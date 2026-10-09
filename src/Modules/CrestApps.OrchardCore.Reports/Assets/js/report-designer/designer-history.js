@@ -604,16 +604,14 @@
 
         if (history.unpublished && history.remote !== 'deleted') {
             e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('This report is saved as a draft and was never published. Only you and the people who manage every report can see it.'), [
-                actionButton(app.t('Delete draft'), 'btn-outline-secondary', app.discardDraft),
-                actionButton(app.t('Publish'), 'btn-primary', app.publish)
+                actionButton(app.t('Delete draft'), 'btn-outline-secondary', app.discardDraft)
             ]));
         } else if (history.hasDraft && history.remote !== 'deleted') {
             var by = history.modifiedBy ? ' ' + app.t('by') + ' ' + history.modifiedBy : '';
             var when = history.modifiedUtc ? ' (' + app.formatTime(history.modifiedUtc) + ')' : '';
 
             e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('Unpublished changes') + by + when + '. ' + app.t('People who run the report still see the published version.'), [
-                actionButton(app.t('Discard changes'), 'btn-outline-secondary', app.discardDraft),
-                actionButton(app.t('Publish'), 'btn-primary', app.publish)
+                actionButton(app.t('Discard changes'), 'btn-outline-secondary', app.discardDraft)
             ]));
         }
     };

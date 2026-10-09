@@ -33,7 +33,7 @@ People who only run reports that were shared with them need no permission: they 
 ## Design a report
 
 1. Open **Reports > Report Builder** and click **New Report**.
-2. Type a title at the top of the page.
+2. The builder opens on **Design**. Give the report a title on the **Settings** tab, the first tab, where you can also add a description and a category.
 3. Click **Add data set**. Pick a data source on the left (or **All**), then click **Add** on the data set's card. Its fields appear in the **Data** pane on the left, grouped by part.
 4. Drag fields onto **Columns**. You can also click the column icon next to a field. Numbers are added as a **Sum** by default; text, dates and identifiers become dimensions.
 5. Click a column to change it in **Properties** on the right (see [Column settings](#column-settings)).
@@ -48,9 +48,9 @@ The builder fills the window, and each pane scrolls on its own. Collapse the **D
 
 The builder saves your changes as you work, from the first change to a new report. The words next to the title say **Saving…**, then **Draft saved**, and you can close or refresh the page at any time. Saved changes are a **draft**: people who run the report keep seeing the published version until you click **Publish**.
 
-- A new report you have not published yet is listed on the **Report Builder** page under **Not published yet**. Click **Continue** to keep working on it, or **Delete** to throw it away. Only you, and the people who manage every report, can see it.
+- A new report you have not published yet is listed on the **Report Builder** page under **Not published yet**. Click **Edit** to keep working on it, or **Delete** to throw it away. Only you, and the people who manage every report, can see it. It cannot run until it is published. Use the status filter at the top of the list to show only published reports or only the ones not published yet.
 
-- A bar above the tabs shows that the report has **unpublished changes**, who made them and when. Click **Discard changes** to go back to the published version, or **Publish** to make them live.
+- A bar above the tabs shows that the report has **unpublished changes**, who made them and when. Click **Discard changes** to go back to the published version, or **Publish** at the top to make them live.
 - Each time you publish a change, the builder keeps a **version**. Click **Versions** to list them with who published each one and when. **Preview** shows a version; **Restore** copies it into the draft, so you can check it and publish it. Restoring never changes what people run until you publish.
 - Old versions are removed after a while; your administrator decides how many are kept.
 

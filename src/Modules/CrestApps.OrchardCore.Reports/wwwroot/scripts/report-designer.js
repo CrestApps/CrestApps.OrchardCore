@@ -886,6 +886,13 @@
     app.queueAutosave();
   };
 
+  // Records an edit that needs no re-render, such as typing in a text box, and saves it a moment later.
+  app.touched = function () {
+    app.dirty = true;
+    app.renderStatus();
+    app.queueAutosave();
+  };
+
   // Saves the change into the report's draft a moment later, when the report exists (see designer-history.js).
   app.queueAutosave = function () {
     if (app.scheduleAutosave && app.canAutosave && app.canAutosave()) {
@@ -1056,7 +1063,8 @@
       status.textContent = app.historyStatus ? app.historyStatus() : app.dirty ? app.t('Unsaved changes') : '';
     }
     if (app.elements.runLink) {
-      app.elements.runLink.classList.toggle('d-none', !app.design.id || app.isView());
+      // A report that was never published has nothing to run yet.
+      app.elements.runLink.classList.toggle('d-none', !app.design.id || app.isView() || !!(app.history && app.history.unpublished));
       app.elements.runLink.href = app.design.id ? app.url('run', {
         id: app.design.id
       }) : '#';
@@ -1209,20 +1217,6 @@
   app.buildLayout = function (container) {
     var e = app.elements;
     e.root = container;
-    e.title = h('input', {
-      type: 'text',
-      className: 'form-control form-control-sm report-designer-title',
-      value: app.design.displayText || '',
-      placeholder: app.isView() ? app.t('View name') : app.t('Report title'),
-      'aria-label': app.isView() ? app.t('View name') : app.t('Report title'),
-      maxlength: '200',
-      oninput: function (event) {
-        app.design.displayText = event.target.value;
-        app.dirty = true;
-        app.renderStatus();
-        app.queueAutosave();
-      }
-    });
     e.status = h('span', {
       className: 'text-muted small text-nowrap'
     });
@@ -1326,25 +1320,28 @@
     }, paneHeader(sideTitle, e.sideToggle), h('div', {
       className: 'rd-pane-scroll'
     }, e.properties, app.isView() ? null : e.visuals))));
+
+    // Settings (the title and description) come first; the builder opens on Design, where the work happens.
     var tabs = [{
-      id: 'design',
-      label: app.t('Design'),
-      icon: 'fa-pen-ruler',
-      body: e.workspace,
-      className: 'rd-tab-design'
-    }, {
-      id: 'model',
-      label: app.t('Data model'),
-      icon: 'fa-diagram-project',
-      body: e.model,
-      className: 'rd-tab-model'
-    }, {
       id: 'settings',
       label: app.t('Settings'),
       icon: 'fa-gear',
       body: h('div', {
         className: 'rd-tab-scroll'
       }, e.settings)
+    }, {
+      id: 'design',
+      label: app.t('Design'),
+      icon: 'fa-pen-ruler',
+      body: e.workspace,
+      className: 'rd-tab-design',
+      active: true
+    }, {
+      id: 'model',
+      label: app.t('Data model'),
+      icon: 'fa-diagram-project',
+      body: e.model,
+      className: 'rd-tab-model'
     }];
     if (!app.isView()) {
       tabs.push({
@@ -1363,22 +1360,22 @@
     var panes = h('div', {
       className: 'tab-content rd-tabs-content'
     });
-    tabs.forEach(function (tab, index) {
+    tabs.forEach(function (tab) {
       var paneId = 'report-designer-' + tab.id;
       nav.appendChild(h('li', {
         className: 'nav-item',
         role: 'presentation'
       }, h('button', {
         type: 'button',
-        className: 'nav-link text-nowrap' + (index === 0 ? ' active' : ''),
+        className: 'nav-link text-nowrap' + (tab.active ? ' active' : ''),
         'data-bs-toggle': 'tab',
         'data-bs-target': '#' + paneId,
         role: 'tab',
         'aria-controls': paneId,
-        'aria-selected': index === 0 ? 'true' : 'false'
+        'aria-selected': tab.active ? 'true' : 'false'
       }, ui.icon(tab.icon), ' ', tab.label)));
       panes.appendChild(h('div', {
-        className: 'tab-pane fade ' + (tab.className || '') + (index === 0 ? ' show active' : ''),
+        className: 'tab-pane fade ' + (tab.className || '') + (tab.active ? ' show active' : ''),
         id: paneId,
         role: 'tabpanel'
       }, tab.body));
@@ -1388,7 +1385,7 @@
       className: 'card-header rd-header'
     }, nav, h('div', {
       className: 'rd-header-tools'
-    }, e.title, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)), h('div', {
+    }, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)), h('div', {
       className: 'card-body p-0 rd-body'
     }, e.historyBar, e.messages, panes)]);
     var saved = readLayout();
@@ -3409,16 +3406,29 @@
   app.renderSettings = function () {
     var target = app.elements.settings;
     var design = app.design;
-    var touch = function () {
-      app.dirty = true;
-      app.renderStatus();
-    };
+    var touch = app.touched;
+
+    // Redrawing while the person types would lose what they are typing.
+    if (target.contains(root.document.activeElement)) {
+      return;
+    }
     ui.clear(target);
     ui.append(target, [h('div', {
       className: 'row'
     }, h('div', {
       className: 'col-12 col-lg-8'
-    }, field(app.t('Description'), h('textarea', {
+    }, field(app.isView() ? app.t('View name') : app.t('Report title'), h('input', {
+      type: 'text',
+      className: 'form-control',
+      value: design.displayText || '',
+      maxlength: '200',
+      required: true,
+      placeholder: app.isView() ? app.t('Such as Revenue by region') : app.t('Such as Sales by region'),
+      oninput: function (event) {
+        design.displayText = event.target.value;
+        touch();
+      }
+    }), app.isView() ? app.t('Other reports list the view by this name.') : app.t('Shown at the top of the report and in the report list.')), field(app.t('Description'), h('textarea', {
       className: 'form-control',
       rows: '3',
       oninput: function (event) {
@@ -3470,8 +3480,7 @@
             design.sharedUserNames = design.sharedUserNames.filter(function (other) {
               return other !== userName;
             });
-            app.dirty = true;
-            app.renderStatus();
+            app.touched();
             renderChips();
           }
         })));
@@ -3492,8 +3501,7 @@
             onclick: function () {
               if (design.sharedUserNames.indexOf(user.value) < 0) {
                 design.sharedUserNames.push(user.value);
-                app.dirty = true;
-                app.renderStatus();
+                app.touched();
               }
               input.value = '';
               ui.clear(results);
@@ -3522,8 +3530,7 @@
         if (value) {
           design.sharedRoles.push(role);
         }
-        app.dirty = true;
-        app.renderStatus();
+        app.touched();
       }, hint, isAnonymous && !shared && !app.config.canSharePublicly);
     }));
   }
@@ -3700,7 +3707,9 @@
   }
   app.renderSharing = function () {
     var target = app.elements.sharing;
-    if (!target || app.isView()) {
+
+    // Redrawing while the person types (searching people) would lose what they are typing.
+    if (!target || app.isView() || target.contains(root.document.activeElement)) {
       return;
     }
     ui.clear(target);
@@ -4265,11 +4274,11 @@
       e.historyBar.appendChild(bar('secondary', 'fa-users', designer.presenceNames(history.presence).join(', ') + ' ' + app.t('also has this report open. Changes you both make can conflict.'), null));
     }
     if (history.unpublished && history.remote !== 'deleted') {
-      e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('This report is saved as a draft and was never published. Only you and the people who manage every report can see it.'), [actionButton(app.t('Delete draft'), 'btn-outline-secondary', app.discardDraft), actionButton(app.t('Publish'), 'btn-primary', app.publish)]));
+      e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('This report is saved as a draft and was never published. Only you and the people who manage every report can see it.'), [actionButton(app.t('Delete draft'), 'btn-outline-secondary', app.discardDraft)]));
     } else if (history.hasDraft && history.remote !== 'deleted') {
       var by = history.modifiedBy ? ' ' + app.t('by') + ' ' + history.modifiedBy : '';
       var when = history.modifiedUtc ? ' (' + app.formatTime(history.modifiedUtc) + ')' : '';
-      e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('Unpublished changes') + by + when + '. ' + app.t('People who run the report still see the published version.'), [actionButton(app.t('Discard changes'), 'btn-outline-secondary', app.discardDraft), actionButton(app.t('Publish'), 'btn-primary', app.publish)]));
+      e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('Unpublished changes') + by + when + '. ' + app.t('People who run the report still see the published version.'), [actionButton(app.t('Discard changes'), 'btn-outline-secondary', app.discardDraft)]));
     }
   };
 

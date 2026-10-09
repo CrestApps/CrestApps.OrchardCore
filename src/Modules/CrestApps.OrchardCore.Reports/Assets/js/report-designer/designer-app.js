@@ -128,6 +128,13 @@
         app.queueAutosave();
     };
 
+    // Records an edit that needs no re-render, such as typing in a text box, and saves it a moment later.
+    app.touched = function () {
+        app.dirty = true;
+        app.renderStatus();
+        app.queueAutosave();
+    };
+
     // Saves the change into the report's draft a moment later, when the report exists (see designer-history.js).
     app.queueAutosave = function () {
         if (app.scheduleAutosave && app.canAutosave && app.canAutosave()) {
@@ -297,7 +304,8 @@
         }
 
         if (app.elements.runLink) {
-            app.elements.runLink.classList.toggle('d-none', !app.design.id || app.isView());
+            // A report that was never published has nothing to run yet.
+            app.elements.runLink.classList.toggle('d-none', !app.design.id || app.isView() || !!(app.history && app.history.unpublished));
             app.elements.runLink.href = app.design.id ? app.url('run', { id: app.design.id }) : '#';
         }
     };
@@ -451,20 +459,6 @@
         var e = app.elements;
 
         e.root = container;
-        e.title = h('input', {
-            type: 'text',
-            className: 'form-control form-control-sm report-designer-title',
-            value: app.design.displayText || '',
-            placeholder: app.isView() ? app.t('View name') : app.t('Report title'),
-            'aria-label': app.isView() ? app.t('View name') : app.t('Report title'),
-            maxlength: '200',
-            oninput: function (event) {
-                app.design.displayText = event.target.value;
-                app.dirty = true;
-                app.renderStatus();
-                app.queueAutosave();
-            }
-        });
         e.status = h('span', { className: 'text-muted small text-nowrap' });
         e.saveButton = app.isView()
             ? h('button', { type: 'button', className: 'btn btn-sm btn-primary text-nowrap', onclick: app.save }, ui.icon('fa-floppy-disk'), ' ', app.t('Save'))
@@ -522,10 +516,11 @@
                     paneHeader(sideTitle, e.sideToggle),
                     h('div', { className: 'rd-pane-scroll' }, e.properties, app.isView() ? null : e.visuals))));
 
+        // Settings (the title and description) come first; the builder opens on Design, where the work happens.
         var tabs = [
-            { id: 'design', label: app.t('Design'), icon: 'fa-pen-ruler', body: e.workspace, className: 'rd-tab-design' },
-            { id: 'model', label: app.t('Data model'), icon: 'fa-diagram-project', body: e.model, className: 'rd-tab-model' },
-            { id: 'settings', label: app.t('Settings'), icon: 'fa-gear', body: h('div', { className: 'rd-tab-scroll' }, e.settings) }
+            { id: 'settings', label: app.t('Settings'), icon: 'fa-gear', body: h('div', { className: 'rd-tab-scroll' }, e.settings) },
+            { id: 'design', label: app.t('Design'), icon: 'fa-pen-ruler', body: e.workspace, className: 'rd-tab-design', active: true },
+            { id: 'model', label: app.t('Data model'), icon: 'fa-diagram-project', body: e.model, className: 'rd-tab-model' }
         ];
 
         if (!app.isView()) {
@@ -535,21 +530,21 @@
         var nav = h('ul', { className: 'nav nav-tabs card-header-tabs flex-nowrap', role: 'tablist' });
         var panes = h('div', { className: 'tab-content rd-tabs-content' });
 
-        tabs.forEach(function (tab, index) {
+        tabs.forEach(function (tab) {
             var paneId = 'report-designer-' + tab.id;
 
             nav.appendChild(h('li', { className: 'nav-item', role: 'presentation' },
                 h('button', {
                     type: 'button',
-                    className: 'nav-link text-nowrap' + (index === 0 ? ' active' : ''),
+                    className: 'nav-link text-nowrap' + (tab.active ? ' active' : ''),
                     'data-bs-toggle': 'tab',
                     'data-bs-target': '#' + paneId,
                     role: 'tab',
                     'aria-controls': paneId,
-                    'aria-selected': index === 0 ? 'true' : 'false'
+                    'aria-selected': tab.active ? 'true' : 'false'
                 }, ui.icon(tab.icon), ' ', tab.label)));
             panes.appendChild(h('div', {
-                className: 'tab-pane fade ' + (tab.className || '') + (index === 0 ? ' show active' : ''),
+                className: 'tab-pane fade ' + (tab.className || '') + (tab.active ? ' show active' : ''),
                 id: paneId,
                 role: 'tabpanel'
             }, tab.body));
@@ -559,7 +554,7 @@
         ui.append(container, [
             h('div', { className: 'card-header rd-header' },
                 nav,
-                h('div', { className: 'rd-header-tools' }, e.title, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)),
+                h('div', { className: 'rd-header-tools' }, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)),
             h('div', { className: 'card-body p-0 rd-body' }, e.historyBar, e.messages, panes)
         ]);
 

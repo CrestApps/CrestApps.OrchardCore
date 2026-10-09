@@ -79,6 +79,33 @@ public class ReportDesignsIndexViewModel
     /// Gets or sets the search text.
     /// </summary>
     public string Search { get; set; }
+
+    /// <summary>
+    /// Gets or sets which reports are listed: <see cref="ReportDesignListStatus.All"/>, only published ones, or only
+    /// the ones never published.
+    /// </summary>
+    public string Status { get; set; } = ReportDesignListStatus.All;
+}
+
+/// <summary>
+/// The values of the designed report list's status filter.
+/// </summary>
+public static class ReportDesignListStatus
+{
+    /// <summary>
+    /// Every report.
+    /// </summary>
+    public const string All = "";
+
+    /// <summary>
+    /// Reports that were published.
+    /// </summary>
+    public const string Published = "published";
+
+    /// <summary>
+    /// Reports that exist only as a draft.
+    /// </summary>
+    public const string Unpublished = "unpublished";
 }
 
 /// <summary>

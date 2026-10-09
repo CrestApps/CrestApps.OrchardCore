@@ -16,6 +16,16 @@
             @if (Model.CanDesign)
             {
                 <div class="col-auto">
+                    <select name="status" class="form-select" aria-label="@T["Status"]">
+                        <option value="" selected="@(Model.Status == ReportDesignListStatus.All)">@T["All reports"]</option>
+                        <option value="@ReportDesignListStatus.Published" selected="@(Model.Status == ReportDesignListStatus.Published)">@T["Published"]</option>
+                        <option value="@ReportDesignListStatus.Unpublished" selected="@(Model.Status == ReportDesignListStatus.Unpublished)">@T["Not published yet"]</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-secondary">@T["Filter"]</button>
+                </div>
+                <div class="col-auto">
                     <a class="btn btn-secondary" asp-route="ReportViewsIndex">@T["Views"]</a>
                 </div>
                 <div class="col-auto">
@@ -47,7 +57,7 @@
                     </div>
                 </div>
                 <div class="d-flex gap-1">
-                    <a class="btn btn-sm btn-primary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Continue"]</a>
+                    <a class="btn btn-sm btn-primary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Edit"]</a>
                     <form method="post" asp-route="ReportDesignsDeleteDraft" asp-route-id="@design.ItemId" class="d-inline">
                         <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
                     </form>
@@ -57,8 +67,13 @@
     </ul>
 }
 
+@if (Model.Drafts.Count > 0 && Model.Entries.Count > 0)
+{
+    <h2 class="h6 text-muted text-uppercase mb-2">@T["Published"]</h2>
+}
+
 <ul class="list-group">
-    @if (Model.Entries.Count == 0)
+    @if (Model.Entries.Count == 0 && Model.Drafts.Count == 0)
     {
         <li class="list-group-item list-group-item-info text-center">
             @if (Model.CanDesign)

@@ -34,13 +34,27 @@
     app.renderSettings = function () {
         var target = app.elements.settings;
         var design = app.design;
-        var touch = function () {
-            app.dirty = true;
-            app.renderStatus();
-        };
+        var touch = app.touched;
+
+        // Redrawing while the person types would lose what they are typing.
+        if (target.contains(root.document.activeElement)) {
+            return;
+        }
 
         ui.clear(target);
         ui.append(target, [h('div', { className: 'row' }, h('div', { className: 'col-12 col-lg-8' },
+            field(app.isView() ? app.t('View name') : app.t('Report title'), h('input', {
+                type: 'text',
+                className: 'form-control',
+                value: design.displayText || '',
+                maxlength: '200',
+                required: true,
+                placeholder: app.isView() ? app.t('Such as Revenue by region') : app.t('Such as Sales by region'),
+                oninput: function (event) {
+                    design.displayText = event.target.value;
+                    touch();
+                }
+            }), app.isView() ? app.t('Other reports list the view by this name.') : app.t('Shown at the top of the report and in the report list.')),
             field(app.t('Description'), h('textarea', {
                 className: 'form-control',
                 rows: '3',
@@ -83,8 +97,7 @@
                         design.sharedUserNames = design.sharedUserNames.filter(function (other) {
                             return other !== userName;
                         });
-                        app.dirty = true;
-                        app.renderStatus();
+                        app.touched();
                         renderChips();
                     } })));
             });
@@ -104,8 +117,7 @@
                     results.appendChild(h('button', { type: 'button', className: 'list-group-item list-group-item-action', onclick: function () {
                         if (design.sharedUserNames.indexOf(user.value) < 0) {
                             design.sharedUserNames.push(user.value);
-                            app.dirty = true;
-                            app.renderStatus();
+                            app.touched();
                         }
 
                         input.value = '';
@@ -141,8 +153,7 @@
                     design.sharedRoles.push(role);
                 }
 
-                app.dirty = true;
-                app.renderStatus();
+                app.touched();
             }, hint, isAnonymous && !shared && !app.config.canSharePublicly);
         }));
     }
@@ -274,7 +285,8 @@
     app.renderSharing = function () {
         var target = app.elements.sharing;
 
-        if (!target || app.isView()) {
+        // Redrawing while the person types (searching people) would lose what they are typing.
+        if (!target || app.isView() || target.contains(root.document.activeElement)) {
             return;
         }
 

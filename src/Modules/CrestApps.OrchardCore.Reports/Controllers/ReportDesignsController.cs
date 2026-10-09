@@ -56,18 +56,20 @@ public sealed class ReportDesignsController : Controller
     /// Lists the designed reports the user can run.
     /// </summary>
     /// <param name="q">The optional search text.</param>
+    /// <param name="status">Which reports to list: empty for all, <c>published</c>, or <c>unpublished</c>.</param>
     /// <returns>The list page.</returns>
     [Admin("reports/designs", "ReportDesignsIndex")]
-    public async Task<IActionResult> Index(string q)
+    public async Task<IActionResult> Index(string q, string status)
     {
         var model = new ReportDesignsIndexViewModel
         {
             CanDesign = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageOwnReportDesigns),
             Search = q,
+            Status = status is ReportDesignListStatus.Published or ReportDesignListStatus.Unpublished ? status : ReportDesignListStatus.All,
         };
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        foreach (var design in await _designService.GetAllAsync())
+        foreach (var design in model.Status == ReportDesignListStatus.Unpublished ? [] : await _designService.GetAllAsync())
         {
             if (!string.IsNullOrWhiteSpace(q) &&
                 design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true &&
@@ -89,7 +91,7 @@ public sealed class ReportDesignsController : Controller
             });
         }
 
-        if (model.CanDesign)
+        if (model.CanDesign && model.Status != ReportDesignListStatus.Published)
         {
             foreach (var draft in await _history.ListUnpublishedAsync())
             {
@@ -107,7 +109,7 @@ public sealed class ReportDesignsController : Controller
             }
         }
 
-        if (!model.CanDesign && model.Entries.Count == 0 && string.IsNullOrWhiteSpace(q))
+        if (!model.CanDesign && model.Entries.Count == 0 && string.IsNullOrWhiteSpace(q) && model.Status == ReportDesignListStatus.All)
         {
             return Forbid();
         }
@@ -127,6 +129,16 @@ public sealed class ReportDesignsController : Controller
 
         if (design is null)
         {
+            // A report that was never published has nothing to run yet: send its editor back to the builder.
+            var draft = await _history.FindUnpublishedAsync(id);
+
+            if (draft is not null && await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
+            {
+                await _notifier.InformationAsync(H["This report is not published yet. Publish it to run it."]);
+
+                return RedirectToRoute("ReportDesignerEdit", new { id });
+            }
+
             return NotFound();
         }
 
