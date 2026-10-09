@@ -38,6 +38,54 @@ public sealed class RecordingDisclosureCheckTests
     }
 
     [Fact]
+    public void AnOpeningCutOffPartwayThroughTheDisclosure_IsGivenByTheLineThatSaysItAgain()
+    {
+        // Live: the person said "hello?" over the first words, the line was cut back to what they heard, and the
+        // assistant said the whole disclosure in its next line. Judging only the first line reported it missed.
+        var (said, line) = RecordingDisclosureCheck.FindInOpening(Disclosure,
+        [
+            "This call may be recorded for",
+            "This call may be recorded for quality assurance and training purposes. Hey Jack, this is Sarah.",
+            "This call may be recorded for quality assurance and training purposes. Is this a good time?",
+        ]);
+
+        Assert.True(said);
+        Assert.StartsWith("This call may be recorded for quality assurance and training purposes. Hey Jack", line, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AnOpeningThatMovesOnWithoutTheDisclosure_IsMissed_AtTheLineThatMovedOn()
+    {
+        var (said, line) = RecordingDisclosureCheck.FindInOpening(Disclosure,
+        [
+            "This call may be",
+            "Hey Jack, this is Sarah. Is now a good time?",
+            "This call may be recorded for quality assurance and training purposes.",
+        ]);
+
+        Assert.False(said);
+        Assert.Equal("Hey Jack, this is Sarah. Is now a good time?", line);
+    }
+
+    [Fact]
+    public void AnOpeningNeverFinished_IsMissed_WithTheLastAttempt()
+    {
+        var (said, line) = RecordingDisclosureCheck.FindInOpening(Disclosure, ["This call may", "This call may be recorded"]);
+
+        Assert.False(said);
+        Assert.Equal("This call may be recorded", line);
+    }
+
+    [Fact]
+    public void AnAssistantThatNeverSpoke_IsMissed_WithNoLine()
+    {
+        var (said, line) = RecordingDisclosureCheck.FindInOpening(Disclosure, []);
+
+        Assert.False(said);
+        Assert.Null(line);
+    }
+
+    [Fact]
     public void AnEmptyDisclosure_IsNeverFound()
     {
         Assert.False(RecordingDisclosureCheck.WasSaid("  ", "Anything at all."));

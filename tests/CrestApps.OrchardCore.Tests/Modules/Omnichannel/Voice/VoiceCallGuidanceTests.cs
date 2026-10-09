@@ -49,7 +49,8 @@ public sealed class VoiceCallGuidanceTests
         Assert.Contains("\"This call may be recorded for training.\"", guidance, StringComparison.Ordinal);
         Assert.Contains("word for word", guidance, StringComparison.Ordinal);
         Assert.Contains("Your opening must begin", guidance, StringComparison.Ordinal);
-        Assert.Contains("say it again in full", guidance, StringComparison.Ordinal);
+        Assert.Contains("start your next reply with the whole sentence again", guidance, StringComparison.Ordinal);
+        Assert.Contains("never say it again", guidance, StringComparison.Ordinal);
     }
 
     [Theory]

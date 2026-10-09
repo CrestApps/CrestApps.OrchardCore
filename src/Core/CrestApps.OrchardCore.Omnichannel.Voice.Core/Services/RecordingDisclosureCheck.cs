@@ -13,6 +13,57 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 internal static class RecordingDisclosureCheck
 {
     /// <summary>
+    /// Finds the line of the assistant's opening that gave the disclosure, following the opening the way a call
+    /// actually goes: a person who says "hello?" over the first words cuts the line off partway through the
+    /// disclosure, and the assistant then says it again in full. An attempt cut off partway through is passed over;
+    /// the first line that contains the whole disclosure gave it; a line that goes on to anything else without it
+    /// means the assistant moved on without giving it.
+    /// </summary>
+    /// <param name="disclosure">The disclosure the assistant was to give.</param>
+    /// <param name="assistantLines">What the assistant said, in order.</param>
+    /// <returns>
+    /// Whether the disclosure was given; the line that gave it, or else the line that moved on without it (or the
+    /// last attempt, or <see langword="null"/> when the assistant never spoke).
+    /// </returns>
+    public static (bool Said, string Line) FindInOpening(string disclosure, IEnumerable<string> assistantLines)
+    {
+        var expected = Normalize(disclosure);
+        string lastAttempt = null;
+
+        if (expected.Length == 0 || assistantLines is null)
+        {
+            return (false, null);
+        }
+
+        foreach (var line in assistantLines)
+        {
+            var spoken = Normalize(line);
+
+            if (spoken.Length == 0)
+            {
+                continue;
+            }
+
+            if (WasSaid(disclosure, line))
+            {
+                return (true, line);
+            }
+
+            // Cut off partway through the disclosure: the next line is where it is said again.
+            if (expected.StartsWith(spoken, StringComparison.Ordinal))
+            {
+                lastAttempt = line;
+
+                continue;
+            }
+
+            return (false, line);
+        }
+
+        return (false, lastAttempt);
+    }
+
+    /// <summary>
     /// Returns whether the opening line contains the whole disclosure, word for word.
     /// </summary>
     /// <param name="disclosure">The disclosure the assistant was to give.</param>

@@ -83,18 +83,19 @@ public sealed partial class VoiceAgentConversationLoop
     {
         try
         {
-            var prompts = await _promptStore.GetPromptsAsync(sessionId);
-            var opening = prompts
+            var assistantLines = (await _promptStore.GetPromptsAsync(sessionId))
                 .Where(prompt => prompt.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(prompt.Content))
                 .OrderBy(prompt => prompt.CreatedUtc)
-                .FirstOrDefault();
+                .ToList();
 
-            await ObserveRecordingDisclosureAsync(
-                voiceEvent,
-                disclosure,
-                opening?.Content,
-                RecordingDisclosureCheck.WasSaid(disclosure, opening?.Content),
-                opening?.CreatedUtc ?? _clock.UtcNow);
+            var (said, line) = RecordingDisclosureCheck.FindInOpening(disclosure, assistantLines.Select(prompt => prompt.Content));
+
+            // Dated by the line that gave it, or that moved on without it, rather than by when the call was checked.
+            var occurredUtc = assistantLines.FirstOrDefault(prompt => ReferenceEquals(prompt.Content, line))?.CreatedUtc
+                ?? assistantLines.FirstOrDefault()?.CreatedUtc
+                ?? _clock.UtcNow;
+
+            await ObserveRecordingDisclosureAsync(voiceEvent, disclosure, line, said, occurredUtc);
         }
         catch (Exception ex)
         {

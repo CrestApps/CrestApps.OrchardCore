@@ -116,6 +116,28 @@ public sealed partial class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task ARealtimeOpeningCutOffByTheCaller_IsRecordedAsDisclosed_WhenTheNextLineGivesIt()
+    {
+        // Arrange
+        // Live: "hello?" over the first words cut the line back, and the assistant said it in full next.
+        var harness = new LoopHarness();
+        harness.UseRealtime();
+        harness.DisclosureProviders.Add(new FixedDisclosureProvider(Disclosure));
+        harness.Realtime.DuringSession = _ =>
+        {
+            harness.AssistantSaid("This call may be recorded for");
+            harness.AssistantSaid(Disclosure + " Hey Jack, this is Sarah.");
+        };
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(harness.CallObserver.Observations, o => o.Kind == AutomatedVoiceCallObservationKind.RecordingDisclosed);
+        Assert.DoesNotContain(harness.CallObserver.Observations, o => o.Kind == AutomatedVoiceCallObservationKind.RecordingDisclosureMissed);
+    }
+
+    [Fact]
     public async Task ARealtimeCallThatParaphrasedTheDisclosure_IsRecordedAsMissed_WithWhatWasSaid()
     {
         // Arrange

@@ -82,9 +82,10 @@ internal static class VoiceCallGuidance
             "This call is recorded, and the customer must be told so before anything else. Your opening must begin " +
             "with this sentence, said word for word exactly as it is written here: \"" + disclosure.Trim() + "\" " +
             "Do not paraphrase, shorten, translate or skip it, and do not add anything to it; then go straight on " +
-            "with the rest of your opening. If the customer talks over it before you have finished it, say it again " +
-            "in full before anything else. Once you have said it in full, do not say it again, but if the customer " +
-            "asks whether the call is recorded, tell them that it is.";
+            "with the rest of your opening. Only if you were cut off before you finished that sentence, start your " +
+            "next reply with the whole sentence again. Once you have said the whole sentence, never say it again, " +
+            "even if the customer spoke while you were saying it or while you went on; if they ask whether the call " +
+            "is recorded, simply tell them that it is.";
     }
 
     /// <summary>
