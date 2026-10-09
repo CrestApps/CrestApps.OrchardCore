@@ -5,10 +5,14 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.FileStorage.FileSystem;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -68,7 +72,67 @@ public sealed class VoicemailMediaEndpointTests
 
         var fileResult = Assert.IsType<FileStreamHttpResult>(result);
         Assert.Equal("audio/mpeg", fileResult.ContentType);
+        Assert.True(fileResult.EnableRangeProcessing);
         governance.Verify(g => g.RecordAccessAsync("interaction-1", ContactCenterActor.Agent("user-1"), "voicemail-playback", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleVoicemailMediaAsync_WhenThePlayerSeeks_ServesTheRequestedRangeOfTheEncryptedRecording()
+    {
+        // Arrange
+        // The player seeks in a voicemail with a byte range. The encrypted store's stream seeks, so the range is
+        // decrypted and served on its own rather than the whole recording.
+        var rootPath = Path.Combine(Path.GetTempPath(), "crestapps-voicemail-range-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(rootPath);
+
+        try
+        {
+            var content = new byte[(64 * 1024 * 3) + 321];
+            new Random(808).NextBytes(content);
+
+            var mediaStore = new LocalEncryptedRecordingMediaStore(
+                new FileSystemStore(rootPath, NullLogger<FileSystemStore>.Instance),
+                new EphemeralDataProtectionProvider());
+            await mediaStore.StoreAsync(
+                new RecordingMediaWriteRequest
+                {
+                    StorageKey = "rec-1",
+                    InteractionId = "interaction-1",
+                    Format = "mp3",
+                    Content = new MemoryStream(content, writable: false),
+                },
+                TestContext.Current.CancellationToken);
+
+            var interaction = CreateInteraction(isVoicemail: true, storageReference: "rec-1");
+            var (interactionManager, governance) = CreateMocks(interaction);
+            governance
+                .Setup(g => g.RecordAccessAsync("interaction-1", ContactCenterActor.Agent("user-1"), "voicemail-playback", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            var httpContext = CreateHttpContext("user-1", mediaStore, governance.Object);
+            httpContext.Request.Method = HttpMethods.Get;
+            httpContext.Request.Headers.Range = "bytes=100000-100999";
+
+            using var body = new MemoryStream();
+            httpContext.Response.Body = body;
+
+            // Act
+            var result = await AgentWorkspaceEndpoints.HandleVoicemailMediaAsync(
+                "interaction-1",
+                interactionManager.Object,
+                InboxStore(new TelephonyInteraction { InteractionId = "interaction-1", CallId = "provider-call-1", UserId = "user-1", IsVoicemail = true }),
+                httpContext);
+            await result.ExecuteAsync(httpContext);
+
+            // Assert
+            Assert.Equal(StatusCodes.Status206PartialContent, httpContext.Response.StatusCode);
+            Assert.Equal($"bytes 100000-100999/{content.Length}", httpContext.Response.Headers.ContentRange.ToString());
+            Assert.Equal(content.AsSpan(100000, 1000).ToArray(), body.ToArray());
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
     }
 
     [Fact]
@@ -209,6 +273,7 @@ public sealed class VoicemailMediaEndpointTests
         IRecordingAccessGovernanceService governance)
     {
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddSingleton(mediaStore);
         services.AddSingleton(governance);
 
