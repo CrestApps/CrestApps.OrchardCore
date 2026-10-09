@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 
@@ -139,24 +140,33 @@ public sealed class InstallmentPlan : CatalogItem
     /// <summary>
     /// Gets the down payment, or <see langword="null"/> on a plan that has none recorded.
     /// </summary>
+    /// <remarks>
+    /// This and the other computed properties are not stored. They return payments the plan already holds, and the
+    /// document serializer populates existing objects when it reads, so a stored copy would be read back into the
+    /// same payment and add to its lists on every save.
+    /// </remarks>
+    [JsonIgnore]
     public InstallmentPlanPayment DownPayment
         => Payments.FirstOrDefault(payment => payment.Number == 0);
 
     /// <summary>
     /// Gets the total received so far.
     /// </summary>
+    [JsonIgnore]
     public decimal AmountPaid
         => Payments.Where(payment => payment.Status == InstallmentPaymentStatus.Paid).Sum(payment => payment.Amount);
 
     /// <summary>
     /// Gets the total still to be received, excluding anything canceled.
     /// </summary>
+    [JsonIgnore]
     public decimal AmountOutstanding
         => Payments.Where(payment => payment.Status is not InstallmentPaymentStatus.Paid and not InstallmentPaymentStatus.Canceled).Sum(payment => payment.Amount);
 
     /// <summary>
     /// Gets the next payment still to be received, or <see langword="null"/> when none is.
     /// </summary>
+    [JsonIgnore]
     public InstallmentPlanPayment NextPayment
         => Payments
             .Where(payment => payment.Status is not InstallmentPaymentStatus.Paid and not InstallmentPaymentStatus.Canceled)
