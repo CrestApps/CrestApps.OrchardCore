@@ -206,6 +206,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public string ProviderName { get; set; }
         public System.Func<bool> ReachedVoicemail { get; set; }
         public string RealtimeDeploymentName { get; set; }
+        public string RecordingDisclosure { get; set; }
         public CrestApps.Core.AI.Models.AIChatSession Session { get; set; }
         public bool SessionLost { get; set; }
         public bool UseCallAmbience { get; set; }
@@ -239,6 +240,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IAutomatedVoiceCallObserver> callObservers,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IRecordingDisclosureProvider> disclosureProviders,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
                     CrestApps.Core.AI.Capabilities.IAIDeploymentCapabilityService capabilityService,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,

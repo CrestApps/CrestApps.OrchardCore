@@ -676,7 +676,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
-            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Hi Haneen, it's Sarah with Prestige Auto Group. Please call us back when you can." });
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Hi Haneen, it's Sarah with Contoso Motors. Please call us back when you can." });
 
         await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
         harness.ReachedVoicemail = true;
@@ -927,6 +927,39 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         Assert.Contains("Amani", systemMessage);
         Assert.Contains("never guess or invent one", systemMessage);
+    }
+
+    [Fact]
+    public async Task TheSessionIsToldToOpenWithTheRecordingDisclosure_WordForWord()
+    {
+        // Arrange
+        // A live session writes its own opening, so the platform cannot say the disclosure for it.
+        var harness = new RealtimeHarness();
+        harness.RecordingDisclosure = "This call may be recorded for quality assurance and training purposes.";
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var systemMessage = harness.Orchestrator.Contexts.Single().SystemMessageBuilder.ToString();
+
+        Assert.Contains(VoiceCallGuidance.RecordingDisclosureHeading, systemMessage);
+        Assert.Contains("\"This call may be recorded for quality assurance and training purposes.\"", systemMessage);
+    }
+
+    [Fact]
+    public async Task ASessionWithNoRecordingDisclosure_IsToldNothingAboutIt()
+    {
+        // Arrange
+        var harness = new RealtimeHarness();
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.DoesNotContain(
+            VoiceCallGuidance.RecordingDisclosureHeading,
+            harness.Orchestrator.Contexts.Single().SystemMessageBuilder.ToString());
     }
 
     [Fact]
@@ -1398,6 +1431,8 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         /// </summary>
         public string ContactName { get; set; }
 
+        public string RecordingDisclosure { get; set; }
+
         public List<AIChatSessionPrompt> StoredPrompts => _prompts;
 
         /// <summary>
@@ -1424,6 +1459,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 EndCallRequests = EndCallRequests,
                 HandoffInstructions = HandoffInstructions,
                 ContactName = ContactName,
+                RecordingDisclosure = RecordingDisclosure,
 
                 // The loop decides this now, by asking whether the profile's chat deployment can hold a live call.
                 RealtimeDeploymentName = "realtime-deployment",

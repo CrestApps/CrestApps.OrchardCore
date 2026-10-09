@@ -149,6 +149,12 @@ public sealed class RealtimeVoiceConversationContext
     public string ContactName { get; set; }
 
     /// <summary>
+    /// Gets or sets the notice that the call is recorded, which the assistant must give word for word before
+    /// anything else, or <see langword="null"/> when the tenant gives none on automated voice calls.
+    /// </summary>
+    public string RecordingDisclosure { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the live session was lost while the caller was still on the line,
     /// and could not be brought back.
     /// </summary>

@@ -52,6 +52,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IInboundPriorityResolver _priorityResolver;
     private readonly IEnumerable<IInboundAIVoiceAnswerer> _aiVoiceAnswerers;
+    private readonly IEnumerable<IRecordingDisclosureProvider> _disclosureProviders;
     private readonly YesSqlSession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -81,6 +82,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
     /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
     /// <param name="auditRecorder">The recorder that writes each inbound call's interaction to the audit log.</param>
     /// <param name="priorityResolver">The resolver that raises a caller above the configured priority from what is known about them.</param>
+    /// <param name="disclosureProviders">The recording disclosure, registered only while call recording is enabled.</param>
     /// <param name="session">The session used to read the caller's earlier calls and callbacks for the priority contributors.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
@@ -107,6 +109,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         IContactCenterAuditRecorder auditRecorder,
         IInboundPriorityResolver priorityResolver,
         IEnumerable<IInboundAIVoiceAnswerer> aiVoiceAnswerers,
+        IEnumerable<IRecordingDisclosureProvider> disclosureProviders,
         YesSqlSession session,
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
@@ -133,6 +136,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         _auditRecorder = auditRecorder;
         _priorityResolver = priorityResolver;
         _aiVoiceAnswerers = aiVoiceAnswerers;
+        _disclosureProviders = disclosureProviders;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -312,7 +316,7 @@ public sealed partial class InboundVoiceCallProcessor : IInboundVoiceCallProcess
         // The entry point's welcome message (open) or closed message (closed) is said before the caller goes
         // anywhere. Such a caller is not admitted, queued or offered here: that happens once the message has been
         // said, the same way it happens once a caller has chosen from the menu.
-        var announcement = ResolveAnnouncement(plan, hasMenu, isDirect, queue);
+        var announcement = ResolveAnnouncement(plan, hasMenu, isDirect, queue, await DisclosesRecordingAsync(plan, cancellationToken));
 
         // A full queue does not take another caller: its size limit decides whether they wait in an overflow
         // queue instead, or go to voicemail. A personal line and a missing queue have nothing to admit to.

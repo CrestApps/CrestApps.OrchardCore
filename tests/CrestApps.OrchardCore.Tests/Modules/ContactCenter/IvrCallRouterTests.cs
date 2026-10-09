@@ -561,6 +561,7 @@ public sealed class IvrCallRouterTests
                 processor.Object,
                 external.Object,
                 audit.Object,
+                [],
                 new Mock<global::YesSql.ISession>().Object,
                 new TestClock(),
                 NullLogger<IvrCallRouter>.Instance);

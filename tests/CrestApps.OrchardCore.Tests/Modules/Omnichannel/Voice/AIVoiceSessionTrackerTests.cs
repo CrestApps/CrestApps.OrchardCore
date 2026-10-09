@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +11,8 @@ using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Builders;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
 
@@ -106,6 +110,7 @@ public sealed class AIVoiceSessionTrackerTests
                 throw new InvalidOperationException("SQLite Error 5: 'database is locked'.");
             })),
             new ShellSettings { Name = "Default" },
+            new KeyedSemaphoreLock(),
             logger);
 
         // Act
@@ -134,6 +139,7 @@ public sealed class AIVoiceSessionTrackerTests
                 return CreateWriterThatWritesNothing();
             })),
             new ShellSettings { Name = "Default" },
+            new KeyedSemaphoreLock(),
             logger);
 
         // Act
@@ -144,8 +150,83 @@ public sealed class AIVoiceSessionTrackerTests
         Assert.Contains("activity-1", warning);
     }
 
+    [Fact]
+    public async Task TwoSummariesOfOneCall_AreNeverWrittenAtTheSameTime()
+    {
+        // Arrange
+        // A live call is summarized by its session as it ends and by the provider's hangup a few hundred
+        // milliseconds later. The writer keeps one summary per call by looking for an existing one first, but the
+        // two ran in their own scopes at once, neither saw the other's uncommitted summary, and the call was
+        // reported twice. The writer stands in here only to count how many are being written at once.
+        var writing = 0;
+        var mostAtOnce = 0;
+        var written = new CountdownEvent(2);
+        var tracker = new AIVoiceSessionTracker(
+            CreateShellHost(services => services.AddScoped(_ =>
+            {
+                var now = Interlocked.Increment(ref writing);
+                InterlockedMax(ref mostAtOnce, now);
+                Thread.Sleep(200);
+                Interlocked.Decrement(ref writing);
+                written.Signal();
+
+                return CreateWriterThatWritesNothing();
+            })),
+            new ShellSettings { Name = "Default" },
+            new KeyedSemaphoreLock(),
+            NullLogger<AIVoiceSessionTracker>.Instance);
+
+        // Act
+        await tracker.RecordAsync(new AIVoiceSessionDraft { ActivityId = "activity-1", Engine = AIVoiceSessionEngine.Realtime });
+        await tracker.RecordAsync(new AIVoiceSessionDraft { ActivityId = "activity-1", Engine = AIVoiceSessionEngine.TurnBased });
+
+        // Assert
+        Assert.True(written.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+        Assert.Equal(1, mostAtOnce);
+    }
+
+    [Fact]
+    public async Task SummariesOfDifferentCalls_DoNotWaitForEachOther()
+    {
+        // Arrange
+        var writing = 0;
+        var mostAtOnce = 0;
+        var written = new CountdownEvent(2);
+        var tracker = new AIVoiceSessionTracker(
+            CreateShellHost(services => services.AddScoped(_ =>
+            {
+                var now = Interlocked.Increment(ref writing);
+                InterlockedMax(ref mostAtOnce, now);
+                Thread.Sleep(500);
+                Interlocked.Decrement(ref writing);
+                written.Signal();
+
+                return CreateWriterThatWritesNothing();
+            })),
+            new ShellSettings { Name = "Default" },
+            new KeyedSemaphoreLock(),
+            NullLogger<AIVoiceSessionTracker>.Instance);
+
+        // Act
+        await tracker.RecordAsync(new AIVoiceSessionDraft { ActivityId = "activity-1" });
+        await tracker.RecordAsync(new AIVoiceSessionDraft { ActivityId = "activity-2" });
+
+        // Assert
+        Assert.True(written.Wait(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+        Assert.Equal(2, mostAtOnce);
+    }
+
+    private static void InterlockedMax(ref int target, int value)
+    {
+        int current;
+
+        while ((current = Volatile.Read(ref target)) < value && Interlocked.CompareExchange(ref target, value, current) != current)
+        {
+        }
+    }
+
     private static AIVoiceSessionTracker CreateTracker()
-        => new(shellHost: null, shellSettings: null, NullLogger<AIVoiceSessionTracker>.Instance);
+        => new(shellHost: null, shellSettings: null, new KeyedSemaphoreLock(), NullLogger<AIVoiceSessionTracker>.Instance);
 
     private static AIVoiceSessionSummaryWriter CreateWriterThatWritesNothing()
     {
@@ -174,6 +255,56 @@ public sealed class AIVoiceSessionTrackerTests
             .ReturnsAsync(() => new ShellScope(shellContext));
 
         return shellHost.Object;
+    }
+
+    /// <summary>
+    /// A real lock, one per key, so writes of one call exclude each other while other calls go ahead.
+    /// </summary>
+    private sealed class KeyedSemaphoreLock : IDistributedLock
+    {
+        private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
+
+        public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+        {
+            var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+            await semaphore.WaitAsync();
+
+            return new Locker(semaphore);
+        }
+
+        public async Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
+        {
+            var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
+
+            return await semaphore.WaitAsync(timeout)
+                ? (new Locker(semaphore), true)
+                : (null, false);
+        }
+
+        public Task<bool> IsLockAcquiredAsync(string key)
+            => Task.FromResult(_locks.TryGetValue(key, out var semaphore) && semaphore.CurrentCount == 0);
+
+        private sealed class Locker : ILocker
+        {
+            private readonly SemaphoreSlim _semaphore;
+
+            public Locker(SemaphoreSlim semaphore)
+            {
+                _semaphore = semaphore;
+            }
+
+            public ValueTask DisposeAsync()
+            {
+                _semaphore.Release();
+
+                return ValueTask.CompletedTask;
+            }
+
+            public void Dispose()
+            {
+                _semaphore.Release();
+            }
+        }
     }
 
     private sealed class WarningLogger<T> : ILogger<T>
