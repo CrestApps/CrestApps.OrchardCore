@@ -98,11 +98,11 @@ Refund notices use it. A handler that fails is logged and never undoes the refun
 
 ### Customer statement — "My Transactions"
 
-Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), a page size picker and a pager, and lets them open a transaction and **Pay** an outstanding balance online.
+Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online.
 
 ### Administrator report and console
 
-Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features, with a page size picker. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
+Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
 
 - **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
 - **Record payment** — record a full or partial payment received offline.
