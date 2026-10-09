@@ -1,88 +1,143 @@
 @using CrestApps.OrchardCore.Checkout.Models
-@model IReadOnlyList<Coupon>
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@model CouponsIndexViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+    var now = DateTime.UtcNow;
+}
 
 <zone Name="Title">
     <breadcrumb name="CheckoutCoupons" title="@T["Coupons"]" />
 </zone>
 
-<div class="mb-3">
-    <a class="btn btn-primary" asp-action="Create">@T["Add coupon"]</a>
-</div>
-
-@if (Model.Count == 0)
-{
-    <div class="alert alert-info text-center" role="alert">
-        @T["<strong>Nothing here!</strong> No coupons have been created."]
-    </div>
-
-    return;
-}
-
-<div class="table-responsive">
-    <table class="table align-middle">
-        <thead>
-            <tr>
-                <th scope="col">@T["Code"]</th>
-                <th scope="col">@T["Discount"]</th>
-                <th scope="col">@T["Applies to"]</th>
-                <th scope="col">@T["Used"]</th>
-                <th scope="col">@T["Valid until"]</th>
-                <th scope="col">@T["Status"]</th>
-                <th scope="col" class="text-end">@T["Actions"]</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var coupon in Model)
-            {
-                <tr>
-                    <td>
-                        <a asp-action="Edit" asp-route-itemId="@coupon.ItemId"><strong>@coupon.Code</strong></a>
-                        <div class="text-muted small">@coupon.Description</div>
-                    </td>
-                    <td>
-                        @if (coupon.Kind == CouponKind.Percentage)
-                        {
-                            @($"{coupon.Percentage:0.##}%")
-                        }
-                        else
-                        {
-                            @($"{coupon.Currency} {coupon.Amount:0.00}")
-                        }
-                    </td>
-                    <td>@(coupon.Target == DiscountTarget.FirstCycle ? T["First cycle"] : T["One-time amount"])</td>
-                    <td>
-                        @coupon.RedemptionCount@(coupon.MaxRedemptions.HasValue ? $" / {coupon.MaxRedemptions}" : string.Empty)
-                    </td>
-                    <td>@(coupon.EndsUtc.HasValue ? coupon.EndsUtc.Value.ToString("d") : T["No end date"].Value)</td>
-                    <td>
-                        @if (!coupon.IsEnabled)
-                        {
-                            <span class="badge bg-secondary">@T["Disabled"]</span>
-                        }
-                        else if (coupon.IsRedeemable(DateTime.UtcNow))
-                        {
-                            <span class="badge bg-success">@T["Active"]</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-warning text-dark">@T["Not available"]</span>
-                        }
-                    </td>
-                    <td class="text-end">
-                        <a class="btn btn-sm btn-secondary" asp-action="Edit" asp-route-itemId="@coupon.ItemId">@T["Edit"]</a>
-                        <form asp-action="Delete" asp-route-itemId="@coupon.ItemId" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-sm btn-danger" data-title="@T["Delete"]" data-message="@T["Are you sure you want to delete this coupon?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
-                        </form>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-</div>
-
-@if (Model.Any(coupon => coupon.IsEnabled && !coupon.MaxRedemptions.HasValue && !coupon.EndsUtc.HasValue))
+@if (Model.HasUnboundedCoupons)
 {
     <div class="alert alert-warning" role="alert">
         @T["One or more coupons have neither a usage limit nor an end date. A code that leaks will keep discounting until somebody notices."]
     </div>
 }
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="coupons-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by code or description"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Add coupon"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Coupons.Count, "1 coupon", "{0} coupons")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} coupon in total", " / {0} coupons in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" form="coupons-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
+    @if (Model.Coupons.Count > 0)
+    {
+        @foreach (var coupon in Model.Coupons)
+        {
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0"><a asp-action="Edit" asp-route-itemId="@coupon.ItemId">@coupon.Code</a></h5>
+                                </div>
+                                <div class="tags me-1">
+                                    @if (!coupon.IsEnabled)
+                                    {
+                                        <span class="badge text-bg-secondary">@T["Disabled"]</span>
+                                    }
+                                    else if (coupon.IsRedeemable(now))
+                                    {
+                                        <span class="badge text-bg-success">@T["Active"]</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-warning">@T["Not available"]</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Discount"]">
+                                    <i class="fa-solid fa-percent text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Discount"]</span>
+                                    @if (coupon.Kind == CouponKind.Percentage)
+                                    {
+                                        @($"{coupon.Percentage:0.##}%")
+                                    }
+                                    else
+                                    {
+                                        @($"{coupon.Currency} {coupon.Amount:0.00}")
+                                    }
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Applies to"]">
+                                    <i class="fa-solid fa-bullseye text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Applies to"]</span>
+                                    @(coupon.Target == DiscountTarget.FirstCycle ? T["First cycle"] : T["One-time amount"])
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Used"]">
+                                    <i class="fa-solid fa-ticket text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Used"]</span>
+                                    @(coupon.MaxRedemptions.HasValue ? T["{0} of {1} used", coupon.RedemptionCount, coupon.MaxRedemptions.Value] : T["{0} used", coupon.RedemptionCount])
+                                </span>
+                                <span class="badge ta-badge font-weight-normal @(coupon.EndsUtc.HasValue ? string.Empty : "bg-warning-subtle")" data-bs-toggle="tooltip" title="@T["Valid until"]">
+                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Valid until"]</span>
+                                    @(coupon.EndsUtc.HasValue ? coupon.EndsUtc.Value.ToString("d") : T["No end date"].Value)
+                                </span>
+                                @if (!string.IsNullOrEmpty(coupon.Description))
+                                {
+                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Description"]">
+                                        <i class="fa-regular fa-comment text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Description"]</span>
+                                        @coupon.Description
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions d-flex gap-1">
+                            <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-itemId="@coupon.ItemId">@T["Edit"]</a>
+                            <form asp-action="Delete" asp-route-itemId="@coupon.ItemId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-danger btn-sm" data-title="@T["Delete"]" data-message="@T["Are you sure you want to delete this coupon?"]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]" data-url-af="RemoveUrl">@T["Delete"]</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> There are no coupons that match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

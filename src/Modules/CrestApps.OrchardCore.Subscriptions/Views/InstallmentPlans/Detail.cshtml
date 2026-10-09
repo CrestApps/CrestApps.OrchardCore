@@ -187,9 +187,11 @@
                                             <input type="hidden" name="itemId" value="@plan.ItemId" />
                                             <input type="hidden" name="paymentNumber" value="@payment.Number" />
                                             <button type="submit" class="btn btn-primary btn-sm"
-                                                    data-url-af="UnsafeUrl"
-                                                    data-title="@T["Charge now"]"
-                                                    data-message="@T["Charge {0} to {1} now?", Money(payment.Amount), plan.PaymentMethod.Describe()]">
+                                                    data-url-af="RemoveUrl"
+                                                    data-title="@T["Charge the customer's card"]"
+                                                    data-message="@T["Charge {0} to {1} now for payment {2} of {3}? The customer is charged immediately.", Money(payment.Amount), plan.PaymentMethod.Describe(), payment.Number, plan.InstallmentCount]"
+                                                    data-ok-text="@T["Charge now"]"
+                                                    data-cancel-text="@T["Don't charge"]">
                                                 <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                                                 @T["Charge now"]
                                             </button>
@@ -234,9 +236,11 @@
                         <input type="hidden" name="itemId" value="@plan.ItemId" />
                         <input type="text" class="form-control mb-2" name="reason" placeholder="@T["Reason (optional)"]" />
                         <button type="submit" class="btn btn-outline-danger w-100"
-                                data-url-af="UnsafeUrl"
+                                data-url-af="RemoveUrl"
                                 data-title="@T["Cancel the plan"]"
-                                data-message="@T["Are you sure you want to cancel this plan? Payments not yet received will not be collected."]">
+                                data-message="@T["Are you sure you want to cancel this plan? Payments not yet received will not be collected, and the customer is told the plan was canceled."]"
+                                data-ok-text="@T["Cancel the plan"]"
+                                data-cancel-text="@T["Keep the plan"]">
                             @T["Cancel the plan"]
                         </button>
                     </form>

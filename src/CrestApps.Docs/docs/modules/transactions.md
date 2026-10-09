@@ -77,6 +77,10 @@ transaction's tax, so a balance paid in three parts gets three receipts that add
 through the notification system with an HTML body; a guest owner receives it by email. Each payment on a
 transaction's timeline links to its printable receipt, for the owner and for administrators.
 
+The same feature tells the owner when a payment is refunded, however the refund finished: confirmed by the gateway
+straight away, confirmed later by a gateway notification, or recorded by an administrator who paid it back by hand.
+The notice names the amount and what it was for, and the transaction's timeline records that it was sent.
+
 ### Reacting to a payment
 
 `ITransactionPaymentHandler.PaymentRecordedAsync` is raised after a payment is applied to a transaction, however it
@@ -84,15 +88,21 @@ was paid. Receipts and installment plans use it; implement it to react to paymen
 process took the money. Each recorded payment is a `TransactionEvent` with an `Id`, the `Amount` applied and the
 `Method` (`online` or `offline`). A handler that fails is logged and never undoes the payment.
 
+### Reacting to a refund
+
+`IPaymentRefundHandler.RefundSucceededAsync` is raised once for every refund that succeeds, from each place a refund
+can finish. The refund names the payment it returned (`OriginalAttemptId`), and that payment names what it paid for.
+Refund notices use it. A handler that fails is logged and never undoes the refund.
+
 ## Using the module
 
 ### Customer statement — "My Transactions"
 
-Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter dropdown (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online.
+Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), a page size picker and a pager, and lets them open a transaction and **Pay** an outstanding balance online.
 
 ### Administrator report and console
 
-Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It filters by status (including an *outstanding* view), searches by title, and filters by **source** through a dropdown of the sources registered by the enabled features. Opening a transaction reveals its full timeline and the management actions:
+Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features, with a page size picker. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
 
 - **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
 - **Record payment** — record a full or partial payment received offline.

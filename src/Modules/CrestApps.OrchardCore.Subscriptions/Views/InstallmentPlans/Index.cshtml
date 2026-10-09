@@ -1,13 +1,19 @@
 @using CrestApps.OrchardCore.Payments
 @using CrestApps.OrchardCore.Subscriptions.Models
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
 @model InstallmentPlansIndexViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+}
 
 <zone Name="Title">
     <breadcrumb name="SubscriptionsInstallmentPlans" title="@T["Installment Plans"]" />
 </zone>
 
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="installment-plans-filter" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -20,17 +26,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
-                </div>
-                <div class="col-auto">
-                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
-                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
-                    </button>
-                </div>
-                <div class="col-auto">
-                    <a asp-action="Create" class="btn btn-secondary text-nowrap">
-                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New plan"]
-                    </a>
+                    <a asp-action="Create" class="btn btn-secondary text-nowrap">@T["New plan"]</a>
                 </div>
             </div>
         </div>
@@ -38,50 +34,64 @@
 </form>
 
 <ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Plans.Count, "1 plan", "{0} plans")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} plan in total", " / {0} plans in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" form="installment-plans-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
     @if (Model.Plans.Count > 0)
     {
         @foreach (var plan in Model.Plans)
         {
             var next = plan.NextPayment;
+            var isOpen = plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed);
             string Money(decimal amount) => $"{plan.Currency} {CurrencyScale.Format(amount, plan.Currency)}";
 
             <li class="list-group-item">
                 <div class="row g-0">
                     <div class="col-lg col-12 title d-flex align-items-center">
                         <div class="summary">
-                            <div class="d-flex flex-column flex-md-row">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
                                 <div class="me-2">
-                                    <h5 class="mb-0"><a asp-action="Detail" asp-route-itemId="@plan.ItemId">@plan.Title</a></h5>
+                                    <h5 class="mb-1 mb-md-0"><a asp-action="Detail" asp-route-itemId="@plan.ItemId">@plan.Title</a></h5>
                                 </div>
-                                <div class="metadata me-1">
+                                <div class="tags me-1">
                                     <partial name="_InstallmentPlanStatusBadge" model="plan.Status" />
                                 </div>
                             </div>
-                            <div class="text-muted small mt-1">
-                                <span class="me-3" title="@T["Customer"]">
-                                    <i class="fa-regular fa-user" aria-hidden="true"></i><span class="visually-hidden">@T["Customer"]</span>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Customer"]">
+                                    <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Customer"]</span>
                                     @plan.CustomerName
-                                    @if (!string.IsNullOrEmpty(plan.CustomerEmail))
-                                    {
-                                        <span>&lt;@plan.CustomerEmail&gt;</span>
-                                    }
                                 </span>
-                                <span class="me-3 text-nowrap" title="@T["Received of the total"]">
-                                    <i class="fa-solid fa-coins" aria-hidden="true"></i><span class="visually-hidden">@T["Received of the total"]</span>
-                                    @T["{0} of {1} received", Money(plan.AmountPaid), Money(plan.TotalAmount)]
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Total"]">
+                                    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Total"]</span>
+                                    @Money(plan.TotalAmount)
                                 </span>
-                                @if (plan.AmountOutstanding > 0m && plan.Status != InstallmentPlanStatus.Canceled)
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Received"]">
+                                    <i class="fa-solid fa-coins text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Received"]</span>
+                                    @Money(plan.AmountPaid)
+                                </span>
+                                @if (isOpen && plan.AmountOutstanding > 0m)
                                 {
-                                    <span class="me-3 text-nowrap" title="@T["Outstanding"]">
-                                        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
-                                        @T["{0} outstanding", Money(plan.AmountOutstanding)]
+                                    <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Outstanding"]">
+                                        <i class="fa-solid fa-hourglass-half text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
+                                        @Money(plan.AmountOutstanding)
                                     </span>
                                 }
-                                @if (next is not null && plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed))
+                                @if (isOpen && next is not null)
                                 {
-                                    <span class="text-nowrap" title="@T["Next payment"]">
-                                        <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Next payment"]</span>
-                                        @T["Next: {0} on {1:d}", Money(next.Amount), next.DueUtc]
+                                    <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Next payment"]">
+                                        <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Next payment"]</span>
+                                        @T["{0} on {1:d}", Money(next.Amount), next.DueUtc]
                                     </span>
                                 }
                             </div>
@@ -91,15 +101,9 @@
                         <div class="actions">
                             @if (plan.Status == InstallmentPlanStatus.Draft)
                             {
-                                <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">
-                                    <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
-                                    @T["Take down payment"]
-                                </a>
+                                <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take down payment"]</a>
                             }
-                            <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-route-itemId="@plan.ItemId">
-                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                                @T["Manage"]
-                            </a>
+                            <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-route-itemId="@plan.ItemId">@T["Manage"]</a>
                         </div>
                     </div>
                 </div>
@@ -108,10 +112,15 @@
     }
     else
     {
-        <li class="list-group-item list-group-item-info text-center">
-            @T["<strong>Nothing here!</strong> There are no installment plans that match the current filter."]
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> There are no installment plans that match the current filter."]
+            </div>
         </li>
     }
 </ul>
 
 @await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

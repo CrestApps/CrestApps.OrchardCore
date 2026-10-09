@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 
@@ -38,6 +39,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
     private readonly IDistributedLock _distributedLock;
     private readonly IEnumerable<ITaxRefundCalculator> _taxRefundCalculators;
     private readonly IClock _clock;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -50,6 +52,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
     /// <param name="distributedLock">The distributed lock used to serialize refunds of a payment.</param>
     /// <param name="taxRefundCalculators">The optional tax refund calculators contributed by the Taxation feature.</param>
     /// <param name="clock">The clock used for timestamps.</param>
+    /// <param name="serviceProvider">The provider the refund handlers are resolved from once a refund succeeds.</param>
     /// <param name="logger">The logger.</param>
     public DefaultCheckoutRefundService(
         ICheckoutSessionStore sessionStore,
@@ -59,6 +62,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
         IDistributedLock distributedLock,
         IEnumerable<ITaxRefundCalculator> taxRefundCalculators,
         IClock clock,
+        IServiceProvider serviceProvider,
         ILogger<DefaultCheckoutRefundService> logger)
     {
         _sessionStore = sessionStore;
@@ -68,6 +72,7 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
         _distributedLock = distributedLock;
         _taxRefundCalculators = taxRefundCalculators;
         _clock = clock;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -192,9 +197,12 @@ public sealed class DefaultCheckoutRefundService : ICheckoutRefundService
                 return refund;
             }
 
+            var previousStatus = refund.Status;
+
             await ExecuteRefundAsync(provider, refund, attempt, context, cancellationToken);
 
             await _refundStore.UpdateAsync(refund, cancellationToken);
+            await _serviceProvider.RefundSucceededAsync(refund, previousStatus, _logger, cancellationToken);
 
             return refund;
         }

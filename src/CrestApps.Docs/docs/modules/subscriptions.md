@@ -302,7 +302,9 @@ each payment.
 
 The plan's page shows every payment and where it stands, the card on file and its expiry, and the plan's history.
 From there an administrator can **Charge now** (to collect early, or retry a declined card at once) and
-**Cancel the plan**, which cancels every payment not yet received. Managing plans requires the
+**Cancel the plan**, which cancels every payment not yet received. Both ask for confirmation first, and a customer
+whose plan had started is told when it is canceled. A declined early charge leaves the payment on schedule, so it is
+still charged on its due date. Managing plans requires the
 **Manage installment plans** permission, granted to administrators by default; it is separate from the other
 subscription permissions because it charges customers' saved cards.
 

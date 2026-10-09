@@ -1,93 +1,134 @@
 @using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Transactions
+@using Microsoft.AspNetCore.Mvc.Localization
 @model PaymentsAdminIndexViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+}
 
 <zone Name="Title">
     <breadcrumb name="TransactionsPayments" title="@T["Payments"]" />
 </zone>
 
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="payments-filter" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+</form>
 
-    <div class="card text-bg-theme mb-3 position-sticky action-bar">
-        <div class="card-body">
-            <div class="row gx-1">
-                <div class="col-auto">
-                    <select asp-for="Options.State" asp-items="Model.Options.States" class="form-select"></select>
-                </div>
-                <div class="col-auto">
-                    <select asp-for="Options.ProviderKey" asp-items="Model.Options.Providers" class="form-select"></select>
-                </div>
-                <div class="col-auto">
-                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
-                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
-                    </button>
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Attempts.Count, "1 payment", "{0} payments")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} payment in total", " / {0} payments in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select asp-for="Options.State" asp-items="Model.Options.States" form="payments-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by state"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["State"]"></select>
+                    <select asp-for="Options.ProviderKey" asp-items="Model.Options.Providers" form="payments-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by method"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Method"]"></select>
                 </div>
             </div>
         </div>
-    </div>
-</form>
+    </li>
+    @if (Model.Attempts.Count > 0)
+    {
+        @foreach (var attempt in Model.Attempts)
+        {
+            var settled = attempt.State == PaymentAttemptState.Succeeded;
+            var amount = settled ? attempt.ConfirmedAmount : attempt.ExpectedAmount;
+            var tax = settled ? attempt.ConfirmedTaxAmount : attempt.ExpectedTaxAmount;
+            var paysTransaction = string.Equals(attempt.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(attempt.ReferenceId);
+            var stateClass = attempt.State switch
+            {
+                PaymentAttemptState.Succeeded => "text-bg-success",
+                PaymentAttemptState.Failed => "text-bg-danger",
+                _ => "text-bg-secondary",
+            };
 
-@if (Model.Attempts.Count > 0)
-{
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">@T["Updated"]</th>
-                    <th scope="col">@T["Method"]</th>
-                    <th scope="col">@T["Obligation"]</th>
-                    <th scope="col" class="text-end">@T["Amount"]</th>
-                    <th scope="col" class="text-end">@T["Tax"]</th>
-                    <th scope="col">@T["State"]</th>
-                    <th scope="col">@T["Transaction"]</th>
-                    <th scope="col" class="text-end">@T["Actions"]</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var attempt in Model.Attempts)
-                {
-                    var settled = attempt.State == PaymentAttemptState.Succeeded;
-                    var amount = settled ? attempt.ConfirmedAmount : attempt.ExpectedAmount;
-                    var tax = settled ? attempt.ConfirmedTaxAmount : attempt.ExpectedTaxAmount;
-
-                    <tr>
-                        <td>@attempt.UpdatedUtc.ToString("g")</td>
-                        <td>@attempt.ProviderKey</td>
-                        <td><span class="text-muted small">@attempt.ObligationId</span></td>
-                        <td class="text-end">@attempt.Currency @amount.ToString("0.00")</td>
-                        <td class="text-end">@attempt.Currency @tax.ToString("0.00")</td>
-                        <td>
-                            @if (settled)
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0">
+                                        @if (paysTransaction)
+                                        {
+                                            <a asp-action="Detail" asp-controller="Admin" asp-route-itemId="@attempt.ReferenceId">@attempt.Currency @CurrencyScale.Format(amount + tax, attempt.Currency)</a>
+                                        }
+                                        else
+                                        {
+                                            @($"{attempt.Currency} {CurrencyScale.Format(amount + tax, attempt.Currency)}")
+                                        }
+                                    </h5>
+                                </div>
+                                <div class="tags me-1">
+                                    <span class="badge @stateClass">@attempt.State</span>
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Method"]">
+                                    <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
+                                    @attempt.ProviderKey
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Updated"]">
+                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Updated"]</span>
+                                    @await DisplayAsync(await New.DateTime(Utc: attempt.UpdatedUtc, Format: "g"))
+                                </span>
+                                @if (tax > 0m)
+                                {
+                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Tax included"]">
+                                        <i class="fa-solid fa-percent text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Tax included"]</span>
+                                        @attempt.Currency @CurrencyScale.Format(tax, attempt.Currency)
+                                    </span>
+                                }
+                                @if (!string.IsNullOrEmpty(attempt.ProviderReference))
+                                {
+                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Gateway reference"]">
+                                        <i class="fa-solid fa-link text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Gateway reference"]</span>
+                                        @attempt.ProviderReference
+                                    </span>
+                                }
+                            </div>
+                            @if (attempt.State == PaymentAttemptState.Failed && !string.IsNullOrEmpty(attempt.FailureReason))
                             {
-                                <span class="badge bg-success">@attempt.State</span>
+                                @* A gateway's reason can run to several sentences, so it is text that wraps, not a badge. *@
+                                <div class="text-danger small mt-1">
+                                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span class="visually-hidden">@T["Why it failed"]</span>
+                                    @attempt.FailureReason
+                                </div>
                             }
-                            else if (attempt.State == PaymentAttemptState.Failed)
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
+                            @if (paysTransaction)
                             {
-                                <span class="badge bg-danger">@attempt.State</span>
+                                <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-controller="Admin" asp-route-itemId="@attempt.ReferenceId">@T["Transaction"]</a>
                             }
-                            else
-                            {
-                                <span class="badge bg-secondary">@attempt.State</span>
-                            }
-                        </td>
-                        <td><span class="text-muted small">@(attempt.TransactionId ?? attempt.ProviderReference)</span></td>
-                        <td class="text-end">
                             @if (Model.CanRefund && settled && !string.IsNullOrEmpty(attempt.TransactionId))
                             {
-                                <a class="btn btn-sm btn-secondary" asp-action="Refund" asp-route-itemId="@attempt.ItemId">@T["Refund"]</a>
+                                <a class="btn btn-warning btn-sm" asp-action="Refund" asp-route-itemId="@attempt.ItemId">@T["Refund"]</a>
                             }
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-else
-{
-    <div class="alert alert-info text-center" role="alert">
-        @T["<strong>Nothing here!</strong> There are no payments that match the current filter."]
-    </div>
-}
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> There are no payments that match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
 
 @await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

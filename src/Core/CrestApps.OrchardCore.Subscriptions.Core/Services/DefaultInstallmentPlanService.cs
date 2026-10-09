@@ -407,6 +407,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             await SyncPaymentsAsync(plan, cancellationToken);
 
             var now = _clock.UtcNow;
+            var wasStarted = plan.Status != InstallmentPlanStatus.Draft;
 
             if (plan.Status == InstallmentPlanStatus.Draft && !string.IsNullOrEmpty(plan.DownPaymentSessionId))
             {
@@ -448,6 +449,17 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                 InstallmentPlanEventType.Canceled,
                 string.IsNullOrWhiteSpace(reason) ? S["The plan was canceled."].Value : S["The plan was canceled: {0}", reason].Value,
                 actor: CurrentUserName());
+
+            // A customer whose plan had started is told it stopped, so a payment they expected not to be taken is
+            // not a surprise. A draft never took anything from them, so there is nothing to tell.
+            if (wasStarted)
+            {
+                await NotifyCustomerAsync(
+                    plan,
+                    S["Your payment plan was canceled"].Value,
+                    S["Your payment plan {0} was canceled. {1} of {2} was received and stays received; no further payments will be taken.", plan.Title, Format(plan.AmountPaid, plan.Currency), Format(plan.TotalAmount, plan.Currency)].Value,
+                    cancellationToken);
+            }
 
             return result;
         }, cancellationToken);

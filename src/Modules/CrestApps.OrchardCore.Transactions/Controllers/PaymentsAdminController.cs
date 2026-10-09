@@ -129,11 +129,12 @@ public sealed class PaymentsAdminController : Controller
     /// Preserves the ledger filter when the toolbar is submitted.
     /// </summary>
     /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("payments", "PaymentsIndex")]
-    public async Task<IActionResult> IndexFilterPost(PaymentsAdminIndexOptions options)
+    public async Task<IActionResult> IndexFilterPost(PaymentsAdminIndexOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageRefunds))
         {
@@ -150,6 +151,11 @@ public sealed class PaymentsAdminController : Controller
         if (options.State.HasValue)
         {
             routeValues.TryAdd("Options.State", options.State.Value);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
         }
 
         return RedirectToAction(nameof(Index), routeValues);

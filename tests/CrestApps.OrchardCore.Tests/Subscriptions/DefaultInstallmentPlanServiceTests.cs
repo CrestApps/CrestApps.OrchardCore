@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking;
+using OrchardCore.Notifications;
 using OrchardCore.Users;
 using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
@@ -602,6 +603,40 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
+    public async Task CancelAsync_ForAPlanThatStarted_TellsTheCustomer()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+
+        // Act
+        await service.CancelAsync(plan.ItemId, "Customer asked to stop.", TestContext.Current.CancellationToken);
+
+        // Assert
+        context.Notifications.Verify(
+            notifications => notifications.SendAsync(It.IsAny<object>(), It.Is<INotificationMessage>(message => message.Subject.Contains("canceled", StringComparison.OrdinalIgnoreCase)), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelAsync_ForADraft_TellsTheCustomerNothing()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var created = await service.CreateAsync(CreateRequest(), TestContext.Current.CancellationToken);
+
+        // Act
+        await service.CancelAsync(created.Plan.ItemId, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        context.Notifications.Verify(
+            notifications => notifications.SendAsync(It.IsAny<object>(), It.IsAny<INotificationMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task CancelAsync_ForADraft_ClosesTheDownPaymentCheckout()
     {
         // Arrange
@@ -707,6 +742,8 @@ public sealed class DefaultInstallmentPlanServiceTests
 
         public InstallmentPlanSettings Settings { get; set; } = new();
 
+        public Mock<INotificationService> Notifications { get; } = new();
+
         public DefaultInstallmentPlanService Build()
         {
             Engine = new FakePlanCheckoutEngine(Transactions, Attempts, new InMemoryCheckoutSessionStore());
@@ -758,7 +795,7 @@ public sealed class DefaultInstallmentPlanServiceTests
                 new LocalLock(NullLogger<LocalLock>.Instance),
                 SiteServiceFactory.Create(Settings),
                 new HttpContextAccessor(),
-                new ServiceCollection().BuildServiceProvider(),
+                new ServiceCollection().AddSingleton(Notifications.Object).BuildServiceProvider(),
                 new Mock<ISession>().Object,
                 Clock,
                 NullLogger<DefaultInstallmentPlanService>.Instance,

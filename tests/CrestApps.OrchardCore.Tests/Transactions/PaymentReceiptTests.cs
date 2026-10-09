@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using CrestApps.OrchardCore.Receipts.Services;
+using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
@@ -142,6 +143,77 @@ public sealed class PaymentReceiptTests
         Assert.False(string.IsNullOrEmpty(sent.HtmlBody));
     }
 
+    [Fact]
+    public async Task Handler_TellsTheCustomerTheirRefundWasMadeAndRecordsIt()
+    {
+        // Arrange
+        INotificationMessage sent = null;
+
+        var notifications = new Mock<INotificationService>();
+        notifications
+            .Setup(service => service.SendAsync(It.IsAny<object>(), It.IsAny<INotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Callback((object _, INotificationMessage message, CancellationToken _) => sent = message)
+            .ReturnsAsync(new NotificationSendResult { SuccessfulCount = 1 });
+
+        var userService = new Mock<IUserService>();
+        userService.Setup(service => service.GetUserByUniqueIdAsync("customer-1")).ReturnsAsync(Mock.Of<IUser>());
+
+        var transaction = CreateTransaction();
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            ItemId = "attempt-1",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+            State = PaymentAttemptState.Succeeded,
+        });
+
+        var handler = CreateHandler(new FakeTransactionStore(transaction), notifications.Object, userService.Object, attempts: attempts);
+
+        // Act
+        await handler.RefundSucceededAsync(
+            new PaymentRefund { ItemId = "refund-1", OriginalAttemptId = "attempt-1", Currency = "USD", RefundGrossAmount = 50m, Status = RefundStatus.Succeeded },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(sent);
+        Assert.Contains("USD 50.00", sent.Subject, StringComparison.Ordinal);
+        Assert.Contains("Kitchen remodel", sent.TextBody, StringComparison.Ordinal);
+        Assert.Contains(transaction.Events, evt => evt.Type == TransactionEventType.Note && evt.Message.Contains("refund", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Handler_SaysNothingAboutARefundOfAPaymentForSomethingElse()
+    {
+        // Arrange
+        var notifications = new Mock<INotificationService>(MockBehavior.Strict);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt { ItemId = "attempt-1", ReferenceType = "Order", ReferenceId = "order-1" });
+        var handler = CreateHandler(new FakeTransactionStore(CreateTransaction()), notifications.Object, Mock.Of<IUserService>(), attempts: attempts);
+
+        // Act
+        await handler.RefundSucceededAsync(new PaymentRefund { ItemId = "refund-1", OriginalAttemptId = "attempt-1", Currency = "USD", RefundGrossAmount = 50m }, TestContext.Current.CancellationToken);
+
+        // Assert: the strict mock throws if anything is sent.
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Theory]
+    [InlineData(RefundStatus.Pending, RefundStatus.Succeeded, 1)]
+    [InlineData(RefundStatus.PendingManualReview, RefundStatus.Succeeded, 1)]
+    [InlineData(RefundStatus.Succeeded, RefundStatus.Succeeded, 0)]
+    [InlineData(RefundStatus.Pending, RefundStatus.Failed, 0)]
+    public async Task RefundSucceeded_IsRaisedOnlyWhenARefundBecomesSucceeded(RefundStatus before, RefundStatus after, int expectedCalls)
+    {
+        // Arrange
+        var handler = new Mock<IPaymentRefundHandler>();
+        var services = new ServiceCollection().AddSingleton(handler.Object).BuildServiceProvider();
+
+        // Act
+        await services.RefundSucceededAsync(new PaymentRefund { ItemId = "refund-1", Status = after }, before, NullLogger.Instance, TestContext.Current.CancellationToken);
+
+        // Assert
+        handler.Verify(candidate => candidate.RefundSucceededAsync(It.IsAny<PaymentRefund>(), It.IsAny<CancellationToken>()), Times.Exactly(expectedCalls));
+    }
+
     private static Transaction CreateTransaction()
         => new()
         {
@@ -188,13 +260,18 @@ public sealed class PaymentReceiptTests
             new PassThroughStringLocalizer<TransactionReceiptBuilder>());
     }
 
-    private static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null)
+    private static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null)
     {
         var services = new ServiceCollection();
 
         if (email is not null)
         {
             services.AddSingleton(email);
+        }
+
+        if (attempts is not null)
+        {
+            services.AddSingleton(attempts);
         }
 
         return new PaymentReceiptTransactionPaymentHandler(

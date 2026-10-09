@@ -147,7 +147,7 @@ public sealed class InstallmentPlansController : Controller
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("installment-plans", "InstallmentPlansIndex")]
-    public async Task<IActionResult> IndexFilterPost(InstallmentPlansIndexOptions options)
+    public async Task<IActionResult> IndexFilterPost(InstallmentPlansIndexOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageInstallmentPlans))
         {
@@ -164,6 +164,11 @@ public sealed class InstallmentPlansController : Controller
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeValues.TryAdd(_optionsSearch, options.Search);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
         }
 
         return RedirectToAction(nameof(Index), routeValues);

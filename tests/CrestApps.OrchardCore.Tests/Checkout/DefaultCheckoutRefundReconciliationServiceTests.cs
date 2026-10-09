@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking;
@@ -476,6 +477,7 @@ public sealed class DefaultCheckoutRefundReconciliationServiceTests
             refundStore,
             distributedLock.Object,
             clock.Object,
+            new ServiceCollection().BuildServiceProvider(),
             NullLogger<DefaultCheckoutRefundReconciliationService>.Instance);
     }
 

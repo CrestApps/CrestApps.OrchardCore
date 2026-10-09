@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking;
@@ -373,6 +374,7 @@ public sealed class DefaultCheckoutRefundServiceTests
             distributedLock.Object,
             calculators,
             Mock.Of<IClock>(),
+            new ServiceCollection().BuildServiceProvider(),
             NullLogger<DefaultCheckoutRefundService>.Instance);
     }
 

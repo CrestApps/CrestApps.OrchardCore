@@ -14,11 +14,12 @@ using OrchardCore.Users.Services;
 namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
-/// Sends the customer a receipt for every payment applied to a transaction, however it was paid. A signed-up
-/// customer receives it through the notification system, so it honors their channel preference; a guest receives
-/// it by email at the address captured when they bought.
+/// Sends the customer a receipt for every payment applied to a transaction, however it was paid, and a notice for
+/// every refund of one, however the refund finished. A signed-up customer receives them through the notification
+/// system, so they honor their channel preference; a guest receives them by email at the address captured when they
+/// bought.
 /// </summary>
-public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymentHandler
+public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymentHandler, IPaymentRefundHandler
 {
     private readonly ITransactionReceiptBuilder _receiptBuilder;
     private readonly IReceiptHtmlRenderer _htmlRenderer;
@@ -112,6 +113,60 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task RefundSucceededAsync(PaymentRefund refund, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(refund);
+
+        if (string.IsNullOrEmpty(refund.OriginalAttemptId) || _serviceProvider.GetService<IPaymentAttemptStore>() is not { } attemptStore)
+        {
+            return;
+        }
+
+        // The refund names the payment it returns; the payment names the transaction it paid for, and that is where
+        // the customer is known.
+        var attempt = await attemptStore.FindByIdAsync(refund.OriginalAttemptId, cancellationToken);
+
+        if (attempt is null ||
+            !string.Equals(attempt.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrEmpty(attempt.ReferenceId))
+        {
+            return;
+        }
+
+        var transaction = await _transactionManager.FindByIdAsync(attempt.ReferenceId, cancellationToken);
+
+        if (transaction is null || string.IsNullOrEmpty(transaction.OwnerId))
+        {
+            return;
+        }
+
+        var amount = $"{refund.Currency} {CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)}";
+        var title = string.IsNullOrEmpty(transaction.Title) ? S["your purchase"].Value : transaction.Title;
+        var subject = S["Your refund of {0}", amount].Value;
+        var text = S["We refunded {0} for {1} to the card or account you paid with. It can take a few business days to appear on your statement.", amount, title].Value;
+
+        var delivered = transaction.OwnerKind == CustomerOwnerKind.Guest
+            ? await SendByEmailAsync(transaction.GuestContactEmail, subject, text, html: null, cancellationToken)
+            : await SendNotificationAsync(transaction.OwnerId, subject, text, html: null, cancellationToken);
+
+        if (!delivered)
+        {
+            _logger.LogWarning("The notice for refund '{RefundId}' on transaction '{TransactionId}' could not be delivered to its owner.", refund.ItemId, transaction.ItemId);
+
+            return;
+        }
+
+        transaction.Events.Add(new TransactionEvent
+        {
+            CreatedUtc = _clock.UtcNow,
+            Type = TransactionEventType.Note,
+            Message = S["A refund of {0} was made, and the customer was told.", amount].Value,
+        });
+
+        await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+    }
+
     private async Task<bool> SendNotificationAsync(string userId, string subject, string text, string html, CancellationToken cancellationToken)
     {
         var user = await _userService.GetUserByUniqueIdAsync(userId);
@@ -129,7 +184,7 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
                 Summary = text,
                 TextBody = text,
                 HtmlBody = html,
-                IsHtmlPreferred = true,
+                IsHtmlPreferred = html is not null,
             },
             cancellationToken);
 
