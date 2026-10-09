@@ -1,13 +1,17 @@
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.Deployments;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
+using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Deployment;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
@@ -57,5 +61,33 @@ public sealed class DesignerStartup : StartupBase
         services.AddScoped<IAuthorizationHandler, ReportDesignAuthorizationHandler>();
         services.AddPermissionProvider<ReportDesignerPermissionProvider>();
         services.AddNavigationProvider<ReportDesignerAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe step that imports designed reports and views.
+/// </summary>
+[Feature(ReportsConstants.DesignerFeature)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class DesignerRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<ReportDesignsRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step that exports designed reports and views.
+/// </summary>
+[Feature(ReportsConstants.DesignerFeature)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DesignerDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<ReportDesignsDeploymentSource, ReportDesignsDeploymentStep, ReportDesignsDeploymentStepDisplayDriver>();
     }
 }

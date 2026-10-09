@@ -1,0 +1,178 @@
+---
+sidebar_label: Report Designer
+sidebar_position: 36
+title: Report Designer
+description: Build your own reports with drag and drop, join data sets, add formulas, filters, charts and pivot tables, and share them.
+technical_manual:
+  - modules/report-designer
+---
+
+The **Report Designer** lets you build your own reports without writing code. You pick the data you need (for example your customers and their orders), drag fields onto the report, choose how numbers are added up, and add charts, headline numbers, and pivot tables. You can save a report, put it in the admin menu so you can run it again with one click, and share it with people, roles, or a link.
+
+| | |
+| --- | --- |
+| **Menu** | Reports > Report Designer, and Reports > Report Views |
+| **Permissions** | Design reports and manage own designed reports and views (to design); Share designed reports publicly and through share links (to share with everyone or create links); Manage all designed reports and views (to change other people's reports) |
+| **Features** | Report Designer; Content Reports adds your content types (such as customers or orders) as data |
+
+<AskYourAdmin />
+
+People who only run reports that were shared with them need no permission: they see **Reports > Shared Reports**, and any report pinned to the menu that they may open.
+
+## Words you will see
+
+| Word | What it means |
+| --- | --- |
+| **Data source** | Where data comes from. **Content items** offers each content type of the site; **Report views** offers the views you and your team saved. Other features can add more sources. |
+| **Data set** | One table of data from a source, such as the *Customer* content type. |
+| **Field** | One piece of information in a data set, such as *Email* or *Total*. |
+| **Dimension** | A column the report groups by, such as *Region*. |
+| **Measure** | A column that adds up values, such as the *Sum* of *Total*. When a report has a measure, it shows one row per group of dimensions. |
+| **View** | A saved, reusable data set: it joins, filters, and calculates once, and other reports can use its columns as fields. |
+
+## Design a report
+
+1. Open **Reports > Report Designer** and click **Design Report**.
+2. Type a title at the top of the page.
+3. Click **Add data set**, pick a **data source**, then pick a data set. Its fields appear in the **Data** pane on the left, grouped by part.
+4. Drag fields onto **Columns**. You can also click the column icon next to a field. Numbers are added as a **Sum** by default; text, dates and identifiers become dimensions.
+5. Click a column to change it in **Properties** on the right (see [Column settings](#column-settings)).
+6. The **Preview** under the shelves refreshes as you work. Click **Refresh** to run it again.
+7. Click **Save** (or press Ctrl+S). Unfinished designs can be saved: the designer lists their problems, and the report shows them when it runs until they are fixed.
+
+Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it.
+
+## Combine data sets
+
+To report on data that lives in two places (for example customers and their orders), add both data sets. The designer adds a **Relationships** card for every data set after the first.
+
+1. Pick how rows are kept:
+
+   | Choice | Keeps |
+   | --- | --- |
+   | **Only rows that match on both sides** | Customers that have orders, with each of their orders. |
+   | **All rows before, matching rows of this data set** | Every customer, with their orders when they have any. |
+   | **All rows of this data set, matching rows before** | Every order, with its customer when one matches. |
+   | **All rows of both sides** | Everything from both data sets. |
+
+2. Pick the fields that must match, such as the customer's *Content item id* and the order's *Customer* picker. The designer suggests a pair when it recognizes one. Click **Match fields** to require more than one pair.
+
+## Column settings
+
+| Setting | What it does |
+| --- | --- |
+| **Header** | The column title. Left empty, the field name is used. |
+| **Aggregate** | How a group of values is combined: **Count**, **Count distinct**, **Sum**, **Average**, **Minimum**, **Maximum** or **Median**. Pick **None** to group the report by this column. |
+| **Transform** | Changes each value first: **Upper case**, **Lower case**, **Trim spaces**, **Number of characters**, **Round to whole number**, or for dates **Year**, **Quarter**, **Month**, **Week**, **Day**, **Day of week**, **Month of year** and **Hour of day**. Use **Month** to see revenue per month. |
+| **Format** | How values are shown, such as `N0` (whole numbers), `N2`, `C2` (currency), `P1` (percentage) or `MMM yyyy`. |
+| **Hide from tables** | Keeps the column for grouping, charts and filters without showing it in tables. |
+
+Use **Sort** under the shelves to order the rows, and **Top rows** to keep only the first rows (for example the top 10 customers by revenue).
+
+## Filter the data
+
+Drag a field onto **Filters**, or click the filter icon next to it, then set it in **Properties**:
+
+| Setting | What it does |
+| --- | --- |
+| **Applies to** | **Rows, before grouping** filters the data itself. **Result, after grouping** filters the finished rows, for example customers whose total is above 1,000. |
+| **Condition** | Such as **is**, **contains**, **is between**, **is one of**, **is empty**, or for dates **is in the last number of days**. |
+| **Value** | What to compare with. A date without a time covers the whole day. |
+| **Let viewers change this filter** | Shows the filter above the report so the people who run it can change it. The values you set become its defaults. |
+| **Filter label** | The label viewers see. |
+| **Control** | How viewers pick values: **Automatic**, **Text box**, **Drop-down list**, **List with several choices**, **Date range**, **Number range** or **Yes or no**. Lists show the values found in the data. |
+
+Filters that viewers cannot change always apply, and viewers cannot see or remove them.
+
+## Calculated fields
+
+A calculated field works out a new value with a formula, like a spreadsheet.
+
+1. Under **Calculated fields**, click **New**.
+2. Enter a **Label** and a **Name** (letters, digits and underscores).
+3. Write the **Formula**. Click a field or function on the right to insert it. Fields are written in square brackets, such as `[Order.Order.Total]`.
+4. Click **Check**. The designer shows the result type, or what is wrong. Click **Apply**.
+
+Examples:
+
+| Formula | Result |
+| --- | --- |
+| `[Order.Order.Total] * 0.2` | 20% of each order total. |
+| `IF([Order.Order.Total] >= 1000, 'Large', 'Small')` | A label for each order, which you can group by. |
+| `[Customer.Customer.FirstName] & ' ' & [Customer.Customer.LastName]` | A full name. |
+| `DATEDIFF('day', [Order.CreatedUtc], TODAY())` | The age of each order in days. |
+| `SUM([Order.Order.Total]) / COUNTD([Customer.ContentItemId])` | Revenue per customer, worked out once per group. |
+
+A formula that uses an aggregate function (**SUM**, **AVG**, **MIN**, **MAX**, **COUNT**, **COUNTD**, **MEDIAN**) is worked out once per group, so it can divide one total by another. Inside such a formula, every field must be inside an aggregate function.
+
+The functions list in the formula dialog explains every function. They cover text (such as **UPPER**, **LEFT**, **REPLACE**, **CONTAINS**), numbers (**ROUND**, **ABS**, **POWER**), dates (**YEAR**, **DATEADD**, **DATEDIFF**, **DATETRUNC**), and logic (**IF**, **IFS**, **SWITCH**, **COALESCE**, **IN**). A formula never stops the report: dividing by zero or a missing value gives an empty result.
+
+## Visuals
+
+The **Visuals** card on the right lists what the report shows, in order. Without visuals, the report shows one table. Click a visual to change it.
+
+| Visual | What it shows |
+| --- | --- |
+| **Table** | The result rows. Pick the **Columns shown** and whether to **Show totals**. |
+| **Chart** | A **Bar**, **Horizontal bar**, **Line**, **Area**, **Pie** or **Doughnut** chart of the **Values** by **Categories**. **Split into series by** draws one series per value of another column, and **Stack series** stacks them. |
+| **Metrics** | Headline numbers: the total of each value column over the whole report. |
+| **Pivot table** | A cross-tab: **Rows** down the side, the values of **Columns across** along the top, and the **Value** in each cell, with optional totals. |
+
+Set each visual's **Width** to place visuals side by side. Charts, metrics, pivot tables and totals add up the underlying rows again, so an average stays a true average.
+
+## Reuse data with views
+
+A view saves a prepared data set (joined, filtered and calculated) so other reports don't have to repeat that work.
+
+1. Open **Reports > Report Views** and click **Add View**.
+2. Design it like a report: add data sets, relationships, calculated fields, filters and columns.
+3. Save it.
+
+In any report, click **Add data set**, pick **Report views** as the data source, and pick your view. Its columns appear as fields. A view cannot use itself, directly or through other views, and a view that a report uses cannot be deleted.
+
+## Put a report in the menu
+
+On the **Settings** tab, check **Show in the admin menu**. The report appears under **Reports** in the group you enter as **Category** (or *Custom Reports*), for everyone who can open it. Use **Description** for the text shown above the report.
+
+## Share a report
+
+On the **Sharing** tab:
+
+| Setting | What it does |
+| --- | --- |
+| **People** | Search by user name or email and pick the people who may run the report. |
+| **Roles** | Everyone in a checked role may run the report. **Authenticated** means everyone who is signed in. **Anonymous** means everyone, including visitors who are not signed in, and needs the *Share designed reports publicly and through share links* permission. |
+| **Let people the report is shared with export it** | On the **Settings** tab. Turn it off to let them view the report but not download it. |
+
+A shared report reads data with **your** access: people see what the report shows even when they could not open that data themselves. Share only what they should see. If your account is disabled or deleted, your reports stop running; someone who designs reports can duplicate them and share the copies again.
+
+People who cannot open the admin can open a shared report at its own page outside the admin.
+
+## Create a share link
+
+A share link opens one report for anyone who has the link, without an account. You need the *Share designed reports publicly and through share links* permission, and the report must be saved.
+
+1. On the **Sharing** tab, under **Share links**, enter a **Note** that says what the link is for.
+2. Optionally set **Expires**, **Allow export**, and **Require sign-in** (the link then works only for people who are signed in).
+3. Click **Create link**, then **Copy**. For security, the full link is shown only once.
+
+To stop a link working, click **Revoke**. The list shows each link's note, the first characters of its address, when it expires, and whether it is **Active**, **Expired** or **Revoked**.
+
+## Run, export, copy and delete
+
+**Reports > Report Designer** (or **Shared Reports**) lists every report you can open. From the list:
+
+- **Run** opens the report. Change the filters and click **Show**. Click **Export** to download it as CSV, or as Excel when the Reports (OpenXml) feature is on.
+- **Edit** opens the designer (when you may change the report).
+- **Duplicate** makes your own copy. The copy is not shared with anybody.
+- **Delete** removes the report and all its share links.
+
+## Troubleshooting
+
+| Problem | What to do |
+| --- | --- |
+| A data set says it is not available to you | You may not view that content type. Ask your administrator. |
+| The report says it cannot run because its owner has no active account | Ask someone who designs reports to duplicate it, and share the copy again. |
+| A warning says only the first rows were read | The data set is larger than the designer reads at once. Add filters that narrow the data, or ask your administrator to raise the limits. |
+| A formula says it mixes aggregated values with row-level fields | Wrap every field in an aggregate function, or remove the aggregate function. |
+| The **Anonymous** role cannot be checked | You need the *Share designed reports publicly and through share links* permission. |

@@ -70,7 +70,7 @@ public sealed class ReportDesignRunner
             _logger.LogWarning("Designed report '{ReportId}' cannot run because its owner '{OwnerId}' no longer exists or is disabled.", design.ItemId, design.OwnerId);
 
             var result = new ReportRunResult();
-            result.Errors.Add(S["This report cannot run because its owner no longer has an active account. Ask an administrator to give it a new owner."]);
+            result.Errors.Add(S["This report cannot run because its owner no longer has an active account. Ask someone who designs reports to duplicate it and share the copy again."]);
 
             return result;
         }

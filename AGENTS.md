@@ -352,6 +352,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-report-data-source` — how to add a data source (connector) to the Report
+  Designer (a database, a search index, an API, or a module's own records) by implementing `IReportDataSource`, and
+  how to extend Content Reports for custom content fields and parts: the security boundary, value types, safe filter
+  push-down, limits, wiring, tests and docs.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

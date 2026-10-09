@@ -1544,6 +1544,41 @@ The phone number verification providers have no configuration section. Set them 
 **Settings > Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
 
+## Reports
+
+### Report designer limits
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Reports:Designer:Limits` |
+| **Feature** | Report Designer |
+| **Controls** | The size limits of one designed report run |
+
+Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`) and
+`MaxFilterOptions` (`500`).
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Reports": {
+        "Designer": {
+          "Limits": {
+            "MaxRowsPerDataSet": 100000
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Reports__Designer__Limits__MaxRowsPerDataSet=100000
+```
+
+See [Report Designer](modules/report-designer.md#configuration).
+
 ## Orchard Core sections the modules depend on
 
 Some features rely on Orchard Core's own configuration. These sections belong to Orchard Core; see its
