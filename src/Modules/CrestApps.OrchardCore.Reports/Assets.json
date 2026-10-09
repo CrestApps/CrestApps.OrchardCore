@@ -1,0 +1,25 @@
+[
+  {
+    "inputs": [
+      "Assets/js/report-charts.js"
+    ],
+    "output": "wwwroot/scripts/report-charts.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/report-designer/designer-state.js",
+      "Assets/js/report-designer/designer-ui.js",
+      "Assets/js/report-designer/designer-app.js",
+      "Assets/js/report-designer/designer-data.js",
+      "Assets/js/report-designer/designer-canvas.js",
+      "Assets/js/report-designer/designer-sharing.js"
+    ],
+    "output": "wwwroot/scripts/report-designer.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/report-designer.css"
+    ],
+    "output": "wwwroot/styles/report-designer.css"
+  }
+]

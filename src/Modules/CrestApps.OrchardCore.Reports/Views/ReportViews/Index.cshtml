@@ -1,0 +1,45 @@
+@model ReportViewsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportViewsIndex" title="@T["Report Views"]">
+        <breadcrumb-item id="ReportDesignsIndex" action="Index" controller="ReportDesigns" area="CrestApps.OrchardCore.Reports">@T["Report Designer"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p class="text-muted">@T["A view is a reusable data set: it joins, filters, and calculates data once, and reports and other views read its result columns as fields."]</p>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body text-end">
+        <a class="btn btn-primary create" asp-route="ReportViewsCreate">@T["Add View"]</a>
+    </div>
+</div>
+
+<ul class="list-group">
+    @if (Model.Entries.Count == 0)
+    {
+        <li class="list-group-item list-group-item-info text-center">@T["<strong>Nothing here!</strong> There are no views yet."]</li>
+    }
+
+    @foreach (var (view, canEdit) in Model.Entries)
+    {
+        <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+            <div class="flex-grow-1">
+                <div class="fw-semibold">@view.DisplayText</div>
+                @if (!string.IsNullOrWhiteSpace(view.Description))
+                {
+                    <div class="small text-muted">@view.Description</div>
+                }
+                <div class="small text-muted">@T.Plural(view.Query?.Columns?.Count ?? 0, "1 column", "{0} columns") · @(view.Author ?? "?")</div>
+            </div>
+            @if (canEdit)
+            {
+                <div class="d-flex gap-1">
+                    <a class="btn btn-sm btn-outline-secondary" asp-route="ReportViewsEdit" asp-route-id="@view.ItemId">@T["Edit"]</a>
+                    <form method="post" asp-route="ReportViewsDelete" asp-route-id="@view.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                    </form>
+                </div>
+            }
+        </li>
+    }
+</ul>

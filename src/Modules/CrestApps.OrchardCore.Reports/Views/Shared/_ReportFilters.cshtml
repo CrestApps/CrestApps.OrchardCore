@@ -1,0 +1,99 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Reports.DataSources
+@model ReportFiltersViewModel
+
+@foreach (var filter in Model.Filters)
+{
+    var id = filter.Definition.Id;
+    var name = ReportFilterValueBinder.FieldName(id);
+    var inputId = "report-filter-" + id;
+    var label = string.IsNullOrWhiteSpace(filter.Definition.Label) ? id : filter.Definition.Label;
+    var values = filter.Values ?? [];
+    var first = values.Count > 0 ? values[0] : string.Empty;
+    var second = values.Count > 1 ? values[1] : string.Empty;
+    var inputType = filter.DataType switch
+    {
+        ReportDataType.Integer or ReportDataType.Decimal => "number",
+        ReportDataType.Date => "date",
+        ReportDataType.DateTime => "datetime-local",
+        _ => "text",
+    };
+
+    switch (filter.Control)
+    {
+        case ReportFilterControl.DateRange when !Model.SimpleControls:
+            {
+                var from = ReportDataValues.Coerce(first, ReportDataType.DateTime) as DateTime?;
+                var to = ReportDataValues.Coerce(second, ReportDataType.DateTime) as DateTime?;
+
+                @await Component.InvokeAsync("DateRangePicker", new
+                {
+                    fromName = ReportFilterValueBinder.FieldName(id, "from"),
+                    toName = ReportFilterValueBinder.FieldName(id, "to"),
+                    from,
+                    to,
+                    label,
+                })
+            }
+
+            break;
+
+        case ReportFilterControl.DateRange:
+        case ReportFilterControl.NumberRange:
+            {
+                var rangeType = filter.Control == ReportFilterControl.NumberRange ? "number" : inputType;
+
+                <div class="col p-1">
+                    <label class="form-label" for="@(inputId)-from">@label</label>
+                    <div class="input-group">
+                        <input type="@rangeType" class="form-control" id="@(inputId)-from" name="@ReportFilterValueBinder.FieldName(id, "from")" value="@first" placeholder="@T["From"]" aria-label="@T["From"]" step="any" />
+                        <input type="@rangeType" class="form-control" id="@(inputId)-to" name="@ReportFilterValueBinder.FieldName(id, "to")" value="@second" placeholder="@T["To"]" aria-label="@T["To"]" step="any" />
+                    </div>
+                </div>
+            }
+
+            break;
+
+        case ReportFilterControl.Select:
+        case ReportFilterControl.MultiSelect:
+            {
+                var multiple = filter.Control == ReportFilterControl.MultiSelect;
+
+                <div class="col p-1">
+                    <label class="form-label" for="@inputId">@label</label>
+                    <select class="form-select" id="@inputId" name="@name" multiple="@multiple" size="@(multiple ? "4" : null)">
+                        @if (!multiple)
+                        {
+                            <option value="">@T["Any"]</option>
+                        }
+                        @foreach (var option in filter.Options)
+                        {
+                            <option value="@option.Value" selected="@values.Contains(option.Value, StringComparer.OrdinalIgnoreCase)">@option.Text</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            break;
+
+        case ReportFilterControl.Boolean:
+            <div class="col p-1">
+                <label class="form-label" for="@inputId">@label</label>
+                <select class="form-select" id="@inputId" name="@name">
+                    <option value="">@T["Any"]</option>
+                    <option value="true" selected="@string.Equals(first, "true", StringComparison.OrdinalIgnoreCase)">@T["Yes"]</option>
+                    <option value="false" selected="@string.Equals(first, "false", StringComparison.OrdinalIgnoreCase)">@T["No"]</option>
+                </select>
+            </div>
+
+            break;
+
+        default:
+            <div class="col p-1">
+                <label class="form-label" for="@inputId">@label</label>
+                <input type="@inputType" class="form-control" id="@inputId" name="@name" value="@first" step="any" />
+            </div>
+
+            break;
+    }
+}

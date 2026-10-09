@@ -167,6 +167,6 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = ReportAggregate.Sum, Format = "0" },
         ];
 
-        return Engine(SalesData()).ExecuteAsync(query, Context());
+        return Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
     }
 }

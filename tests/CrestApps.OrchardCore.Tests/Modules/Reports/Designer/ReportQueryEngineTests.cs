@@ -15,7 +15,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("region", "c.Region"), Column("revenue", "o.Total", ReportAggregate.Sum)];
 
         // Act
-        var result = await Engine(data).ExecuteAsync(query, Context());
+        var result = await Engine(data).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsAggregated);
@@ -36,7 +36,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name"), Column("order", "o.Id")];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(expectedRows, result.Rows.Count);
@@ -63,7 +63,7 @@ public sealed class ReportQueryEngineTests
         };
 
         // Act
-        var result = await Engine(data).ExecuteAsync(query, Context());
+        var result = await Engine(data).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("seven", Assert.Single(result.Rows)[0]);
@@ -83,7 +83,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("size", "Big"), Column("avg", "AverageOrder"), Column("unit", "UnitPrice", ReportAggregate.Max)];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Big", 200m, 100m], result.Rows[0]);
@@ -100,7 +100,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name"), Column("count", ReportQueryPlanner.RowCountField), Column("orders", "o.Id", ReportAggregate.Count)];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         var umbrella = result.Rows.Single(row => (string)row[0] == "Umbrella");
@@ -117,7 +117,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("region", "c.Region"), Column("name", "c.Name"), Column("avg", "o.Total", ReportAggregate.Average)];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
         var byRegion = result.Regroup(["region"]);
 
         // Assert
@@ -137,7 +137,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name")];
 
         // Act
-        var result = await Engine(data).ExecuteAsync(query, Context());
+        var result = await Engine(data).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Acme", "Acme", "Initech"], result.Rows.Select(row => (string)row[0]));
@@ -164,7 +164,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("order", "o.Id")];
 
         // Act
-        var result = await Engine(data).ExecuteAsync(query, Context());
+        var result = await Engine(data).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(data.Queries.Single(candidate => candidate.DataSet == "Customer").Conditions);
@@ -183,7 +183,7 @@ public sealed class ReportQueryEngineTests
         context.FilterValues["region"] = ["East"];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Globex", 300m], Assert.Single(result.Rows));
@@ -200,7 +200,7 @@ public sealed class ReportQueryEngineTests
         context.FilterValues["region"] = [];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(4, result.Rows.Count);
@@ -217,7 +217,7 @@ public sealed class ReportQueryEngineTests
         context.FilterValues["region"] = ["East"];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.All(result.Rows, row => Assert.Equal("West", row[1]));
@@ -238,7 +238,7 @@ public sealed class ReportQueryEngineTests
         context.FilterValues["region"] = ["North"];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["East", "North", "West"], result.FilterOptions["region"].Select(option => option.Value));
@@ -254,7 +254,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", ReportAggregate.Sum)];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Acme", "Globex"], result.Rows.Select(row => (string)row[0]));
@@ -270,7 +270,7 @@ public sealed class ReportQueryEngineTests
         query.Limit = 2;
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Globex", "Acme"], result.Rows.Select(row => (string)row[0]));
@@ -288,7 +288,7 @@ public sealed class ReportQueryEngineTests
         context.ToLocal = value => DateTime.SpecifyKind(value.AddHours(2), DateTimeKind.Unspecified);
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(new DateTime(2026, 2, 21), Assert.Single(result.Rows)[0]);
@@ -303,7 +303,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("order", "o.Id")];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["o2", "o3"], result.Rows.Select(row => (string)row[0]));
@@ -318,7 +318,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("order", "o.Id")];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("o4", Assert.Single(result.Rows)[0]);
@@ -332,7 +332,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("region", "c.Region"), Column("total", "o.Total")];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
         var byRegion = result.Regroup(["region"]);
 
         // Assert
@@ -350,7 +350,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("count", ReportQueryPlanner.RowCountField), Column("total", "o.Total", ReportAggregate.Sum)];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context());
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal([0L, null], Assert.Single(result.Rows));
@@ -366,7 +366,7 @@ public sealed class ReportQueryEngineTests
         context.Limits.MaxRowsPerDataSet = 2;
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(result.Warnings, warning => warning.Contains("Only the first 2 rows of 'Customer'", StringComparison.Ordinal));
@@ -382,7 +382,7 @@ public sealed class ReportQueryEngineTests
         context.Limits.MaxJoinedRows = 2;
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, context);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, result.Rows.Count);
@@ -399,7 +399,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name")];
 
         // Act
-        var exception = await Assert.ThrowsAsync<ReportQueryException>(() => Engine(data).ExecuteAsync(query, Context()));
+        var exception = await Assert.ThrowsAsync<ReportQueryException>(() => Engine(data).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Contains(exception.Errors, error => error.Contains("does not exist or is not available to you", StringComparison.Ordinal));
@@ -437,7 +437,7 @@ public sealed class ReportQueryEngineTests
         };
 
         // Act
-        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext());
+        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(plan.IsValid);
@@ -463,7 +463,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name")];
 
         // Act
-        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext());
+        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(plan.Errors, error => error.Contains("must match a field of a data set listed before it", StringComparison.Ordinal));
@@ -480,7 +480,7 @@ public sealed class ReportQueryEngineTests
         };
 
         // Act
-        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext());
+        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("Enable the feature", Assert.Single(plan.Errors), StringComparison.Ordinal);

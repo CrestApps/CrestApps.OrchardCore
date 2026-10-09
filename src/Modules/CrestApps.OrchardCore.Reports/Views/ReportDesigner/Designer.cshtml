@@ -1,0 +1,75 @@
+@using System.Text.Json
+@using OrchardCore.DisplayManagement.Html
+@model ReportDesignerViewModel
+
+@{
+    var isNew = string.IsNullOrEmpty(Model.Payload.Id);
+    var breadcrumbName = Model.IsView
+        ? (isNew ? "ReportViewsCreate" : "ReportViewsEdit")
+        : (isNew ? "ReportDesignerCreate" : "ReportDesignerEdit");
+    var title = Model.IsView
+        ? (isNew ? T["New View"].Value : T["Edit View '{0}'", Model.Payload.DisplayText].Value)
+        : (isNew ? T["New Report"].Value : T["Edit Report '{0}'", Model.Payload.DisplayText].Value);
+    var config = new Dictionary<string, object>(Model.Labels)
+    {
+        ["mode"] = Model.IsView ? "view" : "report",
+        ["payload"] = Model.Payload,
+        ["canSharePublicly"] = Model.CanSharePublicly,
+        ["roles"] = Model.Roles,
+        ["urls"] = new Dictionary<string, string>
+        {
+            ["sources"] = Url.RouteUrl("ReportDesignerApiSources"),
+            ["dataSets"] = Url.RouteUrl("ReportDesignerApiDataSets"),
+            ["schema"] = Url.RouteUrl("ReportDesignerApiSchema"),
+            ["functions"] = Url.RouteUrl("ReportDesignerApiFunctions"),
+            ["plan"] = Url.RouteUrl("ReportDesignerApiPlan"),
+            ["users"] = Url.RouteUrl("ReportDesignerApiUsers"),
+            ["preview"] = Url.RouteUrl("ReportDesignerPreview"),
+            ["save"] = Url.RouteUrl("ReportDesignerSave"),
+            ["saveView"] = Url.RouteUrl("ReportViewsSave"),
+            ["links"] = Url.RouteUrl("ReportDesignerApiLinks", new { id = "__id__" }),
+            ["createLink"] = Url.RouteUrl("ReportDesignerApiCreateLink", new { id = "__id__" }),
+            ["revokeLink"] = Url.RouteUrl("ReportDesignerApiRevokeLink", new { id = "__id__", linkId = "__link__" }),
+            ["run"] = Url.RouteUrl("ReportDesignsRun", new { id = "__id__" }),
+        },
+    };
+}
+
+<zone Name="Title">
+    <breadcrumb name="@breadcrumbName" title="@(new HtmlContentString(System.Net.WebUtility.HtmlEncode(title)))">
+        @if (Model.IsView)
+        {
+            <breadcrumb-item id="ReportViewsIndex" action="Index" controller="ReportViews" area="CrestApps.OrchardCore.Reports" permission="@ReportDesignerPermissions.ManageOwnReportDesigns.Name">@T["Report Views"]</breadcrumb-item>
+        }
+        else
+        {
+            <breadcrumb-item id="ReportDesignsIndex" action="Index" controller="ReportDesigns" area="CrestApps.OrchardCore.Reports">@T["Report Designer"]</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
+
+<style asp-name="CrestApps.OrchardCore.Reports.Designer"></style>
+<script asp-name="CrestApps.OrchardCore.Reports.Designer" at="Foot"></script>
+
+@Html.AntiForgeryToken()
+
+<script type="application/json" id="report-designer-config">@Html.Raw(JsonSerializer.Serialize(config, ReportDesignerJson.Options))</script>
+
+<div class="report-designer" data-report-designer data-config="report-designer-config"></div>
+
+<datalist id="report-designer-formats">
+    <option value="N0">@T["Whole number with separators"]</option>
+    <option value="N2">@T["Number with two decimals"]</option>
+    <option value="C2">@T["Currency"]</option>
+    <option value="P1">@T["Percentage"]</option>
+    <option value="d">@T["Short date"]</option>
+    <option value="MMM yyyy">@T["Month and year"]</option>
+    <option value="yyyy-MM-dd">@T["Year-month-day"]</option>
+</datalist>
+
+<datalist id="report-designer-categories">
+    @foreach (var category in Model.Categories)
+    {
+        <option value="@category"></option>
+    }
+</datalist>

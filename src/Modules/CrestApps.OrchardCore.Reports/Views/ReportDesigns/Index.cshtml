@@ -1,0 +1,93 @@
+@model ReportDesignsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportDesignsIndex" title="@(Model.CanDesign ? T["Report Designer"] : T["Shared Reports"])" />
+</zone>
+
+<form method="get" asp-action="Index" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-1">
+            <div class="col">
+                <div class="has-search">
+                    <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <input name="q" value="@Model.Search" class="form-control" placeholder="@T["Search reports"]" type="search" autocomplete="off" aria-label="@T["Search reports"]" />
+                </div>
+            </div>
+            @if (Model.CanDesign)
+            {
+                <div class="col-auto">
+                    <a class="btn btn-secondary" asp-route="ReportViewsIndex">@T["Views"]</a>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-primary create" asp-route="ReportDesignerCreate">@T["Design Report"]</a>
+                </div>
+            }
+        </div>
+    </div>
+</form>
+
+<ul class="list-group">
+    @if (Model.Entries.Count == 0)
+    {
+        <li class="list-group-item list-group-item-info text-center">
+            @if (Model.CanDesign)
+            {
+                @T["<strong>Nothing here!</strong> Design a report to see it here."]
+            }
+            else
+            {
+                @T["No reports are shared with you."]
+            }
+        </li>
+    }
+
+    @foreach (var entry in Model.Entries)
+    {
+        var design = entry.Design;
+        var shared = (design.SharedUserNames?.Count ?? 0) + (design.SharedRoles?.Count ?? 0) > 0;
+
+        <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+            <div class="flex-grow-1">
+                <a class="fw-semibold" asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@design.DisplayText</a>
+                @if (!string.IsNullOrWhiteSpace(design.Category))
+                {
+                    <span class="badge text-bg-light ms-1">@design.Category</span>
+                }
+                @if (design.ShowInAdminMenu)
+                {
+                    <span class="badge text-bg-info ms-1" title="@T["Shown in the admin menu"]"><i class="fa-solid fa-bars" aria-hidden="true"></i> @T["Menu"]</span>
+                }
+                @if (shared)
+                {
+                    <span class="badge text-bg-warning ms-1" title="@T["Shared with other people"]"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> @T["Shared"]</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(design.Description))
+                {
+                    <div class="small text-muted">@design.Description</div>
+                }
+                <div class="small text-muted">
+                    @(entry.IsOwner ? T["Yours"] : T["By {0}", design.Author ?? "?"])
+                </div>
+            </div>
+            <div class="d-flex gap-1">
+                <a class="btn btn-sm btn-primary" asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@T["Run"]</a>
+                @if (entry.CanEdit)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Edit"]</a>
+                }
+                @if (Model.CanDesign)
+                {
+                    <form method="post" asp-route="ReportDesignsDuplicate" asp-route-id="@design.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Duplicate"]</button>
+                    </form>
+                }
+                @if (entry.CanEdit)
+                {
+                    <form method="post" asp-route="ReportDesignsDelete" asp-route-id="@design.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                    </form>
+                }
+            </div>
+        </li>
+    }
+</ul>
