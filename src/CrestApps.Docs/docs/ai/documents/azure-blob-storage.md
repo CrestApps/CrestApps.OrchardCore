@@ -74,7 +74,7 @@ Configure the feature under the Orchard Core shell configuration section:
 | Setting | Description |
 | --- | --- |
 | `ConnectionString` | Azure Storage account connection string. |
-| `ContainerName` | Azure Blob container name. Supports Liquid, so `{{ ShellSettings.Name }}-ai-documents` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
+| `ContainerName` | Azure Blob container name. Supports Liquid, so `ai-documents{{ ShellSettings.Name }}` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
 | `BasePath` | Optional subdirectory inside the container where AI documents are stored. Supports Liquid, so `{{ ShellSettings.Name }}` separates tenants that share a container. |
 | `CreateContainer` | When `true`, the feature creates the blob container automatically if it does not already exist. |
 | `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
@@ -94,11 +94,10 @@ The feature also supports:
 `ContainerName` and `BasePath` both accept Liquid, with the tenant's `ShellSettings` available, so one
 configuration in the root `appsettings.json` serves every tenant. There are two ways to keep tenants apart:
 
-- **A container per tenant.** Set `ContainerName` to a template such as
-  `{{ ShellSettings.Name }}-ai-documents` and leave `BasePath` empty. Each tenant's documents are in a
-  container of their own, created automatically when `CreateContainer` is `true`, and access policies or
-  lifecycle rules can be applied to one tenant at a time. Set `RemoveContainer` to `true` to delete the
-  tenant's container when the tenant is deleted.
+- **A container per tenant.** Set `ContainerName` to a template such as `ai-documents{{ ShellSettings.Name }}`
+  and leave `BasePath` empty. Each tenant's documents are in a container of their own, created automatically
+  when `CreateContainer` is `true`, and access policies or lifecycle rules can be applied to one tenant at a
+  time. Set `RemoveContainer` to `true` to delete the tenant's container when the tenant is deleted.
 - **One shared container.** Keep a fixed `ContainerName` and set `BasePath` to `{{ ShellSettings.Name }}`.
   Every tenant's documents are in the same container, separated by a folder prefix. Use
   `RemoveFilesFromBasePath`, not `RemoveContainer`, so deleting one tenant does not delete the other tenants'
@@ -106,10 +105,12 @@ configuration in the root `appsettings.json` serves every tenant. There are two 
 
 ```json
 {
-  "ContainerName": "{{ ShellSettings.Name }}-ai-documents",
+  "ContainerName": "ai-documents{{ ShellSettings.Name }}",
   "CreateContainer": true
 }
 ```
+
+For a tenant named `Contoso`, this resolves to the container `ai-documentscontoso`.
 
 The resolved container name is lowercased and must be a valid Azure container name: 3 to 63 characters,
 lowercase letters, digits and single hyphens, starting and ending with a letter or digit. A tenant name that
