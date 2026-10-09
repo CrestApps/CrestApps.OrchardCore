@@ -18,9 +18,35 @@ public class ContactCenterRecordingSettingsViewModel
     public RecordingConsentModel ConsentModel { get; set; } = RecordingConsentModel.AllParties;
 
     /// <summary>
-    /// Gets or sets a value indicating whether explicit, recorded consent must be captured before recording starts.
+    /// Gets or sets a value indicating whether consent must be captured before recording starts.
     /// </summary>
     public bool RequireExplicitConsent { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether callers are told the call is recorded.
+    /// </summary>
+    public bool EnableRecordingDisclosure { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notice callers are given that the call is recorded.
+    /// </summary>
+    public string RecordingDisclosureText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the disclosure is spoken to inbound callers on an entry point.
+    /// </summary>
+    public bool DiscloseOnInboundCalls { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether automated voice agents give the disclosure first.
+    /// </summary>
+    public bool DiscloseOnAIVoiceCalls { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether agents are asked to read the disclosure on calls whose customer has
+    /// not heard it.
+    /// </summary>
+    public bool PromptAgentsToDisclose { get; set; }
 
     /// <summary>
     /// Gets or sets the number of days a captured recording is retained before it becomes eligible for erasure.

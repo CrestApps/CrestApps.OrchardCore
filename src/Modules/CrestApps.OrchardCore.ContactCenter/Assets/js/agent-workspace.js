@@ -331,6 +331,20 @@
                     escapeHtml(label('secureCapture', 'Collect data securely')) +
                   '</button>'
                 : '';
+            // The customer has not been told the call is recorded (an outbound call, or one that reached the agent
+            // without the entry point's announcement), so the agent reads the tenant's words out and confirms it.
+            var disclosureBlock = active.recordingDisclosure && config.recordingDisclosedUrl
+                ? '<div class="alert alert-warning cc-active__disclosure" role="status" data-cc-recording-disclosure>' +
+                    '<div class="fw-semibold"><i class="fa-solid fa-microphone-lines" aria-hidden="true"></i> ' + escapeHtml(label('recordingDisclosureTitle', 'Tell the customer the call is recorded')) + '</div>' +
+                    '<blockquote class="my-2 fst-italic">' + escapeHtml(active.recordingDisclosure) + '</blockquote>' +
+                    '<div class="d-flex align-items-center gap-2 flex-wrap">' +
+                        '<button type="button" class="btn btn-sm btn-warning" data-cc-recording-disclosed data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' +
+                            '<i class="fa-solid fa-check" aria-hidden="true"></i> ' + escapeHtml(label('recordingDisclosed', 'I told the customer')) +
+                        '</button>' +
+                        '<span class="small">' + escapeHtml(label('recordingDisclosureHint', 'Read this out word for word, then confirm.')) + '</span>' +
+                    '</div>' +
+                  '</div>'
+                : '';
             refs.active.innerHTML =
                 '<div class="cc-active">' +
                     '<div class="cc-active__headline">' +
@@ -345,6 +359,7 @@
                         '</div>' +
                     '</div>' +
                     (recordingBadge ? '<div class="cc-active__recording">' + recordingBadge + '</div>' : '') +
+                    disclosureBlock +
                     '<div class="cc-active__stats">' +
                         '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' +
                         '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' +
@@ -571,6 +586,23 @@
                 });
         }
 
+        function confirmRecordingDisclosed(button) {
+            var interactionId = button.getAttribute('data-cc-interaction-id');
+
+            if (!config.recordingDisclosedUrl || !interactionId) {
+                return;
+            }
+
+            button.disabled = true;
+
+            post(config.recordingDisclosedUrl, config.antiForgeryToken, { interactionId: interactionId })
+                .then(function (response) { return handleSecureResponse(response, 'recordingDisclosedFailed', 'The disclosure could not be recorded. Refresh the workspace and try again.'); })
+                .catch(function () {
+                    showError(label('recordingDisclosedFailed', 'The disclosure could not be recorded. Refresh the workspace and try again.'));
+                    button.disabled = false;
+                });
+        }
+
         function beginSecureCapture(interactionId) {
             if (!config.beginSecureCaptureUrl || !interactionId) {
                 return;
@@ -661,6 +693,15 @@
             }
 
             refs.active.addEventListener('click', function (event) {
+                var disclosedButton = event.target.closest ? event.target.closest('[data-cc-recording-disclosed]') : null;
+
+                if (disclosedButton) {
+                    event.preventDefault();
+                    confirmRecordingDisclosed(disclosedButton);
+
+                    return;
+                }
+
                 var captureButton = event.target.closest ? event.target.closest('[data-cc-secure-capture]') : null;
 
                 if (captureButton) {

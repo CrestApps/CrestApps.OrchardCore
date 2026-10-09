@@ -37,6 +37,7 @@ internal static partial class AgentWorkspaceEndpoints
     public const string CompleteRouteName = "ContactCenterAgentWorkspaceComplete";
     public const string PauseRecordingRouteName = "ContactCenterAgentWorkspacePauseRecording";
     public const string ResumeRecordingRouteName = "ContactCenterAgentWorkspaceResumeRecording";
+    public const string RecordingDisclosedRouteName = "ContactCenterAgentWorkspaceRecordingDisclosed";
     public const string VoicemailMediaRouteName = "ContactCenterVoicemailMedia";
     public const string VoicemailDeleteRouteName = "ContactCenterVoicemailDelete";
 
@@ -62,6 +63,9 @@ internal static partial class AgentWorkspaceEndpoints
 
         builder.MapPost("Admin/contact-center/workspace/recording/resume", HandleResumeRecordingAsync)
             .WithName(ResumeRecordingRouteName);
+
+        builder.MapPost("Admin/contact-center/workspace/recording/disclosed", HandleRecordingDisclosedAsync)
+            .WithName(RecordingDisclosedRouteName);
 
         return builder;
     }
@@ -341,6 +345,65 @@ internal static partial class AgentWorkspaceEndpoints
             result.OutcomeUnknown,
             result.Reason,
             result.IsPaused,
+        });
+    }
+
+    // Records that the agent told the customer on their own live call that it is recorded.
+    private static async Task<IResult> HandleRecordingDisclosedAsync(
+        [FromForm] RecordingControlRequest request,
+        IAuthorizationService authorizationService,
+        IAntiforgery antiforgery,
+        IAgentProfileManager agentManager,
+        IInteractionManager interactionManager,
+        IEnumerable<IRecordingDisclosureService> disclosureServices,
+        HttpContext httpContext)
+    {
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
+        {
+            return ContactCenterApiResults.Forbidden();
+        }
+
+        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        if (string.IsNullOrEmpty(request?.InteractionId))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var disclosureService = disclosureServices.FirstOrDefault();
+
+        if (disclosureService is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var profile = string.IsNullOrEmpty(userId)
+            ? null
+            : await agentManager.FindByUserIdAsync(userId, httpContext.RequestAborted);
+
+        // Only the agent on the call can say they told its customer: the record stands as the customer's consent.
+        var activeInteraction = profile is null
+            ? null
+            : await interactionManager.FindActiveByAgentAsync(profile.ItemId, httpContext.RequestAborted);
+
+        if (activeInteraction is null || !string.Equals(activeInteraction.ItemId, request.InteractionId, StringComparison.Ordinal))
+        {
+            return ContactCenterApiResults.Forbidden();
+        }
+
+        // A customer who was already told counts as told: the agent's confirmation is not refused, only not recorded twice.
+        var recorded = await disclosureService.RecordDisclosedAsync(
+            activeInteraction.ItemId,
+            ContactCenterConstants.RecordingDisclosureMethod.Agent,
+            httpContext.RequestAborted);
+
+        return TypedResults.Ok(new
+        {
+            Succeeded = recorded || activeInteraction.RecordingDisclosedUtc.HasValue,
         });
     }
 

@@ -310,13 +310,11 @@ public sealed class CallRecordingsController : Controller
             return NotFound();
         }
 
-        // The store decrypts forward only, but a player seeks with byte ranges. The recording is decrypted into memory
-        // (a temporary file only for very long calls) that the response streams ranges from, and released with it.
-        var media = await SeekableRecordingMedia.CreateAsync(source, HttpContext.RequestAborted);
-
+        // A player seeks with byte ranges. The store's stream seeks when the stored file does, decrypting only the
+        // frames a range covers, so no request decrypts the whole recording or writes its plaintext anywhere.
         Response.Headers.CacheControl = "private, no-store";
 
-        return File(media, ContentTypeOf(recording.Format), enableRangeProcessing: true);
+        return File(source, ContentTypeOf(recording.Format), enableRangeProcessing: true);
     }
 
     /// <summary>

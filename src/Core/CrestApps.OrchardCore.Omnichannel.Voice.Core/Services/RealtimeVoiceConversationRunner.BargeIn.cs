@@ -100,6 +100,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         // idle watchdog counts from here, and the assistant's answer plays straight away instead of after audio
         // nobody will hear.
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, now);
+        Interlocked.Exchange(ref _assistantVoiceEndsTicks, Math.Min(Interlocked.Read(ref _assistantVoiceEndsTicks), now));
         Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
 
         // What had not reached the line yet goes with it, and whatever is said next fades in rather than starting

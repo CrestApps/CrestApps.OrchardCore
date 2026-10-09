@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Content Transfer - Azure Blob Storage</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure Blob Storage support for Content Transfer import and export files.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS ContentTransfer Azure Blob</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
+    <PackageReference Include="OrchardCore.Media.Azure" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

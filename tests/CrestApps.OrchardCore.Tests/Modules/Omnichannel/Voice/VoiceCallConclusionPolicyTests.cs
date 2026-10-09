@@ -358,4 +358,64 @@ public sealed class VoiceCallConclusionPolicyTests
         Assert.Same(done, chosen);
         Assert.Null(VoiceCallConclusionPolicy.ChooseUnansweredDisposition([], [], "Lead"));
     }
+
+    private static readonly DateTime _now = new(2026, 10, 8, 17, 20, 0, DateTimeKind.Utc);
+    private static readonly TimeSpan _pacific = TimeSpan.FromHours(-7);
+
+    [Theory]
+    [InlineData("2026-10-08T11:20:00-07:00", "2026-10-08T18:20:00Z")]
+    [InlineData("2026-10-08T18:20:00Z", "2026-10-08T18:20:00Z")]
+    [InlineData("2026-10-09T14:00:00", "2026-10-09T21:00:00Z")]
+    public void ACallbackTime_IsReadAsUtc_WithAnOffsetOrInTheSitesZone(string requested, string expected)
+    {
+        // Live, a customer said "call me back in one hour" and the call was concluded as Done: nobody called back.
+        var callback = VoiceCallConclusionPolicy.ResolveCallbackUtc(requested, _now, _pacific);
+
+        Assert.Equal(DateTime.Parse(expected, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AdjustToUniversal), callback);
+        Assert.Equal(DateTimeKind.Utc, callback?.Kind);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("in an hour")]
+    [InlineData("2026-10-08T09:00:00-07:00")]
+    [InlineData("2027-06-01T09:00:00-07:00")]
+    public void ACallbackTimeThatIsNotAUsableFutureMoment_IsNotUsed(string requested)
+        => Assert.Null(VoiceCallConclusionPolicy.ResolveCallbackUtc(requested, _now, _pacific));
+
+    [Fact]
+    public void ACallback_SchedulesOnlyTheFollowUpsTheDispositionCreates()
+    {
+        // Arrange
+        var actions = new[]
+        {
+            new SubjectAction { ItemId = "retry", SubjectContentType = "LeadGeneration", DispositionId = "call-back", Source = OmnichannelConstants.ActionTypes.TryAgain },
+            new SubjectAction { ItemId = "new", SubjectContentType = "LeadGeneration", DispositionId = "call-back", Source = OmnichannelConstants.ActionTypes.NewActivity },
+            new SubjectAction { ItemId = "finish", SubjectContentType = "LeadGeneration", DispositionId = "call-back", Source = OmnichannelConstants.ActionTypes.Finish },
+            new SubjectAction { ItemId = "no-answer", SubjectContentType = "LeadGeneration", DispositionId = "no-answer", Source = OmnichannelConstants.ActionTypes.TryAgain },
+            new SubjectAction { ItemId = "other-subject", SubjectContentType = "SupportCase", DispositionId = "call-back", Source = OmnichannelConstants.ActionTypes.TryAgain },
+        };
+        var callback = _now.AddHours(1);
+
+        // Act
+        var dates = VoiceCallConclusionPolicy.CallbackScheduleDates(actions, "LeadGeneration", "call-back", callback);
+
+        // Assert
+        Assert.NotNull(dates);
+        Assert.Equal(["new", "retry"], dates.Keys.Order(StringComparer.Ordinal));
+        Assert.All(dates.Values, date => Assert.Equal(callback, date));
+    }
+
+    [Fact]
+    public void WithoutACallbackTime_NothingIsScheduled_AndTheActionsKeepTheirDefaultDelay()
+    {
+        var actions = new[]
+        {
+            new SubjectAction { ItemId = "retry", SubjectContentType = "LeadGeneration", DispositionId = "call-back", Source = OmnichannelConstants.ActionTypes.TryAgain },
+        };
+
+        Assert.Null(VoiceCallConclusionPolicy.CallbackScheduleDates(actions, "LeadGeneration", "call-back", callbackUtc: null));
+        Assert.Null(VoiceCallConclusionPolicy.CallbackScheduleDates(actions, "LeadGeneration", "done", _now.AddHours(1)));
+    }
 }

@@ -173,6 +173,11 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// voice. It used to end this pump, and with it the call. Now the session is marked dead so it can be replaced,
     /// and the caller's audio keeps being read. While a replacement opens there is nowhere to send it, so it is not.
     /// </remarks>
+    /// <summary>
+    /// How long one send of caller audio to the session may take before it is logged as holding the caller back.
+    /// </summary>
+    private static readonly TimeSpan CallerAudioSendStall = TimeSpan.FromMilliseconds(250);
+
     private async Task SendToModelAsync(
         LiveConversation live,
         List<ReadOnlyMemory<byte>> released,
@@ -188,9 +193,24 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         try
         {
+            var started = System.Diagnostics.Stopwatch.GetTimestamp();
+
             foreach (var chunk in released)
             {
                 await conversation.SendAudioAsync(chunk, cancellationToken);
+            }
+
+            // A send that waits holds up every frame behind it, so the session hears the caller late. Measured here
+            // so a provider that reports the caller late (see LogProviderRunningBehind) can be told apart from audio
+            // that left here late.
+            var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(started);
+
+            if (elapsed >= CallerAudioSendStall && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Sending the caller's audio to the realtime session on activity '{ActivityId}' took {ElapsedMilliseconds} ms, so the session hears the caller that much late.",
+                    context.Activity?.ItemId.SanitizeLogValue(),
+                    (int)elapsed.TotalMilliseconds);
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -263,6 +283,14 @@ public sealed partial class RealtimeVoiceConversationRunner
         // muted -- the customer heard silence and then the line go dead.
         string lastAssistantLine = null;
 
+        // How many of the caller's turns the provider could not transcribe on this call.
+        var transcriptionFailures = 0;
+
+        // When the provider last took a caller turn as finished, and whether its answer has started playing yet:
+        // for how long the caller waited for each answer, and on what.
+        long turnCommittedTicks = 0;
+        var awaitingFirstAudio = false;
+
         // The requests already acted on, so a later one -- the model ending the call again after the customer
         // answered its first goodbye -- is recognised as new.
         var requestsSeen = 0;
@@ -273,9 +301,11 @@ public sealed partial class RealtimeVoiceConversationRunner
 
             // Nothing is being said, and the assistant has already answered the customer, so the goodbye is behind
             // us. The closing watchdog is told too, so it does not wait for a goodbye this pump will now suppress.
+            // On voicemail the message is the goodbye, whatever it says: live, "Thanks, goodbye." was added to the
+            // recording after it.
             if (!Volatile.Read(ref utteranceInFlight) &&
                 Volatile.Read(ref spokeSinceCaller) &&
-                VoiceGoodbye.SoundsLikeOne(Volatile.Read(ref lastAssistantLine)))
+                (VoiceGoodbye.SoundsLikeOne(Volatile.Read(ref lastAssistantLine)) || ReachedVoicemail(context)))
             {
                 goodbyeSaid = true;
                 Volatile.Write(ref _goodbyeAlreadySaid, true);
@@ -351,6 +381,12 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                         utteranceInFlight = true;
 
+                        if (awaitingFirstAudio && !speech.IsEmpty)
+                        {
+                            awaitingFirstAudio = false;
+                            LogAnswerLatency(activityId, turnCommittedTicks);
+                        }
+
                         if (!speech.IsEmpty)
                         {
                             // Stamped for two readers: the bed pump, which must stay quiet while the assistant is
@@ -358,6 +394,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                             // to actually finish before it hangs up. Both mean "finished playing", not "arrived".
                             // Where it plays is kept too, so a caller who talks over it can have it taken back.
                             var startsTicks = ExtendAssistantPlayback(speech.Length);
+                            var spokenBytes = AssistantSpeechExtent.SpokenBytes(speech.Span);
+
+                            if (spokenBytes > 0)
+                            {
+                                Interlocked.Exchange(ref _assistantVoiceEndsTicks, startsTicks + AssistantBargeIn.DurationTicks(spokenBytes));
+                            }
                             assistantLineStartedUtc ??= new DateTime(startsTicks, DateTimeKind.Utc);
                             bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, DateTime.UtcNow.Ticks);
                             _meter?.AssistantAudioScheduled(startsTicks, AssistantBargeIn.DurationTicks(speech.Length));
@@ -404,6 +446,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.UserSpeechStarted:
                         _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
+                        LogProviderRunningBehind(activityId);
                         ProviderHeardCaller(turnOpen: true);
 
                         // The first start since the last transcript: a pause mid-sentence starts speech again, but
@@ -448,8 +491,11 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // their speech the session reports.
                         if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
                         {
+                            turnCommittedTicks = DateTime.UtcNow.Ticks;
+                            awaitingFirstAudio = true;
                             _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
                             ProviderHeardCaller(turnOpen: false);
+                            await LeaveOpeningTurnDetectionAsync(conversation, cancellationToken);
                         }
 
                         // A new turn, so speech from here is not the rest of a line the caller talked over.
@@ -486,14 +532,30 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.UserTranscriptFailed:
                         callerLineStartedUtc = null;
 
-                        // The provider took an utterance and could not transcribe it. Said at information level
-                        // rather than debug because it is not a detail: a turn the caller took has been lost, the
-                        // model is still waiting for them, and the caller believes they have already answered.
-                        if (_logger.IsEnabled(LogLevel.Information))
+                        // The provider took an utterance and could not transcribe it. A speech-to-speech model
+                        // heard the audio and answers it; what is lost is the caller's line in the transcript, which
+                        // is what the call's review, its notes and its disposition are written from. The first
+                        // failure on a call is a warning carrying the provider's reason, because when every turn
+                        // fails the cause is configuration -- live, a transcription model the provider would not
+                        // run -- and the reason is the only thing that says so.
+                        transcriptionFailures++;
+
+                        var failureReason = conversationEvent.ErrorMessage.SanitizeLogValue() ?? "(no reason given)";
+
+                        if (transcriptionFailures == 1)
+                        {
+                            _logger.LogWarning(
+                                "A caller utterance on activity '{ActivityId}' could not be transcribed: {Reason}. The model heard it, but the transcript the call is reviewed from will not have it.",
+                                activityId,
+                                failureReason);
+                        }
+                        else if (_logger.IsEnabled(LogLevel.Information))
                         {
                             _logger.LogInformation(
-                                "A caller utterance on activity '{ActivityId}' could not be transcribed, so the model never saw it.",
-                                activityId);
+                                "Another caller utterance on activity '{ActivityId}' could not be transcribed ({Failures} so far): {Reason}.",
+                                activityId,
+                                transcriptionFailures,
+                                failureReason);
                         }
 
                         break;
@@ -523,12 +585,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
                         Volatile.Write(ref lastAssistantLine, spoken);
+                        Volatile.Write(ref _lastAssistantLine, spoken);
                         context.AssistantSaid?.Invoke(spoken);
 
                         // The line that was in flight when the call was closed is the goodbye, when it is one. It
                         // has now been said, so the assistant is done talking. A line that was not a goodbye leaves
                         // the next one to be heard: that is where the model is still saying what it meant to.
-                        goodbyeSaid = closingRequested && VoiceGoodbye.SoundsLikeOne(spoken);
+                        goodbyeSaid = closingRequested && (VoiceGoodbye.SoundsLikeOne(spoken) || ReachedVoicemail(context));
 
                         break;
 
@@ -653,6 +716,78 @@ public sealed partial class RealtimeVoiceConversationRunner
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Says how long the caller waited for an answer, split into the two waits that make it up.
+    /// </summary>
+    /// <remarks>
+    /// A caller who says the assistant is slow to answer is hearing the sum of two things this side cannot see
+    /// otherwise: how long the provider's turn detector waited after they stopped before taking the turn as
+    /// finished, and how long the model then took to produce its first audio. Which one is long decides the fix --
+    /// a more eager detector, or a faster model -- so each answer logs both.
+    /// </remarks>
+    /// <param name="activityId">The call, already sanitized for the log.</param>
+    /// <param name="turnCommittedTicks">When the provider took the caller's turn as finished, in UTC ticks.</param>
+    private void LogAnswerLatency(string activityId, long turnCommittedTicks)
+    {
+        if (turnCommittedTicks == 0 || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow.Ticks;
+        var lastVoice = _replyListener?.LastVoiceTicks ?? 0;
+
+        // The caller's voice is only tracked once the assistant has finished, so a turn that began by talking over it
+        // has no end on the line to measure from.
+        var detectorWait = lastVoice > 0 && lastVoice <= turnCommittedTicks && turnCommittedTicks - lastVoice < TimeSpan.TicksPerSecond * 10
+            ? (int)((turnCommittedTicks - lastVoice) / TimeSpan.TicksPerMillisecond)
+            : -1;
+
+        _logger.LogInformation(
+            "Answered the caller on activity '{ActivityId}': the turn was taken as finished {DetectorWaitMilliseconds} ms after their voice stopped on the line (-1 when it began over the assistant), and the model's first audio came {ModelMilliseconds} ms after that.",
+            activityId,
+            detectorWait,
+            (int)((now - turnCommittedTicks) / TimeSpan.TicksPerMillisecond));
+    }
+
+    /// <summary>
+    /// Says so when the provider reports the caller starting well after their voice was heard on the line.
+    /// </summary>
+    /// <remarks>
+    /// Live, a caller's "yes" reached the session as it was said and the provider reported it four and a half
+    /// seconds later; the assistant's own request to have it repeated was refused six seconds after it was sent,
+    /// as colliding with the reply to that "yes". To the caller it was eight seconds of silence and then the line
+    /// going dead, and nothing in the log said the provider was behind. The provider normally reports a voice
+    /// within half a second; this measures it against the line, so a slow session shows as one.
+    /// </remarks>
+    /// <param name="activityId">The call, already sanitized for the log.</param>
+    private void LogProviderRunningBehind(string activityId)
+    {
+        var heardOnLine = _replyListener?.LatestReplyStartTicks ?? 0;
+
+        // Only a reply the provider has not reported yet: once it has, later starts are the same reply resuming.
+        if (heardOnLine == 0 || heardOnLine <= Interlocked.Read(ref _providerHeardCallerTicks))
+        {
+            return;
+        }
+
+        var lag = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - heardOnLine);
+
+        if (lag < ProviderLagWorthReporting || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "The realtime session on activity '{ActivityId}' reported the caller starting {LagMilliseconds} ms after their voice was heard on the line; it is running behind the call's audio.",
+            activityId,
+            (int)lag.TotalMilliseconds);
+    }
+
+    // Whether the model ended the call on voicemail, where its message is the closing line.
+    private static bool ReachedVoicemail(RealtimeVoiceConversationContext context)
+        => context.ReachedVoicemail?.Invoke() == true;
 
     private static ValueTask WriteToLineAsync(IContactCenterVoiceMediaSession media, ReadOnlyMemory<byte> audio, CancellationToken cancellationToken)
         => audio.IsEmpty

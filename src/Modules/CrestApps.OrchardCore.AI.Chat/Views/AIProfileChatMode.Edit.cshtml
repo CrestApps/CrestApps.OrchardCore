@@ -29,6 +29,14 @@
     </div>
 </div>
 
+<div class="ocat-wrapper profile-type profile-type-chat" id="chatModeTranscriptionWarning" style="display: none;">
+    <div class="ocat-end-offset">
+        <div class="alert alert-warning mb-0">
+            @T["The user's words will not be transcribed: this deployment's provider has no speech-to-text deployment. The conversation still works, but stored transcripts, summaries and AI call reviews will see only the assistant's side. Add a speech-to-text deployment on the same provider, and choose it as the default speech-to-text deployment in the AI settings if there is more than one."]
+        </div>
+    </div>
+</div>
+
 <div class="ocat-wrapper profile-type profile-type-chat" id="chatModeVoiceSelector" style="display: none;">
     <label asp-for="VoiceName" class="ocat-label">@T["Voice"]</label>
     <div class="ocat-end">
@@ -55,12 +63,14 @@
         function init() {
             var chatModeSelect = document.getElementById('chatModeSelector');
             var conversationDeploymentGroup = document.getElementById('chatModeConversationDeploymentGroup');
+            var transcriptionWarning = document.getElementById('chatModeTranscriptionWarning');
             var conversationDeploymentSelect = document.getElementById('chatModeConversationDeploymentSelect');
             var voiceSelector = document.getElementById('chatModeVoiceSelector');
             var voiceSelect = document.getElementById('chatModeVoiceSelect');
             var ttsPlaybackGroup = document.getElementById('chatModeTtsPlaybackGroup');
 
             var realtimeDeploymentNames = @Html.Raw(JsonSerializer.Serialize(Model.RealtimeDeploymentNames ?? []));
+            var untranscribedDeploymentNames = @Html.Raw(JsonSerializer.Serialize(Model.UntranscribedRealtimeDeploymentNames ?? []));
             var defaultRealtimeDeploymentName = @Html.Raw(JsonSerializer.Serialize(Model.DefaultRealtimeDeploymentName ?? string.Empty));
 
             if (!chatModeSelect || !voiceSelector) {
@@ -154,11 +164,16 @@
                     ttsPlaybackGroup.style.display = '';
                 }
 
+                var resolved = resolvedConversationDeploymentName();
+
+                // The conversation would run on a model whose provider cannot write the user down.
+                if (transcriptionWarning) {
+                    transcriptionWarning.style.display = conversation && resolved && untranscribedDeploymentNames.indexOf(resolved) >= 0 ? '' : 'none';
+                }
+
                 if (!conversation) {
                     return;
                 }
-
-                var resolved = resolvedConversationDeploymentName();
 
                 if (resolved) {
                     loadRealtimeVoices(resolved);

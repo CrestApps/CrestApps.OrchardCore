@@ -307,7 +307,7 @@
     if (!active) {
       return NO_ACTIVE_INTERACTION;
     }
-    return [active.interactionId, active.status, active.recordingState || '', active.isRecordingPaused === true ? 'paused' : ''].join(':');
+    return [active.interactionId, active.status, active.recordingState || '', active.isRecordingPaused === true ? 'paused' : '', active.recordingDisclosure ? 'disclosure-owed' : ''].join(':');
   }
 
   // Answers whether a card must redraw for a value. The first value always redraws, whatever it is.
@@ -642,7 +642,10 @@
       var recordingBadge = showSecurePause ? '<span class="cc-recording ' + (isPaused ? 'is-paused' : 'is-active') + '" data-cc-recording-badge>' + '<i class="fa-solid ' + (isPaused ? 'fa-circle-pause' : 'fa-circle') + '" aria-hidden="true"></i> ' + escapeHtml(isPaused ? label('recordingPaused', 'Recording paused for sensitive-data capture') : label('recordingActive', 'Recording')) + '</span>' : '';
       var secureButton = showSecurePause ? '<button type="button" class="btn btn-sm ' + (isPaused ? 'btn-success' : 'btn-outline-warning') + '" data-cc-secure-pause="' + (isPaused ? 'resume' : 'pause') + '" data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' + '<i class="fa-solid ' + (isPaused ? 'fa-play' : 'fa-pause') + '"></i> ' + escapeHtml(isPaused ? label('secureResume', 'Resume recording') : label('securePause', 'Pause recording')) + '</button>' : '';
       var secureCaptureButton = config.canInitiateSecureCapture === true ? '<button type="button" class="btn btn-sm btn-outline-primary" data-cc-secure-capture="begin" data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' + '<i class="fa-solid fa-shield-halved"></i> ' + escapeHtml(label('secureCapture', 'Collect data securely')) + '</button>' : '';
-      refs.active.innerHTML = '<div class="cc-active">' + '<div class="cc-active__headline">' + '<span class="cc-active__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' + '<div>' + '<div class="cc-active__customer">' + escapeHtml(active.customerLabel || active.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' + '<div class="cc-active__sub">' + escapeHtml(inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) + (active.queueName ? ' &middot; ' + escapeHtml(active.queueName) : '') + (active.customerAddress ? ' &middot; ' + escapeHtml(active.customerAddress) : '') + '</div>' + '</div>' + '</div>' + (recordingBadge ? '<div class="cc-active__recording">' + recordingBadge + '</div>' : '') + '<div class="cc-active__stats">' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' + '</div>' + '<div class="cc-active__actions">' + (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') + secureButton + secureCaptureButton + (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') + '</div>' + '</div>';
+      // The customer has not been told the call is recorded (an outbound call, or one that reached the agent
+      // without the entry point's announcement), so the agent reads the tenant's words out and confirms it.
+      var disclosureBlock = active.recordingDisclosure && config.recordingDisclosedUrl ? '<div class="alert alert-warning cc-active__disclosure" role="status" data-cc-recording-disclosure>' + '<div class="fw-semibold"><i class="fa-solid fa-microphone-lines" aria-hidden="true"></i> ' + escapeHtml(label('recordingDisclosureTitle', 'Tell the customer the call is recorded')) + '</div>' + '<blockquote class="my-2 fst-italic">' + escapeHtml(active.recordingDisclosure) + '</blockquote>' + '<div class="d-flex align-items-center gap-2 flex-wrap">' + '<button type="button" class="btn btn-sm btn-warning" data-cc-recording-disclosed data-cc-interaction-id="' + escapeHtml(active.interactionId) + '">' + '<i class="fa-solid fa-check" aria-hidden="true"></i> ' + escapeHtml(label('recordingDisclosed', 'I told the customer')) + '</button>' + '<span class="small">' + escapeHtml(label('recordingDisclosureHint', 'Read this out word for word, then confirm.')) + '</span>' + '</div>' + '</div>' : '';
+      refs.active.innerHTML = '<div class="cc-active">' + '<div class="cc-active__headline">' + '<span class="cc-active__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' + '<div>' + '<div class="cc-active__customer">' + escapeHtml(active.customerLabel || active.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' + '<div class="cc-active__sub">' + escapeHtml(inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) + (active.queueName ? ' &middot; ' + escapeHtml(active.queueName) : '') + (active.customerAddress ? ' &middot; ' + escapeHtml(active.customerAddress) : '') + '</div>' + '</div>' + '</div>' + (recordingBadge ? '<div class="cc-active__recording">' + recordingBadge + '</div>' : '') + disclosureBlock + '<div class="cc-active__stats">' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value">' + escapeHtml(active.status) + '</div></div>' + '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('talkTime', 'Talk time')) + '</div><div class="cc-stat__value" data-cc-talk-time aria-hidden="true">0:00</div></div>' + '</div>' + '<div class="cc-active__actions">' + (active.contactUrl ? '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(label('openContact', 'Open customer record')) + '</a>' : '') + secureButton + secureCaptureButton + (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') + '</div>' + '</div>';
     }
 
     // The number as a person would read it out. The formatter is shared with the soft phone rather than
@@ -815,6 +818,21 @@
         setSecureButtonDisabled(false);
       });
     }
+    function confirmRecordingDisclosed(button) {
+      var interactionId = button.getAttribute('data-cc-interaction-id');
+      if (!config.recordingDisclosedUrl || !interactionId) {
+        return;
+      }
+      button.disabled = true;
+      post(config.recordingDisclosedUrl, config.antiForgeryToken, {
+        interactionId: interactionId
+      }).then(function (response) {
+        return handleSecureResponse(response, 'recordingDisclosedFailed', 'The disclosure could not be recorded. Refresh the workspace and try again.');
+      }).catch(function () {
+        showError(label('recordingDisclosedFailed', 'The disclosure could not be recorded. Refresh the workspace and try again.'));
+        button.disabled = false;
+      });
+    }
     function beginSecureCapture(interactionId) {
       if (!config.beginSecureCaptureUrl || !interactionId) {
         return;
@@ -889,6 +907,12 @@
         return;
       }
       refs.active.addEventListener('click', function (event) {
+        var disclosedButton = event.target.closest ? event.target.closest('[data-cc-recording-disclosed]') : null;
+        if (disclosedButton) {
+          event.preventDefault();
+          confirmRecordingDisclosed(disclosedButton);
+          return;
+        }
         var captureButton = event.target.closest ? event.target.closest('[data-cc-secure-capture]') : null;
         if (captureButton) {
           event.preventDefault();

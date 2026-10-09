@@ -31,7 +31,13 @@
             return NO_ACTIVE_INTERACTION;
         }
 
-        return [active.interactionId, active.status, active.recordingState || '', active.isRecordingPaused === true ? 'paused' : ''].join(':');
+        return [
+            active.interactionId,
+            active.status,
+            active.recordingState || '',
+            active.isRecordingPaused === true ? 'paused' : '',
+            active.recordingDisclosure ? 'disclosure-owed' : ''
+        ].join(':');
     }
 
     // Answers whether a card must redraw for a value. The first value always redraws, whatever it is.
