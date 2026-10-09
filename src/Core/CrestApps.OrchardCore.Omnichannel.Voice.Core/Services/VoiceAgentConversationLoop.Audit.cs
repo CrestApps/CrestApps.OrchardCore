@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -33,6 +34,77 @@ public sealed partial class VoiceAgentConversationLoop
             CreateObservation(voiceEvent, kind, occurredUtc ?? _clock.UtcNow, outcome, dispositionId),
             _logger,
             cancellationToken);
+
+    /// <summary>
+    /// Reports whether the person was told the call is recorded, so the notice is on the record with the words used,
+    /// and a call that went without it is found rather than assumed to have had it.
+    /// </summary>
+    /// <param name="voiceEvent">The call's event.</param>
+    /// <param name="disclosure">The disclosure the assistant was to give.</param>
+    /// <param name="openingLine">What the assistant said first, or <see langword="null"/> when it never spoke.</param>
+    /// <param name="said">Whether the disclosure was given.</param>
+    /// <param name="occurredUtc">When the opening line was said, or when the call ended without one.</param>
+    private Task ObserveRecordingDisclosureAsync(
+        VoiceAgentEvent voiceEvent,
+        string disclosure,
+        string openingLine,
+        bool said,
+        DateTime occurredUtc)
+    {
+        var observation = CreateObservation(
+            voiceEvent,
+            said ? AutomatedVoiceCallObservationKind.RecordingDisclosed : AutomatedVoiceCallObservationKind.RecordingDisclosureMissed,
+            occurredUtc,
+            outcome: null,
+            dispositionId: null);
+
+        observation.RecordingDisclosure = disclosure;
+        observation.OpeningLine = said ? null : openingLine;
+
+        if (!said)
+        {
+            _logger.LogWarning(
+                "The assistant on AI voice activity '{ActivityId}' did not give the recording disclosure word for word in its opening line.",
+                voiceEvent.ActivityId.SanitizeLogValue());
+        }
+
+        // Told after the call, never during it, so the call is not held up; and with no token, because the request
+        // that carried the call may already be gone.
+        return NotifyAsync(_callObservers, observation, _logger, CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Checks a live session's opening line against the disclosure it was told to give, once the session is over.
+    /// </summary>
+    /// <param name="voiceEvent">The call's event.</param>
+    /// <param name="sessionId">The chat session the transcript is stored in.</param>
+    /// <param name="disclosure">The disclosure the assistant was to give.</param>
+    private async Task VerifyRealtimeRecordingDisclosureAsync(VoiceAgentEvent voiceEvent, string sessionId, string disclosure)
+    {
+        try
+        {
+            var prompts = await _promptStore.GetPromptsAsync(sessionId);
+            var opening = prompts
+                .Where(prompt => prompt.Role == ChatRole.Assistant && !string.IsNullOrWhiteSpace(prompt.Content))
+                .OrderBy(prompt => prompt.CreatedUtc)
+                .FirstOrDefault();
+
+            await ObserveRecordingDisclosureAsync(
+                voiceEvent,
+                disclosure,
+                opening?.Content,
+                RecordingDisclosureCheck.WasSaid(disclosure, opening?.Content),
+                opening?.CreatedUtc ?? _clock.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            // The check is a record of the call; it must never fail the work that finishes the call.
+            _logger.LogWarning(
+                ex,
+                "Could not check the recording disclosure of AI voice activity '{ActivityId}'.",
+                voiceEvent.ActivityId.SanitizeLogValue());
+        }
+    }
 
     /// <summary>
     /// Reports the end of a conversation that was concluded, once the conclusion has decided its disposition.

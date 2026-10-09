@@ -345,6 +345,12 @@ public static partial class ContactCenterConstants
         public const string RecordingDisclosed = "RecordingDisclosed";
 
         /// <summary>
+        /// Raised when an automated voice agent was to tell the caller the call is recorded and its opening line did
+        /// not contain the tenant's disclosure, so the gap is found rather than assumed away.
+        /// </summary>
+        public const string RecordingDisclosureMissed = "RecordingDisclosureMissed";
+
+        /// <summary>
         /// Raised when a captured recording is accessed or retrieved, recording who accessed it and why for the
         /// recording access audit trail.
         /// </summary>

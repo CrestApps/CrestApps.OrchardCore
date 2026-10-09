@@ -67,6 +67,11 @@ public static partial class ContactCenterConstants
         /// The agent read the disclosure out and confirmed it from the agent workspace.
         /// </summary>
         public const string Agent = "agent";
+
+        /// <summary>
+        /// An automated voice agent gave the disclosure as the start of its opening line.
+        /// </summary>
+        public const string AIVoiceAgent = "aiVoiceAgent";
     }
 
     /// <summary>

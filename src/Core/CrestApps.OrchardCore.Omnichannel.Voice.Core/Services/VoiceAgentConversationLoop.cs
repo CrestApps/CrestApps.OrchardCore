@@ -326,6 +326,13 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 // line with nothing queued and nobody coming.
                 await FinishTheCallElsewhereAsync(activity, voiceEvent, sessionLost: realtime?.SessionLost == true);
                 await RecordRealtimeSessionAsync(voiceEvent, meter, realtimeDeploymentName, sessionHeldTheCall);
+
+                // The session was only told to give the disclosure, so what it actually said is checked. A call the
+                // session never held goes to the turn-based loop below, which gives it itself.
+                if (sessionHeldTheCall && !string.IsNullOrWhiteSpace(recordingDisclosure))
+                {
+                    await VerifyRealtimeRecordingDisclosureAsync(voiceEvent, session.SessionId, recordingDisclosure);
+                }
             }
 
             if (sessionHeldTheCall)
@@ -351,7 +358,13 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         }
 
         await StorePromptAsync(session, ChatRole.Assistant, greeting, cancellationToken);
-        await SpeakAsync(media, voiceEvent.ProviderCallId, activity, greeting, cancellationToken);
+        var spoken = await SpeakAsync(media, voiceEvent.ProviderCallId, activity, greeting, cancellationToken);
+
+        // The platform says the disclosure itself here, so the provider accepting the line is what gives it.
+        if (!string.IsNullOrWhiteSpace(recordingDisclosure))
+        {
+            await ObserveRecordingDisclosureAsync(voiceEvent, recordingDisclosure, spoken ? null : greeting, spoken, _clock.UtcNow);
+        }
     }
 
     /// <summary>
