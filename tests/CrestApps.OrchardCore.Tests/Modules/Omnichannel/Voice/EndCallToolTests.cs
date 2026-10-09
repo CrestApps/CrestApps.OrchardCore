@@ -153,6 +153,131 @@ public sealed class EndCallToolTests
         Assert.False(turn.EndCallRequested);
     }
 
+    [Fact]
+    public async Task EndingTheCall_OnTheCustomersLastWords_AsksForAGoodbyeFirst()
+    {
+        // Arrange
+        // Live, the customer confirmed their email with "yes", the model answered with the end-call tool alone, was
+        // told to say nothing further, and the line went dead four seconds later with no goodbye.
+        var (tool, turn, arguments) = Create();
+        turn.AssistantSaid("I heard: mike at gmail dot com. Did I get that right?");
+        turn.CustomerAnswered();
+        arguments["reason"] = "got basics and confirmed email";
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.EndCallRequested);
+        Assert.Contains("you have not said goodbye", result?.ToString(), StringComparison.Ordinal);
+        Assert.DoesNotContain("Say nothing further", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCall_AfterTheGoodbye_AsksForNothingMore()
+    {
+        // Arrange
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Perfect, thanks Haneen. Have a great day!");
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.EndCallRequested);
+        Assert.Contains("Say nothing further", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCall_OnVoicemail_NeverAsksForAGoodbye()
+    {
+        // Arrange
+        // The greeting is transcribed as the customer speaking, but the message left on it is the closing line.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        arguments["voicemail"] = true;
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.ReachedVoicemail);
+        Assert.Contains("Say nothing further", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCall_AfterALineThatIsNotAGoodbye_AsksForAGoodbyeFirst()
+    {
+        // Arrange
+        // Live, a model said "let me wrap this up for you", ended the call, was told to say nothing further, and the
+        // line dropped with no goodbye at all.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Alright, thanks for confirming—let me wrap this up for you.");
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(turn.EndCallRequested);
+        Assert.Contains("you have not said goodbye", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCallAgain_BeforeTheCustomerSpeaks_IsNotANewRequest()
+    {
+        // Arrange
+        // Live, a model said goodbye, ended the call, and then answered the tool's reply by ending it again -- twelve
+        // times, every half second, each one a response that kept the line open as if it were still talking.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen—talk soon.");
+        await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, turn.RequestCount);
+        Assert.Contains("Do not call this tool again", result?.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EndingTheCallAgain_AfterTheCustomerSpoke_IsANewRequest()
+    {
+        // Arrange
+        // The customer answered the goodbye ("thank you"), took the call back, and the model ends it again.
+        var (tool, turn, arguments) = Create();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen—talk soon.");
+        await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen, talk to you soon. Bye.");
+
+        // Act
+        await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, turn.RequestCount);
+    }
+
+    [Fact]
+    public void AReset_ForgetsTheGoodbyeAlreadySaid()
+    {
+        // Arrange
+        var turn = new VoiceCallEndTurn();
+        turn.CustomerAnswered();
+        turn.AssistantSaid("Thanks, Haneen. Have a great day!");
+        Assert.False(turn.ClosingLineOwed);
+
+        // Act
+        turn.Reset();
+
+        // Assert
+        Assert.Equal(new VoiceCallEndTurn().ClosingLineOwed, turn.ClosingLineOwed);
+    }
+
     private static (EndCallTool Tool, VoiceCallEndTurn Turn, AIFunctionArguments Arguments) Create()
     {
         var turn = new VoiceCallEndTurn();

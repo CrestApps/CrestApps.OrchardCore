@@ -67,7 +67,8 @@ public sealed class LocalEncryptedRecordingMediaStore : IRecordingMediaStore, IS
         }
 
         // The returned stream decrypts a fixed chunk at a time and takes ownership of the underlying file
-        // stream, so reading back a recording never buffers the whole plaintext in memory.
+        // stream, so reading back a recording never buffers the whole plaintext in memory. Both the file system and
+        // blob stores return seekable streams, so the decrypting stream seeks too and decrypts only the frames read.
         var fileStream = await _fileStore.GetFileStreamAsync(path);
 
         try

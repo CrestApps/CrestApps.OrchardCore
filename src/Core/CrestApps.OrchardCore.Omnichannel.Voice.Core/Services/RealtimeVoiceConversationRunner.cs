@@ -64,6 +64,15 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private long _assistantSpeechEndsTicks;
 
     /// <summary>
+    /// When the assistant's last spoken word is projected to finish playing, or zero before it has said anything.
+    /// </summary>
+    /// <remarks>
+    /// Earlier than <see cref="_assistantSpeechEndsTicks"/> by the silence a line ends on, which is what the wait after
+    /// a goodbye is measured from: see <see cref="AssistantSpeechExtent"/>.
+    /// </remarks>
+    private long _assistantVoiceEndsTicks;
+
+    /// <summary>
     /// When the caller was last heard to say something, so a closing call can tell "they are done" from "they
     /// had one more thing".
     /// </summary>
@@ -110,6 +119,18 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private static readonly TimeSpan ClosingSpeechStartGrace = TimeSpan.FromSeconds(4);
 
     /// <summary>
+    /// How long after asking to end the call the model may still be producing a response before the call is hung up
+    /// regardless.
+    /// </summary>
+    /// <remarks>
+    /// The goodbye often comes in a response of its own after the tool call, and the line before it is not always one:
+    /// live, "let me wrap this up for you" ended, the countdown ran from its last word, and the line dropped while the
+    /// goodbye was still being produced. A response under way is the model still talking; bounded, because one that
+    /// never finishes must not hold the line open.
+    /// </remarks>
+    private static readonly TimeSpan ClosingResponseLimit = TimeSpan.FromSeconds(10);
+
+    /// <summary>
     /// How long the caller is left the line after the assistant's goodbye before the call is hung up.
     /// </summary>
     /// <remarks>
@@ -118,11 +139,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// do speak, the assistant answers and the call carries on; this window only ends a conversation that both
     /// sides have finished.
     /// <para>
-    /// Two seconds was about the length of a breath, and it read on a real call as being hung up on. The cost of
-    /// the extra couple of seconds is a little silence at the end of a call that was over anyway.
+    /// Measured from the end of the goodbye's playback, which already reaches the caller a moment after it leaves
+    /// here. Four seconds was tried after two read once as being hung up on, but live it left five seconds of dead
+    /// air after every goodbye, which the caller heard as the call taking too long to end; two is back.
     /// </para>
     /// </remarks>
-    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// How long a voicemail message is allowed past the projected end of its playback before the call is hung up.
@@ -253,20 +275,20 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             return false;
         }
 
-        await using var media = await mediaProvider.OpenSessionAsync(new ContactCenterVoiceMediaSessionRequest
-        {
-            ProviderCallId = context.ProviderCallId,
-            InteractionId = context.InteractionId,
-        }, cancellationToken);
+        // The call's audio and the model's session are opened side by side. One after the other, the caller who
+        // answered with "hello?" waited for the provider to connect its stream, and only then for the model's
+        // session to open -- the greeting came four and a half seconds after the pickup. Neither needs the other
+        // until the greeting is asked for.
+        var (media, first) = await OpenMediaAndSessionAsync(mediaProvider, context, answeredTicks, cancellationToken);
 
-        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
-
-        var first = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
+        await using var mediaLease = media;
 
         if (first is null)
         {
             return false;
         }
+
+        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
 
         using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -278,18 +300,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
         _meter?.Start(answeredTicks);
 
-        await ApplyTelephonyTurnDetectionAsync(first, cancellationToken);
-
-        // We placed this call, so the silence after the customer picks up is ours to fill. Left to itself the
-        // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript
-        // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
-        // session that creates its own responses ignores this, so it is safe to ask either way.
-        //
-        // Asked for with no instructions of its own, on purpose. Instructions given with one response replace the
-        // session's for that response -- the profile's persona included -- and a call opened that way greeted the
-        // customer as a generic assistant ("Hi there! I'm ChatGPT"). What the opening must be is said in the
-        // session's own instructions instead (see VoiceCallGuidance.WhenTalkedOver).
-        await first.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+        // The greeting was already asked for, the moment the model's session opened: see OpenMediaAndSessionAsync.
 
         // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
         // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
@@ -298,8 +309,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
+        Interlocked.Exchange(ref _assistantVoiceEndsTicks, 0);
         Volatile.Write(ref _goodbyeAlreadySaid, false);
         _replyListener = new CallerReplyListener();
+        Volatile.Write(ref _lastAssistantLine, null);
         Interlocked.Exchange(ref _providerHeardCallerTicks, 0);
         Interlocked.Exchange(ref _callerTurnOpenSinceTicks, 0);
         Interlocked.Exchange(ref _responseInFlight, 0);
@@ -607,13 +620,27 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 continue;
             }
 
+            // The model is still producing something -- usually the goodbye itself -- so it has not finished speaking.
+            if (Volatile.Read(ref _responseInFlight) == 1 && now - requestedAtTicks < ClosingResponseLimit.Ticks)
+            {
+                continue;
+            }
+
             // Quiet since the goodbye ended — and long enough that the caller has had their moment to answer it.
             // Measured from the end of the assistant's playback rather than from the tool call, so a long closing
             // line does not eat the window the caller was supposed to get. A voicemail has no caller to give it
             // to, so there the call ends as soon as the message has reached the far end.
             var afterGoodbye = reachedVoicemail?.Invoke() == true ? VoicemailTailGrace : ClosingListeningGrace;
 
-            if (now - lastAssistantTicks < afterGoodbye.Ticks)
+            // From the goodbye's last word rather than the silence it is padded with, when that word was still to be
+            // heard after the request: the padding is about a second, and counted as speech it was heard as the call
+            // taking too long to end.
+            var lastWordTicks = Interlocked.Read(ref _assistantVoiceEndsTicks);
+            var goodbyeEndsTicks = lastWordTicks > requestedAtTicks && lastWordTicks < lastAssistantTicks
+                ? lastWordTicks
+                : lastAssistantTicks;
+
+            if (now - goodbyeEndsTicks < afterGoodbye.Ticks)
             {
                 continue;
             }

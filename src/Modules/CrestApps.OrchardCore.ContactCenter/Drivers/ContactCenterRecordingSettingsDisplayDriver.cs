@@ -57,6 +57,13 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
                 model.RecordAllCalls = settings.RecordAllCalls;
                 model.ConsentModel = settings.ConsentModel;
                 model.RequireExplicitConsent = settings.RequireExplicitConsent;
+                model.EnableRecordingDisclosure = settings.EnableRecordingDisclosure;
+                model.RecordingDisclosureText = string.IsNullOrWhiteSpace(settings.RecordingDisclosureText)
+                    ? S["This call may be recorded for quality assurance and training purposes."].Value
+                    : settings.RecordingDisclosureText;
+                model.DiscloseOnInboundCalls = settings.DiscloseOnInboundCalls;
+                model.DiscloseOnAIVoiceCalls = settings.DiscloseOnAIVoiceCalls;
+                model.PromptAgentsToDisclose = settings.PromptAgentsToDisclose;
                 model.RetentionDays = settings.RetentionDays;
                 model.LegalHoldByDefault = settings.LegalHoldByDefault;
                 model.AllowAgentSecurePause = settings.AllowAgentSecurePause;
@@ -94,11 +101,34 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
                 S["Select a valid consent model."]);
         }
 
+        var disclosureText = model.RecordingDisclosureText?.Trim();
+
+        if (model.EnableRecordingDisclosure && string.IsNullOrEmpty(disclosureText))
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(model.RecordingDisclosureText),
+                S["Enter the disclosure callers are told, or stop telling them."]);
+        }
+
+        if (disclosureText?.Length > ContactCenterRecordingSettings.MaxRecordingDisclosureLength)
+        {
+            context.Updater.ModelState.AddModelError(
+                Prefix,
+                nameof(model.RecordingDisclosureText),
+                S["The disclosure can be at most {0} characters long.", ContactCenterRecordingSettings.MaxRecordingDisclosureLength]);
+        }
+
         if (context.Updater.ModelState.IsValid)
         {
             settings.RecordAllCalls = model.RecordAllCalls;
             settings.ConsentModel = model.ConsentModel;
             settings.RequireExplicitConsent = model.RequireExplicitConsent;
+            settings.EnableRecordingDisclosure = model.EnableRecordingDisclosure;
+            settings.RecordingDisclosureText = disclosureText;
+            settings.DiscloseOnInboundCalls = model.DiscloseOnInboundCalls;
+            settings.DiscloseOnAIVoiceCalls = model.DiscloseOnAIVoiceCalls;
+            settings.PromptAgentsToDisclose = model.PromptAgentsToDisclose;
             settings.RetentionDays = Math.Clamp(model.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
             settings.LegalHoldByDefault = model.LegalHoldByDefault;
             settings.AllowAgentSecurePause = model.AllowAgentSecurePause;

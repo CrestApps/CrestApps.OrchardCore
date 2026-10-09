@@ -5,6 +5,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -20,9 +22,22 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
     /// </summary>
     private static readonly TimeSpan _abandonedAfter = TimeSpan.FromHours(6);
 
+    /// <summary>
+    /// How long a summary waits for another summary of the same call to finish writing.
+    /// </summary>
+    private static readonly TimeSpan _summaryLockTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How long a summary's lock is held at most, should its writer never release it.
+    /// </summary>
+    private static readonly TimeSpan _summaryLockExpiration = TimeSpan.FromMinutes(1);
+
+    private const string SummaryLockKeyPrefix = "ai-voice-session-summary:";
+
     private readonly ConcurrentDictionary<string, TurnBasedCall> _turnBased = new(StringComparer.Ordinal);
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
+    private readonly IDistributedLock _distributedLock;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -30,11 +45,17 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
     /// </summary>
     /// <param name="shellHost">The shell host, used to write a summary in a scope that outlives the request.</param>
     /// <param name="shellSettings">The tenant the calls belong to.</param>
+    /// <param name="distributedLock">The lock that lets only one summary of a call be written at a time.</param>
     /// <param name="logger">The logger.</param>
-    public AIVoiceSessionTracker(IShellHost shellHost, ShellSettings shellSettings, ILogger<AIVoiceSessionTracker> logger)
+    public AIVoiceSessionTracker(
+        IShellHost shellHost,
+        ShellSettings shellSettings,
+        IDistributedLock distributedLock,
+        ILogger<AIVoiceSessionTracker> logger)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
+        _distributedLock = distributedLock;
         _logger = logger;
     }
 
@@ -118,8 +139,28 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
 
     private async Task WriteInOwnScopeAsync(ShellScope scope, AIVoiceSessionDraft draft)
     {
+        ILocker locker = null;
+
         try
         {
+            // A live call is summarized twice at once: by its session when it ends, and by the provider's hangup a
+            // few hundred milliseconds later. The writer keeps one summary per call by looking for an existing one
+            // first, but each write runs in its own scope, so neither saw the other's uncommitted summary and the
+            // call was reported twice. Held until the scope has committed, so the second writer sees the first.
+            (locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+                SummaryLockKeyPrefix + draft.ActivityId,
+                _summaryLockTimeout,
+                _summaryLockExpiration);
+
+            if (!locked)
+            {
+                // Another summary of this call has held the lock for too long to wait on. Writing anyway risks a
+                // second summary, which is better than losing the only one.
+                _logger.LogWarning(
+                    "Writing the AI voice session of activity '{ActivityId}' without waiting longer for another summary of the same call.",
+                    draft.ActivityId.SanitizeLogValue());
+            }
+
             await scope.UsingAsync(async childScope =>
             {
                 await childScope.ServiceProvider
@@ -131,6 +172,13 @@ internal sealed class AIVoiceSessionTracker : IAIVoiceSessionTracker
         {
             // Around the scope rather than inside it, so a commit refused when the scope ends is reported too.
             _logger.LogWarning(ex, "Could not record the AI voice session of activity '{ActivityId}'.", draft.ActivityId.SanitizeLogValue());
+        }
+        finally
+        {
+            if (locker is not null)
+            {
+                await locker.DisposeAsync();
+            }
         }
     }
 

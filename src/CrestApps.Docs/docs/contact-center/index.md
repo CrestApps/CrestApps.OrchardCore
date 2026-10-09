@@ -232,6 +232,16 @@ On every start or resume, the recording service evaluates `IRecordingGovernanceP
 
 When recording is permitted, the interaction is stamped once at capture time with the resolved retention deadline (`RecordingRetainUntilUtc`, computed from the retention window through the injected clock, or left indefinite when the window is zero) and, when configured, its legal-hold flag is raised. The retention deadline is established a single time so a later resume never extends it, and legal hold is only ever raised — never silently cleared — by resuming a recording. This governance layer is additive to, and independent of, the provider capability and support gates, which remain the hard gate on whether recording can execute at all.
 
+#### Recording disclosure and consent
+
+The **Recording disclosure** settings give callers one tenant-wide notice that the call is recorded. `IRecordingDisclosureProvider` (in `CrestApps.OrchardCore.ContactCenter.Abstractions`) returns the text for a `RecordingDisclosureCallType`, or `null` when none is given on that type of call. It is registered only while this feature is enabled, so consumers resolve it as an optional dependency.
+
+- **Inbound.** Inbound routing marks the entry point's announcement as including the disclosure (`EntryPointAnnouncement.IncludesDisclosure`). It does this even when the entry point has no welcome message, for a caller who goes on to the menu, an agent or a queue. `IvrCallRouter` speaks the disclosure and the message as one announcement. When the provider reports that the speech ended, it records the disclosure before the caller is routed on.
+- **Automated voice agents.** The turn-based loop puts the disclosure at the start of its opening line. A realtime session gets it as `RealtimeVoiceConversationContext.RecordingDisclosure` and is instructed to say it word for word first.
+- **Agents.** On a live voice interaction with no `RecordingDisclosedUtc`, the agent workspace state carries the disclosure text. The agent confirms it through `POST Admin/contact-center/workspace/recording/disclosed`, which accepts only the agent's own active interaction.
+
+`IRecordingDisclosureService.RecordDisclosedAsync` stamps `Interaction.RecordingDisclosedUtc` and sets `RecordingConsentCapturedUtc` if it is not already set. It publishes a `RecordingDisclosed` event carrying the method (`announcement` or `agent`) and the words used. If the tenant records every call but requires consent under the all-parties model, it also starts the recording that was refused when the call connected.
+
 #### Access audit and right to erasure
 
 Because the Contact Center orchestration layer never stores recording media — the interaction holds only an opaque recording reference and the retrieval metadata needed to fetch the media from the owning media store — post-capture governance is handled by `IRecordingAccessGovernanceService`. Every recording retrieval is audited: `RecordAccessAsync` publishes a `RecordingAccessed` domain event capturing who accessed the recording, the stated purpose, and the reference that was accessed. Access is not audited when the interaction has no captured recording.

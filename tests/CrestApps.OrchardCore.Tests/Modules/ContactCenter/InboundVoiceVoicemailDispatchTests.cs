@@ -324,6 +324,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 new RecordingContactCenterAuditRecorder(),
                 new InboundPriorityResolver([], NullLogger<InboundPriorityResolver>.Instance),
                 [],
+                [],
                 new Mock<global::YesSql.ISession> { DefaultValue = DefaultValue.Mock }.Object,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()),

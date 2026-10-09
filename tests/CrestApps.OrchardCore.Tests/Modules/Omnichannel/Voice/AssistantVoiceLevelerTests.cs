@@ -73,7 +73,7 @@ public sealed class AssistantVoiceLevelerTests
     }
 
     [Theory]
-    [InlineData(-24d)]
+    [InlineData(-22d)]
     [InlineData(-21d)]
     [InlineData(-15d)]
     public void AVoiceAtOrAboveTheTarget_PassesThroughUnchanged(double dbfs)

@@ -43,6 +43,7 @@ public sealed class IvrCallRouter : IIvrCallRouter
     private readonly IInboundVoiceCallProcessor _inboundProcessor;
     private readonly IIvrExternalTransferService _externalTransfers;
     private readonly IContactCenterAuditRecorder _auditRecorder;
+    private readonly IEnumerable<IRecordingDisclosureService> _disclosureServices;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -63,6 +64,7 @@ public sealed class IvrCallRouter : IIvrCallRouter
         IInboundVoiceCallProcessor inboundProcessor,
         IIvrExternalTransferService externalTransfers,
         IContactCenterAuditRecorder auditRecorder,
+        IEnumerable<IRecordingDisclosureService> disclosureServices,
         ISession session,
         IClock clock,
         ILogger<IvrCallRouter> logger)
@@ -79,6 +81,7 @@ public sealed class IvrCallRouter : IIvrCallRouter
         _inboundProcessor = inboundProcessor;
         _externalTransfers = externalTransfers;
         _auditRecorder = auditRecorder;
+        _disclosureServices = disclosureServices;
         _session = session;
         _clock = clock;
         _logger = logger;
@@ -356,7 +359,24 @@ public sealed class IvrCallRouter : IIvrCallRouter
             return;
         }
 
-        var text = announcement.Kind == EntryPointAnnouncement.Closed ? entryPoint.ClosedMessage : entryPoint.WelcomeMessage;
+        var message = announcement.Kind == EntryPointAnnouncement.Closed ? entryPoint.ClosedMessage : entryPoint.WelcomeMessage;
+        var disclosureService = _disclosureServices.FirstOrDefault();
+        var disclosure = announcement.IncludesDisclosure && disclosureService is not null
+            ? await disclosureService.GetDisclosureAsync(RecordingDisclosureCallType.Inbound, cancellationToken)
+            : null;
+
+        // The disclosure was turned off after the call arrived: the caller hears the message alone, and is not recorded
+        // as having been told. Saved with the message's status below.
+        if (announcement.IncludesDisclosure && string.IsNullOrWhiteSpace(disclosure))
+        {
+            EntryPointAnnouncement.SetIncludesDisclosure(interaction, false);
+        }
+
+        // Said as one message so nothing can come between them: the disclosure first, because it is the first thing a
+        // caller must hear, then the entry point's own message.
+        var text = string.Join(' ', new[] { disclosure, message }
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Select(part => part.Trim()));
 
         // The message was removed after the call arrived: the caller goes on exactly as they would have without one.
         if (string.IsNullOrWhiteSpace(text))
@@ -496,6 +516,16 @@ public sealed class IvrCallRouter : IIvrCallRouter
         // failed on a concurrency conflict would be retried against a caller already marked as moved on, and do nothing.
         EntryPointAnnouncement.SetStatus(interaction, EntryPointAnnouncement.Played);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+        // Recorded before the caller is put through, so the consent it captures is there when the call connects to an
+        // agent and the recording asks for it.
+        var disclosureService = _disclosureServices.FirstOrDefault();
+
+        if (announcement.IncludesDisclosure && disclosureService is not null)
+        {
+            await disclosureService.RecordDisclosedAsync(interaction.ItemId, ContactCenterConstants.RecordingDisclosureMethod.Announcement, cancellationToken);
+        }
+
         await ContinueAfterAnnouncementAsync(interaction, entryPoint, announcement, cancellationToken);
 
         return true;

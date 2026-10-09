@@ -11,6 +11,9 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     private int _requestCount;
     private int _awaitingAnswer;
     private int _holds;
+    private int _customerSpokeLast;
+    private int _lastLineSaidGoodbye;
+    private int _requestedSinceCustomer;
 
     // How many times one unanswered question may keep the call open against the model's request to end it.
     private const int MaximumHolds = 2;
@@ -37,6 +40,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     public void RequestEndCall(string reason, bool reachedVoicemail)
     {
         EndCallRequested = true;
+        Volatile.Write(ref _requestedSinceCustomer, 1);
         Reason = reason;
         ReachedVoicemail = reachedVoicemail;
         Interlocked.Increment(ref _requestCount);
@@ -49,6 +53,12 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     /// <inheritdoc/>
     public void AssistantSaid(string line)
     {
+        if (!string.IsNullOrWhiteSpace(line))
+        {
+            Volatile.Write(ref _customerSpokeLast, 0);
+            Volatile.Write(ref _lastLineSaidGoodbye, VoiceGoodbye.SoundsLikeOne(line) ? 1 : 0);
+        }
+
         // Only set here, never cleared: a goodbye said straight after the question, without the customer
         // answering, is exactly what must not close the call.
         if (VoiceConfirmation.AwaitsAnswer(line))
@@ -60,7 +70,23 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
 
     /// <inheritdoc/>
     public void CustomerAnswered()
-        => Volatile.Write(ref _awaitingAnswer, 0);
+    {
+        Volatile.Write(ref _awaitingAnswer, 0);
+        Volatile.Write(ref _customerSpokeLast, 1);
+        Volatile.Write(ref _requestedSinceCustomer, 0);
+    }
+
+    /// <inheritdoc/>
+    public bool EndCallAlreadyRequested
+        => Volatile.Read(ref _requestedSinceCustomer) == 1;
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Owed too when the assistant spoke last but not to say goodbye: live, a model said "let me wrap this up for you",
+    /// ended the call, was told to say nothing further, and the line dropped with no goodbye at all.
+    /// </remarks>
+    public bool ClosingLineOwed
+        => Volatile.Read(ref _customerSpokeLast) == 1 || Volatile.Read(ref _lastLineSaidGoodbye) == 0;
 
     /// <inheritdoc/>
     public bool TryHoldForAnswer()
@@ -77,6 +103,9 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     {
         Volatile.Write(ref _awaitingAnswer, 0);
         Volatile.Write(ref _holds, 0);
+        Volatile.Write(ref _customerSpokeLast, 0);
+        Volatile.Write(ref _lastLineSaidGoodbye, 0);
+        Volatile.Write(ref _requestedSinceCustomer, 0);
         EndCallRequested = false;
         Reason = null;
         ReachedVoicemail = false;

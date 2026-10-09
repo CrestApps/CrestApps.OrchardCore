@@ -144,7 +144,40 @@ internal static partial class AgentWorkspaceEndpoints
             RecordingState = interaction.RecordingState.ToString(),
             IsRecordingPaused = interaction.RecordingState == RecordingState.Paused,
             SupportsSecurePause = SupportsSecurePause(interaction, voiceProviderResolver),
+            RecordingDisclosure = await ResolveOwedRecordingDisclosureAsync(interaction, httpContext, cancellationToken),
         };
+    }
+
+    // The disclosure the agent reads out on a live call whose customer has not been told it is recorded: an outbound
+    // call, or an inbound one that reached them without an entry point's announcement. Resolved from the request
+    // because it is registered only while call recording is enabled.
+    private static async Task<string> ResolveOwedRecordingDisclosureAsync(
+        Interaction interaction,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        if (interaction.Channel != InteractionChannel.Voice ||
+            interaction.RecordingDisclosedUtc.HasValue ||
+            interaction.IsSettled)
+        {
+            return null;
+        }
+
+        var provider = httpContext.RequestServices?.GetService<IRecordingDisclosureProvider>();
+
+        if (provider is null)
+        {
+            return null;
+        }
+
+        // A call handed over by an automated voice agent that gives the disclosure was told by the assistant already.
+        if (!string.IsNullOrEmpty(interaction.HandoffAiSessionId) &&
+            !string.IsNullOrWhiteSpace(await provider.GetDisclosureAsync(RecordingDisclosureCallType.AIVoiceAgent, cancellationToken)))
+        {
+            return null;
+        }
+
+        return await provider.GetDisclosureAsync(RecordingDisclosureCallType.Agent, cancellationToken);
     }
 
     private static bool SupportsSecurePause(

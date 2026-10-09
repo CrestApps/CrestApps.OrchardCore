@@ -158,6 +158,62 @@ public sealed class ContactCenterCallAuditTests
     }
 
     [Fact]
+    public async Task AutomatedCallObserver_RecordsTheRecordingDisclosure_WithTheWordsUsed()
+    {
+        // Arrange
+        // An automated call is usually no interaction at all, so the notice is tied to the provider's call.
+        var recorder = new RecordingContactCenterAuditRecorder();
+        var observer = new ContactCenterAutomatedVoiceCallObserver(new Mock<IInteractionManager>().Object, recorder);
+
+        // Act
+        await observer.ObserveAsync(new AutomatedVoiceCallObservation
+        {
+            Kind = AutomatedVoiceCallObservationKind.RecordingDisclosed,
+            ActivityItemId = "act-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-1",
+            OccurredUtc = _now,
+            RecordingDisclosure = "This call may be recorded.",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var call = Assert.Single(recorder.Calls);
+        Assert.Equal(ContactCenterConstants.Events.RecordingDisclosed, call.EventType);
+        Assert.Null(call.Data.InteractionId);
+        Assert.Equal("call-1", call.Data.ProviderCallId);
+        Assert.Equal(ContactCenterConstants.RecordingDisclosureMethod.AIVoiceAgent, call.Data.Details["method"]);
+        Assert.Equal("This call may be recorded.", call.Data.Details["text"]);
+        Assert.False(call.Data.Details.ContainsKey("openingLine"));
+        Assert.Equal(_now, call.OccurredUtc);
+    }
+
+    [Fact]
+    public async Task AutomatedCallObserver_RecordsAMissedDisclosure_WithWhatWasSaidInstead()
+    {
+        // Arrange
+        var recorder = new RecordingContactCenterAuditRecorder();
+        var observer = new ContactCenterAutomatedVoiceCallObserver(new Mock<IInteractionManager>().Object, recorder);
+
+        // Act
+        await observer.ObserveAsync(new AutomatedVoiceCallObservation
+        {
+            Kind = AutomatedVoiceCallObservationKind.RecordingDisclosureMissed,
+            ActivityItemId = "act-1",
+            ProviderCallId = "call-1",
+            OccurredUtc = _now,
+            RecordingDisclosure = "This call may be recorded.",
+            OpeningLine = "Hey Jack! " + new string('x', 600),
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var call = Assert.Single(recorder.Calls);
+        Assert.Equal(ContactCenterConstants.Events.RecordingDisclosureMissed, call.EventType);
+        Assert.Equal("This call may be recorded.", call.Data.Details["text"]);
+        Assert.StartsWith("Hey Jack! ", call.Data.Details["openingLine"], StringComparison.Ordinal);
+        Assert.Equal(500, call.Data.Details["openingLine"].Length);
+    }
+
+    [Fact]
     public async Task AutomatedVoiceCallObserver_AConversationHandedToAnAgent_IsRecordedEndedAtTheHandoff_NotAtTheHangup()
     {
         // Arrange

@@ -24,6 +24,11 @@ public interface IRecordingMediaStore
     /// <summary>
     /// Opens a readable, decrypted stream over a previously stored recording.
     /// </summary>
+    /// <remarks>
+    /// Return a stream that can seek and reports its <see cref="Stream.Length"/> whenever the stored media allows it.
+    /// Playback serves the stream with HTTP range requests, so a stream that cannot seek still plays, but the player
+    /// cannot seek in it.
+    /// </remarks>
     /// <param name="storageReference">The storage reference returned when the recording was stored.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>

@@ -70,6 +70,26 @@ public sealed class VoiceCallConclusionWiringTests
     }
 
     [Fact]
+    public async Task ACallLoadedWithoutAProfile_IsConcludedWithItsSubjectFlowsProfile()
+    {
+        // Arrange
+        // Older loads left the activity's profile empty and let the subject flow decide it. The call itself ran on
+        // the flow's profile, but concluding it looked the profile up by the empty id and failed every time, so the
+        // call stayed open for good.
+        var harness = new ConclusionHarness();
+        harness.Activity.AIProfileId = null;
+        harness.NobodySpoke();
+        harness.Offers("disposition-no-answer", "No answer");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.NotNull(harness.WrittenActivity);
+        Assert.Equal(ActivityStatus.Completed, harness.WrittenActivity.Status);
+    }
+
+    [Fact]
     public async Task AConcludedCall_IsWrittenCompleted_WithTheClocksTimeTheChosenOutcomeAndTheNotes()
     {
         // Arrange
@@ -143,7 +163,7 @@ public sealed class VoiceCallConclusionWiringTests
         // picked up. A recording is not a conversation, so it is concluded exactly like a call nobody answered.
         var harness = new ConclusionHarness();
         harness.Says(
-            (ChatRole.Assistant, "Hi Amani, this is Alex at Prestige Auto Group. Do you have a quick minute?"),
+            (ChatRole.Assistant, "Hi Amani, this is Alex at Contoso Motors. Do you have a quick minute?"),
             (ChatRole.User, "When you have finished recording you may hang up."),
             (ChatRole.Assistant, "Thanks, Amani! Have a great day! [[HANGUP]]"));
         harness.Offers("disposition-do-not-call", "Do Not Call");
@@ -551,12 +571,18 @@ public sealed class VoiceCallConclusionWiringTests
                 .ReturnsAsync(() => _prompts);
 
             var profileManager = new Mock<IAIProfileManager>();
+            // Refuses an empty id the way the real catalog does, so a lookup by a missing id fails here as it does live.
             profileManager
                 .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new AIProfile
+                .Returns((string id, CancellationToken _) =>
                 {
-                    ItemId = "profile-1",
-                    Type = AIProfileType.Chat,
+                    ArgumentException.ThrowIfNullOrEmpty(id);
+
+                    return ValueTask.FromResult(new AIProfile
+                    {
+                        ItemId = "profile-1",
+                        Type = AIProfileType.Chat,
+                    });
                 });
 
             var flowSettingsService = new Mock<ISubjectFlowSettingsService>();
@@ -566,6 +592,7 @@ public sealed class VoiceCallConclusionWiringTests
                 {
                     SubjectContentType = "Opportunity",
                     SubjectGoal = "Book the customer in for a quote.",
+                    ProfileId = "profile-1",
                 });
 
             var contextBuilder = new Mock<IAICompletionContextBuilder>();
@@ -641,6 +668,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IOmnichannelHandoffTurn>(),
                 Mock.Of<IVoiceCallEndTurn>(),
                 Mock.Of<IRealtimeCallCompletionRunner>(),
+                [],
                 [],
                 [],
                 deploymentManager.Object,

@@ -1,11 +1,13 @@
 ﻿using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Omnichannel.Voice.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice;
@@ -55,6 +57,9 @@ public sealed class Startup : StartupBase
         // on speak and transcribe alone - so the capability is optional: without it, this reports that no
         // realtime session ran and the turn-based loop takes the call.
         services.TryAddScoped<IRealtimeVoiceConversationRunner, NoRealtimeVoiceConversationRunner>();
+
+        // A call whose hangup was never reported is concluded here, or it stays in progress for good.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, StrandedVoiceCallRecoveryBackgroundTask>());
     }
 }
 

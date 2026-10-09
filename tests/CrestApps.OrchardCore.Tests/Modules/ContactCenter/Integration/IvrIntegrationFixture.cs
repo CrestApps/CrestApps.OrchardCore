@@ -102,6 +102,25 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
     public IReadOnlyList<InteractionEvent> Events => Harness.PublishedEvents;
 
     /// <summary>
+    /// The recording disclosure the router says ahead of the entry point's message; empty while call recording is off.
+    /// </summary>
+    public List<IRecordingDisclosureService> DisclosureServices { get; } = [];
+
+    /// <summary>
+    /// Turns call recording on with the specified settings, so the real disclosure service is registered.
+    /// </summary>
+    public void EnableRecording(ContactCenterRecordingSettings settings)
+    {
+        DisclosureServices.Clear();
+        DisclosureServices.Add(new RecordingDisclosureService(
+            Harness.Services,
+            Harness.InteractionManager,
+            SiteServiceFactory.Create(settings),
+            Harness.Services.GetRequiredService<IClock>(),
+            NullLogger<RecordingDisclosureService>.Instance));
+    }
+
+    /// <summary>
     /// Creates the fixture: an agent signed in and Available, and an inbound call that inbound routing has just handed
     /// to the entry point's menu, exactly as it leaves it: activity and interaction written, the entry point recorded,
     /// nothing queued.
@@ -150,7 +169,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
     /// Leaves the call as inbound routing does for a caller owed the entry point's welcome or closed message: the
     /// message scheduled, and, for a caller who is not going on to the menu, no menu left to press keys in.
     /// </summary>
-    public async Task ScheduleAnnouncementAsync(string kind, string next, string queueId = null)
+    public async Task ScheduleAnnouncementAsync(string kind, string next, string queueId = null, bool includesDisclosure = false)
     {
         var interaction = await FindInteractionAsync();
 
@@ -159,7 +178,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             interaction.TechnicalMetadata[IvrExecutionService.StateMetadataKey] = new IvrFlowState { Completed = true };
         }
 
-        EntryPointAnnouncement.Schedule(interaction, kind, next, queueId);
+        EntryPointAnnouncement.Schedule(interaction, kind, next, queueId, includesDisclosure);
         await Harness.InteractionManager.UpdateAsync(interaction, cancellationToken: TestContext.Current.CancellationToken);
         await Harness.CommitAsync();
     }
@@ -407,6 +426,7 @@ internal sealed class IvrIntegrationFixture : IAsyncDisposable
             processor.Object,
             external.Object,
             services.GetRequiredService<IContactCenterAuditRecorder>(),
+            DisclosureServices,
             Harness.Session,
             clock,
             RouterLog);

@@ -23,6 +23,18 @@ that request — even when the rest of the call went well, and even when the wor
 That request is a legal obligation rather than a preference, and recording it as an ordinary completed call is the
 one mistake here that cannot be undone later.
 
+A customer who asked to be called back -- "call me later", "not a good time, try me in an hour", "call me tomorrow
+afternoon" -- has not finished the conversation. If a disposition that calls them back is offered, choose it rather
+than an ordinary completed call, which would mean nobody ever calls them again.
+
+## Callback time
+
+If the customer named when to call them back, set CallbackTime to that moment as an ISO 8601 date and time with its
+UTC offset (for example 2026-10-08T15:30:00-07:00), worked out from the current date and time you are given and in
+the same offset unless they named another time zone. "In an hour" is an hour from now; "tomorrow afternoon" is
+tomorrow at 14:00; "after five" is 17:00. If they asked to be called back without saying when, or did not ask at
+all, omit CallbackTime.
+
 {% if AllowSubjectFields %}
 ## Subject fields
 

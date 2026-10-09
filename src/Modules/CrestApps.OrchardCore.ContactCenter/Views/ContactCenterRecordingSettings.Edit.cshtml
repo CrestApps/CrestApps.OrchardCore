@@ -1,70 +1,159 @@
 @using CrestApps.OrchardCore.ContactCenter.Core.Models
 @model ContactCenterRecordingSettingsViewModel
 
-<p class="alert alert-info">
-    @T["Calls can be recorded while the Contact Center Call Recording feature is enabled; disable the feature to stop all recording. These rules are enforced server-side before any recording starts: when required consent has not been captured, recording is denied and a governance event is recorded."]
-</p>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" asp-for="RecordAllCalls" class="form-check-input" />
-        <label asp-for="RecordAllCalls" class="form-check-label">@T["Record every call automatically"]</label>
-        <span class="hint dashed">@T["Starts recording as soon as a call connects to an agent, or as soon as an AI agent's call is answered. When unchecked, a call is recorded only when a workflow or a supervisor starts it."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="alert alert-info">
+            @T["Calls can be recorded while the Contact Center Call Recording feature is enabled; disable the feature to stop all recording. These rules are enforced server-side before any recording starts: when required consent has not been captured, recording is denied and a governance event is recorded."]
+        </p>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="ConsentModel" class="form-label">@T["Consent model"]</label>
-    <select asp-for="ConsentModel" class="form-select">
-        <option value="@RecordingConsentModel.AllParties">@T["All parties must consent"]</option>
-        <option value="@RecordingConsentModel.SingleParty">@T["Single party consent is sufficient"]</option>
-    </select>
-    <span class="hint">@T["Choose the consent model required by the jurisdictions this tenant operates in."]</span>
-</div>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" asp-for="RequireExplicitConsent" class="form-check-input" />
-        <label asp-for="RequireExplicitConsent" class="form-check-label">@T["Require explicit consent capture"]</label>
-        <span class="hint dashed">@T["When enabled with the all-parties consent model, recording is denied until explicit consent has been captured on the interaction."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="RecordAllCalls" class="form-check-input" />
+            <label asp-for="RecordAllCalls" class="form-check-label">@T["Record every call automatically"]</label>
+            <span class="hint dashed">@T["Starts recording as soon as a call connects to an agent, or as soon as an AI agent's call is answered. When unchecked, a call is recorded only when a workflow or a supervisor starts it."]</span>
+        </div>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="RetentionDays" class="form-label">@T["Retention (days)"]</label>
-    <input type="number" min="0" asp-for="RetentionDays" class="form-control" />
-    <span class="hint">@T["The number of days a captured recording is retained before it becomes eligible for erasure. Zero retains recordings indefinitely."]</span>
-</div>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" asp-for="LegalHoldByDefault" class="form-check-input" />
-        <label asp-for="LegalHoldByDefault" class="form-check-label">@T["Apply legal hold by default"]</label>
-        <span class="hint dashed">@T["When enabled, captured recordings begin under legal hold and are exempt from retention-driven and subject-request erasure until the hold is released."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="ConsentModel">
+    <label asp-for="ConsentModel" class="ocat-label">@T["Consent model"]</label>
+    <div class="ocat-end">
+        <select asp-for="ConsentModel" class="form-select">
+            <option value="@RecordingConsentModel.AllParties">@T["All parties must consent"]</option>
+            <option value="@RecordingConsentModel.SingleParty">@T["Single party consent is sufficient"]</option>
+        </select>
+        <span asp-validation-for="ConsentModel" class="text-danger"></span>
+        <span class="hint">@T["Choose the consent model required by the jurisdictions this tenant operates in."]</span>
     </div>
 </div>
 
-<h5 class="mt-4">@T["Agent secure pause"]</h5>
-<p class="hint">@T["Secure pause lets an agent suppress recording during a sensitive-data capture, such as a card or Social Security number, so the sensitive audio is never captured. Every pause and resume is authorized against the agent's own live interaction and recorded as an audit event."]</p>
-
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" asp-for="AllowAgentSecurePause" class="form-check-input" />
-        <label asp-for="AllowAgentSecurePause" class="form-check-label">@T["Allow agents to pause recording"]</label>
-        <span class="hint dashed">@T["When disabled, only automation or the provider may suppress capture, and the agent-facing secure-pause control is never shown."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-4">@T["Recording disclosure"]</h5>
+        <p class="hint">@T["Tell callers the call is recorded, in words your legal team approves. The platform says it word for word on inbound calls and automated voice agent calls; on any other call, the agent is shown it to read out and confirm. Each disclosure is logged with the time and the words used."]</p>
     </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="MaxSecurePauseSeconds" class="form-label">@T["Maximum secure-pause window (seconds)"]</label>
-    <input type="number" min="0" asp-for="MaxSecurePauseSeconds" class="form-control" />
-    <span class="hint">@T["The number of seconds a recording may remain paused before the platform automatically resumes it, so a pause that is never resumed cannot suppress capture for the rest of the call. Zero keeps a pause active until it is explicitly resumed."]</span>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="EnableRecordingDisclosure" class="form-check-input" />
+            <label asp-for="EnableRecordingDisclosure" class="form-check-label">@T["Tell callers the call is recorded"]</label>
+            <span class="hint dashed">@T["When unchecked, no disclosure is given, and the entry point welcome messages and AI profile instructions are the only notice callers get."]</span>
+        </div>
+    </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" asp-for="RequirePauseReason" class="form-check-input" />
-        <label asp-for="RequirePauseReason" class="form-check-label">@T["Require a reason to pause"]</label>
-        <span class="hint dashed">@T["When enabled, an agent must supply a reason when pausing recording, so the suppression gap is always accompanied by an auditable justification."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="RecordingDisclosureText">
+    <label asp-for="RecordingDisclosureText" class="ocat-label">@T["Disclosure"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="RecordingDisclosureText" class="form-control" rows="2" maxlength="@ContactCenterRecordingSettings.MaxRecordingDisclosureLength"></textarea>
+        <span asp-validation-for="RecordingDisclosureText" class="text-danger"></span>
+        <span class="hint">@T["Keep it to a sentence or two, for example: \"This call may be recorded for quality assurance and training purposes.\""]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="DiscloseOnInboundCalls" class="form-check-input" />
+            <label asp-for="DiscloseOnInboundCalls" class="form-check-label">@T["Say it to inbound callers"]</label>
+            <span class="hint dashed">@T["Spoken to a caller on an entry point before its welcome message, menu or queue, even when the entry point has no welcome message. Callers sent straight to voicemail or turned away do not hear it."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="DiscloseOnAIVoiceCalls" class="form-check-input" />
+            <label asp-for="DiscloseOnAIVoiceCalls" class="form-check-label">@T["Have automated voice agents say it first"]</label>
+            <span class="hint dashed">@T["Turn-based calls speak it ahead of the profile's opening line. A realtime call's opening is written by the model, which is told to say the disclosure first, word for word; check a few call transcripts to confirm it does."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="PromptAgentsToDisclose" class="form-check-input" />
+            <label asp-for="PromptAgentsToDisclose" class="form-check-label">@T["Ask agents to say it when the caller has not heard it"]</label>
+            <span class="hint dashed">@T["On an outbound call, or an inbound call that reached the agent without the entry point's announcement, the agent workspace shows the disclosure with a button the agent presses once they have read it out."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="RequireExplicitConsent" class="form-check-input" />
+            <label asp-for="RequireExplicitConsent" class="form-check-label">@T["Do not record until the caller has heard the disclosure"]</label>
+            <span class="hint dashed">@T["With the all-parties consent model, a call starts recording only once the disclosure has been spoken to the caller or the agent has confirmed giving it. Automated voice agent calls and soft phone calls made outside the Contact Center are not recorded while this is on."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-4">@T["Retention"]</h5>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RetentionDays">
+    <label asp-for="RetentionDays" class="ocat-label">@T["Retention (days)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" asp-for="RetentionDays" class="form-control" />
+        <span asp-validation-for="RetentionDays" class="text-danger"></span>
+        <span class="hint">@T["The number of days a captured recording is retained before it becomes eligible for erasure. Zero retains recordings indefinitely."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="LegalHoldByDefault" class="form-check-input" />
+            <label asp-for="LegalHoldByDefault" class="form-check-label">@T["Apply legal hold by default"]</label>
+            <span class="hint dashed">@T["When enabled, captured recordings begin under legal hold and are exempt from retention-driven and subject-request erasure until the hold is released."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <h5 class="mt-4">@T["Agent secure pause"]</h5>
+        <p class="hint">@T["Secure pause lets an agent suppress recording during a sensitive-data capture, such as a card or Social Security number, so the sensitive audio is never captured. Every pause and resume is authorized against the agent's own live interaction and recorded as an audit event."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="AllowAgentSecurePause" class="form-check-input" />
+            <label asp-for="AllowAgentSecurePause" class="form-check-label">@T["Allow agents to pause recording"]</label>
+            <span class="hint dashed">@T["When disabled, only automation or the provider may suppress capture, and the agent-facing secure-pause control is never shown."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxSecurePauseSeconds">
+    <label asp-for="MaxSecurePauseSeconds" class="ocat-label">@T["Maximum secure-pause window (seconds)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" asp-for="MaxSecurePauseSeconds" class="form-control" />
+        <span asp-validation-for="MaxSecurePauseSeconds" class="text-danger"></span>
+        <span class="hint">@T["The number of seconds a recording may remain paused before the platform automatically resumes it, so a pause that is never resumed cannot suppress capture for the rest of the call. Zero keeps a pause active until it is explicitly resumed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="RequirePauseReason" class="form-check-input" />
+            <label asp-for="RequirePauseReason" class="form-check-label">@T["Require a reason to pause"]</label>
+            <span class="hint dashed">@T["When enabled, an agent must supply a reason when pausing recording, so the suppression gap is always accompanied by an auditable justification."]</span>
+        </div>
     </div>
 </div>

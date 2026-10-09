@@ -19,19 +19,74 @@ internal static class VoiceCallGuidance
     /// <remarks>
     /// Said plainly, because the model is speaking rather than writing and cannot see the call state: on a phone
     /// call somebody has to hang up, and if it does not, the customer is left holding a dead line.
+    /// <para>
+    /// The confirmation rule is here because ending the call is where a wrong one costs: live, a model read an
+    /// email address back wrongly, the customer's reply came through garbled, and the model took it for a yes,
+    /// thanked them and hung up with the wrong address.
+    /// </para>
+    /// <para>
+    /// The callback rule is here for the same reason: live, a customer said "can you call me later?" and the model
+    /// said goodbye and hung up without asking when, so the follow-up could only be scheduled for a guess. And a
+    /// customer who answered "no, not right now" was wished a good day and closed as finished -- never called again
+    /// -- when "not now" is a timing answer, not a refusal.
+    /// </para>
+    /// <para>
+    /// The closing line is held to one sentence because every word of it is waited through: live, a confirmed email
+    /// was followed by "let me just wrap this up with you" and a two-sentence goodbye, twelve seconds of talking
+    /// before the line could drop.
+    /// </para>
     /// </remarks>
     public const string EndingTheCall =
         "You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
-        "they needed, has declined, has asked not to be called again, or has said goodbye — say a short, warm " +
-        "closing line and then call the " + EndCallTool.ToolName + " tool. The call is hung up for you once you " +
+        "they needed, has declined, has asked not to be called again, or has said goodbye — say one short, warm " +
+        "closing sentence (thank them and say goodbye) and then call the " + EndCallTool.ToolName + " tool. Do " +
+        "not say you are wrapping up or about to finish first; just say goodbye. The call is hung up for you once you " +
         "have finished speaking and the customer has had a moment to add anything, so do not announce that you " +
         "are hanging up and do not wait for them to do it. Never call it while the customer still has questions " +
-        "or is being transferred to a person.";
+        "or is being transferred to a person. When you read details back to confirm them, only a clear yes " +
+        "confirms them: an answer you could not make out, or one that does not plainly say yes, is not a " +
+        "confirmation -- ask again (\"Sorry, was that a yes?\"), and if they correct you, read the corrected " +
+        "details back before you go on. If the customer says now is not a good time, offer to call them back " +
+        "unless they have made clear they are not interested at all. If they ask to be called back, or accept " +
+        "the offer, without saying when, ask once when would suit them before you close, and say that time back " +
+        "to them in your goodbye.";
 
     /// <summary>
     /// The same guidance under its own heading, for a system prompt that is assembled in sections.
     /// </summary>
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;
+
+    /// <summary>
+    /// The heading <see cref="RecordingDisclosure(string)"/> is given in a live session's instructions.
+    /// </summary>
+    public const string RecordingDisclosureHeading = "## Telling the customer the call is recorded";
+
+    /// <summary>
+    /// Tells a live session to give the tenant's recording disclosure word for word, before anything else.
+    /// </summary>
+    /// <remarks>
+    /// A live session writes its own opening line, so the platform cannot say the disclosure for it the way the
+    /// turn-based loop does. A legal notice has to be the approved words, so the model is told to quote it rather
+    /// than to mention that the call is recorded, and to say it again in full if the caller talked over it.
+    /// </remarks>
+    /// <param name="disclosure">The disclosure text, exactly as the tenant configured it.</param>
+    /// <returns>The guidance, or <see langword="null"/> when there is no disclosure to give.</returns>
+    public static string RecordingDisclosure(string disclosure)
+    {
+        if (string.IsNullOrWhiteSpace(disclosure))
+        {
+            return null;
+        }
+
+        return
+            "This call is recorded, and the customer must be told so before anything else. Your opening must begin " +
+            "with this sentence, said word for word exactly as it is written here: \"" + disclosure.Trim() + "\" " +
+            "Do not paraphrase, shorten, translate or skip it, and do not add anything to it; then go straight on " +
+            "with the rest of your opening. Only if you were cut off before you finished that sentence, start your " +
+            "next reply with the whole sentence again. Once you have said the whole sentence, never say it again, " +
+            "even if the customer spoke while you were saying it or while you went on; if they ask whether the call " +
+            "is recorded, simply tell them that it is.";
+    }
 
     /// <summary>
     /// The heading <see cref="WhenTalkedOver"/> is given in a live session's instructions.

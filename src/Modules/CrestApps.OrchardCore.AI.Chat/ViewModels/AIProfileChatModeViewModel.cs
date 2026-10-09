@@ -65,6 +65,17 @@ public class AIProfileChatModeViewModel
     public string[] RealtimeDeploymentNames { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the technical names of the realtime deployments that would leave the user untranscribed: their
+    /// provider has no speech-to-text deployment.
+    /// </summary>
+    /// <remarks>
+    /// The editor warns when the conversation would resolve to one of these, because the conversation still works
+    /// and nothing else would say that its transcript holds only the assistant's side.
+    /// </remarks>
+    [BindNever]
+    public string[] UntranscribedRealtimeDeploymentNames { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the site's default realtime deployment, the second link in that chain.
     /// </summary>
     [BindNever]

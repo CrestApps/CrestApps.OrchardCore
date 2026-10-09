@@ -43,6 +43,11 @@ public sealed class AgentWorkspaceIndexViewModel
     public string PauseRecordingUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the URL that records that the agent told the customer on their own live call that it is recorded.
+    /// </summary>
+    public string RecordingDisclosedUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the URL that resumes recording on the agent's own live interaction after a sensitive-data capture.
     /// </summary>
     public string ResumeRecordingUrl { get; set; }
