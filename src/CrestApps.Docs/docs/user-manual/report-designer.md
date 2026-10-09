@@ -34,7 +34,7 @@ People who only run reports that were shared with them need no permission: they 
 
 1. Open **Reports > Report Designer** and click **Design Report**.
 2. Type a title at the top of the page.
-3. Click **Add data set**, pick a **data source**, then pick a data set. Its fields appear in the **Data** pane on the left, grouped by part.
+3. Click **Add data set**. Pick a data source on the left (or **All**), then click **Add** on the data set's card. Its fields appear in the **Data** pane on the left, grouped by part.
 4. Drag fields onto **Columns**. You can also click the column icon next to a field. Numbers are added as a **Sum** by default; text, dates and identifiers become dimensions.
 5. Click a column to change it in **Properties** on the right (see [Column settings](#column-settings)).
 6. The **Preview** under the shelves refreshes as you work. Click **Refresh** to run it again.
@@ -42,11 +42,16 @@ People who only run reports that were shared with them need no permission: they 
 
 Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it.
 
+The designer fills the window, and each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section to give the preview more room; the designer remembers your choice.
+
 ## Combine data sets
 
-To report on data that lives in two places (for example customers and their orders), add both data sets. The designer adds a **Relationships** card for every data set after the first.
+To report on data that lives in two places (for example customers and their orders), add both data sets, then join them on the columns they share.
 
-1. Pick how rows are kept:
+1. Open the **Data model** tab. Each data set is a card listing its columns; key columns are marked with a key and listed first. Drag a card by its title to move it.
+2. Drag a column from one card onto the matching column of another card, such as the order's *Customer* onto the customer's *Content item id*. A line now connects the two columns.
+3. To match on more than one column, drag another pair. Every pair must be equal for two rows to match.
+4. Click the line or its badge to open the join on the right, then pick which rows to keep:
 
    | Choice | Keeps |
    | --- | --- |
@@ -55,7 +60,7 @@ To report on data that lives in two places (for example customers and their orde
    | **All rows of this data set, matching rows before** | Every order, with its customer when one matches. |
    | **All rows of both sides** | Everything from both data sets. |
 
-2. Pick the fields that must match, such as the customer's *Content item id* and the order's *Customer* picker. The designer suggests a pair when it recognizes one. Click **Match fields** to require more than one pair.
+When you add a second data set, the designer suggests a pair of matching columns when it recognizes one, and opens the join so you can check it. On the **Design** tab, the **Joins** row above **Columns** lists every join; a red join still needs matching columns. Click a join there to change it in **Properties**, where **Add matching columns** adds another pair.
 
 ## Column settings
 
@@ -117,6 +122,8 @@ The **Visuals** card on the right lists what the report shows, in order. Without
 | **Chart** | A **Bar**, **Horizontal bar**, **Line**, **Area**, **Pie** or **Doughnut** chart of the **Values** by **Categories**. **Split into series by** draws one series per value of another column, and **Stack series** stacks them. |
 | **Metrics** | Headline numbers: the total of each value column over the whole report. |
 | **Pivot table** | A cross-tab: **Rows** down the side, the values of **Columns across** along the top, and the **Value** in each cell, with optional totals. |
+
+You can also drag a field from the **Data** pane straight onto a visual's **Categories**, **Values**, **Split into series by**, **Rows**, **Columns across** or **Value** box. The designer adds the column for you: a number dropped on values is summed, and other fields dropped on values are counted.
 
 Set each visual's **Width** to place visuals side by side. Charts, metrics, pivot tables and totals add up the underlying rows again, so an average stays a true average.
 
