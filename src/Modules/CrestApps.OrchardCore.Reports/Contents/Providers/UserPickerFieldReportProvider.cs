@@ -34,6 +34,7 @@ public sealed class UserPickerFieldReportProvider : IContentReportFieldProvider
         var first = context.CreateElementField(null, context.DisplayName, ReportDataType.Text, ContentReportValueMode.First, "UserIds");
 
         first.Descriptor.IsIdentifier = true;
+        first.Descriptor.References.Add(new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
 
         return
         [

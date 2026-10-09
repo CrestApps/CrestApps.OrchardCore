@@ -59,4 +59,10 @@ public sealed class ReportFieldDescriptor
     /// designer suggests identifier fields when the user joins data sets.
     /// </summary>
     public bool IsIdentifier { get; set; }
+
+    /// <summary>
+    /// Gets or sets the data sets whose records this field's values identify. A field may reference several data sets,
+    /// such as a picker that accepts more than one content type.
+    /// </summary>
+    public IList<ReportFieldReference> References { get; set; } = [];
 }

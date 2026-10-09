@@ -17,10 +17,10 @@ public sealed class ContentsReportDataSourceTests
     public async Task GetDataSetsAsync_ListsOnlyTheContentTypesTheUserMayView()
     {
         // Arrange
-        var widget = ContentReportTestHelpers.Type("Banner", "Banner", "Widget");
+        var menu = ContentReportTestHelpers.Type("MainMenu", "Main menu", "MenuItem");
         using var services = ContentReportTestHelpers.Services(
-            ContentReportTestHelpers.Definitions(ContentReportTestHelpers.OrderType(), ContentReportTestHelpers.CustomerType(), widget).Object,
-            ContentReportTestHelpers.AuthorizationFor("Customer", "Banner").Object);
+            ContentReportTestHelpers.Definitions(ContentReportTestHelpers.OrderType(), ContentReportTestHelpers.CustomerType(), menu).Object,
+            ContentReportTestHelpers.AuthorizationFor("Customer", "MainMenu").Object);
         var dataSource = GetDataSource(services);
 
         // Act
@@ -30,7 +30,7 @@ public sealed class ContentsReportDataSourceTests
         Assert.Equal(ReportsConstants.ContentsDataSource, dataSource.Name);
         Assert.Equal("Content items", dataSource.DisplayName.Value);
         Assert.Equal(
-            [("Banner", "Banner", "Widget"), ("Customer", "Customer", "Content")],
+            [("Customer", "Customer", "Content"), ("MainMenu", "Main menu", "MenuItem")],
             dataSets.Select(dataSet => (dataSet.Name, dataSet.DisplayName, dataSet.Group)));
     }
 

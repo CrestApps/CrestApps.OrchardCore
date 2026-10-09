@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Reports.Designer.Deployments;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using CrestApps.OrchardCore.Reports.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -55,7 +56,8 @@ public sealed class DesignerStartup : StartupBase
             .AddScoped<ReportDesignRunner>()
             .AddScoped<ReportShareLinkService>()
             .AddScoped<DesignedReportPresenter>()
-            .AddScoped<IReportDataSource, ReportViewsDataSource>();
+            .AddScoped<IReportDataSource, ReportViewsDataSource>()
+            .AddScoped<IReportDataSource, UsersReportDataSource>();
 
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.AddScoped<IAuthorizationHandler, ReportDesignAuthorizationHandler>();

@@ -36,6 +36,11 @@ public sealed class ContentPickerFieldReportProvider : IContentReportFieldProvid
 
         first.Descriptor.IsIdentifier = true;
 
+        foreach (var contentType in ContentReportJson.ReadSetting(context.PartFieldDefinition?.Settings, "ContentPickerFieldSettings", "DisplayedContentTypes"))
+        {
+            first.Descriptor.References.Add(new ReportFieldReference(ReportsConstants.ContentsDataSource, contentType, ContentReportFieldNames.ContentItemId));
+        }
+
         return
         [
             first,

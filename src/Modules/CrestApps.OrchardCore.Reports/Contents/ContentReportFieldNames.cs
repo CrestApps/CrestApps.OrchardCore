@@ -55,4 +55,10 @@ public static class ContentReportFieldNames
     /// Whether the content item is published.
     /// </summary>
     public const string Published = "Published";
+
+    /// <summary>
+    /// The ID of the list that contains the content item, for content items held by a ListPart. It references the
+    /// content type of the list.
+    /// </summary>
+    public const string ContainedListContentItemId = "ContainedPart.ListContentItemId";
 }

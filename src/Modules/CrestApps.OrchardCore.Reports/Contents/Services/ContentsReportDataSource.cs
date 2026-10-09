@@ -69,14 +69,24 @@ public sealed class ContentsReportDataSource : IReportDataSource
         }
 
         var dataSets = new List<ReportDataSetDescriptor>();
+        var definitions = (await _contentDefinitionManager.ListTypeDefinitionsAsync()).ToList();
 
-        foreach (var definition in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+        foreach (var definition in definitions)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (definition is not null && await CanViewAsync(user, definition.Name))
+            if (definition is not null && IsReportable(definition) && await CanViewAsync(user, definition.Name))
             {
-                dataSets.Add(Describe(definition));
+                var descriptor = Describe(definition);
+
+                foreach (var reference in BuildFields(definition, definitions)
+                    .SelectMany(field => field.Descriptor.References)
+                    .DistinctBy(reference => (reference.Source, reference.DataSet)))
+                {
+                    descriptor.References.Add(reference);
+                }
+
+                dataSets.Add(descriptor);
             }
         }
 
@@ -99,7 +109,7 @@ public sealed class ContentsReportDataSource : IReportDataSource
         return new ReportDataSetSchema
         {
             DataSet = Describe(definition),
-            Fields = _schemaBuilder.Build(definition)
+            Fields = (await BuildFieldsAsync(definition))
                 .Select(field => field.Descriptor)
                 .ToList(),
         };
@@ -118,7 +128,7 @@ public sealed class ContentsReportDataSource : IReportDataSource
             return new ReportDataTable();
         }
 
-        var fields = SelectFields(_schemaBuilder.Build(definition), query.Fields);
+        var fields = SelectFields(await BuildFieldsAsync(definition), query.Fields);
         var maxRows = Math.Max(1, query.MaxRows);
         var take = maxRows == int.MaxValue
             ? maxRows
@@ -236,12 +246,80 @@ public sealed class ContentsReportDataSource : IReportDataSource
 
         if (definition is null ||
             !string.Equals(definition.Name, dataSet, StringComparison.Ordinal) ||
+            !IsReportable(definition) ||
             !await CanViewAsync(user, definition.Name))
         {
             return null;
         }
 
         return definition;
+    }
+
+    /// <summary>
+    /// Determines whether a content type is offered as a data set. Widgets are parts of pages, not records, so they are
+    /// left out.
+    /// </summary>
+    /// <param name="definition">The content type definition.</param>
+    /// <returns><see langword="true"/> when the type is offered.</returns>
+    public static bool IsReportable(ContentTypeDefinition definition)
+    {
+        ArgumentNullException.ThrowIfNull(definition);
+
+        return !string.Equals(definition.GetStereotype(), "Widget", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The fields of a content type, plus the container of a type that lists hold: a ListPart that contains the type
+    // makes Orchard Core add a ContainedPart to its items at run time, so the type definition alone does not show it.
+    private async Task<IReadOnlyList<ContentReportField>> BuildFieldsAsync(ContentTypeDefinition definition)
+    {
+        return BuildFields(definition, (await _contentDefinitionManager.ListTypeDefinitionsAsync()).ToList());
+    }
+
+    private List<ContentReportField> BuildFields(ContentTypeDefinition definition, IReadOnlyList<ContentTypeDefinition> definitions)
+    {
+        var fields = _schemaBuilder.Build(definition).ToList();
+        var containers = new List<string>();
+
+        foreach (var candidate in definitions)
+        {
+            foreach (var part in candidate?.Parts ?? [])
+            {
+                if (part?.PartDefinition?.Name == "ListPart" &&
+                    ContentReportJson.ReadSetting(part.Settings, "ListPartSettings", "ContainedContentTypes").Contains(definition.Name, StringComparer.Ordinal))
+                {
+                    containers.Add(candidate.Name);
+                }
+            }
+        }
+
+        if (containers.Count == 0)
+        {
+            return fields;
+        }
+
+        var name = ContentReportFieldNames.ContainedListContentItemId;
+        var field = fields.FirstOrDefault(candidate => string.Equals(candidate.Descriptor.Name, name, StringComparison.Ordinal));
+
+        if (field is null)
+        {
+            field = new ContentElementReportField(
+                new ReportFieldDescriptor(name, S["Container ID"], ReportDataType.Text, S["Container"])
+                {
+                    IsIdentifier = true,
+                },
+                "ContainedPart",
+                null,
+                ContentReportValueMode.Single,
+                "ListContentItemId");
+            fields.Add(field);
+        }
+
+        foreach (var container in containers.Distinct(StringComparer.Ordinal))
+        {
+            field.Descriptor.References.Add(new ReportFieldReference(ReportsConstants.ContentsDataSource, container, ContentReportFieldNames.ContentItemId));
+        }
+
+        return fields;
     }
 
     private async Task<bool> CanViewAsync(ClaimsPrincipal user, string contentType)

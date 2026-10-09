@@ -7,7 +7,7 @@ user_manual:
   - user-manual/report-builder
 ---
 
-The **Report Builder** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. Two data sources are added automatically when their Orchard Core feature is enabled with the builder: **Content items** (with `OrchardCore.Contents`) and **Queries** (with `OrchardCore.Queries`). Any module can add more sources.
+The **Report Builder** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. Three data sources are added automatically when their Orchard Core feature is enabled with the builder: **Content items** (with `OrchardCore.Contents`), **Queries** (with `OrchardCore.Queries`) and **Users**. Any module can add more sources.
 
 | | |
 | --- | --- |
@@ -20,6 +20,7 @@ The **Report Builder** feature of the [Reports](reports.md) module lets people b
 | **Report views** (saved views) | Report Builder |
 | **Content items** (content types) | Report Builder and `OrchardCore.Contents` |
 | **Queries** (saved Orchard Core queries) | Report Builder and `OrchardCore.Queries` |
+| **Users** (user accounts and their roles) | Report Builder |
 
 The built-in sources need no feature of their own: each is registered by a startup class marked with `[RequireFeatures]`, so it appears as soon as its Orchard Core feature is enabled alongside the builder.
 
@@ -180,13 +181,14 @@ The contract:
 | `GetDataSetsAsync`, `GetSchemaAsync` | Return only what `context.User` may read; `GetSchemaAsync` returns `null` otherwise. This is the security boundary. |
 | Values | One CLR type per `ReportDataType`: `string`, `long`, `decimal`, `bool`, `DateTime` (date only, no time zone) and `DateTime` in UTC. Use `ReportDataValues.Coerce` to normalize. |
 | `IsIdentifier` | Marks keys, which the builder suggests when joining. |
+| `References` | On a field, the data sets (and their key field) it points to; on a data set, every data set its fields point to. The builder joins on them automatically and lists referenced data sets under **Related**. Declare them only when the source knows them without reading data, for example from definitions. |
 | `ReportDataSourceContext.Properties` | A bag shared by one run, for example to detect recursion. |
 
 A repository development skill under `.agents/skills/crestapps-report-data-source` walks through every step.
 
 ## Content items
 
-When `OrchardCore.Contents` is enabled, the **Content items** data source offers one data set per content type the user may view, reading published items with YesSql.
+When `OrchardCore.Contents` is enabled, the **Content items** data source offers one data set per content type the user may view, reading published items with YesSql. Types with the `Widget` stereotype are left out: widgets are pieces of pages, not records.
 
 | Field | Name |
 | --- | --- |
@@ -195,6 +197,19 @@ When `OrchardCore.Contents` is enabled, the **Content items** data source offers
 | Part data | `TitlePart.Title`, `AutoroutePart.Path`, `ContainedPart.ListContentItemId`, and other common parts |
 
 For example, a `Customer` type with an `Email` text field and an `Order` type with a `Customer` content picker give `Customer.Email` and `Order.Customer` (the first picked id, an identifier), `Order.Customer.ContentItemIds` and `Order.Customer.DisplayText`. Join the order to the customer on `Order.Customer` = `ContentItemId`.
+
+### Relationships
+
+Relationships come from the content definitions, so nothing about a site's types is hard-coded:
+
+| Relationship | Declared by | Field that points to the other data set |
+| --- | --- | --- |
+| A content picker | The picker's **Displayed content types** setting | `{PartName}.{FieldName}` → `ContentItemId` of each listed type |
+| A list | A `ListPart` whose **Contained content types** include the type | `ContainedPart.ListContentItemId` (**Container ID**) → `ContentItemId` of the list's type |
+| The owner | Every content item | `Owner` → `Users.UserId` |
+| A user picker | Every user picker field | `{PartName}.{FieldName}` → `Users.UserId` |
+
+For example, when an `Account` type has a `ListPart` that contains `Contact`, the `Contact` data set gets a **Container ID** field, and adding `Contact` to a report that has `Account` joins them on it. A content picker that allows any type declares no relationship, because the builder cannot know which type is picked.
 
 Built-in providers cover the Orchard Core text, numeric, boolean, date, date-time, time, HTML, Markdown, multi-text, link, content picker, user picker, media, taxonomy, localization set and YouTube fields, and the CrestApps phone field. An unknown field type is read as text from its `Text` or `Value` property. Date range filters on the content item index columns are passed down to the query; text filters are not, because database collations may compare case differently from the engine.
 
@@ -218,6 +233,17 @@ When `OrchardCore.Queries` is enabled, the **Queries** data source offers every 
 - A query that returns content items (**Return content items**) gives its content item properties and part and field values the same way.
 - The query runs once per report run, without parameters, so write queries whose parameters have defaults. Its own limits apply first; the report then keeps at most `MaxRowsPerDataSet` rows.
 - A query that fails stops the report with the query's name and error message, and the failure is logged.
+
+## Users
+
+The **Users** data source is part of the builder. It is listed only for principals with the **View Users** permission and offers two data sets:
+
+| Data set | Rows | Fields |
+| --- | --- | --- |
+| **Users** | One per user account | `UserId` (identifier), `UserName`, `Email`, `EmailConfirmed`, `PhoneNumber`, `PhoneNumberConfirmed`, `IsEnabled`, `TwoFactorEnabled`, `IsLockoutEnabled`, `LockoutEndUtc`, `AccessFailedCount`, `Roles` (comma separated), and `Properties.*` for the custom user settings stored with the users |
+| **User roles** | One per user and role | `UserId` (references **Users**), `UserName`, `Role` |
+
+Password hashes, security stamps, tokens and external login keys are never exposed. The `Properties.*` fields are found the same way as query fields: nested objects become dotted names and types are inferred from the stored values. Content item owners and user picker fields reference **Users**, so they join to it automatically.
 
 ## Formula reference
 

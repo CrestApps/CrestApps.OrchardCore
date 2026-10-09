@@ -4,7 +4,7 @@
 */
 
 /*
- * The decisions the report designer makes about a design, kept free of the DOM so they can be tested: which aggregates,
+ * The decisions the report builder makes about a design, kept free of the DOM so they can be tested: which aggregates,
  * transforms, operators, and controls suit a field type, how columns, filters, data sets, and joins are added and
  * removed without leaving dangling references, and which fields to suggest for a join.
  *
@@ -391,7 +391,60 @@
   // Suggests the fields to match when a data set is joined to the ones before it: an identifier of one side whose
   // name mentions the other side (an order's "Customer" picker and the customer's id), else the two identifiers.
   // `earlier` is a list of { dataSet, fields } and `added` is { dataSet, fields }, where dataSet is a reference.
+  // Finds a pair of fields one data set declares as referencing the other, such as an order's customer picker that
+  // references the customer type, or a contained item that references its list.
+  designer.referencedJoin = function (earlier, added) {
+    var refersTo = function (field, dataSet) {
+      return (field.references || []).filter(function (reference) {
+        return reference.source === dataSet.source && reference.dataSet === dataSet.dataSet;
+      })[0];
+    };
+    for (var index = 0; index < (earlier || []).length; index++) {
+      var left = earlier[index];
+      var found = null;
+      (added.fields || []).some(function (field) {
+        var reference = refersTo(field, left.dataSet);
+        if (reference) {
+          found = {
+            leftField: left.dataSet.alias + '.' + reference.field,
+            rightField: added.dataSet.alias + '.' + field.name
+          };
+        }
+        return !!found;
+      });
+      if (!found) {
+        (left.fields || []).some(function (field) {
+          var reference = refersTo(field, added.dataSet);
+          if (reference) {
+            found = {
+              leftField: left.dataSet.alias + '.' + field.name,
+              rightField: added.dataSet.alias + '.' + reference.field
+            };
+          }
+          return !!found;
+        });
+      }
+      if (found) {
+        return found;
+      }
+    }
+    return null;
+  };
+
+  // Whether two data sets are related: either one's references point at the other.
+  designer.isRelated = function (left, right) {
+    var refers = function (from, to) {
+      return (from.references || []).some(function (reference) {
+        return reference.source === to.source && reference.dataSet === to.dataSet;
+      });
+    };
+    return refers(left, right) || refers(right, left);
+  };
   designer.suggestJoin = function (earlier, added) {
+    var referenced = designer.referencedJoin(earlier, added);
+    if (referenced) {
+      return referenced;
+    }
     var best = null;
     (earlier || []).forEach(function (left) {
       var leftIds = (left.fields || []).filter(function (field) {
@@ -467,7 +520,7 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*
- * DOM and server helpers of the report designer: element building that never interprets text as HTML, the
+ * DOM and server helpers of the report builder: element building that never interprets text as HTML, the
  * antiforgery-aware JSON client, debouncing, and Bootstrap modal handling.
  */
 (function (root) {
@@ -656,7 +709,7 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*
- * The report designer page: holds the design being edited, keeps the field catalog and the server's check of the query
+ * The report builder page: holds the design being edited, keeps the field catalog and the server's check of the query
  * current, refreshes the preview, and saves. The panels are built by designer-data.js, designer-canvas.js, and
  * designer-sharing.js, which add their render functions to the same app object.
  */
@@ -1308,7 +1361,7 @@
   }
 })(typeof window !== 'undefined' ? window : globalThis);
 /*
- * The Data pane of the report designer: the data sets of the design with their draggable fields, the joins between
+ * The Data pane of the report builder: the data sets of the design with their draggable fields, the joins between
  * them, and the calculated fields, plus the dialogs that add a data set and edit a formula.
  */
 (function (root) {
@@ -1694,15 +1747,61 @@
     var added = (app.design.query.dataSets || []).map(function (dataSet) {
       return dataSet.source + '\u001f' + dataSet.dataSet;
     });
+
+    // The data sets already in the design, with the references their fields declare, so the picker can tell which
+    // data sets are related to them.
+    var current = (app.design.query.dataSets || []).map(function (dataSet) {
+      var schema = app.schemas[dataSet.alias] || {};
+      var references = [];
+      (schema.fields || []).forEach(function (field) {
+        (field.references || []).forEach(function (reference) {
+          references.push(reference);
+        });
+      });
+      return {
+        source: dataSet.source,
+        dataSet: dataSet.dataSet,
+        label: dataSet.displayName || dataSet.dataSet,
+        references: references
+      };
+    });
+    var relatedTo = function (entry) {
+      var candidate = {
+        source: entry.source.name,
+        dataSet: entry.dataSet.name,
+        references: entry.dataSet.references || []
+      };
+      return current.filter(function (existing) {
+        return designer.isRelated(candidate, existing);
+      }).map(function (existing) {
+        return existing.label;
+      });
+    };
+    var related = '__related';
+    var inCategory = function (entry, name) {
+      if (name === related) {
+        return entry.related.length > 0;
+      }
+      return !name || entry.source.name === name;
+    };
     var renderCategories = function () {
       ui.clear(categories);
-      [{
+      var options = [{
         name: '',
         displayName: app.t('All')
-      }].concat(app.sources).forEach(function (source) {
+      }];
+      if (entries.some(function (entry) {
+        return entry.related.length > 0;
+      })) {
+        options.push({
+          name: related,
+          displayName: app.t('Related')
+        });
+      }
+      options.concat(app.sources).forEach(function (source) {
         var active = source.name === selectedSource;
         var count = entries.filter(function (entry) {
-          return !source.name || entry.source.name === source.name;
+          return inCategory(entry, source.name);
         }).length;
         categories.appendChild(h('button', {
           type: 'button',
@@ -1723,7 +1822,9 @@
     var renderCards = function () {
       var text = filter.value.trim().toLowerCase();
       var visible = entries.filter(function (entry) {
-        return (!selectedSource || entry.source.name === selectedSource) && (!text || entry.search.indexOf(text) >= 0);
+        return inCategory(entry, selectedSource) && (!text || entry.search.indexOf(text) >= 0);
+      }).sort(function (left, right) {
+        return (right.related.length ? 1 : 0) - (left.related.length ? 1 : 0);
       });
       ui.clear(grid);
       visible.forEach(function (entry) {
@@ -1743,10 +1844,15 @@
         }), h('span', null, dataSet.displayName || dataSet.name)), dataSet.description ? h('p', {
           className: 'card-text text-body-secondary small mb-0'
         }, dataSet.description) : null), h('div', {
-          className: 'card-footer d-flex align-items-center gap-2'
+          className: 'card-footer d-flex align-items-center gap-2 flex-wrap'
         }, h('span', {
-          className: 'me-auto badge text-bg-light'
-        }, entry.source.displayName), isAdded ? h('span', {
+          className: 'badge text-bg-light'
+        }, entry.source.displayName), entry.related.length ? h('span', {
+          className: 'badge text-bg-success',
+          title: app.t('Joined automatically when added.')
+        }, ui.icon('fa-link'), ' ', app.t('Related to') + ' ' + entry.related.join(', ')) : null, h('span', {
+          className: 'me-auto'
+        }), isAdded ? h('span', {
           className: 'small text-muted'
         }, app.t('Added')) : null, h('button', {
           type: 'button',
@@ -1774,17 +1880,24 @@
     Promise.all(app.sources.map(function (source) {
       return ui.request(app.url('dataSets') + '?source=' + encodeURIComponent(source.name)).then(function (dataSets) {
         (dataSets || []).forEach(function (dataSet) {
-          entries.push({
+          var entry = {
             source: source,
             dataSet: dataSet,
             search: [dataSet.displayName, dataSet.name, dataSet.description, dataSet.group, source.displayName].join(' ').toLowerCase()
-          });
+          };
+          entry.related = relatedTo(entry);
+          entries.push(entry);
         });
       }).catch(function () {
         return null;
       });
     })).then(function () {
       status.textContent = app.sources.length ? app.t('No data sets are available to you.') : app.t('No data sources are enabled.');
+      if (entries.some(function (entry) {
+        return entry.related.length > 0;
+      })) {
+        selectedSource = related;
+      }
       renderCategories();
       renderCards();
       filter.focus();
@@ -1994,7 +2107,7 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*
- * The canvas of the report designer: the Columns and Filters shelves that fields are dropped on, the sort and row
+ * The canvas of the report builder: the Columns and Filters shelves that fields are dropped on, the sort and row
  * limit, the properties of the selected column or filter, and the visuals of the report.
  */
 (function (root) {
@@ -2808,7 +2921,7 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*
- * The Data model tab of the report designer: every data set as a card on a canvas, with a line for each pair of
+ * The Data model tab of the report builder: every data set as a card on a canvas, with a line for each pair of
  * columns that joins two of them. Dragging a column from one card onto a column of another card joins the two data
  * sets on that pair; clicking a line or its badge opens the join so the rows to keep and more pairs can be set.
  */
@@ -3138,7 +3251,7 @@
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*
- * The Settings and Sharing tabs of the report designer: the description, category, and admin menu placement, the
+ * The Settings and Sharing tabs of the report builder: the description, category, and admin menu placement, the
  * people and roles a report is shared with, and its share links.
  */
 (function (root) {
@@ -3198,7 +3311,7 @@
         design.description = event.target.value;
         touch();
       }
-    }, design.description || ''), app.isView() ? app.t('Tells other designers what the view prepares.') : app.t('Shown above the report.')), app.isView() ? null : field(app.t('Category'), h('input', {
+    }, design.description || ''), app.isView() ? app.t('Tells other report builders what the view prepares.') : app.t('Shown above the report.')), app.isView() ? null : field(app.t('Category'), h('input', {
       type: 'text',
       className: 'form-control',
       value: design.category || '',

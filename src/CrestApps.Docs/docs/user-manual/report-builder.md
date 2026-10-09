@@ -60,7 +60,7 @@ To report on data that lives in two places (for example customers and their orde
    | **All rows of this data set, matching rows before** | Every order, with its customer when one matches. |
    | **All rows of both sides** | Everything from both data sets. |
 
-When you add a second data set, the builder suggests a pair of matching columns when it recognizes one, and opens the join so you can check it. On the **Design** tab, the **Joins** row above **Columns** lists every join; a red join still needs matching columns. Click a join there to change it in **Properties**, where **Add matching columns** adds another pair.
+When you add a second data set, the builder suggests a pair of matching columns when it recognizes one, and opens the join so you can check it. Data sets your site already links are joined for you: an order's content picker to the customer it picks, a contact to the account whose list holds it, and an item's owner to **Users**. Once a report has a data set, **Add data set** opens on **Related**, which lists the data sets linked to the ones you already have. On the **Design** tab, the **Joins** row above **Columns** lists every join; a red join still needs matching columns. Click a join there to change it in **Properties**, where **Add matching columns** adds another pair.
 
 ## Column settings
 

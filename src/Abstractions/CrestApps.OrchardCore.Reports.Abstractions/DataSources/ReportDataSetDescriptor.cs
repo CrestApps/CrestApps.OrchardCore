@@ -45,4 +45,10 @@ public sealed class ReportDataSetDescriptor
     /// Gets or sets the optional group the data set is listed under in the designer.
     /// </summary>
     public string Group { get; set; }
+
+    /// <summary>
+    /// Gets or sets the data sets this data set links to, when the data source can tell without reading data (for
+    /// example from content definitions). The report builder uses them to suggest related data sets.
+    /// </summary>
+    public IList<ReportFieldReference> References { get; set; } = [];
 }

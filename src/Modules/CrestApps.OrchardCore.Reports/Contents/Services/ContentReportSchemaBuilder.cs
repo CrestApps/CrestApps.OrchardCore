@@ -141,6 +141,13 @@ public sealed class ContentReportSchemaBuilder
         return _fallbackProvider;
     }
 
+    private static ReportFieldDescriptor Owner(ReportFieldDescriptor descriptor)
+    {
+        descriptor.References.Add(new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+
+        return descriptor;
+    }
+
     private IEnumerable<ContentReportField> GetMetadataFields()
     {
         var group = S["Content item"].Value;
@@ -160,7 +167,7 @@ public sealed class ContentReportSchemaBuilder
             new ContentItemReportField(Descriptor(ContentReportFieldNames.ContentItemVersionId, S["Content item version ID"], ReportDataType.Text), item => item.ContentItemVersionId),
             new ContentItemReportField(Descriptor(ContentReportFieldNames.DisplayText, S["Display text"], ReportDataType.Text), item => item.DisplayText),
             new ContentItemReportField(Descriptor(ContentReportFieldNames.ContentType, S["Content type"], ReportDataType.Text), item => item.ContentType),
-            new ContentItemReportField(Descriptor(ContentReportFieldNames.Owner, S["Owner"], ReportDataType.Text, isIdentifier: true, S["The ID of the user who owns the content item."]), item => item.Owner),
+            new ContentItemReportField(Owner(Descriptor(ContentReportFieldNames.Owner, S["Owner"], ReportDataType.Text, isIdentifier: true, S["The ID of the user who owns the content item."])), item => item.Owner),
             new ContentItemReportField(Descriptor(ContentReportFieldNames.Author, S["Author"], ReportDataType.Text, description: S["The user name of the last person who edited the content item."]), item => item.Author),
             new ContentItemReportField(Descriptor(ContentReportFieldNames.CreatedUtc, S["Created"], ReportDataType.DateTime), item => item.CreatedUtc),
             new ContentItemReportField(Descriptor(ContentReportFieldNames.ModifiedUtc, S["Modified"], ReportDataType.DateTime), item => item.ModifiedUtc),

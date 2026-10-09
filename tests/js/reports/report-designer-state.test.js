@@ -168,6 +168,62 @@ describe('join suggestions', () => {
     });
 });
 
+describe('declared relationships', () => {
+    const account = {
+        dataSet: { alias: 'Account', source: 'Contents', dataSet: 'Account' },
+        fields: [{ name: 'ContentItemId', isIdentifier: true }],
+    };
+    const contact = {
+        dataSet: { alias: 'Contact', source: 'Contents', dataSet: 'Contact' },
+        fields: [
+            { name: 'ContentItemId', isIdentifier: true },
+            {
+                name: 'ContainedPart.ListContentItemId',
+                isIdentifier: true,
+                references: [{ source: 'Contents', dataSet: 'Account', field: 'ContentItemId' }],
+            },
+        ],
+    };
+
+    it('joins a contained item to the list that holds it', () => {
+        expect(designer.suggestJoin([account], contact)).toEqual({
+            leftField: 'Account.ContentItemId',
+            rightField: 'Contact.ContainedPart.ListContentItemId',
+        });
+    });
+
+    it('joins when the earlier data set holds the reference, even when names do not match', () => {
+        const order = {
+            dataSet: { alias: 'Order', source: 'Contents', dataSet: 'Order' },
+            fields: [{ name: 'Order.Buyer', isIdentifier: true, references: [{ source: 'Contents', dataSet: 'Account', field: 'ContentItemId' }] }],
+        };
+
+        expect(designer.referencedJoin([order], account)).toEqual({
+            leftField: 'Order.Order.Buyer',
+            rightField: 'Account.ContentItemId',
+        });
+    });
+
+    it('ignores a reference to a data set of another source with the same name', () => {
+        const users = {
+            dataSet: { alias: 'Account2', source: 'Users', dataSet: 'Account' },
+            fields: [{ name: 'UserId', isIdentifier: true }],
+        };
+
+        expect(designer.referencedJoin([users], contact)).toBeNull();
+    });
+
+    it('tells which data sets are related in either direction', () => {
+        const contactSet = { source: 'Contents', dataSet: 'Contact', references: [{ source: 'Contents', dataSet: 'Account' }] };
+        const accountSet = { source: 'Contents', dataSet: 'Account', references: [] };
+        const userSet = { source: 'Users', dataSet: 'Users' };
+
+        expect(designer.isRelated(contactSet, accountSet)).toBe(true);
+        expect(designer.isRelated(accountSet, contactSet)).toBe(true);
+        expect(designer.isRelated(accountSet, userSet)).toBe(false);
+    });
+});
+
 describe('filter form values', () => {
     it('reads single, multiple, and range values and keeps a cleared filter empty', () => {
         const values = designer.filterValuesFromEntries([

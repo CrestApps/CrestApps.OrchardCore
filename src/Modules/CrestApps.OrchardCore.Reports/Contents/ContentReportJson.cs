@@ -13,6 +13,28 @@ namespace CrestApps.OrchardCore.Reports.Contents;
 public static class ContentReportJson
 {
     /// <summary>
+    /// Reads a list of text values from the settings of a content definition, such as the content types a content
+    /// picker field accepts.
+    /// </summary>
+    /// <param name="settings">The definition settings.</param>
+    /// <param name="settingsName">The name of the settings object, such as <c>ContentPickerFieldSettings</c>.</param>
+    /// <param name="propertyName">The name of the list property, such as <c>DisplayedContentTypes</c>.</param>
+    /// <returns>The values, or an empty list when the setting is missing.</returns>
+    public static IReadOnlyList<string> ReadSetting(JsonObject settings, string settingsName, string propertyName)
+    {
+        if (settings?[settingsName] is not JsonObject named || named[propertyName] is not JsonArray values)
+        {
+            return [];
+        }
+
+        return values
+            .Select(value => value is JsonValue jsonValue && jsonValue.TryGetValue<string>(out var text) ? text : value?.ToString())
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <summary>
     /// The separator <see cref="ContentReportValueMode.Join"/> places between array entries.
     /// </summary>
     public const string JoinSeparator = ",";

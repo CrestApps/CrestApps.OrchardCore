@@ -375,13 +375,53 @@
             return dataSet.source + '\u001f' + dataSet.dataSet;
         });
 
+        // The data sets already in the design, with the references their fields declare, so the picker can tell which
+        // data sets are related to them.
+        var current = (app.design.query.dataSets || []).map(function (dataSet) {
+            var schema = app.schemas[dataSet.alias] || {};
+            var references = [];
+
+            (schema.fields || []).forEach(function (field) {
+                (field.references || []).forEach(function (reference) {
+                    references.push(reference);
+                });
+            });
+
+            return { source: dataSet.source, dataSet: dataSet.dataSet, label: dataSet.displayName || dataSet.dataSet, references: references };
+        });
+        var relatedTo = function (entry) {
+            var candidate = { source: entry.source.name, dataSet: entry.dataSet.name, references: entry.dataSet.references || [] };
+
+            return current.filter(function (existing) {
+                return designer.isRelated(candidate, existing);
+            }).map(function (existing) {
+                return existing.label;
+            });
+        };
+        var related = '__related';
+        var inCategory = function (entry, name) {
+            if (name === related) {
+                return entry.related.length > 0;
+            }
+
+            return !name || entry.source.name === name;
+        };
+
         var renderCategories = function () {
             ui.clear(categories);
 
-            [{ name: '', displayName: app.t('All') }].concat(app.sources).forEach(function (source) {
+            var options = [{ name: '', displayName: app.t('All') }];
+
+            if (entries.some(function (entry) {
+                return entry.related.length > 0;
+            })) {
+                options.push({ name: related, displayName: app.t('Related') });
+            }
+
+            options.concat(app.sources).forEach(function (source) {
                 var active = source.name === selectedSource;
                 var count = entries.filter(function (entry) {
-                    return !source.name || entry.source.name === source.name;
+                    return inCategory(entry, source.name);
                 }).length;
 
                 categories.appendChild(h('button', {
@@ -400,8 +440,10 @@
         var renderCards = function () {
             var text = filter.value.trim().toLowerCase();
             var visible = entries.filter(function (entry) {
-                return (!selectedSource || entry.source.name === selectedSource) &&
+                return inCategory(entry, selectedSource) &&
                     (!text || entry.search.indexOf(text) >= 0);
+            }).sort(function (left, right) {
+                return (right.related.length ? 1 : 0) - (left.related.length ? 1 : 0);
             });
 
             ui.clear(grid);
@@ -415,8 +457,12 @@
                             h('i', { className: 'fa-solid ' + (entry.source.name === 'ReportViews' ? 'fa-layer-group' : 'fa-table') + ' fa-fw text-primary', 'aria-hidden': 'true' }),
                             h('span', null, dataSet.displayName || dataSet.name)),
                         dataSet.description ? h('p', { className: 'card-text text-body-secondary small mb-0' }, dataSet.description) : null),
-                    h('div', { className: 'card-footer d-flex align-items-center gap-2' },
-                        h('span', { className: 'me-auto badge text-bg-light' }, entry.source.displayName),
+                    h('div', { className: 'card-footer d-flex align-items-center gap-2 flex-wrap' },
+                        h('span', { className: 'badge text-bg-light' }, entry.source.displayName),
+                        entry.related.length
+                            ? h('span', { className: 'badge text-bg-success', title: app.t('Joined automatically when added.') }, ui.icon('fa-link'), ' ', app.t('Related to') + ' ' + entry.related.join(', '))
+                            : null,
+                        h('span', { className: 'me-auto' }),
                         isAdded ? h('span', { className: 'small text-muted' }, app.t('Added')) : null,
                         h('button', {
                             type: 'button',
@@ -443,17 +489,27 @@
         Promise.all(app.sources.map(function (source) {
             return ui.request(app.url('dataSets') + '?source=' + encodeURIComponent(source.name)).then(function (dataSets) {
                 (dataSets || []).forEach(function (dataSet) {
-                    entries.push({
+                    var entry = {
                         source: source,
                         dataSet: dataSet,
                         search: [dataSet.displayName, dataSet.name, dataSet.description, dataSet.group, source.displayName].join(' ').toLowerCase()
-                    });
+                    };
+
+                    entry.related = relatedTo(entry);
+                    entries.push(entry);
                 });
             }).catch(function () {
                 return null;
             });
         })).then(function () {
             status.textContent = app.sources.length ? app.t('No data sets are available to you.') : app.t('No data sources are enabled.');
+
+            if (entries.some(function (entry) {
+                return entry.related.length > 0;
+            })) {
+                selectedSource = related;
+            }
+
             renderCategories();
             renderCards();
             filter.focus();

@@ -39,6 +39,21 @@ public static class ReportsConstants
     public const string QueriesDataSource = "Queries";
 
     /// <summary>
+    /// The technical name of the data source that exposes the users of the site.
+    /// </summary>
+    public const string UsersDataSource = "Users";
+
+    /// <summary>
+    /// The technical name of the users data set of the users data source.
+    /// </summary>
+    public const string UsersDataSet = "Users";
+
+    /// <summary>
+    /// The technical name of the users data set's identifier field, which content owners and user pickers reference.
+    /// </summary>
+    public const string UserIdField = "UserId";
+
+    /// <summary>
     /// The priority of the top-level Reports admin menu item built by the Reports module. Orchard Core merges menu items
     /// with the same text and keeps the identifier, classes, and position of the one with the highest priority, so other
     /// modules that add items under Reports use a lower priority and the Reports item keeps its <c>reports</c>

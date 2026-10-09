@@ -449,7 +449,67 @@
     // Suggests the fields to match when a data set is joined to the ones before it: an identifier of one side whose
     // name mentions the other side (an order's "Customer" picker and the customer's id), else the two identifiers.
     // `earlier` is a list of { dataSet, fields } and `added` is { dataSet, fields }, where dataSet is a reference.
+    // Finds a pair of fields one data set declares as referencing the other, such as an order's customer picker that
+    // references the customer type, or a contained item that references its list.
+    designer.referencedJoin = function (earlier, added) {
+        var refersTo = function (field, dataSet) {
+            return (field.references || []).filter(function (reference) {
+                return reference.source === dataSet.source && reference.dataSet === dataSet.dataSet;
+            })[0];
+        };
+
+        for (var index = 0; index < (earlier || []).length; index++) {
+            var left = earlier[index];
+            var found = null;
+
+            (added.fields || []).some(function (field) {
+                var reference = refersTo(field, left.dataSet);
+
+                if (reference) {
+                    found = { leftField: left.dataSet.alias + '.' + reference.field, rightField: added.dataSet.alias + '.' + field.name };
+                }
+
+                return !!found;
+            });
+
+            if (!found) {
+                (left.fields || []).some(function (field) {
+                    var reference = refersTo(field, added.dataSet);
+
+                    if (reference) {
+                        found = { leftField: left.dataSet.alias + '.' + field.name, rightField: added.dataSet.alias + '.' + reference.field };
+                    }
+
+                    return !!found;
+                });
+            }
+
+            if (found) {
+                return found;
+            }
+        }
+
+        return null;
+    };
+
+    // Whether two data sets are related: either one's references point at the other.
+    designer.isRelated = function (left, right) {
+        var refers = function (from, to) {
+            return (from.references || []).some(function (reference) {
+                return reference.source === to.source && reference.dataSet === to.dataSet;
+            });
+        };
+
+        return refers(left, right) || refers(right, left);
+    };
+
     designer.suggestJoin = function (earlier, added) {
+        var referenced = designer.referencedJoin(earlier, added);
+
+        if (referenced) {
+            return referenced;
+        }
+
         var best = null;
 
         (earlier || []).forEach(function (left) {
