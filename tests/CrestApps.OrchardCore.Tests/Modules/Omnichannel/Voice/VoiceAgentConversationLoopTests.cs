@@ -418,7 +418,7 @@ public sealed partial class VoiceAgentConversationLoopTests
     {
         // Arrange
         var harness = new LoopHarness();
-        harness.Reply = "Hi Amani, this is Alex from Prestige Auto Group. Sorry we missed you, we will try again soon.";
+        harness.Reply = "Hi Amani, this is Alex from Contoso Motors. Sorry we missed you, we will try again soon.";
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -444,7 +444,7 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Arrange
         // Speaking over the rest of the greeting records half a message, or none of it.
         var harness = new LoopHarness();
-        harness.Reply = "Hi, this is Alex from Prestige Auto Group. We will try you again soon.";
+        harness.Reply = "Hi, this is Alex from Contoso Motors. We will try you again soon.";
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
         var spokenBefore = harness.Media.Spoken.Count;
@@ -503,7 +503,7 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Live, a short greeting played underneath the opening line and was never heard. The silence after it was
         // asked "are you still there?" twice and told "now isn't a good time", all of it recorded as the message.
         var harness = new LoopHarness();
-        harness.Reply = "Hi Amani, this is Alex from Prestige Auto Group. Sorry we missed you, we will try again soon.";
+        harness.Reply = "Hi Amani, this is Alex from Contoso Motors. Sorry we missed you, we will try again soon.";
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
@@ -675,7 +675,7 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Spoken the moment the provider said so, the message would queue behind the opening line and the hangup
         // that follows the line would cut it off. It is left when the line finishes instead.
         var harness = new LoopHarness();
-        harness.Reply = "Hi, this is Alex from Prestige Auto Group. We will try you again soon.";
+        harness.Reply = "Hi, this is Alex from Contoso Motors. We will try you again soon.";
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.MachineGreetingEnded, cancellationToken: TestContext.Current.CancellationToken);
@@ -702,7 +702,7 @@ public sealed partial class VoiceAgentConversationLoopTests
         // Composing the message takes seconds, and live, a late transcript of the rest of the greeting arrived in
         // that window and decided the message was still owed: one voicemail was left two.
         var harness = new LoopHarness();
-        harness.Reply = "Hi, this is Alex from Prestige Auto Group. We will try you again soon.";
+        harness.Reply = "Hi, this is Alex from Contoso Motors. We will try you again soon.";
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);

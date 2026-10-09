@@ -347,7 +347,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         if (string.IsNullOrWhiteSpace(greeting))
         {
-            greeting = "Hi there, this is Alex calling from Prestige Auto Group. Do you have a quick minute?";
+            greeting = S["Hi there, do you have a quick minute?"].Value;
         }
 
         // Spoken by the platform as part of the opening line, so it is said word for word and before anything else.
