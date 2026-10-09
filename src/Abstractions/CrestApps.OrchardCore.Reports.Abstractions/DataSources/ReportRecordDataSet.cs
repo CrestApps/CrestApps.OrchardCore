@@ -16,6 +16,12 @@ public interface IReportRecordDataSet
     IReadOnlyList<ReportFieldDescriptor> Fields { get; }
 
     /// <summary>
+    /// Gets the name of the data set's main date field, or <see langword="null"/>; see
+    /// <see cref="ReportDataSetDescriptor.DefaultDateField"/>.
+    /// </summary>
+    string DefaultDateField { get; }
+
+    /// <summary>
     /// Determines whether the principal of <paramref name="context"/> may read the data set.
     /// </summary>
     /// <param name="context">The context of the run.</param>
@@ -89,6 +95,9 @@ public abstract class ReportRecordDataSet<TRecord> : IReportRecordDataSet
 
     /// <inheritdoc/>
     public IReadOnlyList<ReportFieldDescriptor> Fields => _fields.Select(recordField => recordField.Descriptor).ToArray();
+
+    /// <inheritdoc/>
+    public virtual string DefaultDateField => Descriptor.DefaultDateField;
 
     /// <inheritdoc/>
     public abstract Task<bool> CanReadAsync(ReportDataSourceContext context);

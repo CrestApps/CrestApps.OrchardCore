@@ -47,6 +47,13 @@ public sealed class ReportDataSetDescriptor
     public string Group { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the data set's main date field, such as when a record was created, if it has one. The
+    /// builder filters a new report on it (the last 30 days by default), and data sources read only that range, so a
+    /// report over a large data set reads what it shows instead of the newest rows up to the row limit.
+    /// </summary>
+    public string DefaultDateField { get; set; }
+
+    /// <summary>
     /// Gets or sets the data sets this data set links to, when the data source can tell without reading data (for
     /// example from content definitions). The report builder uses them to suggest related data sets.
     /// </summary>

@@ -107,7 +107,7 @@
         }
 
         if (isTemporal(dataType)) {
-            return ['Auto', 'DateRange', 'Text'];
+            return ['Auto', 'RelativeDate', 'DateRange', 'Text'];
         }
 
         if (isNumeric(dataType)) {
@@ -129,6 +129,8 @@
                 return operator === 'NotEquals' ? 'NotEquals' : 'Equals';
             case 'Boolean':
                 return 'Equals';
+            case 'RelativeDate':
+                return 'InLastDays';
             default:
                 return null;
         }
@@ -321,6 +323,34 @@
         }
 
         return later;
+    };
+
+    // The recent periods a relative date filter offers, in days; an empty value keeps every row.
+    designer.RELATIVE_PERIODS = ['', '1', '7', '30', '90', '365'];
+
+    // The filter a new report starts with on its first data set's main date: the last 30 days, which the people who run
+    // the report can change. Reading only that period keeps a report over a large data set fast and complete. Returns
+    // null when the data set has no main date, the field is not there, or the report already filters.
+    designer.defaultDateFilter = function (query, dataSet, fields) {
+        var name = dataSet && dataSet.defaultDateField;
+        var field = (fields || []).filter(function (candidate) {
+            return candidate.name === name;
+        })[0];
+
+        if (!name || !field || (query.filters || []).length > 0 || !isTemporal(field.dataType)) {
+            return null;
+        }
+
+        return {
+            id: designer.newId('f', ids(query.filters || [])),
+            field: dataSet.alias + '.' + field.name,
+            stage: 'Rows',
+            operator: 'InLastDays',
+            values: ['30'],
+            exposed: true,
+            label: field.displayName || field.name,
+            control: 'RelativeDate'
+        };
     };
 
     designer.addFilter = function (query, field) {

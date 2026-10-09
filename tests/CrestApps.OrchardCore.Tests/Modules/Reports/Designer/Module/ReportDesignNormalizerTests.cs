@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -40,6 +41,22 @@ public sealed class ReportDesignNormalizerTests
         var condition = Assert.Single(customer.Conditions);
         Assert.Equal("Users.UserId", condition.LeftField);
         Assert.Equal("Customer.Owner", condition.RightField);
+    }
+
+    [Fact]
+    public void Normalize_GivesARecentPeriodFilterTheLastDaysOperator()
+    {
+        // Arrange
+        var query = new ReportQueryDefinition
+        {
+            Filters = [new ReportFilterDefinition { Id = "f1", Field = "A.CreatedUtc", Exposed = true, Control = ReportFilterControl.RelativeDate, Operator = ReportFilterOperator.Between, Values = ["30"] }],
+        };
+
+        // Act
+        var filter = Assert.Single(ReportDesignNormalizer.Normalize(query).Filters);
+
+        // Assert
+        Assert.Equal(ReportFilterOperator.InLastDays, filter.Operator);
     }
 
     [Fact]

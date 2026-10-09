@@ -39,4 +39,10 @@ public enum ReportFilterControl
     /// A yes, no, or any choice.
     /// </summary>
     Boolean,
+
+    /// <summary>
+    /// A choice of recent periods (today, the last 7, 30, or 90 days, the last year, or all time) for a date field. The
+    /// filter keeps the rows of the last number of days its value names, and keeps every row when it has no value.
+    /// </summary>
+    RelativeDate,
 }

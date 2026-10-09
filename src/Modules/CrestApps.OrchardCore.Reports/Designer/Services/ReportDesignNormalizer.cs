@@ -66,6 +66,7 @@ public static class ReportDesignNormalizer
                     ReportFilterControl.MultiSelect when filter.Operator != ReportFilterOperator.NotIn => ReportFilterOperator.In,
                     ReportFilterControl.Select when filter.Operator != ReportFilterOperator.NotEquals => ReportFilterOperator.Equals,
                     ReportFilterControl.Boolean => ReportFilterOperator.Equals,
+                    ReportFilterControl.RelativeDate => ReportFilterOperator.InLastDays,
                     _ => filter.Operator,
                 };
             }

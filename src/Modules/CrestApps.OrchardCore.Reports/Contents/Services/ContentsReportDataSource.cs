@@ -350,6 +350,7 @@ public sealed class ContentsReportDataSource : IReportDataSource
         return new ReportDataSetDescriptor(definition.Name, displayName, definition.GetDescription())
         {
             Group = group,
+            DefaultDateField = ContentReportFieldNames.CreatedUtc,
         };
     }
 }

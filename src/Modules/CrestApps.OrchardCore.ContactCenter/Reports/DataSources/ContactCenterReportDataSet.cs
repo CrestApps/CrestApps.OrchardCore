@@ -55,6 +55,9 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     protected virtual (string Field, Expression<Func<TIndex, DateTime>> Column)? DateColumn => null;
 
     /// <inheritdoc/>
+    public override string DefaultDateField => DateColumn?.Field;
+
+    /// <inheritdoc/>
     public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
     {
         if (context?.User is null ||

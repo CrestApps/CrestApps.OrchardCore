@@ -76,6 +76,24 @@
 
             break;
 
+        case ReportFilterControl.RelativeDate:
+            <div class="col p-1">
+                <label class="form-label" for="@inputId">@label</label>
+                <select class="form-select" id="@inputId" name="@name">
+                    <option value="" selected="@string.IsNullOrEmpty(first)">@T["All time"]</option>
+                    @foreach (var (days, text) in new[] { ("1", T["Today"]), ("7", T["Last 7 days"]), ("30", T["Last 30 days"]), ("90", T["Last 90 days"]), ("365", T["Last 12 months"]) })
+                    {
+                        <option value="@days" selected="@string.Equals(first, days, StringComparison.Ordinal)">@text</option>
+                    }
+                    @if (!string.IsNullOrEmpty(first) && first is not ("1" or "7" or "30" or "90" or "365"))
+                    {
+                        <option value="@first" selected>@T["Last {0} days", first]</option>
+                    }
+                </select>
+            </div>
+
+            break;
+
         case ReportFilterControl.Boolean:
             <div class="col p-1">
                 <label class="form-label" for="@inputId">@label</label>

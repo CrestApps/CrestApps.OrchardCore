@@ -117,7 +117,7 @@ internal sealed class ActivitiesDataSet : ReportRecordDataSet<OmnichannelActivit
         ICatalogManager<OmnichannelCampaign> campaigns,
         OmnichannelReportAccess access,
         IStringLocalizer S)
-        : base(new ReportDataSetDescriptor(Name, S["Activities"], S["One row per activity: tasks, calls, messages, and the dialer's attempts."]))
+        : base(new ReportDataSetDescriptor(Name, S["Activities"], S["One row per activity: tasks, calls, messages, and the dialer's attempts."]) { DefaultDateField = "CreatedUtc" })
     {
         _session = session;
         _dispositions = dispositions;
@@ -387,7 +387,7 @@ internal sealed class ActivityBatchesDataSet : ReportRecordDataSet<OmnichannelAc
     private readonly OmnichannelReportAccess _access;
 
     public ActivityBatchesDataSet(ISession session, OmnichannelReportAccess access, IStringLocalizer S)
-        : base(new ReportDataSetDescriptor(Name, S["Activity batches"], S["Bulk loads of activities, such as dialer lists, with how many records were loaded and skipped."]))
+        : base(new ReportDataSetDescriptor(Name, S["Activity batches"], S["Bulk loads of activities, such as dialer lists, with how many records were loaded and skipped."]) { DefaultDateField = "CreatedUtc" })
     {
         _session = session;
         _access = access;

@@ -301,6 +301,19 @@
         ];
     }
 
+    app.periodLabel = function (days) {
+        switch (days) {
+            case '':
+                return app.t('All time');
+            case '1':
+                return app.t('Today');
+            case '365':
+                return app.t('Last 12 months');
+            default:
+                return app.t('Last') + ' ' + days + ' ' + app.t('days');
+        }
+    };
+
     function valueEditor(filter, dataType) {
         var arity = designer.valueArity(filter.operator);
         var inputType = designer.isTemporal(dataType) ? (dataType === 'DateTime' ? 'datetime-local' : 'date') : (designer.isNumeric(dataType) ? 'number' : 'text');
@@ -311,6 +324,18 @@
 
         if (arity === 0) {
             return null;
+        }
+
+        // A recent period: its value is the default the report opens with, which viewers can change.
+        if (filter.control === 'RelativeDate') {
+            return labelled(app.t('Default period'), ui.select(designer.RELATIVE_PERIODS.map(function (days) {
+                return { value: days, text: app.periodLabel(days) };
+            }), (filter.values || [])[0] || '', {
+                onchange: function (event) {
+                    filter.values = event.target.value ? [event.target.value] : [];
+                    app.changed();
+                }
+            }), app.t('The people who run the report can pick another period.'));
         }
 
         if (dataType === 'Boolean') {

@@ -80,6 +80,9 @@ public sealed class AIChatSessionsReportDataSet : ReportRecordDataSet<AIChatRepo
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    public override string DefaultDateField => LastActivityUtcField;
+
     public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
     {
         return context?.User is not null &&

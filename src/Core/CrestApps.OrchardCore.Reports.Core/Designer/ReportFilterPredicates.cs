@@ -129,15 +129,22 @@ public static class ReportFilterPredicates
     /// <param name="dataType">The type of the field.</param>
     /// <param name="rawValues">The filter values as invariant text.</param>
     /// <param name="toUtc">Converts a tenant-local date-time to UTC.</param>
+    /// <param name="today">The tenant-local current date-time, which relative date filters count from.</param>
     /// <returns>The condition, or <see langword="null"/>.</returns>
     public static ReportDataCondition BuildCondition(
         string fieldName,
         ReportFilterOperator filterOperator,
         ReportDataType dataType,
         IList<string> rawValues,
-        Func<DateTime, DateTime> toUtc)
+        Func<DateTime, DateTime> toUtc,
+        DateTime? today = null)
     {
         ArgumentNullException.ThrowIfNull(toUtc);
+
+        if (filterOperator is ReportFilterOperator.InLastDays or ReportFilterOperator.InNextDays)
+        {
+            return RelativeCondition(fieldName, filterOperator, dataType, rawValues, toUtc, today);
+        }
 
         var values = (rawValues ?? []).Select(raw => Parse(raw, dataType)).ToList();
 
@@ -192,6 +199,33 @@ public static class ReportFilterPredicates
             ReportFilterOperator.IsNotEmpty => Condition(fieldName, filterOperator),
             _ => null,
         };
+    }
+
+    // The range of a relative date filter, as the same days the full filter keeps: from the start of the first day to the
+    // start of the day after the last one, as an inclusive range, which keeps every row the filter keeps.
+    private static ReportDataCondition RelativeCondition(
+        string fieldName,
+        ReportFilterOperator filterOperator,
+        ReportDataType dataType,
+        IList<string> rawValues,
+        Func<DateTime, DateTime> toUtc,
+        DateTime? today)
+    {
+        if (today is null ||
+            !ReportDataValues.IsTemporal(dataType) ||
+            ReportDataValues.Coerce(rawValues?.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?.Trim(), ReportDataType.Integer) is not long days ||
+            days < 1 ||
+            days > 36_500)
+        {
+            return null;
+        }
+
+        var start = filterOperator == ReportFilterOperator.InLastDays ? today.Value.Date.AddDays(1 - days) : today.Value.Date;
+        var end = filterOperator == ReportFilterOperator.InLastDays ? today.Value.Date.AddDays(1) : today.Value.Date.AddDays(days);
+
+        return dataType == ReportDataType.DateTime
+            ? Condition(fieldName, ReportFilterOperator.Between, toUtc(start), toUtc(end))
+            : Condition(fieldName, ReportFilterOperator.Between, start, end);
     }
 
     private static ReportDataCondition Condition(string fieldName, ReportFilterOperator filterOperator, params object[] values)

@@ -95,7 +95,7 @@
       return ['Auto', 'Boolean'];
     }
     if (isTemporal(dataType)) {
-      return ['Auto', 'DateRange', 'Text'];
+      return ['Auto', 'RelativeDate', 'DateRange', 'Text'];
     }
     if (isNumeric(dataType)) {
       return ['Auto', 'NumberRange', 'Text', 'Select', 'MultiSelect'];
@@ -115,6 +115,8 @@
         return operator === 'NotEquals' ? 'NotEquals' : 'Equals';
       case 'Boolean':
         return 'Equals';
+      case 'RelativeDate':
+        return 'InLastDays';
       default:
         return null;
     }
@@ -281,6 +283,32 @@
       }
     }
     return later;
+  };
+
+  // The recent periods a relative date filter offers, in days; an empty value keeps every row.
+  designer.RELATIVE_PERIODS = ['', '1', '7', '30', '90', '365'];
+
+  // The filter a new report starts with on its first data set's main date: the last 30 days, which the people who run
+  // the report can change. Reading only that period keeps a report over a large data set fast and complete. Returns
+  // null when the data set has no main date, the field is not there, or the report already filters.
+  designer.defaultDateFilter = function (query, dataSet, fields) {
+    var name = dataSet && dataSet.defaultDateField;
+    var field = (fields || []).filter(function (candidate) {
+      return candidate.name === name;
+    })[0];
+    if (!name || !field || (query.filters || []).length > 0 || !isTemporal(field.dataType)) {
+      return null;
+    }
+    return {
+      id: designer.newId('f', ids(query.filters || [])),
+      field: dataSet.alias + '.' + field.name,
+      stage: 'Rows',
+      operator: 'InLastDays',
+      values: ['30'],
+      exposed: true,
+      label: field.displayName || field.name,
+      control: 'RelativeDate'
+    };
   };
   designer.addFilter = function (query, field) {
     query.filters = query.filters || [];
@@ -2015,9 +2043,20 @@
       dataSet: descriptor.name,
       displayName: descriptor.displayName || descriptor.name
     };
+    var isFirst = query.dataSets.length === 0;
     query.dataSets.push(reference);
     app.render();
     app.loadSchema(reference).then(function () {
+      // A new report starts filtered on the last 30 days of its first data set's main date.
+      if (isFirst) {
+        var dateFilter = designer.defaultDateFilter(query, {
+          alias: reference.alias,
+          defaultDateField: descriptor.defaultDateField
+        }, (app.schemas[reference.alias] || {}).fields);
+        if (dateFilter) {
+          query.filters.push(dateFilter);
+        }
+      }
       if (query.dataSets.length > 1) {
         var earlier = query.dataSets.slice(0, -1).map(function (dataSet) {
           return {
@@ -2571,6 +2610,18 @@
       });
     }, app.t('A hidden column still groups the data and can feed charts.'))];
   }
+  app.periodLabel = function (days) {
+    switch (days) {
+      case '':
+        return app.t('All time');
+      case '1':
+        return app.t('Today');
+      case '365':
+        return app.t('Last 12 months');
+      default:
+        return app.t('Last') + ' ' + days + ' ' + app.t('days');
+    }
+  };
   function valueEditor(filter, dataType) {
     var arity = designer.valueArity(filter.operator);
     var inputType = designer.isTemporal(dataType) ? dataType === 'DateTime' ? 'datetime-local' : 'date' : designer.isNumeric(dataType) ? 'number' : 'text';
@@ -2579,6 +2630,21 @@
     }
     if (arity === 0) {
       return null;
+    }
+
+    // A recent period: its value is the default the report opens with, which viewers can change.
+    if (filter.control === 'RelativeDate') {
+      return labelled(app.t('Default period'), ui.select(designer.RELATIVE_PERIODS.map(function (days) {
+        return {
+          value: days,
+          text: app.periodLabel(days)
+        };
+      }), (filter.values || [])[0] || '', {
+        onchange: function (event) {
+          filter.values = event.target.value ? [event.target.value] : [];
+          app.changed();
+        }
+      }), app.t('The people who run the report can pick another period.'));
     }
     if (dataType === 'Boolean') {
       return labelled(app.t('Value'), ui.select([{

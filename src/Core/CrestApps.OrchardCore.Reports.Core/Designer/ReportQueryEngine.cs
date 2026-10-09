@@ -172,7 +172,7 @@ public sealed partial class ReportQueryEngine
                     continue;
                 }
 
-                var condition = ReportFilterPredicates.BuildCondition(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc);
+                var condition = ReportFilterPredicates.BuildCondition(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc, context.ToLocal(context.UtcNow));
 
                 if (condition is not null)
                 {

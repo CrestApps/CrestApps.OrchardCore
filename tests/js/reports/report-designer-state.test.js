@@ -168,6 +168,36 @@ describe('join suggestions', () => {
     });
 });
 
+describe('default date filter', () => {
+    const fields = [{ name: 'CreatedUtc', displayName: 'Created', dataType: 'DateTime' }, { name: 'Name', dataType: 'Text' }];
+
+    it('filters a new report on the last 30 days of the main date, as a recent period viewers can change', () => {
+        const filter = designer.defaultDateFilter({ filters: [] }, { alias: 'Activities', defaultDateField: 'CreatedUtc' }, fields);
+
+        expect(filter).toMatchObject({
+            field: 'Activities.CreatedUtc',
+            stage: 'Rows',
+            operator: 'InLastDays',
+            values: ['30'],
+            exposed: true,
+            label: 'Created',
+            control: 'RelativeDate',
+        });
+    });
+
+    it('adds nothing without a main date, when the field is missing or not a date, or when the report already filters', () => {
+        expect(designer.defaultDateFilter({ filters: [] }, { alias: 'A' }, fields)).toBeNull();
+        expect(designer.defaultDateFilter({ filters: [] }, { alias: 'A', defaultDateField: 'Missing' }, fields)).toBeNull();
+        expect(designer.defaultDateFilter({ filters: [] }, { alias: 'A', defaultDateField: 'Name' }, fields)).toBeNull();
+        expect(designer.defaultDateFilter({ filters: [{ id: 'f1' }] }, { alias: 'A', defaultDateField: 'CreatedUtc' }, fields)).toBeNull();
+    });
+
+    it('offers recent periods for date fields', () => {
+        expect(designer.controlsFor('DateTime')).toContain('RelativeDate');
+        expect(designer.operatorForControl('RelativeDate', 'Between')).toBe('InLastDays');
+    });
+});
+
 describe('one join per data set', () => {
     it('finds a join without creating one', () => {
         const query = { joins: [] };

@@ -98,6 +98,9 @@ public sealed class AIChatSessionMetricsReportDataSet : ReportRecordDataSet<AICh
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    public override string DefaultDateField => SessionStartedUtcField;
+
     public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
     {
         return context?.User is not null &&

@@ -524,11 +524,24 @@
             dataSet: descriptor.name,
             displayName: descriptor.displayName || descriptor.name
         };
+        var isFirst = query.dataSets.length === 0;
 
         query.dataSets.push(reference);
         app.render();
 
         app.loadSchema(reference).then(function () {
+            // A new report starts filtered on the last 30 days of its first data set's main date.
+            if (isFirst) {
+                var dateFilter = designer.defaultDateFilter(query, {
+                    alias: reference.alias,
+                    defaultDateField: descriptor.defaultDateField
+                }, (app.schemas[reference.alias] || {}).fields);
+
+                if (dateFilter) {
+                    query.filters.push(dateFilter);
+                }
+            }
+
             if (query.dataSets.length > 1) {
                 var earlier = query.dataSets.slice(0, -1).map(function (dataSet) {
                     return { dataSet: dataSet, fields: (app.schemas[dataSet.alias] || {}).fields || [] };

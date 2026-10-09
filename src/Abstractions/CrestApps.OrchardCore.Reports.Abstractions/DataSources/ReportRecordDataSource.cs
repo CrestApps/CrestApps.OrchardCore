@@ -38,6 +38,7 @@ public abstract class ReportRecordDataSource : IReportDataSource
 
             if (await dataSet.CanReadAsync(context))
             {
+                dataSet.Descriptor.DefaultDateField ??= dataSet.DefaultDateField;
                 dataSets.Add(dataSet.Descriptor);
             }
         }
@@ -50,13 +51,18 @@ public abstract class ReportRecordDataSource : IReportDataSource
     {
         var found = await FindReadableAsync(dataSet, context);
 
-        return found is null
-            ? null
-            : new ReportDataSetSchema
-            {
-                DataSet = found.Descriptor,
-                Fields = found.Fields.ToList(),
-            };
+        if (found is null)
+        {
+            return null;
+        }
+
+        found.Descriptor.DefaultDateField ??= found.DefaultDateField;
+
+        return new ReportDataSetSchema
+        {
+            DataSet = found.Descriptor,
+            Fields = found.Fields.ToList(),
+        };
     }
 
     /// <inheritdoc/>

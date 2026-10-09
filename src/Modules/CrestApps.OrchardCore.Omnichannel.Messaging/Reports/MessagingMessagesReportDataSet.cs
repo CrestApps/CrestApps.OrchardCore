@@ -85,6 +85,9 @@ public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<Messagi
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    public override string DefaultDateField => CreatedUtcField;
+
     public override Task<bool> CanReadAsync(ReportDataSourceContext context)
     {
         return MessagingReportPermissions.CanReadAsync(_authorizationService, context);

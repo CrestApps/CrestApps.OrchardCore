@@ -72,6 +72,13 @@ public static class ReportDesignerTexts
             ["A .NET format, such as N0 for whole numbers, C2 for currency, or MMM yyyy for months."] = S["A .NET format, such as N0 for whole numbers, C2 for currency, or MMM yyyy for months."].Value,
             ["Hide from tables"] = S["Hide from tables"].Value,
             ["A hidden column still groups the data and can feed charts."] = S["A hidden column still groups the data and can feed charts."].Value,
+            ["All time"] = S["All time"].Value,
+            ["Today"] = S["Today"].Value,
+            ["Last 12 months"] = S["Last 12 months"].Value,
+            ["Last"] = S["Last"].Value,
+            ["days"] = S["days"].Value,
+            ["Default period"] = S["Default period"].Value,
+            ["The people who run the report can pick another period."] = S["The people who run the report can pick another period."].Value,
             ["Value"] = S["Value"].Value,
             ["Any"] = S["Any"].Value,
             ["Yes"] = S["Yes"].Value,
@@ -373,6 +380,7 @@ public static class ReportDesignerTexts
             ["DateRange"] = S["Date range"].Value,
             ["NumberRange"] = S["Number range"].Value,
             ["Boolean"] = S["Yes or no"].Value,
+            ["RelativeDate"] = S["Recent period (last 30 days...)"].Value,
         };
     }
 
