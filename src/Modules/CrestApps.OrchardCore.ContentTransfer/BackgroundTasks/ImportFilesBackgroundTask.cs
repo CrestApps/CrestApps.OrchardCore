@@ -288,6 +288,34 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 continue;
             }
 
+            // Checked before every row, not only after a batch: rows a filter skips (a duplicate phone number, a
+            // Do Not Call match) never fill a batch, so a file of mostly skipped rows could otherwise run on with
+            // no check and no saved progress. The rows read since the last batch, with the reasons recorded for
+            // skipped ones, are saved before the run stops, so the next run continues from this row.
+            if (clock.UtcNow >= runDeadlineUtc)
+            {
+                var progressSaved = await BackgroundWorkPacer.RunBatchAsync(
+                    token => ProcessBatchAsync(
+                        serviceProvider,
+                        entry,
+                        dataTable,
+                        newRecords,
+                        existingRows,
+                        contentTypeDefinition,
+                        contentManager,
+                        contentImportManager,
+                        progressPart,
+                        session,
+                        clock,
+                        token),
+                    pacingOptions,
+                    cancellationToken);
+
+                return progressSaved
+                    ? ImportRunResult.TimeLimitReached
+                    : ImportRunResult.Stopped;
+            }
+
             progressPart.TotalProcessed++;
             progressPart.CurrentRow = rowIndex;
 
@@ -385,12 +413,6 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 newRecords.Clear();
                 existingRows.Clear();
                 dataTable.Rows.Clear();
-
-                if (clock.UtcNow >= runDeadlineUtc)
-                {
-                    // The batch's progress is saved, so the next run continues from the row after it.
-                    return ImportRunResult.TimeLimitReached;
-                }
             }
 
             rowIndex++;
