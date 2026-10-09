@@ -37,4 +37,19 @@ internal sealed class ReportDesignHistoryMigrations : DataMigration
 
         return 1;
     }
+
+    /// <summary>
+    /// Adds the columns that find reports that were never published.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ReportDesignDraftIndex>(table => table
+            .AddColumn<bool>(nameof(ReportDesignDraftIndex.IsUnpublished), column => column.Nullable()));
+
+        await SchemaBuilder.AlterIndexTableAsync<ReportDesignDraftIndex>(table => table
+            .AddColumn<string>(nameof(ReportDesignDraftIndex.OwnerId), column => column.Nullable().WithLength(DesignIdLength)));
+
+        return 2;
+    }
 }

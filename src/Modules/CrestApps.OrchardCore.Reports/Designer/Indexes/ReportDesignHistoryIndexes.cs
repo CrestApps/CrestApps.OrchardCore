@@ -12,6 +12,16 @@ public sealed class ReportDesignDraftIndex : MapIndex
     /// Gets or sets the identifier of the report.
     /// </summary>
     public string DesignId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the report was never published.
+    /// </summary>
+    public bool IsUnpublished { get; set; }
+
+    /// <summary>
+    /// Gets or sets the owner of the report.
+    /// </summary>
+    public string OwnerId { get; set; }
 }
 
 /// <summary>
@@ -63,6 +73,8 @@ public sealed class ReportDesignDraftIndexProvider : IndexProvider<ReportDesignD
             .Map(draft => new ReportDesignDraftIndex
             {
                 DesignId = draft.DesignId,
+                IsUnpublished = draft.IsUnpublished,
+                OwnerId = draft.Design?.OwnerId,
             });
     }
 }

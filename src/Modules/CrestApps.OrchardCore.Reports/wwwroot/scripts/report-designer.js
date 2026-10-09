@@ -685,6 +685,11 @@
       headers: headers,
       credentials: 'same-origin'
     };
+
+    // A request sent while the page unloads must outlive it.
+    if (settings.keepalive) {
+      init.keepalive = true;
+    }
     if (settings.body !== undefined) {
       init.method = settings.method || 'POST';
       init.body = JSON.stringify(settings.body);
@@ -1431,8 +1436,11 @@
       app.render();
       return app.refreshPlan();
     }).then(app.refreshPreview);
+
+    // Unsaved changes of a report are sent on their way as the page unloads; only what cannot be (a view) asks first.
     root.addEventListener('beforeunload', function (event) {
-      if (app.dirty) {
+      var saved = app.flushOnUnload ? app.flushOnUnload() : !app.dirty;
+      if (!saved) {
         event.preventDefault();
         event.returnValue = '';
       }
@@ -3829,6 +3837,7 @@
   app.history = {
     revision: 0,
     hasDraft: false,
+    unpublished: false,
     modifiedBy: null,
     modifiedUtc: null,
     state: 'idle',
@@ -3841,9 +3850,45 @@
     queued: []
   };
 
-  // Whether changes are saved automatically: only reports that exist, since a new report has nowhere to keep them.
+  // Whether changes are saved automatically: every report. A new report is saved as a draft from its first change.
   app.canAutosave = function () {
-    return !app.isView() && !!app.design.id;
+    return !app.isView();
+  };
+
+  // Whether the report exists on the server: published, or saved as a draft.
+  app.isSaved = function () {
+    return !!app.design.id;
+  };
+
+  // The request that saves the current changes: into the report's draft, or, for a report that was never saved,
+  // into a new draft.
+  app.draftRequest = function (options) {
+    var history = app.history;
+    var body = app.payload();
+    body.revision = history.revision;
+    body.force = history.force;
+    var url = app.isSaved() ? app.url('draft', {
+      id: app.design.id
+    }) : app.url('newDraft');
+
+    // A save still on its way when the page unloads (a refresh right after a change) must not be dropped; browsers
+    // let such requests outlive the page up to 64 KB.
+    var settings = {
+      body: body,
+      keepalive: JSON.stringify(body).length < 60000
+    };
+    return ui.request(url, Object.assign(settings, options || {}));
+  };
+
+  // Called when the first save of a new report created its draft: the page now edits that report.
+  app.adoptDraft = function (result) {
+    app.design.id = result.id;
+    app.history.unpublished = true;
+    if (result.editUrl) {
+      root.history.replaceState(null, '', result.editUrl);
+    }
+    app.render();
+    app.startLive();
   };
   app.formatTime = function (value) {
     if (!value) {
@@ -3861,17 +3906,14 @@
       history.pending = true;
       return history.saving;
     }
-    var body = app.payload();
-    body.revision = history.revision;
-    body.force = history.force;
+    var isNew = !app.isSaved();
     app.dirty = false;
     history.state = 'saving';
     app.renderHistory();
-    history.saving = ui.request(app.url('draft', {
-      id: app.design.id
-    }), {
-      body: body
-    }).then(function (result) {
+    history.saving = app.draftRequest().then(function (result) {
+      if (isNew) {
+        app.adoptDraft(result);
+      }
       history.revision = result.revision;
       history.hasDraft = true;
       history.modifiedBy = result.modifiedBy;
@@ -3900,7 +3942,30 @@
   };
   app.scheduleAutosave = ui.debounce(function () {
     app.autosave();
-  }, 1500);
+  }, 800);
+
+  // Sends the changes not saved yet while the page unloads. Answers false when that is not possible (a view, or a
+  // design too large for a request that outlives the page), so the page asks before leaving.
+  app.flushOnUnload = function () {
+    if (!app.dirty) {
+      return true;
+    }
+    if (!app.canAutosave() || app.history.conflict || app.history.remote === 'deleted') {
+      return false;
+    }
+
+    // Browsers limit requests that outlive the page to 64 KB.
+    if (JSON.stringify(app.payload()).length > 60000) {
+      return false;
+    }
+    app.scheduleAutosave.cancel();
+    app.draftRequest({
+      keepalive: true
+    }).catch(function () {
+      return null;
+    });
+    return true;
+  };
 
   // Publishes the report. A new report is created and gets its first version.
   app.publish = function () {
@@ -3920,10 +3985,12 @@
         return;
       }
       var isNew = !app.design.id;
+      var wasUnpublished = history.unpublished;
       app.design.id = result.id;
       app.dirty = false;
       history.revision = result.revision;
       history.hasDraft = false;
+      history.unpublished = false;
       history.force = false;
       history.conflict = null;
       history.remote = null;
@@ -3937,8 +4004,10 @@
       if (isNew && result.editUrl) {
         root.history.replaceState(null, '', result.editUrl);
         app.config.runUrl = result.runUrl;
-        app.render();
         app.startLive();
+      }
+      if (isNew || wasUnpublished) {
+        app.render();
       }
       app.renderHistory();
     }).catch(function (error) {
@@ -3953,7 +4022,8 @@
     });
   };
   app.discardDraft = function () {
-    if (!root.confirm(app.t('Discard the unpublished changes? The report goes back to its published version.'))) {
+    var question = app.history.unpublished ? app.t('Delete this report? It was never published, so nothing else is kept.') : app.t('Discard the unpublished changes? The report goes back to its published version.');
+    if (!root.confirm(question)) {
       return;
     }
     app.scheduleAutosave.cancel();
@@ -3964,7 +4034,12 @@
         revision: app.history.revision,
         force: app.history.force
       }
-    }).then(function () {
+    }).then(function (result) {
+      if (result && result.deleted) {
+        app.dirty = false;
+        root.location.href = result.listUrl || app.url('list');
+        return;
+      }
       app.reload();
     }).catch(function (error) {
       if (error && error.status === 409) {
@@ -4168,7 +4243,7 @@
       }
     }
     if (e.versionsButton) {
-      e.versionsButton.classList.toggle('d-none', !app.canAutosave());
+      e.versionsButton.classList.toggle('d-none', !app.isSaved() || history.unpublished);
     }
     if (!e.historyBar) {
       return;
@@ -4189,7 +4264,9 @@
     } else if (history.presence.length && app.canAutosave()) {
       e.historyBar.appendChild(bar('secondary', 'fa-users', designer.presenceNames(history.presence).join(', ') + ' ' + app.t('also has this report open. Changes you both make can conflict.'), null));
     }
-    if (history.hasDraft && history.remote !== 'deleted') {
+    if (history.unpublished && history.remote !== 'deleted') {
+      e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('This report is saved as a draft and was never published. Only you and the people who manage every report can see it.'), [actionButton(app.t('Delete draft'), 'btn-outline-secondary', app.discardDraft), actionButton(app.t('Publish'), 'btn-primary', app.publish)]));
+    } else if (history.hasDraft && history.remote !== 'deleted') {
       var by = history.modifiedBy ? ' ' + app.t('by') + ' ' + history.modifiedBy : '';
       var when = history.modifiedUtc ? ' (' + app.formatTime(history.modifiedUtc) + ')' : '';
       e.historyBar.appendChild(bar('light', 'fa-file-pen', app.t('Unpublished changes') + by + when + '. ' + app.t('People who run the report still see the published version.'), [actionButton(app.t('Discard changes'), 'btn-outline-secondary', app.discardDraft), actionButton(app.t('Publish'), 'btn-primary', app.publish)]));
@@ -4221,6 +4298,7 @@
     var payload = app.config.payload || {};
     app.history.revision = payload.revision || 0;
     app.history.hasDraft = !!payload.hasDraft;
+    app.history.unpublished = !!payload.isUnpublished;
     app.history.modifiedBy = payload.draftModifiedBy || null;
     app.history.modifiedUtc = payload.draftModifiedUtc || null;
     app.renderHistory();

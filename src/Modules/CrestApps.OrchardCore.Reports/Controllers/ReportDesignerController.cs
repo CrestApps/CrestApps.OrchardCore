@@ -96,7 +96,20 @@ public sealed class ReportDesignerController : Controller
 
         if (design is null)
         {
-            return NotFound();
+            // A report that was never published exists only as its draft.
+            var draft = await _history.FindUnpublishedAsync(id);
+
+            if (draft is null)
+            {
+                return NotFound();
+            }
+
+            if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
+            {
+                return Forbid();
+            }
+
+            return View("Designer", await BuildViewModelAsync(ReportDesignerPayload.From(ReportDesignHistoryService.GetWorkingCopy(draft)), isView: false));
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, design))
@@ -168,12 +181,15 @@ public sealed class ReportDesignerController : Controller
         {
             existing = await _designService.FindAsync(payload.Id);
 
-            if (existing is null)
+            // A report that was never published exists only as its draft; publishing creates it with its identifier.
+            var target = existing ?? (await _history.FindUnpublishedAsync(payload.Id))?.Design;
+
+            if (target is null)
             {
                 return NotFound();
             }
 
-            if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, existing))
+            if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, target))
             {
                 return Forbid();
             }
@@ -189,6 +205,11 @@ public sealed class ReportDesignerController : Controller
         if (published.Status is ReportHistoryStatus.Conflict or ReportHistoryStatus.Busy)
         {
             return ReportDesignHistoryController.ConflictResult(published);
+        }
+
+        if (published.Status == ReportHistoryStatus.NotFound)
+        {
+            return NotFound();
         }
 
         var result = published.Save;

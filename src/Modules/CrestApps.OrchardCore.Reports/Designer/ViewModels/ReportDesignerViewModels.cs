@@ -66,6 +66,11 @@ public class ReportDesignsIndexViewModel
     public IList<ReportDesignListEntry> Entries { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the reports the user may edit that were never published.
+    /// </summary>
+    public IList<ReportDesignListEntry> Drafts { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether the user can design reports.
     /// </summary>
     public bool CanDesign { get; set; }
@@ -95,6 +100,11 @@ public class ReportDesignListEntry
     /// Gets or sets a value indicating whether the user owns the report.
     /// </summary>
     public bool IsOwner { get; set; }
+
+    /// <summary>
+    /// Gets or sets when an unpublished report was last changed, in UTC.
+    /// </summary>
+    public DateTime? ModifiedUtc { get; set; }
 }
 
 /// <summary>

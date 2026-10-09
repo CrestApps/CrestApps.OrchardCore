@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
@@ -78,6 +79,136 @@ public sealed class ReportDesignHistoryService
             ModifiedByName = hasDraft ? draft.ModifiedByName : null,
             ModifiedUtc = hasDraft ? draft.ModifiedUtc : null,
         };
+    }
+
+    /// <summary>
+    /// Gets what the builder edits for a report that was never published: its draft.
+    /// </summary>
+    /// <param name="draft">The draft of the unpublished report.</param>
+    /// <returns>The working copy.</returns>
+    public static ReportDesignWorkingCopy GetWorkingCopy(ReportDesignDraft draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+
+        return new ReportDesignWorkingCopy
+        {
+            Design = draft.Design,
+            Revision = draft.Revision,
+            HasDraft = true,
+            IsUnpublished = true,
+            ModifiedByName = draft.ModifiedByName,
+            ModifiedUtc = draft.ModifiedUtc,
+        };
+    }
+
+    /// <summary>
+    /// Starts a new report as a draft, so the work on it is saved from the first change. It gets its identifier now and
+    /// keeps it when it is first published; until then only its owner and the people who manage every report see it.
+    /// </summary>
+    /// <param name="incoming">The report as the builder has it.</param>
+    /// <param name="user">The person designing it, who becomes its owner.</param>
+    /// <returns>The outcome, with <see cref="ReportHistoryResult.DesignId"/> set.</returns>
+    public async Task<ReportHistoryResult> CreateDraftAsync(ReportDesign incoming, ClaimsPrincipal user)
+    {
+        ArgumentNullException.ThrowIfNull(incoming);
+        ArgumentNullException.ThrowIfNull(user);
+
+        var owner = new ReportDesign
+        {
+            ItemId = IdGenerator.GenerateId(),
+            OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier),
+            Author = user.Identity?.Name,
+            CreatedUtc = _clock.UtcNow,
+        };
+        var draft = new ReportDesignDraft
+        {
+            DesignId = owner.ItemId,
+            IsUnpublished = true,
+            HasChanges = true,
+            Design = Snapshot(owner, incoming),
+        };
+
+        Touch(draft, user);
+        await _store.SaveDraftAsync(draft);
+        await _store.CommitAsync();
+
+        return Result(ReportHistoryStatus.Saved, draft, null, null);
+    }
+
+    /// <summary>
+    /// Finds the draft of a report that was never published.
+    /// </summary>
+    /// <param name="designId">The report identifier.</param>
+    /// <returns>The draft, or <see langword="null"/> when there is no such report.</returns>
+    public async Task<ReportDesignDraft> FindUnpublishedAsync(string designId)
+    {
+        if (string.IsNullOrEmpty(designId))
+        {
+            return null;
+        }
+
+        var draft = await _store.FindDraftAsync(designId);
+
+        return draft is { IsUnpublished: true, Design: not null } ? draft : null;
+    }
+
+    /// <summary>
+    /// Lists the drafts of the reports that were never published.
+    /// </summary>
+    /// <returns>The drafts.</returns>
+    public async Task<IReadOnlyList<ReportDesignDraft>> ListUnpublishedAsync()
+    {
+        return (await _store.ListUnpublishedAsync())
+            .Where(draft => draft.Design is not null)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Deletes a report that was never published.
+    /// </summary>
+    /// <param name="designId">The report identifier.</param>
+    /// <param name="revision">The revision the person last saw.</param>
+    /// <param name="force">Whether to delete even when someone else changed it since.</param>
+    /// <param name="user">The person deleting it.</param>
+    /// <returns>The outcome.</returns>
+    public async Task<ReportHistoryResult> DeleteUnpublishedAsync(string designId, long revision, bool force, ClaimsPrincipal user)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(designId);
+        ArgumentNullException.ThrowIfNull(user);
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return new ReportHistoryResult { Status = ReportHistoryStatus.Busy };
+        }
+
+        await using (locker)
+        {
+            var draft = await FindUnpublishedAsync(designId);
+
+            if (draft is null)
+            {
+                return new ReportHistoryResult { Status = ReportHistoryStatus.NotFound };
+            }
+
+            if (!force && draft.Revision != revision)
+            {
+                return Result(ReportHistoryStatus.Conflict, draft, null, null);
+            }
+
+            _store.DeleteDraft(draft);
+            await _store.CommitAsync();
+            await _notifier.ReportDesignChangedAsync(new ReportDesignChange
+            {
+                Kind = ReportDesignChangeKind.Deleted,
+                DesignId = designId,
+                UserId = user.FindFirstValue(ClaimTypes.NameIdentifier),
+                UserName = user.Identity?.Name,
+            });
+
+            return new ReportHistoryResult { Status = ReportHistoryStatus.Saved, DesignId = designId };
+        }
     }
 
     /// <summary>
@@ -160,10 +291,11 @@ public sealed class ReportDesignHistoryService
 
     /// <summary>
     /// Publishes a report: stores it as the report that runs, keeps a version when it changed, and clears the draft.
-    /// A new report is created.
+    /// A new report is created; when <paramref name="incoming"/> carries the identifier of a report that exists only as
+    /// a draft, that report is created with it.
     /// </summary>
     /// <param name="incoming">The report as the builder has it.</param>
-    /// <param name="existing">The published report, or <see langword="null"/> for a new one.</param>
+    /// <param name="existing">The published report, or <see langword="null"/> for a new or unpublished one.</param>
     /// <param name="revision">The revision the changes are based on.</param>
     /// <param name="force">Whether to publish even when someone else changed the report since.</param>
     /// <param name="user">The person publishing.</param>
@@ -174,7 +306,7 @@ public sealed class ReportDesignHistoryService
         ArgumentNullException.ThrowIfNull(incoming);
         ArgumentNullException.ThrowIfNull(user);
 
-        if (existing is null)
+        if (existing is null && string.IsNullOrEmpty(incoming.ItemId))
         {
             var created = await _designService.SaveAsync(incoming, null, user, canSharePublicly);
 
@@ -193,7 +325,9 @@ public sealed class ReportDesignHistoryService
             return Result(ReportHistoryStatus.Saved, draft, number, created);
         }
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(existing.ItemId), _lockTimeout, _lockExpiration);
+        var designId = existing?.ItemId ?? incoming.ItemId;
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(LockKey(designId), _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -202,25 +336,36 @@ public sealed class ReportDesignHistoryService
 
         await using (locker)
         {
-            var draft = await _store.FindDraftAsync(existing.ItemId) ?? new ReportDesignDraft { DesignId = existing.ItemId };
+            var draft = await _store.FindDraftAsync(designId);
+
+            if (existing is null && draft is not { IsUnpublished: true })
+            {
+                return new ReportHistoryResult { Status = ReportHistoryStatus.NotFound };
+            }
+
+            draft ??= new ReportDesignDraft { DesignId = designId };
 
             if (!force && draft.Revision != revision)
             {
                 return Result(ReportHistoryStatus.Conflict, draft, null, null);
             }
 
-            var before = existing.Clone();
+            var before = existing?.Clone();
+
+            incoming.ItemId = designId;
+
             var saved = await _designService.SaveAsync(incoming, existing, user, canSharePublicly);
 
             if (!saved.Saved)
             {
-                return new ReportHistoryResult { Status = ReportHistoryStatus.Invalid, Revision = draft.Revision, Save = saved };
+                return new ReportHistoryResult { Status = ReportHistoryStatus.Invalid, Revision = draft.Revision, DesignId = designId, Save = saved };
             }
 
-            var number = await RecordVersionAsync(existing.ItemId, before, saved.Design, draft.RestoredFrom, user);
+            var number = await RecordVersionAsync(designId, before, saved.Design, draft.RestoredFrom, user);
 
             draft.Design = null;
             draft.HasChanges = false;
+            draft.IsUnpublished = false;
             draft.RestoredFrom = null;
             Touch(draft, user);
             await _store.SaveDraftAsync(draft);
@@ -229,7 +374,7 @@ public sealed class ReportDesignHistoryService
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("User '{UserName}' published designed report '{ReportId}' at revision {Revision}.", user.Identity?.Name, existing.ItemId, draft.Revision);
+                _logger.LogInformation("User '{UserName}' published designed report '{ReportId}' at revision {Revision}.", user.Identity?.Name, designId, draft.Revision);
             }
 
             return Result(ReportHistoryStatus.Saved, draft, number, saved);
@@ -395,6 +540,7 @@ public sealed class ReportDesignHistoryService
         return new ReportHistoryResult
         {
             Status = status,
+            DesignId = draft.DesignId,
             Revision = draft.Revision,
             ModifiedByName = draft.ModifiedByName,
             ModifiedUtc = draft.ModifiedUtc,
@@ -465,6 +611,11 @@ public sealed class ReportDesignWorkingCopy
     public bool HasDraft { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the report was never published.
+    /// </summary>
+    public bool IsUnpublished { get; set; }
+
+    /// <summary>
     /// Gets or sets who last changed the draft.
     /// </summary>
     public string ModifiedByName { get; set; }
@@ -515,6 +666,11 @@ public sealed class ReportHistoryResult
     /// Gets or sets the outcome.
     /// </summary>
     public ReportHistoryStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the report.
+    /// </summary>
+    public string DesignId { get; set; }
 
     /// <summary>
     /// Gets or sets the revision of the report after the change, or its current revision on a conflict.

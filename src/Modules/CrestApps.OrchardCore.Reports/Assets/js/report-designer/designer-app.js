@@ -621,8 +621,11 @@
             return app.refreshPlan();
         }).then(app.refreshPreview);
 
+        // Unsaved changes of a report are sent on their way as the page unloads; only what cannot be (a view) asks first.
         root.addEventListener('beforeunload', function (event) {
-            if (app.dirty) {
+            var saved = app.flushOnUnload ? app.flushOnUnload() : !app.dirty;
+
+            if (!saved) {
                 event.preventDefault();
                 event.returnValue = '';
             }

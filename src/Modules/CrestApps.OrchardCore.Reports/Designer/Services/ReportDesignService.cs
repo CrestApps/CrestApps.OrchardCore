@@ -107,8 +107,10 @@ public sealed class ReportDesignService
         ArgumentNullException.ThrowIfNull(user);
 
         var result = new ReportSaveResult();
+        // A report that existed only as an unpublished draft keeps the identifier it was drafted with.
         var design = existing ?? new ReportDesign
         {
+            ItemId = incoming.ItemId,
             OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier),
             Author = user.Identity?.Name,
             CreatedUtc = _clock.UtcNow,

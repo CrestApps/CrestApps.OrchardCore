@@ -42,6 +42,42 @@ public sealed class ReportDesignHistoryController : Controller
     }
 
     /// <summary>
+    /// Starts a new report as a draft with the builder's first changes, so nothing is lost before it is published.
+    /// </summary>
+    /// <returns>The new report's identifier, revision, and builder URL as JSON.</returns>
+    [HttpPost]
+    [Admin("reports/builder/drafts", "ReportDesignerDraftCreate")]
+    public async Task<IActionResult> CreateDraft()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageOwnReportDesigns))
+        {
+            return Forbid();
+        }
+
+        var payload = await ReadPayloadAsync();
+
+        if (payload is null)
+        {
+            return BadRequest();
+        }
+
+        var design = payload.ToDesign();
+
+        design.ItemId = null;
+
+        var result = await _history.CreateDraftAsync(design, User);
+
+        return Json(new
+        {
+            Id = result.DesignId,
+            result.Revision,
+            result.ModifiedUtc,
+            ModifiedBy = result.ModifiedByName,
+            EditUrl = Url.RouteUrl("ReportDesignerEdit", new { id = result.DesignId }),
+        }, ReportDesignerJson.Options);
+    }
+
+    /// <summary>
     /// Saves the builder's changes into the draft of a report.
     /// </summary>
     /// <param name="id">The report identifier.</param>
@@ -57,23 +93,7 @@ public sealed class ReportDesignHistoryController : Controller
             return design.Result;
         }
 
-        var body = await RequestBodyReader.ReadAsync(Request, ReportDesignerController.MaxPayloadBytes, HttpContext.RequestAborted);
-
-        if (body.IsTooLarge || string.IsNullOrWhiteSpace(body.Body))
-        {
-            return BadRequest();
-        }
-
-        ReportDesignerPayload payload;
-
-        try
-        {
-            payload = JsonSerializer.Deserialize<ReportDesignerPayload>(body.Body, ReportDesignerJson.Options);
-        }
-        catch (JsonException)
-        {
-            return BadRequest();
-        }
+        var payload = await ReadPayloadAsync();
 
         if (payload is null)
         {
@@ -102,6 +122,16 @@ public sealed class ReportDesignHistoryController : Controller
 
         request ??= new ReportRevisionRequest();
 
+        // A report that was never published is only its draft, so discarding it deletes it.
+        if (design.IsUnpublished)
+        {
+            var deleted = await _history.DeleteUnpublishedAsync(design.Design.ItemId, request.Revision, request.Force, User);
+
+            return deleted.Status == ReportHistoryStatus.Saved
+                ? Json(new { Deleted = true, ListUrl = Url.RouteUrl("ReportDesignsIndex") }, ReportDesignerJson.Options)
+                : deleted.Status == ReportHistoryStatus.NotFound ? NotFound() : ConflictResult(deleted);
+        }
+
         return Outcome(await _history.DiscardDraftAsync(design.Design, request.Revision, request.Force, User));
     }
 
@@ -121,7 +151,7 @@ public sealed class ReportDesignHistoryController : Controller
             return design.Result;
         }
 
-        var versions = await _history.ListVersionsAsync(design.Design.ItemId);
+        var versions = design.IsUnpublished ? [] : await _history.ListVersionsAsync(design.Design.ItemId);
 
         return Json(versions.Select((version, index) => new
         {
@@ -151,7 +181,7 @@ public sealed class ReportDesignHistoryController : Controller
             return design.Result;
         }
 
-        var version = await _history.FindVersionAsync(design.Design.ItemId, number);
+        var version = design.IsUnpublished ? null : await _history.FindVersionAsync(design.Design.ItemId, number);
 
         if (version?.Design is null)
         {
@@ -187,6 +217,11 @@ public sealed class ReportDesignHistoryController : Controller
         if (design.Result is not null)
         {
             return design.Result;
+        }
+
+        if (design.IsUnpublished)
+        {
+            return NotFound();
         }
 
         request ??= new ReportRevisionRequest();
@@ -233,21 +268,49 @@ public sealed class ReportDesignHistoryController : Controller
         }, ReportDesignerJson.Options);
     }
 
-    private async Task<(ReportDesign Design, IActionResult Result)> FindEditableAsync(string id)
+    private async Task<ReportDesignerPayload> ReadPayloadAsync()
+    {
+        var body = await RequestBodyReader.ReadAsync(Request, ReportDesignerController.MaxPayloadBytes, HttpContext.RequestAborted);
+
+        if (body.IsTooLarge || string.IsNullOrWhiteSpace(body.Body))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ReportDesignerPayload>(body.Body, ReportDesignerJson.Options);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    // Finds a report the user may edit: a published one, or one that exists only as its draft, which is authorized the
+    // same way through the owner recorded in the draft.
+    private async Task<(ReportDesign Design, bool IsUnpublished, IActionResult Result)> FindEditableAsync(string id)
     {
         var design = await _designService.FindAsync(id);
+        var isUnpublished = false;
 
         if (design is null)
         {
-            return (null, NotFound());
+            design = (await _history.FindUnpublishedAsync(id))?.Design;
+            isUnpublished = design is not null;
+        }
+
+        if (design is null)
+        {
+            return (null, false, NotFound());
         }
 
         if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, design))
         {
-            return (null, Forbid());
+            return (null, false, Forbid());
         }
 
-        return (design, null);
+        return (design, isUnpublished, null);
     }
 }
 

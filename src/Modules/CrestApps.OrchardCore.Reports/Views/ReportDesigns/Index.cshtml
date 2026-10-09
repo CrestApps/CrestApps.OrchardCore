@@ -26,6 +26,37 @@
     </div>
 </form>
 
+@if (Model.Drafts.Count > 0)
+{
+    <h2 class="h6 text-muted text-uppercase mb-2">@T["Not published yet"]</h2>
+    <ul class="list-group mb-3">
+        @foreach (var entry in Model.Drafts)
+        {
+            var design = entry.Design;
+
+            <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
+                <div class="flex-grow-1">
+                    <a class="fw-semibold" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@(string.IsNullOrWhiteSpace(design.DisplayText) ? T["Untitled report"] : design.DisplayText)</a>
+                    <span class="badge text-bg-secondary ms-1"><i class="fa-solid fa-file-pen" aria-hidden="true"></i> @T["Draft"]</span>
+                    <div class="small text-muted">
+                        @(entry.IsOwner ? T["Yours"] : T["By {0}", design.Author ?? "?"])
+                        @if (entry.ModifiedUtc.HasValue)
+                        {
+                            <span> · @T["Saved {0}", entry.ModifiedUtc.Value.ToString("g", System.Globalization.CultureInfo.CurrentCulture)] UTC</span>
+                        }
+                    </div>
+                </div>
+                <div class="d-flex gap-1">
+                    <a class="btn btn-sm btn-primary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Continue"]</a>
+                    <form method="post" asp-route="ReportDesignsDeleteDraft" asp-route-id="@design.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                    </form>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
 <ul class="list-group">
     @if (Model.Entries.Count == 0)
     {

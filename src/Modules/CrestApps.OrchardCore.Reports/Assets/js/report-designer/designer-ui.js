@@ -130,6 +130,11 @@
             credentials: 'same-origin'
         };
 
+        // A request sent while the page unloads must outlive it.
+        if (settings.keepalive) {
+            init.keepalive = true;
+        }
+
         if (settings.body !== undefined) {
             init.method = settings.method || 'POST';
             init.body = JSON.stringify(settings.body);

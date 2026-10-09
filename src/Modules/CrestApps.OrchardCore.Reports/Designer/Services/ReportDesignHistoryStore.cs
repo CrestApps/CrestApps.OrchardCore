@@ -35,6 +35,26 @@ public sealed class ReportDesignHistoryStore
     }
 
     /// <summary>
+    /// Lists the drafts of reports that were never published.
+    /// </summary>
+    /// <returns>The drafts.</returns>
+    public async Task<IReadOnlyList<ReportDesignDraft>> ListUnpublishedAsync()
+    {
+        return (await _session.Query<ReportDesignDraft, ReportDesignDraftIndex>(index => index.IsUnpublished).ListAsync()).ToArray();
+    }
+
+    /// <summary>
+    /// Deletes a draft.
+    /// </summary>
+    /// <param name="draft">The draft.</param>
+    public void DeleteDraft(ReportDesignDraft draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+
+        _session.Delete(draft);
+    }
+
+    /// <summary>
     /// Saves a draft.
     /// </summary>
     /// <param name="draft">The draft.</param>

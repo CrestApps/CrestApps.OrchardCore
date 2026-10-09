@@ -89,6 +89,24 @@ public sealed class ReportDesignsController : Controller
             });
         }
 
+        if (model.CanDesign)
+        {
+            foreach (var draft in await _history.ListUnpublishedAsync())
+            {
+                if ((string.IsNullOrWhiteSpace(q) || draft.Design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) == true) &&
+                    await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
+                {
+                    model.Drafts.Add(new ReportDesignListEntry
+                    {
+                        Design = draft.Design,
+                        CanEdit = true,
+                        IsOwner = string.Equals(draft.Design.OwnerId, userId, StringComparison.Ordinal),
+                        ModifiedUtc = draft.ModifiedUtc,
+                    });
+                }
+            }
+        }
+
         if (!model.CanDesign && model.Entries.Count == 0 && string.IsNullOrWhiteSpace(q))
         {
             return Forbid();
@@ -185,6 +203,33 @@ public sealed class ReportDesignsController : Controller
 
         await _history.DeleteAsync(design, User);
         await _notifier.SuccessAsync(H["The report has been deleted."]);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Deletes a report that was never published.
+    /// </summary>
+    /// <param name="id">The report identifier.</param>
+    /// <returns>A redirect to the list.</returns>
+    [HttpPost]
+    [Admin("reports/designs/drafts/{id}/delete", "ReportDesignsDeleteDraft")]
+    public async Task<IActionResult> DeleteDraft(string id)
+    {
+        var draft = await _history.FindUnpublishedAsync(id);
+
+        if (draft is null)
+        {
+            return NotFound();
+        }
+
+        if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
+        {
+            return Forbid();
+        }
+
+        await _history.DeleteUnpublishedAsync(id, draft.Revision, force: true, User);
+        await _notifier.SuccessAsync(H["The unpublished report has been deleted."]);
 
         return RedirectToAction(nameof(Index));
     }

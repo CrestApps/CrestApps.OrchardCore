@@ -48,6 +48,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         };
 
         Assert.Equal(1, await migrations.CreateAsync());
+        Assert.Equal(2, await migrations.UpdateFrom1Async());
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
@@ -307,6 +308,91 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task NewReport_IsSavedAsADraft_ThenPublishedWithTheSameIdentifier()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        await using var session = _store.CreateSession();
+        var history = History(session, designs);
+
+        // Act
+        var created = await history.CreateDraftAsync(Edited("Work in progress"), _ada);
+        var unpublished = await history.FindUnpublishedAsync(created.DesignId);
+        var saved = await history.SaveDraftAsync(unpublished.Design, Edited("Almost done"), created.Revision, force: false, _ada);
+        var listed = (await history.ListUnpublishedAsync()).Select(draft => draft.Design.DisplayText).ToArray();
+        var published = await history.PublishAsync(Edited("Done", created.DesignId), null, saved.Revision, force: false, _ada, canSharePublicly: false);
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, created.Revision);
+        Assert.Equal("ada", unpublished.Design.OwnerId);
+        Assert.Equal("Almost done", Assert.Single(listed));
+        Assert.Equal(ReportHistoryStatus.Saved, published.Status);
+        Assert.Equal(1, published.VersionNumber);
+        Assert.Equal(created.DesignId, published.Save.Id);
+        Assert.Equal("Done", (await designs.FindByIdAsync(created.DesignId, TestContext.Current.CancellationToken)).DisplayText);
+        Assert.Null(await history.FindUnpublishedAsync(created.DesignId));
+        Assert.Empty(await history.ListUnpublishedAsync());
+    }
+
+    [Fact]
+    public async Task NewReport_PublishedFromAStaleRevision_IsRefused()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        await using var session = _store.CreateSession();
+        var history = History(session, designs);
+        var created = await history.CreateDraftAsync(Edited("Draft"), _ada);
+        await history.SaveDraftAsync((await history.FindUnpublishedAsync(created.DesignId)).Design, Edited("Bob's change"), created.Revision, force: false, _bob);
+
+        // Act
+        var result = await history.PublishAsync(Edited("Ada's title", created.DesignId), null, created.Revision, force: false, _ada, canSharePublicly: false);
+
+        // Assert
+        Assert.Equal(ReportHistoryStatus.Conflict, result.Status);
+        Assert.Equal("Bob", result.ModifiedByName);
+        Assert.Null(await designs.FindByIdAsync(created.DesignId, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task Publish_WithTheIdentifierOfAPublishedReportButNoExisting_IsNotFound()
+    {
+        // Arrange
+        var designs = Catalog(Published("Sales"));
+        await using var session = _store.CreateSession();
+        var history = History(session, designs);
+        var incoming = Edited("Hijack");
+        incoming.ItemId = "r1";
+
+        // Act
+        var result = await history.PublishAsync(incoming, null, 0, force: true, _bob, canSharePublicly: false);
+
+        // Assert
+        Assert.Equal(ReportHistoryStatus.NotFound, result.Status);
+        Assert.Equal("Sales", (await designs.FindByIdAsync("r1", TestContext.Current.CancellationToken)).DisplayText);
+    }
+
+    [Fact]
+    public async Task DeleteUnpublished_RemovesTheDraft()
+    {
+        // Arrange
+        var designs = Catalog<ReportDesign>();
+        await using var session = _store.CreateSession();
+        var history = History(session, designs);
+        var created = await history.CreateDraftAsync(Edited("Scratch"), _ada);
+
+        // Act
+        var stale = await history.DeleteUnpublishedAsync(created.DesignId, 0, force: false, _ada);
+        var deleted = await history.DeleteUnpublishedAsync(created.DesignId, created.Revision, force: false, _ada);
+
+        // Assert
+        Assert.Equal(ReportHistoryStatus.Conflict, stale.Status);
+        Assert.Equal(ReportHistoryStatus.Saved, deleted.Status);
+        Assert.Null(await history.FindUnpublishedAsync(created.DesignId));
+        Assert.Equal(ReportDesignChangeKind.Deleted, _changes[^1].Kind);
+    }
+
+    [Fact]
     public void HasSameContent_IgnoresIdentityAndDates()
     {
         // Arrange
@@ -369,10 +455,12 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         };
     }
 
-    private static ReportDesign Edited(string title)
+    // The report as the builder sends it; a report that exists only as a draft is sent with its identifier.
+    private static ReportDesign Edited(string title, string itemId = null)
     {
         return new ReportDesign
         {
+            ItemId = itemId,
             DisplayText = title,
             Query = Query(),
         };

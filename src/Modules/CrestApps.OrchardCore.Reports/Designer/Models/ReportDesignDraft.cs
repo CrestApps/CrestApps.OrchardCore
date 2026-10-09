@@ -29,6 +29,12 @@ public sealed class ReportDesignDraft
     public bool HasChanges { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the report was never published: a new report exists only as this draft
+    /// until its first publish, so work on it is saved from the first change.
+    /// </summary>
+    public bool IsUnpublished { get; set; }
+
+    /// <summary>
     /// Gets or sets the unpublished report, or <see langword="null"/> when there are no unpublished changes.
     /// </summary>
     public ReportDesign Design { get; set; }

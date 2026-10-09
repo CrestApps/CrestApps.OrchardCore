@@ -81,6 +81,11 @@ public class ReportDesignerPayload
     public bool HasDraft { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the report was never published and exists only as its draft.
+    /// </summary>
+    public bool IsUnpublished { get; set; }
+
+    /// <summary>
     /// Gets or sets who last changed the unpublished changes.
     /// </summary>
     public string DraftModifiedBy { get; set; }
@@ -103,6 +108,7 @@ public class ReportDesignerPayload
 
         payload.Revision = workingCopy.Revision;
         payload.HasDraft = workingCopy.HasDraft;
+        payload.IsUnpublished = workingCopy.IsUnpublished;
         payload.DraftModifiedBy = workingCopy.ModifiedByName;
         payload.DraftModifiedUtc = workingCopy.ModifiedUtc;
 

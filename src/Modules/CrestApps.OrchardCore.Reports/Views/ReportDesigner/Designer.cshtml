@@ -10,8 +10,8 @@
         ? (isNew ? "ReportViewsCreate" : "ReportViewsEdit")
         : (isNew ? "ReportDesignerCreate" : "ReportDesignerEdit");
     var title = Model.IsView
-        ? (isNew ? T["New View"].Value : T["Edit View '{0}'", Model.Payload.DisplayText].Value)
-        : (isNew ? T["New Report"].Value : T["Edit Report '{0}'", Model.Payload.DisplayText].Value);
+        ? (isNew ? T["New View"] : T["Edit View '{0}'", Model.Payload.DisplayText ?? string.Empty])
+        : (isNew ? T["New Report"] : T["Edit Report '{0}'", string.IsNullOrWhiteSpace(Model.Payload.DisplayText) ? T["Untitled report"].Value : Model.Payload.DisplayText]);
     // Routes with a number take a placeholder number, which the page replaces.
     var numberPlaceholder = int.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
     var realTime = !Model.IsView && ReportsRealTime.IsEnabled(Context.RequestServices);
@@ -38,6 +38,8 @@
             ["revokeLink"] = Url.RouteUrl("ReportDesignerApiRevokeLink", new { id = "__id__", linkId = "__link__" }),
             ["run"] = Url.RouteUrl("ReportDesignsRun", new { id = "__id__" }),
             ["draft"] = Url.RouteUrl("ReportDesignerDraftSave", new { id = "__id__" }),
+            ["newDraft"] = Url.RouteUrl("ReportDesignerDraftCreate"),
+            ["list"] = Url.RouteUrl("ReportDesignsIndex"),
             ["discardDraft"] = Url.RouteUrl("ReportDesignerDraftDiscard", new { id = "__id__" }),
             ["versions"] = Url.RouteUrl("ReportDesignerVersions", new { id = "__id__" }),
             ["version"] = Url.RouteUrl("ReportDesignerVersion", new { id = "__id__", number = int.MaxValue })?.Replace(numberPlaceholder, "__number__"),
@@ -47,7 +49,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="@breadcrumbName" title="@(new HtmlContentString(System.Net.WebUtility.HtmlEncode(title)))">
+    <breadcrumb name="@breadcrumbName" title="@title">
         @if (Model.IsView)
         {
             <breadcrumb-item id="ReportViewsIndex" action="Index" controller="ReportViews" area="CrestApps.OrchardCore.Reports" permission="@ReportDesignerPermissions.ManageOwnReportDesigns.Name">@T["Report Views"]</breadcrumb-item>
