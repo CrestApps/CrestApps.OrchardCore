@@ -142,7 +142,7 @@ key in the application's root `appsettings.json`:
 | Setting | Description |
 | --- | --- |
 | `ConnectionString` | Azure Storage account connection string. **Required.** |
-| `ContainerName` | Azure Blob container name. **Required.** Supports Liquid, so `content-transfer{{ ShellSettings.Name }}` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
+| `ContainerName` | Azure Blob container name. **Required.** Supports Liquid, so `content-transfer-{{ ShellSettings.Name }}` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
 | `BasePath` | Optional subdirectory inside the container. Supports Liquid, so `{{ ShellSettings.Name }}` separates tenants that share a container. |
 | `CreateContainer` | When `true`, the container is created automatically if it does not already exist. |
 | `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
@@ -163,10 +163,10 @@ after you enable the feature.
 configuration in the root `appsettings.json` serves every tenant. There are two ways to keep tenants apart:
 
 - **A container per tenant.** Set `ContainerName` to a template such as
-  `content-transfer{{ ShellSettings.Name }}` and leave `BasePath` empty. Each tenant's import and export files
-  are in a container of their own, created automatically when `CreateContainer` is `true`, and access policies
-  or lifecycle rules can be applied to one tenant at a time. Set `RemoveContainer` to `true` to delete the
-  tenant's container when the tenant is deleted.
+  `content-transfer-{{ ShellSettings.Name }}` and leave `BasePath` empty. Each tenant's import and export
+  files are in a container of their own, created automatically when `CreateContainer` is `true`, and access
+  policies or lifecycle rules can be applied to one tenant at a time. Set `RemoveContainer` to `true` to
+  delete the tenant's container when the tenant is deleted.
 - **One shared container.** Keep a fixed `ContainerName` and set `BasePath` to `{{ ShellSettings.Name }}`.
   Every tenant's import and export files are in the same container, separated by a folder prefix. Use
   `RemoveFilesFromBasePath`, not `RemoveContainer`, so deleting one tenant does not delete the other tenants'
@@ -174,12 +174,12 @@ configuration in the root `appsettings.json` serves every tenant. There are two 
 
 ```json
 {
-  "ContainerName": "content-transfer{{ ShellSettings.Name }}",
+  "ContainerName": "content-transfer-{{ ShellSettings.Name }}",
   "CreateContainer": true
 }
 ```
 
-For a tenant named `Contoso`, this resolves to the container `content-transfercontoso`.
+For a tenant named `Contoso`, this resolves to the container `content-transfer-contoso`.
 
 The resolved container name is lowercased and must be a valid Azure container name: 3 to 63 characters,
 lowercase letters, digits and single hyphens, starting and ending with a letter or digit. A tenant name that

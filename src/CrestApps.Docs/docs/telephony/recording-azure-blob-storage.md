@@ -69,7 +69,7 @@ Configure the feature under the Orchard Core shell configuration section:
 | Setting | Description |
 | --- | --- |
 | `ConnectionString` | Azure Storage account connection string. |
-| `ContainerName` | Azure Blob container name. Supports Liquid, so `recordings{{ ShellSettings.Name }}` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
+| `ContainerName` | Azure Blob container name. Supports Liquid, so `recordings-{{ ShellSettings.Name }}` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
 | `BasePath` | Optional subdirectory inside the container where recordings are stored. Supports Liquid, so a per-tenant path (for example `{{ ShellSettings.Name }}`) keeps tenants isolated within a shared container. |
 | `CreateContainer` | When `true`, the feature creates the blob container automatically if it does not already exist. |
 
@@ -78,7 +78,7 @@ Configure the feature under the Orchard Core shell configuration section:
 `ContainerName` and `BasePath` both accept Liquid, with the tenant's `ShellSettings` available, so one
 configuration in the root `appsettings.json` serves every tenant. There are two ways to keep tenants apart:
 
-- **A container per tenant.** Set `ContainerName` to a template such as `recordings{{ ShellSettings.Name }}`
+- **A container per tenant.** Set `ContainerName` to a template such as `recordings-{{ ShellSettings.Name }}`
   and leave `BasePath` empty. Each tenant's recordings are in a container of their own, created automatically
   when `CreateContainer` is `true`, and access policies or lifecycle rules can be applied to one tenant at a
   time. Deleting the tenant purges its recordings, as described below, but leaves the empty container; remove
@@ -89,12 +89,12 @@ configuration in the root `appsettings.json` serves every tenant. There are two 
 
 ```json
 {
-  "ContainerName": "recordings{{ ShellSettings.Name }}",
+  "ContainerName": "recordings-{{ ShellSettings.Name }}",
   "CreateContainer": true
 }
 ```
 
-For a tenant named `Contoso`, this resolves to the container `recordingscontoso`.
+For a tenant named `Contoso`, this resolves to the container `recordings-contoso`.
 
 The resolved container name is lowercased and must be a valid Azure container name: 3 to 63 characters,
 lowercase letters, digits and single hyphens, starting and ending with a letter or digit. A tenant name that
