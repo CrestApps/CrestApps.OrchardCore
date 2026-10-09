@@ -157,7 +157,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         try
         {
-            await using var fileStream = await fileStore.GetFileStreamAsync(fileInfo);
+            await using var fileStream = await fileStore.OpenSeekableReadStreamAsync(fileInfo, cancellationToken);
 
             var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
                 .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)

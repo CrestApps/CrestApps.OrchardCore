@@ -12,6 +12,7 @@ user_manual:
 | **Feature Name** | Content Transfer |
 | **Feature ID** | `CrestApps.OrchardCore.ContentTransfer` |
 | **Optional format feature** | `CrestApps.OrchardCore.ContentTransfer.OpenXml` |
+| **Optional storage feature** | `CrestApps.OrchardCore.ContentTransfer.Azure` |
 
 Bulk import and export Orchard Core content by using the enabled transfer file formats.
 
@@ -87,59 +88,74 @@ The Omnichannel contact columns `DoNotCall`, `DoNotSms`, and `DoNotEmail` advert
 
 The User Manual describes these options for operators on the [Contacts](../user-manual/contacts.md) and [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) pages.
 
-## Where import and export files are stored
-
-Uploaded import files and queued export files stay on disk until their entry is deleted: the import reads its
-file batch by batch, and **Download errors** reads it again later. Where they are kept depends on Orchard Core's
-[temporary file storage](https://docs.orchardcore.net/en/latest/reference/core/temporary-file-storage/)
-setting, `OrchardCore:TempDirectory:Path`:
-
-| `OrchardCore:TempDirectory:Path` | Upload chunks | Import and export files |
-| --- | --- | --- |
-| Not set | The operating system temp directory | `App_Data/Sites/{tenant}/Temp` |
-| Set | `{Path}/{tenant}/CrestAppsContentTransferUploads` | `{Path}/{tenant}/ContentTransfer` |
-
-When the path is not set, the files stay in `App_Data` rather than the operating system temp directory, which
-the operating system or a container restart clears.
-
-Setting or changing the path does not move files that are already stored. Let running imports finish first;
-after the change, earlier imports can no longer offer **Download errors**, and an import or export whose file
-is in the old location reports that its file is no longer available.
-
 ## Running on more than one instance
 
-A single instance with a persistent `App_Data` folder needs nothing below. When the site runs in a container
-whose `App_Data` folder is not on persistent storage, or on more than one instance (a scaled-out App Service
-plan, several containers behind a load balancer), three things have to be shared.
+A single instance needs nothing below. When the site runs on more than one instance (a scaled-out App
+Service plan, several containers behind a load balancer), three things have to be shared between them.
 
-**Import and export files.** Mount a file share that every instance can reach (Azure Files, AWS EFS/FSx) and
-point `OrchardCore:TempDirectory:Path` at the mount point. The files and the upload chunks are then kept on
-the share, so another instance, or the same container after a restart, reads the file an import is working
-on. Without it an import that was still running when its container restarted fails with *The import file no
-longer exists*. The path must be a mounted file system; object storage such as Azure Blob does not work.
-
-```json
-{
-  "OrchardCore": {
-    "TempDirectory": {
-      "Path": "/mnt/shared-temp"
-    }
-  }
-}
-```
-
-```text
-OrchardCore__TempDirectory__Path=/mnt/shared-temp
-```
+**Import and export files.** By default the files are kept on the local disk, under
+`App_Data/Sites/{tenant}/Temp`. Another instance cannot read them, and a container that is restarted or
+redeployed loses them, so an import that was still running fails with *The import file no longer exists*.
+Enable **Content Transfer - Azure Blob Storage** to keep them in a blob container every instance reads; see
+[Store import and export files in Azure Blob Storage](#store-import-and-export-files-in-azure-blob-storage).
+The same applies to a single container whose `App_Data` folder is not on persistent storage.
 
 **The import lock.** The lock that keeps two runs off the same import is held in memory unless Orchard Core's
 **Redis Lock** feature (`OrchardCore.Redis.Lock`) is enabled and Redis is configured. Without it each instance
 has its own lock, and two instances can import the same file at the same time, which creates every row twice.
 
-**Chunked uploads.** A large file is uploaded in chunks and put back together in one file. With the temporary
-directory on a shared mount, any instance can take the next chunk. Without it, keep session affinity on (ARR
-affinity on Azure App Service, sticky sessions on other load balancers) so every chunk of an upload reaches
-the same instance.
+**Chunked uploads.** A large file is uploaded in chunks, and the chunks are put back together in Orchard Core's
+[temporary directory](https://docs.orchardcore.net/en/latest/reference/core/temporary-file-storage/) before the
+file is saved to the store. By default that directory is local to each instance, so keep session affinity on
+(ARR affinity on Azure App Service, sticky sessions on other load balancers) so every chunk of an upload reaches
+the same instance. Pointing `OrchardCore:TempDirectory:Path` at a file share that every instance mounts removes
+that need. The chunks are deleted as soon as the file is saved, so only uploads in progress use that directory.
+
+### Store import and export files in Azure Blob Storage
+
+| | |
+| --- | --- |
+| **Feature Name** | Content Transfer - Azure Blob Storage |
+| **Feature ID** | `CrestApps.OrchardCore.ContentTransfer.Azure` |
+
+The feature depends on **Content Transfer** and has no admin screen of its own. It is configured through the
+`CrestApps:ContentTransfer:AzureBlobStorage` shell configuration section, which sits under the `OrchardCore`
+key in the application's root `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ContentTransfer": {
+        "AzureBlobStorage": {
+          "ConnectionString": "",
+          "ContainerName": "content-transfer",
+          "BasePath": "{{ ShellSettings.Name }}",
+          "CreateContainer": true
+        }
+      }
+    }
+  }
+}
+```
+
+| Setting | Description |
+| --- | --- |
+| `ConnectionString` | Azure Storage account connection string. **Required.** |
+| `ContainerName` | Azure Blob container name. Must follow Azure container naming rules and should be lowercase. **Required.** |
+| `BasePath` | Optional subdirectory inside the container. Use a per-tenant value, such as `{{ ShellSettings.Name }}`, when tenants share a container. |
+| `CreateContainer` | When `true`, the container is created automatically if it does not already exist. |
+| `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
+| `RemoveFilesFromBasePath` | Removes only the configured `BasePath` contents when the tenant is deleted. Use this instead of `RemoveContainer` when the container is shared. |
+
+:::warning
+`ConnectionString` and `ContainerName` are both required. When either is missing, the feature stays enabled
+but **does not take over storage**: an error is written to the log and the local file system keeps serving
+the files.
+:::
+
+Files already on the local disk are not moved. Let imports that are running finish, or upload them again,
+after you enable the feature.
 
 ## Export processing
 

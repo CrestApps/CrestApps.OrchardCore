@@ -1474,10 +1474,33 @@ OrchardCore__Default__CrestApps__ContentTransfer__ImportBatchSize=50
 
 See [Content Transfer](modules/content-transfer.md).
 
-Uploaded import files and queued export files follow Orchard Core's `OrchardCore:TempDirectory:Path`. Point it
-at a mounted file share when the site runs on more than one instance, or in a container whose `App_Data` folder
-is not persistent. See
-[Where import and export files are stored](modules/content-transfer.md#where-import-and-export-files-are-stored).
+### Content transfer files in Azure Blob Storage
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:ContentTransfer:AzureBlobStorage` |
+| **Feature** | Content Transfer - Azure Blob Storage (`CrestApps.OrchardCore.ContentTransfer.Azure`) |
+| **Controls** | Where uploaded import files and queued export files are stored |
+
+Keys: `ConnectionString` and `ContainerName` (both required), `BasePath`, `CreateContainer`,
+`RemoveContainer`, `RemoveFilesFromBasePath`. When either required key is missing, files stay on the local
+file system and an error is logged. A site that runs on more than one instance needs this; see
+[Running on more than one instance](modules/content-transfer.md#running-on-more-than-one-instance).
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ContentTransfer": {
+        "AzureBlobStorage": {
+          "ConnectionString": "<storage-connection-string>",
+          "ContainerName": "content-transfer"
+        }
+      }
+    }
+  }
+}
+```
 
 ### Background work pacing
 
