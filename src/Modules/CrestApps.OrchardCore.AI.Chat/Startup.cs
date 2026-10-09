@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -20,6 +21,8 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -161,6 +164,33 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Exposes AI chat sessions to the report builder when it is enabled.
+/// </summary>
+[RequireFeatures(ReportsConstants.BuilderFeature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IAIChatReportDataSet, AIChatSessionsReportDataSet>()
+            .AddScoped<IReportDataSource, AIChatReportDataSource>();
+    }
+}
+
+/// <summary>
+/// Adds the chat session metrics data set to the AI chat report data source when the report builder is enabled.
+/// </summary>
+[Feature(AIConstants.Feature.ChatAnalytics)]
+[RequireFeatures(ReportsConstants.BuilderFeature)]
+public sealed class ChatAnalyticsReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>();
     }
 }
 
