@@ -163,7 +163,7 @@ public sealed class VoiceCallConclusionWiringTests
         // picked up. A recording is not a conversation, so it is concluded exactly like a call nobody answered.
         var harness = new ConclusionHarness();
         harness.Says(
-            (ChatRole.Assistant, "Hi Amani, this is Alex at Prestige Auto Group. Do you have a quick minute?"),
+            (ChatRole.Assistant, "Hi Amani, this is Alex at Contoso Motors. Do you have a quick minute?"),
             (ChatRole.User, "When you have finished recording you may hang up."),
             (ChatRole.Assistant, "Thanks, Amani! Have a great day! [[HANGUP]]"));
         harness.Offers("disposition-do-not-call", "Do Not Call");

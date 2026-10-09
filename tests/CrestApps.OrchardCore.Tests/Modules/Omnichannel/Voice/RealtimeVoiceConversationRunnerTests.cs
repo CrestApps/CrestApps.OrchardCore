@@ -676,7 +676,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
-            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Hi Haneen, it's Sarah with Prestige Auto Group. Please call us back when you can." });
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Hi Haneen, it's Sarah with Contoso Motors. Please call us back when you can." });
 
         await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
         harness.ReachedVoicemail = true;
