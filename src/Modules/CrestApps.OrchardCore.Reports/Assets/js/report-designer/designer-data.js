@@ -1,5 +1,5 @@
 /*
- * The Data pane of the report designer: the data sets of the design with their draggable fields, the joins between
+ * The Data pane of the report builder: the data sets of the design with their draggable fields, the joins between
  * them, and the calculated fields, plus the dialogs that add a data set and edit a formula.
  */
 (function (root) {

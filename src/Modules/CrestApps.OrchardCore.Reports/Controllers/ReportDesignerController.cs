@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 /// <summary>
 /// Serves the drag-and-drop designer for reports and views: the designer pages, saving, and the live preview.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 [Admin]
 public sealed class ReportDesignerController : Controller
 {
@@ -58,7 +58,7 @@ public sealed class ReportDesignerController : Controller
     /// Opens the designer for a new report.
     /// </summary>
     /// <returns>The designer page.</returns>
-    [Admin("reports/designer/create", "ReportDesignerCreate")]
+    [Admin("reports/builder/create", "ReportDesignerCreate")]
     public async Task<IActionResult> Create()
     {
         if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageOwnReportDesigns))
@@ -85,7 +85,7 @@ public sealed class ReportDesignerController : Controller
     /// </summary>
     /// <param name="id">The report identifier.</param>
     /// <returns>The designer page.</returns>
-    [Admin("reports/designer/edit/{id}", "ReportDesignerEdit")]
+    [Admin("reports/builder/edit/{id}", "ReportDesignerEdit")]
     public async Task<IActionResult> Edit(string id)
     {
         var design = await _designService.FindAsync(id);
@@ -146,7 +146,7 @@ public sealed class ReportDesignerController : Controller
     /// </summary>
     /// <returns>The outcome as JSON.</returns>
     [HttpPost]
-    [Admin("reports/designer/save", "ReportDesignerSave")]
+    [Admin("reports/builder/save", "ReportDesignerSave")]
     public async Task<IActionResult> Save()
     {
         var payload = await ReadPayloadAsync();
@@ -245,7 +245,7 @@ public sealed class ReportDesignerController : Controller
     /// <param name="view">Whether a view is being previewed.</param>
     /// <returns>The rendered preview.</returns>
     [HttpPost]
-    [Admin("reports/designer/preview", "ReportDesignerPreview")]
+    [Admin("reports/builder/preview", "ReportDesignerPreview")]
     public async Task<IActionResult> Preview(bool view = false)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageOwnReportDesigns))

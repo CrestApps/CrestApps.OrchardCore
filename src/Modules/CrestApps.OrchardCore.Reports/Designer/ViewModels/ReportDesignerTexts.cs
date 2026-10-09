@@ -178,7 +178,7 @@ public static class ReportDesignerTexts
             ["Click a line or its badge to choose which rows to keep, or to match on more columns."] = S["Click a line or its badge to choose which rows to keep, or to match on more columns."].Value,
             ["Key columns are marked with a key and listed first."] = S["Key columns are marked with a key and listed first."].Value,
             ["Description"] = S["Description"].Value,
-            ["Tells other designers what the view prepares."] = S["Tells other designers what the view prepares."].Value,
+            ["Tells other report builders what the view prepares."] = S["Tells other report builders what the view prepares."].Value,
             ["Shown above the report."] = S["Shown above the report."].Value,
             ["Category"] = S["Category"].Value,
             ["Groups the report in the admin menu and the report list."] = S["Groups the report in the admin menu and the report list."].Value,

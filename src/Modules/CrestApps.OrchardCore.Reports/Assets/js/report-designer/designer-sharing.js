@@ -1,5 +1,5 @@
 /*
- * The Settings and Sharing tabs of the report designer: the description, category, and admin menu placement, the
+ * The Settings and Sharing tabs of the report builder: the description, category, and admin menu placement, the
  * people and roles a report is shared with, and its share links.
  */
 (function (root) {
@@ -48,7 +48,7 @@
                     design.description = event.target.value;
                     touch();
                 }
-            }, design.description || ''), app.isView() ? app.t('Tells other designers what the view prepares.') : app.t('Shown above the report.')),
+            }, design.description || ''), app.isView() ? app.t('Tells other report builders what the view prepares.') : app.t('Shown above the report.')),
             app.isView() ? null : field(app.t('Category'), h('input', {
                 type: 'text',
                 className: 'form-control',

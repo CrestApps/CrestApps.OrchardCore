@@ -15,14 +15,14 @@ internal sealed class ReportsResourceConfiguration : IConfigureOptions<ResourceM
     public const string ChartsScript = "CrestApps.OrchardCore.Reports.Charts";
 
     /// <summary>
-    /// The name of the report designer script.
+    /// The name of the report builder script.
     /// </summary>
-    public const string DesignerScript = "CrestApps.OrchardCore.Reports.Designer";
+    public const string DesignerScript = "CrestApps.OrchardCore.Reports.Builder";
 
     /// <summary>
-    /// The name of the report designer style sheet.
+    /// The name of the report builder style sheet.
     /// </summary>
-    public const string DesignerStyle = "CrestApps.OrchardCore.Reports.Designer";
+    public const string DesignerStyle = "CrestApps.OrchardCore.Reports.Builder";
 
     private static readonly ResourceManifest _manifest;
 

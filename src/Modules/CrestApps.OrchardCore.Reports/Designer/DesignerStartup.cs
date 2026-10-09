@@ -17,10 +17,10 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
-/// Registers the report designer: the query engine, the stores of designed reports, views, and share links, the
+/// Registers the report builder: the query engine, the stores of designed reports, views, and share links, the
 /// built-in views data source, the sharing-aware authorization handler, and the admin menu.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 public sealed class DesignerStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
@@ -39,7 +39,7 @@ public sealed class DesignerStartup : StartupBase
     {
         services.AddCatalogs();
 
-        services.Configure<ReportQueryLimits>(_shellConfiguration.GetSection("CrestApps:Reports:Designer:Limits"));
+        services.Configure<ReportQueryLimits>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Limits"));
 
         services
             .AddScoped<IReportDataSourceManager, ReportDataSourceManager>()
@@ -67,7 +67,7 @@ public sealed class DesignerStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports designed reports and views.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class DesignerRecipesStartup : StartupBase
 {
@@ -81,7 +81,7 @@ public sealed class DesignerRecipesStartup : StartupBase
 /// <summary>
 /// Registers the deployment step that exports designed reports and views.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class DesignerDeploymentStartup : StartupBase
 {

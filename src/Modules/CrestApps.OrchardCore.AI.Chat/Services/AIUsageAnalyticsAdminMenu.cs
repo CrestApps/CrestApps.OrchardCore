@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -28,6 +28,7 @@ public sealed class AIUsageAnalyticsAdminMenu : AdminNavigationProvider
 
         builder
             .Add(S["Reports"], "after.40", reports => reports
+                .Id("reports")
                 .Add(category, category.PrefixPosition(), categoryNode => categoryNode
                     .AddClass("report-category")
                     .Add(S["AI Usage Analytics"], S["AI Usage Analytics"].PrefixPosition(), usageAnalytics => usageAnalytics

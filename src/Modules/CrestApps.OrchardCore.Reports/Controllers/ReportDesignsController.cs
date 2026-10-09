@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 /// Serves designed reports in the admin: the list of reports the user can see, running and exporting a report, and
 /// deleting or duplicating one.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 [Admin]
 public sealed class ReportDesignsController : Controller
 {

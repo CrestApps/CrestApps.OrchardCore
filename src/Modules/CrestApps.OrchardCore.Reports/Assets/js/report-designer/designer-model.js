@@ -1,5 +1,5 @@
 /*
- * The Data model tab of the report designer: every data set as a card on a canvas, with a line for each pair of
+ * The Data model tab of the report builder: every data set as a card on a canvas, with a line for each pair of
  * columns that joins two of them. Dragging a column from one card onto a column of another card joins the two data
  * sets on that pair; clicking a line or its badge opens the join so the rows to keep and more pairs can be set.
  */

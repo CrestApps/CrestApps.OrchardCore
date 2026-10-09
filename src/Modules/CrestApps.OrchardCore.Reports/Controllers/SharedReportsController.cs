@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 /// Shows designed reports outside the admin: to the people and roles a report is shared with (including anonymous
 /// visitors when it is shared with the Anonymous role), and to anyone holding an active share link.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 public sealed class SharedReportsController : Controller
 {
     private readonly ReportDesignService _designService;

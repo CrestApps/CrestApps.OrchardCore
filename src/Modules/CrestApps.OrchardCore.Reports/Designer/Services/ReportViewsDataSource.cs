@@ -55,7 +55,7 @@ public sealed class ReportViewsDataSource : IReportDataSource
     public LocalizedString DisplayName => S["Report views"];
 
     /// <inheritdoc/>
-    public LocalizedString Description => S["Reusable views saved in the report designer."];
+    public LocalizedString Description => S["Reusable views saved in the report builder."];
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)

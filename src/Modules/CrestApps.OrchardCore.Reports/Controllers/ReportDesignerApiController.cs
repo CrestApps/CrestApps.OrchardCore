@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 /// The JSON endpoints the designer page calls: the data sources, data sets, and fields it can use, the formula
 /// functions, a check of the query, the people a report can be shared with, and the report's share links.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 [Admin]
 public sealed class ReportDesignerApiController : Controller
 {
@@ -72,7 +72,7 @@ public sealed class ReportDesignerApiController : Controller
     /// </summary>
     /// <returns>The data sources as JSON.</returns>
     [HttpGet]
-    [Admin("reports/designer/api/sources", "ReportDesignerApiSources")]
+    [Admin("reports/builder/api/sources", "ReportDesignerApiSources")]
     public async Task<IActionResult> Sources()
     {
         if (!await CanDesignAsync())
@@ -94,7 +94,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="source">The data source name.</param>
     /// <returns>The data sets as JSON.</returns>
     [HttpGet]
-    [Admin("reports/designer/api/datasets", "ReportDesignerApiDataSets")]
+    [Admin("reports/builder/api/datasets", "ReportDesignerApiDataSets")]
     public async Task<IActionResult> DataSets(string source)
     {
         if (!await CanDesignAsync())
@@ -121,7 +121,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="dataSet">The data set name.</param>
     /// <returns>The schema as JSON.</returns>
     [HttpGet]
-    [Admin("reports/designer/api/schema", "ReportDesignerApiSchema")]
+    [Admin("reports/builder/api/schema", "ReportDesignerApiSchema")]
     public async Task<IActionResult> Schema(string source, string dataSet)
     {
         if (!await CanDesignAsync())
@@ -156,7 +156,7 @@ public sealed class ReportDesignerApiController : Controller
     /// </summary>
     /// <returns>The functions as JSON.</returns>
     [HttpGet]
-    [Admin("reports/designer/api/functions", "ReportDesignerApiFunctions")]
+    [Admin("reports/builder/api/functions", "ReportDesignerApiFunctions")]
     public async Task<IActionResult> Functions()
     {
         if (!await CanDesignAsync())
@@ -179,7 +179,7 @@ public sealed class ReportDesignerApiController : Controller
     /// </summary>
     /// <returns>The fields, columns, and problems as JSON.</returns>
     [HttpPost]
-    [Admin("reports/designer/api/plan", "ReportDesignerApiPlan")]
+    [Admin("reports/builder/api/plan", "ReportDesignerApiPlan")]
     public async Task<IActionResult> Plan()
     {
         if (!await CanDesignAsync())
@@ -247,7 +247,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="query">The text to search for in user names and emails.</param>
     /// <returns>The matching users as <c>{ value, text }</c> JSON.</returns>
     [HttpGet]
-    [Admin("reports/designer/api/users", "ReportDesignerApiUsers")]
+    [Admin("reports/builder/api/users", "ReportDesignerApiUsers")]
     public async Task<IActionResult> Users(string query)
     {
         if (!await CanDesignAsync())
@@ -280,7 +280,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="id">The report identifier.</param>
     /// <returns>The links as JSON.</returns>
     [HttpGet]
-    [Admin("reports/designer/{id}/links", "ReportDesignerApiLinks")]
+    [Admin("reports/builder/{id}/links", "ReportDesignerApiLinks")]
     public async Task<IActionResult> Links(string id)
     {
         var design = await FindShareableAsync(id);
@@ -318,7 +318,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="request">The link settings.</param>
     /// <returns>The new link and its URL as JSON.</returns>
     [HttpPost]
-    [Admin("reports/designer/{id}/links/create", "ReportDesignerApiCreateLink")]
+    [Admin("reports/builder/{id}/links/create", "ReportDesignerApiCreateLink")]
     public async Task<IActionResult> CreateLink(string id, [FromBody] ReportShareLinkRequest request)
     {
         var design = await FindShareableAsync(id);
@@ -365,7 +365,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="linkId">The link identifier.</param>
     /// <returns>An empty result.</returns>
     [HttpPost]
-    [Admin("reports/designer/{id}/links/{linkId}/revoke", "ReportDesignerApiRevokeLink")]
+    [Admin("reports/builder/{id}/links/{linkId}/revoke", "ReportDesignerApiRevokeLink")]
     public async Task<IActionResult> RevokeLink(string id, string linkId)
     {
         var design = await FindShareableAsync(id);

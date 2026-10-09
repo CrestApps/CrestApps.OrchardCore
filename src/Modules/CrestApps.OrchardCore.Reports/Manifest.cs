@@ -24,9 +24,9 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = ReportsConstants.DesignerFeature,
-    Name = "Report Designer",
-    Description = "Lets people design their own reports with drag and drop: pick data sets from any data source, join them, add calculated fields, filters, charts, and pivot tables, save reusable views, pin reports to the admin menu, and share reports with people, roles, or expiring links.",
+    Id = ReportsConstants.BuilderFeature,
+    Name = "Report Builder",
+    Description = "Lets people build their own reports with drag and drop: pick data sets from any data source, join them, add calculated fields, filters, charts, and pivot tables, save reusable views, pin reports to the admin menu, and share reports with people, roles, or expiring links.",
     Category = "Reporting",
     Dependencies =
     [

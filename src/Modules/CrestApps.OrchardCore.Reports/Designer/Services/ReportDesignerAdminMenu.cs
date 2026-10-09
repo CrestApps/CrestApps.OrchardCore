@@ -8,7 +8,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
 /// <summary>
-/// Adds the report designer to the admin Reports menu: the list of designed reports, the list of views, and an item
+/// Adds the report builder to the admin Reports menu: the list of designed reports, the list of views, and an item
 /// for every designed report pinned to the menu, grouped under its category. Each pinned report is authorized with the
 /// report as the resource, so it shows only to the people it is shared with.
 /// </summary>
@@ -71,7 +71,7 @@ public sealed class ReportDesignerAdminMenu : AdminNavigationProvider
 
                 if (canSeeList)
                 {
-                    reports.Add(canDesign ? S["Report Designer"] : S["Shared Reports"], "1", designer => designer
+                    reports.Add(canDesign ? S["Report Builder"] : S["Shared Reports"], "1", designer => designer
                         .AddClass("report-designer")
                         .Id("reportDesigner")
                         .Action("Index", "ReportDesigns", new { area = ReportsConstants.Feature })
@@ -114,6 +114,6 @@ public sealed class ReportDesignerAdminMenu : AdminNavigationProvider
                         }
                     });
                 }
-            }, priority: 1);
+            }, priority: ReportsConstants.AdminMenuPriority);
     }
 }

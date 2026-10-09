@@ -1,14 +1,14 @@
 ---
 name: crestapps-report-data-source
 description: >
-  Skill for adding a new data source (connector) to the CrestApps.OrchardCore Report Designer, such as a SQL Server
+  Skill for adding a new data source (connector) to the CrestApps.OrchardCore Report Builder, such as a SQL Server
   or PostgreSQL database, an Elasticsearch or Azure AI Search index, a REST API, users, or any module's own records,
   modeled on the Content items, Queries and Report Views data sources. Covers the IReportDataSource
   contract (data sets, typed field schemas, rows), the security boundary (only expose what the principal may read),
   value types and UTC dates, optional filter push-down that must never drop rows, row limits and truncation, stable
   names, the feature/module layout, DI registration, tests, and docs. Also covers extending the content items source with
   IContentReportFieldProvider / IContentReportPartProvider for custom content fields and parts. Use this skill
-  whenever the request is to "add a report data source", "let the report designer read from <system>", "add a
+  whenever the request is to "add a report data source", "let the report builder read from <system>", "add a
   connector for reports", implement IReportDataSource, or report on a new content field type.
 license: Apache-2.0
 metadata:
@@ -16,9 +16,9 @@ metadata:
   version: "1.0"
 ---
 
-# Adding a Report Designer Data Source
+# Adding a Report Builder Data Source
 
-The **Report Designer** (`CrestApps.OrchardCore.Reports.Designer`, in the Reports module) lets people build reports
+The **Report Builder** (`CrestApps.OrchardCore.Reports.Builder`, in the Reports module) lets people build reports
 with drag and drop. The engine (`CrestApps.OrchardCore.Reports.Core`, `Designer/`) owns everything that is the same
 for every source:
 
@@ -37,14 +37,14 @@ Read these first; they are authoritative:
 - `src/Modules/CrestApps.OrchardCore.Reports/Queries/QueriesReportDataSource.cs` — a source whose schema is inferred from results.
 - `src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportViewsDataSource.cs` — a source built on the engine.
 - `src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs` — how sources are called.
-- Docs: `src/CrestApps.Docs/docs/modules/report-designer.md`.
+- Docs: `src/CrestApps.Docs/docs/modules/report-builder.md`.
 
 ## The contract (all members required)
 
 | Member | Required behavior |
 | --- | --- |
 | `string Name` | Stable technical name. Designs store it (`ReportDataSetReference.Source`). Never rename. |
-| `LocalizedString DisplayName`, `Description` | Shown in the designer's data source picker. |
+| `LocalizedString DisplayName`, `Description` | Shown in the builder's data source picker. |
 | `GetDataSetsAsync(context, ct)` | Data sets **`context.User` may read**. `context.User` may be null: return nothing. |
 | `GetSchemaAsync(dataSet, context, ct)` | The fields of a data set, or **null** when it does not exist or the principal may not read it. The engine reads a data set only after this returns a schema: **this is the security boundary**. It may throw `ReportQueryException` with a clear message (for example a broken upstream definition). |
 | `QueryAsync(query, ct)` | Rows of `query.DataSet` with at least `query.Fields` (return only those when computing others costs anything), at most `query.MaxRows` rows; set `Truncated` when more exist (read `MaxRows + 1`). Re-check access defensively. Honor cancellation. |
@@ -59,7 +59,7 @@ Rules:
    Boolean=`bool`, Date=`DateTime` (date only, no zone, never shifted), DateTime=`DateTime` **in UTC** (the engine
    converts to the tenant zone). Normalize with `ReportDataValues.Coerce(value, dataType)` (it also unwraps
    `System.Text.Json` nodes). Rows are `object[]` aligned with `ReportDataTable.Fields`.
-4. **Identifiers.** Set `ReportFieldDescriptor.IsIdentifier` on keys and foreign keys; the designer suggests them for
+4. **Identifiers.** Set `ReportFieldDescriptor.IsIdentifier` on keys and foreign keys; the builder suggests them for
    joins (it scores identifier names that mention the other data set).
 5. **Push-down is optional and must be a superset.** `query.Conditions` carry typed values (DateTime already in UTC
    for DateTime fields). Apply a condition only if your translation can never drop a row the engine's own filter
@@ -72,12 +72,12 @@ Rules:
 ## Layout and registration
 
 - **A source that wraps an Orchard Core feature** (like Contents and Queries) needs no feature of its own: add a startup
-  class in the Reports module (or your module) marked `[Feature(ReportsConstants.DesignerFeature)]` and
+  class in the Reports module (or your module) marked `[Feature(ReportsConstants.BuilderFeature)]` and
   `[RequireFeatures("OrchardCore.X")]`, registering `services.AddScoped<IReportDataSource, MyReportDataSource>();`. See
   `Contents/ContentsReportsStartup.cs` and `Queries/QueriesReportsStartup.cs`.
 - **A source for an external system** (a database, a search server, an API) goes in its own module
   `src/Modules/CrestApps.OrchardCore.Reports.<Source>` with `Manifest.cs` (category `Reporting`, dependency
-  `ReportsConstants.DesignerFeature`) and `Startup.cs`. Add the project to `CrestApps.OrchardCore.slnx`, the targets
+  `ReportsConstants.BuilderFeature`) and `Startup.cs`. Add the project to `CrestApps.OrchardCore.slnx`, the targets
   project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj`, and the
   tests project references.
 - Connection settings for external systems go in configuration (`CrestApps:Reports:<Source>`), documented in
@@ -109,6 +109,6 @@ Use `TestContext.Current.CancellationToken` (xUnit1051) and build with
 
 ## Docs (required)
 
-Add the source to `src/CrestApps.Docs/docs/modules/report-designer.md` (or its own technical page linked from
+Add the source to `src/CrestApps.Docs/docs/modules/report-builder.md` (or its own technical page linked from
 there), its feature to `docs/feature-reference.md`, configuration to `docs/configuration.md`, and the data source name
-to the User Manual page `docs/user-manual/report-designer.md` under "Words you will see".
+to the User Manual page `docs/user-manual/report-builder.md` under "Words you will see".

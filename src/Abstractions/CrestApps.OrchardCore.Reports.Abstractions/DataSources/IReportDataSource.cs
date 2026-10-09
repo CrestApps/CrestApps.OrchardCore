@@ -3,10 +3,10 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Reports.DataSources;
 
 /// <summary>
-/// A connector the report designer reads data from. A data source exposes one or more data sets (for example the
+/// A connector the report builder reads data from. A data source exposes one or more data sets (for example the
 /// content types of the tenant, the tables of a database, or the indexes of a search server), describes the typed
 /// fields of each one, and returns their rows. Register an implementation as a scoped service to make its data sets
-/// available in the report designer.
+/// available in the report builder.
 /// </summary>
 public interface IReportDataSource
 {

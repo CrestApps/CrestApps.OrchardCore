@@ -1,5 +1,5 @@
 /*
- * The decisions the report designer makes about a design, kept free of the DOM so they can be tested: which aggregates,
+ * The decisions the report builder makes about a design, kept free of the DOM so they can be tested: which aggregates,
  * transforms, operators, and controls suit a field type, how columns, filters, data sets, and joins are added and
  * removed without leaving dangling references, and which fields to suggest for a join.
  *

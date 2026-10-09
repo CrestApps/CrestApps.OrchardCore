@@ -1546,12 +1546,12 @@ The phone number verification providers have no configuration section. Set them 
 
 ## Reports
 
-### Report designer limits
+### Report builder limits
 
 | | |
 | --- | --- |
-| **Section** | `CrestApps:Reports:Designer:Limits` |
-| **Feature** | Report Designer |
+| **Section** | `CrestApps:Reports:Builder:Limits` |
+| **Feature** | Report Builder |
 | **Controls** | The size limits of one designed report run |
 
 Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`) and
@@ -1574,10 +1574,10 @@ Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxRes
 ```
 
 ```text
-OrchardCore__CrestApps__Reports__Designer__Limits__MaxRowsPerDataSet=100000
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=100000
 ```
 
-See [Report Designer](modules/report-designer.md#configuration).
+See [Report Builder](modules/report-builder.md#configuration).
 
 ## Orchard Core sections the modules depend on
 

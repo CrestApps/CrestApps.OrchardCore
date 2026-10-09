@@ -1,19 +1,19 @@
 ---
-sidebar_label: Report Designer
+sidebar_label: Report Builder
 sidebar_position: 36
-title: Report Designer
+title: Report Builder
 description: Build your own reports with drag and drop, join data sets, add formulas, filters, charts and pivot tables, and share them.
 technical_manual:
-  - modules/report-designer
+  - modules/report-builder
 ---
 
-The **Report Designer** lets you build your own reports without writing code. You pick the data you need (for example your customers and their orders), drag fields onto the report, choose how numbers are added up, and add charts, headline numbers, and pivot tables. You can save a report, put it in the admin menu so you can run it again with one click, and share it with people, roles, or a link.
+The **Report Builder** lets you build your own reports without writing code. You pick the data you need (for example your customers and their orders), drag fields onto the report, choose how numbers are added up, and add charts, headline numbers, and pivot tables. You can save a report, put it in the admin menu so you can run it again with one click, and share it with people, roles, or a link.
 
 | | |
 | --- | --- |
-| **Menu** | Reports > Report Designer, and Reports > Report Views |
-| **Permissions** | Design reports and manage own designed reports and views (to design); Share designed reports publicly and through share links (to share with everyone or create links); Manage all designed reports and views (to change other people's reports) |
-| **Features** | Report Designer. Your content types (such as customers or orders) are offered as data when Contents is on, and your saved queries when Queries is on. |
+| **Menu** | Reports > Report Builder, and Reports > Report Views |
+| **Permissions** | Build reports and manage own custom reports and views (to design); Share custom reports publicly and through share links (to share with everyone or create links); Manage all custom reports and views (to change other people's reports) |
+| **Features** | Report Builder. Your content types (such as customers or orders) are offered as data when Contents is on, and your saved queries when Queries is on. |
 
 <AskYourAdmin />
 
@@ -32,17 +32,17 @@ People who only run reports that were shared with them need no permission: they 
 
 ## Design a report
 
-1. Open **Reports > Report Designer** and click **Design Report**.
+1. Open **Reports > Report Builder** and click **New Report**.
 2. Type a title at the top of the page.
 3. Click **Add data set**. Pick a data source on the left (or **All**), then click **Add** on the data set's card. Its fields appear in the **Data** pane on the left, grouped by part.
 4. Drag fields onto **Columns**. You can also click the column icon next to a field. Numbers are added as a **Sum** by default; text, dates and identifiers become dimensions.
 5. Click a column to change it in **Properties** on the right (see [Column settings](#column-settings)).
 6. The **Preview** under the shelves refreshes as you work. Click **Refresh** to run it again.
-7. Click **Save** (or press Ctrl+S). Unfinished designs can be saved: the designer lists their problems, and the report shows them when it runs until they are fixed.
+7. Click **Save** (or press Ctrl+S). Unfinished designs can be saved: the builder lists their problems, and the report shows them when it runs until they are fixed.
 
 Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it.
 
-The designer fills the window, and each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section to give the preview more room; the designer remembers your choice.
+The builder fills the window, and each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section to give the preview more room; the builder remembers your choice.
 
 ## Combine data sets
 
@@ -60,7 +60,7 @@ To report on data that lives in two places (for example customers and their orde
    | **All rows of this data set, matching rows before** | Every order, with its customer when one matches. |
    | **All rows of both sides** | Everything from both data sets. |
 
-When you add a second data set, the designer suggests a pair of matching columns when it recognizes one, and opens the join so you can check it. On the **Design** tab, the **Joins** row above **Columns** lists every join; a red join still needs matching columns. Click a join there to change it in **Properties**, where **Add matching columns** adds another pair.
+When you add a second data set, the builder suggests a pair of matching columns when it recognizes one, and opens the join so you can check it. On the **Design** tab, the **Joins** row above **Columns** lists every join; a red join still needs matching columns. Click a join there to change it in **Properties**, where **Add matching columns** adds another pair.
 
 ## Column settings
 
@@ -96,7 +96,7 @@ A calculated field works out a new value with a formula, like a spreadsheet.
 1. Under **Calculated fields**, click **New**.
 2. Enter a **Label** and a **Name** (letters, digits and underscores).
 3. Write the **Formula**. Click a field or function on the right to insert it. Fields are written in square brackets, such as `[Order.Order.Total]`.
-4. Click **Check**. The designer shows the result type, or what is wrong. Click **Apply**.
+4. Click **Check**. The builder shows the result type, or what is wrong. Click **Apply**.
 
 Examples:
 
@@ -123,7 +123,7 @@ The **Visuals** card on the right lists what the report shows, in order. Without
 | **Metrics** | Headline numbers: the total of each value column over the whole report. |
 | **Pivot table** | A cross-tab: **Rows** down the side, the values of **Columns across** along the top, and the **Value** in each cell, with optional totals. |
 
-You can also drag a field from the **Data** pane straight onto a visual's **Categories**, **Values**, **Split into series by**, **Rows**, **Columns across** or **Value** box. The designer adds the column for you: a number dropped on values is summed, and other fields dropped on values are counted.
+You can also drag a field from the **Data** pane straight onto a visual's **Categories**, **Values**, **Split into series by**, **Rows**, **Columns across** or **Value** box. The builder adds the column for you: a number dropped on values is summed, and other fields dropped on values are counted.
 
 Set each visual's **Width** to place visuals side by side. Charts, metrics, pivot tables and totals add up the underlying rows again, so an average stays a true average.
 
@@ -148,7 +148,7 @@ On the **Sharing** tab:
 | Setting | What it does |
 | --- | --- |
 | **People** | Search by user name or email and pick the people who may run the report. |
-| **Roles** | Everyone in a checked role may run the report. **Authenticated** means everyone who is signed in. **Anonymous** means everyone, including visitors who are not signed in, and needs the *Share designed reports publicly and through share links* permission. |
+| **Roles** | Everyone in a checked role may run the report. **Authenticated** means everyone who is signed in. **Anonymous** means everyone, including visitors who are not signed in, and needs the *Share custom reports publicly and through share links* permission. |
 | **Let people the report is shared with export it** | On the **Settings** tab. Turn it off to let them view the report but not download it. |
 
 A shared report reads data with **your** access: people see what the report shows even when they could not open that data themselves. Share only what they should see. If your account is disabled or deleted, your reports stop running; someone who designs reports can duplicate them and share the copies again.
@@ -157,7 +157,7 @@ People who cannot open the admin can open a shared report at its own page outsid
 
 ## Create a share link
 
-A share link opens one report for anyone who has the link, without an account. You need the *Share designed reports publicly and through share links* permission, and the report must be saved.
+A share link opens one report for anyone who has the link, without an account. You need the *Share custom reports publicly and through share links* permission, and the report must be saved.
 
 1. On the **Sharing** tab, under **Share links**, enter a **Note** that says what the link is for.
 2. Optionally set **Expires**, **Allow export**, and **Require sign-in** (the link then works only for people who are signed in).
@@ -167,10 +167,10 @@ To stop a link working, click **Revoke**. The list shows each link's note, the f
 
 ## Run, export, copy and delete
 
-**Reports > Report Designer** (or **Shared Reports**) lists every report you can open. From the list:
+**Reports > Report Builder** (or **Shared Reports**) lists every report you can open. From the list:
 
 - **Run** opens the report. Change the filters and click **Show**. Click **Export** to download it as CSV, or as Excel when the Reports (OpenXml) feature is on.
-- **Edit** opens the designer (when you may change the report).
+- **Edit** opens the builder (when you may change the report).
 - **Duplicate** makes your own copy. The copy is not shared with anybody.
 - **Delete** removes the report and all its share links.
 
@@ -180,6 +180,6 @@ To stop a link working, click **Revoke**. The list shows each link's note, the f
 | --- | --- |
 | A data set says it is not available to you | You may not view that content type. Ask your administrator. |
 | The report says it cannot run because its owner has no active account | Ask someone who designs reports to duplicate it, and share the copy again. |
-| A warning says only the first rows were read | The data set is larger than the designer reads at once. Add filters that narrow the data, or ask your administrator to raise the limits. |
+| A warning says only the first rows were read | The data set is larger than the builder reads at once. Add filters that narrow the data, or ask your administrator to raise the limits. |
 | A formula says it mixes aggregated values with row-level fields | Wrap every field in an aggregate function, or remove the aggregate function. |
-| The **Anonymous** role cannot be checked | You need the *Share designed reports publicly and through share links* permission. |
+| The **Anonymous** role cannot be checked | You need the *Share custom reports publicly and through share links* permission. |

@@ -1,37 +1,37 @@
 ---
-sidebar_label: Report Designer
+sidebar_label: Report Builder
 sidebar_position: 8
-title: Report Designer
-description: A drag-and-drop report designer with pluggable data sources, joins, formulas, filters, charts, pivots, reusable views, and secure sharing.
+title: Report Builder
+description: A drag-and-drop report builder with pluggable data sources, joins, formulas, filters, charts, pivots, reusable views, and secure sharing.
 user_manual:
-  - user-manual/report-designer
+  - user-manual/report-builder
 ---
 
-The **Report Designer** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. Two data sources are added automatically when their Orchard Core feature is enabled with the designer: **Content items** (with `OrchardCore.Contents`) and **Queries** (with `OrchardCore.Queries`). Any module can add more sources.
+The **Report Builder** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. Two data sources are added automatically when their Orchard Core feature is enabled with the builder: **Content items** (with `OrchardCore.Contents`) and **Queries** (with `OrchardCore.Queries`). Any module can add more sources.
 
 | | |
 | --- | --- |
-| **Feature Name** | Report Designer |
-| **Feature ID** | `CrestApps.OrchardCore.Reports.Designer` |
+| **Feature Name** | Report Builder |
+| **Feature ID** | `CrestApps.OrchardCore.Reports.Builder` |
 | **Dependency** | `CrestApps.OrchardCore.Reports` |
 
 | Data source | Registered when these are enabled |
 | --- | --- |
-| **Report views** (saved views) | Report Designer |
-| **Content items** (content types) | Report Designer and `OrchardCore.Contents` |
-| **Queries** (saved Orchard Core queries) | Report Designer and `OrchardCore.Queries` |
+| **Report views** (saved views) | Report Builder |
+| **Content items** (content types) | Report Builder and `OrchardCore.Contents` |
+| **Queries** (saved Orchard Core queries) | Report Builder and `OrchardCore.Queries` |
 
-The built-in sources need no feature of their own: each is registered by a startup class marked with `[RequireFeatures]`, so it appears as soon as its Orchard Core feature is enabled alongside the designer.
+The built-in sources need no feature of their own: each is registered by a startup class marked with `[RequireFeatures]`, so it appears as soon as its Orchard Core feature is enabled alongside the builder.
 
-How people use the designer is described in the User Manual: [Report Designer](../user-manual/report-designer.md).
+How people use the builder is described in the User Manual: [Report Builder](../user-manual/report-builder.md).
 
 ## Architecture
 
-The designer is split over the three Reports layers, so the engine can be reused outside Orchard Core and data sources can be added from any module:
+The builder is split over the three Reports layers, so the engine can be reused outside Orchard Core and data sources can be added from any module:
 
-- **`CrestApps.OrchardCore.Reports.Abstractions`** holds the data source contract (`IReportDataSource`, `IReportDataSourceManager`, `ReportDataType`, `ReportFieldDescriptor`, `ReportDataSetDescriptor`, `ReportDataSetSchema`, `ReportDataSourceQuery`, `ReportDataCondition`, `ReportDataTable`, `ReportDataValues`) in the `CrestApps.OrchardCore.Reports.DataSources` namespace, and the designed query model (`ReportQueryDefinition`, `ReportDataSetReference`, `ReportJoinDefinition`, `ReportCalculatedField`, `ReportFilterDefinition`, `ReportColumnDefinition`, `ReportSortDefinition`, `ReportVisualDefinition`) in `CrestApps.OrchardCore.Reports.Designer`.
+- **`CrestApps.OrchardCore.Reports.Abstractions`** holds the data source contract (`IReportDataSource`, `IReportDataSourceManager`, `ReportDataType`, `ReportFieldDescriptor`, `ReportDataSetDescriptor`, `ReportDataSetSchema`, `ReportDataSourceQuery`, `ReportDataCondition`, `ReportDataTable`, `ReportDataValues`) in the `CrestApps.OrchardCore.Reports.DataSources` namespace, and the designed query model (`ReportQueryDefinition`, `ReportDataSetReference`, `ReportJoinDefinition`, `ReportCalculatedField`, `ReportFilterDefinition`, `ReportColumnDefinition`, `ReportSortDefinition`, `ReportVisualDefinition`) in `CrestApps.OrchardCore.Reports.Builder`.
 - **`CrestApps.OrchardCore.Reports.Core`** holds the engine: `ReportQueryPlanner` checks a query against the live schemas and compiles it, `ReportQueryEngine` runs it, the formula language lives in `Designer/Expressions`, and `ReportDesignDocumentBuilder` turns a result into a `ReportDocument`.
-- **`CrestApps.OrchardCore.Reports`** holds the Orchard Core side: the stores of designed reports, views and share links (document catalogs), permissions and the authorization handler, the designer pages and JSON endpoints, the admin menu, and the built-in **Report views** data source.
+- **`CrestApps.OrchardCore.Reports`** holds the Orchard Core side: the stores of designed reports, views and share links (document catalogs), permissions and the authorization handler, the builder pages and JSON endpoints, the admin menu, and the built-in **Report views** data source.
 
 A run goes through these steps:
 
@@ -54,15 +54,15 @@ A data source returns `DateTime` field values in UTC. The engine converts them t
 
   | Permission | Key | Granted by the handler to |
   | --- | --- | --- |
-  | Manage all designed reports and views | `ManageAllReportDesigns` | The owner, when they hold `ManageOwnReportDesigns`. |
-  | Design reports and manage own designed reports and views | `ManageOwnReportDesigns` | (implied by `ManageAllReportDesigns`) |
-  | View all designed reports | `ViewAllReportDesigns` | The owner; the shared users and roles; everyone for the `Anonymous` role; every signed-in person for the `Authenticated` role. Any designer, for a view. |
-  | Share designed reports publicly and through share links | `ShareReportsPublicly` | Nobody: needed to share with the `Anonymous` role and to create share links. |
+  | Manage all custom reports and views | `ManageAllReportDesigns` | The owner, when they hold `ManageOwnReportDesigns`. |
+  | Build reports and manage own custom reports and views | `ManageOwnReportDesigns` | (implied by `ManageAllReportDesigns`) |
+  | View all custom reports | `ViewAllReportDesigns` | The owner; the shared users and roles; everyone for the `Anonymous` role; every signed-in person for the `Authenticated` role. Any builder, for a view. |
+  | Share custom reports publicly and through share links | `ShareReportsPublicly` | Nobody: needed to share with the `Anonymous` role and to create share links. |
 
   Administrators get all four through the default stereotype.
 
-- **A saved report reads data with its owner's current access**, whoever runs it. The owner vouches for what the report shows; viewers need no access to the underlying data. When the owner is deleted or disabled, or loses access to a data set, the report stops running. The designer preview reads with the designer's access.
-- A data source must hide every data set the principal may not read. The **Content items** source lists a content type only when the principal holds `ViewContent` for it, including the type-specific permission of a securable type. Because Orchard Core grants `ViewContent` broadly by default, make content types that hold sensitive data **Securable** to control which designers can report on them.
+- **A saved report reads data with its owner's current access**, whoever runs it. The owner vouches for what the report shows; viewers need no access to the underlying data. When the owner is deleted or disabled, or loses access to a data set, the report stops running. The builder preview reads with the builder's access.
+- A data source must hide every data set the principal may not read. The **Content items** source lists a content type only when the principal holds `ViewContent` for it, including the type-specific permission of a securable type. Because Orchard Core grants `ViewContent` broadly by default, make content types that hold sensitive data **Securable** to control which report builders can report on them.
 - Exposed filter values from the query string override only filters marked as exposed. Fixed filters cannot be changed or removed by a viewer.
 - Share link tokens hold 256 random bits. Only their SHA-256 hash is stored, the full link is shown once, and links can expire, be revoked, require sign-in, and allow or deny export. Shared pages send `noindex` and `no-referrer`. Every link opening, export, creation and revocation is logged.
 - Designer payloads are limited to 1 MB, formulas are nested at most 64 levels, views at most 8 levels, and a view that reads itself is refused.
@@ -71,9 +71,9 @@ A data source returns `DateTime` field values in UTC. The engine converts them t
 
 | URL | What it is |
 | --- | --- |
-| `/Admin/reports/designs` | The designed reports the user can run (Report Designer, or Shared Reports for non-designers). |
+| `/Admin/reports/designs` | The designed reports the user can run (Report Builder, or Shared Reports for non-report builders). |
 | `/Admin/reports/designs/{id}` | Runs a designed report in the admin. |
-| `/Admin/reports/designer/create`, `/Admin/reports/designer/edit/{id}` | The designer. |
+| `/Admin/reports/builder/create`, `/Admin/reports/builder/edit/{id}` | The builder. |
 | `/Admin/reports/views`, `/Admin/reports/views/create`, `/Admin/reports/views/edit/{id}` | Reusable views. |
 | `/reports/view/{id}` | A report shared with users or roles, outside the admin, for people without admin access. |
 | `/reports/shared/{token}` | A report opened through a share link. |
@@ -106,10 +106,10 @@ The size limits of one run can be changed in the host's `appsettings.json` (a te
 As environment variables:
 
 ```text
-OrchardCore__CrestApps__Reports__Designer__Limits__MaxRowsPerDataSet=50000
-OrchardCore__CrestApps__Reports__Designer__Limits__MaxJoinedRows=250000
-OrchardCore__CrestApps__Reports__Designer__Limits__MaxResultRows=10000
-OrchardCore__CrestApps__Reports__Designer__Limits__MaxFilterOptions=500
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=50000
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxJoinedRows=250000
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxResultRows=10000
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxFilterOptions=500
 ```
 
 | Setting | Default | What it limits |
@@ -121,7 +121,7 @@ OrchardCore__CrestApps__Reports__Designer__Limits__MaxFilterOptions=500
 
 ## Adding a data source
 
-Implement `IReportDataSource` and register it as a scoped service. The designer lists it as soon as the feature that registers it is enabled.
+Implement `IReportDataSource` and register it as a scoped service. The builder lists it as soon as the feature that registers it is enabled.
 
 ```csharp
 public sealed class InvoicesReportDataSource : IReportDataSource
@@ -179,7 +179,7 @@ The contract:
 | `Name`, data set names, field names | Stable: designs store them. Field names may contain dots; aliases cannot. |
 | `GetDataSetsAsync`, `GetSchemaAsync` | Return only what `context.User` may read; `GetSchemaAsync` returns `null` otherwise. This is the security boundary. |
 | Values | One CLR type per `ReportDataType`: `string`, `long`, `decimal`, `bool`, `DateTime` (date only, no time zone) and `DateTime` in UTC. Use `ReportDataValues.Coerce` to normalize. |
-| `IsIdentifier` | Marks keys, which the designer suggests when joining. |
+| `IsIdentifier` | Marks keys, which the builder suggests when joining. |
 | `ReportDataSourceContext.Properties` | A bag shared by one run, for example to detect recursion. |
 
 A repository development skill under `.agents/skills/crestapps-report-data-source` walks through every step.

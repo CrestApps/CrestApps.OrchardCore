@@ -6,7 +6,7 @@ using CrestApps.Core.Services;
 namespace CrestApps.OrchardCore.Reports.Designer.Models;
 
 /// <summary>
-/// A report designed in the report designer: the query that reads and shapes its data, the visuals that present the
+/// A report designed in the report builder: the query that reads and shapes its data, the visuals that present the
 /// result, where it appears in the admin menu, and who it is shared with.
 /// </summary>
 public sealed class ReportDesign : CatalogItem, IDisplayTextAwareModel, IModifiedUtcAwareModel, ICloneable<ReportDesign>

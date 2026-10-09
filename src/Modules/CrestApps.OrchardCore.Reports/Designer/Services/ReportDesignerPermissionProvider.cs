@@ -14,7 +14,7 @@ internal sealed class ReportDesignerPermissionProvider : IPermissionProvider
     ];
 
     /// <summary>
-    /// Retrieves the permissions of the report designer.
+    /// Retrieves the permissions of the report builder.
     /// </summary>
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
     {
@@ -22,7 +22,7 @@ internal sealed class ReportDesignerPermissionProvider : IPermissionProvider
     }
 
     /// <summary>
-    /// Grants every report designer permission to administrators.
+    /// Grants every report builder permission to administrators.
     /// </summary>
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
     {

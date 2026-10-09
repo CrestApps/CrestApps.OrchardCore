@@ -1,7 +1,7 @@
 @model ReportDesignsIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="ReportDesignsIndex" title="@(Model.CanDesign ? T["Report Designer"] : T["Shared Reports"])" />
+    <breadcrumb name="ReportDesignsIndex" title="@(Model.CanDesign ? T["Report Builder"] : T["Shared Reports"])" />
 </zone>
 
 <form method="get" asp-action="Index" class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -19,7 +19,7 @@
                     <a class="btn btn-secondary" asp-route="ReportViewsIndex">@T["Views"]</a>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-primary create" asp-route="ReportDesignerCreate">@T["Design Report"]</a>
+                    <a class="btn btn-primary create" asp-route="ReportDesignerCreate">@T["New Report"]</a>
                 </div>
             }
         </div>

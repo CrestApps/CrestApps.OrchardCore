@@ -11,9 +11,9 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Reports.Controllers;
 
 /// <summary>
-/// Lists and deletes the reusable views of the report designer.
+/// Lists and deletes the reusable views of the report builder.
 /// </summary>
-[Feature(ReportsConstants.DesignerFeature)]
+[Feature(ReportsConstants.BuilderFeature)]
 [Admin]
 public sealed class ReportViewsController : Controller
 {

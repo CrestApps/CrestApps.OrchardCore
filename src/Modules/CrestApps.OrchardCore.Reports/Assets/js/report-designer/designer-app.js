@@ -1,5 +1,5 @@
 /*
- * The report designer page: holds the design being edited, keeps the field catalog and the server's check of the query
+ * The report builder page: holds the design being edited, keeps the field catalog and the server's check of the query
  * current, refreshes the preview, and saves. The panels are built by designer-data.js, designer-canvas.js, and
  * designer-sharing.js, which add their render functions to the same app object.
  */

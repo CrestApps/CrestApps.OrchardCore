@@ -1,5 +1,5 @@
 /*
- * DOM and server helpers of the report designer: element building that never interprets text as HTML, the
+ * DOM and server helpers of the report builder: element building that never interprets text as HTML, the
  * antiforgery-aware JSON client, debouncing, and Bootstrap modal handling.
  */
 (function (root) {

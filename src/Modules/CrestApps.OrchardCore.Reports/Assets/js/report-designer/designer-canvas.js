@@ -1,5 +1,5 @@
 /*
- * The canvas of the report designer: the Columns and Filters shelves that fields are dropped on, the sort and row
+ * The canvas of the report builder: the Columns and Filters shelves that fields are dropped on, the sort and row
  * limit, the properties of the selected column or filter, and the visuals of the report.
  */
 (function (root) {

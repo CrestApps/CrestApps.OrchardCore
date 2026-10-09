@@ -112,7 +112,7 @@ internal sealed class InMemoryReportDataSource : IReportDataSource
 }
 
 /// <summary>
-/// Builds the report designer services over in-memory data sources.
+/// Builds the report builder services over in-memory data sources.
 /// </summary>
 internal static class ReportDesignerTestServices
 {
