@@ -330,6 +330,7 @@ public sealed class ReportDesignerController : Controller
                 ["controlLabels"] = ReportDesignerTexts.Controls(S),
                 ["chartLabels"] = ReportDesignerTexts.Charts(S),
                 ["visualLabels"] = ReportDesignerTexts.Visuals(S),
+                ["joinLabels"] = ReportDesignerTexts.Joins(S),
             },
         };
     }

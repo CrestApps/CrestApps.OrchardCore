@@ -12,6 +12,7 @@
       "Assets/js/report-designer/designer-app.js",
       "Assets/js/report-designer/designer-data.js",
       "Assets/js/report-designer/designer-canvas.js",
+      "Assets/js/report-designer/designer-model.js",
       "Assets/js/report-designer/designer-sharing.js"
     ],
     "output": "wwwroot/scripts/report-designer.js"

@@ -268,6 +268,12 @@
                 return h('li', null, item);
             })) : null,
             h('button', { type: 'button', className: 'btn-close', 'data-bs-dismiss': 'alert', 'aria-label': app.t('Close') })));
+
+        if (kind === 'success') {
+            root.setTimeout(function () {
+                ui.clear(target);
+            }, 3000);
+        }
     };
 
     app.renderStatus = function () {
@@ -304,12 +310,24 @@
         }
     };
 
+    // Opens a join in the Properties pane, expanding the pane when it is collapsed.
+    app.editJoin = function (alias) {
+        app.selection = { kind: 'join', id: alias };
+
+        if (app.layout.side) {
+            app.toggle('side', false);
+        }
+
+        app.render();
+    };
+
     app.select = function (kind, id) {
         app.selection = kind ? { kind: kind, id: id } : null;
         app.render();
     };
 
     app.render = function () {
+        app.renderModel();
         app.renderDataPane();
         app.renderShelves();
         app.renderProperties();
@@ -319,12 +337,110 @@
         app.renderStatus();
     };
 
+    var STORAGE_KEY = 'crestapps-report-designer-layout';
+
+    function readLayout() {
+        try {
+            return JSON.parse(root.localStorage.getItem(STORAGE_KEY)) || {};
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function writeLayout(layout) {
+        try {
+            root.localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+        } catch (e) {
+            // Remembering the layout is a convenience; private windows may refuse it.
+        }
+    }
+
+    app.layout = { data: false, side: false, shelves: false };
+
+    // Collapses or expands a part of the workspace and remembers the choice for the next visit.
+    app.toggle = function (part, collapsed) {
+        app.layout[part] = typeof collapsed === 'boolean' ? collapsed : !app.layout[part];
+        writeLayout(app.layout);
+        app.applyLayout();
+    };
+
+    app.applyLayout = function () {
+        var e = app.elements;
+
+        e.workspace.classList.toggle('is-data-collapsed', !!app.layout.data);
+        e.workspace.classList.toggle('is-side-collapsed', !!app.layout.side);
+        e.workspace.classList.toggle('is-shelves-collapsed', !!app.layout.shelves);
+        e.dataToggle.setAttribute('aria-expanded', app.layout.data ? 'false' : 'true');
+        e.sideToggle.setAttribute('aria-expanded', app.layout.side ? 'false' : 'true');
+        e.shelvesToggle.setAttribute('aria-expanded', app.layout.shelves ? 'false' : 'true');
+        e.shelvesToggle.firstChild.className = 'fa-solid ' + (app.layout.shelves ? 'fa-chevron-down' : 'fa-chevron-up');
+    };
+
+    // Sizes the designer to the window so the page itself never scrolls; each pane scrolls on its own instead. On a
+    // narrow screen the panes stack and the page scrolls normally.
+    app.fit = function () {
+        var container = app.elements.root;
+
+        if (!container) {
+            return;
+        }
+
+        if (root.innerWidth < 992) {
+            container.style.height = '';
+
+            return;
+        }
+
+        var top = container.getBoundingClientRect().top + root.scrollY;
+        var height = Math.max(420, root.innerHeight - top - 12);
+
+        container.style.height = height + 'px';
+
+        var overflow = root.document.documentElement.scrollHeight - root.innerHeight;
+
+        if (overflow > 0) {
+            container.style.height = Math.max(420, height - overflow) + 'px';
+        }
+    };
+
+    function paneHeader(title, toggle, extra) {
+        return h('div', { className: 'rd-pane-header d-flex align-items-center gap-2' },
+            h('span', { className: 'rd-pane-title flex-grow-1 text-truncate' }, title),
+            extra || null,
+            toggle || null);
+    }
+
+    function collapseButton(part, label, icon) {
+        return h('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-link text-reset p-0 rd-collapse',
+            title: label,
+            'aria-label': label,
+            onclick: function () {
+                app.toggle(part);
+            }
+        }, h('i', { className: 'fa-solid ' + icon, 'aria-hidden': 'true' }));
+    }
+
+    function rail(part, label, icon) {
+        return h('button', {
+            type: 'button',
+            className: 'rd-rail btn btn-link text-reset',
+            title: label,
+            'aria-label': label,
+            onclick: function () {
+                app.toggle(part, false);
+            }
+        }, h('i', { className: 'fa-solid ' + icon, 'aria-hidden': 'true' }), h('span', { className: 'rd-rail-label' }, label));
+    }
+
     app.buildLayout = function (container) {
         var e = app.elements;
 
+        e.root = container;
         e.title = h('input', {
             type: 'text',
-            className: 'form-control form-control-lg report-designer-title',
+            className: 'form-control form-control-sm report-designer-title',
             value: app.design.displayText || '',
             placeholder: app.isView() ? app.t('View name') : app.t('Report title'),
             'aria-label': app.isView() ? app.t('View name') : app.t('Report title'),
@@ -335,10 +451,10 @@
                 app.renderStatus();
             }
         });
-        e.status = h('span', { className: 'text-muted small' });
-        e.saveButton = h('button', { type: 'button', className: 'btn btn-primary', onclick: app.save }, ui.icon('fa-floppy-disk'), ' ', app.t('Save'));
-        e.runLink = h('a', { className: 'btn btn-outline-secondary d-none', href: '#' }, ui.icon('fa-play'), ' ', app.t('Run report'));
-        e.messages = h('div');
+        e.status = h('span', { className: 'text-muted small text-nowrap' });
+        e.saveButton = h('button', { type: 'button', className: 'btn btn-sm btn-primary text-nowrap', onclick: app.save }, ui.icon('fa-floppy-disk'), ' ', app.t('Save'));
+        e.runLink = h('a', { className: 'btn btn-sm btn-outline-secondary text-nowrap d-none', href: '#' }, ui.icon('fa-play'), ' ', app.t('Run report'));
+        e.messages = h('div', { className: 'report-designer-messages' });
         e.issues = h('div');
         e.dataPane = h('div', { className: 'report-designer-data' });
         e.shelves = h('div', { className: 'report-designer-shelves' });
@@ -347,25 +463,52 @@
         e.preview = h('div', { className: 'report-designer-preview' });
         e.settings = h('div', { className: 'report-designer-settings' });
         e.sharing = h('div', { className: 'report-designer-sharing' });
+        e.model = h('div', { className: 'rd-model' });
+        e.dataToggle = collapseButton('data', app.t('Collapse the data pane'), 'fa-angles-left');
+        e.sideToggle = collapseButton('side', app.t('Collapse the properties pane'), 'fa-angles-right');
+        e.shelvesToggle = collapseButton('shelves', app.t('Collapse the columns and filters'), 'fa-chevron-up');
+
+        var addDataSet = h('button', { type: 'button', className: 'btn btn-sm btn-primary text-nowrap', onclick: app.openAddDataSet }, ui.icon('fa-plus'), ' ', app.t('Add data set'));
+        var refresh = h('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-outline-secondary text-nowrap',
+            onclick: function () {
+                app.refreshPreview();
+            }
+        }, ui.icon('fa-rotate'), ' ', app.t('Refresh'));
+        var sideTitle = app.isView() ? app.t('Properties') : app.t('Properties and visuals');
+
+        e.workspace = h('div', { className: 'rd-workspace' },
+            h('aside', { className: 'rd-pane rd-pane-data', 'aria-label': app.t('Data') },
+                rail('data', app.t('Data'), 'fa-database'),
+                h('div', { className: 'rd-pane-content' },
+                    paneHeader(app.t('Data'), e.dataToggle, addDataSet),
+                    h('div', { className: 'rd-pane-scroll' }, e.dataPane))),
+            h('section', { className: 'rd-center', 'aria-label': app.t('Design') },
+                h('div', { className: 'rd-shelves-panel' },
+                    paneHeader(app.t('Columns and filters'), e.shelvesToggle),
+                    h('div', { className: 'rd-shelves-body' }, e.issues, e.shelves)),
+                h('div', { className: 'rd-preview-panel' },
+                    paneHeader(app.t('Preview'), null, refresh),
+                    h('div', { className: 'rd-pane-scroll rd-preview-scroll' }, e.preview))),
+            h('aside', { className: 'rd-pane rd-pane-side', 'aria-label': sideTitle },
+                rail('side', sideTitle, 'fa-sliders'),
+                h('div', { className: 'rd-pane-content' },
+                    paneHeader(sideTitle, e.sideToggle),
+                    h('div', { className: 'rd-pane-scroll' }, e.properties, app.isView() ? null : e.visuals))));
 
         var tabs = [
-            { id: 'design', label: app.t('Design'), body: h('div', { className: 'row g-3' },
-                h('div', { className: 'col-12 col-lg-3' }, e.dataPane),
-                h('div', { className: 'col-12 col-lg-6' }, e.issues, e.shelves, h('div', { className: 'd-flex align-items-center justify-content-between mt-3 mb-2' },
-                    h('h2', { className: 'h6 mb-0' }, app.t('Preview')),
-                    h('button', { type: 'button', className: 'btn btn-sm btn-outline-secondary', onclick: function () {
-                        app.refreshPreview();
-                    } }, ui.icon('fa-rotate'), ' ', app.t('Refresh'))), e.preview),
-                h('div', { className: 'col-12 col-lg-3' }, e.properties, app.isView() ? null : e.visuals)) },
-            { id: 'settings', label: app.t('Settings'), body: e.settings }
+            { id: 'design', label: app.t('Design'), icon: 'fa-pen-ruler', body: e.workspace, className: 'rd-tab-design' },
+            { id: 'model', label: app.t('Data model'), icon: 'fa-diagram-project', body: e.model, className: 'rd-tab-model' },
+            { id: 'settings', label: app.t('Settings'), icon: 'fa-gear', body: h('div', { className: 'rd-tab-scroll' }, e.settings) }
         ];
 
         if (!app.isView()) {
-            tabs.push({ id: 'sharing', label: app.t('Sharing'), body: e.sharing });
+            tabs.push({ id: 'sharing', label: app.t('Sharing'), icon: 'fa-share-nodes', body: h('div', { className: 'rd-tab-scroll' }, e.sharing) });
         }
 
-        var nav = h('ul', { className: 'nav nav-tabs mb-3', role: 'tablist' });
-        var panes = h('div', { className: 'tab-content' });
+        var nav = h('ul', { className: 'nav nav-tabs card-header-tabs flex-nowrap', role: 'tablist' });
+        var panes = h('div', { className: 'tab-content rd-tabs-content' });
 
         tabs.forEach(function (tab, index) {
             var paneId = 'report-designer-' + tab.id;
@@ -373,26 +516,42 @@
             nav.appendChild(h('li', { className: 'nav-item', role: 'presentation' },
                 h('button', {
                     type: 'button',
-                    className: 'nav-link' + (index === 0 ? ' active' : ''),
+                    className: 'nav-link text-nowrap' + (index === 0 ? ' active' : ''),
                     'data-bs-toggle': 'tab',
                     'data-bs-target': '#' + paneId,
                     role: 'tab',
                     'aria-controls': paneId,
                     'aria-selected': index === 0 ? 'true' : 'false'
-                }, tab.label)));
-            panes.appendChild(h('div', { className: 'tab-pane fade' + (index === 0 ? ' show active' : ''), id: paneId, role: 'tabpanel' }, tab.body));
+                }, ui.icon(tab.icon), ' ', tab.label)));
+            panes.appendChild(h('div', {
+                className: 'tab-pane fade ' + (tab.className || '') + (index === 0 ? ' show active' : ''),
+                id: paneId,
+                role: 'tabpanel'
+            }, tab.body));
         });
 
+        container.classList.add('card');
         ui.append(container, [
-            h('div', { className: 'report-designer-toolbar card mb-3' }, h('div', { className: 'card-body d-flex flex-wrap gap-2 align-items-center' },
-                h('div', { className: 'flex-grow-1' }, e.title),
-                e.status,
-                e.runLink,
-                e.saveButton)),
-            e.messages,
-            nav,
-            panes
+            h('div', { className: 'card-header rd-header' },
+                nav,
+                h('div', { className: 'rd-header-tools' }, e.title, e.status, e.runLink, e.saveButton)),
+            h('div', { className: 'card-body p-0 rd-body' }, e.messages, panes)
         ]);
+
+        var saved = readLayout();
+
+        app.layout.data = !!saved.data;
+        app.layout.side = !!saved.side;
+        app.layout.shelves = !!saved.shelves;
+        app.applyLayout();
+        app.fit();
+        root.addEventListener('resize', ui.debounce(function () {
+            app.fit();
+            app.drawModelLines();
+        }, 100));
+        nav.addEventListener('shown.bs.tab', function () {
+            app.drawModelLines();
+        });
     };
 
     app.start = function (container) {

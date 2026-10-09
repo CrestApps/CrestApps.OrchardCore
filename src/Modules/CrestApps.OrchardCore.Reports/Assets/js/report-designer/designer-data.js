@@ -12,6 +12,26 @@
 
     var FIELD_MIME = 'application/x-report-field';
     var fieldSearch = '';
+    var collapsed = {};
+
+    function collapsible(key, header, body, className) {
+        var isCollapsed = !!collapsed[key] && !fieldSearch;
+
+        return h('div', { className: 'card mb-2 ' + (className || '') },
+            h('div', { className: 'card-header d-flex align-items-center gap-2 py-1' },
+                h('button', {
+                    type: 'button',
+                    className: 'btn btn-sm btn-link text-reset p-0',
+                    'aria-expanded': isCollapsed ? 'false' : 'true',
+                    'aria-label': isCollapsed ? app.t('Expand') : app.t('Collapse'),
+                    onclick: function () {
+                        collapsed[key] = !collapsed[key];
+                        app.renderDataPane();
+                    }
+                }, ui.icon(isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down')),
+                header),
+            isCollapsed ? null : body);
+    }
 
     designer.FIELD_MIME = FIELD_MIME;
 
@@ -104,10 +124,19 @@
             });
         }
 
-        return h('div', { className: 'card mb-2 report-designer-dataset' },
-            h('div', { className: 'card-header d-flex align-items-center gap-2 py-1' },
+        return collapsible('dataset:' + dataSet.alias, [
                 h('span', { className: 'badge text-bg-primary' }, index === 0 ? app.t('Base') : String(index + 1)),
                 h('span', { className: 'fw-semibold text-truncate flex-grow-1', title: dataSet.alias }, dataSet.displayName || dataSet.dataSet),
+                h('span', { className: 'badge text-bg-light' }, String(own.length)),
+                index === 0 ? null : h('button', {
+                    type: 'button',
+                    className: 'btn btn-sm btn-link p-0',
+                    title: app.t('Edit join'),
+                    'aria-label': app.t('Edit join') + ': ' + (dataSet.displayName || dataSet.dataSet),
+                    onclick: function () {
+                        app.editJoin(dataSet.alias);
+                    }
+                }, ui.icon('fa-link')),
                 h('button', {
                     type: 'button',
                     className: 'btn btn-sm btn-link text-danger p-0',
@@ -118,96 +147,148 @@
                         delete app.schemas[dataSet.alias];
                         app.changed();
                     }
-                }, ui.icon('fa-xmark'))),
-            list);
+                }, ui.icon('fa-xmark'))
+            ], list, 'report-designer-dataset');
     }
 
-    function joinEditor(dataSet, index, fields) {
+    // Finds the join that attaches a data set, creating an inner join with no matching columns when there is none.
+    app.joinFor = function (alias) {
         var query = app.design.query;
         var join = query.joins.filter(function (candidate) {
-            return candidate.alias === dataSet.alias;
+            return candidate.alias === alias;
         })[0];
 
         if (!join) {
-            join = { alias: dataSet.alias, type: 'Inner', conditions: [] };
+            join = { alias: alias, type: 'Inner', conditions: [] };
             query.joins.push(join);
         }
 
+        return join;
+    };
+
+    app.dataSetLabel = function (alias) {
+        var dataSet = app.design.query.dataSets.filter(function (candidate) {
+            return candidate.alias === alias;
+        })[0];
+
+        return dataSet ? (dataSet.displayName || dataSet.dataSet || alias) : alias;
+    };
+
+    // The editor of one join, shown in the Properties pane: which rows to keep, and the pairs of columns that must be
+    // equal for two rows to match. Several pairs match on several columns at once.
+    app.joinEditor = function (alias) {
+        var query = app.design.query;
+        var index = query.dataSets.map(function (dataSet) {
+            return dataSet.alias;
+        }).indexOf(alias);
+
+        if (index < 1) {
+            return null;
+        }
+
+        var fields = app.fields();
+        var join = app.joinFor(alias);
         var earlier = query.dataSets.slice(0, index).map(function (candidate) {
             return candidate.alias;
         });
         var options = function (aliases) {
-            return [{ value: '', text: app.t('Pick a field') }].concat(Object.keys(fields)
+            return [{ value: '', text: app.t('Pick a column') }].concat(Object.keys(fields)
                 .map(function (key) {
                     return fields[key];
                 })
                 .filter(function (field) {
                     return field.kind === 'DataSetField' && aliases.indexOf(field.alias) >= 0;
                 })
+                .sort(function (left, right) {
+                    return (right.isIdentifier ? 1 : 0) - (left.isIdentifier ? 1 : 0);
+                })
                 .map(function (field) {
-                    var owner = query.dataSets.filter(function (candidate) {
-                        return candidate.alias === field.alias;
-                    })[0];
-
-                    return { value: field.key, text: (owner.displayName || owner.alias) + ' › ' + field.label };
+                    return { value: field.key, text: app.dataSetLabel(field.alias) + ' › ' + field.label + (field.isIdentifier ? ' 🔑' : '') };
                 }));
         };
-
-        var conditions = h('div');
+        var conditions = h('div', { className: 'd-flex flex-column gap-2 mb-2' });
 
         join.conditions.forEach(function (condition, conditionIndex) {
-            conditions.appendChild(h('div', { className: 'd-flex gap-1 align-items-center mb-1' },
+            conditions.appendChild(h('div', { className: 'rd-join-pair border rounded p-2' },
+                h('div', { className: 'd-flex align-items-center justify-content-between mb-1' },
+                    h('span', { className: 'small text-muted' }, app.t('Matching columns') + ' ' + (conditionIndex + 1)),
+                    h('button', {
+                        type: 'button',
+                        className: 'btn btn-sm btn-link text-danger p-0',
+                        'aria-label': app.t('Remove'),
+                        onclick: function () {
+                            join.conditions.splice(conditionIndex, 1);
+                            app.changed();
+                        }
+                    }, ui.icon('fa-xmark'))),
                 ui.select(options(earlier), condition.leftField, {
-                    'aria-label': app.t('Field before'),
+                    'aria-label': app.t('Column of the data sets before'),
                     onchange: function (event) {
                         condition.leftField = event.target.value;
-                        app.changed({ render: false });
-                    }
-                }),
-                h('span', { className: 'text-muted' }, '='),
-                ui.select(options([dataSet.alias]), condition.rightField, {
-                    'aria-label': app.t('Field of the joined data set'),
-                    onchange: function (event) {
-                        condition.rightField = event.target.value;
-                        app.changed({ render: false });
-                    }
-                }),
-                h('button', {
-                    type: 'button',
-                    className: 'btn btn-sm btn-link text-danger p-0',
-                    'aria-label': app.t('Remove'),
-                    onclick: function () {
-                        join.conditions.splice(conditionIndex, 1);
                         app.changed();
                     }
-                }, ui.icon('fa-xmark'))));
+                }),
+                h('div', { className: 'text-center text-muted small my-1' }, ui.icon('fa-equals')),
+                ui.select(options([alias]), condition.rightField, {
+                    'aria-label': app.t('Column of the joined data set'),
+                    onchange: function (event) {
+                        condition.rightField = event.target.value;
+                        app.changed();
+                    }
+                })));
         });
 
-        return h('div', { className: 'card mb-2' }, h('div', { className: 'card-body p-2' },
-            h('label', { className: 'form-label small mb-1' }, app.t('Join') + ' ' + (dataSet.displayName || dataSet.alias)),
+        if (!join.conditions.length) {
+            conditions.appendChild(h('div', { className: 'alert alert-warning small py-2 mb-0' }, app.t('Add the columns that must match.')));
+        }
+
+        return [
+            h('p', { className: 'small text-muted' }, app.t('Joins') + ' ', h('strong', null, app.dataSetLabel(alias)), ' ' + app.t('to') + ' ', h('strong', null, earlier.map(app.dataSetLabel).join(', ')), '.'),
+            h('label', { className: 'form-label small mb-1' }, app.t('Keep')),
             ui.select([
                 { value: 'Inner', text: app.t('Only rows that match on both sides') },
                 { value: 'Left', text: app.t('All rows before, matching rows of this data set') },
                 { value: 'Right', text: app.t('All rows of this data set, matching rows before') },
                 { value: 'Full', text: app.t('All rows of both sides') }
             ], join.type, {
-                className: 'form-select form-select-sm mb-2',
+                className: 'form-select form-select-sm mb-3',
                 'aria-label': app.t('Join type'),
                 onchange: function (event) {
                     join.type = event.target.value;
-                    app.changed({ render: false });
+                    app.changed();
                 }
             }),
             conditions,
             h('button', {
                 type: 'button',
-                className: 'btn btn-sm btn-outline-secondary',
+                className: 'btn btn-sm btn-outline-primary w-100',
                 onclick: function () {
                     join.conditions.push({ leftField: '', rightField: '' });
                     app.changed();
                 }
-            }, ui.icon('fa-plus'), ' ', app.t('Match fields'))));
-    }
+            }, ui.icon('fa-plus'), ' ', app.t('Add matching columns')),
+            h('div', { className: 'form-text' }, app.t('Rows match when every pair of columns is equal. Add more pairs to match on several columns. Key columns are marked with a key.'))
+        ];
+    };
+
+    // A short description of a join for its pill on the Joins shelf.
+    app.joinSummary = function (alias) {
+        var fields = app.fields();
+        var join = app.joinFor(alias);
+        var complete = join.conditions.filter(function (condition) {
+            return condition.leftField && condition.rightField;
+        });
+
+        return {
+            complete: complete.length > 0,
+            text: complete.map(function (condition) {
+                var left = fields[condition.leftField];
+                var right = fields[condition.rightField];
+
+                return (left ? left.label : condition.leftField) + ' = ' + (right ? right.label : condition.rightField);
+            }).join(', ')
+        };
+    };
 
     app.renderDataPane = function () {
         var pane = app.elements.dataPane;
@@ -232,21 +313,15 @@
 
         ui.clear(pane);
         ui.append(pane, [
-            h('div', { className: 'd-flex align-items-center justify-content-between mb-2' },
-                h('h2', { className: 'h6 mb-0' }, app.t('Data')),
-                h('button', { type: 'button', className: 'btn btn-sm btn-primary', onclick: app.openAddDataSet }, ui.icon('fa-plus'), ' ', app.t('Add data set'))),
-            query.dataSets.length ? search : h('p', { className: 'text-muted small' }, app.t('Start by adding a data set, such as a content type.')),
+            query.dataSets.length
+                ? h('div', { className: 'rd-sticky-search' }, search)
+                : h('div', { className: 'report-designer-empty text-muted small' },
+                    h('div', { className: 'mb-2' }, ui.icon('fa-database fa-2x')),
+                    app.t('Start by adding a data set, such as a content type.')),
             query.dataSets.map(function (dataSet, index) {
                 return dataSetCard(dataSet, index, fields);
             })
         ]);
-
-        if (query.dataSets.length > 1) {
-            pane.appendChild(h('h3', { className: 'h6 mt-3' }, app.t('Relationships')));
-            query.dataSets.slice(1).forEach(function (dataSet, index) {
-                pane.appendChild(joinEditor(dataSet, index + 1, fields));
-            });
-        }
 
         var calculated = Object.keys(fields)
             .map(function (key) {
@@ -279,70 +354,110 @@
         });
 
         if (query.dataSets.length) {
-            pane.appendChild(h('div', { className: 'card mt-3' },
-                h('div', { className: 'card-header d-flex align-items-center justify-content-between py-1' },
-                    h('span', { className: 'fw-semibold' }, app.t('Calculated fields')),
-                    h('button', { type: 'button', className: 'btn btn-sm btn-link p-0', onclick: function () {
-                        app.openFormula(null);
-                    } }, ui.icon('fa-plus'), ' ', app.t('New'))),
-                calculatedList));
+            pane.appendChild(collapsible('calculated', [
+                h('span', { className: 'fw-semibold flex-grow-1' }, app.t('Calculated fields')),
+                h('button', { type: 'button', className: 'btn btn-sm btn-link p-0', onclick: function () {
+                    app.openFormula(null);
+                } }, ui.icon('fa-plus'), ' ', app.t('New'))
+            ], calculatedList, 'mt-3'));
         }
     };
 
     app.openAddDataSet = function () {
-        var sourceSelect = ui.select([{ value: '', text: app.t('Pick a data source') }].concat(app.sources.map(function (source) {
-            return { value: source.name, text: source.displayName };
-        })), '', { className: 'form-select mb-2', 'aria-label': app.t('Data source') });
-        var filter = h('input', { type: 'search', className: 'form-control mb-2', placeholder: app.t('Search data sets'), 'aria-label': app.t('Search data sets') });
-        var list = h('div', { className: 'list-group report-designer-dataset-picker' });
-        var dataSets = [];
+        var filter = h('input', { type: 'search', className: 'form-control mb-3', placeholder: app.t('Filter'), 'aria-label': app.t('Filter data sets'), autocomplete: 'off' });
+        var categories = h('nav', { className: 'nav nav-pills flex-nowrap flex-md-column overflow-auto gap-1 pb-2 pb-md-0', 'aria-label': app.t('Data sources') });
+        var grid = h('div', { className: 'row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2' });
+        var status = h('div', { className: 'text-muted small py-3 text-center' }, app.t('Loading…'));
+        var entries = [];
+        var selectedSource = '';
         var modal;
+        var added = (app.design.query.dataSets || []).map(function (dataSet) {
+            return dataSet.source + '\u001f' + dataSet.dataSet;
+        });
 
-        var renderList = function () {
-            var text = filter.value.trim().toLowerCase();
+        var renderCategories = function () {
+            ui.clear(categories);
 
-            ui.clear(list);
-            dataSets.filter(function (dataSet) {
-                return !text || (dataSet.displayName + ' ' + dataSet.name).toLowerCase().indexOf(text) >= 0;
-            }).forEach(function (dataSet) {
-                list.appendChild(h('button', {
+            [{ name: '', displayName: app.t('All') }].concat(app.sources).forEach(function (source) {
+                var active = source.name === selectedSource;
+                var count = entries.filter(function (entry) {
+                    return !source.name || entry.source.name === source.name;
+                }).length;
+
+                categories.appendChild(h('button', {
                     type: 'button',
-                    className: 'list-group-item list-group-item-action',
+                    className: 'nav-link text-start text-nowrap d-flex align-items-center gap-2' + (active ? ' active' : ''),
+                    'aria-pressed': active ? 'true' : 'false',
                     onclick: function () {
-                        addDataSet(sourceSelect.value, dataSet);
-                        modal.close();
+                        selectedSource = source.name;
+                        renderCategories();
+                        renderCards();
                     }
-                }, h('div', { className: 'fw-semibold' }, dataSet.displayName || dataSet.name),
-                dataSet.description ? h('div', { className: 'small text-muted' }, dataSet.description) : null));
+                }, h('span', { className: 'flex-grow-1' }, source.displayName), h('span', { className: 'badge rounded-pill ' + (active ? 'text-bg-light' : 'text-bg-secondary') }, String(count))));
             });
-
-            if (!list.firstChild) {
-                list.appendChild(h('div', { className: 'text-muted small p-2' }, sourceSelect.value ? app.t('No data sets found.') : app.t('Pick a data source first.')));
-            }
         };
 
-        sourceSelect.addEventListener('change', function () {
-            dataSets = [];
-            renderList();
-
-            if (!sourceSelect.value) {
-                return;
-            }
-
-            ui.request(app.url('dataSets') + '?source=' + encodeURIComponent(sourceSelect.value)).then(function (result) {
-                dataSets = result || [];
-                renderList();
+        var renderCards = function () {
+            var text = filter.value.trim().toLowerCase();
+            var visible = entries.filter(function (entry) {
+                return (!selectedSource || entry.source.name === selectedSource) &&
+                    (!text || entry.search.indexOf(text) >= 0);
             });
+
+            ui.clear(grid);
+            visible.forEach(function (entry) {
+                var dataSet = entry.dataSet;
+                var isAdded = added.indexOf(entry.source.name + '\u001f' + dataSet.name) >= 0;
+
+                grid.appendChild(h('div', { className: 'col' }, h('div', { className: 'card h-100' },
+                    h('div', { className: 'card-body' },
+                        h('h5', { className: 'card-title d-flex align-items-baseline gap-2' },
+                            h('i', { className: 'fa-solid ' + (entry.source.name === 'ReportViews' ? 'fa-layer-group' : 'fa-table') + ' fa-fw text-primary', 'aria-hidden': 'true' }),
+                            h('span', null, dataSet.displayName || dataSet.name)),
+                        dataSet.description ? h('p', { className: 'card-text text-body-secondary small mb-0' }, dataSet.description) : null),
+                    h('div', { className: 'card-footer d-flex align-items-center gap-2' },
+                        h('span', { className: 'me-auto badge text-bg-light' }, entry.source.displayName),
+                        isAdded ? h('span', { className: 'small text-muted' }, app.t('Added')) : null,
+                        h('button', {
+                            type: 'button',
+                            className: 'btn btn-primary btn-sm',
+                            onclick: function () {
+                                addDataSet(entry.source.name, dataSet);
+                                modal.close();
+                            }
+                        }, isAdded ? app.t('Add again') : app.t('Add'))))));
+            });
+
+            status.classList.toggle('d-none', visible.length > 0);
+            status.textContent = entries.length ? app.t('No data sets match the filter.') : status.textContent;
+        };
+
+        filter.addEventListener('input', renderCards);
+
+        modal = ui.modal(app.t('Add Data Set'), h('div', { className: 'row g-3' },
+            h('div', { className: 'col-md-3' }, h('div', { className: 'position-sticky top-0' }, filter, categories)),
+            h('div', { className: 'col-md-9' }, grid, status)), null, 'modal-xl');
+
+        renderCategories();
+
+        Promise.all(app.sources.map(function (source) {
+            return ui.request(app.url('dataSets') + '?source=' + encodeURIComponent(source.name)).then(function (dataSets) {
+                (dataSets || []).forEach(function (dataSet) {
+                    entries.push({
+                        source: source,
+                        dataSet: dataSet,
+                        search: [dataSet.displayName, dataSet.name, dataSet.description, dataSet.group, source.displayName].join(' ').toLowerCase()
+                    });
+                });
+            }).catch(function () {
+                return null;
+            });
+        })).then(function () {
+            status.textContent = app.sources.length ? app.t('No data sets are available to you.') : app.t('No data sources are enabled.');
+            renderCategories();
+            renderCards();
+            filter.focus();
         });
-        filter.addEventListener('input', renderList);
-
-        if (app.sources.length === 1) {
-            sourceSelect.value = app.sources[0].name;
-            sourceSelect.dispatchEvent(new root.Event('change'));
-        }
-
-        renderList();
-        modal = ui.modal(app.t('Add data set'), [sourceSelect, filter, list]);
     };
 
     function addDataSet(source, descriptor) {
@@ -369,6 +484,7 @@
                     type: 'Inner',
                     conditions: suggestion ? [suggestion] : [{ leftField: '', rightField: '' }]
                 });
+                app.editJoin(reference.alias);
             }
 
             app.changed();

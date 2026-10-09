@@ -205,6 +205,83 @@
     query.columns.splice(position, 0, column);
     return column;
   };
+
+  // Finds the column that shows a field in a role, adding one when there is none, so a field dropped on a visual's
+  // well becomes a dimension (categories, series, pivot rows) or a measure (values). A measure of a field that cannot
+  // be summed counts it instead.
+  designer.ensureColumn = function (query, field, role) {
+    query.columns = query.columns || [];
+    var wantsMeasure = role === 'measure';
+    var existing = query.columns.filter(function (column) {
+      var isMeasure = designer.isMeasure(column, field);
+      return column.field === field.key && isMeasure === wantsMeasure && (column.transform || 'None') === 'None';
+    })[0];
+    if (existing) {
+      return existing;
+    }
+    var column = designer.addColumn(query, field);
+    if (wantsMeasure) {
+      if (!field.isAggregate && column.aggregate === 'None') {
+        column.aggregate = isNumeric(field.dataType) && !field.isIdentifier ? 'Sum' : 'Count';
+      }
+    } else {
+      column.aggregate = 'None';
+    }
+    return column;
+  };
+
+  // Joins two data sets on a pair of columns dropped on each other in the data model. The data set listed later is
+  // the one attached by the join, so the pair is stored on its join, oriented from the earlier data set. An empty
+  // pair left by the designer is filled first. Returns the alias of the join, or null when both fields belong to the
+  // same data set.
+  designer.connect = function (query, sourceKey, targetKey) {
+    var sourceAlias = designer.aliasOf(sourceKey);
+    var targetAlias = designer.aliasOf(targetKey);
+    var aliases = (query.dataSets || []).map(function (dataSet) {
+      return dataSet.alias;
+    });
+    var sourceIndex = aliases.indexOf(sourceAlias);
+    var targetIndex = aliases.indexOf(targetAlias);
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+      return null;
+    }
+    var later = sourceIndex > targetIndex ? sourceAlias : targetAlias;
+    var condition = sourceIndex < targetIndex ? {
+      leftField: sourceKey,
+      rightField: targetKey
+    } : {
+      leftField: targetKey,
+      rightField: sourceKey
+    };
+    query.joins = query.joins || [];
+    var join = query.joins.filter(function (candidate) {
+      return candidate.alias === later;
+    })[0];
+    if (!join) {
+      join = {
+        alias: later,
+        type: 'Inner',
+        conditions: []
+      };
+      query.joins.push(join);
+    }
+    join.conditions = join.conditions || [];
+    var duplicate = join.conditions.some(function (existing) {
+      return existing.leftField === condition.leftField && existing.rightField === condition.rightField;
+    });
+    if (!duplicate) {
+      var empty = join.conditions.filter(function (existing) {
+        return !existing.leftField || !existing.rightField;
+      })[0];
+      if (empty) {
+        empty.leftField = condition.leftField;
+        empty.rightField = condition.rightField;
+      } else {
+        join.conditions.push(condition);
+      }
+    }
+    return later;
+  };
   designer.addFilter = function (query, field) {
     query.filters = query.filters || [];
     var filter = {
@@ -838,6 +915,11 @@
       'data-bs-dismiss': 'alert',
       'aria-label': app.t('Close')
     })));
+    if (kind === 'success') {
+      root.setTimeout(function () {
+        ui.clear(target);
+      }, 3000);
+    }
   };
   app.renderStatus = function () {
     var status = app.elements.status;
@@ -872,6 +954,18 @@
       }))));
     }
   };
+
+  // Opens a join in the Properties pane, expanding the pane when it is collapsed.
+  app.editJoin = function (alias) {
+    app.selection = {
+      kind: 'join',
+      id: alias
+    };
+    if (app.layout.side) {
+      app.toggle('side', false);
+    }
+    app.render();
+  };
   app.select = function (kind, id) {
     app.selection = kind ? {
       kind: kind,
@@ -880,6 +974,7 @@
     app.render();
   };
   app.render = function () {
+    app.renderModel();
     app.renderDataPane();
     app.renderShelves();
     app.renderProperties();
@@ -888,11 +983,106 @@
     app.renderSharing();
     app.renderStatus();
   };
+  var STORAGE_KEY = 'crestapps-report-designer-layout';
+  function readLayout() {
+    try {
+      return JSON.parse(root.localStorage.getItem(STORAGE_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function writeLayout(layout) {
+    try {
+      root.localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
+    } catch (e) {
+      // Remembering the layout is a convenience; private windows may refuse it.
+    }
+  }
+  app.layout = {
+    data: false,
+    side: false,
+    shelves: false
+  };
+
+  // Collapses or expands a part of the workspace and remembers the choice for the next visit.
+  app.toggle = function (part, collapsed) {
+    app.layout[part] = typeof collapsed === 'boolean' ? collapsed : !app.layout[part];
+    writeLayout(app.layout);
+    app.applyLayout();
+  };
+  app.applyLayout = function () {
+    var e = app.elements;
+    e.workspace.classList.toggle('is-data-collapsed', !!app.layout.data);
+    e.workspace.classList.toggle('is-side-collapsed', !!app.layout.side);
+    e.workspace.classList.toggle('is-shelves-collapsed', !!app.layout.shelves);
+    e.dataToggle.setAttribute('aria-expanded', app.layout.data ? 'false' : 'true');
+    e.sideToggle.setAttribute('aria-expanded', app.layout.side ? 'false' : 'true');
+    e.shelvesToggle.setAttribute('aria-expanded', app.layout.shelves ? 'false' : 'true');
+    e.shelvesToggle.firstChild.className = 'fa-solid ' + (app.layout.shelves ? 'fa-chevron-down' : 'fa-chevron-up');
+  };
+
+  // Sizes the designer to the window so the page itself never scrolls; each pane scrolls on its own instead. On a
+  // narrow screen the panes stack and the page scrolls normally.
+  app.fit = function () {
+    var container = app.elements.root;
+    if (!container) {
+      return;
+    }
+    if (root.innerWidth < 992) {
+      container.style.height = '';
+      return;
+    }
+    var top = container.getBoundingClientRect().top + root.scrollY;
+    var height = Math.max(420, root.innerHeight - top - 12);
+    container.style.height = height + 'px';
+    var overflow = root.document.documentElement.scrollHeight - root.innerHeight;
+    if (overflow > 0) {
+      container.style.height = Math.max(420, height - overflow) + 'px';
+    }
+  };
+  function paneHeader(title, toggle, extra) {
+    return h('div', {
+      className: 'rd-pane-header d-flex align-items-center gap-2'
+    }, h('span', {
+      className: 'rd-pane-title flex-grow-1 text-truncate'
+    }, title), extra || null, toggle || null);
+  }
+  function collapseButton(part, label, icon) {
+    return h('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-link text-reset p-0 rd-collapse',
+      title: label,
+      'aria-label': label,
+      onclick: function () {
+        app.toggle(part);
+      }
+    }, h('i', {
+      className: 'fa-solid ' + icon,
+      'aria-hidden': 'true'
+    }));
+  }
+  function rail(part, label, icon) {
+    return h('button', {
+      type: 'button',
+      className: 'rd-rail btn btn-link text-reset',
+      title: label,
+      'aria-label': label,
+      onclick: function () {
+        app.toggle(part, false);
+      }
+    }, h('i', {
+      className: 'fa-solid ' + icon,
+      'aria-hidden': 'true'
+    }), h('span', {
+      className: 'rd-rail-label'
+    }, label));
+  }
   app.buildLayout = function (container) {
     var e = app.elements;
+    e.root = container;
     e.title = h('input', {
       type: 'text',
-      className: 'form-control form-control-lg report-designer-title',
+      className: 'form-control form-control-sm report-designer-title',
       value: app.design.displayText || '',
       placeholder: app.isView() ? app.t('View name') : app.t('Report title'),
       'aria-label': app.isView() ? app.t('View name') : app.t('Report title'),
@@ -904,18 +1094,20 @@
       }
     });
     e.status = h('span', {
-      className: 'text-muted small'
+      className: 'text-muted small text-nowrap'
     });
     e.saveButton = h('button', {
       type: 'button',
-      className: 'btn btn-primary',
+      className: 'btn btn-sm btn-primary text-nowrap',
       onclick: app.save
     }, ui.icon('fa-floppy-disk'), ' ', app.t('Save'));
     e.runLink = h('a', {
-      className: 'btn btn-outline-secondary d-none',
+      className: 'btn btn-sm btn-outline-secondary text-nowrap d-none',
       href: '#'
     }, ui.icon('fa-play'), ' ', app.t('Run report'));
-    e.messages = h('div');
+    e.messages = h('div', {
+      className: 'report-designer-messages'
+    });
     e.issues = h('div');
     e.dataPane = h('div', {
       className: 'report-designer-data'
@@ -938,46 +1130,89 @@
     e.sharing = h('div', {
       className: 'report-designer-sharing'
     });
+    e.model = h('div', {
+      className: 'rd-model'
+    });
+    e.dataToggle = collapseButton('data', app.t('Collapse the data pane'), 'fa-angles-left');
+    e.sideToggle = collapseButton('side', app.t('Collapse the properties pane'), 'fa-angles-right');
+    e.shelvesToggle = collapseButton('shelves', app.t('Collapse the columns and filters'), 'fa-chevron-up');
+    var addDataSet = h('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-primary text-nowrap',
+      onclick: app.openAddDataSet
+    }, ui.icon('fa-plus'), ' ', app.t('Add data set'));
+    var refresh = h('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-outline-secondary text-nowrap',
+      onclick: function () {
+        app.refreshPreview();
+      }
+    }, ui.icon('fa-rotate'), ' ', app.t('Refresh'));
+    var sideTitle = app.isView() ? app.t('Properties') : app.t('Properties and visuals');
+    e.workspace = h('div', {
+      className: 'rd-workspace'
+    }, h('aside', {
+      className: 'rd-pane rd-pane-data',
+      'aria-label': app.t('Data')
+    }, rail('data', app.t('Data'), 'fa-database'), h('div', {
+      className: 'rd-pane-content'
+    }, paneHeader(app.t('Data'), e.dataToggle, addDataSet), h('div', {
+      className: 'rd-pane-scroll'
+    }, e.dataPane))), h('section', {
+      className: 'rd-center',
+      'aria-label': app.t('Design')
+    }, h('div', {
+      className: 'rd-shelves-panel'
+    }, paneHeader(app.t('Columns and filters'), e.shelvesToggle), h('div', {
+      className: 'rd-shelves-body'
+    }, e.issues, e.shelves)), h('div', {
+      className: 'rd-preview-panel'
+    }, paneHeader(app.t('Preview'), null, refresh), h('div', {
+      className: 'rd-pane-scroll rd-preview-scroll'
+    }, e.preview))), h('aside', {
+      className: 'rd-pane rd-pane-side',
+      'aria-label': sideTitle
+    }, rail('side', sideTitle, 'fa-sliders'), h('div', {
+      className: 'rd-pane-content'
+    }, paneHeader(sideTitle, e.sideToggle), h('div', {
+      className: 'rd-pane-scroll'
+    }, e.properties, app.isView() ? null : e.visuals))));
     var tabs = [{
       id: 'design',
       label: app.t('Design'),
-      body: h('div', {
-        className: 'row g-3'
-      }, h('div', {
-        className: 'col-12 col-lg-3'
-      }, e.dataPane), h('div', {
-        className: 'col-12 col-lg-6'
-      }, e.issues, e.shelves, h('div', {
-        className: 'd-flex align-items-center justify-content-between mt-3 mb-2'
-      }, h('h2', {
-        className: 'h6 mb-0'
-      }, app.t('Preview')), h('button', {
-        type: 'button',
-        className: 'btn btn-sm btn-outline-secondary',
-        onclick: function () {
-          app.refreshPreview();
-        }
-      }, ui.icon('fa-rotate'), ' ', app.t('Refresh'))), e.preview), h('div', {
-        className: 'col-12 col-lg-3'
-      }, e.properties, app.isView() ? null : e.visuals))
+      icon: 'fa-pen-ruler',
+      body: e.workspace,
+      className: 'rd-tab-design'
+    }, {
+      id: 'model',
+      label: app.t('Data model'),
+      icon: 'fa-diagram-project',
+      body: e.model,
+      className: 'rd-tab-model'
     }, {
       id: 'settings',
       label: app.t('Settings'),
-      body: e.settings
+      icon: 'fa-gear',
+      body: h('div', {
+        className: 'rd-tab-scroll'
+      }, e.settings)
     }];
     if (!app.isView()) {
       tabs.push({
         id: 'sharing',
         label: app.t('Sharing'),
-        body: e.sharing
+        icon: 'fa-share-nodes',
+        body: h('div', {
+          className: 'rd-tab-scroll'
+        }, e.sharing)
       });
     }
     var nav = h('ul', {
-      className: 'nav nav-tabs mb-3',
+      className: 'nav nav-tabs card-header-tabs flex-nowrap',
       role: 'tablist'
     });
     var panes = h('div', {
-      className: 'tab-content'
+      className: 'tab-content rd-tabs-content'
     });
     tabs.forEach(function (tab, index) {
       var paneId = 'report-designer-' + tab.id;
@@ -986,26 +1221,40 @@
         role: 'presentation'
       }, h('button', {
         type: 'button',
-        className: 'nav-link' + (index === 0 ? ' active' : ''),
+        className: 'nav-link text-nowrap' + (index === 0 ? ' active' : ''),
         'data-bs-toggle': 'tab',
         'data-bs-target': '#' + paneId,
         role: 'tab',
         'aria-controls': paneId,
         'aria-selected': index === 0 ? 'true' : 'false'
-      }, tab.label)));
+      }, ui.icon(tab.icon), ' ', tab.label)));
       panes.appendChild(h('div', {
-        className: 'tab-pane fade' + (index === 0 ? ' show active' : ''),
+        className: 'tab-pane fade ' + (tab.className || '') + (index === 0 ? ' show active' : ''),
         id: paneId,
         role: 'tabpanel'
       }, tab.body));
     });
+    container.classList.add('card');
     ui.append(container, [h('div', {
-      className: 'report-designer-toolbar card mb-3'
-    }, h('div', {
-      className: 'card-body d-flex flex-wrap gap-2 align-items-center'
-    }, h('div', {
-      className: 'flex-grow-1'
-    }, e.title), e.status, e.runLink, e.saveButton)), e.messages, nav, panes]);
+      className: 'card-header rd-header'
+    }, nav, h('div', {
+      className: 'rd-header-tools'
+    }, e.title, e.status, e.runLink, e.saveButton)), h('div', {
+      className: 'card-body p-0 rd-body'
+    }, e.messages, panes)]);
+    var saved = readLayout();
+    app.layout.data = !!saved.data;
+    app.layout.side = !!saved.side;
+    app.layout.shelves = !!saved.shelves;
+    app.applyLayout();
+    app.fit();
+    root.addEventListener('resize', ui.debounce(function () {
+      app.fit();
+      app.drawModelLines();
+    }, 100));
+    nav.addEventListener('shown.bs.tab', function () {
+      app.drawModelLines();
+    });
   };
   app.start = function (container) {
     var configElement = root.document.getElementById(container.dataset.config);
@@ -1071,6 +1320,24 @@
   var app = designer.app;
   var FIELD_MIME = 'application/x-report-field';
   var fieldSearch = '';
+  var collapsed = {};
+  function collapsible(key, header, body, className) {
+    var isCollapsed = !!collapsed[key] && !fieldSearch;
+    return h('div', {
+      className: 'card mb-2 ' + (className || '')
+    }, h('div', {
+      className: 'card-header d-flex align-items-center gap-2 py-1'
+    }, h('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-link text-reset p-0',
+      'aria-expanded': isCollapsed ? 'false' : 'true',
+      'aria-label': isCollapsed ? app.t('Expand') : app.t('Collapse'),
+      onclick: function () {
+        collapsed[key] = !collapsed[key];
+        app.renderDataPane();
+      }
+    }, ui.icon(isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down')), header), isCollapsed ? null : body);
+  }
   designer.FIELD_MIME = FIELD_MIME;
   function fieldItem(field) {
     var item = h('li', {
@@ -1161,16 +1428,22 @@
         }, error));
       });
     }
-    return h('div', {
-      className: 'card mb-2 report-designer-dataset'
-    }, h('div', {
-      className: 'card-header d-flex align-items-center gap-2 py-1'
-    }, h('span', {
+    return collapsible('dataset:' + dataSet.alias, [h('span', {
       className: 'badge text-bg-primary'
     }, index === 0 ? app.t('Base') : String(index + 1)), h('span', {
       className: 'fw-semibold text-truncate flex-grow-1',
       title: dataSet.alias
-    }, dataSet.displayName || dataSet.dataSet), h('button', {
+    }, dataSet.displayName || dataSet.dataSet), h('span', {
+      className: 'badge text-bg-light'
+    }, String(own.length)), index === 0 ? null : h('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-link p-0',
+      title: app.t('Edit join'),
+      'aria-label': app.t('Edit join') + ': ' + (dataSet.displayName || dataSet.dataSet),
+      onclick: function () {
+        app.editJoin(dataSet.alias);
+      }
+    }, ui.icon('fa-link')), h('button', {
       type: 'button',
       className: 'btn btn-sm btn-link text-danger p-0',
       title: app.t('Remove data set'),
@@ -1180,65 +1453,75 @@
         delete app.schemas[dataSet.alias];
         app.changed();
       }
-    }, ui.icon('fa-xmark'))), list);
+    }, ui.icon('fa-xmark'))], list, 'report-designer-dataset');
   }
-  function joinEditor(dataSet, index, fields) {
+
+  // Finds the join that attaches a data set, creating an inner join with no matching columns when there is none.
+  app.joinFor = function (alias) {
     var query = app.design.query;
     var join = query.joins.filter(function (candidate) {
-      return candidate.alias === dataSet.alias;
+      return candidate.alias === alias;
     })[0];
     if (!join) {
       join = {
-        alias: dataSet.alias,
+        alias: alias,
         type: 'Inner',
         conditions: []
       };
       query.joins.push(join);
     }
+    return join;
+  };
+  app.dataSetLabel = function (alias) {
+    var dataSet = app.design.query.dataSets.filter(function (candidate) {
+      return candidate.alias === alias;
+    })[0];
+    return dataSet ? dataSet.displayName || dataSet.dataSet || alias : alias;
+  };
+
+  // The editor of one join, shown in the Properties pane: which rows to keep, and the pairs of columns that must be
+  // equal for two rows to match. Several pairs match on several columns at once.
+  app.joinEditor = function (alias) {
+    var query = app.design.query;
+    var index = query.dataSets.map(function (dataSet) {
+      return dataSet.alias;
+    }).indexOf(alias);
+    if (index < 1) {
+      return null;
+    }
+    var fields = app.fields();
+    var join = app.joinFor(alias);
     var earlier = query.dataSets.slice(0, index).map(function (candidate) {
       return candidate.alias;
     });
     var options = function (aliases) {
       return [{
         value: '',
-        text: app.t('Pick a field')
+        text: app.t('Pick a column')
       }].concat(Object.keys(fields).map(function (key) {
         return fields[key];
       }).filter(function (field) {
         return field.kind === 'DataSetField' && aliases.indexOf(field.alias) >= 0;
+      }).sort(function (left, right) {
+        return (right.isIdentifier ? 1 : 0) - (left.isIdentifier ? 1 : 0);
       }).map(function (field) {
-        var owner = query.dataSets.filter(function (candidate) {
-          return candidate.alias === field.alias;
-        })[0];
         return {
           value: field.key,
-          text: (owner.displayName || owner.alias) + ' › ' + field.label
+          text: app.dataSetLabel(field.alias) + ' › ' + field.label + (field.isIdentifier ? ' 🔑' : '')
         };
       }));
     };
-    var conditions = h('div');
+    var conditions = h('div', {
+      className: 'd-flex flex-column gap-2 mb-2'
+    });
     join.conditions.forEach(function (condition, conditionIndex) {
       conditions.appendChild(h('div', {
-        className: 'd-flex gap-1 align-items-center mb-1'
-      }, ui.select(options(earlier), condition.leftField, {
-        'aria-label': app.t('Field before'),
-        onchange: function (event) {
-          condition.leftField = event.target.value;
-          app.changed({
-            render: false
-          });
-        }
-      }), h('span', {
-        className: 'text-muted'
-      }, '='), ui.select(options([dataSet.alias]), condition.rightField, {
-        'aria-label': app.t('Field of the joined data set'),
-        onchange: function (event) {
-          condition.rightField = event.target.value;
-          app.changed({
-            render: false
-          });
-        }
-      }), h('button', {
+        className: 'rd-join-pair border rounded p-2'
+      }, h('div', {
+        className: 'd-flex align-items-center justify-content-between mb-1'
+      }, h('span', {
+        className: 'small text-muted'
+      }, app.t('Matching columns') + ' ' + (conditionIndex + 1)), h('button', {
         type: 'button',
         className: 'btn btn-sm btn-link text-danger p-0',
         'aria-label': app.t('Remove'),
@@ -1246,15 +1529,32 @@
           join.conditions.splice(conditionIndex, 1);
           app.changed();
         }
-      }, ui.icon('fa-xmark'))));
+      }, ui.icon('fa-xmark'))), ui.select(options(earlier), condition.leftField, {
+        'aria-label': app.t('Column of the data sets before'),
+        onchange: function (event) {
+          condition.leftField = event.target.value;
+          app.changed();
+        }
+      }), h('div', {
+        className: 'text-center text-muted small my-1'
+      }, ui.icon('fa-equals')), ui.select(options([alias]), condition.rightField, {
+        'aria-label': app.t('Column of the joined data set'),
+        onchange: function (event) {
+          condition.rightField = event.target.value;
+          app.changed();
+        }
+      })));
     });
-    return h('div', {
-      className: 'card mb-2'
-    }, h('div', {
-      className: 'card-body p-2'
-    }, h('label', {
+    if (!join.conditions.length) {
+      conditions.appendChild(h('div', {
+        className: 'alert alert-warning small py-2 mb-0'
+      }, app.t('Add the columns that must match.')));
+    }
+    return [h('p', {
+      className: 'small text-muted'
+    }, app.t('Joins') + ' ', h('strong', null, app.dataSetLabel(alias)), ' ' + app.t('to') + ' ', h('strong', null, earlier.map(app.dataSetLabel).join(', ')), '.'), h('label', {
       className: 'form-label small mb-1'
-    }, app.t('Join') + ' ' + (dataSet.displayName || dataSet.alias)), ui.select([{
+    }, app.t('Keep')), ui.select([{
       value: 'Inner',
       text: app.t('Only rows that match on both sides')
     }, {
@@ -1267,17 +1567,15 @@
       value: 'Full',
       text: app.t('All rows of both sides')
     }], join.type, {
-      className: 'form-select form-select-sm mb-2',
+      className: 'form-select form-select-sm mb-3',
       'aria-label': app.t('Join type'),
       onchange: function (event) {
         join.type = event.target.value;
-        app.changed({
-          render: false
-        });
+        app.changed();
       }
     }), conditions, h('button', {
       type: 'button',
-      className: 'btn btn-sm btn-outline-secondary',
+      className: 'btn btn-sm btn-outline-primary w-100',
       onclick: function () {
         join.conditions.push({
           leftField: '',
@@ -1285,8 +1583,27 @@
         });
         app.changed();
       }
-    }, ui.icon('fa-plus'), ' ', app.t('Match fields'))));
-  }
+    }, ui.icon('fa-plus'), ' ', app.t('Add matching columns')), h('div', {
+      className: 'form-text'
+    }, app.t('Rows match when every pair of columns is equal. Add more pairs to match on several columns. Key columns are marked with a key.'))];
+  };
+
+  // A short description of a join for its pill on the Joins shelf.
+  app.joinSummary = function (alias) {
+    var fields = app.fields();
+    var join = app.joinFor(alias);
+    var complete = join.conditions.filter(function (condition) {
+      return condition.leftField && condition.rightField;
+    });
+    return {
+      complete: complete.length > 0,
+      text: complete.map(function (condition) {
+        var left = fields[condition.leftField];
+        var right = fields[condition.rightField];
+        return (left ? left.label : condition.leftField) + ' = ' + (right ? right.label : condition.rightField);
+      }).join(', ')
+    };
+  };
   app.renderDataPane = function () {
     var pane = app.elements.dataPane;
     var query = app.design.query;
@@ -1306,27 +1623,15 @@
       }
     });
     ui.clear(pane);
-    ui.append(pane, [h('div', {
-      className: 'd-flex align-items-center justify-content-between mb-2'
-    }, h('h2', {
-      className: 'h6 mb-0'
-    }, app.t('Data')), h('button', {
-      type: 'button',
-      className: 'btn btn-sm btn-primary',
-      onclick: app.openAddDataSet
-    }, ui.icon('fa-plus'), ' ', app.t('Add data set'))), query.dataSets.length ? search : h('p', {
-      className: 'text-muted small'
-    }, app.t('Start by adding a data set, such as a content type.')), query.dataSets.map(function (dataSet, index) {
+    ui.append(pane, [query.dataSets.length ? h('div', {
+      className: 'rd-sticky-search'
+    }, search) : h('div', {
+      className: 'report-designer-empty text-muted small'
+    }, h('div', {
+      className: 'mb-2'
+    }, ui.icon('fa-database fa-2x')), app.t('Start by adding a data set, such as a content type.')), query.dataSets.map(function (dataSet, index) {
       return dataSetCard(dataSet, index, fields);
     })]);
-    if (query.dataSets.length > 1) {
-      pane.appendChild(h('h3', {
-        className: 'h6 mt-3'
-      }, app.t('Relationships')));
-      query.dataSets.slice(1).forEach(function (dataSet, index) {
-        pane.appendChild(joinEditor(dataSet, index + 1, fields));
-      });
-    }
     var calculated = Object.keys(fields).map(function (key) {
       return fields[key];
     }).filter(function (field) {
@@ -1354,88 +1659,136 @@
       calculatedList.appendChild(item);
     });
     if (query.dataSets.length) {
-      pane.appendChild(h('div', {
-        className: 'card mt-3'
-      }, h('div', {
-        className: 'card-header d-flex align-items-center justify-content-between py-1'
-      }, h('span', {
-        className: 'fw-semibold'
+      pane.appendChild(collapsible('calculated', [h('span', {
+        className: 'fw-semibold flex-grow-1'
       }, app.t('Calculated fields')), h('button', {
         type: 'button',
         className: 'btn btn-sm btn-link p-0',
         onclick: function () {
           app.openFormula(null);
         }
-      }, ui.icon('fa-plus'), ' ', app.t('New'))), calculatedList));
+      }, ui.icon('fa-plus'), ' ', app.t('New'))], calculatedList, 'mt-3'));
     }
   };
   app.openAddDataSet = function () {
-    var sourceSelect = ui.select([{
-      value: '',
-      text: app.t('Pick a data source')
-    }].concat(app.sources.map(function (source) {
-      return {
-        value: source.name,
-        text: source.displayName
-      };
-    })), '', {
-      className: 'form-select mb-2',
-      'aria-label': app.t('Data source')
-    });
     var filter = h('input', {
       type: 'search',
-      className: 'form-control mb-2',
-      placeholder: app.t('Search data sets'),
-      'aria-label': app.t('Search data sets')
+      className: 'form-control mb-3',
+      placeholder: app.t('Filter'),
+      'aria-label': app.t('Filter data sets'),
+      autocomplete: 'off'
     });
-    var list = h('div', {
-      className: 'list-group report-designer-dataset-picker'
+    var categories = h('nav', {
+      className: 'nav nav-pills flex-nowrap flex-md-column overflow-auto gap-1 pb-2 pb-md-0',
+      'aria-label': app.t('Data sources')
     });
-    var dataSets = [];
+    var grid = h('div', {
+      className: 'row row-cols-1 row-cols-md-2 row-cols-xl-3 g-2'
+    });
+    var status = h('div', {
+      className: 'text-muted small py-3 text-center'
+    }, app.t('Loading…'));
+    var entries = [];
+    var selectedSource = '';
     var modal;
-    var renderList = function () {
-      var text = filter.value.trim().toLowerCase();
-      ui.clear(list);
-      dataSets.filter(function (dataSet) {
-        return !text || (dataSet.displayName + ' ' + dataSet.name).toLowerCase().indexOf(text) >= 0;
-      }).forEach(function (dataSet) {
-        list.appendChild(h('button', {
+    var added = (app.design.query.dataSets || []).map(function (dataSet) {
+      return dataSet.source + '\u001f' + dataSet.dataSet;
+    });
+    var renderCategories = function () {
+      ui.clear(categories);
+      [{
+        name: '',
+        displayName: app.t('All')
+      }].concat(app.sources).forEach(function (source) {
+        var active = source.name === selectedSource;
+        var count = entries.filter(function (entry) {
+          return !source.name || entry.source.name === source.name;
+        }).length;
+        categories.appendChild(h('button', {
           type: 'button',
-          className: 'list-group-item list-group-item-action',
+          className: 'nav-link text-start text-nowrap d-flex align-items-center gap-2' + (active ? ' active' : ''),
+          'aria-pressed': active ? 'true' : 'false',
           onclick: function () {
-            addDataSet(sourceSelect.value, dataSet);
+            selectedSource = source.name;
+            renderCategories();
+            renderCards();
+          }
+        }, h('span', {
+          className: 'flex-grow-1'
+        }, source.displayName), h('span', {
+          className: 'badge rounded-pill ' + (active ? 'text-bg-light' : 'text-bg-secondary')
+        }, String(count))));
+      });
+    };
+    var renderCards = function () {
+      var text = filter.value.trim().toLowerCase();
+      var visible = entries.filter(function (entry) {
+        return (!selectedSource || entry.source.name === selectedSource) && (!text || entry.search.indexOf(text) >= 0);
+      });
+      ui.clear(grid);
+      visible.forEach(function (entry) {
+        var dataSet = entry.dataSet;
+        var isAdded = added.indexOf(entry.source.name + '\u001f' + dataSet.name) >= 0;
+        grid.appendChild(h('div', {
+          className: 'col'
+        }, h('div', {
+          className: 'card h-100'
+        }, h('div', {
+          className: 'card-body'
+        }, h('h5', {
+          className: 'card-title d-flex align-items-baseline gap-2'
+        }, h('i', {
+          className: 'fa-solid ' + (entry.source.name === 'ReportViews' ? 'fa-layer-group' : 'fa-table') + ' fa-fw text-primary',
+          'aria-hidden': 'true'
+        }), h('span', null, dataSet.displayName || dataSet.name)), dataSet.description ? h('p', {
+          className: 'card-text text-body-secondary small mb-0'
+        }, dataSet.description) : null), h('div', {
+          className: 'card-footer d-flex align-items-center gap-2'
+        }, h('span', {
+          className: 'me-auto badge text-bg-light'
+        }, entry.source.displayName), isAdded ? h('span', {
+          className: 'small text-muted'
+        }, app.t('Added')) : null, h('button', {
+          type: 'button',
+          className: 'btn btn-primary btn-sm',
+          onclick: function () {
+            addDataSet(entry.source.name, dataSet);
             modal.close();
           }
-        }, h('div', {
-          className: 'fw-semibold'
-        }, dataSet.displayName || dataSet.name), dataSet.description ? h('div', {
-          className: 'small text-muted'
-        }, dataSet.description) : null));
+        }, isAdded ? app.t('Add again') : app.t('Add'))))));
       });
-      if (!list.firstChild) {
-        list.appendChild(h('div', {
-          className: 'text-muted small p-2'
-        }, sourceSelect.value ? app.t('No data sets found.') : app.t('Pick a data source first.')));
-      }
+      status.classList.toggle('d-none', visible.length > 0);
+      status.textContent = entries.length ? app.t('No data sets match the filter.') : status.textContent;
     };
-    sourceSelect.addEventListener('change', function () {
-      dataSets = [];
-      renderList();
-      if (!sourceSelect.value) {
-        return;
-      }
-      ui.request(app.url('dataSets') + '?source=' + encodeURIComponent(sourceSelect.value)).then(function (result) {
-        dataSets = result || [];
-        renderList();
+    filter.addEventListener('input', renderCards);
+    modal = ui.modal(app.t('Add Data Set'), h('div', {
+      className: 'row g-3'
+    }, h('div', {
+      className: 'col-md-3'
+    }, h('div', {
+      className: 'position-sticky top-0'
+    }, filter, categories)), h('div', {
+      className: 'col-md-9'
+    }, grid, status)), null, 'modal-xl');
+    renderCategories();
+    Promise.all(app.sources.map(function (source) {
+      return ui.request(app.url('dataSets') + '?source=' + encodeURIComponent(source.name)).then(function (dataSets) {
+        (dataSets || []).forEach(function (dataSet) {
+          entries.push({
+            source: source,
+            dataSet: dataSet,
+            search: [dataSet.displayName, dataSet.name, dataSet.description, dataSet.group, source.displayName].join(' ').toLowerCase()
+          });
+        });
+      }).catch(function () {
+        return null;
       });
+    })).then(function () {
+      status.textContent = app.sources.length ? app.t('No data sets are available to you.') : app.t('No data sources are enabled.');
+      renderCategories();
+      renderCards();
+      filter.focus();
     });
-    filter.addEventListener('input', renderList);
-    if (app.sources.length === 1) {
-      sourceSelect.value = app.sources[0].name;
-      sourceSelect.dispatchEvent(new root.Event('change'));
-    }
-    renderList();
-    modal = ui.modal(app.t('Add data set'), [sourceSelect, filter, list]);
   };
   function addDataSet(source, descriptor) {
     var query = app.design.query;
@@ -1467,6 +1820,7 @@
             rightField: ''
           }]
         });
+        app.editJoin(reference.alias);
       }
       app.changed();
     });
@@ -1766,6 +2120,35 @@
     var columns = app.columns();
     var selection = app.selection || {};
     ui.clear(target);
+    if (query.dataSets.length > 1) {
+      target.appendChild(h('div', {
+        className: 'report-designer-shelf mb-2'
+      }, h('div', {
+        className: 'report-designer-shelf-label small fw-semibold text-muted text-uppercase'
+      }, app.t('Joins')), h('div', {
+        className: 'report-designer-shelf-zone rd-joins-zone d-flex flex-wrap gap-1 align-items-center'
+      }, query.dataSets.slice(1).map(function (dataSet) {
+        var summary = app.joinSummary(dataSet.alias);
+        var join = app.joinFor(dataSet.alias);
+        var selected = selection.kind === 'join' && selection.id === dataSet.alias;
+        return h('button', {
+          type: 'button',
+          className: 'btn btn-sm rd-join-pill ' + (summary.complete ? 'btn-outline-primary' : 'btn-outline-danger') + (selected ? ' active' : ''),
+          title: summary.complete ? summary.text : app.t('Add the columns that must match.'),
+          onclick: function () {
+            app.editJoin(dataSet.alias);
+          }
+        }, ui.icon(summary.complete ? 'fa-link' : 'fa-link-slash'), ' ', h('span', {
+          className: 'fw-semibold'
+        }, app.dataSetLabel(dataSet.alias)), ' ', h('span', {
+          className: 'badge text-bg-light'
+        }, app.config.joinLabels[join.type] || join.type), summary.complete ? h('span', {
+          className: 'small ms-1 rd-join-summary'
+        }, summary.text) : h('span', {
+          className: 'small ms-1'
+        }, app.t('Not joined yet')));
+      }))));
+    }
     target.appendChild(shelf('columns', app.t('Columns'), app.t('Drag fields here. Numbers are summed; add a dimension to group them.'), query.columns, function (column, index) {
       var field = fields[column.field];
       var aggregate = column.aggregate && column.aggregate !== 'None' ? app.config.aggregateLabels[column.aggregate] || column.aggregate : null;
@@ -2103,7 +2486,10 @@
     var body = null;
     var title = app.t('Properties');
     ui.clear(target);
-    if (selection && selection.kind === 'column') {
+    if (selection && selection.kind === 'join') {
+      title = app.t('Join');
+      body = app.joinEditor(selection.id);
+    } else if (selection && selection.kind === 'column') {
       var column = query.columns.filter(function (candidate) {
         return candidate.id === selection.id;
       })[0];
@@ -2128,7 +2514,7 @@
       className: 'card-body p-2'
     }, body || h('p', {
       className: 'text-muted small mb-0'
-    }, app.t('Select a column or filter to change it.')))));
+    }, app.t('Select a join, column, or filter to change it.')))));
   };
   function checkboxList(options, selected, onChange) {
     return h('div', {
@@ -2144,6 +2530,34 @@
         onChange(next);
       });
     }));
+  }
+
+  // A well a field can be dropped on to put it in a visual, like a chart's categories or values.
+  function well(label, role, control, onField) {
+    var zone = h('div', {
+      className: 'rd-well',
+      ondragover: function (event) {
+        if (Array.prototype.indexOf.call(event.dataTransfer.types || [], designer.FIELD_MIME) >= 0) {
+          event.preventDefault();
+          zone.classList.add('is-over');
+        }
+      },
+      ondragleave: function () {
+        zone.classList.remove('is-over');
+      },
+      ondrop: function (event) {
+        event.preventDefault();
+        zone.classList.remove('is-over');
+        var field = app.fields()[event.dataTransfer.getData(designer.FIELD_MIME)];
+        if (field) {
+          onField(designer.ensureColumn(app.design.query, field, role));
+          app.changed();
+        }
+      }
+    }, control, h('div', {
+      className: 'rd-well-hint'
+    }, ui.icon('fa-arrow-down'), ' ', app.t('Drop a field here')));
+    return labelled(label, zone);
   }
   function visualProperties(visual) {
     var columns = app.columns();
@@ -2220,41 +2634,63 @@
               render: false
             });
           }
-        })), labelled(app.t('Categories'), ui.select(none.concat(dimensions), visual.categoryColumnId || '', {
+        })), well(app.t('Categories'), 'dimension', ui.select(none.concat(dimensions), visual.categoryColumnId || '', {
           onchange: function (event) {
             visual.categoryColumnId = event.target.value || null;
             app.changed({
               render: false
             });
           }
-        })), labelled(app.t('Values'), checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds'))), labelled(app.t('Split into series by'), ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
+        }), function (column) {
+          visual.categoryColumnId = column.id;
+        }), well(app.t('Values'), 'measure', checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds')), function (column) {
+          visual.valueColumnIds = (visual.valueColumnIds || []).filter(function (id) {
+            return id !== column.id;
+          }).concat([column.id]);
+        }), well(app.t('Split into series by'), 'dimension', ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
           onchange: function (event) {
             visual.seriesColumnId = event.target.value || null;
             app.changed({
               render: false
             });
           }
-        }), app.t('Draws one series per value of this column, using the first value column.')), check(app.t('Stack series'), visual.stacked, set('stacked', false)), check(app.t('Show legend'), visual.showLegend !== false, set('showLegend', false)));
+        }), function (column) {
+          visual.seriesColumnId = column.id;
+        }), h('div', {
+          className: 'form-text mb-2'
+        }, app.t('Draws one series per value of this column, using the first value column.')), check(app.t('Stack series'), visual.stacked, set('stacked', false)), check(app.t('Show legend'), visual.showLegend !== false, set('showLegend', false)));
         break;
       case 'Metrics':
-        parts.push(labelled(app.t('Values'), checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds'))));
+        parts.push(well(app.t('Values'), 'measure', checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds')), function (column) {
+          visual.valueColumnIds = (visual.valueColumnIds || []).filter(function (id) {
+            return id !== column.id;
+          }).concat([column.id]);
+        }));
         break;
       case 'Pivot':
-        parts.push(labelled(app.t('Rows'), checkboxList(dimensions, visual.columnIds || [], set('columnIds'))), labelled(app.t('Columns across'), ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
+        parts.push(well(app.t('Rows'), 'dimension', checkboxList(dimensions, visual.columnIds || [], set('columnIds')), function (column) {
+          visual.columnIds = (visual.columnIds || []).filter(function (id) {
+            return id !== column.id;
+          }).concat([column.id]);
+        }), well(app.t('Columns across'), 'dimension', ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
           onchange: function (event) {
             visual.seriesColumnId = event.target.value || null;
             app.changed({
               render: false
             });
           }
-        })), labelled(app.t('Value'), ui.select(none.concat(numbers), (visual.valueColumnIds || [])[0] || '', {
+        }), function (column) {
+          visual.seriesColumnId = column.id;
+        }), well(app.t('Value'), 'measure', ui.select(none.concat(numbers), (visual.valueColumnIds || [])[0] || '', {
           onchange: function (event) {
             visual.valueColumnIds = event.target.value ? [event.target.value] : [];
             app.changed({
               render: false
             });
           }
-        })), check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
+        }), function (column) {
+          visual.valueColumnIds = [column.id];
+        }), check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
         break;
       default:
         parts.push(labelled(app.t('Columns shown'), checkboxList(all, visual.columnIds || [], set('columnIds')), app.t('Leave all unchecked to show every visible column.')), check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
@@ -2277,6 +2713,11 @@
       var dimensions = columns.filter(function (column) {
         return !column.isMeasure;
       });
+      if (!measures.length) {
+        measures = columns.filter(function (column) {
+          return designer.isNumeric(column.dataType);
+        });
+      }
       var visual = {
         id: designer.newId('v', visuals.map(function (item) {
           return item.id;
@@ -2364,6 +2805,336 @@
     })), selectedVisual ? h('div', {
       className: 'card-body p-2 border-top'
     }, visualProperties(selectedVisual)) : null));
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+/*
+ * The Data model tab of the report designer: every data set as a card on a canvas, with a line for each pair of
+ * columns that joins two of them. Dragging a column from one card onto a column of another card joins the two data
+ * sets on that pair; clicking a line or its badge opens the join so the rows to keep and more pairs can be set.
+ */
+(function (root) {
+  'use strict';
+
+  var designer = root.CrestAppsReportDesigner;
+  var ui = designer.ui;
+  var h = ui.h;
+  var app = designer.app;
+  var MODEL_MIME = 'application/x-report-model-field';
+  var SVG = 'http://www.w3.org/2000/svg';
+  var CARD_WIDTH = 248;
+  var positions = {};
+  var cardElements = {};
+
+  // Places cards that the user has not moved yet on a grid, left to right.
+  function placeCards(aliases, width) {
+    var perRow = Math.max(1, Math.floor((width - 40) / (CARD_WIDTH + 96)));
+    var placed = 0;
+    aliases.forEach(function (alias) {
+      if (!positions[alias]) {
+        positions[alias] = {
+          x: 32 + placed % perRow * (CARD_WIDTH + 96),
+          y: 32 + Math.floor(placed / perRow) * 340
+        };
+      }
+      placed++;
+    });
+  }
+  function fieldRow(alias, field, usedKeys) {
+    var key = alias + '.' + field.name;
+    var row = h('li', {
+      className: 'rd-model-field d-flex align-items-center gap-2' + (usedKeys[key] ? ' is-joined' : ''),
+      draggable: 'true',
+      title: app.t('Drag onto a column of another data set to join on it.'),
+      dataset: {
+        fieldKey: key
+      },
+      ondragstart: function (event) {
+        event.dataTransfer.setData(MODEL_MIME, key);
+        event.dataTransfer.effectAllowed = 'link';
+        app.elements.model.classList.add('is-linking');
+      },
+      ondragend: function () {
+        app.elements.model.classList.remove('is-linking');
+      },
+      ondragover: function (event) {
+        if (Array.prototype.indexOf.call(event.dataTransfer.types || [], MODEL_MIME) >= 0) {
+          event.preventDefault();
+          row.classList.add('is-over');
+        }
+      },
+      ondragleave: function () {
+        row.classList.remove('is-over');
+      },
+      ondrop: function (event) {
+        event.preventDefault();
+        row.classList.remove('is-over');
+        app.elements.model.classList.remove('is-linking');
+        var source = event.dataTransfer.getData(MODEL_MIME);
+        var joined = source ? designer.connect(app.design.query, source, key) : null;
+        if (joined) {
+          app.selection = {
+            kind: 'join',
+            id: joined
+          };
+          app.changed();
+        }
+      }
+    }, h('span', {
+      className: 'report-designer-type badge text-bg-light'
+    }, designer.typeGlyph(field.dataType)), h('span', {
+      className: 'flex-grow-1 text-truncate'
+    }, field.displayName || field.name), field.isIdentifier ? h('i', {
+      className: 'fa-solid fa-key text-warning',
+      title: app.t('Key column'),
+      'aria-hidden': 'true'
+    }) : null);
+    return row;
+  }
+  function startMove(alias, card, event) {
+    if (event.button !== 0 || event.target.closest('button')) {
+      return;
+    }
+    var start = {
+      x: event.clientX,
+      y: event.clientY,
+      left: positions[alias].x,
+      top: positions[alias].y
+    };
+    var move = function (moveEvent) {
+      positions[alias] = {
+        x: Math.max(0, start.left + moveEvent.clientX - start.x),
+        y: Math.max(0, start.top + moveEvent.clientY - start.y)
+      };
+      card.style.left = positions[alias].x + 'px';
+      card.style.top = positions[alias].y + 'px';
+      app.drawModelLines();
+    };
+    var stop = function () {
+      root.removeEventListener('pointermove', move);
+      root.removeEventListener('pointerup', stop);
+      card.classList.remove('is-moving');
+    };
+    card.classList.add('is-moving');
+    root.addEventListener('pointermove', move);
+    root.addEventListener('pointerup', stop);
+    event.preventDefault();
+  }
+  function modelCard(dataSet, index, usedKeys, joined) {
+    var schema = app.schemas[dataSet.alias];
+    var list = h('ul', {
+      className: 'rd-model-fields list-unstyled mb-0',
+      onscroll: function () {
+        app.drawModelLines();
+      }
+    });
+    var fields = (schema && schema.fields || []).slice().sort(function (left, right) {
+      return (right.isIdentifier ? 1 : 0) - (left.isIdentifier ? 1 : 0);
+    });
+    fields.forEach(function (field) {
+      list.appendChild(fieldRow(dataSet.alias, field, usedKeys));
+    });
+    var card = h('div', {
+      className: 'rd-model-card card shadow-sm',
+      style: {
+        left: positions[dataSet.alias].x + 'px',
+        top: positions[dataSet.alias].y + 'px',
+        width: CARD_WIDTH + 'px'
+      },
+      dataset: {
+        alias: dataSet.alias
+      }
+    }, h('div', {
+      className: 'card-header d-flex align-items-center gap-2 py-1 rd-model-card-header',
+      title: app.t('Drag to move'),
+      onpointerdown: function (event) {
+        startMove(dataSet.alias, card, event);
+      }
+    }, ui.icon(dataSet.source === 'ReportViews' ? 'fa-layer-group' : 'fa-table'), h('span', {
+      className: 'fw-semibold text-truncate flex-grow-1'
+    }, dataSet.displayName || dataSet.dataSet), index === 0 ? h('span', {
+      className: 'badge text-bg-primary'
+    }, app.t('Base')) : joined ? null : h('span', {
+      className: 'badge text-bg-danger',
+      title: app.t('Add the columns that must match.')
+    }, app.t('Not joined'))), list);
+    cardElements[dataSet.alias] = card;
+    return card;
+  }
+
+  // The point on a card's edge where a line for a column starts: beside the column's row when it is visible in the
+  // card's list, else at the card's header.
+  function anchor(key, towardRight) {
+    var alias = designer.aliasOf(key);
+    var card = cardElements[alias];
+    if (!card) {
+      return null;
+    }
+    var canvas = app.elements.modelCanvas.getBoundingClientRect();
+    var cardBox = card.getBoundingClientRect();
+    var row = card.querySelector('[data-field-key="' + (root.CSS && root.CSS.escape ? root.CSS.escape(key) : key) + '"]');
+    var list = card.querySelector('.rd-model-fields');
+    var y = cardBox.top + 16;
+    if (row && list) {
+      var rowBox = row.getBoundingClientRect();
+      var listBox = list.getBoundingClientRect();
+      y = Math.min(Math.max(rowBox.top + rowBox.height / 2, listBox.top + 4), listBox.bottom - 4);
+    }
+    return {
+      x: (towardRight ? cardBox.right : cardBox.left) - canvas.left + app.elements.modelCanvas.scrollLeft,
+      y: y - canvas.top + app.elements.modelCanvas.scrollTop
+    };
+  }
+  app.drawModelLines = function () {
+    var svg = app.elements.modelLines;
+    var badges = app.elements.modelBadges;
+    if (!svg || !app.elements.modelCanvas.offsetParent) {
+      return;
+    }
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+    ui.clear(badges);
+    (app.design.query.joins || []).forEach(function (join) {
+      var selected = app.selection && app.selection.kind === 'join' && app.selection.id === join.alias;
+      (join.conditions || []).forEach(function (condition, index) {
+        if (!condition.leftField || !condition.rightField) {
+          return;
+        }
+        var leftCard = cardElements[designer.aliasOf(condition.leftField)];
+        var rightCard = cardElements[designer.aliasOf(condition.rightField)];
+        if (!leftCard || !rightCard) {
+          return;
+        }
+        var leftIsWest = leftCard.getBoundingClientRect().left <= rightCard.getBoundingClientRect().left;
+        var start = anchor(condition.leftField, leftIsWest);
+        var end = anchor(condition.rightField, !leftIsWest);
+        if (!start || !end) {
+          return;
+        }
+        var bend = Math.max(40, Math.abs(end.x - start.x) / 2);
+        var direction = leftIsWest ? 1 : -1;
+        var d = 'M ' + start.x + ' ' + start.y + ' C ' + (start.x + bend * direction) + ' ' + start.y + ', ' + (end.x - bend * direction) + ' ' + end.y + ', ' + end.x + ' ' + end.y;
+        var open = function () {
+          app.selection = {
+            kind: 'join',
+            id: join.alias
+          };
+          app.render();
+        };
+        var hit = root.document.createElementNS(SVG, 'path');
+        var line = root.document.createElementNS(SVG, 'path');
+        hit.setAttribute('d', d);
+        hit.setAttribute('class', 'rd-model-hit');
+        hit.addEventListener('click', open);
+        line.setAttribute('d', d);
+        line.setAttribute('class', 'rd-model-line' + (selected ? ' is-selected' : ''));
+        svg.appendChild(hit);
+        svg.appendChild(line);
+        if (index === 0) {
+          badges.appendChild(h('button', {
+            type: 'button',
+            className: 'btn btn-sm rd-model-badge ' + (selected ? 'btn-primary' : 'btn-light border'),
+            style: {
+              left: (start.x + end.x) / 2 + 'px',
+              top: (start.y + end.y) / 2 + 'px'
+            },
+            title: app.t('Edit join'),
+            onclick: open
+          }, ui.icon('fa-link'), ' ', app.config.joinLabels[join.type] || join.type, join.conditions.length > 1 ? ' ×' + join.conditions.length : ''));
+        }
+      });
+    });
+  };
+  app.renderModel = function () {
+    var target = app.elements.model;
+    if (!target) {
+      return;
+    }
+    var query = app.design.query;
+    var usedKeys = {};
+    var joinedAliases = {};
+    (query.joins || []).forEach(function (join) {
+      (join.conditions || []).forEach(function (condition) {
+        if (condition.leftField && condition.rightField) {
+          usedKeys[condition.leftField] = true;
+          usedKeys[condition.rightField] = true;
+          joinedAliases[join.alias] = true;
+        }
+      });
+    });
+    var canvas = app.elements.modelCanvas;
+    var scrollLeft = canvas ? canvas.scrollLeft : 0;
+    var scrollTop = canvas ? canvas.scrollTop : 0;
+    cardElements = {};
+    ui.clear(target);
+    canvas = app.elements.modelCanvas = h('div', {
+      className: 'rd-model-canvas',
+      onscroll: function () {
+        app.drawModelLines();
+      }
+    });
+    app.elements.modelLines = root.document.createElementNS(SVG, 'svg');
+    app.elements.modelLines.setAttribute('class', 'rd-model-lines');
+    app.elements.modelBadges = h('div', {
+      className: 'rd-model-badges'
+    });
+    var stage = h('div', {
+      className: 'rd-model-stage'
+    }, app.elements.modelLines, app.elements.modelBadges);
+    canvas.appendChild(stage);
+    placeCards(query.dataSets.map(function (dataSet) {
+      return dataSet.alias;
+    }), app.elements.root ? app.elements.root.clientWidth - 360 : 900);
+    Object.keys(positions).forEach(function (alias) {
+      if (!query.dataSets.some(function (dataSet) {
+        return dataSet.alias === alias;
+      })) {
+        delete positions[alias];
+      }
+    });
+    var right = 0;
+    var bottom = 0;
+    query.dataSets.forEach(function (dataSet, index) {
+      stage.appendChild(modelCard(dataSet, index, usedKeys, !!joinedAliases[dataSet.alias]));
+      right = Math.max(right, positions[dataSet.alias].x + CARD_WIDTH + 64);
+      bottom = Math.max(bottom, positions[dataSet.alias].y + 380);
+    });
+    stage.style.width = right + 'px';
+    stage.style.height = bottom + 'px';
+    if (!query.dataSets.length) {
+      stage.appendChild(h('div', {
+        className: 'report-designer-empty text-muted'
+      }, h('div', {
+        className: 'mb-2'
+      }, ui.icon('fa-diagram-project fa-2x')), app.t('Add data sets, then drag a column of one onto the matching column of another to join them.')));
+    }
+    var side = h('div', {
+      className: 'rd-model-side'
+    }, h('div', {
+      className: 'rd-pane-header d-flex align-items-center gap-2'
+    }, h('span', {
+      className: 'rd-pane-title flex-grow-1'
+    }, app.t('Join'))), h('div', {
+      className: 'rd-pane-scroll'
+    }, app.selection && app.selection.kind === 'join' ? app.joinEditor(app.selection.id) : h('div', {
+      className: 'small text-muted'
+    }, h('p', null, app.t('Drag a column from one data set onto the matching column of another to join them, such as an order\'s customer onto the customer\'s id.')), h('p', null, app.t('Click a line or its badge to choose which rows to keep, or to match on more columns.')), h('p', {
+      className: 'mb-0'
+    }, app.t('Key columns are marked with a key and listed first.')))));
+    ui.append(target, [h('div', {
+      className: 'rd-model-main'
+    }, h('div', {
+      className: 'rd-pane-header d-flex align-items-center gap-2'
+    }, h('span', {
+      className: 'rd-pane-title flex-grow-1'
+    }, app.t('Data model')), h('button', {
+      type: 'button',
+      className: 'btn btn-sm btn-primary text-nowrap',
+      onclick: app.openAddDataSet
+    }, ui.icon('fa-plus'), ' ', app.t('Add data set'))), canvas), side]);
+    canvas.scrollLeft = scrollLeft;
+    canvas.scrollTop = scrollTop;
+    root.requestAnimationFrame(app.drawModelLines);
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*

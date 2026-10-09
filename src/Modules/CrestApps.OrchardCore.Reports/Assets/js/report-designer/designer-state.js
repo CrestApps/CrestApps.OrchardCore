@@ -238,6 +238,91 @@
         return column;
     };
 
+    // Finds the column that shows a field in a role, adding one when there is none, so a field dropped on a visual's
+    // well becomes a dimension (categories, series, pivot rows) or a measure (values). A measure of a field that cannot
+    // be summed counts it instead.
+    designer.ensureColumn = function (query, field, role) {
+        query.columns = query.columns || [];
+
+        var wantsMeasure = role === 'measure';
+        var existing = query.columns.filter(function (column) {
+            var isMeasure = designer.isMeasure(column, field);
+
+            return column.field === field.key && isMeasure === wantsMeasure && (column.transform || 'None') === 'None';
+        })[0];
+
+        if (existing) {
+            return existing;
+        }
+
+        var column = designer.addColumn(query, field);
+
+        if (wantsMeasure) {
+            if (!field.isAggregate && column.aggregate === 'None') {
+                column.aggregate = isNumeric(field.dataType) && !field.isIdentifier ? 'Sum' : 'Count';
+            }
+        } else {
+            column.aggregate = 'None';
+        }
+
+        return column;
+    };
+
+    // Joins two data sets on a pair of columns dropped on each other in the data model. The data set listed later is
+    // the one attached by the join, so the pair is stored on its join, oriented from the earlier data set. An empty
+    // pair left by the designer is filled first. Returns the alias of the join, or null when both fields belong to the
+    // same data set.
+    designer.connect = function (query, sourceKey, targetKey) {
+        var sourceAlias = designer.aliasOf(sourceKey);
+        var targetAlias = designer.aliasOf(targetKey);
+        var aliases = (query.dataSets || []).map(function (dataSet) {
+            return dataSet.alias;
+        });
+        var sourceIndex = aliases.indexOf(sourceAlias);
+        var targetIndex = aliases.indexOf(targetAlias);
+
+        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+            return null;
+        }
+
+        var later = sourceIndex > targetIndex ? sourceAlias : targetAlias;
+        var condition = sourceIndex < targetIndex
+            ? { leftField: sourceKey, rightField: targetKey }
+            : { leftField: targetKey, rightField: sourceKey };
+
+        query.joins = query.joins || [];
+
+        var join = query.joins.filter(function (candidate) {
+            return candidate.alias === later;
+        })[0];
+
+        if (!join) {
+            join = { alias: later, type: 'Inner', conditions: [] };
+            query.joins.push(join);
+        }
+
+        join.conditions = join.conditions || [];
+
+        var duplicate = join.conditions.some(function (existing) {
+            return existing.leftField === condition.leftField && existing.rightField === condition.rightField;
+        });
+
+        if (!duplicate) {
+            var empty = join.conditions.filter(function (existing) {
+                return !existing.leftField || !existing.rightField;
+            })[0];
+
+            if (empty) {
+                empty.leftField = condition.leftField;
+                empty.rightField = condition.rightField;
+            } else {
+                join.conditions.push(condition);
+            }
+        }
+
+        return later;
+    };
+
     designer.addFilter = function (query, field) {
         query.filters = query.filters || [];
 

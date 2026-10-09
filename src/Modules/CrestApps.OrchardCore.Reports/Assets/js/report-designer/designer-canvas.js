@@ -121,6 +121,28 @@
 
         ui.clear(target);
 
+        if (query.dataSets.length > 1) {
+            target.appendChild(h('div', { className: 'report-designer-shelf mb-2' },
+                h('div', { className: 'report-designer-shelf-label small fw-semibold text-muted text-uppercase' }, app.t('Joins')),
+                h('div', { className: 'report-designer-shelf-zone rd-joins-zone d-flex flex-wrap gap-1 align-items-center' }, query.dataSets.slice(1).map(function (dataSet) {
+                    var summary = app.joinSummary(dataSet.alias);
+                    var join = app.joinFor(dataSet.alias);
+                    var selected = selection.kind === 'join' && selection.id === dataSet.alias;
+
+                    return h('button', {
+                        type: 'button',
+                        className: 'btn btn-sm rd-join-pill ' + (summary.complete ? 'btn-outline-primary' : 'btn-outline-danger') + (selected ? ' active' : ''),
+                        title: summary.complete ? summary.text : app.t('Add the columns that must match.'),
+                        onclick: function () {
+                            app.editJoin(dataSet.alias);
+                        }
+                    }, ui.icon(summary.complete ? 'fa-link' : 'fa-link-slash'), ' ',
+                    h('span', { className: 'fw-semibold' }, app.dataSetLabel(dataSet.alias)), ' ',
+                    h('span', { className: 'badge text-bg-light' }, app.config.joinLabels[join.type] || join.type),
+                    summary.complete ? h('span', { className: 'small ms-1 rd-join-summary' }, summary.text) : h('span', { className: 'small ms-1' }, app.t('Not joined yet')));
+                }))));
+        }
+
         target.appendChild(shelf('columns', app.t('Columns'), app.t('Drag fields here. Numbers are summed; add a dimension to group them.'), query.columns, function (column, index) {
             var field = fields[column.field];
             var aggregate = column.aggregate && column.aggregate !== 'None' ? app.config.aggregateLabels[column.aggregate] || column.aggregate : null;
@@ -415,7 +437,10 @@
 
         ui.clear(target);
 
-        if (selection && selection.kind === 'column') {
+        if (selection && selection.kind === 'join') {
+            title = app.t('Join');
+            body = app.joinEditor(selection.id);
+        } else if (selection && selection.kind === 'column') {
             var column = query.columns.filter(function (candidate) {
                 return candidate.id === selection.id;
             })[0];
@@ -437,7 +462,7 @@
 
         target.appendChild(h('div', { className: 'card mb-3' },
             h('div', { className: 'card-header py-1 fw-semibold' }, title),
-            h('div', { className: 'card-body p-2' }, body || h('p', { className: 'text-muted small mb-0' }, app.t('Select a column or filter to change it.')))));
+            h('div', { className: 'card-body p-2' }, body || h('p', { className: 'text-muted small mb-0' }, app.t('Select a join, column, or filter to change it.')))));
     };
 
     function checkboxList(options, selected, onChange) {
@@ -454,6 +479,35 @@
                 onChange(next);
             });
         }));
+    }
+
+    // A well a field can be dropped on to put it in a visual, like a chart's categories or values.
+    function well(label, role, control, onField) {
+        var zone = h('div', {
+            className: 'rd-well',
+            ondragover: function (event) {
+                if (Array.prototype.indexOf.call(event.dataTransfer.types || [], designer.FIELD_MIME) >= 0) {
+                    event.preventDefault();
+                    zone.classList.add('is-over');
+                }
+            },
+            ondragleave: function () {
+                zone.classList.remove('is-over');
+            },
+            ondrop: function (event) {
+                event.preventDefault();
+                zone.classList.remove('is-over');
+
+                var field = app.fields()[event.dataTransfer.getData(designer.FIELD_MIME)];
+
+                if (field) {
+                    onField(designer.ensureColumn(app.design.query, field, role));
+                    app.changed();
+                }
+            }
+        }, control, h('div', { className: 'rd-well-hint' }, ui.icon('fa-arrow-down'), ' ', app.t('Drop a field here')));
+
+        return labelled(label, zone);
     }
 
     function visualProperties(visual) {
@@ -505,42 +559,63 @@
                             app.changed({ render: false });
                         }
                     })),
-                    labelled(app.t('Categories'), ui.select(none.concat(dimensions), visual.categoryColumnId || '', {
+                    well(app.t('Categories'), 'dimension', ui.select(none.concat(dimensions), visual.categoryColumnId || '', {
                         onchange: function (event) {
                             visual.categoryColumnId = event.target.value || null;
                             app.changed({ render: false });
                         }
-                    })),
-                    labelled(app.t('Values'), checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds'))),
-                    labelled(app.t('Split into series by'), ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
+                    }), function (column) {
+                        visual.categoryColumnId = column.id;
+                    }),
+                    well(app.t('Values'), 'measure', checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds')), function (column) {
+                        visual.valueColumnIds = (visual.valueColumnIds || []).filter(function (id) {
+                            return id !== column.id;
+                        }).concat([column.id]);
+                    }),
+                    well(app.t('Split into series by'), 'dimension', ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
                         onchange: function (event) {
                             visual.seriesColumnId = event.target.value || null;
                             app.changed({ render: false });
                         }
-                    }), app.t('Draws one series per value of this column, using the first value column.')),
+                    }), function (column) {
+                        visual.seriesColumnId = column.id;
+                    }),
+                    h('div', { className: 'form-text mb-2' }, app.t('Draws one series per value of this column, using the first value column.')),
                     check(app.t('Stack series'), visual.stacked, set('stacked', false)),
                     check(app.t('Show legend'), visual.showLegend !== false, set('showLegend', false)));
                 break;
 
             case 'Metrics':
-                parts.push(labelled(app.t('Values'), checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds'))));
+                parts.push(well(app.t('Values'), 'measure', checkboxList(numbers, visual.valueColumnIds || [], set('valueColumnIds')), function (column) {
+                    visual.valueColumnIds = (visual.valueColumnIds || []).filter(function (id) {
+                        return id !== column.id;
+                    }).concat([column.id]);
+                }));
                 break;
 
             case 'Pivot':
                 parts.push(
-                    labelled(app.t('Rows'), checkboxList(dimensions, visual.columnIds || [], set('columnIds'))),
-                    labelled(app.t('Columns across'), ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
+                    well(app.t('Rows'), 'dimension', checkboxList(dimensions, visual.columnIds || [], set('columnIds')), function (column) {
+                        visual.columnIds = (visual.columnIds || []).filter(function (id) {
+                            return id !== column.id;
+                        }).concat([column.id]);
+                    }),
+                    well(app.t('Columns across'), 'dimension', ui.select(none.concat(dimensions), visual.seriesColumnId || '', {
                         onchange: function (event) {
                             visual.seriesColumnId = event.target.value || null;
                             app.changed({ render: false });
                         }
-                    })),
-                    labelled(app.t('Value'), ui.select(none.concat(numbers), (visual.valueColumnIds || [])[0] || '', {
+                    }), function (column) {
+                        visual.seriesColumnId = column.id;
+                    }),
+                    well(app.t('Value'), 'measure', ui.select(none.concat(numbers), (visual.valueColumnIds || [])[0] || '', {
                         onchange: function (event) {
                             visual.valueColumnIds = event.target.value ? [event.target.value] : [];
                             app.changed({ render: false });
                         }
-                    })),
+                    }), function (column) {
+                        visual.valueColumnIds = [column.id];
+                    }),
                     check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
                 break;
 
@@ -571,6 +646,13 @@
             var dimensions = columns.filter(function (column) {
                 return !column.isMeasure;
             });
+
+            if (!measures.length) {
+                measures = columns.filter(function (column) {
+                    return designer.isNumeric(column.dataType);
+                });
+            }
+
             var visual = {
                 id: designer.newId('v', visuals.map(function (item) {
                     return item.id;
