@@ -743,6 +743,18 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             return reason;
         }
 
+        if (manual && payment.DueUtc.Date > now.Date)
+        {
+            // Collecting early is a favor, not a deadline: a declined early charge leaves the payment on schedule,
+            // so it is still charged (and retried) from its due date, and does not count against the card's retries.
+            payment.ChargeAttempts = Math.Max(0, payment.ChargeAttempts - 1);
+            payment.NextChargeAttemptUtc = null;
+
+            AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged early by an administrator ({1}). It will still be charged on {2:d}.", payment.Number, reason, payment.DueUtc].Value, payment.Number, CurrentUserName());
+
+            return reason;
+        }
+
         payment.Status = InstallmentPaymentStatus.Failed;
 
         var settings = await _siteService.GetSettingsAsync<InstallmentPlanSettings>();

@@ -66,20 +66,20 @@
                                         <span>&lt;@plan.CustomerEmail&gt;</span>
                                     }
                                 </span>
-                                <span class="me-3" title="@T["Received of the total"]">
+                                <span class="me-3 text-nowrap" title="@T["Received of the total"]">
                                     <i class="fa-solid fa-coins" aria-hidden="true"></i><span class="visually-hidden">@T["Received of the total"]</span>
                                     @T["{0} of {1} received", Money(plan.AmountPaid), Money(plan.TotalAmount)]
                                 </span>
                                 @if (plan.AmountOutstanding > 0m && plan.Status != InstallmentPlanStatus.Canceled)
                                 {
-                                    <span class="me-3" title="@T["Outstanding"]">
+                                    <span class="me-3 text-nowrap" title="@T["Outstanding"]">
                                         <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
                                         @T["{0} outstanding", Money(plan.AmountOutstanding)]
                                     </span>
                                 }
                                 @if (next is not null && plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed))
                                 {
-                                    <span title="@T["Next payment"]">
+                                    <span class="text-nowrap" title="@T["Next payment"]">
                                         <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Next payment"]</span>
                                         @T["Next: {0} on {1:d}", Money(next.Amount), next.DueUtc]
                                     </span>

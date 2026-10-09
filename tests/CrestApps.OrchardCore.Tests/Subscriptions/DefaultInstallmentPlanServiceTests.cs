@@ -514,6 +514,7 @@ public sealed class DefaultInstallmentPlanServiceTests
         var plan = await CreateActivePlanAsync(context, service);
 
         context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card was declined." };
+        context.Clock.UtcNow = plan.Payments[3].DueUtc.AddHours(1);
 
         // Act
         var result = await service.ChargeAsync(plan.ItemId, 3, TestContext.Current.CancellationToken);
@@ -523,6 +524,36 @@ public sealed class DefaultInstallmentPlanServiceTests
         Assert.Contains(result.Errors, error => error.Value == "Your card was declined.");
         Assert.Equal(InstallmentPaymentStatus.Failed, plan.Payments[3].Status);
         Assert.Null(plan.Payments[3].NextChargeAttemptUtc);
+    }
+
+    [Fact]
+    public async Task ChargeAsync_WhenAnEarlyChargeIsDeclined_KeepsThePaymentOnScheduleAndChargesItWhenDue()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+
+        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card was declined." };
+
+        // Act
+        var result = await service.ChargeAsync(plan.ItemId, payment.Number, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(InstallmentPaymentStatus.Scheduled, payment.Status);
+        Assert.Equal("Your card was declined.", payment.LastFailureMessage);
+        Assert.Equal(0, payment.ChargeAttempts);
+        Assert.Equal(InstallmentPlanStatus.Active, plan.Status);
+
+        // The card works again by the due date, and the payment is charged then as planned.
+        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = true };
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(InstallmentPaymentStatus.Paid, payment.Status);
     }
 
     [Fact]

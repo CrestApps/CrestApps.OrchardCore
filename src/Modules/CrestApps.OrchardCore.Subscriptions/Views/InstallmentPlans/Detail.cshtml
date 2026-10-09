@@ -85,7 +85,7 @@
 
                     <dt class="col-sm-4">@T["Created"]</dt>
                     <dd class="col-sm-8">
-                        @plan.CreatedUtc.ToString("g")
+                        @await DisplayAsync(await New.DateTime(Utc: plan.CreatedUtc, Format: "g"))
                         @if (!string.IsNullOrEmpty(plan.CreatedByName))
                         {
                             @T["by {0}", plan.CreatedByName]
@@ -128,24 +128,24 @@
                                         </div>
                                     </div>
                                     <div class="text-muted small mt-1">
-                                        <span class="me-3" title="@T["Amount"]">
+                                        <span class="me-3 text-nowrap" title="@T["Amount"]">
                                             <i class="fa-solid fa-coins" aria-hidden="true"></i><span class="visually-hidden">@T["Amount"]</span>
                                             @Money(payment.Amount)
                                         </span>
-                                        <span class="me-3" title="@T["Due"]">
+                                        <span class="me-3 text-nowrap" title="@T["Due"]">
                                             <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Due"]</span>
                                             @T["Due {0:d}", payment.DueUtc]
                                         </span>
                                         @if (payment.PaidUtc.HasValue)
                                         {
-                                            <span class="me-3" title="@T["Received"]">
+                                            <span class="me-3 text-nowrap" title="@T["Received"]">
                                                 <i class="fa-solid fa-check" aria-hidden="true"></i><span class="visually-hidden">@T["Received"]</span>
                                                 @T["Received {0:d}", payment.PaidUtc.Value]
                                             </span>
                                         }
                                         @if (isOutstanding && payment.NextChargeAttemptUtc.HasValue)
                                         {
-                                            <span title="@T["Next try"]">
+                                            <span class="text-nowrap" title="@T["Next try"]">
                                                 <i class="fa-solid fa-rotate" aria-hidden="true"></i><span class="visually-hidden">@T["Next try"]</span>
                                                 @T["Next try"] @await DisplayAsync(await New.DateTime(Utc: payment.NextChargeAttemptUtc.Value, Format: "g"))
                                             </span>
