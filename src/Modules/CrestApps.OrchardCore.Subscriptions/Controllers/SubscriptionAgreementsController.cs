@@ -85,7 +85,7 @@ public sealed class SubscriptionAgreementsController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _subscriptionManager.PageAsync(pager.Page, pager.PageSize, new SubscriptionQuery
         {
@@ -119,11 +119,12 @@ public sealed class SubscriptionAgreementsController : Controller
     /// Preserves the report filter when the toolbar is submitted.
     /// </summary>
     /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("subscription-agreements", "SubscriptionAgreementsIndex")]
-    public async Task<IActionResult> IndexFilterPost(SubscriptionAgreementsIndexOptions options)
+    public async Task<IActionResult> IndexFilterPost(SubscriptionAgreementsIndexOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
         {
@@ -140,6 +141,11 @@ public sealed class SubscriptionAgreementsController : Controller
         if (!string.IsNullOrEmpty(options.Search))
         {
             routeValues.TryAdd(_optionsSearch, options.Search);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
         }
 
         return RedirectToAction(nameof(Index), routeValues);

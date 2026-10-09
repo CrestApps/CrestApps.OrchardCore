@@ -109,7 +109,7 @@ public sealed class CouponsAdminController : Controller
         };
 
         var matching = coupons.OrderByDescending(coupon => coupon.CreatedUtc).ToArray();
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var routeData = new RouteData();
 

@@ -1,0 +1,26 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using OrchardCore.DisplayManagement
+@{
+    // Read from the shape's properties: Model.Items would bind to the shape's own child list, which is always empty.
+    var items = ((IShape)Model).Properties.TryGetValue("Items", out var value) ? value as IEnumerable<SelectListItem> : null;
+}
+@if (items is not null && items.Any())
+{
+    @* The pager sits in the middle with the selector at the right edge; on a narrow screen they stack. *@
+    <style>
+        @@media (min-width: 768px) {
+            .pager-wrapper { position: relative; justify-content: center !important; }
+            .pager-wrapper > .pager-page-size { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+            .pager-wrapper > .pagination { margin-bottom: 0; }
+        }
+    </style>
+    <div class="pager-page-size d-flex align-items-center ms-auto">
+        <label class="col-form-label text-nowrap me-2">@T["Items per page"]</label>
+        <select class="form-select form-select-sm w-auto" aria-label="@T["Items per page"]" onchange="if (this.value) { window.location.href = this.value; }">
+            @foreach (var item in items)
+            {
+                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+            }
+        </select>
+    </div>
+}

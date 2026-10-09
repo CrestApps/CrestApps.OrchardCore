@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.ResourceManagement;
@@ -21,5 +23,6 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<CommerceAdminMenu>();
         services.AddScoped<IFinancialDocumentPolicy, ReceiptsOnlyFinancialDocumentPolicy>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CommerceResourceManagementOptionsConfiguration>();
+        services.AddShapeTableProvider<PagerPageSizeSelectorShapeTableProvider>();
     }
 }

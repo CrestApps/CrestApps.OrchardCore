@@ -2,12 +2,19 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -19,6 +26,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 /// page is what turns a wait into a status, and it is honest about the one outcome that needs a person:
 /// a job that has failed enough times to be abandoned says so, rather than spinning forever.
 /// </remarks>
+[Feature(SubscriptionConstants.Features.Tenants)]
 [Admin("my-sites/{action}/{itemId?}", "MySites{action}")]
 public sealed class MySitesController : Controller
 {
@@ -50,8 +58,14 @@ public sealed class MySitesController : Controller
     /// <summary>
     /// Lists the signed-in customer's sites.
     /// </summary>
+    /// <param name="pagerParameters">The page to show.</param>
+    /// <param name="pagerOptions">The site's pager options.</param>
+    /// <param name="shapeFactory">The shape factory the pager is built with.</param>
     [Admin("my-sites", "MySitesIndex")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageOwnSubscriptions))
         {
@@ -65,9 +79,14 @@ public sealed class MySitesController : Controller
             return Forbid();
         }
 
-        var jobs = await _jobStore.GetByOwnerAsync(ownerId);
+        var jobs = (await _jobStore.GetByOwnerAsync(ownerId)).OrderByDescending(job => job.CreatedUtc).ToArray();
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
-        return View(jobs);
+        return View(new TenantProvisioningListViewModel
+        {
+            Jobs = [.. jobs.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
+            Pager = await shapeFactory.PagerAsync(pager, jobs.Length, new RouteData()),
+        });
     }
 }
 
@@ -79,6 +98,7 @@ public sealed class MySitesController : Controller
 /// this module that cannot be resolved automatically, so it needs a screen where an operator can see it and
 /// retry once they have fixed whatever caused it.
 /// </remarks>
+[Feature(SubscriptionConstants.Features.Tenants)]
 [Admin("provisioning/{action}/{itemId?}", "TenantProvisioning{action}")]
 public sealed class TenantProvisioningAdminController : Controller
 {
@@ -114,17 +134,45 @@ public sealed class TenantProvisioningAdminController : Controller
     /// <summary>
     /// Lists every provisioning job.
     /// </summary>
+    /// <param name="status">The status to show, or <see langword="null"/> for every status.</param>
+    /// <param name="pagerParameters">The page to show.</param>
+    /// <param name="pagerOptions">The site's pager options.</param>
+    /// <param name="shapeFactory">The shape factory the pager is built with.</param>
     [Admin("provisioning", "TenantProvisioningIndex")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        TenantProvisioningStatus? status,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
         {
             return Forbid();
         }
 
-        var jobs = await _jobStore.GetAllAsync();
+        var jobs = (await _jobStore.GetAllAsync())
+            .Where(job => !status.HasValue || job.Status == status.Value)
+            .OrderByDescending(job => job.CreatedUtc)
+            .ToArray();
 
-        return View(jobs.OrderByDescending(job => job.CreatedUtc).ToArray());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var routeData = new RouteData();
+
+        if (status.HasValue)
+        {
+            routeData.Values.TryAdd(nameof(status), status.Value);
+        }
+
+        var statuses = new List<SelectListItem> { new(H["All statuses"].Value, string.Empty, !status.HasValue) };
+        statuses.AddRange(Enum.GetValues<TenantProvisioningStatus>().Select(value => new SelectListItem(value.ToString(), value.ToString(), status == value)));
+
+        return View(new TenantProvisioningListViewModel
+        {
+            Jobs = [.. jobs.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
+            Status = status,
+            Statuses = statuses,
+            Pager = await shapeFactory.PagerAsync(pager, jobs.Length, routeData),
+        });
     }
 
     /// <summary>

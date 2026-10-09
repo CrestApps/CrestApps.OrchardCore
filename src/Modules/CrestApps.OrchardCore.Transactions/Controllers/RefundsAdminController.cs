@@ -90,7 +90,7 @@ public sealed class RefundsAdminController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _refundStore.PageAsync(pager.Page, pager.PageSize, new PaymentRefundQuery
         {

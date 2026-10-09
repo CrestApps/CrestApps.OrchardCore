@@ -6,10 +6,15 @@ using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -65,8 +70,16 @@ public sealed class MySubscriptionsController : Controller
     /// <summary>
     /// Lists the signed-in customer's subscriptions.
     /// </summary>
+    /// <param name="status">The status to show, or <see langword="null"/> for every status.</param>
+    /// <param name="pagerParameters">The page to show.</param>
+    /// <param name="pagerOptions">The site's pager options.</param>
+    /// <param name="shapeFactory">The shape factory the pager is built with.</param>
     [Admin("my-subscriptions", "MySubscriptionsIndex")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        SubscriptionStatus? status,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageOwnSubscriptions))
         {
@@ -80,9 +93,28 @@ public sealed class MySubscriptionsController : Controller
             return Forbid();
         }
 
+        // A customer has a handful of subscriptions, so they are filtered and paged in memory.
+        var subscriptions = (await _subscriptionManager.GetByOwnerAsync(ownerId))
+            .Where(subscription => !status.HasValue || subscription.Status == status.Value)
+            .ToArray();
+
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var routeData = new RouteData();
+
+        if (status.HasValue)
+        {
+            routeData.Values.TryAdd(nameof(status), status.Value);
+        }
+
+        var statuses = new List<SelectListItem> { new(S["All statuses"], string.Empty, !status.HasValue) };
+        statuses.AddRange(Enum.GetValues<SubscriptionStatus>().Select(value => new SelectListItem(value.ToString(), value.ToString(), status == value)));
+
         return View(new MySubscriptionsViewModel
         {
-            Subscriptions = [.. await _subscriptionManager.GetByOwnerAsync(ownerId)],
+            Subscriptions = [.. subscriptions.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
+            Status = status,
+            Statuses = statuses,
+            Pager = await shapeFactory.PagerAsync(pager, subscriptions.Length, routeData),
             UtcNow = _clock.UtcNow,
         });
     }

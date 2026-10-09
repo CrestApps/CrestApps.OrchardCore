@@ -85,7 +85,7 @@ public sealed class TransactionController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var query = new TransactionQuery
         {
