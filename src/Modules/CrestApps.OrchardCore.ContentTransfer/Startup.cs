@@ -62,22 +62,16 @@ public sealed class Startup : StartupBase
             var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
             var logger = serviceProvider.GetRequiredService<ILogger<FileSystemStore>>();
             var tempDirectoryOptions = serviceProvider.GetRequiredService<IOptions<TempDirectoryOptions>>().Value;
-            var appDataPath = Path.Combine(shellOptions.ShellsApplicationDataPath, shellOptions.ShellsContainerName, shellSettings.Name, "Temp");
 
-            // Without OrchardCore:TempDirectory:Path the files stay in App_Data rather than the operating system temp
-            // directory, which a container restart or the operating system clears while imports still need them.
-            if (string.IsNullOrWhiteSpace(tempDirectoryOptions.Path))
-            {
-                return new ContentTransferFileStore(new FileSystemStore(appDataPath, logger));
-            }
+            // When OrchardCore:TempDirectory:Path is set, typically to a file share every instance mounts, the files
+            // follow it like the upload chunks already do, so every instance and every restarted container reads the
+            // same files. Without it they stay in App_Data rather than the operating system temp directory, which a
+            // container restart or the operating system clears while imports still need them.
+            var path = string.IsNullOrWhiteSpace(tempDirectoryOptions.Path)
+                ? Path.Combine(shellOptions.ShellsApplicationDataPath, shellOptions.ShellsContainerName, shellSettings.Name, "Temp")
+                : Path.Combine(serviceProvider.GetRequiredService<ITempDirectoryProvider>().GetRootDirectory(), "ContentTransfer");
 
-            // When the path is set, typically to a file share every instance mounts, the files follow it like the
-            // upload chunks already do, so every instance and every restarted container reads the same files. Files
-            // saved in App_Data before the path was set stay readable there.
-            var tempDirectoryProvider = serviceProvider.GetRequiredService<ITempDirectoryProvider>();
-            var path = Path.Combine(tempDirectoryProvider.GetRootDirectory(), "ContentTransfer");
-
-            return new ContentTransferFileStore(new FileSystemStore(path, logger), new FileSystemStore(appDataPath, logger));
+            return new ContentTransferFileStore(new FileSystemStore(path, logger));
         });
 
         services.AddSingleton<IContentTransferFileFormatProvider, CsvContentTransferFileFormatProvider>();

@@ -102,8 +102,9 @@ setting, `OrchardCore:TempDirectory:Path`:
 When the path is not set, the files stay in `App_Data` rather than the operating system temp directory, which
 the operating system or a container restart clears.
 
-Files saved in `App_Data` before the path was set stay readable there, so imports that were running and the
-**Download errors** of earlier imports keep working. New files go to the configured path.
+Setting or changing the path does not move files that are already stored. Let running imports finish first;
+after the change, earlier imports can no longer offer **Download errors**, and an import or export whose file
+is in the old location reports that its file is no longer available.
 
 ## Running on more than one instance
 
