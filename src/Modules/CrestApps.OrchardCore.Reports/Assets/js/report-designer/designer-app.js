@@ -590,6 +590,9 @@
             app.design.query[name] = app.design.query[name] || [];
         });
 
+        // A design saved with two joins for one data set cannot run; merge them.
+        designer.mergeJoins(app.design.query);
+
         app.design.visuals = app.design.visuals || [];
         app.design.sharedUserNames = app.design.sharedUserNames || [];
         app.design.sharedRoles = app.design.sharedRoles || [];

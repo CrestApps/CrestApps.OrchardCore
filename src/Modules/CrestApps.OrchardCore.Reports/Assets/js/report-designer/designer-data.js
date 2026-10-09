@@ -274,8 +274,8 @@
     // A short description of a join for its pill on the Joins shelf.
     app.joinSummary = function (alias) {
         var fields = app.fields();
-        var join = app.joinFor(alias);
-        var complete = join.conditions.filter(function (condition) {
+        var join = designer.findJoin(app.design.query, alias) || { conditions: [] };
+        var complete = (join.conditions || []).filter(function (condition) {
             return condition.leftField && condition.rightField;
         });
 
@@ -534,12 +534,17 @@
                     return { dataSet: dataSet, fields: (app.schemas[dataSet.alias] || {}).fields || [] };
                 });
                 var suggestion = designer.suggestJoin(earlier, { dataSet: reference, fields: app.schemas[reference.alias].fields || [] });
-
-                query.joins.push({
-                    alias: reference.alias,
-                    type: 'Inner',
-                    conditions: suggestion ? [suggestion] : [{ leftField: '', rightField: '' }]
+                var join = app.joinFor(reference.alias);
+                var complete = join.conditions.some(function (condition) {
+                    return condition.leftField && condition.rightField;
                 });
+
+                // The data set may already have a join (the person may have started one while its fields loaded), so
+                // the suggestion fills it rather than adding a second join.
+                if (!complete) {
+                    join.conditions = suggestion ? [suggestion] : [{ leftField: '', rightField: '' }];
+                }
+
                 app.editJoin(reference.alias);
             }
 

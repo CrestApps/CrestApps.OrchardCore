@@ -39,6 +39,8 @@ public static class ReportDesignNormalizer
             join.Conditions = (join.Conditions ?? []).Where(condition => condition is not null).ToList();
         }
 
+        query.Joins = MergeJoins(query.Joins);
+
         foreach (var field in query.CalculatedFields)
         {
             field.Name = field.Name?.Trim();
@@ -90,6 +92,36 @@ public static class ReportDesignNormalizer
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// Merges the joins that attach the same data set into one, so a design that ended up with two joins for a data set
+    /// (the planner needs exactly one) still runs. The first join keeps its type; the matching column pairs of all of
+    /// them are kept once each, and pairs with a missing column are dropped when a complete pair exists.
+    /// </summary>
+    /// <param name="joins">The joins.</param>
+    /// <returns>One join per data set, in the order they first appear.</returns>
+    public static List<ReportJoinDefinition> MergeJoins(IEnumerable<ReportJoinDefinition> joins)
+    {
+        var merged = new List<ReportJoinDefinition>();
+
+        foreach (var group in (joins ?? []).Where(join => join is not null).GroupBy(join => join.Alias ?? string.Empty, StringComparer.OrdinalIgnoreCase))
+        {
+            var first = group.First();
+            var conditions = group
+                .SelectMany(join => join.Conditions ?? [])
+                .Where(condition => condition is not null)
+                .ToList();
+            var complete = conditions
+                .Where(condition => !string.IsNullOrEmpty(condition.LeftField) && !string.IsNullOrEmpty(condition.RightField))
+                .DistinctBy(condition => (condition.LeftField, condition.RightField))
+                .ToList();
+
+            first.Conditions = complete.Count > 0 ? complete : (first.Conditions ?? []).Where(condition => condition is not null).ToList();
+            merged.Add(first);
+        }
+
+        return merged;
     }
 
     /// <summary>

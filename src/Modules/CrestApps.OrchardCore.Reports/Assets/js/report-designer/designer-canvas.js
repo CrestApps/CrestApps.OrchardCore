@@ -126,7 +126,7 @@
                 h('div', { className: 'report-designer-shelf-label small fw-semibold text-muted text-uppercase' }, app.t('Joins')),
                 h('div', { className: 'report-designer-shelf-zone rd-joins-zone d-flex flex-wrap gap-1 align-items-center' }, query.dataSets.slice(1).map(function (dataSet) {
                     var summary = app.joinSummary(dataSet.alias);
-                    var join = app.joinFor(dataSet.alias);
+                    var join = designer.findJoin(query, dataSet.alias) || { type: 'Inner' };
                     var selected = selection.kind === 'join' && selection.id === dataSet.alias;
 
                     return h('button', {

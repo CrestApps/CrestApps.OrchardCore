@@ -390,6 +390,65 @@
 
     // Removes a data set with its join and every column and row filter that reads it. Calculated fields that read it
     // are kept so their formulas are not lost; the designer reports them as invalid.
+    // The join that attaches a data set, or undefined. It never creates one, so rendering can use it freely.
+    designer.findJoin = function (query, alias) {
+        return ((query && query.joins) || []).filter(function (candidate) {
+            return candidate && candidate.alias === alias;
+        })[0];
+    };
+
+    // Merges the joins that attach the same data set into one: the server runs a design only with exactly one join per
+    // data set. The first join keeps its type; its column pairs are combined with the others' once each, and pairs with
+    // a missing column are dropped when a complete pair exists.
+    designer.mergeJoins = function (query) {
+        var merged = [];
+        var byAlias = {};
+
+        ((query && query.joins) || []).forEach(function (join) {
+            if (!join) {
+                return;
+            }
+
+            var first = byAlias[join.alias];
+
+            if (!first) {
+                byAlias[join.alias] = join;
+                join.conditions = join.conditions || [];
+                merged.push(join);
+
+                return;
+            }
+
+            (join.conditions || []).forEach(function (condition) {
+                first.conditions.push(condition);
+            });
+        });
+
+        merged.forEach(function (join) {
+            var complete = [];
+
+            join.conditions.forEach(function (condition) {
+                var duplicate = complete.some(function (existing) {
+                    return existing.leftField === condition.leftField && existing.rightField === condition.rightField;
+                });
+
+                if (condition && condition.leftField && condition.rightField && !duplicate) {
+                    complete.push(condition);
+                }
+            });
+
+            if (complete.length) {
+                join.conditions = complete;
+            }
+        });
+
+        if (query) {
+            query.joins = merged;
+        }
+
+        return merged;
+    };
+
     designer.removeDataSet = function (design, alias) {
         var query = design.query;
         var prefix = alias + '.';

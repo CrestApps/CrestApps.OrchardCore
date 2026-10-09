@@ -339,6 +339,53 @@
 
   // Removes a data set with its join and every column and row filter that reads it. Calculated fields that read it
   // are kept so their formulas are not lost; the designer reports them as invalid.
+  // The join that attaches a data set, or undefined. It never creates one, so rendering can use it freely.
+  designer.findJoin = function (query, alias) {
+    return (query && query.joins || []).filter(function (candidate) {
+      return candidate && candidate.alias === alias;
+    })[0];
+  };
+
+  // Merges the joins that attach the same data set into one: the server runs a design only with exactly one join per
+  // data set. The first join keeps its type; its column pairs are combined with the others' once each, and pairs with
+  // a missing column are dropped when a complete pair exists.
+  designer.mergeJoins = function (query) {
+    var merged = [];
+    var byAlias = {};
+    (query && query.joins || []).forEach(function (join) {
+      if (!join) {
+        return;
+      }
+      var first = byAlias[join.alias];
+      if (!first) {
+        byAlias[join.alias] = join;
+        join.conditions = join.conditions || [];
+        merged.push(join);
+        return;
+      }
+      (join.conditions || []).forEach(function (condition) {
+        first.conditions.push(condition);
+      });
+    });
+    merged.forEach(function (join) {
+      var complete = [];
+      join.conditions.forEach(function (condition) {
+        var duplicate = complete.some(function (existing) {
+          return existing.leftField === condition.leftField && existing.rightField === condition.rightField;
+        });
+        if (condition && condition.leftField && condition.rightField && !duplicate) {
+          complete.push(condition);
+        }
+      });
+      if (complete.length) {
+        join.conditions = complete;
+      }
+    });
+    if (query) {
+      query.joins = merged;
+    }
+    return merged;
+  };
   designer.removeDataSet = function (design, alias) {
     var query = design.query;
     var prefix = alias + '.';
@@ -1361,6 +1408,9 @@
     ['dataSets', 'joins', 'calculatedFields', 'filters', 'columns', 'sorts'].forEach(function (name) {
       app.design.query[name] = app.design.query[name] || [];
     });
+
+    // A design saved with two joins for one data set cannot run; merge them.
+    designer.mergeJoins(app.design.query);
     app.design.visuals = app.design.visuals || [];
     app.design.sharedUserNames = app.design.sharedUserNames || [];
     app.design.sharedRoles = app.design.sharedRoles || [];
@@ -1691,8 +1741,10 @@
   // A short description of a join for its pill on the Joins shelf.
   app.joinSummary = function (alias) {
     var fields = app.fields();
-    var join = app.joinFor(alias);
-    var complete = join.conditions.filter(function (condition) {
+    var join = designer.findJoin(app.design.query, alias) || {
+      conditions: []
+    };
+    var complete = (join.conditions || []).filter(function (condition) {
       return condition.leftField && condition.rightField;
     });
     return {
@@ -1972,14 +2024,19 @@
           dataSet: reference,
           fields: app.schemas[reference.alias].fields || []
         });
-        query.joins.push({
-          alias: reference.alias,
-          type: 'Inner',
-          conditions: suggestion ? [suggestion] : [{
+        var join = app.joinFor(reference.alias);
+        var complete = join.conditions.some(function (condition) {
+          return condition.leftField && condition.rightField;
+        });
+
+        // The data set may already have a join (the person may have started one while its fields loaded), so
+        // the suggestion fills it rather than adding a second join.
+        if (!complete) {
+          join.conditions = suggestion ? [suggestion] : [{
             leftField: '',
             rightField: ''
-          }]
-        });
+          }];
+        }
         app.editJoin(reference.alias);
       }
       app.changed();
@@ -2289,7 +2346,9 @@
         className: 'report-designer-shelf-zone rd-joins-zone d-flex flex-wrap gap-1 align-items-center'
       }, query.dataSets.slice(1).map(function (dataSet) {
         var summary = app.joinSummary(dataSet.alias);
-        var join = app.joinFor(dataSet.alias);
+        var join = designer.findJoin(query, dataSet.alias) || {
+          type: 'Inner'
+        };
         var selected = selection.kind === 'join' && selection.id === dataSet.alias;
         return h('button', {
           type: 'button',

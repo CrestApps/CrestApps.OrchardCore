@@ -168,6 +168,32 @@ describe('join suggestions', () => {
     });
 });
 
+describe('one join per data set', () => {
+    it('finds a join without creating one', () => {
+        const query = { joins: [] };
+
+        expect(designer.findJoin(query, 'Customer')).toBeUndefined();
+        expect(query.joins).toEqual([]);
+    });
+
+    it('merges two joins of the same data set, keeping the complete pairs once', () => {
+        const query = {
+            joins: [
+                { alias: 'Customer', type: 'Left', conditions: [{ leftField: '', rightField: '' }] },
+                { alias: 'Customer', type: 'Inner', conditions: [{ leftField: 'Users.UserId', rightField: 'Customer.Owner' }, { leftField: 'Users.UserId', rightField: 'Customer.Owner' }] },
+                { alias: 'Order', type: 'Inner', conditions: [] },
+            ],
+        };
+
+        designer.mergeJoins(query);
+
+        expect(query.joins).toEqual([
+            { alias: 'Customer', type: 'Left', conditions: [{ leftField: 'Users.UserId', rightField: 'Customer.Owner' }] },
+            { alias: 'Order', type: 'Inner', conditions: [] },
+        ]);
+    });
+});
+
 describe('declared relationships', () => {
     const account = {
         dataSet: { alias: 'Account', source: 'Contents', dataSet: 'Account' },
