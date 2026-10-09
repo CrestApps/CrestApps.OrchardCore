@@ -155,6 +155,7 @@ public sealed class ReportDesignService
         }
 
         result.Id = design.ItemId;
+        result.Design = design;
         result.Saved = true;
 
         return result;
@@ -319,6 +320,11 @@ public sealed class ReportSaveResult
     /// Gets or sets the identifier of the saved item.
     /// </summary>
     public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved report, when a report was saved.
+    /// </summary>
+    public ReportDesign Design { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the item was saved.

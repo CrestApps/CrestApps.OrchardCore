@@ -69,6 +69,40 @@
     padding: 1rem;
 }
 
+/* Draft, conflict and presence notices: thin bars above the tabs' content. */
+.report-designer .rd-history {
+    flex: 0 0 auto;
+}
+
+.report-designer .rd-history-bar .btn {
+    --bs-btn-padding-y: .125rem;
+}
+
+/* The people who also have the report open, as initials. */
+.report-designer .rd-presence {
+    display: inline-flex;
+    align-items: center;
+}
+
+.report-designer .rd-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin-left: -.375rem;
+    border: 2px solid var(--bs-body-bg);
+    border-radius: 50%;
+    background-color: var(--bs-info);
+    color: var(--bs-white);
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.report-designer .rd-avatar:first-child {
+    margin-left: 0;
+}
+
 /* Messages float over the body instead of pushing the workspace down. */
 .report-designer .report-designer-messages {
     position: absolute;

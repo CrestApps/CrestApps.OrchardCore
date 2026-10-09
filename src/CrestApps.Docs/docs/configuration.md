@@ -1562,7 +1562,7 @@ Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxRes
   "OrchardCore": {
     "CrestApps": {
       "Reports": {
-        "Designer": {
+        "Builder": {
           "Limits": {
             "MaxRowsPerDataSet": 100000
           }
@@ -1575,6 +1575,37 @@ Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxRes
 
 ```text
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=100000
+```
+
+### Report versions
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Reports:Builder:Versions` |
+| **Feature** | Report Builder |
+| **Controls** | How many published versions of each designed report are kept |
+
+Key: `MaxVersions` (default `50`). The oldest versions beyond it are deleted when a report is published; `0` keeps
+them all.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Reports": {
+        "Builder": {
+          "Versions": {
+            "MaxVersions": 100
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=100
 ```
 
 See [Report Builder](modules/report-builder.md#configuration).

@@ -49,6 +49,26 @@ All processing runs in memory over the rows the sources return, so every source 
 
 A data source returns `DateTime` field values in UTC. The engine converts them to the tenant time zone before anything else, so transforms, formulas, filters and display all work in local time. `Date` fields carry no time zone and are never shifted. Filter values written without a time (`2026-01-31`) cover the whole day.
 
+## Drafts, versions and editing together
+
+A designed report has a published version, which is what people run, and a **draft**, which the builder saves into a moment after each change. Nobody sees the draft until someone publishes it.
+
+- **Autosave.** Each change to a saved report is sent to `POST /Admin/reports/builder/{id}/draft` with the revision the page has. A new report is saved for the first time when it is published.
+- **Revisions.** Every draft save, publish, discard and restore increases the report's revision, kept in its `ReportDesignDraft` document. A change based on an older revision is refused with `409 Conflict` and the name of the person who changed it last; the page offers to reload their changes or to keep its own (which sends the change again with `force`). Changes to one report are serialized with Orchard Core's `IDistributedLock`, so the check holds on several nodes.
+- **Publishing** saves the report as before (title, sharing and data rules are checked), adds an immutable `ReportDesignVersion` only when the report's content differs from the latest version, and clears the draft. A report published before versions existed first gets its earlier state as version 1.
+- **Versions** can be previewed and **restored**: restoring copies a version into the draft, to be checked and published; the new version records which version it was restored from. Drafts and versions are separate YesSql documents with their own index tables (`ReportDesignDraftIndex`, `ReportDesignVersionIndex`), so autosaving one report never rewrites another. Deleting a report deletes its draft and versions.
+- **Retention.** At most `MaxVersions` versions are kept per report (see [Configuration](#configuration)).
+
+### Real time
+
+When `OrchardCore.SignalR` is enabled, the builder connects to `ReportsHub` (at `/Communication/Hub/ReportsHub` under the tenant's path). No separate feature is needed: the hub is registered by a startup class marked with `[RequireFeatures("OrchardCore.SignalR")]`.
+
+- **Presence.** A page subscribes to the report it edits; the hub checks that the user may edit it. Pages tell each other who arrived and left, and the builder shows the others' initials and a notice that changes can conflict. The server only relays these messages and keeps no list, so it works behind the Redis or Azure SignalR backplane.
+- **Changes.** After a draft save, publish, discard, restore or delete is committed, `SignalRReportDesignNotifier` sends `ReportDesignChanged` (`kind`, `designId`, `revision`, `versionNumber`, `userName`) to the report's group. A page that is behind offers to reload. Group names are qualified by tenant with `TenantSignalRGroupName`.
+- Without SignalR, the revision check still prevents silent overwrites; people find out when their next save is refused.
+
+Other modules can react to report changes by replacing `IReportDesignNotifier`.
+
 ## Security model
 
 - A designed report or view is authorized like a content item: the broad permission is checked with the item as the resource, and `ReportDesignAuthorizationHandler` grants it to the owner and to the people the report is shared with.
@@ -90,12 +110,15 @@ The size limits of one run can be changed in the host's `appsettings.json` (a te
   "OrchardCore": {
     "CrestApps": {
       "Reports": {
-        "Designer": {
+        "Builder": {
           "Limits": {
             "MaxRowsPerDataSet": 50000,
             "MaxJoinedRows": 250000,
             "MaxResultRows": 10000,
             "MaxFilterOptions": 500
+          },
+          "Versions": {
+            "MaxVersions": 50
           }
         }
       }
@@ -111,6 +134,7 @@ OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=50000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxJoinedRows=250000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxResultRows=10000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxFilterOptions=500
+OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 ```
 
 | Setting | Default | What it limits |
@@ -119,6 +143,7 @@ OrchardCore__CrestApps__Reports__Builder__Limits__MaxFilterOptions=500
 | `MaxJoinedRows` | `250000` | Rows the joins may produce. |
 | `MaxResultRows` | `10000` | Result rows kept after sorting. |
 | `MaxFilterOptions` | `500` | Values listed by a drop-down filter. |
+| `Versions:MaxVersions` | `50` | Published versions kept per report; the oldest are deleted. `0` keeps them all. |
 
 ## Adding a data source
 

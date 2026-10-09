@@ -65,6 +65,51 @@ public class ReportDesignerPayload
     public Dictionary<string, IList<string>> FilterValues { get; set; }
 
     /// <summary>
+    /// Gets or sets the revision of the report the builder's changes are based on.
+    /// </summary>
+    public long Revision { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to save even when someone else changed the report since
+    /// <see cref="Revision"/>.
+    /// </summary>
+    public bool Force { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the report has unpublished changes, which the builder shows.
+    /// </summary>
+    public bool HasDraft { get; set; }
+
+    /// <summary>
+    /// Gets or sets who last changed the unpublished changes.
+    /// </summary>
+    public string DraftModifiedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the unpublished changes last changed, in UTC.
+    /// </summary>
+    public DateTime? DraftModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Creates the payload of a report as the builder edits it.
+    /// </summary>
+    /// <param name="workingCopy">The report's working copy.</param>
+    /// <returns>The payload.</returns>
+    public static ReportDesignerPayload From(Services.ReportDesignWorkingCopy workingCopy)
+    {
+        ArgumentNullException.ThrowIfNull(workingCopy);
+
+        var payload = From(workingCopy.Design);
+
+        payload.Revision = workingCopy.Revision;
+        payload.HasDraft = workingCopy.HasDraft;
+        payload.DraftModifiedBy = workingCopy.ModifiedByName;
+        payload.DraftModifiedUtc = workingCopy.ModifiedUtc;
+
+        return payload;
+    }
+
+    /// <summary>
     /// Creates a payload from a stored report.
     /// </summary>
     /// <param name="design">The report.</param>

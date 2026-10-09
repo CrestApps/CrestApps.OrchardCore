@@ -27,6 +27,7 @@ public sealed class ReportDesignerController : Controller
     internal const int MaxPayloadBytes = 1024 * 1024;
 
     private readonly ReportDesignService _designService;
+    private readonly ReportDesignHistoryService _history;
     private readonly ReportDesignRunner _runner;
     private readonly IAuthorizationService _authorizationService;
     private readonly IRoleService _roleService;
@@ -36,18 +37,21 @@ public sealed class ReportDesignerController : Controller
     /// Initializes a new instance of the <see cref="ReportDesignerController"/> class.
     /// </summary>
     /// <param name="designService">The design service.</param>
+    /// <param name="history">The service that keeps drafts and versions.</param>
     /// <param name="runner">The report runner used by the preview.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="roleService">The role service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportDesignerController(
         ReportDesignService designService,
+        ReportDesignHistoryService history,
         ReportDesignRunner runner,
         IAuthorizationService authorizationService,
         IRoleService roleService,
         IStringLocalizer<ReportDesignerController> stringLocalizer)
     {
         _designService = designService;
+        _history = history;
         _runner = runner;
         _authorizationService = authorizationService;
         _roleService = roleService;
@@ -81,7 +85,7 @@ public sealed class ReportDesignerController : Controller
     }
 
     /// <summary>
-    /// Opens the designer for a stored report.
+    /// Opens the designer for a stored report, with its unpublished changes when it has some.
     /// </summary>
     /// <param name="id">The report identifier.</param>
     /// <returns>The designer page.</returns>
@@ -100,7 +104,7 @@ public sealed class ReportDesignerController : Controller
             return Forbid();
         }
 
-        return View("Designer", await BuildViewModelAsync(ReportDesignerPayload.From(design), isView: false));
+        return View("Designer", await BuildViewModelAsync(ReportDesignerPayload.From(await _history.GetWorkingCopyAsync(design)), isView: false));
     }
 
     /// <summary>
@@ -142,7 +146,9 @@ public sealed class ReportDesignerController : Controller
     }
 
     /// <summary>
-    /// Saves a report sent by the designer.
+    /// Publishes a report sent by the designer: it becomes the report that runs, and a version is kept when it
+    /// changed. Answers 409 when someone else changed the report since the revision the designer had, unless the
+    /// designer asks to overwrite.
     /// </summary>
     /// <returns>The outcome as JSON.</returns>
     [HttpPost]
@@ -178,7 +184,14 @@ public sealed class ReportDesignerController : Controller
         }
 
         var canSharePublicly = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ShareReportsPublicly);
-        var result = await _designService.SaveAsync(payload.ToDesign(), existing, User, canSharePublicly);
+        var published = await _history.PublishAsync(payload.ToDesign(), existing, payload.Revision, payload.Force, User, canSharePublicly);
+
+        if (published.Status is ReportHistoryStatus.Conflict or ReportHistoryStatus.Busy)
+        {
+            return ReportDesignHistoryController.ConflictResult(published);
+        }
+
+        var result = published.Save;
 
         return Json(new
         {
@@ -186,6 +199,8 @@ public sealed class ReportDesignerController : Controller
             result.Saved,
             result.Errors,
             result.Warnings,
+            published.Revision,
+            published.VersionNumber,
             EditUrl = result.Saved ? Url.RouteUrl("ReportDesignerEdit", new { id = result.Id }) : null,
             RunUrl = result.Saved ? Url.RouteUrl("ReportDesignsRun", new { id = result.Id }) : null,
         }, ReportDesignerJson.Options);

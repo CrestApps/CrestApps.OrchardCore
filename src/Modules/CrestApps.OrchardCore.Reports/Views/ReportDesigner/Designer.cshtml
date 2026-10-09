@@ -1,4 +1,6 @@
 @using System.Text.Json
+@using CrestApps.OrchardCore
+@using CrestApps.OrchardCore.Reports.Designer.RealTime
 @using OrchardCore.DisplayManagement.Html
 @model ReportDesignerViewModel
 
@@ -10,8 +12,12 @@
     var title = Model.IsView
         ? (isNew ? T["New View"].Value : T["Edit View '{0}'", Model.Payload.DisplayText].Value)
         : (isNew ? T["New Report"].Value : T["Edit Report '{0}'", Model.Payload.DisplayText].Value);
+    // Routes with a number take a placeholder number, which the page replaces.
+    var numberPlaceholder = int.MaxValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    var realTime = !Model.IsView && ReportsRealTime.IsEnabled(Context.RequestServices);
     var config = new Dictionary<string, object>(Model.Labels)
     {
+        ["hubUrl"] = realTime ? Html.SignalRHubUrl<ReportsHub>() : null,
         ["mode"] = Model.IsView ? "view" : "report",
         ["payload"] = Model.Payload,
         ["canSharePublicly"] = Model.CanSharePublicly,
@@ -31,6 +37,11 @@
             ["createLink"] = Url.RouteUrl("ReportDesignerApiCreateLink", new { id = "__id__" }),
             ["revokeLink"] = Url.RouteUrl("ReportDesignerApiRevokeLink", new { id = "__id__", linkId = "__link__" }),
             ["run"] = Url.RouteUrl("ReportDesignsRun", new { id = "__id__" }),
+            ["draft"] = Url.RouteUrl("ReportDesignerDraftSave", new { id = "__id__" }),
+            ["discardDraft"] = Url.RouteUrl("ReportDesignerDraftDiscard", new { id = "__id__" }),
+            ["versions"] = Url.RouteUrl("ReportDesignerVersions", new { id = "__id__" }),
+            ["version"] = Url.RouteUrl("ReportDesignerVersion", new { id = "__id__", number = int.MaxValue })?.Replace(numberPlaceholder, "__number__"),
+            ["restore"] = Url.RouteUrl("ReportDesignerVersionRestore", new { id = "__id__", number = int.MaxValue })?.Replace(numberPlaceholder, "__number__"),
         },
     };
 }
@@ -49,6 +60,10 @@
 </zone>
 
 <style asp-name="CrestApps.OrchardCore.Reports.Builder"></style>
+@if (realTime)
+{
+    <script asp-name="signalr" at="Foot"></script>
+}
 <script asp-name="CrestApps.OrchardCore.Reports.Builder" at="Foot"></script>
 
 @Html.AntiForgeryToken()

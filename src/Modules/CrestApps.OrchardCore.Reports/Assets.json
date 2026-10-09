@@ -13,7 +13,8 @@
       "Assets/js/report-designer/designer-data.js",
       "Assets/js/report-designer/designer-canvas.js",
       "Assets/js/report-designer/designer-model.js",
-      "Assets/js/report-designer/designer-sharing.js"
+      "Assets/js/report-designer/designer-sharing.js",
+      "Assets/js/report-designer/designer-history.js"
     ],
     "output": "wwwroot/scripts/report-designer.js"
   },

@@ -2,12 +2,16 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Deployments;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
+using CrestApps.OrchardCore.Reports.Designer.Indexes;
+using CrestApps.OrchardCore.Reports.Designer.Migrations;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
@@ -41,6 +45,7 @@ public sealed class DesignerStartup : StartupBase
         services.AddCatalogs();
 
         services.Configure<ReportQueryLimits>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Limits"));
+        services.Configure<ReportDesignVersionOptions>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Versions"));
 
         services
             .AddScoped<IReportDataSourceManager, ReportDataSourceManager>()
@@ -53,11 +58,18 @@ public sealed class DesignerStartup : StartupBase
             .AddScoped<ReportExecutionContextFactory>()
             .AddScoped<ReportOwnerPrincipalResolver>()
             .AddScoped<ReportDesignService>()
+            .AddScoped<ReportDesignHistoryStore>()
+            .AddScoped<ReportDesignHistoryService>()
             .AddScoped<ReportDesignRunner>()
             .AddScoped<ReportShareLinkService>()
             .AddScoped<DesignedReportPresenter>()
             .AddScoped<IReportDataSource, ReportViewsDataSource>()
             .AddScoped<IReportDataSource, UsersReportDataSource>();
+
+        services.TryAddScoped<IReportDesignNotifier, NullReportDesignNotifier>();
+        services.AddIndexProvider<ReportDesignDraftIndexProvider>();
+        services.AddIndexProvider<ReportDesignVersionIndexProvider>();
+        services.AddDataMigration<ReportDesignHistoryMigrations>();
 
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.AddScoped<IAuthorizationHandler, ReportDesignAuthorizationHandler>();

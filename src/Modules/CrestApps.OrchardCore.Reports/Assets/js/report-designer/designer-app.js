@@ -125,6 +125,14 @@
 
         app.schedulePlan();
         app.schedulePreview();
+        app.queueAutosave();
+    };
+
+    // Saves the change into the report's draft a moment later, when the report exists (see designer-history.js).
+    app.queueAutosave = function () {
+        if (app.scheduleAutosave && app.canAutosave && app.canAutosave()) {
+            app.scheduleAutosave();
+        }
     };
 
     app.loadSchema = function (dataSet) {
@@ -221,7 +229,12 @@
         };
     };
 
+    // Publishes a report (see designer-history.js), or saves a view.
     app.save = function () {
+        if (!app.isView() && app.publish) {
+            return app.publish();
+        }
+
         var button = app.elements.saveButton;
 
         button.disabled = true;
@@ -280,7 +293,7 @@
         var status = app.elements.status;
 
         if (status) {
-            status.textContent = app.dirty ? app.t('Unsaved changes') : '';
+            status.textContent = app.historyStatus ? app.historyStatus() : (app.dirty ? app.t('Unsaved changes') : '');
         }
 
         if (app.elements.runLink) {
@@ -449,10 +462,22 @@
                 app.design.displayText = event.target.value;
                 app.dirty = true;
                 app.renderStatus();
+                app.queueAutosave();
             }
         });
         e.status = h('span', { className: 'text-muted small text-nowrap' });
-        e.saveButton = h('button', { type: 'button', className: 'btn btn-sm btn-primary text-nowrap', onclick: app.save }, ui.icon('fa-floppy-disk'), ' ', app.t('Save'));
+        e.saveButton = app.isView()
+            ? h('button', { type: 'button', className: 'btn btn-sm btn-primary text-nowrap', onclick: app.save }, ui.icon('fa-floppy-disk'), ' ', app.t('Save'))
+            : h('button', { type: 'button', className: 'btn btn-sm btn-primary text-nowrap', onclick: app.save, title: app.t('Publish (Ctrl+S)') }, ui.icon('fa-cloud-arrow-up'), ' ', app.t('Publish'));
+        e.versionsButton = app.isView() ? null : h('button', {
+            type: 'button',
+            className: 'btn btn-sm btn-outline-secondary text-nowrap d-none',
+            onclick: function () {
+                app.openVersions();
+            }
+        }, ui.icon('fa-clock-rotate-left'), ' ', app.t('Versions'));
+        e.presence = h('span', { className: 'rd-presence d-none' });
+        e.historyBar = h('div', { className: 'rd-history', 'aria-live': 'polite' });
         e.runLink = h('a', { className: 'btn btn-sm btn-outline-secondary text-nowrap d-none', href: '#' }, ui.icon('fa-play'), ' ', app.t('Run report'));
         e.messages = h('div', { className: 'report-designer-messages' });
         e.issues = h('div');
@@ -534,8 +559,8 @@
         ui.append(container, [
             h('div', { className: 'card-header rd-header' },
                 nav,
-                h('div', { className: 'rd-header-tools' }, e.title, e.status, e.runLink, e.saveButton)),
-            h('div', { className: 'card-body p-0 rd-body' }, e.messages, panes)
+                h('div', { className: 'rd-header-tools' }, e.title, e.status, e.presence, e.runLink, e.versionsButton, e.saveButton)),
+            h('div', { className: 'card-body p-0 rd-body' }, e.historyBar, e.messages, panes)
         ]);
 
         var saved = readLayout();
@@ -573,6 +598,10 @@
 
         app.buildLayout(container);
         app.render();
+
+        if (app.startHistory) {
+            app.startHistory();
+        }
 
         Promise.all([
             ui.request(app.url('sources')).then(function (sources) {

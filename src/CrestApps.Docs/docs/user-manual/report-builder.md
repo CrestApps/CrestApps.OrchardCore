@@ -38,11 +38,26 @@ People who only run reports that were shared with them need no permission: they 
 4. Drag fields onto **Columns**. You can also click the column icon next to a field. Numbers are added as a **Sum** by default; text, dates and identifiers become dimensions.
 5. Click a column to change it in **Properties** on the right (see [Column settings](#column-settings)).
 6. The **Preview** under the shelves refreshes as you work. Click **Refresh** to run it again.
-7. Click **Save** (or press Ctrl+S). Unfinished designs can be saved: the builder lists their problems, and the report shows them when it runs until they are fixed.
+7. Click **Publish** (or press Ctrl+S). Unfinished designs can be published: the builder lists their problems, and the report shows them when it runs until they are fixed.
 
 Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it.
 
 The builder fills the window, and each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section to give the preview more room; the builder remembers your choice.
+
+## Drafts, publishing and versions
+
+Once a report has been published, the builder saves your changes as you work. The words next to the title say **Saving…**, then **Draft saved**. Saved changes are a **draft**: people who run the report keep seeing the published version until you click **Publish**.
+
+- A bar above the tabs shows that the report has **unpublished changes**, who made them and when. Click **Discard changes** to go back to the published version, or **Publish** to make them live.
+- Each time you publish a change, the builder keeps a **version**. Click **Versions** to list them with who published each one and when. **Preview** shows a version; **Restore** copies it into the draft, so you can check it and publish it. Restoring never changes what people run until you publish.
+- Old versions are removed after a while; your administrator decides how many are kept.
+
+## Work on a report with others
+
+Two people can open the same report, but only one change can win, so the builder protects your work:
+
+- When someone else changed the report since you opened it, your next change is **not saved** and a yellow bar says who changed it. Click **Reload their changes** to see their version (your unsaved changes are lost), or **Keep mine** to save your version over theirs.
+- When real-time updates are turned on for your site, the builder also shows the initials of the others who have the report open, warns that your changes can conflict, and tells you as soon as someone saves, publishes or discards changes, with a **Reload** button.
 
 ## Combine data sets
 

@@ -21,6 +21,7 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 public sealed class ReportDesignsController : Controller
 {
     private readonly ReportDesignService _designService;
+    private readonly ReportDesignHistoryService _history;
     private readonly DesignedReportPresenter _presenter;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -30,18 +31,21 @@ public sealed class ReportDesignsController : Controller
     /// Initializes a new instance of the <see cref="ReportDesignsController"/> class.
     /// </summary>
     /// <param name="designService">The design service.</param>
+    /// <param name="history">The service that keeps drafts and versions.</param>
     /// <param name="presenter">The report presenter.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public ReportDesignsController(
         ReportDesignService designService,
+        ReportDesignHistoryService history,
         DesignedReportPresenter presenter,
         IAuthorizationService authorizationService,
         INotifier notifier,
         IHtmlLocalizer<ReportDesignsController> htmlLocalizer)
     {
         _designService = designService;
+        _history = history;
         _presenter = presenter;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -159,7 +163,7 @@ public sealed class ReportDesignsController : Controller
     }
 
     /// <summary>
-    /// Deletes a designed report and its share links.
+    /// Deletes a designed report with its share links, draft, and versions.
     /// </summary>
     /// <param name="id">The report identifier.</param>
     /// <returns>A redirect to the list.</returns>
@@ -179,7 +183,7 @@ public sealed class ReportDesignsController : Controller
             return Forbid();
         }
 
-        await _designService.DeleteAsync(design);
+        await _history.DeleteAsync(design, User);
         await _notifier.SuccessAsync(H["The report has been deleted."]);
 
         return RedirectToAction(nameof(Index));

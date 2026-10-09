@@ -146,7 +146,18 @@
 
                 error.status = response.status;
 
-                throw error;
+                // Keep a JSON answer, such as who changed a report on a 409, for the caller.
+                return response.text().then(function (text) {
+                    try {
+                        error.body = text ? JSON.parse(text) : null;
+                    } catch (e) {
+                        error.body = null;
+                    }
+
+                    throw error;
+                }, function () {
+                    throw error;
+                });
             }
 
             if (response.status === 204) {
