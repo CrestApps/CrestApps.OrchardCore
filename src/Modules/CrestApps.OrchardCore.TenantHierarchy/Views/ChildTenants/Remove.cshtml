@@ -40,7 +40,7 @@
         <div class="ocat-wrapper">
             <label asp-for="ConfirmName" class="ocat-label">@T["Type the name to confirm"]</label>
             <div class="ocat-end">
-                <input asp-for="ConfirmName" class="form-control" autocomplete="off" placeholder="@entry.DisplayName" data-th-confirm data-expected="@entry.DisplayName" />
+                <input asp-for="ConfirmName" class="form-control" autocomplete="off" data-th-confirm data-expected="@entry.DisplayName" />
                 <span asp-validation-for="ConfirmName" class="text-danger"></span>
                 <span class="hint">@T["Type {0} exactly as it is shown.", entry.DisplayName]</span>
             </div>

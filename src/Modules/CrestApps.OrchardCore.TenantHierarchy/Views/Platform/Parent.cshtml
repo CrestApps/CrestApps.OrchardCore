@@ -88,7 +88,7 @@
         else
         {
             <form asp-action="Remove" asp-route-id="@settings.Name" method="post" class="d-flex flex-wrap gap-2 align-items-center">
-                <input name="confirmName" class="form-control w-auto" placeholder="@settings.Name" autocomplete="off" aria-label="@T["Type the tenant name to confirm"]" />
+                <input name="confirmName" class="form-control w-auto" placeholder="@T["Type {0} to confirm", settings.Name]" autocomplete="off" aria-label="@T["Type the tenant name to confirm"]" />
                 <button type="submit" class="btn btn-danger">@T["Remove everything"]</button>
                 <span class="small text-muted">@T["Type {0} to confirm. This cannot be undone.", settings.Name]</span>
             </form>

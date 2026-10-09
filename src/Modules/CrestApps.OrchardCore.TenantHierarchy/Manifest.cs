@@ -34,6 +34,9 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Users",
         "OrchardCore.Roles",
         "CrestApps.OrchardCore.Resources",
+
+        // The user picker of the access rules.
+        "CrestApps.OrchardCore.Users",
     ]
 )]
 

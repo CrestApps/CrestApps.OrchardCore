@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
 using CrestApps.OrchardCore.TenantHierarchy.ViewModels;
@@ -93,8 +94,13 @@ public sealed class PlatformController : Controller
         };
 
         model.FromPolicy(new ParentTenantPolicy());
-        model.DisplayName = tenant;
         await PopulateAsync(model, setupService);
+
+        if (!string.IsNullOrEmpty(tenant) && model.Suggestions.TryGetValue(tenant, out var suggestion))
+        {
+            model.DisplayName = suggestion.DisplayName;
+            model.Slug = suggestion.Slug;
+        }
 
         return View("EditParent", model);
     }
@@ -373,9 +379,23 @@ public sealed class PlatformController : Controller
     private async Task PopulateAsync(ParentPolicyEditViewModel model, ISetupService setupService)
     {
         model.PlatformDomain = _platformService.GetPlatformDomain();
-        model.Candidates = _platformService.GetOverview().Candidates
+
+        var candidates = _platformService.GetOverview().Candidates;
+        model.Candidates = candidates
             .Select(settings => new SelectListItem($"{settings.Name} ({settings.State})", settings.Name, settings.Name == model.TenantName))
             .ToList();
+
+        // The form fills the display name and address from the tenant the user picks.
+        model.Suggestions = candidates.ToDictionary(
+            settings => settings.Name,
+            settings => new ParentSuggestion
+            {
+                DisplayName = string.IsNullOrWhiteSpace(settings[TenantHierarchyConstants.SettingsKeys.Description])
+                    ? settings.Name
+                    : settings[TenantHierarchyConstants.SettingsKeys.Description],
+                Slug = TenantHierarchyNaming.SuggestParentSlug(settings.Name, settings.GetPrimaryHost(), model.PlatformDomain),
+            },
+            StringComparer.Ordinal);
         model.AvailableRecipes = (await setupService.GetSetupRecipesAsync())
             .OrderBy(recipe => recipe.DisplayName ?? recipe.Name, StringComparer.OrdinalIgnoreCase)
             .Select(recipe => new SelectListItem(recipe.DisplayName ?? recipe.Name, recipe.Name, model.Recipes.Contains(recipe.Name, StringComparer.OrdinalIgnoreCase)))

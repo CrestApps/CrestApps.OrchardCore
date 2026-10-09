@@ -1,3 +1,4 @@
+using System.Net;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
@@ -246,13 +247,16 @@ public sealed class ChildTenantLifecycleTests
         Assert.True((await InFirmAAsync(manager => manager.ReloadAsync(entry.EntryId))).Succeeded);
         Assert.True((await InFirmAAsync(manager => manager.SuspendAsync(entry.EntryId))).Succeeded);
         Assert.True(_fixture.Host.GetSettings(tenantName).IsDisabled());
+        await AssertUnavailableAsync(entry.Host);
 
         Assert.True((await InFirmAAsync(manager => manager.ResumeAsync(entry.EntryId))).Succeeded);
         Assert.True(_fixture.Host.GetSettings(tenantName).IsRunning());
+        await AssertAvailableAsync(entry.Host);
 
         Assert.True((await InFirmAAsync(manager => manager.SuspendAsync(entry.EntryId))).Succeeded);
         var removal = await InFirmAAsync(manager => manager.RemoveAsync(entry.EntryId));
         Assert.True(removal.Succeeded, removal.Error);
+        await AssertUnavailableAsync(entry.Host);
 
         // The tenant, its registry entry and its grants are gone.
         Assert.Null(_fixture.Host.GetSettings(tenantName));
@@ -393,5 +397,33 @@ public sealed class ChildTenantLifecycleTests
             var (result, _) = await services.GetRequiredService<TenantHierarchyPlatformService>().UpdateParentAsync(parent, settings.GetHierarchyDisplayName(), policy);
             Assert.True(result.Succeeded, result.Error);
         });
+    }
+
+    /// <summary>
+    /// Asserts that the address of a tenant that is not running answers "not found" instead of the platform site,
+    /// which the Default tenant would otherwise serve for any host no running tenant claims.
+    /// </summary>
+    private async Task AssertUnavailableAsync(string host)
+    {
+        using var browser = _fixture.Host.CreateBrowser();
+        var response = await browser.GetAsync($"http://{host}/");
+        var html = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains("This site is not available", html, StringComparison.Ordinal);
+
+        var login = await browser.GetAsync($"http://{host}/Login");
+        Assert.Equal(HttpStatusCode.NotFound, login.StatusCode);
+    }
+
+    private async Task AssertAvailableAsync(string host)
+    {
+        using var browser = _fixture.Host.CreateBrowser();
+        var home = await browser.GetAsync($"http://{host}/");
+        var login = await browser.GetAsync($"http://{host}/Login");
+
+        // A site set up with the Blank recipe has no home page, so only the guard's own page tells the two apart.
+        Assert.DoesNotContain("This site is not available", await home.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.OK, login.StatusCode);
     }
 }

@@ -130,6 +130,35 @@ public static class TenantHierarchyNaming
     }
 
     /// <summary>
+    /// Suggests the slug of a tenant that becomes a parent. When the tenant already lives at
+    /// <c>{slug}.{platform domain}</c>, its current slug is kept, so its address does not change; otherwise the slug is
+    /// made from its name.
+    /// </summary>
+    /// <param name="tenantName">The tenant name.</param>
+    /// <param name="currentHost">The current host of the tenant, or <see langword="null"/>.</param>
+    /// <param name="platformDomain">The platform domain.</param>
+    public static string SuggestParentSlug(string tenantName, string currentHost, string platformDomain)
+    {
+        if (!string.IsNullOrWhiteSpace(currentHost) && !string.IsNullOrWhiteSpace(platformDomain))
+        {
+            var suffix = $".{platformDomain.Trim()}";
+            var host = currentHost.Trim();
+
+            if (host.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                var label = host[..^suffix.Length].ToLowerInvariant();
+
+                if (ValidateSlug(label) == SlugValidationResult.Valid)
+                {
+                    return label;
+                }
+            }
+        }
+
+        return SuggestSlug(tenantName);
+    }
+
+    /// <summary>
     /// Validates a child host pattern. It must contain <see cref="BusinessPlaceholder"/> exactly once, at the start of
     /// the first label, and must not contain a wildcard, a list separator or a path.
     /// </summary>

@@ -34,6 +34,9 @@ public sealed class TenantHierarchyArchitectureTests
         nameof(EgressGuard),
         "ParentRemovalTenantEvents",
         "ParentRemovalHostHandler",
+
+        // Runs in the Default tenant only, which may reach every tenant, to read the tenant list.
+        "UnavailableAddressMiddleware",
     ];
 
     [Fact]

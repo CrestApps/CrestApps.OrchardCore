@@ -11,14 +11,14 @@
     {
         case EntryErrorKind.MfaRequired:
             title = T["Two-factor sign-in required"].Value;
-            message = T["Your organization requires two-factor authentication to open a {0}. Sign out, then sign in again with two-factor authentication.", childWord].Value;
+            message = T.GetString("Your organization requires two-factor authentication to open a {0}. Sign out, then sign in again with two-factor authentication.", childWord).Value;
             break;
         case EntryErrorKind.SignInExpired:
             title = T["The sign-in expired"].Value;
             message = T["The sign-in took too long or was started in another browser window. Try again."].Value;
             break;
         default:
-            title = T["You cannot open this {0}", childWord].Value;
+            title = T.GetString("You cannot open this {0}", childWord).Value;
             message = T["It does not exist, it is not available right now, or you have no access to it. Ask your administrator if you think you should have access."].Value;
             break;
     }

@@ -3,13 +3,23 @@
 @{
     var labels = Model.Labels;
     var target = Model.Embedded ? "_top" : "_self";
+
+    // Search and the favorite and recent shortcuts only help in a long list; in a short one they repeat what is
+    // already on screen, so a short list shows every entry once, favorites first.
+    var isLongList = Model.All.Count > 5;
+    var groups = isLongList
+        ? new[] { ("favorites", T["Favorites"].Value, Model.Favorites), ("recent", T["Recent"].Value, Model.Recent), ("all", T.GetString("All {0}", labels.ChildrenLower).Value, Model.All) }
+        : new[] { ("all", T.GetString("All {0}", labels.ChildrenLower).Value, Model.All.OrderByDescending(item => item.IsFavorite).ToList()) };
 }
 
 <div class="th-picker" data-th-picker>
-    <div class="has-search mb-3">
-        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-        <input class="form-control" type="search" placeholder="@T["Search {0}", labels.ChildrenLower]" autocomplete="off" data-th-picker-search autofocus />
-    </div>
+    @if (isLongList)
+    {
+        <div class="has-search mb-3">
+            <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+            <input class="form-control" type="search" placeholder="@T["Search {0}", labels.ChildrenLower]" autocomplete="off" data-th-picker-search autofocus />
+        </div>
+    }
 
     @if (Model.All.Count == 0)
     {
@@ -20,7 +30,7 @@
     }
     else
     {
-        foreach (var group in new[] { ("favorites", T["Favorites"].Value, Model.Favorites), ("recent", T["Recent"].Value, Model.Recent), ("all", T["All {0}", labels.ChildrenLower].Value, Model.All) })
+        foreach (var group in groups)
         {
             if (group.Item3.Count == 0)
             {

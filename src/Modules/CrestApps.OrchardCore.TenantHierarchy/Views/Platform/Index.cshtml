@@ -31,6 +31,11 @@
         {
             <a class="btn btn-secondary" asp-action="MakeParent"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Make a parent tenant"]</a>
         }
+        else if (Model.HostGuardInstalled)
+        {
+            <span class="small text-muted">@T["Any tenant that is set up and not yet in the hierarchy can become a parent."]</span>
+            <a class="btn btn-outline-secondary" asp-area="OrchardCore.Tenants" asp-controller="Admin" asp-action="Create"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Create a tenant"]</a>
+        }
     </div>
 </div>
 

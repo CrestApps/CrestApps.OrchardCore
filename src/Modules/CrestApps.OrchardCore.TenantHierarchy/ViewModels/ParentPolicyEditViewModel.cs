@@ -129,6 +129,12 @@ public class ParentPolicyEditViewModel
     public List<SelectListItem> Candidates { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the suggested display name and slug of each candidate tenant, keyed by tenant name.
+    /// </summary>
+    [BindNever]
+    public Dictionary<string, ParentSuggestion> Suggestions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the setup recipes.
     /// </summary>
     [BindNever]

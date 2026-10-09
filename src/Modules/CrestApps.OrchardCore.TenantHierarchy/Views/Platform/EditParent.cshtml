@@ -3,7 +3,7 @@
 @{
     var title = Model.IsNew
         ? T["Make a parent tenant"].Value
-        : T["Policy of {0}", Model.DisplayName].Value;
+        : T.GetString("Policy of {0}", Model.DisplayName).Value;
     var action = Model.IsNew ? "MakeParent" : "EditParent";
 }
 
@@ -29,7 +29,7 @@
                 }
                 else
                 {
-                    <select asp-for="TenantName" asp-items="Model.Candidates" class="form-select">
+                    <select asp-for="TenantName" asp-items="Model.Candidates" class="form-select" data-th-suggestions="@System.Text.Json.JsonSerializer.Serialize(Model.Suggestions, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))">
                         <option value="">@T["Select a tenant"]</option>
                     </select>
                     <span class="hint">@T["An existing tenant that is not part of a hierarchy. Its address is replaced by the one below, and its users keep working at the new address."]</span>
@@ -249,3 +249,36 @@
         </div>
     </div>
 </form>
+
+<script at="Foot">
+    (function () {
+        const select = document.querySelector('[data-th-suggestions]');
+
+        if (!select) {
+            return;
+        }
+
+        const suggestions = JSON.parse(select.dataset.thSuggestions || '{}');
+        const displayName = document.getElementById('@Html.IdFor(m => m.DisplayName)');
+        const slug = document.getElementById('@Html.IdFor(m => m.Slug)');
+
+        // A field the user typed in keeps its value when another tenant is picked.
+        [displayName, slug].forEach((input) => input?.addEventListener('input', () => input.dataset.edited = 'true'));
+
+        select.addEventListener('change', () => {
+            const suggestion = suggestions[select.value];
+
+            if (!suggestion) {
+                return;
+            }
+
+            if (displayName && displayName.dataset.edited !== 'true') {
+                displayName.value = suggestion.displayName;
+            }
+
+            if (slug && slug.dataset.edited !== 'true') {
+                slug.value = suggestion.slug;
+            }
+        });
+    })();
+</script>

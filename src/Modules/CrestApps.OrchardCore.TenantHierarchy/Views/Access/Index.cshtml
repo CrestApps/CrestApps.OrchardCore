@@ -4,8 +4,8 @@
     var labels = Model.Labels;
     var childId = Model.Child?.Entry.EntryId;
     var title = Model.Child is null
-        ? T["Access to every {0}", labels.ChildLower].Value
-        : T["Access to {0}", Model.Child.Entry.DisplayName].Value;
+        ? T.GetString("Access to every {0}", labels.ChildLower).Value
+        : T.GetString("Access to {0}", Model.Child.Entry.DisplayName).Value;
 }
 
 <zone Name="Title">
@@ -27,11 +27,11 @@
 </p>
 
 <div class="card mb-4">
-    <div class="card-header fw-semibold">@T["Who can open"]</div>
+    <div class="card-header fw-semibold">@(Model.Child is null ? T["Who can open"] : T["Rules for {0} only", Model.Child.Entry.DisplayName])</div>
     <ul class="list-group list-group-flush">
         @if (Model.Grants.Count == 0)
         {
-            <li class="list-group-item text-muted">@T["Nobody yet. Add a rule below."]</li>
+            <li class="list-group-item text-muted">@(Model.Child is null ? T["Nobody yet. Add a rule below."] : T["None. The rules for every {0} below decide who can open it.", labels.ChildLower])</li>
         }
         @foreach (var grant in Model.Grants)
         {
@@ -98,8 +98,17 @@
             </div>
 
             <div class="mb-3 d-none" data-th-for="User">
-                <label asp-for="Principal" class="form-label">@T["User name or email"]</label>
-                <input asp-for="Principal" class="form-control" autocomplete="off" />
+                <span class="form-label d-block">@T["User"]</span>
+                @await Component.InvokeAsync("UserPicker", new
+                {
+                    name = Html.NameFor(m => m.Principal).ToString(),
+                    selectedValues = string.IsNullOrEmpty(Model.Principal) ? Array.Empty<string>() : new[] { Model.Principal },
+                    valueType = "userName",
+                    multiple = false,
+                    buttonText = T["Select a user"].Value,
+                    searchPlaceholder = T["Search users"].Value,
+                    smallButton = false,
+                })
             </div>
 
             <div class="mb-3">

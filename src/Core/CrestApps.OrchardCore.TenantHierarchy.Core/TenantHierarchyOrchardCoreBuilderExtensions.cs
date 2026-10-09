@@ -28,7 +28,8 @@ public static class TenantHierarchyOrchardCoreBuilderExtensions
 
     /// <summary>
     /// Installs the tenant hierarchy guards in every tenant: the <see cref="IShellHost"/> scope guard, the feature
-    /// guard, the egress guard, the <c>__Host-</c> cookie names, the parent removal guard and the Fetch Metadata guard.
+    /// guard, the egress guard, the <c>__Host-</c> cookie names, the parent removal guard, the Fetch Metadata guard and
+    /// the guard that keeps the Default tenant from answering for a hierarchy tenant that is not running.
     /// Each guard reads the tenant's own shell settings and does nothing unless the tenant is part of a hierarchy.
     /// Call it from <c>Program.cs</c>, inside <c>AddOrchardCms(builder =&gt; builder.AddTenantHierarchy())</c>.
     /// </summary>
@@ -78,6 +79,7 @@ public static class TenantHierarchyOrchardCoreBuilderExtensions
             order: int.MaxValue);
 
         builder.Configure(app => app.UseMiddleware<ParentFetchMetadataMiddleware>(), FetchMetadataMiddlewareOrder);
+        builder.Configure(app => app.UseMiddleware<UnavailableAddressMiddleware>(), FetchMetadataMiddlewareOrder);
 
         return builder;
     }

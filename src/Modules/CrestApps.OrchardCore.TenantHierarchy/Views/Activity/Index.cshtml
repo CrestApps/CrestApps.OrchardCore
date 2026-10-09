@@ -1,10 +1,11 @@
 @model HierarchyActivityViewModel
+@using CrestApps.OrchardCore.TenantHierarchy.Core.Services
 
 @{
     var labels = Model.Labels;
     var title = Model.Child is null
         ? T["Activity"].Value
-        : T["Activity of {0}", Model.Child.DisplayName].Value;
+        : T.GetString("Activity of {0}", Model.Child.DisplayName).Value;
 
     string Describe(string name) => name switch
     {
@@ -28,6 +29,38 @@
         HierarchyAuditEventNames.SessionEnded => T["Session ended"].Value,
         HierarchyAuditEventNames.Dismissed => T["Removed from list"].Value,
         _ => name,
+    };
+
+    // Session events store why the session ended as a reason code; show it in words.
+    string DescribeDetails(HierarchyAuditEvent auditEvent) => auditEvent.Name != HierarchyAuditEventNames.SessionEnded
+        ? auditEvent.Details
+        : auditEvent.Details switch
+        {
+            DelegatedSessionRules.Ended => T["Ended"].Value,
+            DelegatedSessionRules.IdleTimeout => T["Ended after a period without activity"].Value,
+            DelegatedSessionRules.LifetimeExceeded => T["Reached its maximum length"].Value,
+            DelegatedSessionRules.UserDisabled => T["The user was disabled"].Value,
+            DelegatedSessionRules.SecurityStampChanged => T["The user's password or security settings changed"].Value,
+            DelegatedSessionRules.GrantRemoved => T["The user's access was removed"].Value,
+            DelegatedSessionRules.ChildUnavailable => T.GetString("The {0} was unavailable", labels.ChildLower).Value,
+            DelegatedSessionRules.SignedOut => T["The user signed out"].Value,
+            DelegatedSessionRules.SignedOutEverywhere => T.GetString("The user signed out of every {0}", labels.ChildLower).Value,
+            DelegatedSessionRules.ChildSignOut => T.GetString("The user left the {0}", labels.ChildLower).Value,
+            DelegatedSessionRules.ChildRemoved => T.GetString("The {0} was removed", labels.ChildLower).Value,
+            _ => auditEvent.Details,
+        };
+
+    // Authentication method references (RFC 8176) as words.
+    string DescribeMethod(string method) => method switch
+    {
+        "pwd" => T["password"].Value,
+        "mfa" => T["two-factor authentication"].Value,
+        "otp" => T["one-time code"].Value,
+        "sms" => T["text message code"].Value,
+        "hwk" or "swk" => T["security key"].Value,
+        "fido" => T["passkey"].Value,
+        "ext" or "fed" => T["external sign-in"].Value,
+        _ => method,
     };
 
     string Badge(string name) => name switch
@@ -86,14 +119,14 @@
                         @(auditEvent.UserName ?? T["System"].Value)
                         @if (!string.IsNullOrEmpty(auditEvent.IpAddress))
                         {
-                            <div class="text-muted">@auditEvent.IpAddress</div>
+                            <div class="text-muted text-nowrap">@T["IP {0}", auditEvent.IpAddress]</div>
                         }
                     </td>
                     <td class="small text-break">
-                        @auditEvent.Details
+                        @DescribeDetails(auditEvent)
                         @if (auditEvent.AuthenticationMethods?.Length > 0)
                         {
-                            <div class="text-muted">@T["Sign-in: {0}", string.Join(", ", auditEvent.AuthenticationMethods)]</div>
+                            <div class="text-muted">@T["Signed in with {0}", string.Join(", ", auditEvent.AuthenticationMethods.Select(DescribeMethod).Distinct())]</div>
                         }
                         @if (!string.IsNullOrEmpty(auditEvent.SessionReference))
                         {

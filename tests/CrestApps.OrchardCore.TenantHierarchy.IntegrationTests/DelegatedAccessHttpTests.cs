@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.TenantHierarchy.IntegrationTests;
 /// Drives delegated access over HTTP, as a browser does: sign in to the parent, open a child, and use it.
 /// </summary>
 [Collection(TenantHierarchyCollection.Name)]
-public sealed class DelegatedAccessHttpTests
+public sealed partial class DelegatedAccessHttpTests
 {
     private const string BusinessOneAddress = "http://business1.firma.localhost";
 
@@ -94,6 +95,7 @@ public sealed class DelegatedAccessHttpTests
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("You cannot open this", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Business Four", html, StringComparison.Ordinal);
+        AssertNoUnformattedText(html);
     }
 
     [Fact]
@@ -197,6 +199,7 @@ public sealed class DelegatedAccessHttpTests
         Assert.Contains("Business One", html, StringComparison.Ordinal);
         Assert.Contains("Business Two", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Business Four", html, StringComparison.Ordinal);
+        AssertNoUnformattedText(html);
         Assert.Contains("frame-ancestors 'none'", response.Headers.GetValues("Content-Security-Policy").First(), StringComparison.Ordinal);
     }
 
@@ -216,6 +219,7 @@ public sealed class DelegatedAccessHttpTests
         Assert.Contains("business1.firma.localhost", html, StringComparison.Ordinal);
         Assert.Contains($"/delegated-access/open/{_fixture.BusinessOne.EntryId}", html, StringComparison.Ordinal);
         Assert.DoesNotContain("Business Four", html, StringComparison.Ordinal);
+        AssertNoUnformattedText(html);
     }
 
     [Theory]
@@ -233,6 +237,7 @@ public sealed class DelegatedAccessHttpTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AssertNoUnformattedText(await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -243,10 +248,11 @@ public sealed class DelegatedAccessHttpTests
         var entryId = _fixture.BusinessOne.EntryId;
 
         // Act + Assert
-        foreach (var path in new[] { $"/Admin/children/{entryId}/edit", $"/Admin/children/{entryId}/features", $"/Admin/children/{entryId}/access" })
+        foreach (var path in new[] { $"/Admin/children/{entryId}/edit", $"/Admin/children/{entryId}/features", $"/Admin/children/{entryId}/access", $"/Admin/children/{entryId}/remove", $"/Admin/children/activity?child={entryId}" })
         {
             var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}{path}");
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{path} returned {(int)response.StatusCode}.");
+            AssertNoUnformattedText(await response.Content.ReadAsStringAsync(), path);
         }
     }
 
@@ -290,7 +296,26 @@ public sealed class DelegatedAccessHttpTests
         {
             var response = await browser.NavigateAsync($"{platform}{path}");
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{path} returned {(int)response.StatusCode}.");
+            AssertNoUnformattedText(await response.Content.ReadAsStringAsync(), path);
         }
+    }
+
+    [Fact]
+    public async Task MakeParentPage_ForATenant_SuggestsItsCurrentAddress()
+    {
+        // Arrange
+        using var browser = _fixture.Host.CreateBrowser();
+        var platform = "http://localhost";
+        await browser.SignInAsync(platform, "platform", _fixture.Password);
+
+        // Act
+        var response = await browser.NavigateAsync($"{platform}/Admin/tenant-hierarchy/make-parent?tenant={TenantHierarchyFixture.Plain}");
+        var html = await response.Content.ReadAsStringAsync();
+
+        // Assert: the plain tenant lives at plain.localhost, so the suggested slug keeps that address.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Matches(@"<input[^>]*name=""Slug""[^>]*value=""plain""|<input[^>]*value=""plain""[^>]*name=""Slug""", html);
+        Assert.Contains("data-th-suggestions", html, StringComparison.Ordinal);
     }
 
     private async Task<TestBrowser> SignInAsAliceAsync()
@@ -303,4 +328,18 @@ public sealed class DelegatedAccessHttpTests
 
         return browser;
     }
+
+    /// <summary>
+    /// Fails when a page shows a localized string whose arguments were never applied, such as "All {0}", in its text
+    /// or in an attribute.
+    /// </summary>
+    private static void AssertNoUnformattedText(string html, string page = null)
+    {
+        var match = UnformattedTextPattern().Match(html);
+
+        Assert.False(match.Success, $"{page ?? "The page"} shows an unformatted string: {match.Value}");
+    }
+
+    [GeneratedRegex(@"(>[^<]*\{\d+\}[^<]*<)|(=""[^""]*\{\d+\}[^""]*"")")]
+    private static partial Regex UnformattedTextPattern();
 }

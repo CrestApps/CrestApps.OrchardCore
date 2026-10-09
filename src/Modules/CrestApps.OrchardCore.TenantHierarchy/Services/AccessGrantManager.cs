@@ -119,7 +119,7 @@ public sealed class AccessGrantManager
         if (string.IsNullOrWhiteSpace(principal))
         {
             return TenantHierarchyResult.Failure(principalType == AccessGrantPrincipalType.User
-                ? S["Enter a user name or email."]
+                ? S["Select a user."]
                 : S["Select a role."]);
         }
 

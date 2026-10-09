@@ -64,16 +64,16 @@ else
                             }
                             else
                             {
-                                <form asp-action="Features" asp-route-id="@entry.EntryId" method="post" class="no-multisubmit d-inline">
+                                <form asp-action="Features" asp-route-id="@entry.EntryId" method="post" class="no-multisubmit d-inline" data-th-feature-form>
                                     <input type="hidden" name="featureIds" value="@feature.Id" />
                                     <input type="hidden" name="enable" value="@((!feature.IsEnabled).ToString())" />
                                     @if (feature.IsEnabled)
                                     {
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Disable"]</button>
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" data-th-busy="@T["Disabling…"]">@T["Disable"]</button>
                                     }
                                     else
                                     {
-                                        <button type="submit" class="btn btn-primary btn-sm">@T["Enable"]</button>
+                                        <button type="submit" class="btn btn-primary btn-sm" data-th-busy="@T["Enabling…"]">@T["Enable"]</button>
                                     }
                                 </form>
                             }
@@ -93,6 +93,22 @@ else
 
 <script at="Foot">
     (function () {
+        // Changing a feature restarts the site for a few seconds; show that the request is on its way.
+        document.querySelectorAll('[data-th-feature-form]').forEach((form) => {
+            form.addEventListener('submit', () => {
+                const button = form.querySelector('[data-th-busy]');
+
+                if (!button) {
+                    return;
+                }
+
+                const spinner = document.createElement('span');
+                spinner.className = 'spinner-border spinner-border-sm me-1';
+                spinner.setAttribute('aria-hidden', 'true');
+                button.replaceChildren(spinner, document.createTextNode(button.dataset.thBusy));
+            });
+        });
+
         const search = document.getElementById('th-feature-search');
 
         if (!search) {

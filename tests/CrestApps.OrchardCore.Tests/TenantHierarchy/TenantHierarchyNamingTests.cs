@@ -180,4 +180,21 @@ public sealed class TenantHierarchyNamingTests
         // Assert
         Assert.Equal(expected, result);
     }
+
+    [Theory]
+    [InlineData("firma", "firma.platform.com", "platform.com", "firma")]
+    [InlineData("firma", "Contoso.Platform.com", "platform.com", "contoso")]
+    [InlineData("firma", "firma.localhost:5000", "localhost:5000", "firma")]
+    [InlineData("Contoso Books", "contoso.example.org", "platform.com", "contoso-books")]
+    [InlineData("Contoso Books", null, "platform.com", "contoso-books")]
+    [InlineData("Contoso Books", "deep.firma.platform.com", "platform.com", "contoso-books")]
+    [InlineData("Contoso Books", "www.platform.com", "platform.com", "contoso-books")]
+    public void SuggestParentSlug_KeepsTheCurrentAddressWhenItIsUnderThePlatformDomain(string tenantName, string currentHost, string platformDomain, string expected)
+    {
+        // Act
+        var slug = TenantHierarchyNaming.SuggestParentSlug(tenantName, currentHost, platformDomain);
+
+        // Assert
+        Assert.Equal(expected, slug);
+    }
 }
