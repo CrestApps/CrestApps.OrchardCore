@@ -173,7 +173,6 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Reports` | Reports | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.OpenXml` | Reports (OpenXml) | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.Designer` | Report Designer | [Report Designer](./modules/report-designer) |
-| `CrestApps.OrchardCore.Reports.Contents` | Content Reports | [Report Designer](./modules/report-designer#content-reports) |
 
 ## Communication
 

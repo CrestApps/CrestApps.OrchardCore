@@ -223,7 +223,7 @@ internal static class ContentReportTestHelpers
         services.AddSingleton(authorizationService ?? AuthorizationFor().Object);
         services.AddSingleton(session ?? Mock.Of<ISession>());
 
-        new Startup().ConfigureServices(services);
+        new ContentsReportsStartup().ConfigureServices(services);
         configure?.Invoke(services);
 
         return services.BuildServiceProvider();

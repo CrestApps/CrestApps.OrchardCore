@@ -22,19 +22,21 @@ public static class ReportsConstants
     public const string DesignerFeature = "CrestApps.OrchardCore.Reports.Designer";
 
     /// <summary>
-    /// The identifier of the feature that adds the tenant's content types as a report data source.
-    /// </summary>
-    public const string ContentsFeature = "CrestApps.OrchardCore.Reports.Contents";
-
-    /// <summary>
     /// The technical name of the data source that exposes saved report views as data sets.
     /// </summary>
     public const string ViewsDataSource = "ReportViews";
 
     /// <summary>
-    /// The technical name of the data source that exposes content types as data sets.
+    /// The technical name of the data source that exposes content types as data sets. It is registered when the report
+    /// designer and Orchard Core Contents are both enabled.
     /// </summary>
     public const string ContentsDataSource = "Contents";
+
+    /// <summary>
+    /// The technical name of the data source that exposes saved Orchard Core queries as data sets. It is registered when
+    /// the report designer and Orchard Core Queries are both enabled.
+    /// </summary>
+    public const string QueriesDataSource = "Queries";
 
     /// <summary>
     /// The technical name of the built-in CSV export format.

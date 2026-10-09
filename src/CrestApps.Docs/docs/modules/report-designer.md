@@ -7,7 +7,7 @@ user_manual:
   - user-manual/report-designer
 ---
 
-The **Report Designer** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. The **Content Reports** feature adds the tenant's content types as a data source, and any module can add more sources.
+The **Report Designer** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. Two data sources are added automatically when their Orchard Core feature is enabled with the designer: **Content items** (with `OrchardCore.Contents`) and **Queries** (with `OrchardCore.Queries`). Any module can add more sources.
 
 | | |
 | --- | --- |
@@ -15,11 +15,13 @@ The **Report Designer** feature of the [Reports](reports.md) module lets people 
 | **Feature ID** | `CrestApps.OrchardCore.Reports.Designer` |
 | **Dependency** | `CrestApps.OrchardCore.Reports` |
 
-| | |
+| Data source | Registered when these are enabled |
 | --- | --- |
-| **Feature Name** | Content Reports |
-| **Feature ID** | `CrestApps.OrchardCore.Reports.Contents` |
-| **Dependencies** | `CrestApps.OrchardCore.Reports.Designer`, `OrchardCore.Contents` |
+| **Report views** (saved views) | Report Designer |
+| **Content items** (content types) | Report Designer and `OrchardCore.Contents` |
+| **Queries** (saved Orchard Core queries) | Report Designer and `OrchardCore.Queries` |
+
+The built-in sources need no feature of their own: each is registered by a startup class marked with `[RequireFeatures]`, so it appears as soon as its Orchard Core feature is enabled alongside the designer.
 
 How people use the designer is described in the User Manual: [Report Designer](../user-manual/report-designer.md).
 
@@ -60,7 +62,7 @@ A data source returns `DateTime` field values in UTC. The engine converts them t
   Administrators get all four through the default stereotype.
 
 - **A saved report reads data with its owner's current access**, whoever runs it. The owner vouches for what the report shows; viewers need no access to the underlying data. When the owner is deleted or disabled, or loses access to a data set, the report stops running. The designer preview reads with the designer's access.
-- A data source must hide every data set the principal may not read. **Content Reports** lists a content type only when the principal holds `ViewContent` for it, including the type-specific permission of a securable type. Because Orchard Core grants `ViewContent` broadly by default, make content types that hold sensitive data **Securable** to control which designers can report on them.
+- A data source must hide every data set the principal may not read. The **Content items** source lists a content type only when the principal holds `ViewContent` for it, including the type-specific permission of a securable type. Because Orchard Core grants `ViewContent` broadly by default, make content types that hold sensitive data **Securable** to control which designers can report on them.
 - Exposed filter values from the query string override only filters marked as exposed. Fixed filters cannot be changed or removed by a viewer.
 - Share link tokens hold 256 random bits. Only their SHA-256 hash is stored, the full link is shown once, and links can expire, be revoked, require sign-in, and allow or deny export. Shared pages send `noindex` and `no-referrer`. Every link opening, export, creation and revocation is logged.
 - Designer payloads are limited to 1 MB, formulas are nested at most 64 levels, views at most 8 levels, and a view that reads itself is refused.
@@ -182,9 +184,9 @@ The contract:
 
 A repository development skill under `.agents/skills/crestapps-report-data-source` walks through every step.
 
-## Content Reports
+## Content items
 
-The **Content Reports** feature registers the **Content items** data source: one data set per content type the user may view, reading published items with YesSql.
+When `OrchardCore.Contents` is enabled, the **Content items** data source offers one data set per content type the user may view, reading published items with YesSql.
 
 | Field | Name |
 | --- | --- |
@@ -196,7 +198,7 @@ For example, a `Customer` type with an `Email` text field and an `Order` type wi
 
 Built-in providers cover the Orchard Core text, numeric, boolean, date, date-time, time, HTML, Markdown, multi-text, link, content picker, user picker, media, taxonomy, localization set and YouTube fields, and the CrestApps phone field. An unknown field type is read as text from its `Text` or `Value` property. Date range filters on the content item index columns are passed down to the query; text filters are not, because database collations may compare case differently from the engine.
 
-### Extending Content Reports
+### Extending the content items source
 
 - **A content field type:** implement `IContentReportFieldProvider` (keyed by `FieldType`; the provider registered last wins), or register a one-property provider:
 
@@ -206,6 +208,16 @@ Built-in providers cover the Orchard Core text, numeric, boolean, date, date-tim
 
 - **A content part:** implement `IContentReportPartProvider`. Every provider is asked about every part; their fields are combined.
 - A field derives from `ContentReportField`. Override `PrepareAsync` for work done once per query (it runs only when a report uses the field), and `GetValue` to read the value.
+
+## Queries
+
+When `OrchardCore.Queries` is enabled, the **Queries** data source offers every saved query (SQL, Lucene, Elasticsearch, or any other query source) as a data set, so a query someone wrote once can be joined, filtered and charted like any other data.
+
+- A query is listed and read only for a principal allowed to execute it: `ExecuteApi_{QueryName}`, or **Execute Queries API (all)**.
+- A query declares no columns, so its fields are found in its results. Each result item is written as JSON; nested objects become dotted fields (`TitlePart.Title`, `Customer.Balance.Value`), lists of plain values are joined with commas, and each field's type is inferred from the first 200 items (whole numbers, decimals, booleans, ISO dates and date-times, otherwise text). Fields ending in `Id` are offered as join keys.
+- A query that returns content items (**Return content items**) gives its content item properties and part and field values the same way.
+- The query runs once per report run, without parameters, so write queries whose parameters have defaults. Its own limits apply first; the report then keeps at most `MaxRowsPerDataSet` rows.
+- A query that fails stops the report with the query's name and error message, and the failure is logged.
 
 ## Formula reference
 

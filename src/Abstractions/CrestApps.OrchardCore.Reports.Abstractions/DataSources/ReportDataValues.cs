@@ -197,11 +197,26 @@ public static class ReportDataValues
     {
         return value switch
         {
-            JsonValue jsonValue => UnwrapElement(jsonValue.GetValue<JsonElement>()),
+            JsonValue jsonValue => UnwrapElement(ToElement(jsonValue)),
             JsonElement element => UnwrapElement(element),
             JsonNode node => node.ToJsonString(),
             _ => value,
         };
+    }
+
+    /// <summary>
+    /// Reads a JSON value as a <see cref="JsonElement"/>, whether it was parsed from JSON text or created from a CLR
+    /// value.
+    /// </summary>
+    /// <param name="value">The JSON value.</param>
+    /// <returns>The element.</returns>
+    public static JsonElement ToElement(JsonValue value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+
+        return value.TryGetValue<JsonElement>(out var element)
+            ? element
+            : JsonSerializer.SerializeToElement(value);
     }
 
     private static object UnwrapElement(JsonElement element)

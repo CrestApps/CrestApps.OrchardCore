@@ -13,7 +13,7 @@ The **Report Designer** lets you build your own reports without writing code. Yo
 | --- | --- |
 | **Menu** | Reports > Report Designer, and Reports > Report Views |
 | **Permissions** | Design reports and manage own designed reports and views (to design); Share designed reports publicly and through share links (to share with everyone or create links); Manage all designed reports and views (to change other people's reports) |
-| **Features** | Report Designer; Content Reports adds your content types (such as customers or orders) as data |
+| **Features** | Report Designer. Your content types (such as customers or orders) are offered as data when Contents is on, and your saved queries when Queries is on. |
 
 <AskYourAdmin />
 
@@ -23,7 +23,7 @@ People who only run reports that were shared with them need no permission: they 
 
 | Word | What it means |
 | --- | --- |
-| **Data source** | Where data comes from. **Content items** offers each content type of the site; **Report views** offers the views you and your team saved. Other features can add more sources. |
+| **Data source** | Where data comes from. **Content items** offers each content type of the site; **Queries** offers the saved queries you may run (such as SQL or search queries); **Report views** offers the views you and your team saved. Other features can add more sources. |
 | **Data set** | One table of data from a source, such as the *Customer* content type. |
 | **Field** | One piece of information in a data set, such as *Email* or *Total*. |
 | **Dimension** | A column the report groups by, such as *Region*. |

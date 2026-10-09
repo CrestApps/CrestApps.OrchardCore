@@ -3,10 +3,10 @@ name: crestapps-report-data-source
 description: >
   Skill for adding a new data source (connector) to the CrestApps.OrchardCore Report Designer, such as a SQL Server
   or PostgreSQL database, an Elasticsearch or Azure AI Search index, a REST API, users, or any module's own records,
-  modeled on the Content Reports data source and the built-in Report Views source. Covers the IReportDataSource
+  modeled on the Content items, Queries and Report Views data sources. Covers the IReportDataSource
   contract (data sets, typed field schemas, rows), the security boundary (only expose what the principal may read),
   value types and UTC dates, optional filter push-down that must never drop rows, row limits and truncation, stable
-  names, the feature/module layout, DI registration, tests, and docs. Also covers extending Content Reports with
+  names, the feature/module layout, DI registration, tests, and docs. Also covers extending the content items source with
   IContentReportFieldProvider / IContentReportPartProvider for custom content fields and parts. Use this skill
   whenever the request is to "add a report data source", "let the report designer read from <system>", "add a
   connector for reports", implement IReportDataSource, or report on a new content field type.
@@ -33,7 +33,8 @@ and what rows it holds. Everything else comes for free.
 Read these first; they are authoritative:
 
 - `src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/DataSources/*.cs` — the contract.
-- `src/Modules/CrestApps.OrchardCore.Reports.Contents/Services/ContentsReportDataSource.cs` — the reference source.
+- `src/Modules/CrestApps.OrchardCore.Reports/Contents/Services/ContentsReportDataSource.cs` — the reference source.
+- `src/Modules/CrestApps.OrchardCore.Reports/Queries/QueriesReportDataSource.cs` — a source whose schema is inferred from results.
 - `src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportViewsDataSource.cs` — a source built on the engine.
 - `src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs` — how sources are called.
 - Docs: `src/CrestApps.Docs/docs/modules/report-designer.md`.
@@ -70,16 +71,19 @@ Rules:
 
 ## Layout and registration
 
-- New module `src/Modules/CrestApps.OrchardCore.Reports.<Source>` with `Manifest.cs` (category `Reporting`,
-  dependency `ReportsConstants.DesignerFeature`), `Startup.cs` registering
-  `services.AddScoped<IReportDataSource, MyReportDataSource>();`.
-- Add the project to `CrestApps.OrchardCore.slnx`, the targets project
-  `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj`, and the tests
-  project references.
+- **A source that wraps an Orchard Core feature** (like Contents and Queries) needs no feature of its own: add a startup
+  class in the Reports module (or your module) marked `[Feature(ReportsConstants.DesignerFeature)]` and
+  `[RequireFeatures("OrchardCore.X")]`, registering `services.AddScoped<IReportDataSource, MyReportDataSource>();`. See
+  `Contents/ContentsReportsStartup.cs` and `Queries/QueriesReportsStartup.cs`.
+- **A source for an external system** (a database, a search server, an API) goes in its own module
+  `src/Modules/CrestApps.OrchardCore.Reports.<Source>` with `Manifest.cs` (category `Reporting`, dependency
+  `ReportsConstants.DesignerFeature`) and `Startup.cs`. Add the project to `CrestApps.OrchardCore.slnx`, the targets
+  project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.csproj`, and the
+  tests project references.
 - Connection settings for external systems go in configuration (`CrestApps:Reports:<Source>`), documented in
   `docs/configuration.md` with the environment-variable form; never in a design.
 
-## Extending Content Reports instead
+## Extending the content items source instead
 
 For a custom content field or part, do not write a new source:
 

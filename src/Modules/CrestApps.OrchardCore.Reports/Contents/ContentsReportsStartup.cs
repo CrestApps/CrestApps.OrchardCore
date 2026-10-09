@@ -9,9 +9,12 @@ namespace CrestApps.OrchardCore.Reports.Contents;
 
 /// <summary>
 /// Registers the content type report data source and the report field providers of the standard content fields and
-/// parts.
+/// parts. It needs no feature of its own: the content items become a data source as soon as the Report Designer and
+/// Orchard Core Contents are both enabled.
 /// </summary>
-public sealed class Startup : StartupBase
+[Feature(ReportsConstants.DesignerFeature)]
+[RequireFeatures("OrchardCore.Contents")]
+public sealed class ContentsReportsStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
