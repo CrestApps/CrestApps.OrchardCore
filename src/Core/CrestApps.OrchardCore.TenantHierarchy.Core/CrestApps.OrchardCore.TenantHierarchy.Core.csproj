@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.AuditTrail.Abstractions" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Recipes.Abstractions" />

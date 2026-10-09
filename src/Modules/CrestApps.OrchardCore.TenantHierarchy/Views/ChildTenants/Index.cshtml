@@ -42,17 +42,12 @@
                         </button>
                     </div>
                 </div>
-                <div class="col-auto d-none d-md-block">
-                    <span class="badge rounded-pill @(atLimit ? "text-bg-warning" : "text-bg-light") fs-6 fw-normal" title="@T["Used of the limit the platform set"]">
-                        @T["{0} of {1}", Model.TotalCount, Model.MaxChildren]
-                    </span>
-                </div>
                 @if (Model.CanCreate)
                 {
                     <div class="col-auto">
                         @if (atLimit || !Model.HostGuardInstalled)
                         {
-                            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="@(atLimit ? T["You have reached your limit."] : T["Not available yet."])">
+                            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="@(atLimit ? T["You have reached your limit of {0} {1}.", Model.MaxChildren, labels.ChildrenLower] : T["Not available yet."])">
                                 <button type="button" class="btn btn-secondary" disabled>
                                     <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add {0}", labels.ChildLower]
                                 </button>
@@ -144,10 +139,10 @@
             var initials = new TenantSwitchItem { Info = item }.Initials;
 
             <li class="list-group-item" data-entry-id="@entryId" @(isBusy ? Html.Raw($"data-status-url=\"{Url.Action("Status", new { id = entryId })}\"") : null)>
-                <div class="d-flex align-items-start gap-3">
+                <div class="d-flex align-items-center gap-3">
                     @if (Model.BulkActions.Count > 0)
                     {
-                        <div class="form-check pt-2">
+                        <div class="form-check">
                             <input type="checkbox" class="form-check-input" value="@entryId" name="itemIds" id="itemIds-@entryId">
                             <label class="form-check-label" for="itemIds-@entryId"><span class="visually-hidden">@entry.DisplayName</span></label>
                         </div>
@@ -255,7 +250,7 @@
                                     {
                                         <li><a class="dropdown-item" asp-controller="Access" asp-action="Child" asp-route-id="@entryId"><i class="fa-solid fa-user-shield fa-fw me-2" aria-hidden="true"></i>@T["Access"]</a></li>
                                     }
-                                    <li><a class="dropdown-item" asp-controller="Activity" asp-action="Index" asp-route-child="@entryId"><i class="fa-solid fa-clock-rotate-left fa-fw me-2" aria-hidden="true"></i>@T["Activity"]</a></li>
+                                    <li><a class="dropdown-item" asp-area="OrchardCore.AuditTrail" asp-controller="Admin" asp-action="Index" asp-route-correlationId="@entryId"><i class="fa-solid fa-clock-rotate-left fa-fw me-2" aria-hidden="true"></i>@T["Activity"]</a></li>
                                     @if (Model.CanManage && entry.Status == ChildTenantStatus.Ready)
                                     {
                                         <li><hr class="dropdown-divider"></li>

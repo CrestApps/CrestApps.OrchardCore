@@ -225,7 +225,7 @@ public sealed partial class DelegatedAccessHttpTests
     [Theory]
     [InlineData("/Admin/children/create")]
     [InlineData("/Admin/children/access")]
-    [InlineData("/Admin/children/activity")]
+    [InlineData("/Admin/AuditTrail?q=category:TenantHierarchy")]
     [InlineData("/Admin/children/switch")]
     public async Task ParentAdminPages_Render(string path)
     {
@@ -248,12 +248,30 @@ public sealed partial class DelegatedAccessHttpTests
         var entryId = _fixture.BusinessOne.EntryId;
 
         // Act + Assert
-        foreach (var path in new[] { $"/Admin/children/{entryId}/edit", $"/Admin/children/{entryId}/features", $"/Admin/children/{entryId}/access", $"/Admin/children/{entryId}/remove", $"/Admin/children/activity?child={entryId}" })
+        foreach (var path in new[] { $"/Admin/children/{entryId}/edit", $"/Admin/children/{entryId}/features", $"/Admin/children/{entryId}/access", $"/Admin/children/{entryId}/remove", $"/Admin/AuditTrail/{entryId}" })
         {
             var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}{path}");
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{path} returned {(int)response.StatusCode}.");
             AssertNoUnformattedText(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), path);
         }
+    }
+
+    [Fact]
+    public async Task AuditTrail_ForOneChild_ShowsItsEventsWithTheirData()
+    {
+        // Arrange
+        using var browser = await SignInAsAliceAsync();
+
+        // Act
+        var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}/Admin/AuditTrail/{_fixture.BusinessOne.EntryId}");
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert: the event names come from the tenant hierarchy category, the client name from its data shape.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("Child tenant created", html, StringComparison.Ordinal);
+        Assert.Contains("Business One", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Business Four", html, StringComparison.Ordinal);
+        AssertNoUnformattedText(html);
     }
 
     [Fact]

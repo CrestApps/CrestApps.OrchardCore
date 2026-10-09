@@ -1,15 +1,11 @@
 namespace CrestApps.OrchardCore.TenantHierarchy.Models;
 
 /// <summary>
-/// Represents one entry in the hierarchy activity log of a parent tenant. Child tenants cannot write it.
+/// The tenant hierarchy data of an Orchard Core audit trail event, recorded in the parent tenant. Child tenants cannot
+/// write it.
 /// </summary>
 public sealed class HierarchyAuditEvent
 {
-    /// <summary>
-    /// Gets or sets the document identifier.
-    /// </summary>
-    public long Id { get; set; }
-
     /// <summary>
     /// Gets or sets the event name, one of <see cref="HierarchyAuditEventNames"/>.
     /// </summary>
@@ -54,9 +50,4 @@ public sealed class HierarchyAuditEvent
     /// Gets or sets details about the event.
     /// </summary>
     public string Details { get; set; }
-
-    /// <summary>
-    /// Gets or sets when the event happened.
-    /// </summary>
-    public DateTime CreatedUtc { get; set; }
 }

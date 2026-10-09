@@ -22,6 +22,11 @@ public class AccessGrantsViewModel
     public List<AccessGrant> Grants { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the display name of the parent tenant.
+    /// </summary>
+    public string ParentName { get; set; }
+
+    /// <summary>
     /// Gets or sets the grants for every child tenant, shown read-only on the screen of one child tenant.
     /// </summary>
     [BindNever]

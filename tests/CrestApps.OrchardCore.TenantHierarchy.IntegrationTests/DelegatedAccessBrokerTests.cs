@@ -274,20 +274,19 @@ public sealed class DelegatedAccessBrokerTests
     }
 
     [Fact]
-    public async Task Redeem_RecordsTheEntryInTheParentsActivityLog()
+    public async Task Redeem_RecordsTheEntryInTheParentsAuditTrail()
     {
         // Arrange
         var redemption = await DelegatedAccessHelper.EnterAsync(_fixture.Host, TenantHierarchyFixture.FirmA, TenantHierarchyFixture.Alice, _fixture.BusinessOne);
         var reference = DelegatedAccessTokens.GetReference(DelegatedAccessTokens.Hash(redemption.SessionId));
 
         // Act
-        var events = await _fixture.Host.InTenantAsync(TenantHierarchyFixture.FirmA, services =>
-            services.GetRequiredService<HierarchyAuditLog>().PageAsync(_fixture.BusinessOne.EntryId, 0, 200));
+        var events = await AuditTrailHelper.GetEventsAsync(_fixture.Host, TenantHierarchyFixture.FirmA, _fixture.BusinessOne.EntryId);
 
         // Assert
-        Assert.Contains(events, auditEvent => auditEvent.Name == HierarchyAuditEventNames.Entered &&
-            auditEvent.UserName == TenantHierarchyFixture.Alice &&
-            auditEvent.SessionReference == reference);
+        Assert.Contains(events, item => item.Event.Name == HierarchyAuditEventNames.Entered &&
+            item.Event.UserName == TenantHierarchyFixture.Alice &&
+            item.Data?.SessionReference == reference);
     }
 
     private Task<DelegatedSessionValidation> ValidateAsync(string child, string sessionId)

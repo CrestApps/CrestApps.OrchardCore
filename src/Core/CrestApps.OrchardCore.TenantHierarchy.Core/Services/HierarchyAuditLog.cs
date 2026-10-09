@@ -1,75 +1,57 @@
-using CrestApps.OrchardCore.TenantHierarchy.Core.Indexes;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
-using OrchardCore.Modules;
-using YesSql;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrchardCore.AuditTrail.Services;
+using OrchardCore.AuditTrail.Services.Models;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 
 /// <summary>
-/// Records and reads the hierarchy activity log of the current parent tenant.
+/// Records the tenant hierarchy events of a parent tenant in the Orchard Core audit trail, under the
+/// <see cref="HierarchyAuditEventNames.Category"/> category. The child tenant's registry entry is the correlation
+/// identifier, so the audit trail can show the events of one child tenant.
 /// </summary>
 public sealed class HierarchyAuditLog
 {
-    private const string Collection = TenantHierarchyConstants.CollectionName;
-
-    private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HierarchyAuditLog"/> class.
     /// </summary>
-    /// <param name="session">The YesSql session of the parent tenant.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="serviceProvider">The tenant services, to resolve the audit trail when it is enabled.</param>
+    /// <param name="logger">The logger.</param>
     public HierarchyAuditLog(
-        ISession session,
-        IClock clock)
+        IServiceProvider serviceProvider,
+        ILogger<HierarchyAuditLog> logger)
     {
-        _session = session;
-        _clock = clock;
+        _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     /// <summary>
-    /// Records an event. The time is set by the log.
+    /// Records an event. Does nothing, apart from a warning, when the audit trail is not enabled in the tenant.
     /// </summary>
     /// <param name="auditEvent">The event.</param>
-    public Task RecordAsync(HierarchyAuditEvent auditEvent)
+    public async Task RecordAsync(HierarchyAuditEvent auditEvent)
     {
         ArgumentNullException.ThrowIfNull(auditEvent);
 
-        auditEvent.CreatedUtc = _clock.UtcNow;
+        var auditTrailManager = _serviceProvider.GetService<IAuditTrailManager>();
 
-        return _session.SaveAsync(auditEvent, checkConcurrency: false, Collection);
-    }
+        if (auditTrailManager is null)
+        {
+            _logger.LogWarning("The tenant hierarchy event '{Event}' was not recorded because the Audit Trail feature is not enabled.", auditEvent.Name);
 
-    /// <summary>
-    /// Counts the events, optionally for one child tenant.
-    /// </summary>
-    /// <param name="childEntryId">The registry entry of the child tenant, or <see langword="null"/> for every event.</param>
-    public Task<int> CountAsync(string childEntryId)
-    {
-        return Query(childEntryId).CountAsync();
-    }
+            return;
+        }
 
-    /// <summary>
-    /// Returns a page of events, most recent first, optionally for one child tenant.
-    /// </summary>
-    /// <param name="childEntryId">The registry entry of the child tenant, or <see langword="null"/> for every event.</param>
-    /// <param name="skip">The number of events to skip.</param>
-    /// <param name="take">The number of events to return.</param>
-    public Task<IReadOnlyList<HierarchyAuditEvent>> PageAsync(string childEntryId, int skip, int take)
-    {
-        return Query(childEntryId)
-            .OrderByDescending(index => index.CreatedUtc)
-            .ThenByDescending(index => index.Id)
-            .Skip(skip)
-            .Take(take)
-            .ListAsync();
-    }
-
-    private IQuery<HierarchyAuditEvent, HierarchyAuditEventIndex> Query(string childEntryId)
-    {
-        return string.IsNullOrEmpty(childEntryId)
-            ? _session.Query<HierarchyAuditEvent, HierarchyAuditEventIndex>(Collection)
-            : _session.Query<HierarchyAuditEvent, HierarchyAuditEventIndex>(index => index.ChildEntryId == childEntryId, Collection);
+        await auditTrailManager.RecordEventAsync(new AuditTrailContext<HierarchyAuditEvent>(
+            auditEvent.Name,
+            HierarchyAuditEventNames.Category,
+            auditEvent.ChildEntryId,
+            auditEvent.UserId,
+            auditEvent.UserName,
+            auditEvent));
     }
 }

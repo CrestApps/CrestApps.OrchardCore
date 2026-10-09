@@ -358,15 +358,16 @@ public sealed class ChildTenantLifecycleTests
     }
 
     [Fact]
-    public async Task ActivityLog_RecordsTheLifeOfAChild()
+    public async Task AuditTrail_RecordsTheLifeOfAChild()
     {
         // Act
-        var names = await _fixture.Host.InTenantAsync(TenantHierarchyFixture.FirmA, async services =>
-            (await services.GetRequiredService<HierarchyAuditLog>().PageAsync(_fixture.BusinessOne.EntryId, 0, 100)).Select(auditEvent => auditEvent.Name).ToList());
+        var events = await AuditTrailHelper.GetEventsAsync(_fixture.Host, TenantHierarchyFixture.FirmA, _fixture.BusinessOne.EntryId);
+        var names = events.Select(item => item.Event.Name).ToList();
 
-        // Assert
+        // Assert: the events are in the parent's audit trail, under the tenant hierarchy category, with their data.
         Assert.Contains(HierarchyAuditEventNames.Created, names);
         Assert.Contains(HierarchyAuditEventNames.SetupSucceeded, names);
+        Assert.All(events, item => Assert.Equal(_fixture.BusinessOne.EntryId, item.Data?.ChildEntryId));
     }
 
     private Task<TenantHierarchyResult> InFirmAAsync(Func<ChildTenantManager, Task<TenantHierarchyResult>> operation)

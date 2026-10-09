@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.TenantHierarchy.Models;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.Services;
 
@@ -9,6 +12,9 @@ namespace CrestApps.OrchardCore.TenantHierarchy.Services;
 /// </summary>
 internal sealed class ParentAdminMenu : AdminNavigationProvider
 {
+    // The Audit Trail's own permission is not public; permissions are matched by name.
+    private static readonly Permission _viewAuditTrail = new("ViewAuditTrail", "View Audit Trail");
+
     private readonly ShellSettings _shellSettings;
     private readonly HierarchyLabelsProvider _labelsProvider;
 
@@ -59,9 +65,10 @@ internal sealed class ParentAdminMenu : AdminNavigationProvider
                     .Action("Index", "Access", TenantHierarchyConstants.Features.Area)
                     .Permission(TenantHierarchyPermissions.ManageChildAccess)
                     .LocalNav())
+                // The activity is recorded in the audit trail; this opens it filtered to the tenant hierarchy events.
                 .Add(S["Activity"], "4", activity => activity
-                    .Action("Index", "Activity", TenantHierarchyConstants.Features.Area)
-                    .Permission(TenantHierarchyPermissions.ViewChildTenants)
+                    .Action("Index", "Admin", "OrchardCore.AuditTrail", new RouteValueDictionary { ["q"] = $"category:{HierarchyAuditEventNames.Category}" })
+                    .Permission(_viewAuditTrail)
                     .LocalNav()));
 
         return ValueTask.CompletedTask;

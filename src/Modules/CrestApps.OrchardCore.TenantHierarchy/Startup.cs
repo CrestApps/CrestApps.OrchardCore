@@ -11,6 +11,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin.Models;
+using OrchardCore.AuditTrail.Models;
+using OrchardCore.AuditTrail.Services.Models;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -71,7 +73,6 @@ public sealed class ParentStartup : StartupBase
             .AddIndexProvider<AccessGrantIndexProvider>()
             .AddIndexProvider<DelegatedAccessCodeIndexProvider>()
             .AddIndexProvider<DelegatedAccessSessionIndexProvider>()
-            .AddIndexProvider<HierarchyAuditEventIndexProvider>()
             .AddIndexProvider<TenantSwitcherPreferenceIndexProvider>()
             .AddDataMigration<ParentTenantMigrations>();
 
@@ -82,6 +83,8 @@ public sealed class ParentStartup : StartupBase
         services.AddPermissionProvider<ParentPermissionProvider>();
         services.AddNavigationProvider<ParentAdminMenu>();
         services.AddDisplayDriver<Navbar, ParentSwitcherNavbarDisplayDriver>();
+        services.AddDisplayDriver<AuditTrailEvent, HierarchyAuditTrailEventDisplayDriver>();
+        services.AddTransient<IConfigureOptions<AuditTrailOptions>, TenantHierarchyAuditTrailEventConfiguration>();
     }
 
     internal static void AddCommonServices(IServiceCollection services)

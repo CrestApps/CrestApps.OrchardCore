@@ -6,6 +6,11 @@ namespace CrestApps.OrchardCore.TenantHierarchy.Models;
 public static class HierarchyAuditEventNames
 {
     /// <summary>
+    /// The audit trail category of the tenant hierarchy events.
+    /// </summary>
+    public const string Category = "TenantHierarchy";
+
+    /// <summary>
     /// A child tenant was created.
     /// </summary>
     public const string Created = "Created";

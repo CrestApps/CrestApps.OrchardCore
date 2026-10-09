@@ -129,6 +129,12 @@ public sealed class ChildTenantsController : Controller
             routeData.Values.TryAdd(FilterOrderKey, options.OrderBy);
         }
 
+        // Keeps the page size the user picked when they move to another page.
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeData.Values.TryAdd("pageSize", pagerParameters.PageSize.Value);
+        }
+
         var labels = _labelsProvider.GetLabels();
         var enterable = (await _issuer.GetEnterableChildrenAsync(User)).Select(info => info.Entry.EntryId).ToHashSet(StringComparer.Ordinal);
 

@@ -81,17 +81,6 @@ internal sealed class ParentTenantMigrations : DataMigration
             .CreateIndex("IDX_DelegatedAccessSessionIndex_Owner", "DocumentId", nameof(DelegatedAccessSessionIndex.ParentUserId), nameof(DelegatedAccessSessionIndex.ParentSessionId), nameof(DelegatedAccessSessionIndex.ChildEntryId), nameof(DelegatedAccessSessionIndex.IsOpen)),
             collection: Collection);
 
-        await SchemaBuilder.CreateMapIndexTableAsync<HierarchyAuditEventIndex>(table => table
-            .Column<string>(nameof(HierarchyAuditEventIndex.Name), column => column.WithLength(64))
-            .Column<string>(nameof(HierarchyAuditEventIndex.ChildEntryId), column => column.Nullable().WithLength(26))
-            .Column<string>(nameof(HierarchyAuditEventIndex.UserId), column => column.Nullable().WithLength(26))
-            .Column<DateTime>(nameof(HierarchyAuditEventIndex.CreatedUtc)),
-            collection: Collection);
-
-        await SchemaBuilder.AlterIndexTableAsync<HierarchyAuditEventIndex>(table => table
-            .CreateIndex("IDX_HierarchyAuditEventIndex_Child", "DocumentId", nameof(HierarchyAuditEventIndex.ChildEntryId), nameof(HierarchyAuditEventIndex.CreatedUtc)),
-            collection: Collection);
-
         await SchemaBuilder.CreateMapIndexTableAsync<TenantSwitcherPreferenceIndex>(table => table
             .Column<string>(nameof(TenantSwitcherPreferenceIndex.UserId), column => column.WithLength(26)),
             collection: Collection);

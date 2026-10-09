@@ -162,6 +162,7 @@ public sealed class AccessController : Controller
     {
         model.Child = child;
         model.Labels = _labelsProvider.GetLabels();
+        model.ParentName = _shellSettings.GetHierarchyDisplayName() ?? model.Labels.Parent;
         model.Grants = (await _grantManager.ListAsync(child?.Entry.EntryId)).ToList();
         model.InheritedGrants = child is null
             ? []

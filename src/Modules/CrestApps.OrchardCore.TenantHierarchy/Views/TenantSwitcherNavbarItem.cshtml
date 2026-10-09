@@ -4,36 +4,38 @@
     var childWord = string.IsNullOrWhiteSpace(Model.ChildLabel) ? T["site"].Value : Model.ChildLabel.ToLowerInvariant();
 }
 
-<li class="nav-item dropdown th-switcher">
-    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Signed in through {0}", Model.ParentName]">
-        <i class="fa-solid fa-sitemap" aria-hidden="true"></i>
-        <span class="d-none d-lg-inline text-truncate th-switcher-label"><span class="opacity-75">@Model.ParentName</span> <i class="fa-solid fa-angle-right mx-1 small" aria-hidden="true"></i> <strong>@Model.ChildName</strong></span>
-    </a>
-    <ul class="dropdown-menu dropdown-menu-end shadow">
-        <li class="px-3 py-2 small">
-            <div class="text-muted">@T["You are working in"]</div>
-            <div class="fw-semibold">@Model.ChildName</div>
-            <div class="text-muted">@T["as {0}, through {1}", Model.UserName, Model.ParentName]</div>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-        <li>
-            @if (string.IsNullOrEmpty(Model.EmbeddedPickerUrl))
-            {
-                <a class="dropdown-item" href="@Model.SwitchUrl"><i class="fa-solid fa-shuffle fa-fw me-2" aria-hidden="true"></i>@T["Switch {0}", childWord]</a>
-            }
-            else
-            {
-                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#th-switcher-modal"><i class="fa-solid fa-shuffle fa-fw me-2" aria-hidden="true"></i>@T["Switch {0}", childWord]</a>
-            }
-        </li>
-        <li><a class="dropdown-item" href="@Model.BackUrl"><i class="fa-solid fa-arrow-left fa-fw me-2" aria-hidden="true"></i>@T["Back to {0}", Model.ParentName]</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li>
-            <form method="post" action="@Url.Content($"~/{TenantHierarchyConstants.Routes.SignOut}")" asp-antiforgery="true" class="m-0">
-                <button type="submit" class="dropdown-item"><i class="fa-solid fa-right-from-bracket fa-fw me-2" aria-hidden="true"></i>@T["Leave this {0}", childWord]</button>
-            </form>
-        </li>
-    </ul>
+@* The same markup as the other navbar menus: the menu floats over the page instead of growing the navbar. *@
+<li class="nav-item th-switcher">
+    <div class="dropdown">
+        <button type="button" class="btn btn-link nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="@T["{0}, through {1}", Model.ChildName, Model.ParentName]" aria-label="@T["{0}, through {1}", Model.ChildName, Model.ParentName]">
+            <i class="fa-solid fa-building" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end position-absolute shadow">
+            <li class="px-3 py-2 small">
+                <div class="text-muted">@T["You are working in"]</div>
+                <div class="fw-semibold">@Model.ChildName</div>
+                <div class="text-muted">@T["as {0}, through {1}", Model.UserName, Model.ParentName]</div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                @if (string.IsNullOrEmpty(Model.EmbeddedPickerUrl))
+                {
+                    <a class="dropdown-item" href="@Model.SwitchUrl"><i class="fa-solid fa-shuffle fa-fw me-2" aria-hidden="true"></i>@T["Switch {0}", childWord]</a>
+                }
+                else
+                {
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#th-switcher-modal"><i class="fa-solid fa-shuffle fa-fw me-2" aria-hidden="true"></i>@T["Switch {0}", childWord]</a>
+                }
+            </li>
+            <li><a class="dropdown-item" href="@Model.BackUrl"><i class="fa-solid fa-arrow-left fa-fw me-2" aria-hidden="true"></i>@T["Back to {0}", Model.ParentName]</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form method="post" action="@Url.Content($"~/{TenantHierarchyConstants.Routes.SignOut}")" asp-antiforgery="true" class="m-0">
+                    <button type="submit" class="dropdown-item"><i class="fa-solid fa-right-from-bracket fa-fw me-2" aria-hidden="true"></i>@T["Leave this {0}", childWord]</button>
+                </form>
+            </li>
+        </ul>
+    </div>
 </li>
 
 @if (!string.IsNullOrEmpty(Model.EmbeddedPickerUrl))
@@ -74,7 +76,3 @@
         })();
     </script>
 }
-
-<style at="Head">
-    .th-switcher-label { max-width: 22rem; }
-</style>

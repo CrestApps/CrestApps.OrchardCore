@@ -38,7 +38,8 @@ Each guard reads the tenant's own shell settings and does nothing for a tenant t
 | Fact | Store | Who changes it |
 | --- | --- | --- |
 | `TenantHierarchy:Role` (`Parent` or `Child`), the parent policy `TenantHierarchy:Policy:*`, a child's `TenantHierarchy:ParentTenantId` | Shell settings | The platform, and the module's own code. Tenant administrators cannot edit shell settings. |
-| The registry of child tenants, access grants, one-time codes, delegated access sessions, the activity log, favorites | The parent's database, collection `TenantHierarchy` | The parent's administrators, through the screens |
+| The registry of child tenants, access grants, one-time codes, delegated access sessions, favorites | The parent's database, collection `TenantHierarchy` | The parent's administrators, through the screens |
+| The activity of the child tenants | The parent's Orchard Core audit trail, category `TenantHierarchy` | The module only |
 | User links (which local user belongs to which parent user) | The child's database, collection `TenantHierarchy` | The module only |
 
 A child is named by an opaque tenant name such as `u_7k2m9q4x1c`; its display name goes into the tenant `Description`, and the parent's display name into `Category`, so the Default tenant's Tenants admin can filter by parent.
@@ -134,6 +135,10 @@ In parent and child tenants, every `HttpClient` from `IHttpClientFactory` refuse
 
 The authentication and antiforgery cookies of parent and child tenants get the `__Host-` prefix, `Path=/`, no domain and `Secure`, so a child's script cannot plant a cookie for its parent or a sibling. A parent also refuses every request a child page makes with a script (`Sec-Fetch-Site: same-site` and a mode other than `navigate`).
 
+### Activity in the audit trail
+
+The Parent feature depends on `OrchardCore.AuditTrail` and records every life-cycle, access and session event in the parent's audit trail, in the `TenantHierarchy` category, with the child's registry entry as the correlation identifier. The **Activity** menu item opens `/Admin/AuditTrail?q=category:TenantHierarchy`, and a child's **Manage > Activity** opens `/Admin/AuditTrail/{entryId}`. Each event stores a `HierarchyAuditEvent` with the child, the user, the session reference, the authentication methods, the client address and details, which `HierarchyAuditTrailEventDisplayDriver` shows in the list and on the event page. Events can be turned off and are trimmed like any other audit trail event, under **Settings > Audit Trail**. Events are only written in the parent: a child's own users never see them.
+
 ### Unavailable addresses
 
 When the Default tenant has no host name, Orchard Core sends it every request that no running tenant claims. Without a guard, the address of a suspended or removed child, or any address under a parent's host, would show the platform site and its sign-in page. In the Default tenant, a middleware answers such a request with `404` and a short "This site is not available" page instead. It matches the hosts of every parent and child tenant, with or without a port, and every host under a parent's host. A host of an ordinary tenant is left alone.
@@ -224,7 +229,7 @@ A step-by-step build guide for AI agents and developers, with the naming, creden
 | Permission | Allows |
 | --- | --- |
 | `ManageTenantHierarchy` | Platform screens (Default tenant) |
-| `ViewChildTenants` | The child tenants list and the activity log. Implied by the next five. |
+| `ViewChildTenants` | The child tenants list. Implied by the next five. The activity needs the audit trail's `ViewAuditTrail`. |
 | `CreateChildTenants` | Create, retry and discard child tenants |
 | `ManageChildTenants` | Edit, suspend, resume and reload |
 | `ManageChildFeatures` | Enable and disable features in a child |
@@ -248,4 +253,3 @@ When a tenant becomes a parent, a parent-wide grant gives the parent's **Adminis
 - A federated OpenID Connect mode for children that run in another application.
 - Custom domains for children, and inviting the business owner as a local user when a child is created. The child's own Users admin adds local users.
 - An idle-release service for inactive children, and metrics.
-- The activity log is the module's own; it does not write to the Orchard Core Audit Trail.

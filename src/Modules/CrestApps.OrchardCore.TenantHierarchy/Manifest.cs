@@ -37,6 +37,9 @@ using OrchardCore.Modules.Manifest;
 
         // The user picker of the access rules.
         "CrestApps.OrchardCore.Users",
+
+        // The activity of the child tenants is recorded in the audit trail.
+        "OrchardCore.AuditTrail",
     ]
 )]
 
