@@ -105,7 +105,7 @@ public sealed partial class TestBrowser : IDisposable
     public async Task<string> GetAntiforgeryTokenAsync(string url)
     {
         var response = await NavigateAsync(url);
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         var match = AntiforgeryTokenRegex().Match(html);
 
         return match.Success

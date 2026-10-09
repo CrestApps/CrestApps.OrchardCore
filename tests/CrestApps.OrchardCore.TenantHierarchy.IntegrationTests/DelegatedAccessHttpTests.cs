@@ -32,7 +32,7 @@ public sealed partial class DelegatedAccessHttpTests
 
         // Act
         var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}/delegated-access/open/{_fixture.BusinessOne.EntryId}");
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert: the browser went parent → child → parent → child, and ended on the child admin.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -89,7 +89,7 @@ public sealed partial class DelegatedAccessHttpTests
 
         // Act
         var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}/delegated-access/open/{_fixture.BusinessFour.EntryId}");
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -192,7 +192,7 @@ public sealed partial class DelegatedAccessHttpTests
 
         // Act
         var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}/delegated-access/switch");
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -211,7 +211,7 @@ public sealed partial class DelegatedAccessHttpTests
 
         // Act
         var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}/Admin/children");
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -237,7 +237,7 @@ public sealed partial class DelegatedAccessHttpTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        AssertNoUnformattedText(await response.Content.ReadAsStringAsync());
+        AssertNoUnformattedText(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed partial class DelegatedAccessHttpTests
         {
             var response = await browser.NavigateAsync($"{TenantHierarchyFixture.FirmAAddress}{path}");
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{path} returned {(int)response.StatusCode}.");
-            AssertNoUnformattedText(await response.Content.ReadAsStringAsync(), path);
+            AssertNoUnformattedText(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), path);
         }
     }
 
@@ -296,7 +296,7 @@ public sealed partial class DelegatedAccessHttpTests
         {
             var response = await browser.NavigateAsync($"{platform}{path}");
             Assert.True(response.StatusCode == HttpStatusCode.OK, $"{path} returned {(int)response.StatusCode}.");
-            AssertNoUnformattedText(await response.Content.ReadAsStringAsync(), path);
+            AssertNoUnformattedText(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), path);
         }
     }
 
@@ -310,7 +310,7 @@ public sealed partial class DelegatedAccessHttpTests
 
         // Act
         var response = await browser.NavigateAsync($"{platform}/Admin/tenant-hierarchy/make-parent?tenant={TenantHierarchyFixture.Plain}");
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         // Assert: the plain tenant lives at plain.localhost, so the suggested slug keeps that address.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

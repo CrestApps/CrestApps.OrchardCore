@@ -407,7 +407,7 @@ public sealed class ChildTenantLifecycleTests
     {
         using var browser = _fixture.Host.CreateBrowser();
         var response = await browser.GetAsync($"http://{host}/");
-        var html = await response.Content.ReadAsStringAsync();
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Contains("This site is not available", html, StringComparison.Ordinal);
@@ -423,7 +423,7 @@ public sealed class ChildTenantLifecycleTests
         var login = await browser.GetAsync($"http://{host}/Login");
 
         // A site set up with the Blank recipe has no home page, so only the guard's own page tells the two apart.
-        Assert.DoesNotContain("This site is not available", await home.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        Assert.DoesNotContain("This site is not available", await home.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
     }
 }

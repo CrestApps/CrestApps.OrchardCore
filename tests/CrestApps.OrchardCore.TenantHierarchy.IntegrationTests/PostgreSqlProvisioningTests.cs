@@ -92,7 +92,8 @@ public sealed class PostgreSqlProvisioningTests
 
         try
         {
-            // Assert
+            // Assert: the child names the database of its schema, even when the pool's connection string does not.
+            Assert.False(string.IsNullOrEmpty(new NpgsqlConnectionStringBuilder(firstResult.ConnectionString).Database));
             await ExecuteAsync(firstResult.ConnectionString, $"CREATE TABLE \"{firstResult.Schema}\".notes (id int);");
             var exception = await Record.ExceptionAsync(() => ExecuteAsync(secondResult.ConnectionString, $"CREATE TABLE \"{firstResult.Schema}\".stolen (id int);"));
             Assert.IsType<PostgresException>(exception);

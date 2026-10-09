@@ -66,8 +66,11 @@ public sealed class SqlServerChildDatabaseProvisioner : IChildTenantDatabaseProv
             };
         }
 
-        await ExecuteAsync(context.Pool.ConnectionString, SqlServerProvisioningScripts.CreateSchema(name, name, password), cancellationToken);
+        var database = await ExecuteAsync(context.Pool.ConnectionString, SqlServerProvisioningScripts.CreateSchema(name, name, password), cancellationToken);
 
+        // The schema and its user live in the database the pool connected to. Name it, because the new login's own
+        // default database is master.
+        builder.InitialCatalog = database;
         builder.IntegratedSecurity = false;
         builder.UserID = name;
         builder.Password = password;
@@ -101,7 +104,7 @@ public sealed class SqlServerChildDatabaseProvisioner : IChildTenantDatabaseProv
         return ExecuteAsync(context.Pool.ConnectionString, SqlServerProvisioningScripts.RemoveSchema(name, name), cancellationToken);
     }
 
-    private static async Task ExecuteAsync(string connectionString, IEnumerable<string> statements, CancellationToken cancellationToken)
+    private static async Task<string> ExecuteAsync(string connectionString, IEnumerable<string> statements, CancellationToken cancellationToken)
     {
         await using var connection = new SqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -112,5 +115,7 @@ public sealed class SqlServerChildDatabaseProvisioner : IChildTenantDatabaseProv
             command.CommandText = statement;
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
+
+        return connection.Database;
     }
 }

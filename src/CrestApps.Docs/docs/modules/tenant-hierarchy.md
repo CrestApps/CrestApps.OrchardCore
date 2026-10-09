@@ -15,13 +15,13 @@ The Tenant Hierarchy module lets a tenant that the platform marks as a **parent*
 | Parent Tenant | `CrestApps.OrchardCore.TenantHierarchy.Parent` | A parent tenant. Forced on when the platform makes the tenant a parent. |
 | Child Tenant | `CrestApps.OrchardCore.TenantHierarchy.Child` | Every child tenant. Forced on after the child is set up. |
 
-The Parent and Child features never depend on the Platform feature or on `OrchardCore.Tenants`: a feature that depends on a Default-only feature is unavailable in every other tenant.
+The Parent and Child features never depend on the Platform feature or on `OrchardCore.Tenants`: a feature that depends on a Default-only feature is unavailable in every other tenant. The Parent feature depends on `CrestApps.OrchardCore.Users` for the user picker of the access rules.
 
 How people use the screens is described in the User Manual: [Child tenants](../user-manual/administration/child-tenants.md) for a parent's users and [Tenant hierarchy](../user-manual/administration/tenant-hierarchy.md) for platform administrators.
 
 ## Install the host guards
 
-The module needs host-level services that run in every tenant: the scope guard, the feature guard, the egress guard, the cookie hardening, the parent removal guard and the Fetch Metadata guard. Register them in `Program.cs`:
+The module needs host-level services that run in every tenant: the scope guard, the feature guard, the egress guard, the cookie hardening, the parent removal guard, the Fetch Metadata guard and the unavailable-address guard. Register them in `Program.cs`:
 
 ```csharp
 builder.Services
@@ -134,6 +134,10 @@ In parent and child tenants, every `HttpClient` from `IHttpClientFactory` refuse
 
 The authentication and antiforgery cookies of parent and child tenants get the `__Host-` prefix, `Path=/`, no domain and `Secure`, so a child's script cannot plant a cookie for its parent or a sibling. A parent also refuses every request a child page makes with a script (`Sec-Fetch-Site: same-site` and a mode other than `navigate`).
 
+### Unavailable addresses
+
+When the Default tenant has no host name, Orchard Core sends it every request that no running tenant claims. Without a guard, the address of a suspended or removed child, or any address under a parent's host, would show the platform site and its sign-in page. In the Default tenant, a middleware answers such a request with `404` and a short "This site is not available" page instead. It matches the hosts of every parent and child tenant, with or without a port, and every host under a parent's host. A host of an ordinary tenant is left alone.
+
 ## Configuration
 
 The module reads the `TenantHierarchy` section of the **application** configuration. It is host configuration on purpose: tenant configuration cannot change it.
@@ -213,6 +217,8 @@ builder.Services.AddSingleton<IChildTenantDatabaseProvisioner, MySqlChildDatabas
 
 `CanProvision` says whether the provisioner handles a strategy and pool, `ProvisionAsync` returns the provider, connection string, table prefix, schema and the name of what it created, and `DeprovisionAsync` removes it after Orchard Core dropped the tenant tables.
 
+A step-by-step build guide for AI agents and developers, with the naming, credential and removal rules and the tests to write, lives in the repository at `.agents/skills/crestapps-tenant-database-provisioner`.
+
 ## Permissions
 
 | Permission | Allows |
@@ -232,6 +238,7 @@ When a tenant becomes a parent, a parent-wide grant gives the parent's **Adminis
 
 - Give every tenant its own host name, never a path prefix: `{firm}.platform.com` for parents and `{business}.{firm}.platform.com` for children. This needs wildcard DNS, a certificate for `*.platform.com` and one for `*.{firm}.platform.com` per parent.
 - Serve every tenant over HTTPS, so the `__Host-` cookies work.
+- Give the Default tenant its own host name too, such as `platform.com`. Then no unknown host reaches it at all; the unavailable-address guard covers the case where it has none.
 - Register the platform domain in the private section of the Public Suffix List, so one parent's children cannot set cookies for another parent or make same-site requests to it.
 - With several nodes, use `OrchardCore.Tenants.Distributed`, a shared shell settings store (the shells database or Azure Blob) and a shared data protection key ring.
 - Background tasks run only for tenants that have served a request since the process started.

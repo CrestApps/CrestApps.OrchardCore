@@ -58,8 +58,11 @@ public sealed class PostgreSqlChildDatabaseProvisioner : IChildTenantDatabasePro
             };
         }
 
-        await ExecuteAsync(context.Pool.ConnectionString, PostgreSqlProvisioningScripts.CreateSchema(name, name, password), cancellationToken);
+        var database = await ExecuteAsync(context.Pool.ConnectionString, PostgreSqlProvisioningScripts.CreateSchema(name, name, password), cancellationToken);
 
+        // The schema lives in the database the pool connected to. Name it, because without a database Npgsql would
+        // connect the child to a database named after its own login.
+        builder.Database = database;
         builder.Username = name;
         builder.Password = password;
 
@@ -94,7 +97,7 @@ public sealed class PostgreSqlChildDatabaseProvisioner : IChildTenantDatabasePro
         return ExecuteAsync(context.Pool.ConnectionString, PostgreSqlProvisioningScripts.RemoveSchema(name, name), cancellationToken);
     }
 
-    private static async Task ExecuteAsync(string connectionString, IEnumerable<string> statements, CancellationToken cancellationToken)
+    private static async Task<string> ExecuteAsync(string connectionString, IEnumerable<string> statements, CancellationToken cancellationToken)
     {
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync(cancellationToken);
@@ -105,5 +108,7 @@ public sealed class PostgreSqlChildDatabaseProvisioner : IChildTenantDatabasePro
             command.CommandText = statement;
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
+
+        return connection.Database;
     }
 }

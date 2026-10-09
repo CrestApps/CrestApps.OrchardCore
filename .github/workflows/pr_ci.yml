@@ -58,3 +58,10 @@ jobs:
     - name: Contact Center feature activation tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj 
+    # The tenant hierarchy suite runs real tenants in one host: a parent, its children and an ordinary tenant. It
+    # proves that a tenant cannot reach another one outside the broker, that delegated access works end to end
+    # over HTTP, and that the guards hold. The SQL Server and PostgreSQL provisioning tests skip unless their
+    # connection-string variables are set.
+    - name: Tenant hierarchy integration tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj
