@@ -16,7 +16,20 @@
 }
 
 .report-designer .rd-header .nav-tabs {
+    gap: .25rem;
     margin-bottom: -1px;
+}
+
+/* The admin theme frames every tab pane with a border, padding and a margin; the builder's panes fill the card instead. */
+.report-designer .rd-tabs-content > .tab-pane {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+/* The admin content area keeps room at the bottom for long pages; the builder fits the window, so it needs little. */
+.ta-content:has(> .report-designer) {
+    padding-bottom: .5rem;
 }
 
 .report-designer .rd-header .nav-link {
@@ -148,10 +161,12 @@
     min-height: 0;
 }
 
+/* Every pane header has the same height, buttons or not, so their bottom borders line up across the panes. */
 .report-designer .rd-pane-header {
     flex: 0 0 auto;
-    min-height: 2.5rem;
-    padding: .375rem .75rem;
+    box-sizing: border-box;
+    height: 2.75rem;
+    padding: 0 .75rem;
     border-bottom: 1px solid var(--bs-border-color);
     background-color: var(--bs-body-bg);
 }

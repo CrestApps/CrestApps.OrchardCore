@@ -1110,7 +1110,7 @@
       return;
     }
     var top = container.getBoundingClientRect().top + root.scrollY;
-    var height = Math.max(420, root.innerHeight - top - 12);
+    var height = Math.max(420, root.innerHeight - top);
     container.style.height = height + 'px';
     var overflow = root.document.documentElement.scrollHeight - root.innerHeight;
     if (overflow > 0) {
