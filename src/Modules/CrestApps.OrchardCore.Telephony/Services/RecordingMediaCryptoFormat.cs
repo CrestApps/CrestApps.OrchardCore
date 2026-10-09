@@ -95,7 +95,9 @@ internal static class RecordingMediaCryptoFormat
 
     /// <summary>
     /// Opens a readable stream that lazily decrypts a chunked container as it is read. The container header is
-    /// read and the data key unwrapped eagerly so an invalid or non-container file fails fast.
+    /// read and the data key unwrapped eagerly so an invalid or non-container file fails fast. When
+    /// <paramref name="ciphertext"/> can seek, the returned stream can seek too and reports the plaintext length,
+    /// and its final frame is authenticated before it is returned, so a truncated container fails here.
     /// </summary>
     /// <param name="ciphertext">The readable container stream. The returned stream takes ownership and disposes it.</param>
     /// <param name="protector">The data protector used to unwrap the per-recording data key.</param>
@@ -145,7 +147,23 @@ internal static class RecordingMediaCryptoFormat
 
             var aesGcm = new AesGcm(dataKey, TagSizeBytes);
 
-            return new ChunkedAeadDecryptingReadStream(ciphertext, aesGcm, noncePrefix);
+            try
+            {
+                var stream = new ChunkedAeadDecryptingReadStream(ciphertext, aesGcm, noncePrefix);
+
+                // A seekable container reports its length from its size; authenticating the final frame up front
+                // proves that length before a caller seeks or serves a range from it.
+                await stream.VerifyFinalFrameAsync(cancellationToken);
+
+                return stream;
+            }
+            catch
+            {
+                // The caller still owns the container source when opening fails.
+                aesGcm.Dispose();
+
+                throw;
+            }
         }
         finally
         {
