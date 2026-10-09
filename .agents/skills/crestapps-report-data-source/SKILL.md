@@ -82,6 +82,29 @@ Rules:
   tests project references.
 - Connection settings for external systems go in configuration (`CrestApps:Reports:<Source>`), documented in
   `docs/configuration.md` with the environment-variable form; never in a design.
+- **A module exposing its own stored records** (activities, interactions, chat sessions...) keeps the source in that
+  module, in a startup marked with the module's feature and `[RequireFeatures(ReportsConstants.BuilderFeature)]`, so the
+  Reports module never depends on it. See `Omnichannel.Managements/Reports/DataSources/`.
+
+## Record-backed sources: `ReportRecordDataSource` and `ReportRecordDataSet<T>`
+
+For records kept in a store, derive from the base classes in `Reports.Abstractions/DataSources` instead of
+implementing `IReportDataSource` by hand:
+
+- `ReportRecordDataSet<TRecord>`: declare fields in the constructor with
+  `AddField(name, displayName, dataType, record => value, group, isIdentifier, references...)`; implement
+  `CanReadAsync(context)` (the permission check) and `LoadAsync(query, take, ct)` (at most `take` records, newest
+  first). Values are converted to the field type, enums become their name, and unspecified date-times are treated as UTC.
+  A field's references are added to the data set's references automatically.
+- `ReportRecordDataSource`: name, display name, description, and `DataSets`. It lists only readable data sets and
+  re-checks access on every schema and query call.
+- Push dates down with `ReportDateRange.For(query.Conditions, "CreatedUtc")`, which returns inclusive bounds that never
+  drop a matching row, and apply them to the index column (`records = records.Where(index => index.CreatedUtc >= value)`).
+- Reference other modules' data sets by their stable names, such as
+  `new ReportFieldReference("ContactCenter", "DialerProfiles", "ItemId")` or the users data set
+  (`ReportsConstants.UsersDataSource`, `UsersDataSet`, `UserIdField`); a reference to a source that is not enabled is
+  simply unused.
+- Never expose secrets, message bodies, IP addresses, or storage locations.
 
 ## Extending the content items source instead
 

@@ -46,7 +46,9 @@ The builder fills the window, and each pane scrolls on its own. Collapse the **D
 
 ## Drafts, publishing and versions
 
-Once a report has been published, the builder saves your changes as you work. The words next to the title say **Saving…**, then **Draft saved**. Saved changes are a **draft**: people who run the report keep seeing the published version until you click **Publish**.
+The builder saves your changes as you work, from the first change to a new report. The words next to the title say **Saving…**, then **Draft saved**, and you can close or refresh the page at any time. Saved changes are a **draft**: people who run the report keep seeing the published version until you click **Publish**.
+
+- A new report you have not published yet is listed on the **Report Builder** page under **Not published yet**. Click **Continue** to keep working on it, or **Delete** to throw it away. Only you, and the people who manage every report, can see it.
 
 - A bar above the tabs shows that the report has **unpublished changes**, who made them and when. Click **Discard changes** to go back to the published version, or **Publish** to make them live.
 - Each time you publish a change, the builder keeps a **version**. Click **Versions** to list them with who published each one and when. **Preview** shows a version; **Restore** copies it into the draft, so you can check it and publish it. Restoring never changes what people run until you publish.
