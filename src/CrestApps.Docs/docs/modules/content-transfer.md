@@ -12,6 +12,7 @@ user_manual:
 | **Feature Name** | Content Transfer |
 | **Feature ID** | `CrestApps.OrchardCore.ContentTransfer` |
 | **Optional format feature** | `CrestApps.OrchardCore.ContentTransfer.OpenXml` |
+| **Optional storage feature** | `CrestApps.OrchardCore.ContentTransfer.Azure` |
 
 Bulk import and export Orchard Core content by using the enabled transfer file formats.
 
@@ -69,6 +70,12 @@ Validation runs through `IContentManager.ValidateAsync()`. Failed rows are track
 
 Queued imports follow the same background-job pattern used by the local DNC list importer. The admin list updates the status inline before work starts or stops, so entries can move through **Pending**, **Processing**, **Paused**, **Deleting**, **Completed**, **Completed with errors**, and **Failed** states without briefly showing stale values. A **Processing** entry that has saved no progress for 10 minutes is treated as stalled, and **Resume import** continues paused, failed, pending, and stalled imports from the last saved batch. Deleting an entry removes the entry and its stored file in the background; it never deletes imported content items.
 
+Only one run works on an import at a time: each run holds a lock named after the entry, and a run that cannot
+take the lock leaves the import alone. The lock expires after 30 minutes and cannot be extended, so a run works
+on an import for at most 25 minutes, saves its progress after the batch in flight, and gives up the lock. The
+import then continues right away under a fresh lock from its saved row. Large imports finish the same way, in
+slices that each hold a valid lock.
+
 Imports save drafts by default. When **Publish imported content** is checked, items are published after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports ignore that value entirely.
 
 ### Omnichannel contact imports
@@ -80,6 +87,72 @@ For content types that attach `OmnichannelContactPart`, each import file should 
 The Omnichannel contact columns `DoNotCall`, `DoNotSms`, and `DoNotEmail` advertise `true` and `false` as the expected values in the import metadata so spreadsheet templates make the required boolean values clear.
 
 The User Manual describes these options for operators on the [Contacts](../user-manual/contacts.md) and [Leads, Accounts and Opportunities](../user-manual/leads-accounts-opportunities.md) pages.
+
+## Running on more than one instance
+
+A single instance needs nothing below. When the site runs on more than one instance (a scaled-out App
+Service plan, several containers behind a load balancer), three things have to be shared between them.
+
+**Import and export files.** By default the files are kept on the local disk, under
+`App_Data/Sites/{tenant}/Temp`. Another instance cannot read them, and a container that is restarted or
+redeployed loses them, so an import that was still running fails with *The import file no longer exists*.
+Enable **Content Transfer - Azure Blob Storage** to keep them in a blob container every instance reads; see
+[Store import and export files in Azure Blob Storage](#store-import-and-export-files-in-azure-blob-storage).
+The same applies to a single container whose `App_Data` folder is not on persistent storage.
+
+**The import lock.** The lock that keeps two runs off the same import is held in memory unless Orchard Core's
+**Redis Lock** feature (`OrchardCore.Redis.Lock`) is enabled and Redis is configured. Without it each instance
+has its own lock, and two instances can import the same file at the same time, which creates every row twice.
+
+**Chunked uploads.** A large file is uploaded in chunks, and the chunks are put back together in the temporary
+folder of the instance that receives them. Keep session affinity on (ARR affinity on Azure App Service, sticky
+sessions on other load balancers) so every chunk of an upload reaches the same instance.
+
+### Store import and export files in Azure Blob Storage
+
+| | |
+| --- | --- |
+| **Feature Name** | Content Transfer - Azure Blob Storage |
+| **Feature ID** | `CrestApps.OrchardCore.ContentTransfer.Azure` |
+
+The feature depends on **Content Transfer** and has no admin screen of its own. It is configured through the
+`CrestApps:ContentTransfer:AzureBlobStorage` shell configuration section, which sits under the `OrchardCore`
+key in the application's root `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ContentTransfer": {
+        "AzureBlobStorage": {
+          "ConnectionString": "",
+          "ContainerName": "content-transfer",
+          "BasePath": "{{ ShellSettings.Name }}",
+          "CreateContainer": true
+        }
+      }
+    }
+  }
+}
+```
+
+| Setting | Description |
+| --- | --- |
+| `ConnectionString` | Azure Storage account connection string. **Required.** |
+| `ContainerName` | Azure Blob container name. Must follow Azure container naming rules and should be lowercase. **Required.** |
+| `BasePath` | Optional subdirectory inside the container. Use a per-tenant value, such as `{{ ShellSettings.Name }}`, when tenants share a container. |
+| `CreateContainer` | When `true`, the container is created automatically if it does not already exist. |
+| `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
+| `RemoveFilesFromBasePath` | Removes only the configured `BasePath` contents when the tenant is deleted. Use this instead of `RemoveContainer` when the container is shared. |
+
+:::warning
+`ConnectionString` and `ContainerName` are both required. When either is missing, the feature stays enabled
+but **does not take over storage**: an error is written to the log and the local file system keeps serving
+the files.
+:::
+
+Files already on the local disk are not moved. Let imports that are running finish, or upload them again,
+after you enable the feature.
 
 ## Export processing
 
