@@ -35,7 +35,7 @@
 
 <div class="alert alert-info" role="alert">
     <p class="mb-1">
-        @T["Paste your Stripe secret key and click <strong>Connect</strong>. The key is verified and the webhook is created for you automatically \u2014 no dashboard setup required. Get your keys from <a href=\"https://dashboard.stripe.com/apikeys\" target=\"_blank\" rel=\"noopener\">Developers &rarr; API keys</a> (use the <code>Test mode</code> switch to choose test or live keys)."]
+        @T["Paste your Stripe keys, <strong>save</strong> the settings, then click <strong>Connect</strong>. The saved key is verified and the webhook is created for you automatically \u2014 no dashboard setup required. Get your keys from <a href=\"https://dashboard.stripe.com/apikeys\" target=\"_blank\" rel=\"noopener\">Developers &rarr; API keys</a> (use the <code>Test mode</code> switch to choose test or live keys)."]
     </p>
     <p class="mb-0">
         @T["<strong>Local development.</strong> When this site is not publicly reachable, Stripe cannot create the webhook. Forward events with the <a href=\"https://docs.stripe.com/stripe-cli\" target=\"_blank\" rel=\"noopener\">Stripe CLI</a> and paste the printed signing secret into the optional <em>Webhook signing secret</em> field below:"]
@@ -73,10 +73,21 @@
                 </div>
                 <button type="button" class="btn btn-danger stripe-disconnect" data-url="@disconnectUrl" data-live="true">@T["Disconnect"]</button>
             }
+            else if (Model.HasLivePrivateSecret)
+            {
+                <div data-stripe-connect-area>
+                    <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="true">@T["Connect"]</button>
+                    <span class="hint">@T["Verifies the saved key and creates the webhook automatically."]</span>
+                </div>
+                <div class="alert alert-info mb-0 d-none" role="alert" data-stripe-save-first>
+                    @T["You changed the keys. Save the settings first, then connect with the new keys."]
+                </div>
+            }
             else
             {
-                <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="true">@T["Connect"]</button>
-                <span class="hint">@T["Verifies the key and creates the webhook automatically."]</span>
+                <div class="alert alert-info mb-0" role="alert">
+                    @T["Enter your keys and save the settings. The <strong>Connect</strong> button appears here once a secret key is saved."]
+                </div>
             }
         </div>
     </div>
@@ -125,10 +136,21 @@
                 </div>
                 <button type="button" class="btn btn-danger stripe-disconnect" data-url="@disconnectUrl" data-live="false">@T["Disconnect"]</button>
             }
+            else if (Model.HasTestPrivateSecret)
+            {
+                <div data-stripe-connect-area>
+                    <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="false">@T["Connect"]</button>
+                    <span class="hint">@T["Verifies the saved key and creates the webhook automatically."]</span>
+                </div>
+                <div class="alert alert-info mb-0 d-none" role="alert" data-stripe-save-first>
+                    @T["You changed the keys. Save the settings first, then connect with the new keys."]
+                </div>
+            }
             else
             {
-                <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="false">@T["Connect"]</button>
-                <span class="hint">@T["Verifies the key and creates the webhook automatically."]</span>
+                <div class="alert alert-info mb-0" role="alert">
+                    @T["Enter your keys and save the settings. The <strong>Connect</strong> button appears here once a secret key is saved."]
+                </div>
             }
         </div>
     </div>
@@ -198,18 +220,42 @@
                 e.preventDefault();
 
                 const button = e.currentTarget;
-                const container = button.closest('[data-stripe-environment]');
-                const secretInput = container ? container.querySelector('[data-stripe-secret]') : null;
-                const publishableInput = container ? container.querySelector('[data-stripe-publishable]') : null;
 
                 button.disabled = true;
 
+                // Connecting uses the saved keys. Keys typed but not saved never reach it: the button is hidden
+                // while they are edited, so nothing the administrator entered is lost to the reload.
                 await post(button.getAttribute('data-url'), {
-                    live: button.getAttribute('data-live'),
-                    secretKey: secretInput ? secretInput.value : '',
-                    publishableKey: publishableInput ? publishableInput.value : ''
+                    live: button.getAttribute('data-live')
                 });
             });
+        }
+
+        // An edited key is not saved yet, so connecting now would verify the old one. Ask for a save instead.
+        const environments = document.querySelectorAll('[data-stripe-environment]');
+
+        for (let i = 0; i < environments.length; i++) {
+            const environment = environments[i];
+            const connectArea = environment.querySelector('[data-stripe-connect-area]');
+            const saveFirst = environment.querySelector('[data-stripe-save-first]');
+
+            if (!connectArea || !saveFirst) {
+                continue;
+            }
+
+            const keyInputs = environment.querySelectorAll('[data-stripe-secret], [data-stripe-publishable]');
+            const initialValues = Array.prototype.map.call(keyInputs, (input) => input.value);
+
+            const syncConnect = () => {
+                const edited = Array.prototype.some.call(keyInputs, (input, index) => input.value !== initialValues[index]);
+
+                connectArea.classList.toggle('d-none', edited);
+                saveFirst.classList.toggle('d-none', !edited);
+            };
+
+            for (let j = 0; j < keyInputs.length; j++) {
+                keyInputs[j].addEventListener('input', syncConnect);
+            }
         }
 
         for (let i = 0; i < disconnectButtons.length; i++) {

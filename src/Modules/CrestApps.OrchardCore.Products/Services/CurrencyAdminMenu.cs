@@ -24,6 +24,8 @@ internal sealed class CurrencyAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+                .AddClass("commerce")
+                .Id("commerce")
                 .Add(S["Currencies"], S["Currencies"].PrefixPosition("1"), currencies => currencies
                     .AddClass("commerce-currencies")
                     .Id("commerceCurrencies")

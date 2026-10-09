@@ -58,8 +58,8 @@ The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Provid
 Configure the connection at the top of the settings page. Choose the environment with **Enable Production** (off = test), then connect that environment.
 
 1. Open your [Stripe API keys](https://dashboard.stripe.com/apikeys) (use the *Test mode* switch to pick test or live keys).
-2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout.
-3. Click **Connect**. The app verifies the key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
+2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout. **Save** the settings: the **Connect** button appears once a secret key is saved, and is hidden again while you edit a key, so a key you typed is never lost to connecting.
+3. Click **Connect**. The app verifies the saved key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
 
 Connecting also registers the site's domain with the account for wallet payments (see
 [Apple Pay and Google Pay](#apple-pay-and-google-pay)); a `localhost` site is skipped, since Stripe cannot reach it.
