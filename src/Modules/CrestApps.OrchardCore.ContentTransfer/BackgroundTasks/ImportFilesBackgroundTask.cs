@@ -31,6 +31,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _importLockTimeout = TimeSpan.FromSeconds(1);
     private static readonly TimeSpan _importLockExpiration = TimeSpan.FromMinutes(30);
 
+    /// <summary>
+    /// How long one run works on an import before it saves its progress and gives up the lock. It stays well
+    /// under the lock's expiration so the batch in flight finishes while the lock is still held.
+    /// </summary>
+    internal static readonly TimeSpan MaxRunDuration = _importLockExpiration - TimeSpan.FromMinutes(5);
+
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
 
@@ -55,23 +61,36 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 break;
             }
 
-            (var locker, var locked) = await distributedLock.TryAcquireLockAsync(
-                GetImportLockKey(entry.EntryId),
-                _importLockTimeout,
-                _importLockExpiration);
+            // The lock cannot be extended once taken. An import that outlived it could be picked up by another
+            // instance while this one was still working, and both would import the same rows. Each run therefore
+            // stops before its lock expires, and the import continues under a fresh lock from its saved row.
+            var timeLimitReached = true;
 
-            if (!locked)
+            while (timeLimitReached && !cancellationToken.IsCancellationRequested)
             {
-                continue;
-            }
+                (var locker, var locked) = await distributedLock.TryAcquireLockAsync(
+                    GetImportLockKey(entry.EntryId),
+                    _importLockTimeout,
+                    _importLockExpiration);
 
-            await using var acquiredLock = locker;
-            await using var scope = serviceProvider.CreateAsyncScope();
-            await ProcessEntryAsync(scope.ServiceProvider, entry.EntryId, cancellationToken);
+                if (!locked)
+                {
+                    break;
+                }
+
+                await using var acquiredLock = locker;
+                await using var scope = serviceProvider.CreateAsyncScope();
+                timeLimitReached = await ProcessEntryAsync(scope.ServiceProvider, entry.EntryId, cancellationToken);
+            }
         }
     }
 
-    private static async Task ProcessEntryAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
+    /// <summary>
+    /// Imports rows of one entry until the file is done, the import stops, or the run reaches
+    /// <see cref="MaxRunDuration"/>. Returns <see langword="true"/> only in the last case, when rows remain and the
+    /// progress up to the last batch is saved.
+    /// </summary>
+    private static async Task<bool> ProcessEntryAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var clock = serviceProvider.GetRequiredService<IClock>();
@@ -87,9 +106,10 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         if (entry == null || entry.Status.ShouldStopImport())
         {
-            return;
+            return false;
         }
 
+        var runDeadlineUtc = clock.UtcNow + MaxRunDuration;
         var contentTypeDefinition = await contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
 
         if (contentTypeDefinition == null)
@@ -100,7 +120,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
 
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["The content definition was removed."], cancellationToken);
-            return;
+            return false;
         }
 
         var fileInfo = await fileStore.GetFileInfoAsync(entry.StoredFileName);
@@ -113,7 +133,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             }
 
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["The import file no longer exists."], cancellationToken);
-            return;
+            return false;
         }
 
         var batchSize = contentImportOptions.ImportBatchSize < 1
@@ -144,10 +164,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
 
-        await using var fileStream = await fileStore.GetFileStreamAsync(fileInfo);
+        ImportRunResult result;
 
         try
         {
+            await using var fileStream = await fileStore.OpenSeekableReadStreamAsync(fileInfo, cancellationToken);
+
             var formatProviders = serviceProvider.GetServices<IContentTransferFileFormatProvider>()
                 .OrderBy(provider => provider.FileExtension, StringComparer.OrdinalIgnoreCase)
                 .ToList();
@@ -170,7 +192,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 }
             }
 
-            var completed = await ProcessFileInBatchesAsync(
+            result = await ProcessFileInBatchesAsync(
                 serviceProvider,
                 fileStream,
                 formatProvider,
@@ -183,24 +205,25 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 session,
                 clock,
                 batchSize,
+                runDeadlineUtc,
                 cancellationToken);
-
-            if (!completed)
-            {
-                return;
-            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // The host is stopping. The entry stays in Processing and the next run resumes it from its saved row.
-            return;
+            return false;
         }
         catch (Exception ex)
         {
             // The session that ran the import is unusable after a failed save, and saving the failure through it
             // fails too, which left the entry in Processing with no error and the same rows retried every run.
             await RecordImportFailureAsync(serviceProvider, entry.EntryId, ex, localizer, cancellationToken);
-            return;
+            return false;
+        }
+
+        if (result != ImportRunResult.Completed)
+        {
+            return result == ImportRunResult.TimeLimitReached;
         }
 
         var nowUtc = clock.UtcNow;
@@ -213,9 +236,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
+
+        return false;
     }
 
-    private static async Task<bool> ProcessFileInBatchesAsync(
+    private static async Task<ImportRunResult> ProcessFileInBatchesAsync(
         IServiceProvider serviceProvider,
         Stream stream,
         IContentTransferFileFormatProvider formatProvider,
@@ -228,6 +253,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ISession session,
         IClock clock,
         int batchSize,
+        DateTime runDeadlineUtc,
         CancellationToken cancellationToken)
     {
         using var reader = formatProvider.CreateReader(stream);
@@ -271,6 +297,34 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             {
                 rowIndex++;
                 continue;
+            }
+
+            // Checked before every row, not only after a batch: rows a filter skips (a duplicate phone number, a
+            // Do Not Call match) never fill a batch, so a file of mostly skipped rows could otherwise run on with
+            // no check and no saved progress. The rows read since the last batch, with the reasons recorded for
+            // skipped ones, are saved before the run stops, so the next run continues from this row.
+            if (clock.UtcNow >= runDeadlineUtc)
+            {
+                var progressSaved = await BackgroundWorkPacer.RunBatchAsync(
+                    token => ProcessBatchAsync(
+                        serviceProvider,
+                        entry,
+                        dataTable,
+                        newRecords,
+                        existingRows,
+                        contentTypeDefinition,
+                        contentManager,
+                        contentImportManager,
+                        progressPart,
+                        session,
+                        clock,
+                        token),
+                    pacingOptions,
+                    cancellationToken);
+
+                return progressSaved
+                    ? ImportRunResult.TimeLimitReached
+                    : ImportRunResult.Stopped;
             }
 
             progressPart.TotalProcessed++;
@@ -377,12 +431,12 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         if (importInterrupted || cancellationToken.IsCancellationRequested)
         {
-            return false;
+            return ImportRunResult.Stopped;
         }
 
         if (newRecords.Count + existingRows.Count > 0)
         {
-            return await ProcessBatchAsync(
+            var lastBatchProcessed = await ProcessBatchAsync(
                 serviceProvider,
                 entry,
                 dataTable,
@@ -395,9 +449,14 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 session,
                 clock,
                 cancellationToken);
+
+            if (!lastBatchProcessed)
+            {
+                return ImportRunResult.Stopped;
+            }
         }
 
-        return true;
+        return ImportRunResult.Completed;
     }
 
     /// <summary>
@@ -671,6 +730,13 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             Win32Exception { NativeErrorCode: 258 } => true,
             _ => IsTransient(exception.InnerException),
         };
+
+    private enum ImportRunResult
+    {
+        Completed,
+        Stopped,
+        TimeLimitReached,
+    }
 
     internal static string GetImportLockKey(string entryId)
         => $"ContentsTransfer_Import_{entryId}";
