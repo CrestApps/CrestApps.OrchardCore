@@ -77,6 +77,12 @@ transaction's tax, so a balance paid in three parts gets three receipts that add
 through the notification system with an HTML body; a guest owner receives it by email. Each payment on a
 transaction's timeline links to its printable receipt, for the owner and for administrators.
 
+Each receipt gets a short sequential number per site, `R-1001`, `R-1002` and so on, issued once when it is first sent
+and shown on every copy after that (`TransactionEvent.ReceiptNumber`). The numbers come from
+`IFinancialDocumentNumberGenerator`; the shipped generator keeps the last number of each series durably and issues
+the next one under a distributed lock, so no two receipts share a number even across nodes. A payment that fails
+after taking a number leaves a gap rather than reusing it.
+
 The same feature tells the owner when a payment is refunded, however the refund finished: confirmed by the gateway
 straight away, confirmed later by a gateway notification, or recorded by an administrator who paid it back by hand.
 The notice names the amount and what it was for, and the transaction's timeline records that it was sent.

@@ -57,4 +57,10 @@ public sealed class TransactionEvent
     /// <see cref="TransactionsConstants.SettlementMethods"/> values.
     /// </summary>
     public string Method { get; set; }
+
+    /// <summary>
+    /// Gets or sets the receipt number issued for a recorded payment, for example <c>R-1001</c>. It is issued once,
+    /// when the receipt is first sent, and every later copy of that receipt shows the same number.
+    /// </summary>
+    public string ReceiptNumber { get; set; }
 }

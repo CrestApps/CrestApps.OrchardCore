@@ -4,11 +4,10 @@ using System.Threading.Tasks;
 namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
-/// Generates tenant-scoped financial-document numbers. It is defined as an interface with no shipped default
-/// on purpose: a correct implementation needs a durable, node-safe sequence that only exists once the Orders
-/// domain owns persistence, and a speculative default would risk duplicate or reused numbers. Until an Orders
-/// domain provides an implementation, the shipped receipts-only policy never requires a number, so no
-/// consumer depends on this service at runtime.
+/// Generates tenant-scoped financial-document numbers. The Transactions feature ships a sequential generator
+/// that keeps the last number of each series durably and issues the next one under a distributed lock, so numbers
+/// are never duplicated across nodes; receipts are numbered with it. A domain with its own numbering rules, for
+/// example a per-year invoice series, replaces it.
 /// </summary>
 public interface IFinancialDocumentNumberGenerator
 {

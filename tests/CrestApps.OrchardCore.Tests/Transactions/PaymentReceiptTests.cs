@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Core.Services;
+using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -113,6 +114,42 @@ public sealed class PaymentReceiptTests
         Assert.Contains("USD 108.00", sent.Subject, StringComparison.Ordinal);
         Assert.False(string.IsNullOrEmpty(sent.HtmlBody));
         Assert.Contains(transaction.Events, evt => evt.Type == TransactionEventType.Note && evt.Message.Contains("receipt", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Handler_GivesTheReceiptAShortNumberOnceAndKeepsIt()
+    {
+        // Arrange
+        INotificationMessage sent = null;
+
+        var notifications = new Mock<INotificationService>();
+        notifications
+            .Setup(service => service.SendAsync(It.IsAny<object>(), It.IsAny<INotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Callback((object _, INotificationMessage message, CancellationToken _) => sent = message)
+            .ReturnsAsync(new NotificationSendResult { SuccessfulCount = 1 });
+
+        var userService = new Mock<IUserService>();
+        userService.Setup(service => service.GetUserByUniqueIdAsync("customer-1")).ReturnsAsync(Mock.Of<IUser>());
+
+        var numbers = new Mock<IFinancialDocumentNumberGenerator>();
+        numbers
+            .Setup(generator => generator.GenerateAsync(It.Is<FinancialDocumentNumberRequest>(request => request.Kind == FinancialDocumentKind.Receipt), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FinancialDocumentNumber(1001, "R-1001"));
+
+        var transaction = CreateTransaction();
+        var handler = CreateHandler(new FakeTransactionStore(transaction), notifications.Object, userService.Object, numbers: numbers.Object);
+        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(DateTime.UtcNow, 108m, TransactionsConstants.SettlementMethods.Online, "Paid.");
+        transaction.Events.Add(payment);
+
+        // Act
+        await handler.PaymentRecordedAsync(new TransactionPaymentRecordedContext(transaction, payment), TestContext.Current.CancellationToken);
+        var reprint = await CreateBuilder().BuildAsync(transaction, payment, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("R-1001", payment.ReceiptNumber);
+        Assert.Contains("R-1001", sent.TextBody, StringComparison.Ordinal);
+        Assert.Equal("R-1001", reprint.Reference);
+        numbers.Verify(generator => generator.GenerateAsync(It.IsAny<FinancialDocumentNumberRequest>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -260,7 +297,7 @@ public sealed class PaymentReceiptTests
             new PassThroughStringLocalizer<TransactionReceiptBuilder>());
     }
 
-    private static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null)
+    private static PaymentReceiptTransactionPaymentHandler CreateHandler(FakeTransactionStore store, INotificationService notifications, IUserService userService, IEmailService email = null, IPaymentAttemptStore attempts = null, IFinancialDocumentNumberGenerator numbers = null)
     {
         var services = new ServiceCollection();
 
@@ -272,6 +309,11 @@ public sealed class PaymentReceiptTests
         if (attempts is not null)
         {
             services.AddSingleton(attempts);
+        }
+
+        if (numbers is not null)
+        {
+            services.AddSingleton(numbers);
         }
 
         return new PaymentReceiptTransactionPaymentHandler(

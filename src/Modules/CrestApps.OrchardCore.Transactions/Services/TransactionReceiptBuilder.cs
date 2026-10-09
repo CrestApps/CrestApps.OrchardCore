@@ -86,7 +86,9 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
         {
             BilledToName = contact?.DisplayName,
             BilledToEmail = contact?.Email,
-            Reference = string.IsNullOrEmpty(payment.Id) ? transaction.ItemId : $"{transaction.ItemId}-{payment.Id}",
+            Reference = !string.IsNullOrEmpty(payment.ReceiptNumber)
+                ? payment.ReceiptNumber
+                : string.IsNullOrEmpty(payment.Id) ? transaction.ItemId : $"{transaction.ItemId}-{payment.Id}",
             SourceLabel = S["Receipt"].Value,
             IssuedAt = payment.CreatedUtc,
             Currency = currency,

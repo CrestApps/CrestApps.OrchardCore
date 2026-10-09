@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts;
+using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -78,10 +79,19 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
             return;
         }
 
+        // The receipt gets its short number before it is built and sent, and keeps it: every later copy of this
+        // receipt shows the number the customer was sent.
+        var numbered = await IssueReceiptNumberAsync(context.Payment, cancellationToken);
+
         var receipt = await _receiptBuilder.BuildAsync(transaction, context.Payment, cancellationToken);
 
         if (receipt is null)
         {
+            if (numbered)
+            {
+                await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+            }
+
             return;
         }
 
@@ -99,6 +109,11 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         {
             _logger.LogWarning("The receipt for a payment on transaction '{TransactionId}' could not be delivered to its owner.", transaction.ItemId);
 
+            if (numbered)
+            {
+                await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+            }
+
             return;
         }
 
@@ -111,6 +126,22 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         });
 
         await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+    }
+
+    private async Task<bool> IssueReceiptNumberAsync(TransactionEvent payment, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(payment.ReceiptNumber) ||
+            payment.Amount is not > 0m ||
+            _serviceProvider.GetService<IFinancialDocumentNumberGenerator>() is not { } generator)
+        {
+            return false;
+        }
+
+        var number = await generator.GenerateAsync(new FinancialDocumentNumberRequest(FinancialDocumentKind.Receipt), cancellationToken);
+
+        payment.ReceiptNumber = number.PublicToken;
+
+        return true;
     }
 
     /// <inheritdoc/>
