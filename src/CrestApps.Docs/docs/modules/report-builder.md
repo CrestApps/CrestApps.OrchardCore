@@ -21,6 +21,10 @@ The **Report Builder** feature of the [Reports](reports.md) module lets people b
 | **Content items** (content types) | Report Builder and `OrchardCore.Contents` |
 | **Queries** (saved Orchard Core queries) | Report Builder and `OrchardCore.Queries` |
 | **Users** (user accounts and their roles) | Report Builder |
+| **Omnichannel** (activities, dispositions, campaigns, batches) | Report Builder and Omnichannel Activities |
+| **Contact Center** (interactions, calls, queues, agents, dialer, recordings, voicemail) | Report Builder and the Contact Center feature that stores each data set |
+| **AI chat** (chat sessions and their metrics) | Report Builder and AI Chat (metrics: AI Chat Session Analytics) |
+| **Messaging** (conversations and their messages) | Report Builder and the Messaging Workspace |
 
 The built-in sources need no feature of their own: each is registered by a startup class marked with `[RequireFeatures]`, so it appears as soon as its Orchard Core feature is enabled alongside the builder.
 
@@ -269,6 +273,21 @@ The **Users** data source is part of the builder. It is listed only for principa
 | **User roles** | One per user and role | `UserId` (references **Users**), `UserName`, `Role` |
 
 Password hashes, security stamps, tokens and external login keys are never exposed. The `Properties.*` fields are found the same way as query fields: nested objects become dotted names and types are inferred from the stored values. Content item owners and user picker fields reference **Users**, so they join to it automatically.
+
+## Business records
+
+Modules expose their own records as data sources, registered only when the Report Builder is enabled with the feature that stores them. Each data set reads its newest records first, up to `MaxRowsPerDataSet`, and narrows the read to the date range a report's filters put on its main date. Identifier fields reference the data sets they point to, so related data sets join automatically: an activity's assigned user joins **Users**, its disposition joins **Dispositions**, an interaction's activity joins **Activities**, and so on across sources.
+
+| Source | Data sets | Permission |
+| --- | --- | --- |
+| **Omnichannel** | **Activities** (tasks, calls, messages and the dialer's attempts, with disposition and campaign names and minutes to complete), **Dispositions** (with their **Outcome**, which groups them), **Campaigns**, **Campaign groups**, **Activity batches** (bulk loads and their skip counts) | View Omnichannel reports |
+| **Contact Center** | **Interactions** (with wait, talk and wrap-up seconds and the dialer's `Dialer.*` fields: attempt, outcome, answering machine result, pacing), **Interaction events**, **Call sessions**, **Call quality**, **Call recordings**, **Callback requests**, **Dialer profiles**, **Queues**, **Queue groups**, **Queue items**, **Agent profiles**, **Agent sessions**, **Shared voicemails** | View Contact Center reports; call recordings also need Listen to all call recordings, and shared voicemails need the shared voicemail permission and show only the queues the reader may answer |
+| **AI chat** | **Chat sessions** (with the AI profile name), **Chat session metrics** (messages, handle time, tokens, ratings, resolution, conversion) | View AI chat analytics |
+| **Messaging** | **Conversations** (assignment, unread count, first response time), **Messages** (direction, delivery status, length) | View all messaging conversations |
+
+A dialer attempt is an activity plus the interaction that placed the call, so dialer reports join **Activities** to **Interactions** on the activity ID. Agent fields named `AgentId` hold agent profile IDs and join **Agent profiles**; fields holding user IDs join **Users**. Secrets, storage locations, IP addresses and message text are never exposed.
+
+Modules add sources the same way with `ReportRecordDataSource` and `ReportRecordDataSet<T>` from `CrestApps.OrchardCore.Reports.Abstractions`: declare the fields with the function that reads each from a record, the permission check, and how records are loaded; `ReportDateRange` reads the date range of a report's filters.
 
 ## Formula reference
 

@@ -23,7 +23,7 @@ People who only run reports that were shared with them need no permission: they 
 
 | Word | What it means |
 | --- | --- |
-| **Data source** | Where data comes from. **Content items** offers each content type of the site; **Queries** offers the saved queries you may run (such as SQL or search queries); **Report views** offers the views you and your team saved. Other features can add more sources. |
+| **Data source** | Where data comes from. **Content items** offers each content type of the site; **Queries** offers the saved queries you may run (such as SQL or search queries); **Report views** offers the views you and your team saved; **Users** offers the user accounts. Other features add their records: **Omnichannel** (activities, dispositions, campaigns), **Contact Center** (calls, queues, agents, the dialer, recordings, voicemail), **AI chat** (chat sessions) and **Messaging** (conversations). You see only the sources your permissions allow. |
 | **Data set** | One table of data from a source, such as the *Customer* content type. |
 | **Field** | One piece of information in a data set, such as *Email* or *Total*. |
 | **Dimension** | A column the report groups by, such as *Region*. |
