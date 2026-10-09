@@ -2,7 +2,10 @@
 @using OrchardCore.DisplayManagement
 @{
     // Read from the shape's properties: Model.Items would bind to the shape's own child list, which is always empty.
-    var items = ((IShape)Model).Properties.TryGetValue("Items", out var value) ? value as IEnumerable<SelectListItem> : null;
+    // Orchard Core renames the argument to PageSizes (OrchardCMS/OrchardCore#20007); both names are read so the
+    // selector keeps working across that upgrade, after which this alternate can be removed.
+    var properties = ((IShape)Model).Properties;
+    var items = (properties.TryGetValue("PageSizes", out var pageSizes) ? pageSizes : properties.TryGetValue("Items", out var legacy) ? legacy : null) as IEnumerable<SelectListItem>;
 }
 @if (items is not null && items.Any())
 {

@@ -10,7 +10,8 @@ namespace CrestApps.OrchardCore.Commerce.Services;
 /// already has a CLR property called <c>Items</c> (its child shapes). The theme's template reads <c>Model.Items</c>,
 /// which binds to that CLR property, gets an empty list, and renders nothing, so no listing shows the selector even
 /// when <b>Allow users to change the page size</b> is on. This adds an alternate whose template reads the sizes from
-/// the shape's properties instead. Remove it once the theme's template is fixed.
+/// the shape's properties instead. Remove it once the Orchard Core version in use includes
+/// OrchardCMS/OrchardCore#20007, which renames the argument to <c>PageSizes</c> and fixes the themes.
 /// </remarks>
 internal sealed class PagerPageSizeSelectorShapeTableProvider : IShapeTableProvider
 {
