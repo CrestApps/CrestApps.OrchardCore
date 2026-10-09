@@ -55,7 +55,6 @@ public sealed class InteractionReportDataSet : ContactCenterReportDataSet<Intera
         AddField(nameof(Interaction.RecordingState), S["Recording state"], ReportDataType.Text, record => record.RecordingState, interaction);
         AddField(nameof(Interaction.RecordingLegalHold), S["Recording on legal hold"], ReportDataType.Boolean, record => record.RecordingLegalHold, interaction);
         AddField(nameof(Interaction.HandoffReason), S["Handoff reason"], ReportDataType.Text, record => record.HandoffReason, interaction);
-        AddField("QueueHistoryCount", S["Queue history entries"], ReportDataType.Integer, record => record.QueueHistory?.Count ?? 0, interaction);
         AddField("TransferCount", S["Transfers"], ReportDataType.Integer, record => record.TransferHistory?.Count ?? 0, interaction);
         AddField(nameof(Interaction.CreatedById), S["Created by user ID"], ReportDataType.Text, record => record.CreatedById, interaction, isIdentifier: true, ContactCenterReportDataSets.UserReference());
         AddField(nameof(Interaction.CreatedByUserName), S["Created by"], ReportDataType.Text, record => record.CreatedByUserName, interaction);

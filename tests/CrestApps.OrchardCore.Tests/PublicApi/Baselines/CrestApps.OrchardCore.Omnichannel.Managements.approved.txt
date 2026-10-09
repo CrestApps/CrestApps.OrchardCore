@@ -906,6 +906,26 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources
+{
+    public sealed class OmnichannelReportDataSource : CrestApps.OrchardCore.Reports.DataSources.ReportRecordDataSource
+    {
+        public const string SourceName = "Omnichannel";
+        public OmnichannelReportDataSource(YesSql.ISession session, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositions, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaigns, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroups, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources.OmnichannelReportDataSource> stringLocalizer) { }
+        protected override System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Reports.DataSources.IReportRecordDataSet> DataSets { get; }
+        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
+        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
+        public override string Name { get; }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.Reports.Builder"})]
+    public sealed class OmnichannelReportDataSourceStartup : OrchardCore.Modules.StartupBase
+    {
+        public OmnichannelReportDataSourceStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Schemas
 {
     public sealed class OmnichannelContactPartSchemaDefinition : CrestApps.OrchardCore.Recipes.Core.Schemas.Parts.PartSchemaDefinitionBase

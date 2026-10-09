@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Moq;
 using OrchardCore.Security;
@@ -81,13 +82,8 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
 
     public ValueTask DisposeAsync()
     {
-        _store?.Dispose();
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-
-        if (File.Exists(_databasePath))
-        {
-            File.Delete(_databasePath);
-        }
+        // Deleting retries while another test's connection still holds the file under a parallel run.
+        TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
 
         return ValueTask.CompletedTask;
     }

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Reports.Designer.Indexes;
 using CrestApps.OrchardCore.Reports.Designer.Migrations;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -55,13 +56,8 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
 
     public ValueTask DisposeAsync()
     {
-        _store?.Dispose();
-        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-
-        if (File.Exists(_databasePath))
-        {
-            File.Delete(_databasePath);
-        }
+        // Deleting retries while another test's connection still holds the file under a parallel run.
+        TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
 
         return ValueTask.CompletedTask;
     }
