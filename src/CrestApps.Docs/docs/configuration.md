@@ -542,7 +542,9 @@ A connection stored on a data source wins over both sections. See
 
 Keys: `ConnectionString` and `ContainerName` (both required), `BasePath`, `CreateContainer`,
 `RemoveContainer`, `RemoveFilesFromBasePath`. When either required key is missing, the feature logs an
-error and documents stay on the local file system.
+error and documents stay on the local file system. `ContainerName` and `BasePath` accept Liquid such as
+`{{ ShellSettings.Name }}`, for a container per tenant or a shared container with a folder per tenant; see
+[Separating tenants](ai/documents/azure-blob-storage.md#separating-tenants).
 
 ```json
 {
@@ -926,8 +928,9 @@ See [Timings are configuration, not constants](contact-center/production-support
 | **Section** | `CrestApps:Telephony:AzureRecordings` |
 | **Controls** | Where call recordings are stored. Recordings stay encrypted before they reach Azure. |
 
-Keys: `ConnectionString`, `ContainerName`, `BasePath` (supports Liquid such as `{{ ShellSettings.Name }}`),
-`CreateContainer`.
+Keys: `ConnectionString`, `ContainerName`, `BasePath`, `CreateContainer`. `ContainerName` and `BasePath`
+accept Liquid such as `{{ ShellSettings.Name }}`, for a container per tenant or a shared container with a
+folder per tenant; see [Separating tenants](telephony/recording-azure-blob-storage.md#separating-tenants).
 
 ```json
 {
@@ -1486,6 +1489,9 @@ Keys: `ConnectionString` and `ContainerName` (both required), `BasePath`, `Creat
 `RemoveContainer`, `RemoveFilesFromBasePath`. When either required key is missing, files stay on the local
 file system and an error is logged. A site that runs on more than one instance needs this; see
 [Running on more than one instance](modules/content-transfer.md#running-on-more-than-one-instance).
+`ContainerName` and `BasePath` accept Liquid such as `{{ ShellSettings.Name }}`, for a container per tenant
+or a shared container with a folder per tenant; see
+[Separating tenants](modules/content-transfer.md#separating-tenants).
 
 ```json
 {
@@ -1541,7 +1547,9 @@ See [Limiting how much of the database an import uses](modules/content-transfer.
 
 Keys: `ConnectionString` and `ContainerName` (both required), `BasePath`, `CreateContainer`,
 `RemoveContainer`, `RemoveFilesFromBasePath`. When either required key is missing, files stay on the local
-file system and an error is logged.
+file system and an error is logged. `ContainerName` and `BasePath` accept Liquid such as
+`{{ ShellSettings.Name }}`, for a container per tenant or a shared container with a folder per tenant; see
+[Separating tenants](modules/dnc-registry.md#separating-tenants).
 
 ```json
 {
