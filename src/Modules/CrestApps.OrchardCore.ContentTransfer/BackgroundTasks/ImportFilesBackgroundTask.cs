@@ -82,6 +82,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
         var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
         var rowFilters = serviceProvider.GetServices<IContentImportRowFilter>();
+        var logger = serviceProvider.GetRequiredService<ILogger<ImportFilesBackgroundTask>>();
         var entry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
 
         if (entry == null || entry.Status.ShouldStopImport())
@@ -93,6 +94,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         if (contentTypeDefinition == null)
         {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError("The import of entry '{EntryId}' failed because the content type '{ContentType}' no longer exists.", entry.EntryId, entry.ContentType);
+            }
+
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["The content definition was removed."], cancellationToken);
             return;
         }
@@ -101,6 +107,11 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         if (fileInfo == null || fileInfo.Length == 0)
         {
+            if (logger.IsEnabled(LogLevel.Error))
+            {
+                logger.LogError("The import of entry '{EntryId}' failed because its file '{StoredFileName}' is missing or empty in the content transfer file store.", entry.EntryId, entry.StoredFileName);
+            }
+
             await SaveEntryWithErrorAsync(session, clock, entry, localizer["The import file no longer exists."], cancellationToken);
             return;
         }
