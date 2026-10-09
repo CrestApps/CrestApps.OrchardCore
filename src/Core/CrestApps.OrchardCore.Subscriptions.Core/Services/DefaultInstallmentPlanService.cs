@@ -52,6 +52,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly IEnumerable<ICheckoutSavedPaymentMethodProvider> _savedPaymentMethodProviders;
     private readonly IPaymentAttemptStore _attemptStore;
+    private readonly ITransactionSettlementService _settlementService;
     private readonly UserManager<IUser> _userManager;
     private readonly IUserService _userService;
     private readonly IDistributedLock _distributedLock;
@@ -75,6 +76,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         ICheckoutPaymentProviderResolver providerResolver,
         IEnumerable<ICheckoutSavedPaymentMethodProvider> savedPaymentMethodProviders,
         IPaymentAttemptStore attemptStore,
+        ITransactionSettlementService settlementService,
         UserManager<IUser> userManager,
         IUserService userService,
         IDistributedLock distributedLock,
@@ -93,6 +95,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         _providerResolver = providerResolver;
         _savedPaymentMethodProviders = savedPaymentMethodProviders;
         _attemptStore = attemptStore;
+        _settlementService = settlementService;
         _userManager = userManager;
         _userService = userService;
         _distributedLock = distributedLock;
@@ -466,7 +469,10 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
         if (!locked)
         {
-            var busy = new InstallmentPlanResult { Plan = await _planStore.FindByIdAsync(planId, cancellationToken) };
+            // The plan is not loaded here. When the holder of the lock is this very request (a payment handler
+            // reacting to a charge the plan is making), the checkout has committed in between, so loading the plan
+            // again would put a second copy of it in the session and the holder's save would then be refused.
+            var busy = new InstallmentPlanResult();
 
             return waitForLock
                 ? busy.Fail(string.Empty, S["The plan is being updated by another process. Try again in a moment."])
@@ -503,6 +509,12 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         }
 
         var downPaymentTransaction = await FindTransactionAsync(downPayment, cancellationToken);
+
+        if (downPaymentTransaction is not null && downPaymentTransaction.Status != TransactionStatus.Paid)
+        {
+            // The card may have been charged while recording it was interrupted; that money counts.
+            await ApplyTakenChargesAsync(downPaymentTransaction, cancellationToken);
+        }
 
         if (downPaymentTransaction?.Status != TransactionStatus.Paid)
         {
@@ -609,8 +621,15 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             return S["The payment's transaction could not be found."].Value;
         }
 
+        // Money a previous charge of this payment took is applied before anything else. Recording it can be
+        // interrupted after the gateway took it; charging again on the strength of the unrecorded balance would take
+        // it twice.
+        await ApplyTakenChargesAsync(transaction, cancellationToken);
+
         if (transaction.OutstandingAmount <= 0m)
         {
+            await SyncPaymentsAsync(plan, cancellationToken);
+
             return null;
         }
 
@@ -652,6 +671,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             },
             cancellationToken);
 
+        payment.CheckoutSessionIds.Add(session.SessionId);
         payment.ChargeAttempts++;
         payment.LastChargeAttemptUtc = now;
 
@@ -815,6 +835,26 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         AddEvent(plan, InstallmentPlanEventType.PaymentDue, S["Payment {0} of {1} is now due.", payment.Number, Format(payment.Amount, plan.Currency)].Value, payment.Number);
     }
 
+    // Applies to the transaction whatever any checkout for it already collected and is not on it yet. The attempts
+    // are the durable record: they are committed before anything that records the payment elsewhere, so they still
+    // show the money when that recording was interrupted.
+    private async Task ApplyTakenChargesAsync(Transaction transaction, CancellationToken cancellationToken)
+    {
+        if (transaction.Status is TransactionStatus.Paid or TransactionStatus.Canceled or TransactionStatus.Refunded)
+        {
+            return;
+        }
+
+        var succeeded = (await _attemptStore.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, cancellationToken))
+            .Where(attempt => attempt.State == PaymentAttemptState.Succeeded)
+            .ToArray();
+
+        if (succeeded.Length > 0)
+        {
+            await _settlementService.ApplyAsync(transaction, succeeded, succeeded[^1].SessionId, cancellationToken);
+        }
+    }
+
     // Reads every payment's transaction and records what was received or canceled, however it was paid.
     private async Task SyncPaymentsAsync(InstallmentPlan plan, CancellationToken cancellationToken)
     {
@@ -826,6 +866,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             {
                 continue;
             }
+
+            await ApplyTakenChargesAsync(transaction, cancellationToken);
 
             switch (transaction.Status)
             {

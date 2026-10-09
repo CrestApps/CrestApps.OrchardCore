@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Transactions;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.AspNetCore.Http;
@@ -408,6 +409,51 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
+    public async Task ProcessAsync_WhenAChargeWasTakenButNeverRecorded_AppliesItInsteadOfChargingAgain()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var payment = plan.Payments[1];
+        var transaction = await context.Transactions.FindByIdAsync(payment.TransactionId, TestContext.Current.CancellationToken);
+        var unpaidStatus = transaction.Status;
+        var eventCount = transaction.Events.Count;
+
+        context.Clock.UtcNow = payment.DueUtc.AddHours(1);
+
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // The request that recorded the charge failed after the gateway took the money, so everything it wrote was
+        // rolled back: the plan forgot it charged the card and the transaction never saw the payment. Only the
+        // payment attempt, committed before the charge, survives.
+        Assert.Single(await context.Attempts.GetByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, TestContext.Current.CancellationToken));
+
+        payment.CheckoutSessionIds.Clear();
+        payment.ChargeAttempts = 0;
+        payment.Status = InstallmentPaymentStatus.Due;
+        payment.PaidUtc = null;
+        transaction.Status = unpaidStatus;
+        transaction.AmountPaid = 0m;
+        transaction.SettledUtc = null;
+
+        while (transaction.Events.Count > eventCount)
+        {
+            transaction.Events.RemoveAt(transaction.Events.Count - 1);
+        }
+
+        // Act
+        await service.ChargeAsync(plan.ItemId, payment.Number, TestContext.Current.CancellationToken);
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, context.Engine.Begun.Count);
+        Assert.Equal(TransactionStatus.Paid, transaction.Status);
+        Assert.Equal(payment.Amount, transaction.AmountPaid);
+        Assert.Equal(InstallmentPaymentStatus.Paid, payment.Status);
+    }
+
+    [Fact]
     public async Task ProcessAsync_ForAnInvoicedPlan_AsksTheCustomerToPayOnTheDueDate()
     {
         // Arrange
@@ -660,14 +706,22 @@ public sealed class DefaultInstallmentPlanServiceTests
             UserManager.Setup(manager => manager.GetUserIdAsync(It.IsAny<IUser>())).ReturnsAsync((IUser user) => ((User)user).UserId ?? "new-user");
             UserManager.Setup(manager => manager.CreateAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
 
+            var transactionManager = TransactionManagerFactory.Create(Transactions);
+
             return new DefaultInstallmentPlanService(
                 Plans,
-                TransactionManagerFactory.Create(Transactions),
+                transactionManager,
                 Engine,
                 Engine.Sessions,
                 providerResolver.Object,
                 [savedProvider.Object],
                 Attempts,
+                new TransactionSettlementService(
+                    transactionManager,
+                    new ServiceCollection().BuildServiceProvider(),
+                    Clock,
+                    NullLogger<TransactionSettlementService>.Instance,
+                    new PassThroughStringLocalizer<TransactionSettlementService>()),
                 UserManager.Object,
                 userService.Object,
                 new LocalLock(NullLogger<LocalLock>.Instance),

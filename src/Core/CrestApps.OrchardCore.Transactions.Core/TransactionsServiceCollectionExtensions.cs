@@ -18,6 +18,7 @@ public static class TransactionsServiceCollectionExtensions
     {
         services.AddScoped<ITransactionStore, TransactionStore>();
         services.AddScoped<ITransactionManager, TransactionManager>();
+        services.AddScoped<ITransactionSettlementService, TransactionSettlementService>();
 
         return services;
     }

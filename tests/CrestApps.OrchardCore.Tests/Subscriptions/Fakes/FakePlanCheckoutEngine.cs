@@ -129,24 +129,35 @@ internal sealed class FakePlanCheckoutEngine : ICheckoutEngine
     public async Task SettleAsync(CheckoutSession session, CancellationToken cancellationToken = default)
     {
         var transaction = await _transactions.FindByIdAsync(session.ReferenceId, cancellationToken);
+        var providerKey = Begun.LastOrDefault(begun => begun.SessionId == session.SessionId).Options?.ProviderKey ?? "card";
+
+        var attempt = new PaymentAttempt
+        {
+            ItemId = "attempt-" + session.SessionId,
+            SessionId = session.SessionId,
+            ReferenceType = session.ReferenceType,
+            ReferenceId = session.ReferenceId,
+            ProviderKey = providerKey,
+            ObligationId = CheckoutObligations.OneTime,
+            ProviderReference = "pi_" + session.SessionId,
+            Currency = transaction?.Currency,
+            ConfirmedAmount = transaction?.OutstandingAmount ?? 0m,
+            State = PaymentAttemptState.Succeeded,
+        };
+
+        await _attempts.CreateAsync(attempt, cancellationToken);
 
         if (transaction is not null)
         {
             transaction.AmountPaid = transaction.TotalAmount;
             transaction.Status = TransactionStatus.Paid;
             transaction.SettledUtc = DateTime.UtcNow;
+            transaction.Events.Add(new TransactionEvent
+            {
+                Type = TransactionEventType.PaymentRecorded,
+                Amount = attempt.ConfirmedAmount,
+                PaymentAttemptId = attempt.ItemId,
+            });
         }
-
-        var providerKey = Begun.LastOrDefault(begun => begun.SessionId == session.SessionId).Options?.ProviderKey ?? "card";
-
-        await _attempts.CreateAsync(new PaymentAttempt
-        {
-            ItemId = "attempt-" + session.SessionId,
-            SessionId = session.SessionId,
-            ProviderKey = providerKey,
-            ObligationId = CheckoutObligations.OneTime,
-            ProviderReference = "pi_" + session.SessionId,
-            State = PaymentAttemptState.Succeeded,
-        }, cancellationToken);
     }
 }

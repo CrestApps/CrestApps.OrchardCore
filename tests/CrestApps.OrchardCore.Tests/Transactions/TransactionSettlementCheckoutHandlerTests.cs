@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -411,11 +412,17 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             services.AddSingleton(paymentHandler);
         }
 
+        var manager = TransactionManagerFactory.Create(store);
+
         return new(
-            TransactionManagerFactory.Create(store),
+            manager,
             attempts ?? new InMemoryPaymentAttemptStore(),
-            services.BuildServiceProvider(),
-            new TestClock(_now),
+            new TransactionSettlementService(
+                manager,
+                services.BuildServiceProvider(),
+                new TestClock(_now),
+                NullLogger<TransactionSettlementService>.Instance,
+                new PassThroughStringLocalizer<TransactionSettlementService>()),
             NullLogger<TransactionSettlementCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
     }

@@ -61,6 +61,9 @@ Configure the connection at the top of the settings page. Choose the environment
 2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout.
 3. Click **Connect**. The app verifies the key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
 
+Connecting also registers the site's domain with the account for wallet payments (see
+[Apple Pay and Google Pay](#apple-pay-and-google-pay)); a `localhost` site is skipped, since Stripe cannot reach it.
+
 The connection status is shown for the active environment, including the resolved Stripe account id. To unlink, click **Disconnect** and confirm; the app deletes the provisioned webhook and clears the stored credentials.
 
 If the site is not publicly reachable (for example on `localhost`), Stripe cannot create the webhook. The key and account are still saved, and a warning explains how to receive events during development: forward them with the Stripe CLI and paste the printed signing secret into the optional **Webhook signing secret** field under *Advanced*. See [Local development](#local-development).
@@ -190,6 +193,27 @@ for through the provider-neutral `CheckoutPaymentDataKeys` on an ordinary checko
   cardholder declines with `authentication_required`, and that payment has to be made by the customer. A network
   failure is not a decline, so it is retried without counting against the card. Only server code sets these keys:
   the down payment page strips them from anything the browser sends.
+
+### Apple Pay and Google Pay
+
+The card panel of the checkout also offers the wallets a device already holds, through Stripe's Express Checkout
+Element: Apple Pay in Safari on an iPhone, iPad or Mac, and Google Pay in Chrome on Android and the desktop. A payer
+on a phone confirms with a tap, Face ID or a fingerprint instead of typing a card number. The buttons appear above the
+card form only when the device has a wallet set up and there is an amount to pay now; elsewhere the card form shows
+alone.
+
+- A wallet pays with a card, so everything the card form does still holds: the payment goes through the same
+  checkout, the server decides the amount and verifies the result with Stripe, and a card kept for later charges
+  (an installment plan, a subscription) is kept the same way. Only wallets that produce a card are offered; Link,
+  PayPal, Amazon Pay and Klarna are turned off.
+- Stripe offers a wallet only on a domain registered with the account. **Connect** registers the site's own domain
+  for you; a site served from another domain too can add it under *Settings → Payment method domains* in the Stripe
+  Dashboard. Wallets need HTTPS.
+- Samsung Pay is not a separate button: on a Samsung phone the payer pays through Google Pay, which can hold the
+  same cards.
+
+Taking a card that is tapped against the administrator's own phone (Stripe's *Tap to Pay*) needs Stripe Terminal
+inside a native iOS or Android app, and cannot be done from a web page.
 
 ### Refunds
 

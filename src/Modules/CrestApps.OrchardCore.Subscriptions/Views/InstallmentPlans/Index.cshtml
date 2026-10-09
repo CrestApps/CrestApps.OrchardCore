@@ -37,68 +37,81 @@
     </div>
 </form>
 
-@if (Model.Plans.Count > 0)
-{
-    <div class="table-responsive">
-        <table class="table align-middle">
-            <thead>
-                <tr>
-                    <th scope="col">@T["Plan"]</th>
-                    <th scope="col">@T["Customer"]</th>
-                    <th scope="col" class="text-end">@T["Total"]</th>
-                    <th scope="col" class="text-end">@T["Paid"]</th>
-                    <th scope="col" class="text-end">@T["Outstanding"]</th>
-                    <th scope="col">@T["Next payment"]</th>
-                    <th scope="col">@T["Status"]</th>
-                    <th scope="col" class="text-end">@T["Actions"]</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var plan in Model.Plans)
-                {
-                    var next = plan.NextPayment;
+<ul class="list-group">
+    @if (Model.Plans.Count > 0)
+    {
+        @foreach (var plan in Model.Plans)
+        {
+            var next = plan.NextPayment;
+            string Money(decimal amount) => $"{plan.Currency} {CurrencyScale.Format(amount, plan.Currency)}";
 
-                    <tr>
-                        <td>
-                            <a asp-action="Detail" asp-route-itemId="@plan.ItemId">@plan.Title</a>
-                        </td>
-                        <td>
-                            <div>@plan.CustomerName</div>
-                            <div class="text-muted small">@plan.CustomerEmail</div>
-                        </td>
-                        <td class="text-end text-nowrap">@plan.Currency @CurrencyScale.Format(plan.TotalAmount, plan.Currency)</td>
-                        <td class="text-end text-nowrap">@plan.Currency @CurrencyScale.Format(plan.AmountPaid, plan.Currency)</td>
-                        <td class="text-end text-nowrap">@plan.Currency @CurrencyScale.Format(plan.AmountOutstanding, plan.Currency)</td>
-                        <td class="text-nowrap">
-                            @if (next is not null && plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed))
-                            {
-                                <span>@next.DueUtc.ToString("d")</span>
-                                <span class="text-muted small">@plan.Currency @CurrencyScale.Format(next.Amount, plan.Currency)</span>
-                            }
-                            else
-                            {
-                                <span class="text-muted">&mdash;</span>
-                            }
-                        </td>
-                        <td><partial name="_InstallmentPlanStatusBadge" model="plan.Status" /></td>
-                        <td class="text-end text-nowrap">
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row">
+                                <div class="me-2">
+                                    <h5 class="mb-0"><a asp-action="Detail" asp-route-itemId="@plan.ItemId">@plan.Title</a></h5>
+                                </div>
+                                <div class="metadata me-1">
+                                    <partial name="_InstallmentPlanStatusBadge" model="plan.Status" />
+                                </div>
+                            </div>
+                            <div class="text-muted small mt-1">
+                                <span class="me-3" title="@T["Customer"]">
+                                    <i class="fa-regular fa-user" aria-hidden="true"></i><span class="visually-hidden">@T["Customer"]</span>
+                                    @plan.CustomerName
+                                    @if (!string.IsNullOrEmpty(plan.CustomerEmail))
+                                    {
+                                        <span>&lt;@plan.CustomerEmail&gt;</span>
+                                    }
+                                </span>
+                                <span class="me-3" title="@T["Received of the total"]">
+                                    <i class="fa-solid fa-coins" aria-hidden="true"></i><span class="visually-hidden">@T["Received of the total"]</span>
+                                    @T["{0} of {1} received", Money(plan.AmountPaid), Money(plan.TotalAmount)]
+                                </span>
+                                @if (plan.AmountOutstanding > 0m && plan.Status != InstallmentPlanStatus.Canceled)
+                                {
+                                    <span class="me-3" title="@T["Outstanding"]">
+                                        <i class="fa-solid fa-hourglass-half" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
+                                        @T["{0} outstanding", Money(plan.AmountOutstanding)]
+                                    </span>
+                                }
+                                @if (next is not null && plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed))
+                                {
+                                    <span title="@T["Next payment"]">
+                                        <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Next payment"]</span>
+                                        @T["Next: {0} on {1:d}", Money(next.Amount), next.DueUtc]
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
                             @if (plan.Status == InstallmentPlanStatus.Draft)
                             {
-                                <a class="btn btn-sm btn-primary" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take down payment"]</a>
+                                <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">
+                                    <i class="fa-solid fa-credit-card" aria-hidden="true"></i>
+                                    @T["Take down payment"]
+                                </a>
                             }
-                            <a class="btn btn-sm btn-secondary" asp-action="Detail" asp-route-itemId="@plan.ItemId">@T["Manage"]</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
-else
-{
-    <div class="alert alert-info text-center" role="alert">
-        @T["<strong>Nothing here!</strong> There are no installment plans that match the current filter."]
-    </div>
-}
+                            <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-route-itemId="@plan.ItemId">
+                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                                @T["Manage"]
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item list-group-item-info text-center">
+            @T["<strong>Nothing here!</strong> There are no installment plans that match the current filter."]
+        </li>
+    }
+</ul>
 
 @await DisplayAsync(Model.Pager)

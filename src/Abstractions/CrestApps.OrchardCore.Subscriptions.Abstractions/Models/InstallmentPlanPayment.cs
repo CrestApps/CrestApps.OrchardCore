@@ -56,4 +56,11 @@ public sealed class InstallmentPlanPayment
     /// Gets or sets why the last charge failed, as the payment provider explained it.
     /// </summary>
     public string LastFailureMessage { get; set; }
+
+    /// <summary>
+    /// Gets the checkout sessions the plan started to charge this payment, kept as its charge history. Whether money
+    /// was already taken is answered from the payment attempts made for the transaction rather than from this list,
+    /// because the list is lost with the plan's own changes when recording a charge is interrupted.
+    /// </summary>
+    public IList<string> CheckoutSessionIds { get; init; } = [];
 }

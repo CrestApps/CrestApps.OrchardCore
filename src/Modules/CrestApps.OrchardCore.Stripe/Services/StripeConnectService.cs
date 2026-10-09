@@ -171,18 +171,24 @@ public sealed class StripeConnectService : IStripeConnectService
             webhookWarning = ex.StripeError?.Message ?? ex.Message;
         }
 
+        var walletDomain = await TryRegisterWalletDomainAsync(effectiveSecret, webhookUrl);
+
         site.Put(settings);
 
         await _siteService.UpdateSiteSettingsAsync(site);
 
         _shellReleaseManager.RequestRelease();
 
+        var walletNote = walletDomain is null
+            ? string.Empty
+            : $" Apple Pay and Google Pay are enabled for '{walletDomain}'.";
+
         if (webhookWarning is null)
         {
-            return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}' and provisioned the webhook.", accountId);
+            return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}' and provisioned the webhook.{walletNote}", accountId);
         }
 
-        return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}', but the webhook could not be created automatically ({webhookWarning}). Payments will work; to receive events, make sure this site is publicly reachable and connect again, or add a webhook signing secret manually.", accountId);
+        return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}', but the webhook could not be created automatically ({webhookWarning}). Payments will work; to receive events, make sure this site is publicly reachable and connect again, or add a webhook signing secret manually.{walletNote}", accountId);
     }
 
     /// <inheritdoc/>
@@ -223,6 +229,44 @@ public sealed class StripeConnectService : IStripeConnectService
         var stored = isLive ? settings.LivePrivateSecret : settings.TestPrivateSecret;
 
         return string.IsNullOrEmpty(stored) ? null : protector.Unprotect(stored);
+    }
+
+    // Wallet buttons (Apple Pay above all) are only offered on a domain registered with the Stripe account, so the
+    // site's own domain is registered while connecting. A site that is not publicly reachable cannot be
+    // registered, and failing to register never fails the connection: card payments work either way.
+    private async Task<string> TryRegisterWalletDomainAsync(string secretKey, string siteUrl)
+    {
+        if (!Uri.TryCreate(siteUrl, UriKind.Absolute, out var uri) ||
+            uri.IsLoopback ||
+            uri.HostNameType != UriHostNameType.Dns ||
+            !uri.Host.Contains('.', StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        try
+        {
+            var domainService = new PaymentMethodDomainService(new StripeClient(secretKey));
+            var existing = await domainService.ListAsync(new PaymentMethodDomainListOptions { DomainName = uri.Host });
+            var domain = existing.Data.FirstOrDefault();
+
+            if (domain is null)
+            {
+                await domainService.CreateAsync(new PaymentMethodDomainCreateOptions { DomainName = uri.Host, Enabled = true });
+            }
+            else if (!domain.Enabled)
+            {
+                await domainService.UpdateAsync(domain.Id, new PaymentMethodDomainUpdateOptions { Enabled = true });
+            }
+
+            return uri.Host;
+        }
+        catch (StripeException ex)
+        {
+            _logger.LogWarning(ex, "Could not register the domain '{Domain}' for wallet payments with Stripe.", uri.Host);
+
+            return null;
+        }
     }
 
     private async Task TryDeleteWebhookAsync(string secretKey, string webhookId)

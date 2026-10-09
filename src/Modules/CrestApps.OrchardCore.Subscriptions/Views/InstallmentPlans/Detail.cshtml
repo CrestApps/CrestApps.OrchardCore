@@ -103,79 +103,104 @@
 
         <div class="card mb-3">
             <div class="card-header">@T["Payments"]</div>
-            <div class="table-responsive">
-                <table class="table align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th scope="col">@T["Payment"]</th>
-                            <th scope="col">@T["Due"]</th>
-                            <th scope="col" class="text-end">@T["Amount"]</th>
-                            <th scope="col">@T["Status"]</th>
-                            <th scope="col"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var payment in plan.Payments.OrderBy(payment => payment.Number))
-                        {
-                            Transaction transaction = null;
+            <ul class="list-group list-group-flush">
+                @foreach (var payment in plan.Payments.OrderBy(payment => payment.Number))
+                {
+                    Transaction transaction = null;
 
-                            if (!string.IsNullOrEmpty(payment.TransactionId))
-                            {
-                                Model.Transactions.TryGetValue(payment.TransactionId, out transaction);
-                            }
+                    if (!string.IsNullOrEmpty(payment.TransactionId))
+                    {
+                        Model.Transactions.TryGetValue(payment.TransactionId, out transaction);
+                    }
 
-                            <tr>
-                                <td>@(payment.Number == 0 ? T["Down payment"] : T["Payment {0} of {1}", payment.Number, plan.InstallmentCount])</td>
-                                <td class="text-nowrap">@payment.DueUtc.ToString("d")</td>
-                                <td class="text-end text-nowrap">@Money(payment.Amount)</td>
-                                <td>
-                                    <partial name="_InstallmentPaymentStatusBadge" model="payment.Status" />
-                                    @if (payment.PaidUtc.HasValue)
+                    var isOutstanding = payment.Status is not (InstallmentPaymentStatus.Paid or InstallmentPaymentStatus.Canceled);
+
+                    <li class="list-group-item">
+                        <div class="row g-0">
+                            <div class="col-lg col-12 title d-flex align-items-center">
+                                <div class="summary">
+                                    <div class="d-flex flex-column flex-md-row">
+                                        <div class="me-2">
+                                            <h6 class="mb-0">@(payment.Number == 0 ? T["Down payment"] : T["Payment {0} of {1}", payment.Number, plan.InstallmentCount])</h6>
+                                        </div>
+                                        <div class="metadata me-1">
+                                            <partial name="_InstallmentPaymentStatusBadge" model="payment.Status" />
+                                        </div>
+                                    </div>
+                                    <div class="text-muted small mt-1">
+                                        <span class="me-3" title="@T["Amount"]">
+                                            <i class="fa-solid fa-coins" aria-hidden="true"></i><span class="visually-hidden">@T["Amount"]</span>
+                                            @Money(payment.Amount)
+                                        </span>
+                                        <span class="me-3" title="@T["Due"]">
+                                            <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Due"]</span>
+                                            @T["Due {0:d}", payment.DueUtc]
+                                        </span>
+                                        @if (payment.PaidUtc.HasValue)
+                                        {
+                                            <span class="me-3" title="@T["Received"]">
+                                                <i class="fa-solid fa-check" aria-hidden="true"></i><span class="visually-hidden">@T["Received"]</span>
+                                                @T["Received {0:d}", payment.PaidUtc.Value]
+                                            </span>
+                                        }
+                                        @if (isOutstanding && payment.NextChargeAttemptUtc.HasValue)
+                                        {
+                                            <span title="@T["Next try"]">
+                                                <i class="fa-solid fa-rotate" aria-hidden="true"></i><span class="visually-hidden">@T["Next try"]</span>
+                                                @T["Next try"] @await DisplayAsync(await New.DateTime(Utc: payment.NextChargeAttemptUtc.Value, Format: "g"))
+                                            </span>
+                                        }
+                                    </div>
+                                    @if (isOutstanding && !string.IsNullOrEmpty(payment.LastFailureMessage))
                                     {
-                                        <div class="text-muted small">@T["Received {0:d}", payment.PaidUtc.Value]</div>
+                                        <div class="text-danger small mt-1">
+                                            <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                                            @payment.LastFailureMessage
+                                        </div>
                                     }
-                                    @if (payment.Status != InstallmentPaymentStatus.Paid && !string.IsNullOrEmpty(payment.LastFailureMessage))
-                                    {
-                                        <div class="text-danger small">@payment.LastFailureMessage</div>
-                                    }
-                                    @if (payment.Status != InstallmentPaymentStatus.Paid && payment.NextChargeAttemptUtc.HasValue)
-                                    {
-                                        <div class="text-muted small">@T["Next try {0:g}", payment.NextChargeAttemptUtc.Value]</div>
-                                    }
-                                </td>
-                                <td class="text-end text-nowrap">
+                                </div>
+                            </div>
+                            <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                                <div class="actions">
                                     @if (transaction is not null)
                                     {
-                                        <a class="btn btn-sm btn-outline-secondary" asp-action="Detail" asp-controller="Admin" asp-area="CrestApps.OrchardCore.Transactions" asp-route-itemId="@transaction.ItemId">@T["Transaction"]</a>
+                                        <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-controller="Admin" asp-area="CrestApps.OrchardCore.Transactions" asp-route-itemId="@transaction.ItemId">
+                                            <i class="fa-solid fa-file-invoice-dollar" aria-hidden="true"></i>
+                                            @T["Transaction"]
+                                        </a>
 
                                         @if (Model.ShowReceipts)
                                         {
                                             foreach (var recorded in transaction.Events.Where(evt => evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id)))
                                             {
-                                                <a class="btn btn-sm btn-outline-secondary" asp-action="Index" asp-controller="TransactionReceipt" asp-area="CrestApps.OrchardCore.Transactions" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@recorded.Id">@T["Receipt"]</a>
+                                                <a class="btn btn-secondary btn-sm" asp-action="Index" asp-controller="TransactionReceipt" asp-area="CrestApps.OrchardCore.Transactions" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@recorded.Id">
+                                                    <i class="fa-solid fa-receipt" aria-hidden="true"></i>
+                                                    @T["Receipt"]
+                                                </a>
                                             }
                                         }
                                     }
 
-                                    @if (canCharge && payment.Number > 0 && payment.Status is not (InstallmentPaymentStatus.Paid or InstallmentPaymentStatus.Canceled))
+                                    @if (canCharge && payment.Number > 0 && isOutstanding)
                                     {
                                         <form asp-action="Charge" method="post" class="d-inline">
                                             <input type="hidden" name="itemId" value="@plan.ItemId" />
                                             <input type="hidden" name="paymentNumber" value="@payment.Number" />
-                                            <button type="submit" class="btn btn-sm btn-primary"
+                                            <button type="submit" class="btn btn-primary btn-sm"
                                                     data-url-af="UnsafeUrl"
                                                     data-title="@T["Charge now"]"
                                                     data-message="@T["Charge {0} to {1} now?", Money(payment.Amount), plan.PaymentMethod.Describe()]">
+                                                <i class="fa-solid fa-bolt" aria-hidden="true"></i>
                                                 @T["Charge now"]
                                             </button>
                                         </form>
                                     }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
         </div>
 
         <div class="card mb-3">
@@ -186,7 +211,7 @@
                     <li class="list-group-item">
                         <div class="d-flex justify-content-between">
                             <span>@entry.Message</span>
-                            <span class="text-muted small text-nowrap ms-3">@entry.CreatedUtc.ToString("g")</span>
+                            <span class="text-muted small text-nowrap ms-3">@await DisplayAsync(await New.DateTime(Utc: entry.CreatedUtc, Format: "g"))</span>
                         </div>
                         @if (!string.IsNullOrEmpty(entry.ActorName))
                         {
