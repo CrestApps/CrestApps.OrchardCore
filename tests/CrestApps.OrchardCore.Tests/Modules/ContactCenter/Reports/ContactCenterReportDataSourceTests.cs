@@ -232,6 +232,26 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         Assert.True(table.Truncated);
     }
 
+    [Fact]
+    public async Task Interactions_JoinKeys_ReadOnlyTheMatchingRecords()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var query = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
+        query.Conditions.Add(new ReportDataCondition { Field = ContactCenterReportDataSets.ItemIdField, Operator = ReportFilterOperator.In, Values = ["interaction-middle", "missing"], IsJoinKey = true });
+        var schema = await source.GetSchemaAsync(ContactCenterReportDataSets.Interactions, query.Context, TestContext.Current.CancellationToken);
+
+        // Act
+        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["interaction-middle"], Rows(table).Select(row => row[ContactCenterReportDataSets.ItemIdField]));
+        Assert.True(schema.FindField(ContactCenterReportDataSets.ItemIdField).IsKeyFilterable);
+        Assert.True(schema.FindField(nameof(Interaction.ActivityItemId)).IsKeyFilterable);
+        Assert.False(schema.FindField(nameof(Interaction.CustomerAddress)).IsKeyFilterable);
+    }
+
     [Theory]
     [InlineData(ReportFilterOperator.GreaterThanOrEqual)]
     [InlineData(ReportFilterOperator.GreaterThan)]

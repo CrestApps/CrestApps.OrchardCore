@@ -186,6 +186,9 @@ internal sealed class ActivitiesDataSet : ReportRecordDataSet<OmnichannelActivit
         return _access.CanReadAsync(context);
     }
 
+    // Index columns a join can narrow the read on.
+    protected override IEnumerable<string> KeyFilterableFields => ["ItemId", "AssignedToId", "CreatedById", "DispositionId", "CampaignId", "ContactContentItemId"];
+
     protected override async Task<IEnumerable<OmnichannelActivity>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
     {
         if (query.Fields is null || query.Fields.Count == 0 || query.Fields.Contains("Disposition"))
@@ -203,6 +206,32 @@ internal sealed class ActivitiesDataSet : ReportRecordDataSet<OmnichannelActivit
         }
 
         var records = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(collection: OmnichannelConstants.CollectionName);
+
+        foreach (var field in KeyFilterableFields)
+        {
+            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
+            {
+                continue;
+            }
+
+            if (keys.Count == 0)
+            {
+                return [];
+            }
+
+            var values = keys.ToArray();
+
+            records = field switch
+            {
+                "ItemId" => records.Where(index => index.ItemId.IsIn(values)),
+                "AssignedToId" => records.Where(index => index.AssignedToId.IsIn(values)),
+                "CreatedById" => records.Where(index => index.CreatedById.IsIn(values)),
+                "DispositionId" => records.Where(index => index.DispositionId.IsIn(values)),
+                "CampaignId" => records.Where(index => index.CampaignId.IsIn(values)),
+                _ => records.Where(index => index.ContactContentItemId.IsIn(values)),
+            };
+        }
+
         var (createdFrom, createdTo) = ReportDateRange.For(query.Conditions, "CreatedUtc");
         var (scheduledFrom, scheduledTo) = ReportDateRange.For(query.Conditions, "ScheduledUtc");
         var (completedFrom, completedTo) = ReportDateRange.For(query.Conditions, "CompletedUtc");

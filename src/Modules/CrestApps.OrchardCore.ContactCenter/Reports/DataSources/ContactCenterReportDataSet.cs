@@ -4,7 +4,9 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.Security.Permissions;
+using System.Reflection;
 using YesSql;
+using YesSql.Services;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
@@ -24,6 +26,9 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     // Bounds are widened by this much before they reach the store, so a date the store keeps with less precision
     // than the record never falls outside a bound the record itself is inside. The report filters every row again.
     private static readonly TimeSpan _boundSlack = TimeSpan.FromSeconds(1);
+
+    // YesSql's IN operator, found from a sample expression so it can be applied to any key column.
+    private static readonly MethodInfo _isIn = ((MethodCallExpression)((Expression<Func<string, bool>>)(value => value.IsIn(Array.Empty<string>()))).Body).Method;
 
     private readonly ISession _session;
     private readonly IAuthorizationService _authorizationService;
@@ -57,6 +62,19 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     /// <inheritdoc/>
     public override string DefaultDateField => DateColumn?.Field;
 
+    /// <summary>
+    /// Gets the index columns a join can narrow the read on, by field name. Every data set has its <c>ItemId</c>;
+    /// data sets add the foreign keys their index holds.
+    /// </summary>
+    protected virtual IReadOnlyDictionary<string, Expression<Func<TIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<TIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["ItemId"] = index => index.ItemId,
+        };
+
+    /// <inheritdoc/>
+    protected override IEnumerable<string> KeyFilterableFields => KeyColumns.Keys;
+
     /// <inheritdoc/>
     public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
     {
@@ -88,6 +106,21 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
         if (records is null)
         {
             return [];
+        }
+
+        foreach (var (field, column) in KeyColumns)
+        {
+            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
+            {
+                continue;
+            }
+
+            if (keys.Count == 0)
+            {
+                return [];
+            }
+
+            records = records.Where(In(column, keys.ToArray()));
         }
 
         if (DateColumn is { } dateColumn)
@@ -172,6 +205,13 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     {
         return Expression.Lambda<Func<TIndex, bool>>(
             Expression.MakeBinary(comparison, column.Body, Expression.Constant(value, typeof(DateTime))),
+            column.Parameters);
+    }
+
+    private static Expression<Func<TIndex, bool>> In(Expression<Func<TIndex, string>> column, string[] values)
+    {
+        return Expression.Lambda<Func<TIndex, bool>>(
+            Expression.Call(_isIn, column.Body, Expression.Constant(values, _isIn.GetParameters()[1].ParameterType)),
             column.Parameters);
     }
 

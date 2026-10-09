@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Reports.DataSources;
 using OrchardCore.ContentManagement.Records;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Reports.Contents.Services;
 
@@ -17,7 +18,8 @@ namespace CrestApps.OrchardCore.Reports.Contents.Services;
 /// Text comparisons (<see cref="ReportFilterOperator.In"/>, <see cref="ReportFilterOperator.Contains"/>, and the other
 /// text operators) are not translated: the report engine compares text ignoring case, while the database compares it
 /// with the collation of the column, which is case-sensitive on some databases, so a translated condition could drop
-/// rows the report keeps.
+/// rows the report keeps. Join key conditions on <c>ContentItemId</c> and <c>Owner</c> are the exception: they carry
+/// identifiers read from other records, which keep their case, so they become an exact <c>IN</c> list.
 /// </summary>
 public static class ContentReportConditionTranslator
 {
@@ -30,9 +32,23 @@ public static class ContentReportConditionTranslator
     {
         var predicates = new List<Expression<Func<ContentItemIndex, bool>>>();
 
+        foreach (var field in new[] { ContentReportFieldNames.ContentItemId, ContentReportFieldNames.Owner })
+        {
+            var keys = ReportJoinKeys.For(conditions, field);
+
+            if (keys is not null)
+            {
+                var values = keys.ToArray();
+
+                predicates.Add(field == ContentReportFieldNames.ContentItemId
+                    ? index => index.ContentItemId.IsIn(values)
+                    : index => index.Owner.IsIn(values));
+            }
+        }
+
         foreach (var condition in conditions ?? [])
         {
-            if (condition is null || string.IsNullOrEmpty(condition.Field))
+            if (condition is null || string.IsNullOrEmpty(condition.Field) || condition.IsJoinKey)
             {
                 continue;
             }

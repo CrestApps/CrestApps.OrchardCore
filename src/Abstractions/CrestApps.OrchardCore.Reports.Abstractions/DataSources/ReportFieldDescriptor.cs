@@ -61,6 +61,14 @@ public sealed class ReportFieldDescriptor
     public bool IsIdentifier { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the data source reads only the records whose value of this field is in a
+    /// join key condition (<see cref="ReportDataCondition.IsJoinKey"/>). When another data set is joined on this field,
+    /// the engine then reads only the records that can match, in batches, instead of the newest records up to the row
+    /// limit. A source must apply such a condition exactly, or not set this flag.
+    /// </summary>
+    public bool IsKeyFilterable { get; set; }
+
+    /// <summary>
     /// Gets or sets the data sets whose records this field's values identify. A field may reference several data sets,
     /// such as a picker that accepts more than one content type.
     /// </summary>

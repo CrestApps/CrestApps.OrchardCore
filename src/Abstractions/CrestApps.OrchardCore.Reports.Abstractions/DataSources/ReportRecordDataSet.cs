@@ -94,7 +94,26 @@ public abstract class ReportRecordDataSet<TRecord> : IReportRecordDataSet
     public ReportDataSetDescriptor Descriptor { get; }
 
     /// <inheritdoc/>
-    public IReadOnlyList<ReportFieldDescriptor> Fields => _fields.Select(recordField => recordField.Descriptor).ToArray();
+    public IReadOnlyList<ReportFieldDescriptor> Fields
+    {
+        get
+        {
+            var keys = KeyFilterableFields?.ToHashSet(StringComparer.Ordinal) ?? [];
+
+            foreach (var recordField in _fields)
+            {
+                recordField.Descriptor.IsKeyFilterable |= keys.Contains(recordField.Descriptor.Name);
+            }
+
+            return _fields.Select(recordField => recordField.Descriptor).ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Gets the fields whose join key conditions <see cref="LoadAsync"/> applies exactly (see
+    /// <see cref="ReportFieldDescriptor.IsKeyFilterable"/> and <see cref="ReportJoinKeys"/>).
+    /// </summary>
+    protected virtual IEnumerable<string> KeyFilterableFields => [];
 
     /// <inheritdoc/>
     public virtual string DefaultDateField => Descriptor.DefaultDateField;

@@ -141,14 +141,16 @@ public sealed class ContentsReportDataSourceTests
             Assert.Equal(["ContentItemId", "CreatedUtc", "Customer.Balance"], all.Fields.Select(field => field.Name));
             Assert.False(all.Truncated);
             Assert.Equal(3, all.Rows.Count);
-            Assert.Equal("customer-1", all.Rows[0][0]);
-            Assert.Equal(new DateTime(2026, 1, 5, 9, 0, 0, DateTimeKind.Utc), all.Rows[0][1]);
-            Assert.Equal(DateTimeKind.Utc, ((DateTime)all.Rows[0][1]).Kind);
-            Assert.Equal(10.5m, all.Rows[0][2]);
-            Assert.IsType<decimal>(all.Rows[2][2]);
+
+            // Newest first, so a report that hits the row limit shows the latest items.
+            Assert.Equal("customer-1", all.Rows[2][0]);
+            Assert.Equal(new DateTime(2026, 1, 5, 9, 0, 0, DateTimeKind.Utc), all.Rows[2][1]);
+            Assert.Equal(DateTimeKind.Utc, ((DateTime)all.Rows[2][1]).Kind);
+            Assert.Equal(10.5m, all.Rows[2][2]);
+            Assert.IsType<decimal>(all.Rows[0][2]);
 
             Assert.True(limited.Truncated);
-            Assert.Equal(["customer-1", "customer-2"], limited.Rows.Select(row => (string)row[0]));
+            Assert.Equal(["customer-3", "customer-2"], limited.Rows.Select(row => (string)row[0]));
         }
         finally
         {
@@ -237,9 +239,9 @@ public sealed class ContentsReportDataSourceTests
             // Assert
             Assert.Equal(
                 [
-                    ("order-1", "customer-1", "Ada,Grace"),
-                    ("order-2", "secret-1", null),
                     ("order-3", null, null),
+                    ("order-2", "secret-1", null),
+                    ("order-1", "customer-1", "Ada,Grace"),
                 ],
                 table.Rows.Select(row => ((string)row[0], (string)row[1], (string)row[2])));
         }

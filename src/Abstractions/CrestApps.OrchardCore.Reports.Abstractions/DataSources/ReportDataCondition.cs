@@ -22,4 +22,13 @@ public sealed class ReportDataCondition
     /// for an open bound of <see cref="ReportFilterOperator.Between"/>.
     /// </summary>
     public IList<object> Values { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the condition carries the keys a join needs (an
+    /// <see cref="ReportFilterOperator.In"/> list of identifiers read from the data sets joined before), rather than a
+    /// filter of the report. It is sent only for fields marked <see cref="ReportFieldDescriptor.IsKeyFilterable"/>,
+    /// whose source must then read only the records with one of these values. Identifiers keep their case, so the
+    /// values may be compared exactly.
+    /// </summary>
+    public bool IsJoinKey { get; set; }
 }

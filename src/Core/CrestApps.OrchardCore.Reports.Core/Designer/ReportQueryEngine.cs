@@ -83,22 +83,21 @@ public sealed partial class ReportQueryEngine
             .Select(filter => new ActiveFilter(filter, EffectiveValues(filter.Definition, context)))
             .ToList();
 
-        var tables = new Dictionary<PlannedDataSet, List<object[]>>();
-        var sourceRows = 0;
-
-        foreach (var dataSet in plan.DataSets)
-        {
-            var rows = await ReadAsync(plan, dataSet, filters, context, warnings, cancellationToken);
-            sourceRows += rows.Count;
-            tables[dataSet] = rows;
-        }
-
-        var current = tables[plan.DataSets[0]];
+        // Data sets are read in join order, so a joined data set can be read for the keys the rows before it hold.
+        var current = await ReadAsync(plan, plan.DataSets[0], filters, context, warnings, keys: null, cancellationToken);
+        var sourceRows = current.Count;
 
         foreach (var join in plan.Joins)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            current = Join(current, tables[join.DataSet], join, context.Limits.MaxJoinedRows, warnings);
+
+            var keys = JoinKeys(join, current, context.Limits);
+            var right = keys is { Values.Count: 0 }
+                ? []
+                : await ReadAsync(plan, join.DataSet, filters, context, warnings, keys, cancellationToken);
+
+            sourceRows += right.Count;
+            current = Join(current, right, join, context.Limits.MaxJoinedRows, warnings);
         }
 
         var expressionContext = new ExpressionContext
@@ -142,19 +141,115 @@ public sealed partial class ReportQueryEngine
         return filter.Values ?? [];
     }
 
+    // The keys a join can send to the data set it joins, so that data set reads only the records that can match: the
+    // distinct values of a pair of fields whose right side the source can filter on exactly. Only joins that drop the
+    // joined data set's unmatched records (inner and left) qualify. Returns null when the joined data set must be read
+    // in full: no such pair, keys compared as text across types, or more keys than the limit.
+    private static JoinKeyFilter JoinKeys(PlannedJoin join, List<object[]> left, ReportQueryLimits limits)
+    {
+        if (join.Type is not (ReportJoinType.Inner or ReportJoinType.Left) || limits.MaxJoinKeys < 1)
+        {
+            return null;
+        }
+
+        foreach (var (leftSlot, rightSlot, compareAsText) in join.Pairs)
+        {
+            var field = join.DataSet.UsedFields.Values.FirstOrDefault(candidate => candidate.Slot == rightSlot);
+            var descriptor = field is null ? null : join.DataSet.Schema?.FindField(field.FieldName);
+
+            if (compareAsText ||
+                descriptor is not { IsKeyFilterable: true } ||
+                field.DataType is not (ReportDataType.Text or ReportDataType.Integer))
+            {
+                continue;
+            }
+
+            var values = new Dictionary<string, object>(StringComparer.Ordinal);
+
+            foreach (var row in left)
+            {
+                var value = ReportDataValues.Coerce(row[leftSlot], field.DataType);
+
+                if (ReportDataValues.IsEmpty(value))
+                {
+                    continue;
+                }
+
+                values.TryAdd(ReportDataValues.ToKey(value), value);
+
+                if (values.Count > limits.MaxJoinKeys)
+                {
+                    return null;
+                }
+            }
+
+            return new JoinKeyFilter(field.FieldName, values.Values.ToList());
+        }
+
+        return null;
+    }
+
     private async Task<List<object[]>> ReadAsync(
         ReportQueryPlan plan,
         PlannedDataSet dataSet,
         IReadOnlyList<ActiveFilter> filters,
         ReportQueryExecutionContext context,
         List<string> warnings,
+        JoinKeyFilter keys,
         CancellationToken cancellationToken)
+    {
+        var maxRows = Math.Max(1, context.Limits.MaxRowsPerDataSet);
+        var batches = keys is null
+            ? [null]
+            : keys.Values.Chunk(Math.Max(1, context.Limits.JoinKeyBatchSize)).ToList();
+        var rows = new List<object[]>();
+        var truncated = false;
+
+        for (var index = 0; index < batches.Count; index++)
+        {
+            var query = CreateQuery(dataSet, filters, context, maxRows - rows.Count);
+
+            if (batches[index] is { } batch)
+            {
+                query.Conditions.Add(new ReportDataCondition
+                {
+                    Field = keys.FieldName,
+                    Operator = ReportFilterOperator.In,
+                    Values = batch,
+                    IsJoinKey = true,
+                });
+            }
+
+            var read = await ReadTableAsync(plan, dataSet, query, context, cancellationToken);
+
+            rows.AddRange(read.Rows);
+            truncated |= read.Truncated;
+
+            if (rows.Count >= maxRows)
+            {
+                truncated |= index < batches.Count - 1;
+
+                break;
+            }
+        }
+
+        if (truncated)
+        {
+            var label = dataSet.Reference.DisplayName ?? dataSet.Schema.DataSet?.DisplayName ?? dataSet.Reference.DataSet;
+
+            warnings.Add(S["Only the first {0} rows of '{1}' were read. Add filters to narrow the data.", maxRows, label]);
+        }
+
+        return rows;
+    }
+
+    private static ReportDataSourceQuery CreateQuery(PlannedDataSet dataSet, IReadOnlyList<ActiveFilter> filters, ReportQueryExecutionContext context, int maxRows)
     {
         var query = new ReportDataSourceQuery
         {
             DataSet = dataSet.Reference.DataSet,
             Fields = new HashSet<string>(dataSet.UsedFields.Keys, StringComparer.Ordinal),
-            MaxRows = Math.Max(1, context.Limits.MaxRowsPerDataSet),
+            MaxRows = Math.Max(1, maxRows),
             Context = context.DataSourceContext,
         };
 
@@ -181,14 +276,17 @@ public sealed partial class ReportQueryEngine
             }
         }
 
+        return query;
+    }
+
+    private static async Task<(List<object[]> Rows, bool Truncated)> ReadTableAsync(
+        ReportQueryPlan plan,
+        PlannedDataSet dataSet,
+        ReportDataSourceQuery query,
+        ReportQueryExecutionContext context,
+        CancellationToken cancellationToken)
+    {
         var table = await dataSet.Source.QueryAsync(query, cancellationToken) ?? new ReportDataTable();
-        var label = dataSet.Reference.DisplayName ?? dataSet.Schema.DataSet?.DisplayName ?? dataSet.Reference.DataSet;
-
-        if (table.Truncated || table.Rows.Count > query.MaxRows)
-        {
-            warnings.Add(S["Only the first {0} rows of '{1}' were read. Add filters to narrow the data.", query.MaxRows, label]);
-        }
-
         var mappings = dataSet.UsedFields.Values
             .Select(field => (field.Slot, SourceIndex: table.IndexOf(field.FieldName), field.DataType))
             .ToArray();
@@ -209,7 +307,7 @@ public sealed partial class ReportQueryEngine
             rows.Add(row);
         }
 
-        return rows;
+        return (rows, table.Truncated || table.Rows.Count > query.MaxRows);
     }
 
     private static object Normalize(object value, ReportDataType dataType, Func<DateTime, DateTime> toLocal)
@@ -464,4 +562,7 @@ public sealed partial class ReportQueryEngine
     }
 
     private sealed record ActiveFilter(PlannedFilter Filter, IList<string> Values);
+
+    // The keys of a join, for the field of the joined data set they are matched against.
+    private sealed record JoinKeyFilter(string FieldName, IReadOnlyList<object> Values);
 }

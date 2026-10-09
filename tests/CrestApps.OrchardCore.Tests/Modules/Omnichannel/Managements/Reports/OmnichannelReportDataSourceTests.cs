@@ -173,6 +173,30 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Activities_JoinKeys_ReadOnlyTheMatchingActivities()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var query = Query("Activities");
+        query.Conditions = [new ReportDataCondition { Field = "ItemId", Operator = ReportFilterOperator.In, Values = ["a1", "a3", "missing"], IsJoinKey = true }];
+        var empty = Query("Activities");
+        empty.Conditions = [new ReportDataCondition { Field = "AssignedToId", Operator = ReportFilterOperator.In, Values = [], IsJoinKey = true }];
+
+        // Act
+        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var none = await source.QueryAsync(empty, TestContext.Current.CancellationToken);
+        var schema = await source.GetSchemaAsync("Activities", query.Context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["a3", "a1"], Rows(table).Select(row => row["ItemId"]));
+        Assert.Empty(none.Rows);
+        Assert.True(schema.FindField("AssignedToId").IsKeyFilterable);
+        Assert.False(schema.FindField("Channel").IsKeyFilterable);
+        Assert.Equal("CreatedUtc", schema.DataSet.DefaultDateField);
+    }
+
+    [Fact]
     public async Task Dispositions_AreReadWithTheirOutcome()
     {
         // Arrange

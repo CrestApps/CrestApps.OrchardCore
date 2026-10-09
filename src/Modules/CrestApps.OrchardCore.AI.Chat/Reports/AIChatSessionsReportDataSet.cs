@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using YesSql;
+using YesSql.Services;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.AI.Chat.Reports;
@@ -90,10 +91,32 @@ public sealed class AIChatSessionsReportDataSet : ReportRecordDataSet<AIChatRepo
     }
 
     /// <inheritdoc/>
+    protected override IEnumerable<string> KeyFilterableFields => ["SessionId", "UserId"];
+
+    /// <inheritdoc/>
     protected override async Task<IEnumerable<AIChatReportRecord<AIChatSession>>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
     {
         var (from, to) = ReportDateRange.For(query.Conditions, LastActivityUtcField);
         var sessions = _session.Query<AIChatSession, AIChatSessionIndex>(collection: _storeOptions.AICollectionName);
+
+        foreach (var field in KeyFilterableFields)
+        {
+            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
+            {
+                continue;
+            }
+
+            if (keys.Count == 0)
+            {
+                return [];
+            }
+
+            var values = keys.ToArray();
+
+            sessions = field == "SessionId"
+                ? sessions.Where(index => index.SessionId.IsIn(values))
+                : sessions.Where(index => index.UserId.IsIn(values));
+        }
 
         if (from.HasValue)
         {

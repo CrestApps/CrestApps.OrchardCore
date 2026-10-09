@@ -59,6 +59,15 @@ public sealed class QueueItemReportDataSet : ContactCenterReportDataSet<QueueIte
     }
 
     /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, Expression<Func<QueueItemIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<QueueItemIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["ItemId"] = index => index.ItemId,
+            ["QueueId"] = index => index.QueueId,
+            ["ActivityItemId"] = index => index.ActivityItemId,
+        };
+
+    /// <inheritdoc/>
     protected override (string Field, Expression<Func<QueueItemIndex, DateTime>> Column)? DateColumn
         => (nameof(QueueItem.EnqueuedUtc), index => index.EnqueuedUtc);
 }

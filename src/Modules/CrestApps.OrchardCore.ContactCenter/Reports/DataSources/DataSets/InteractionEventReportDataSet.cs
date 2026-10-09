@@ -51,6 +51,14 @@ public sealed class InteractionEventReportDataSet : ContactCenterReportDataSet<I
     }
 
     /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, Expression<Func<InteractionEventIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<InteractionEventIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["ItemId"] = index => index.ItemId,
+            ["InteractionId"] = index => index.InteractionId,
+        };
+
+    /// <inheritdoc/>
     protected override (string Field, Expression<Func<InteractionEventIndex, DateTime>> Column)? DateColumn
         => (nameof(InteractionEvent.OccurredUtc), index => index.OccurredUtc);
 }

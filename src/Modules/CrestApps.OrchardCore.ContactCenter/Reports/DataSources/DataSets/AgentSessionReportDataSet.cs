@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
@@ -48,4 +49,12 @@ public sealed class AgentSessionReportDataSet : ContactCenterReportDataSet<Agent
         AddField(nameof(AgentSession.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, group);
         AddField(nameof(AgentSession.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, group);
     }
+
+    /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, Expression<Func<AgentSessionIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<AgentSessionIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["ItemId"] = index => index.ItemId,
+            ["UserId"] = index => index.UserId,
+        };
 }

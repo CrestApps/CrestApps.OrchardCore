@@ -7,6 +7,7 @@ using OrchardCore.Users;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
+using YesSql.Services;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Reports.Users;
@@ -109,7 +110,14 @@ public sealed class UsersReportDataSource : IReportDataSource
             .Where(field => query.Fields is null || query.Fields.Count == 0 || query.Fields.Contains(field.Name))
             .ToList();
         var maxRows = Math.Max(1, query.MaxRows);
-        var users = await LoadAsync(maxRows + 1, cancellationToken);
+        var userIds = ReportJoinKeys.For(query.Conditions, ReportsConstants.UserIdField);
+
+        if (userIds is { Count: 0 })
+        {
+            return new ReportDataTable { Fields = fields };
+        }
+
+        var users = await LoadAsync(maxRows + 1, cancellationToken, userIds);
         var table = new ReportDataTable
         {
             Fields = fields,
@@ -157,9 +165,19 @@ public sealed class UsersReportDataSource : IReportDataSource
             await _authorizationService.AuthorizeAsync(context.User, UsersPermissions.ViewUsers);
     }
 
-    private async Task<List<User>> LoadAsync(int take, CancellationToken cancellationToken)
+    // Reads users in index order, or only the given users when a join sends their IDs.
+    private async Task<List<User>> LoadAsync(int take, CancellationToken cancellationToken, IReadOnlyList<string> userIds = null)
     {
-        return (await _session.Query<User, UserIndex>()
+        var users = _session.Query<User, UserIndex>();
+
+        if (userIds is not null)
+        {
+            var ids = userIds.ToArray();
+
+            users = users.Where(index => index.UserId.IsIn(ids));
+        }
+
+        return (await users
             .OrderBy(index => index.Id)
             .Take(take)
             .ListAsync(cancellationToken))
@@ -172,7 +190,7 @@ public sealed class UsersReportDataSource : IReportDataSource
 
         return
         [
-            new ReportFieldDescriptor(ReportsConstants.UserIdField, S["User ID"], ReportDataType.Text, group) { IsIdentifier = true },
+            new ReportFieldDescriptor(ReportsConstants.UserIdField, S["User ID"], ReportDataType.Text, group) { IsIdentifier = true, IsKeyFilterable = true },
             new ReportFieldDescriptor("UserName", S["User name"], ReportDataType.Text, group) { IsIdentifier = true },
             new ReportFieldDescriptor("Email", S["Email"], ReportDataType.Text, group),
             new ReportFieldDescriptor("EmailConfirmed", S["Email confirmed"], ReportDataType.Boolean, group),
@@ -190,7 +208,7 @@ public sealed class UsersReportDataSource : IReportDataSource
     private List<ReportFieldDescriptor> RoleFields()
     {
         var group = S["Account"].Value;
-        var userId = new ReportFieldDescriptor(ReportsConstants.UserIdField, S["User ID"], ReportDataType.Text, group) { IsIdentifier = true };
+        var userId = new ReportFieldDescriptor(ReportsConstants.UserIdField, S["User ID"], ReportDataType.Text, group) { IsIdentifier = true, IsKeyFilterable = true };
 
         userId.References.Add(new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
 

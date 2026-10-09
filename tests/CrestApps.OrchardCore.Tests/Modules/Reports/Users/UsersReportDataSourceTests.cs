@@ -183,6 +183,22 @@ public sealed class UsersReportDataSourceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Query_WithJoinKeys_ReadsOnlyThoseUsers()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+        var query = Query(ReportsConstants.UsersDataSet, ReportsConstants.UserIdField, "UserName");
+        query.Conditions.Add(new ReportDataCondition { Field = ReportsConstants.UserIdField, Operator = ReportFilterOperator.In, Values = ["user-grace"], IsJoinKey = true });
+
+        // Act
+        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("grace", Assert.Single(Rows(table))["UserName"]);
+    }
+
+    [Fact]
     public async Task Query_StopsAtMaxRows_AndSaysItWasTruncated()
     {
         // Arrange

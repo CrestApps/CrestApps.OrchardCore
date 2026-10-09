@@ -45,6 +45,22 @@ public sealed class ContentReportConditionTranslatorTests
     }
 
     [Fact]
+    public void Translate_JoinKeys_OnTheContentItemIdBecomeAnInList_ButAReportFilterDoesNot()
+    {
+        // Arrange
+        var keys = new ReportDataCondition { Field = "ContentItemId", Operator = ReportFilterOperator.In, Values = ["c1", "c2"], IsJoinKey = true };
+        var filter = new ReportDataCondition { Field = "ContentItemId", Operator = ReportFilterOperator.In, Values = ["c1"] };
+
+        // Act
+        var predicate = Assert.Single(ContentReportConditionTranslator.Translate([keys, filter]));
+
+        // Assert
+        var call = Assert.IsType<System.Linq.Expressions.MethodCallExpression>(predicate.Body, exactMatch: false);
+        Assert.Equal("IsIn", call.Method.Name);
+        Assert.Equal(nameof(ContentItemIndex.ContentItemId), ((System.Linq.Expressions.MemberExpression)call.Arguments[0]).Member.Name);
+    }
+
+    [Fact]
     public void Translate_IsNotEmpty_TestsForNotNull()
     {
         // Arrange

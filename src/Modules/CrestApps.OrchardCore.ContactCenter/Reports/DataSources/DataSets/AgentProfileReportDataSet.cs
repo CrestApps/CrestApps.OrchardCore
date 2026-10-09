@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
@@ -59,4 +60,12 @@ public sealed class AgentProfileReportDataSet : ContactCenterReportDataSet<Agent
         AddField(nameof(AgentProfile.LastAssignedUtc), S["Last assigned"], ReportDataType.DateTime, record => record.LastAssignedUtc, presence);
         AddField(nameof(AgentProfile.LastWorkCompletedUtc), S["Last work completed"], ReportDataType.DateTime, record => record.LastWorkCompletedUtc, presence);
     }
+
+    /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, Expression<Func<AgentProfileIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<AgentProfileIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["ItemId"] = index => index.ItemId,
+            ["UserId"] = index => index.UserId,
+        };
 }

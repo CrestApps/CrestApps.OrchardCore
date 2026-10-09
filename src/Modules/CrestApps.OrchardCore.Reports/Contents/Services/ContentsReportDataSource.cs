@@ -142,8 +142,9 @@ public sealed class ContentsReportDataSource : IReportDataSource
             itemsQuery = itemsQuery.Where(predicate);
         }
 
+        // Newest first, so a report that hits the row limit shows the latest items.
         var contentItems = (await itemsQuery
-            .OrderBy(index => index.DocumentId)
+            .OrderByDescending(index => index.DocumentId)
             .Take(take)
             .ListAsync(cancellationToken))
             .ToList();

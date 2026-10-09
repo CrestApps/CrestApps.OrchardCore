@@ -65,6 +65,15 @@ public sealed class CallSessionReportDataSet : ContactCenterReportDataSet<CallSe
     }
 
     /// <inheritdoc/>
+    protected override IReadOnlyDictionary<string, Expression<Func<CallSessionIndex, string>>> KeyColumns =>
+        new Dictionary<string, Expression<Func<CallSessionIndex, string>>>(StringComparer.Ordinal)
+        {
+            ["ItemId"] = index => index.ItemId,
+            ["InteractionId"] = index => index.InteractionId,
+            ["ActivityItemId"] = index => index.ActivityItemId,
+        };
+
+    /// <inheritdoc/>
     protected override (string Field, Expression<Func<CallSessionIndex, DateTime>> Column)? DateColumn
         => (nameof(CallSession.CreatedUtc), index => index.CreatedUtc);
 }

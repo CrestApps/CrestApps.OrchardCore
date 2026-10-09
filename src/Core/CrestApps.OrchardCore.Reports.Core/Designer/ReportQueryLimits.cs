@@ -24,4 +24,16 @@ public sealed class ReportQueryLimits
     /// Gets or sets the most values listed by a drop-down filter.
     /// </summary>
     public int MaxFilterOptions { get; set; } = 500;
+
+    /// <summary>
+    /// Gets or sets the most distinct keys a join sends to the data set it joins, in batches of
+    /// <see cref="JoinKeyBatchSize"/>, so it reads only the records that can match. With more keys, the joined data set
+    /// is read like the others, up to <see cref="MaxRowsPerDataSet"/>.
+    /// </summary>
+    public int MaxJoinKeys { get; set; } = 10_000;
+
+    /// <summary>
+    /// Gets or sets how many join keys one read of a data set carries.
+    /// </summary>
+    public int JoinKeyBatchSize { get; set; } = 500;
 }

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using YesSql;
+using YesSql.Services;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
@@ -94,6 +95,9 @@ public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<Messagi
     }
 
     /// <inheritdoc/>
+    protected override IEnumerable<string> KeyFilterableFields => ["ConversationId"];
+
+    /// <inheritdoc/>
     protected override async Task<IEnumerable<MessagingReportRecord<OmnichannelMessage>>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
     {
         var (from, to) = ReportDateRange.For(query.Conditions, CreatedUtcField);
@@ -103,6 +107,23 @@ public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<Messagi
         var messages = _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
             index => index.ConversationId != null,
             collection: OmnichannelConstants.CollectionName);
+
+        foreach (var field in KeyFilterableFields)
+        {
+            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
+            {
+                continue;
+            }
+
+            if (keys.Count == 0)
+            {
+                return [];
+            }
+
+            var values = keys.ToArray();
+
+            messages = messages.Where(index => index.ConversationId.IsIn(values));
+        }
 
         if (from.HasValue)
         {
