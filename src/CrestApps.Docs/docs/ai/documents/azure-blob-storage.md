@@ -74,8 +74,8 @@ Configure the feature under the Orchard Core shell configuration section:
 | Setting | Description |
 | --- | --- |
 | `ConnectionString` | Azure Storage account connection string. |
-| `ContainerName` | Azure Blob container name. This must follow Azure container naming rules and should be lowercase. |
-| `BasePath` | Optional subdirectory inside the container where AI documents are stored. |
+| `ContainerName` | Azure Blob container name. Supports Liquid, so `{{ ShellSettings.Name }}-ai-documents` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
+| `BasePath` | Optional subdirectory inside the container where AI documents are stored. Supports Liquid, so `{{ ShellSettings.Name }}` separates tenants that share a container. |
 | `CreateContainer` | When `true`, the feature creates the blob container automatically if it does not already exist. |
 | `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
 
@@ -88,6 +88,33 @@ The feature also supports:
 | `RemoveFilesFromBasePath` | Removes only the configured `BasePath` contents when the tenant is deleted. Use this instead of `RemoveContainer` when the container is shared with other content. |
 
 `RemoveContainer` takes precedence over `RemoveFilesFromBasePath`. If both are enabled, the whole container is removed.
+
+## Separating tenants
+
+`ContainerName` and `BasePath` both accept Liquid, with the tenant's `ShellSettings` available, so one
+configuration in the root `appsettings.json` serves every tenant. There are two ways to keep tenants apart:
+
+- **A container per tenant.** Set `ContainerName` to a template such as
+  `{{ ShellSettings.Name }}-ai-documents` and leave `BasePath` empty. Each tenant's documents are in a
+  container of their own, created automatically when `CreateContainer` is `true`, and access policies or
+  lifecycle rules can be applied to one tenant at a time. Set `RemoveContainer` to `true` to delete the
+  tenant's container when the tenant is deleted.
+- **One shared container.** Keep a fixed `ContainerName` and set `BasePath` to `{{ ShellSettings.Name }}`.
+  Every tenant's documents are in the same container, separated by a folder prefix. Use
+  `RemoveFilesFromBasePath`, not `RemoveContainer`, so deleting one tenant does not delete the other tenants'
+  files.
+
+```json
+{
+  "ContainerName": "{{ ShellSettings.Name }}-ai-documents",
+  "CreateContainer": true
+}
+```
+
+The resolved container name is lowercased and must be a valid Azure container name: 3 to 63 characters,
+lowercase letters, digits and single hyphens, starting and ending with a letter or digit. A tenant name that
+breaks these rules, for example one with an underscore, resolves to an invalid name, and an error is logged
+when the tenant starts. Use the shared container for such tenants.
 
 ## Configuration example with comments
 
@@ -116,7 +143,7 @@ The feature also supports:
 
 ## Notes
 
-- `BasePath` supports Orchard Core liquid shell-token formatting through Orchard's blob-storage options pipeline.
+- `ContainerName` and `BasePath` support Orchard Core Liquid shell-token formatting through Orchard's blob-storage options pipeline. See [Separating tenants](#separating-tenants).
 - Container names are normalized to lowercase during configuration.
 - This feature changes only where uploaded files are stored. AI document indexing, chunking, embeddings, and retrieval behavior stay the same.
 - Use local file-system storage unless you specifically need shared cloud storage, container-managed retention, or Azure-hosted deployments.
