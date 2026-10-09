@@ -841,7 +841,7 @@ public sealed class AdminController : Controller, IUpdateModel
             return RedirectToAction(nameof(List));
         }
 
-        await using var sourceStream = await _contentTransferFileStore.OpenSeekableReadStreamAsync(fileInfo, HttpContext.RequestAborted);
+        await using var sourceStream = await _contentTransferFileStore.GetFileStreamAsync(fileInfo);
         var outputStream = new MemoryStream();
         statsPart.ErrorMessages ??= [];
 
