@@ -746,13 +746,6 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => !index.IsClosed || index.IsConverted);
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.ListName))
-        {
-            var listName = filter.ListName.Trim();
-
-            query = query.Where(index => index.ListName == listName);
-        }
-
         if (!string.IsNullOrEmpty(filter.SourceId))
         {
             var sourceId = filter.SourceId;
@@ -774,9 +767,29 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => index.Rating.IsIn(ratings));
         }
 
-        return (await query.ListAsync(cancellationToken))
+        var leadIds = (await query.ListAsync(cancellationToken))
             .Select(index => index.ContentItemId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // A file can hold more leads than a database accepts as query parameters, so the leads of the import are read
+        // on their own and the two sets are intersected here.
+        if (!string.IsNullOrWhiteSpace(filter.ImportEntryId) && leadIds.Count > 0)
+        {
+            var entryId = filter.ImportEntryId.Trim();
+            var contentType = batch.ContactContentType;
+
+            var importQuery = batch.OnlyPublishedLeads
+                ? session.QueryIndex<LeadImportIndex>(index => index.Published && index.EntryId == entryId && index.ContentType == contentType)
+                : session.QueryIndex<LeadImportIndex>(index => index.Latest && index.EntryId == entryId && index.ContentType == contentType);
+
+            var importedIds = (await importQuery.ListAsync(cancellationToken))
+                .Select(index => index.ContentItemId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            leadIds.IntersectWith(importedIds);
+        }
+
+        return leadIds;
     }
 
     /// <summary>

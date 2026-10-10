@@ -77,6 +77,7 @@ public sealed class CrmStartup : StartupBase
 
         services
             .AddIndexProvider<LeadIndexProvider>()
+            .AddIndexProvider<LeadImportIndexProvider>()
             .AddIndexProvider<OpportunityIndexProvider>()
             .AddDataMigration<CrmMigrations>();
 
@@ -88,7 +89,7 @@ public sealed class CrmStartup : StartupBase
         services.AddScoped<CrmCatalogSeeder>();
         services.AddScoped<LeadStatusFlagService>();
         services.AddScoped<LeadRatingProvider>();
-        services.AddScoped<LeadListProvider>();
+        services.AddScoped<LeadImportProvider>();
         services.AddScoped<CrmAccountListSynchronizer>();
         services.AddScoped<IContentDefinitionEventHandler, CrmContentDefinitionEventHandler>();
 

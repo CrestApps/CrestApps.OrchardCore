@@ -97,4 +97,9 @@ public sealed class LeadPart : ContentPart
     /// checks registries sets it, including for a row it imports marked Do not call.
     /// </summary>
     public DateTime? LastScrubbedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the file imports the lead arrived in or was updated by, oldest first.
+    /// </summary>
+    public IList<LeadImport> Imports { get; set; } = [];
 }

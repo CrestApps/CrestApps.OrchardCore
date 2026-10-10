@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -154,11 +155,13 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             ShellScope.AddDeferredTask(MoveValuesIntoFieldsAsync);
         }
 
+        await EnsureLeadImportIndexAsync();
+
         ShellScope.AddDeferredTask(scope => scope.ServiceProvider
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -205,6 +208,47 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         await EnsureIndexTablesAsync();
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the index of the file imports leads arrived in, so the leads of one file can be loaded together, and
+    /// records the imports already made on the leads they wrote.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await EnsureLeadImportIndexAsync();
+
+        return 4;
+    }
+
+    // The import history belongs to the content transfer feature, which a tenant may never have enabled; without its
+    // table there are no past imports to record.
+    private async Task EnsureLeadImportIndexAsync()
+    {
+        if (!await IndexTableExistsAsync<LeadImportIndex>(null))
+        {
+            await CreateLeadImportIndexAsync(SchemaBuilder);
+        }
+
+        if (await IndexTableExistsAsync<ContentTransferEntryIndex>(null))
+        {
+            ShellScope.AddDeferredTask(RecordPastImportsAsync);
+        }
+    }
+
+    private static async Task RecordPastImportsAsync(ShellScope scope)
+    {
+        var definitions = await scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>().ListTypeDefinitionsAsync();
+        var leadTypes = definitions
+            .Where(definition => Core.Services.OmnichannelRecordKinds.HasPart(definition, OmnichannelConstants.ContentParts.Lead))
+            .Select(definition => definition.Name)
+            .ToArray();
+
+        await LeadImportBackfill.RunAsync(
+            scope.ServiceProvider.GetRequiredService<IStore>(),
+            leadTypes,
+            scope.ServiceProvider.GetRequiredService<ILogger<CrmMigrations>>());
     }
 
     // Creates whichever index table is missing. Items saved while it was missing have no index row, so they are
@@ -526,6 +570,24 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
         await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
             .CreateIndex("IDX_LeadIndex_Owner", "OwnerId", "IsConverted", "Published", "Latest"));
+    }
+
+    internal static async Task CreateLeadImportIndexAsync(ISchemaBuilder schemaBuilder)
+    {
+        await schemaBuilder.CreateMapIndexTableAsync<LeadImportIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("Published", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
+            .Column<string>("EntryId", column => column.WithLength(26))
+            .Column<string>("FileName", column => column.WithLength(255))
+            .Column<DateTime>("ImportedUtc", column => column.NotNull()));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadImportIndex>(table => table
+            .CreateIndex("IDX_LeadImportIndex_DocumentId", "DocumentId", "ContentItemId", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadImportIndex>(table => table
+            .CreateIndex("IDX_LeadImportIndex_EntryId", "EntryId", "ContentType", "Published", "Latest"));
     }
 
     private static async Task CreateOpportunityIndexAsync(ISchemaBuilder schemaBuilder)

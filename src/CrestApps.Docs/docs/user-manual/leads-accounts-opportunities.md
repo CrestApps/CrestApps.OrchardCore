@@ -78,9 +78,9 @@ The `phone:` terms from [Contacts](contacts.md) work here too.
 
 Everything you do with a contact works on a lead: **Add Activity**, **List Activities**, calls, texts and automated AI conversations.
 
-- **Activity loads.** Pick the lead type as the **Record type** and a **Lead filters** panel appears right under it, inside **Record filters**. You can filter by status, list, source, rating and owner.
+- **Activity loads.** Pick the lead type as the **Record type** and a **Lead filters** panel appears right under it, inside **Record filters**. You can filter by status, imported file, source, rating and owner.
   - A lead is loaded only when it matches every filter you set, including the other record filters such as the dates, phone number and time zones. Where you tick several statuses or ratings, any one of them matches.
-  - **List** picks from the lists your leads carry, such as the list name given to an import. Type in the box to search them.
+  - **Imported file** loads only the leads that came in through one import, such as *July2020.csv*. Each file shows when it was imported and how many leads it holds. Type in the box to search them. A lead that a later file updated belongs to both files.
   - **Lead owner** loads only the leads one user owns.
   - With no **Lead status** ticked, every open status is loaded. Tick a closed status, such as *Closed - Not Converted*, to load its leads too.
   - **Skip leads that are already contacts** is on by default, so a customer is not called again as a stranger.

@@ -18,7 +18,7 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
 {
     private readonly INamedCatalog<LeadStatus> _statuses;
     private readonly LeadSourceProvider _sources;
-    private readonly LeadListProvider _lists;
+    private readonly LeadImportProvider _imports;
     private readonly LeadRatingProvider _ratings;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
@@ -29,21 +29,21 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
     /// </summary>
     /// <param name="statuses">The lead status catalog.</param>
     /// <param name="sources">The lead sources.</param>
-    /// <param name="lists">The lists leads arrived in.</param>
+    /// <param name="imports">The file imports leads arrived in.</param>
     /// <param name="ratings">The lead ratings.</param>
     /// <param name="contentTypeProvider">The CRM content type provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public LeadBatchFilterDisplayDriver(
         INamedCatalog<LeadStatus> statuses,
         LeadSourceProvider sources,
-        LeadListProvider lists,
+        LeadImportProvider imports,
         LeadRatingProvider ratings,
         OmnichannelContentTypeProvider contentTypeProvider,
         IStringLocalizer<LeadBatchFilterDisplayDriver> stringLocalizer)
     {
         _statuses = statuses;
         _sources = sources;
-        _lists = lists;
+        _imports = imports;
         _ratings = ratings;
         _contentTypeProvider = contentTypeProvider;
         S = stringLocalizer;
@@ -66,8 +66,8 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
             var ratings = (filter.Ratings ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             model.LeadContentTypes = (await _contentTypeProvider.GetLeadContentTypesAsync()).ToArray();
-            model.ListName = filter.ListName;
-            model.Lists = await _lists.GetOptionsAsync(filter.ListName);
+            model.ImportEntryId = filter.ImportEntryId;
+            model.Imports = await _imports.GetOptionsAsync(filter.ImportEntryId);
             model.SourceId = filter.SourceId;
             model.Sources = await _sources.GetOptionsAsync(filter.SourceId);
             model.OwnerId = filter.OwnerId;
@@ -94,7 +94,7 @@ internal sealed class LeadBatchFilterDisplayDriver : DisplayDriver<OmnichannelAc
             batch.Put(new LeadBatchFilter
             {
                 StatusIds = (model.StatusIds ?? []).Where(known.Contains).Distinct(StringComparer.Ordinal).ToArray(),
-                ListName = Trim(model.ListName),
+                ImportEntryId = Trim(model.ImportEntryId),
                 SourceId = await _sources.FindIdAsync(model.SourceId),
                 OwnerId = Trim(model.OwnerId),
                 Ratings = await NormalizeRatingsAsync(model.SelectedRatings),

@@ -19,9 +19,9 @@ public class LeadBatchFilterViewModel
     public string[] StatusIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the list to load.
+    /// Gets or sets the identifier of the file import whose leads are loaded.
     /// </summary>
-    public string ListName { get; set; }
+    public string ImportEntryId { get; set; }
 
     /// <summary>
     /// Gets or sets the content item identifier of the lead source to load.
@@ -50,10 +50,10 @@ public class LeadBatchFilterViewModel
     public IList<SelectListItem> Statuses { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the lists to choose from.
+    /// Gets or sets the file imports to choose from.
     /// </summary>
     [BindNever]
-    public IList<SelectListItem> Lists { get; set; } = [];
+    public IList<SelectListItem> Imports { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the lead sources to choose from.

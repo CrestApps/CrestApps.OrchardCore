@@ -13,9 +13,10 @@ public sealed class LeadBatchFilter
     public string[] StatusIds { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the list to load, such as a purchased list imported earlier.
+    /// Gets or sets the identifier of the file import whose leads are loaded, such as a purchased list imported
+    /// earlier.
     /// </summary>
-    public string ListName { get; set; }
+    public string ImportEntryId { get; set; }
 
     /// <summary>
     /// Gets or sets the content item identifier of the lead source to load.
