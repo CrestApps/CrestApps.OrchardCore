@@ -326,6 +326,28 @@
     return filter;
   };
 
+  // The field a filter had before it was switched to the result, so switching back to the rows restores it.
+  var rowFields = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+  // Switches a filter between the rows (a field) and the result (a column). A result filter starts on the first
+  // column; switching back to the rows restores the field the filter had, since a column id is not a field.
+  designer.setFilterStage = function (filter, stage, columns) {
+    if (!filter || filter.stage === stage) {
+      return filter;
+    }
+    if (stage === 'Result') {
+      if (rowFields && filter.field) {
+        rowFields.set(filter, filter.field);
+      }
+      filter.field = ((columns || [])[0] || {}).id || null;
+    } else {
+      filter.field = rowFields && rowFields.get(filter) || null;
+    }
+    filter.stage = stage;
+    filter.values = [];
+    return filter;
+  };
+
   // Moves an item within a list, returning the list.
   designer.move = function (list, from, to) {
     if (!list || from < 0 || from >= list.length) {
@@ -2761,9 +2783,7 @@
       text: app.t('Result, after grouping')
     }], filter.stage || 'Rows', {
       onchange: function (event) {
-        filter.stage = event.target.value;
-        filter.field = filter.stage === 'Result' ? (columns[0] || {}).id : null;
-        filter.values = [];
+        designer.setFilterStage(filter, event.target.value, columns);
         app.changed();
       }
     })), labelled(filter.stage === 'Result' ? app.t('Column') : app.t('Field'), filter.stage === 'Result' ? ui.select(columns.map(function (column) {

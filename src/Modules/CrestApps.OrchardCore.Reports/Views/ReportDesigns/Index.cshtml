@@ -44,8 +44,8 @@
         {
             var design = entry.Design;
 
-            <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
-                <div class="flex-grow-1">
+            <li class="list-group-item d-flex flex-wrap flex-md-nowrap gap-2 align-items-center">
+                <div class="flex-grow-1" style="min-width: 0">
                     <a class="fw-semibold" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@(string.IsNullOrWhiteSpace(design.DisplayText) ? T["Untitled report"] : design.DisplayText)</a>
                     <span class="badge text-bg-secondary ms-1"><i class="fa-solid fa-file-pen" aria-hidden="true"></i> @T["Draft"]</span>
                     <div class="small text-muted">
@@ -56,7 +56,7 @@
                         }
                     </div>
                 </div>
-                <div class="d-flex gap-1">
+                <div class="d-flex gap-1 flex-shrink-0">
                     <a class="btn btn-sm btn-primary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Edit"]</a>
                     <form method="post" asp-route="ReportDesignsDeleteDraft" asp-route-id="@design.ItemId" class="d-inline">
                         <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
@@ -92,8 +92,8 @@
         var design = entry.Design;
         var shared = (design.SharedUserNames?.Count ?? 0) + (design.SharedRoles?.Count ?? 0) > 0;
 
-        <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
-            <div class="flex-grow-1">
+        <li class="list-group-item d-flex flex-wrap flex-md-nowrap gap-2 align-items-center">
+            <div class="flex-grow-1" style="min-width: 0">
                 <a class="fw-semibold" asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@design.DisplayText</a>
                 @if (!string.IsNullOrWhiteSpace(design.Category))
                 {
@@ -115,7 +115,7 @@
                     @(entry.IsOwner ? T["Yours"] : T["By {0}", design.Author ?? "?"])
                 </div>
             </div>
-            <div class="d-flex gap-1">
+            <div class="d-flex gap-1 flex-shrink-0">
                 <a class="btn btn-sm btn-primary" asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@T["Run"]</a>
                 @if (entry.CanEdit)
                 {

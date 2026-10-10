@@ -407,9 +407,7 @@
                 { value: 'Result', text: app.t('Result, after grouping') }
             ], filter.stage || 'Rows', {
                 onchange: function (event) {
-                    filter.stage = event.target.value;
-                    filter.field = filter.stage === 'Result' ? (columns[0] || {}).id : null;
-                    filter.values = [];
+                    designer.setFilterStage(filter, event.target.value, columns);
                     app.changed();
                 }
             })),

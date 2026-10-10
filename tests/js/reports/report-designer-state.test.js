@@ -25,6 +25,28 @@ function design() {
     };
 }
 
+describe('filter stage', () => {
+    it('restores the field of a filter switched to the result and back to the rows', () => {
+        const value = design();
+        const filter = designer.addFilter(value.query, field('Order.Channel', 'Text'));
+
+        designer.setFilterStage(filter, 'Result', [{ id: 'total' }, { id: 'count' }]);
+        expect(filter).toMatchObject({ stage: 'Result', field: 'total', values: [] });
+
+        designer.setFilterStage(filter, 'Rows', []);
+        expect(filter).toMatchObject({ stage: 'Rows', field: 'Order.Channel', values: [] });
+    });
+
+    it('leaves a filter switched to the stage it already has unchanged', () => {
+        const value = design();
+        const filter = designer.addFilter(value.query, field('Order.Channel', 'Text'));
+        filter.values = ['Phone'];
+
+        designer.setFilterStage(filter, 'Rows', []);
+        expect(filter).toMatchObject({ stage: 'Rows', field: 'Order.Channel', values: ['Phone'] });
+    });
+});
+
 describe('type rules', () => {
     it('offers sums and averages only for numbers', () => {
         expect(designer.aggregatesFor('Decimal')).toContain('Sum');
