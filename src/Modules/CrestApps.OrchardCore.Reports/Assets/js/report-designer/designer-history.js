@@ -362,7 +362,7 @@
         ui.request(app.url('discardDraft', { id: app.design.id }), { body: { revision: app.history.revision, force: app.history.force } }).then(function (result) {
             if (result && result.deleted) {
                 app.dirty = false;
-                root.location.href = result.listUrl || app.url('list');
+                root.location.href = ui.localUrl(result.listUrl || app.url('list'));
 
                 return;
             }

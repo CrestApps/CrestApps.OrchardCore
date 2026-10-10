@@ -639,6 +639,9 @@
     ui.append(element, children);
     return element;
   };
+
+  // Appends children: elements as they are, and anything else (text, numbers) as a text node, so text is never parsed
+  // as HTML. Text is converted first, so only nodes this script built reach appendChild.
   ui.append = function (element, children) {
     (children || []).forEach(function (child) {
       if (child === null || child === undefined || child === false) {
@@ -646,13 +649,24 @@
       }
       if (Array.isArray(child)) {
         ui.append(element, child);
-      } else if (child instanceof root.Node) {
-        element.appendChild(child);
-      } else {
-        element.appendChild(root.document.createTextNode(String(child)));
+        return;
+      }
+      var node = child instanceof root.Node ? child : root.document.createTextNode(String(child));
+      if (node.nodeType === 1 || node.nodeType === 3 || node.nodeType === 11) {
+        element.appendChild(node);
       }
     });
     return element;
+  };
+
+  // Keeps a URL on this site. The builder only navigates to the root-relative paths the server gives it; anything
+  // else, such as another site's address or a script URL, becomes a harmless path on this site.
+  ui.localUrl = function (url) {
+    if (!url) {
+      return '';
+    }
+    var path = String(url).replace(/^[\s\\/]+/, '');
+    return '/' + path;
   };
   ui.clear = function (element) {
     while (element && element.firstChild) {
@@ -830,12 +844,14 @@
     var text = app.config && app.config.text;
     return text && text[key] || key;
   };
+
+  // The address of a builder endpoint or page, from the server's root-relative URLs.
   app.url = function (name, replacements) {
     var url = app.config.urls[name] || '';
     Object.keys(replacements || {}).forEach(function (key) {
       url = url.replace('__' + key + '__', encodeURIComponent(replacements[key]));
     });
-    return url;
+    return ui.localUrl(url);
   };
   app.isView = function () {
     return app.config.mode === 'view';
@@ -4257,7 +4273,7 @@
     }).then(function (result) {
       if (result && result.deleted) {
         app.dirty = false;
-        root.location.href = result.listUrl || app.url('list');
+        root.location.href = ui.localUrl(result.listUrl || app.url('list'));
         return;
       }
       app.reload();

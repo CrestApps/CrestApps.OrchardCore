@@ -29,6 +29,7 @@
         return (text && text[key]) || key;
     };
 
+    // The address of a builder endpoint or page, from the server's root-relative URLs.
     app.url = function (name, replacements) {
         var url = app.config.urls[name] || '';
 
@@ -36,7 +37,7 @@
             url = url.replace('__' + key + '__', encodeURIComponent(replacements[key]));
         });
 
-        return url;
+        return ui.localUrl(url);
     };
 
     app.isView = function () {
