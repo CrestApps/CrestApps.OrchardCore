@@ -355,7 +355,7 @@ The bulk actions apply either to the activities selected on the current page or 
 - **Assign** distributes the activities round-robin among the selected users.
 - **Reschedule** takes a date only; activities are scheduled for midnight of that date in the site's time zone.
 - **Purge** requires `PurgeActivity` (implied by `ManageActivities`) and sets the status to `Purged`.
-- **Change Dialer Profile** is shown when the Contact Center dialer feature is available. It sets the activity's dialer source to match the selected profile; the activity keeps its own campaign, is switched to the **Manual** interaction type, and has any AI session cleared. It can also clear assignment and reservation state so the dialer can pick the activity up again.
+- **Change Dialer Profile** is shown when the Contact Center dialer feature is available. It sets the activity's dialer source and `DialerProfileId` to match the selected profile; the activity keeps its own campaign, is switched to the **Manual** interaction type, and has any AI session cleared. It then queues the activity on its campaign through `IActivityDialerContributor.EnqueueAsync`, which re-tags an activity already waiting there with the new profile. Activities without a campaign are skipped, and the action is refused for a campaign whose waiting activities are queued under another profile (`IActivityDialerContributor.GetWaitingRecordsAsync`), because a campaign's queue is worked under the profile of the record at its head. Dialer activity loads apply the same rule when they are saved and again when they run. It always clears assignment and reservation state, because the dialer offers each activity to whichever agent signed in to the campaign is free.
 
 ## Reports
 

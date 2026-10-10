@@ -1,0 +1,138 @@
+@model ChildTenantFeaturesViewModel
+
+@{
+    var labels = Model.Labels;
+    var entry = Model.Info.Entry;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyChildrenFeatures" title="@T["Features of {0}", entry.DisplayName]">
+        <breadcrumb-item id="TenantHierarchyChildren" action="Index" controller="ChildTenants" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ViewChildTenants.Name">@labels.Children</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.Info.State != ChildTenantRuntimeState.Running)
+{
+    <div class="alert alert-info">@T["The features of {0} can be changed only while it is running.", entry.DisplayName]</div>
+}
+else
+{
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="th-feature-search" class="form-control" placeholder="@T["Search features"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <span class="badge rounded-pill text-bg-light fs-6 fw-normal">@T["{0} enabled", Model.EnabledCount]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-muted small">@T["Features that would reach other sites are hidden here. Changing a feature restarts {0}, which takes a few seconds.", entry.DisplayName]</p>
+
+    @foreach (var category in Model.Categories)
+    {
+        <div class="card mb-3" data-th-category>
+            <div class="card-header fw-semibold">@category.Key</div>
+            <ul class="list-group list-group-flush">
+                @foreach (var feature in category)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-start gap-3" data-th-feature="@($"{feature.Name} {feature.Id} {feature.Description}".ToLowerInvariant())">
+                        <div class="min-w-0">
+                            <div class="fw-semibold">
+                                @feature.Name
+                                @if (feature.IsEnabled)
+                                {
+                                    <span class="badge text-bg-success ms-1">@T["Enabled"]</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(feature.Description))
+                            {
+                                <div class="small text-muted">@feature.Description</div>
+                            }
+                            <div class="small text-muted"><code>@feature.Id</code></div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            @if (feature.IsAlwaysEnabled)
+                            {
+                                <span class="text-muted small" title="@T["This feature is always on."]"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Always on"]</span>
+                            }
+                            else
+                            {
+                                <form asp-action="Features" asp-route-id="@entry.EntryId" method="post" class="no-multisubmit d-inline" data-th-feature-form>
+                                    <input type="hidden" name="featureIds" value="@feature.Id" />
+                                    <input type="hidden" name="enable" value="@((!feature.IsEnabled).ToString())" />
+                                    @if (feature.IsEnabled)
+                                    {
+                                        <button type="submit" class="btn btn-outline-danger btn-sm" data-th-busy="@T["Disabling…"]">@T["Disable"]</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="submit" class="btn btn-primary btn-sm" data-th-busy="@T["Enabling…"]">@T["Enable"]</button>
+                                    }
+                                </form>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div id="th-feature-empty" class="alert alert-info d-none">@T["No feature matches your search."]</div>
+}
+
+<style at="Head">
+    .min-w-0 { min-width: 0; }
+</style>
+
+<script at="Foot">
+    (function () {
+        // Changing a feature restarts the site for a few seconds; show that the request is on its way.
+        document.querySelectorAll('[data-th-feature-form]').forEach((form) => {
+            form.addEventListener('submit', () => {
+                const button = form.querySelector('[data-th-busy]');
+
+                if (!button) {
+                    return;
+                }
+
+                const spinner = document.createElement('span');
+                spinner.className = 'spinner-border spinner-border-sm me-1';
+                spinner.setAttribute('aria-hidden', 'true');
+                button.replaceChildren(spinner, document.createTextNode(button.dataset.thBusy));
+            });
+        });
+
+        const search = document.getElementById('th-feature-search');
+
+        if (!search) {
+            return;
+        }
+
+        search.addEventListener('input', () => {
+            const text = search.value.trim().toLowerCase();
+            let visible = 0;
+
+            document.querySelectorAll('[data-th-category]').forEach((category) => {
+                let categoryVisible = 0;
+
+                category.querySelectorAll('[data-th-feature]').forEach((item) => {
+                    const match = !text || item.dataset.thFeature.includes(text);
+                    item.classList.toggle('d-none', !match);
+                    categoryVisible += match ? 1 : 0;
+                });
+
+                category.classList.toggle('d-none', categoryVisible === 0);
+                visible += categoryVisible;
+            });
+
+            document.getElementById('th-feature-empty').classList.toggle('d-none', visible > 0);
+        });
+    })();
+</script>

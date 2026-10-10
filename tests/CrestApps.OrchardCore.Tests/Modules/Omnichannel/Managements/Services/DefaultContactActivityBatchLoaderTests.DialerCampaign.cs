@@ -131,6 +131,125 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         }
     }
 
+    // Every record queued for a campaign waits in its one dialer queue, worked under the profile of the record at its
+    // head, so records loaded under a second profile behind another profile's records were never dialed. Such a load
+    // is refused before it creates anything.
+    [Fact]
+    public async Task LoadAsync_DialerBatch_WhenCampaignHasRecordsWaitingUnderAnotherProfile_CreatesNoActivitiesAndEnqueuesNothing()
+    {
+        // Arrange
+        var databasePath = DatabasePath("dialer-mixed-profile");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15555550821", cellNationalNumber: "5555550821");
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Dialer, OmnichannelConstants.Channels.Phone);
+            batch.DialerProfileId = DialerProfileId;
+            batch.CampaignId = "campaign-1";
+
+            var dialer = new RecordingDialerContributor();
+            dialer.WaitingRecords.Add(new ActivityDialerWaitingRecord
+            {
+                ActivityId = "waiting-activity",
+                ProfileId = "preview-profile",
+            });
+
+            var logger = new RecordingLogger<DefaultContactActivityBatchLoader>();
+
+            // Act
+            await using (var session = store.CreateSession())
+            {
+                var loader = CreateCampaignDialerLoader(session, store, connectionString, dialer, logger, subjectDefaultCampaignId: null);
+
+                await loader.LoadAsync(
+                    new ActivityBatchLoadContext(batch, LoaderId, LoaderUserName),
+                    TestContext.Current.CancellationToken);
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Assert
+            Assert.Empty(await ListLoadedActivitiesAsync(store));
+            Assert.Empty(dialer.EnqueuedActivityIds);
+            Assert.Equal(OmnichannelActivityBatchStatus.New, batch.Status);
+            Assert.Contains(
+                logger.At(LogLevel.Warning),
+                message => message.Contains(batch.ItemId, StringComparison.Ordinal) &&
+                    message.Contains("one dialer profile", StringComparison.Ordinal));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    // Records already waiting under the batch's own profile are no reason to refuse it.
+    [Fact]
+    public async Task LoadAsync_DialerBatch_WhenCampaignHasRecordsWaitingUnderTheSameProfile_LoadsAndQueues()
+    {
+        // Arrange
+        var databasePath = DatabasePath("dialer-same-profile");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15555550831", cellNationalNumber: "5555550831");
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Dialer, OmnichannelConstants.Channels.Phone);
+            batch.DialerProfileId = DialerProfileId;
+            batch.CampaignId = "campaign-1";
+
+            var dialer = new RecordingDialerContributor();
+            dialer.WaitingRecords.Add(new ActivityDialerWaitingRecord
+            {
+                ActivityId = "waiting-activity",
+                ProfileId = DialerProfileId,
+            });
+
+            // Act
+            await using (var session = store.CreateSession())
+            {
+                var loader = CreateCampaignDialerLoader(
+                    session,
+                    store,
+                    connectionString,
+                    dialer,
+                    new RecordingLogger<DefaultContactActivityBatchLoader>(),
+                    subjectDefaultCampaignId: null);
+
+                await loader.LoadAsync(
+                    new ActivityBatchLoadContext(batch, LoaderId, LoaderUserName),
+                    TestContext.Current.CancellationToken);
+
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Assert
+            var activity = Assert.Single(await ListLoadedActivitiesAsync(store));
+
+            Assert.Equal([activity.ItemId], dialer.EnqueuedActivityIds);
+            Assert.Equal(OmnichannelActivityBatchStatus.Loaded, batch.Status);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static DefaultContactActivityBatchLoader CreateCampaignDialerLoader(
         ISession session,
         IStore store,
@@ -173,6 +292,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
         public List<string> EnqueuedCampaignIds { get; } = [];
 
+        public List<ActivityDialerWaitingRecord> WaitingRecords { get; } = [];
+
         public Task<IEnumerable<ActivityDialerProfileDescriptor>> GetProfilesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<ActivityDialerProfileDescriptor>>([]);
 
@@ -183,6 +304,9 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
                 DisplayName = "Dialer",
                 ActivitySource = ActivitySources.Dialer,
             });
+
+        public Task<IReadOnlyCollection<ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<ActivityDialerWaitingRecord>>(WaitingRecords);
 
         public Task EnqueueAsync(
             string activityId,

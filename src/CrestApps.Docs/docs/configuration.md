@@ -1646,6 +1646,46 @@ OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=100
 
 See [Report Builder](modules/report-builder/index.md#configuration).
 
+## Multi-tenancy
+
+### Tenant hierarchy
+
+| | |
+| --- | --- |
+| **Section** | `TenantHierarchy`, at the root of the application configuration |
+| **Controls** | The platform domain, the egress guard, the database pools child tenants are created in, and reserved slugs |
+
+This section is read from the application configuration only, not from `OrchardCore` or a tenant's own
+configuration, so no tenant can change it.
+
+Keys: `PlatformDomain`, `Scheme`, `UseHostPrefixedCookies` (on, except in development), `ReservedSlugs`,
+`Egress:Enabled` (`true`), `Egress:BlockPrivateNetworks` (`true`), `Egress:AllowedHosts`, and per pool
+`DatabasePools:{name}:DatabaseProvider`, `DatabasePools:{name}:ConnectionString` and
+`DatabasePools:{name}:RetainRemovedDatabases` (`true`).
+
+```json
+{
+  "TenantHierarchy": {
+    "PlatformDomain": "platform.com",
+    "DatabasePools": {
+      "firms": {
+        "DatabaseProvider": "Postgres",
+        "ConnectionString": "Host=db;Username=provisioner;Password=..."
+      }
+    }
+  }
+}
+```
+
+```text
+TenantHierarchy__PlatformDomain=platform.com
+TenantHierarchy__Egress__AllowedHosts__0=ollama.internal
+TenantHierarchy__DatabasePools__firms__DatabaseProvider=Postgres
+```
+
+A parent's policy is set on the platform's **Policy** screen and stored in the parent's shell settings. See
+[Tenant Hierarchy](modules/tenant-hierarchy.md#configuration).
+
 ## Orchard Core sections the modules depend on
 
 Some features rely on Orchard Core's own configuration. These sections belong to Orchard Core; see its

@@ -156,6 +156,18 @@ public sealed class BulkActivityAdminFormOptionsProvider
         return options;
     }
 
+    internal async Task<IReadOnlyList<DialerCampaignProfileConflict>> FindDialerProfileConflictsAsync(string campaignId, string dialerProfileId)
+    {
+        var dialerContributor = _dialerContributors.FirstOrDefault();
+
+        if (dialerContributor is null)
+        {
+            return [];
+        }
+
+        return await DialerCampaignProfileGuard.FindConflictsAsync(dialerContributor, campaignId, dialerProfileId?.Trim(), movingActivityIds: null);
+    }
+
     internal async Task<bool> DialerProfileExistsAsync(string dialerProfileId)
     {
         if (string.IsNullOrWhiteSpace(dialerProfileId))

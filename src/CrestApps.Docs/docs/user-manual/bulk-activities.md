@@ -87,6 +87,8 @@ In the screencast, the manager filters by subject and assignment status, ticks t
 | **Change Subject** | Moves them to another subject and applies that subject's campaign, channel and address. Subject field values are cleared. |
 | **Clear Assignment** | Removes the owner and any reservation so the work can be routed or dialed again. |
 | **Change Source** | Sets the source to **Manual** or **Automatic**, and by default clears assignment and reservation. The dialer sources are not offered here. |
-| **Change Dialer Profile** | Hands them to another dialer profile's mode and makes them agent-handled calls. Each activity keeps its campaign. Shown when dialer profiles exist. |
+| **Change Dialer Profile** | Hands them to another dialer profile's mode, makes them agent-handled calls, and queues them for the dialer on their campaign. Each activity keeps its campaign. Shown when dialer profiles exist. |
 
-To turn assigned manual work into dialer work, use **Change Dialer Profile** with **Clear assignment and reservation state** ticked. Use the same action to have outbound activities dialed in a different mode without creating them again.
+To turn assigned manual work into dialer work, use **Change Dialer Profile**. It clears each activity's assignment, because the dialer offers every activity to whichever agent signed in to the campaign is free. Use the same action to have outbound activities dialed in a different mode without creating them again.
+
+The dialer reaches an activity through its campaign, so an activity with no campaign is left unchanged. A campaign's waiting dialer activities must all use one dialer profile: if the campaign already has activities waiting under another profile, the change is refused and the message names that profile. Select those activities too, or move these to another campaign.
