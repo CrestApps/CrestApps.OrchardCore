@@ -9,6 +9,13 @@ user_manual:
 
 The **Report Builder** feature of the [Reports](reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. Three data sources are added automatically when their Orchard Core feature is enabled with the builder: **Content items** (with `OrchardCore.Contents`), **Queries** (with `OrchardCore.Queries`) and **Users**. Any module can add more sources.
 
+This video walks through the Report Builder: building a report, aggregates and formulas, filters, visuals, joins, reusable views, sharing, and every data source.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/report-builder.jpg" aria-label="Video overview of the Report Builder">
+  <source src="/img/docs/report-builder.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/report-builder.vtt" srcLang="en" label="English" default />
+</video>
+
 | | |
 | --- | --- |
 | **Feature Name** | Report Builder |

@@ -9,6 +9,13 @@ technical_manual:
 
 The **Report Builder** lets you build your own reports without writing code. You pick the data you need (for example your customers and their orders), drag fields onto the report, choose how numbers are added up, and add charts, headline numbers, and pivot tables. You can save a report, put it in the admin menu so you can run it again with one click, and share it with people, roles, or a link.
 
+This video shows how to build a report, add totals, formulas, filters and charts, join data sets, save reusable views, and share your reports.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/report-builder.jpg" aria-label="Video overview of the Report Builder">
+  <source src="/img/docs/report-builder.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/report-builder.vtt" srcLang="en" label="English" default />
+</video>
+
 | | |
 | --- | --- |
 | **Menu** | Reports > Report Builder, and Reports > Report Views |
