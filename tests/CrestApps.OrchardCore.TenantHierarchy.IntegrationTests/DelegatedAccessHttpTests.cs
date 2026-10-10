@@ -318,6 +318,28 @@ public sealed partial class DelegatedAccessHttpTests
         }
     }
 
+    [Theory]
+    [InlineData("Business One", true)]
+    [InlineData("firma.localhost", true)]
+    [InlineData("no-such-tenant", false)]
+    public async Task PlatformPage_Search_FindsParentsByTheirOwnOrTheirChildrensNameAndAddress(string search, bool findsFirmA)
+    {
+        // Arrange
+        using var browser = _fixture.Host.CreateBrowser();
+        var platform = "http://localhost";
+        await browser.SignInAsync(platform, "platform", _fixture.Password);
+
+        // Act
+        var response = await browser.NavigateAsync($"{platform}/Admin/tenant-hierarchy?search={Uri.EscapeDataString(search)}");
+        var html = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(findsFirmA, html.Contains($"/Admin/tenant-hierarchy/parents/{TenantHierarchyFixture.FirmA}\"", StringComparison.Ordinal));
+        Assert.Equal(!findsFirmA, html.Contains("No parent tenant matches your search.", StringComparison.Ordinal));
+        AssertNoUnformattedText(html);
+    }
+
     [Fact]
     public async Task MakeParentPage_ForATenant_SuggestsItsCurrentAddress()
     {

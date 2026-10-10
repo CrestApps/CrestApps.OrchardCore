@@ -59,20 +59,42 @@ public sealed class PlatformController : Controller
     /// <summary>
     /// Shows every parent with its children, the orphans and the tenants that can become parents.
     /// </summary>
+    /// <param name="search">Text to find in the name or address of a parent or of one of its children.</param>
     [Admin("tenant-hierarchy", "TenantHierarchyPlatform")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string search)
     {
         if (!await CanManageAsync())
         {
             return Forbid();
         }
 
+        var overview = _platformService.GetOverview();
+
         return View(new PlatformIndexViewModel
         {
-            Overview = _platformService.GetOverview(),
+            Overview = overview,
+            Parents = overview.Parents.Where(parent => Matches(parent, search)).ToList(),
+            Search = search,
             HostGuardInstalled = _platformService.IsHostGuardInstalled,
             PlatformDomain = _platformService.GetPlatformDomain(),
         });
+    }
+
+    internal static bool Matches(HierarchyTreeNode parent, string search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return true;
+        }
+
+        var text = search.Trim();
+
+        static bool Contains(HierarchyTreeNode node, string value)
+            => node.DisplayName?.Contains(value, StringComparison.OrdinalIgnoreCase) == true ||
+                node.Settings.Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+                node.Settings.RequestUrlHosts.Any(host => host.Contains(value, StringComparison.OrdinalIgnoreCase));
+
+        return Contains(parent, text) || parent.Children.Any(child => Contains(child, text));
     }
 
     /// <summary>

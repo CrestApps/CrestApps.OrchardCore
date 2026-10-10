@@ -28,15 +28,15 @@ If the screen shows **The host guards are not installed**, the application was s
 
 ## See the hierarchy
 
-Open **Multi-Tenancy > Tenant Hierarchy**. Each parent is listed with its state, its address, a count such as **3 of 25 child tenants**, and its child tenants underneath. Click a parent's name to see all its child tenants and the actions for the parent.
+Open **Multi-Tenancy > Tenant Hierarchy**. It looks like the **Tenants** screen. Each parent is listed with its address and badges for its state, a count such as **3 of 25 child tenants** and where its child tenants' data lives, with its child tenants underneath. Use the search box to find a parent by its name or address, or by the name or address of one of its child tenants. Click a parent's name, or **Manage**, to see all its child tenants and the actions for the parent. **View** opens the site.
 
 **Orphaned child tenants** are child tenants whose parent no longer exists. Move each one to a parent, or make it an ordinary tenant.
 
 ## Make a tenant a parent
 
-Any tenant that is set up and not yet part of the hierarchy can become a parent. If there is none, click **Create a tenant**, create and set up the tenant on the **Tenants** screen, then come back.
+Any tenant that is set up and not yet part of the hierarchy can become a parent. If there is none, click **Add Tenant**, create and set up the tenant on the **Tenants** screen, then come back.
 
-1. Click **Make a parent tenant**.
+1. Click **Make a Parent Tenant**.
 2. Pick the **Tenant**. The **Display name** and **Address** fill in from it. When the tenant already has an address under the platform's address, it keeps that address.
 3. Check the **Display name**, which the parent's team sees, and the **Address**.
 4. Set the policy below, and click **Make parent tenant**.
@@ -71,7 +71,7 @@ On a parent's page:
 
 | Action | What it does |
 | --- | --- |
-| **Suspend with children** | Suspends the parent and every running child tenant. Nobody can use them until you click **Resume with children**. |
+| **Suspend** | Suspends the parent and every running child tenant. Nobody can use them until you click **Resume**. |
 | **Move** | Next to a child tenant, pick the new parent and click **Move**. Its address changes, and every open session from the old parent ends. |
 | **Make ordinary** | Turns a parent with no child tenants back into an ordinary tenant. It keeps its data and address. |
 | **Remove everything** | Only for a suspended parent. Removes each child tenant, then the parent, with all their data. Type the tenant name to confirm. This cannot be undone. |

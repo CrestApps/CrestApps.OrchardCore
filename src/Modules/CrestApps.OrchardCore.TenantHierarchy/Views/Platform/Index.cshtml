@@ -1,12 +1,18 @@
 @model PlatformIndexViewModel
 
+@using OrchardCore.Environment.Shell.Models
+
 @{
     var overview = Model.Overview;
-    string StateBadge(OrchardCore.Environment.Shell.ShellSettings settings) => settings.State switch
+    var canMakeParent = Model.HostGuardInstalled && overview.Candidates.Count > 0;
+
+    string Strategy(ChildDatabaseStrategy strategy) => strategy switch
     {
-        OrchardCore.Environment.Shell.Models.TenantState.Running => "text-bg-success",
-        OrchardCore.Environment.Shell.Models.TenantState.Disabled => "text-bg-secondary",
-        _ => "text-bg-light",
+        ChildDatabaseStrategy.SqlitePerChild => T["SQLite per child"].Value,
+        ChildDatabaseStrategy.DatabasePerChild => T["Database per child"].Value,
+        ChildDatabaseStrategy.SchemaPerChild => T["Schema per child"].Value,
+        ChildDatabaseStrategy.TablePrefixPerChild => T["Table prefix per child"].Value,
+        _ => strategy.ToString(),
     };
 }
 
@@ -22,98 +28,201 @@
     </div>
 }
 
-<div class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body d-flex flex-wrap align-items-center gap-3">
-        <div class="flex-grow-1">
-            <span class="text-muted">@T["Parent tenants get the address <code>{{slug}}.{0}</code>. Their child tenants get addresses under the parent's address.", Model.PlatformDomain]</span>
+<form method="get" asp-action="Index">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" name="search" value="@Model.Search" class="form-control" placeholder="@T["Search"]" type="search" autocomplete="off" autofocus />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    @if (canMakeParent)
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-action="MakeParent">@T["Make a Parent Tenant"]</a>
+                    }
+                    else if (Model.HostGuardInstalled)
+                    {
+                        <a class="btn btn-secondary create" role="button" asp-area="OrchardCore.Tenants" asp-controller="Admin" asp-action="Create" data-bs-toggle="tooltip" title="@T["Every tenant is already in the hierarchy. A tenant that is set up and not in the hierarchy can become a parent."]">@T["Add Tenant"]</a>
+                    }
+                </div>
+            </div>
         </div>
-        @if (Model.HostGuardInstalled && overview.Candidates.Count > 0)
-        {
-            <a class="btn btn-secondary" asp-action="MakeParent"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Make a parent tenant"]</a>
-        }
-        else if (Model.HostGuardInstalled)
-        {
-            <span class="small text-muted">@T["Any tenant that is set up and not yet in the hierarchy can become a parent."]</span>
-            <a class="btn btn-outline-secondary" asp-area="OrchardCore.Tenants" asp-controller="Admin" asp-action="Create"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Create a tenant"]</a>
-        }
     </div>
-</div>
+</form>
 
-@if (overview.Parents.Count == 0)
-{
-    <div class="text-center py-5 border rounded mb-4">
-        <i class="fa-solid fa-sitemap fa-3x text-muted mb-3" aria-hidden="true"></i>
-        <h4>@T["No parent tenants yet"]</h4>
-        <p class="text-muted mb-0">@T["A parent tenant can create and manage its own child tenants, and its users can open them without signing in again."]</p>
-    </div>
-}
+<ul class="list-group with-checkbox mb-3">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3">
+            <div class="col text-nowrap">
+                <div class="my-1">
+                    @T.Plural(Model.Parents.Count, "1 parent", "{0} parents")
+                    @if (Model.Parents.Count != overview.Parents.Count)
+                    {
+                        <span class="text-muted">@T.Plural(overview.Parents.Count, " / {0} parent in total", " / {0} parents in total")</span>
+                    }
+                </div>
+            </div>
+            <div class="col-auto my-1 small text-muted d-none d-md-block">
+                @T["Parents get the address <code>{{slug}}.{0}</code>; their child tenants get addresses under it.", Model.PlatformDomain]
+            </div>
+        </div>
+    </li>
 
-@foreach (var parent in overview.Parents)
-{
-    var policy = parent.Settings.GetParentPolicy();
-
-    <div class="card mb-3">
-        <div class="card-header d-flex flex-wrap align-items-center gap-2">
-            <i class="fa-solid fa-building text-muted" aria-hidden="true"></i>
-            <a class="fw-semibold" asp-action="Parent" asp-route-id="@parent.Settings.Name">@parent.DisplayName</a>
-            <span class="badge @StateBadge(parent.Settings)">@parent.Settings.State</span>
-            @if (!string.IsNullOrEmpty(parent.Address))
+    @if (Model.Parents.Count == 0)
+    {
+        <li class="list-group-item text-center text-muted py-4">
+            @if (overview.Parents.Count == 0)
             {
-                <a href="@parent.Address" class="small text-decoration-none" target="_blank" rel="noopener noreferrer"><code>@parent.Settings.GetPrimaryHost()</code></a>
+                @T["No parent tenants yet. A parent tenant creates and manages its own child tenants, and its users can open them without signing in again."]
             }
-            <span class="ms-auto small text-muted">@T["{0} of {1} child tenants", parent.Children.Count, policy.MaxChildren]</span>
-            <a class="btn btn-sm btn-outline-secondary" asp-action="EditParent" asp-route-id="@parent.Settings.Name">@T["Policy"]</a>
-        </div>
-        @if (parent.Children.Count > 0)
+            else
+            {
+                @T["No parent tenant matches your search."]
+            }
+        </li>
+    }
+
+    @foreach (var parent in Model.Parents)
+    {
+        var settings = parent.Settings;
+        var policy = settings.GetParentPolicy();
+        var isRunning = settings.State == TenantState.Running;
+        var isDisabled = settings.State == TenantState.Disabled;
+
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-lg-6 col-sm-12 title d-flex">
+                    <div class="d-inline">
+                        <a class="text-break" asp-action="Parent" asp-route-id="@settings.Name">@parent.DisplayName</a>
+                        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-building text-info" aria-hidden="true"></i> @T["Parent"]</span>
+                        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-sitemap text-info" aria-hidden="true"></i> @T["{0} of {1} child tenants", parent.Children.Count, policy.MaxChildren]</span>
+                        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-database text-info" aria-hidden="true"></i> @Strategy(policy.DatabaseStrategy)</span>
+                        <partial name="_TenantStateBadge" model="settings" />
+                        @if (parent.Warnings.Count > 0)
+                        {
+                            <span class="badge ta-badge fw-normal" title="@string.Join(" ", parent.Warnings)"><i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i> @T.Plural(parent.Warnings.Count, "1 problem", "{0} problems")</span>
+                        }
+                    </div>
+                </div>
+                <div class="col-lg-6 col-sm-12 float-end">
+                    <div class="float-end">
+                        <a class="btn btn-primary btn-sm" asp-action="EditParent" asp-route-id="@settings.Name">@T["Policy"]</a>
+                        @if (!string.IsNullOrEmpty(parent.Address))
+                        {
+                            <a class="btn btn-info btn-sm" href="@parent.Address" target="_blank" rel="noopener noreferrer">@T["View"]</a>
+                        }
+                        @if (isRunning)
+                        {
+                            <a class="btn btn-danger btn-sm" asp-action="Suspend" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend"]" data-message="@T["Suspend {0} and every running child tenant? Nobody can use them until you resume.", parent.DisplayName]">@T["Suspend"]</a>
+                        }
+                        else if (isDisabled)
+                        {
+                            <a class="btn btn-success btn-sm" asp-action="Resume" asp-route-id="@settings.Name" data-url-af="UnsafeUrl">@T["Resume"]</a>
+                        }
+                        <a class="btn btn-secondary btn-sm" asp-action="Parent" asp-route-id="@settings.Name">@T["Manage"]</a>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <p class="mb-0"><small class="text-muted">@settings.Name</small></p>
+                    @if (!string.IsNullOrEmpty(settings.GetPrimaryHost()))
+                    {
+                        <p class="mb-0"><code class="text-break">@settings.GetPrimaryHost()</code></p>
+                    }
+                </div>
+            </div>
+        </li>
+
+        @foreach (var child in parent.Children.Take(10))
         {
-            <ul class="list-group list-group-flush">
-                @foreach (var child in parent.Children.Take(10))
-                {
-                    <li class="list-group-item d-flex flex-wrap align-items-center gap-2 ps-4">
-                        <i class="fa-solid fa-turn-up fa-rotate-90 text-muted small" aria-hidden="true"></i>
-                        <span>@child.DisplayName</span>
-                        <span class="badge @StateBadge(child.Settings)">@child.Settings.State</span>
-                        <code class="small">@child.Settings.GetPrimaryHost()</code>
-                        <span class="ms-auto small text-muted">@child.Settings.Name</span>
-                    </li>
-                }
-                @if (parent.Children.Count > 10)
-                {
-                    <li class="list-group-item ps-4"><a asp-action="Parent" asp-route-id="@parent.Settings.Name">@T["Show all {0} child tenants", parent.Children.Count]</a></li>
-                }
-            </ul>
+            <li class="list-group-item ps-5">
+                <div class="row">
+                    <div class="col-lg-8 col-sm-12 title d-flex">
+                        <div class="d-inline">
+                            <i class="fa-solid fa-turn-up fa-rotate-90 text-muted small me-1" aria-hidden="true"></i>
+                            <span class="text-break">@child.DisplayName</span>
+                            <span class="badge ta-badge fw-normal"><i class="fa-solid fa-tag text-info" aria-hidden="true"></i> @parent.DisplayName</span>
+                            <partial name="_TenantStateBadge" model="child.Settings" />
+                        </div>
+                    </div>
+                    <div class="col-lg-4 col-sm-12 float-end">
+                        <div class="float-end">
+                            @if (!string.IsNullOrEmpty(child.Address) && child.Settings.State == TenantState.Running)
+                            {
+                                <a class="btn btn-info btn-sm" href="@child.Address" target="_blank" rel="noopener noreferrer">@T["View"]</a>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col ps-4">
+                        <p class="mb-0"><small class="text-muted">@child.Settings.Name</small></p>
+                        @if (!string.IsNullOrEmpty(child.Settings.GetPrimaryHost()))
+                        {
+                            <p class="mb-0"><code class="text-break">@child.Settings.GetPrimaryHost()</code></p>
+                        }
+                    </div>
+                </div>
+            </li>
         }
-    </div>
-}
+
+        @if (parent.Children.Count > 10)
+        {
+            <li class="list-group-item ps-5 small">
+                <a asp-action="Parent" asp-route-id="@settings.Name">@T["Show all {0} child tenants of {1}", parent.Children.Count, parent.DisplayName]</a>
+            </li>
+        }
+    }
+</ul>
 
 @if (overview.Orphans.Count > 0)
 {
-    <h5 class="mt-4">@T["Orphaned child tenants"]</h5>
-    <p class="text-muted small">@T["Their parent tenant no longer exists. Move each one to a parent tenant, or make it an ordinary tenant."]</p>
-    <ul class="list-group mb-4">
+    <ul class="list-group mb-3">
+        <li class="list-group-item text-bg-theme">
+            <div class="my-1">
+                <i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T.Plural(overview.Orphans.Count, "1 orphaned child tenant", "{0} orphaned child tenants")
+                <span class="text-muted small ms-2">@T["Their parent tenant no longer exists. Move each one to a parent tenant, or make it an ordinary tenant."]</span>
+            </div>
+        </li>
         @foreach (var orphan in overview.Orphans)
         {
-            <li class="list-group-item d-flex flex-wrap align-items-center gap-2">
-                <i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i>
-                <span class="fw-semibold">@orphan.DisplayName</span>
-                <code class="small">@orphan.Settings.GetPrimaryHost()</code>
-                <span class="small text-muted">@orphan.Settings.Name</span>
-                <span class="ms-auto d-flex gap-2">
-                    @if (overview.Parents.Count > 0)
-                    {
-                        <form asp-action="Adopt" method="post" class="d-flex gap-1">
-                            <input type="hidden" name="child" value="@orphan.Settings.Name" />
-                            <select name="newParent" class="form-select form-select-sm" aria-label="@T["New parent"]">
-                                @foreach (var parent in overview.Parents)
-                                {
-                                    <option value="@parent.Settings.Name">@parent.DisplayName</option>
-                                }
-                            </select>
-                            <button type="submit" class="btn btn-sm btn-secondary text-nowrap">@T["Move"]</button>
-                        </form>
-                    }
-                    <a class="btn btn-sm btn-outline-danger text-nowrap" asp-action="Detach" asp-route-child="@orphan.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant? It keeps its data and address.", orphan.DisplayName]">@T["Make ordinary"]</a>
-                </span>
+            <li class="list-group-item">
+                <div class="row">
+                    <div class="col-lg-6 col-sm-12 title d-flex">
+                        <div class="d-inline">
+                            <span class="text-break">@orphan.DisplayName</span>
+                            <partial name="_TenantStateBadge" model="orphan.Settings" />
+                        </div>
+                    </div>
+                    <div class="col-lg-6 col-sm-12 float-end">
+                        <div class="float-end d-flex gap-1">
+                            @if (overview.Parents.Count > 0)
+                            {
+                                <form asp-action="Adopt" method="post" class="d-flex gap-1">
+                                    <input type="hidden" name="child" value="@orphan.Settings.Name" />
+                                    <select name="newParent" class="form-select form-select-sm" aria-label="@T["New parent"]">
+                                        @foreach (var parent in overview.Parents)
+                                        {
+                                            <option value="@parent.Settings.Name">@parent.DisplayName</option>
+                                        }
+                                    </select>
+                                    <button type="submit" class="btn btn-sm btn-secondary text-nowrap">@T["Move"]</button>
+                                </form>
+                            }
+                            <a class="btn btn-sm btn-danger text-nowrap" asp-action="Detach" asp-route-child="@orphan.Settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant? It keeps its data and address.", orphan.DisplayName]">@T["Make ordinary"]</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <p class="mb-0"><small class="text-muted">@orphan.Settings.Name</small></p>
+                        <p class="mb-0"><code class="text-break">@orphan.Settings.GetPrimaryHost()</code></p>
+                    </div>
+                </div>
             </li>
         }
     </ul>

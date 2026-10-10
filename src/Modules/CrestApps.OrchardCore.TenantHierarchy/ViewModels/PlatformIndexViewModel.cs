@@ -13,6 +13,16 @@ public class PlatformIndexViewModel
     public HierarchyOverview Overview { get; set; }
 
     /// <summary>
+    /// Gets or sets the parents that match the search.
+    /// </summary>
+    public List<HierarchyTreeNode> Parents { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the search text.
+    /// </summary>
+    public string Search { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the host-level guards are installed.
     /// </summary>
     public bool HostGuardInstalled { get; set; }

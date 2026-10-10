@@ -156,31 +156,31 @@
                             @switch (entry.Status)
                             {
                                 case ChildTenantStatus.Provisioning:
-                                    <span class="badge text-bg-info"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>@T["Setting up"]</span>
+                                    <span class="badge ta-badge fw-normal"><span class="spinner-border spinner-border-sm text-info me-1" aria-hidden="true"></span>@T["Setting up"]</span>
                                     break;
                                 case ChildTenantStatus.Failed:
-                                    <span class="badge text-bg-danger">@T["Setup failed"]</span>
+                                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-circle-exclamation text-danger" aria-hidden="true"></i> @T["Setup failed"]</span>
                                     break;
                                 case ChildTenantStatus.Removing:
-                                    <span class="badge text-bg-warning"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>@T["Removing"]</span>
+                                    <span class="badge ta-badge fw-normal"><span class="spinner-border spinner-border-sm text-warning me-1" aria-hidden="true"></span>@T["Removing"]</span>
                                     break;
                                 case ChildTenantStatus.PendingRemoval:
-                                    <span class="badge text-bg-warning">@T["Removal on {0}", entry.RetainUntilUtc?.ToLocalTime().ToString("d")]</span>
+                                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-clock text-warning" aria-hidden="true"></i> @T["Removal on {0}", entry.RetainUntilUtc?.ToLocalTime().ToString("d")]</span>
                                     break;
                                 default:
                                     switch (item.State)
                                     {
                                         case ChildTenantRuntimeState.Running:
-                                            <span class="badge text-bg-success">@T["Running"]</span>
+                                            <span class="badge ta-badge fw-normal"><i class="fa-solid fa-check text-success" aria-hidden="true"></i> @T["Running"]</span>
                                             break;
                                         case ChildTenantRuntimeState.Suspended:
-                                            <span class="badge text-bg-secondary">@T["Suspended"]</span>
+                                            <span class="badge ta-badge fw-normal"><i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Suspended"]</span>
                                             break;
                                         case ChildTenantRuntimeState.ChangedByPlatform:
-                                            <span class="badge text-bg-dark" title="@T["The platform administrator removed this {0} or moved it to another owner.", labels.ChildLower]">@T["Changed by platform"]</span>
+                                            <span class="badge ta-badge fw-normal" title="@T["The platform administrator removed this {0} or moved it to another owner.", labels.ChildLower]"><i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i> @T["Changed by platform"]</span>
                                             break;
                                         default:
-                                            <span class="badge text-bg-light">@item.State</span>
+                                            <span class="badge ta-badge fw-normal">@item.State</span>
                                             break;
                                     }
                                     break;
