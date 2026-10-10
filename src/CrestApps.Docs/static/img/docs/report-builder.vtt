@@ -57,348 +57,348 @@ A data source shows only what the person may read, and a saved
 00:01:34.607 --> 00:01:37.430
 report runs with the access of its owner.
 
-00:01:41.622 --> 00:01:46.761
-Turn on the Report Builder feature under Configuration, Features.
+00:01:41.601 --> 00:01:46.075
+Turn on the Report Builder feature under Tools, Features.
 
-00:01:46.761 --> 00:01:50.742
+00:01:46.075 --> 00:01:49.981
 The Reports (OpenXml) feature adds Excel exports.
 
-00:01:51.195 --> 00:01:54.933
+00:01:50.434 --> 00:01:54.172
 The Report Builder appears under Reports in the admin menu.
 
-00:01:54.933 --> 00:01:58.785
+00:01:54.172 --> 00:01:58.024
 It lists every report you can open, and the filter at the top
 
-00:01:58.785 --> 00:02:01.085
+00:01:58.024 --> 00:02:00.324
 shows published reports or drafts.
 
-00:02:01.537 --> 00:02:05.348
+00:02:00.778 --> 00:02:04.589
 From the list, run a report, edit it, or delete it.
 
-00:02:05.348 --> 00:02:11.497
+00:02:04.589 --> 00:02:10.738
 The Actions menu clones a report into your own copy, which is not shared with anybody.
 
-00:02:15.699 --> 00:02:17.339
+00:02:14.919 --> 00:02:16.558
 Click New report.
 
-00:02:17.339 --> 00:02:19.619
+00:02:16.558 --> 00:02:18.839
 The builder has four tabs:
 
-00:02:19.619 --> 00:02:22.969
+00:02:18.839 --> 00:02:22.189
 Settings, Design, Data model and Sharing.
 
-00:02:23.424 --> 00:02:27.768
+00:02:22.643 --> 00:02:26.987
 On the Settings tab, give the report a title, a description and a
 
-00:02:27.768 --> 00:02:33.764
+00:02:26.987 --> 00:02:32.983
 category, and choose whether it appears in the admin menu and whether viewers may export it.
 
-00:02:34.216 --> 00:02:37.000
+00:02:33.435 --> 00:02:36.218
 On the Design tab, add a data set.
 
-00:02:37.000 --> 00:02:42.636
+00:02:36.218 --> 00:02:41.855
 The list groups the data sets by source; pick Activities, from Omnichannel.
 
-00:02:43.087 --> 00:02:45.638
+00:02:42.305 --> 00:02:44.855
 Its fields appear in the Data pane.
 
-00:02:45.638 --> 00:02:50.427
+00:02:44.855 --> 00:02:49.645
 Drag a field onto Columns, and the preview shows the result right away.
 
-00:02:50.877 --> 00:02:53.386
+00:02:50.096 --> 00:02:52.604
 Add Number of rows to count them.
 
-00:02:53.386 --> 00:02:57.759
+00:02:52.604 --> 00:02:56.978
 With a count, the report groups the rows by its other columns:
 
-00:02:57.759 --> 00:03:00.717
+00:02:56.978 --> 00:02:59.936
 here, activities per channel and status.
 
-00:03:01.170 --> 00:03:05.328
+00:03:00.389 --> 00:03:04.548
 A new report starts filtered on the last thirty days of its main
 
-00:03:05.328 --> 00:03:08.715
+00:03:04.548 --> 00:03:07.934
 date, which keeps reports over a lot of data quick.
 
-00:03:08.715 --> 00:03:11.270
+00:03:07.934 --> 00:03:10.489
 You can change or remove that filter.
 
-00:03:15.456 --> 00:03:18.880
+00:03:14.692 --> 00:03:18.117
 Click a column to edit it under Properties.
 
-00:03:18.880 --> 00:03:23.632
+00:03:18.117 --> 00:03:22.869
 An aggregate turns a number into a sum, an average, a count, a
 
-00:03:23.632 --> 00:03:27.476
+00:03:22.869 --> 00:03:26.712
 distinct count, a minimum, a maximum or a median.
 
-00:03:27.931 --> 00:03:31.235
+00:03:27.168 --> 00:03:30.473
 A transform changes a value before grouping.
 
-00:03:31.235 --> 00:03:35.466
+00:03:30.473 --> 00:03:34.703
 For a date, pick the day, the week, the month or the year,
 
-00:03:35.466 --> 00:03:37.581
+00:03:34.703 --> 00:03:36.818
 to see activity over time.
 
-00:03:38.033 --> 00:03:43.553
+00:03:37.270 --> 00:03:42.791
 Give each column a header and a format, such as one decimal place or a percentage.
 
-00:03:43.553 --> 00:03:48.133
+00:03:42.791 --> 00:03:47.370
 Hide a column from tables while keeping it for grouping and charts.
 
-00:03:48.587 --> 00:03:54.654
+00:03:47.823 --> 00:03:53.890
 Calculated fields use formulas, with functions for text, numbers, dates and aggregates.
 
-00:03:54.654 --> 00:03:57.133
+00:03:53.890 --> 00:03:56.370
 This one is the completion rate:
 
-00:03:57.133 --> 00:04:00.657
+00:03:56.370 --> 00:03:59.893
 the completed activities divided by all of them.
 
-00:04:01.107 --> 00:04:06.387
+00:04:00.345 --> 00:04:05.625
 Drag the calculated field onto Columns, and it works like any other field.
 
-00:04:10.573 --> 00:04:12.629
+00:04:09.812 --> 00:04:11.869
 Drag a field onto Filters.
 
-00:04:12.629 --> 00:04:15.971
+00:04:11.869 --> 00:04:15.211
 A row filter narrows the data before grouping.
 
-00:04:15.971 --> 00:04:21.563
+00:04:15.211 --> 00:04:20.802
 A result filter applies after it, such as channels with more than ten activities.
 
-00:04:22.017 --> 00:04:26.096
+00:04:21.258 --> 00:04:25.337
 Let viewers change this filter, and pick how they choose:
 
-00:04:26.096 --> 00:04:31.017
+00:04:25.337 --> 00:04:30.257
 a drop-down list, a list with several choices, a recent period, a date
 
-00:04:31.017 --> 00:04:33.347
+00:04:30.257 --> 00:04:32.588
 or number range, or yes or no.
 
-00:04:33.799 --> 00:04:38.927
+00:04:33.041 --> 00:04:38.168
 Exposed filters appear above the report, as searchable lists filled with the values
 
-00:04:38.927 --> 00:04:40.310
+00:04:38.168 --> 00:04:39.551
 found in the data.
 
-00:04:40.310 --> 00:04:42.729
+00:04:39.551 --> 00:04:41.971
 Viewers pick values and click Apply.
 
-00:04:46.921 --> 00:04:51.038
+00:04:46.142 --> 00:04:50.259
 Visuals are listed under Visuals, in the order they appear.
 
-00:04:51.038 --> 00:04:54.141
+00:04:50.259 --> 00:04:53.362
 A table shows the rows, and can add totals.
 
-00:04:54.594 --> 00:04:57.426
+00:04:53.817 --> 00:04:56.648
 Add a chart, and pick its type:
 
-00:04:57.426 --> 00:05:01.635
+00:04:56.648 --> 00:05:00.857
 bar, horizontal bar, line, area, pie or doughnut.
 
-00:05:01.635 --> 00:05:05.614
+00:05:00.857 --> 00:05:04.837
 Then pick the category and the values to plot.
 
-00:05:06.066 --> 00:05:10.266
+00:05:06.873 --> 00:05:11.073
 A metric strip shows a few key numbers at the top of the report.
 
-00:05:10.716 --> 00:05:15.050
+00:05:11.523 --> 00:05:15.857
 A pivot table puts one column down the side and spreads the values
 
-00:05:15.050 --> 00:05:16.976
+00:05:15.857 --> 00:05:17.783
 of another across the top.
 
-00:05:17.575 --> 00:05:21.747
+00:05:18.801 --> 00:05:22.973
 Set the width of each visual to place them side by side.
 
-00:05:21.747 --> 00:05:28.275
+00:05:22.973 --> 00:05:29.501
 Charts, metrics and totals regroup the underlying rows, so an average stays a true average.
 
-00:05:32.461 --> 00:05:34.113
+00:05:33.686 --> 00:05:35.338
 Add a second data set:
 
-00:05:34.113 --> 00:05:34.821
+00:05:35.338 --> 00:05:36.046
 Users.
 
-00:05:34.821 --> 00:05:39.246
+00:05:36.046 --> 00:05:40.471
 Data sets that reference each other, such as an activity and the user
 
-00:05:39.246 --> 00:05:41.841
+00:05:40.471 --> 00:05:43.066
 it is assigned to, are joined for you.
 
-00:05:42.292 --> 00:05:46.491
+00:05:43.519 --> 00:05:47.718
 The Data model tab draws the data sets and their relationships.
 
-00:05:46.491 --> 00:05:51.785
+00:05:47.718 --> 00:05:53.013
 To join two yourself, drag a column of one onto the matching column of the other:
 
-00:05:51.785 --> 00:05:55.802
+00:05:53.013 --> 00:05:57.029
 here, the campaign of an activity onto the ID of a campaign.
 
-00:05:56.255 --> 00:05:59.379
+00:05:57.480 --> 00:06:00.604
 Click a relationship to set its type:
 
-00:05:59.379 --> 00:06:04.175
+00:06:00.604 --> 00:06:05.400
 inner, left, right or full, on one or more pairs of columns.
 
-00:06:04.633 --> 00:06:09.481
+00:06:05.853 --> 00:06:10.701
 Back on the Design tab, the fields of both data sets are available.
 
-00:06:09.481 --> 00:06:13.133
+00:06:10.701 --> 00:06:14.353
 Here, activities are counted per user and status.
 
-00:06:17.309 --> 00:06:19.405
+00:06:18.536 --> 00:06:20.632
 A report can be only data.
 
-00:06:19.405 --> 00:06:26.479
+00:06:20.632 --> 00:06:27.706
 This campaign summary is a plain table, with viewer filters, a calculated completion rate, and totals.
 
-00:06:26.934 --> 00:06:29.640
+00:06:28.159 --> 00:06:30.865
 A report can combine charts and data.
 
-00:06:29.640 --> 00:06:33.605
+00:06:30.865 --> 00:06:34.830
 This one shows a metric strip, a bar chart and a table of
 
-00:06:33.605 --> 00:06:35.744
+00:06:34.830 --> 00:06:36.969
 activity outcomes per agent.
 
-00:06:36.196 --> 00:06:38.480
+00:06:37.421 --> 00:06:39.705
 Tables can show subtotals.
 
-00:06:38.480 --> 00:06:43.905
+00:06:39.705 --> 00:06:45.130
 With Role, Agent and Status, there is a subtotal for each agent within
 
-00:06:43.905 --> 00:06:47.546
+00:06:45.130 --> 00:06:48.771
 a role, one for each role, and a grand total.
 
-00:06:47.997 --> 00:06:52.867
+00:06:49.221 --> 00:06:54.091
 Pie charts and pivot tables suit shares and cross-tabs, such as the share
 
-00:06:52.867 --> 00:06:56.257
+00:06:54.091 --> 00:06:57.481
 of each disposition, and dispositions by channel.
 
-00:07:00.461 --> 00:07:05.705
+00:07:01.683 --> 00:07:06.928
 Contents offers one data set per content type, with its parts and fields.
 
-00:07:05.705 --> 00:07:12.411
+00:07:06.928 --> 00:07:13.633
 Owners, content pickers and user pickers reference other data sets, so they join automatically.
 
-00:07:12.866 --> 00:07:16.861
+00:07:14.090 --> 00:07:18.085
 Users offers the accounts of the site and their roles.
 
-00:07:16.861 --> 00:07:20.856
+00:07:18.085 --> 00:07:22.080
 Passwords, tokens and other secrets are never exposed.
 
-00:07:21.306 --> 00:07:27.818
+00:07:22.530 --> 00:07:29.042
 Contact Center offers interactions, call sessions and their quality, queues and queue items,
 
-00:07:27.818 --> 00:07:32.536
+00:07:29.042 --> 00:07:33.760
 agent profiles and sessions, callbacks, voicemail and recordings.
 
-00:07:32.987 --> 00:07:38.464
+00:07:34.211 --> 00:07:39.688
 Omnichannel offers activities, dispositions, campaigns and activity batches.
 
-00:07:38.464 --> 00:07:45.277
+00:07:39.688 --> 00:07:46.501
 AI Chat offers chat sessions and their metrics, and Messaging offers conversations and messages.
 
-00:07:45.728 --> 00:07:49.704
+00:07:46.952 --> 00:07:50.927
 Saved queries, and the views you build, are data sets too.
 
-00:07:49.704 --> 00:07:52.188
+00:07:50.927 --> 00:07:53.412
 Modules can add their own sources.
 
-00:07:56.461 --> 00:07:59.581
+00:07:57.598 --> 00:08:00.718
 Every change is saved in a draft as you work.
 
-00:07:59.581 --> 00:08:04.841
+00:08:00.718 --> 00:08:05.978
 Close the page and come back later, and the builder picks up where you left off.
 
-00:08:05.312 --> 00:08:10.024
+00:08:06.430 --> 00:08:11.143
 Click Publish to make the changes live for everybody who can open the report.
 
-00:08:10.024 --> 00:08:12.012
+00:08:11.143 --> 00:08:13.130
 Each publish keeps a version.
 
-00:08:12.463 --> 00:08:15.235
+00:08:13.582 --> 00:08:16.354
 Versions lists every published version.
 
-00:08:15.235 --> 00:08:17.268
+00:08:16.354 --> 00:08:18.388
 Preview one, or restore it.
 
-00:08:17.268 --> 00:08:21.828
+00:08:18.388 --> 00:08:22.947
 When two people edit the same report, the builder shows who else has
 
-00:08:21.828 --> 00:08:25.833
+00:08:22.947 --> 00:08:26.952
 it open, and stops one from silently overwriting the other.
 
-00:08:30.036 --> 00:08:33.510
+00:08:31.140 --> 00:08:34.614
 Report Views lists the reusable data sets.
 
-00:08:33.510 --> 00:08:35.897
+00:08:34.614 --> 00:08:37.002
 Build a view like a report:
 
-00:08:35.897 --> 00:08:40.456
+00:08:37.002 --> 00:08:41.560
 data sets, joins, calculated fields, filters and columns.
 
-00:08:47.025 --> 00:08:49.417
+00:08:48.211 --> 00:08:50.603
 Choose how often it refreshes:
 
-00:08:49.417 --> 00:08:54.134
+00:08:50.603 --> 00:08:55.320
 every fifteen minutes, every hour, every six hours, or every day.
 
-00:08:54.134 --> 00:08:58.785
+00:08:55.320 --> 00:08:59.971
 A background task stores the result, so reports read it quickly.
 
-00:08:59.240 --> 00:09:04.073
+00:09:00.426 --> 00:09:05.259
 In any report, the view appears under the Report views source, and its
 
-00:09:04.073 --> 00:09:06.680
+00:09:05.259 --> 00:09:07.866
 columns are fields like any others.
 
-00:09:10.862 --> 00:09:15.162
+00:09:12.037 --> 00:09:16.337
 On the Sharing tab, share the report with users, and with roles.
 
-00:09:17.615 --> 00:09:21.460
+00:09:18.877 --> 00:09:22.722
 Share links let people without an account open the report.
 
-00:09:21.460 --> 00:09:25.005
+00:09:22.722 --> 00:09:26.267
 Each link can expire, and can be revoked at any time.
 
-00:09:25.458 --> 00:09:31.078
+00:09:26.721 --> 00:09:32.341
 A shared report reads data with your access, so share only what viewers should see.
 
-00:09:31.530 --> 00:09:36.430
+00:09:32.794 --> 00:09:37.694
 Viewers run the report, change its filters, and export it as a C
 
-00:09:36.430 --> 00:09:39.230
+00:09:37.694 --> 00:09:40.494
 S V file, or as an Excel workbook.
 
-00:09:43.430 --> 00:09:47.857
+00:09:44.694 --> 00:09:49.121
 Developers add a data source by implementing IReportDataSource.
 
-00:09:47.857 --> 00:09:52.861
+00:09:49.121 --> 00:09:54.126
 It lists its data sets, describes their fields, and returns rows for the
 
-00:09:52.861 --> 00:09:54.850
+00:09:54.126 --> 00:09:56.114
 fields a report asks for.
 
-00:09:55.600 --> 00:10:03.210
+00:09:56.864 --> 00:10:04.474
 For data kept in records, derive from ReportRecordDataSource, and register the source with the service collection.
 
-00:10:03.210 --> 00:10:06.380
+00:10:04.474 --> 00:10:07.644
 The source decides what each person may see.
 
-00:10:07.130 --> 00:10:12.550
+00:10:08.394 --> 00:10:13.814
 The data source skill in the repository walks through every contract, step by step.
 
-00:10:14.550 --> 00:10:19.198
+00:10:15.814 --> 00:10:20.463
 The Report Builder turns the data of your site into reports that anyone
 
-00:10:19.198 --> 00:10:21.191
+00:10:20.463 --> 00:10:22.455
 can build, chart and share.
 
-00:10:21.191 --> 00:10:22.760
+00:10:22.455 --> 00:10:24.024
 Thanks for watching.
 

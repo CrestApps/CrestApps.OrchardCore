@@ -208,9 +208,10 @@ public sealed class Scene : IAsyncDisposable
     private static Dictionary<string, object> ScreencastOptions() => new()
     {
         ["format"] = "jpeg",
-        ["quality"] = 92,
-        ["maxWidth"] = (int)(Width * 1.125),
-        ["maxHeight"] = (int)(Height * 1.125),
+        // The full device resolution: ffmpeg scales it down to the frame with Lanczos, sharper than the browser does.
+        ["quality"] = 95,
+        ["maxWidth"] = (int)(Width * Scale),
+        ["maxHeight"] = (int)(Height * Scale),
         ["everyNthFrame"] = 1,
     };
 

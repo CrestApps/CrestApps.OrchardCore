@@ -119,6 +119,11 @@ public static partial class Scenes
 
         await scene.StepAsync("start-1", async () =>
         {
+            var features = scene.Page.Locator("a[href='/Admin/Features']").Filter(new() { Visible = true }).First;
+            await scene.MoveToAsync(features);
+            await scene.HighlightAsync(features, "Tools, Features");
+            await scene.PauseAsync(1800);
+            await scene.ClearHighlightsAsync();
             await scene.TypeAsync(scene.Page.Locator("#search-box"), "report", delay: 90);
             await scene.PauseAsync(500);
             await scene.MoveToAsync(Row("CrestApps_OrchardCore_Reports_Builder"), -300);

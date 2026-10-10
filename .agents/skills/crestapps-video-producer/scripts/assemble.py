@@ -22,9 +22,9 @@ import brand  # noqa: E402
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 FPS = brand.FPS
 
-# The published file. See references/specs.md: under 10 MB for videos up to about 7 minutes, so they can be attached
-# to a GitHub pull request; longer overviews stay under 15 MB.
-PUBLISH_CRF = os.environ.get("CRF", "34")
+# The published file. See references/specs.md: CRF 30 keeps text crisp; videos over 10 MB are linked from a pull
+# request instead of attached.
+PUBLISH_CRF = os.environ.get("CRF", "30")
 PUBLISH_AUDIO = "48k"
 
 # Timing.
@@ -208,9 +208,8 @@ class Assembler:
 
         size = output.stat().st_size / 1_000_000
         print(f"{output}: {clock / 60:.1f} minutes, {len(segments)} segments, {size:.1f} MB")
-        limit = 10 if clock <= 7 * 60 else 15
-        if size >= limit:
-            print(f"Over {limit} MB: raise CRF one step at a time (CRF=35 python assemble.py ...), or shorten the video.")
+        if size >= 25:
+            print("Over 25 MB: shorten the video, or split it into parts.")
         elif size >= 10:
             print("Over 10 MB: link the video from a pull request instead of attaching it.")
 

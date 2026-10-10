@@ -41,7 +41,7 @@
       "id": "03", "title": "Getting started", "subtitle": "Turn on the feature and find your reports",
       "clips": [
         { "id": "03-start", "kind": "clip", "steps": [
-          { "id": "start-1", "text": "Turn on the Report Builder feature under Configuration, Features. The Reports (OpenXml) feature adds Excel exports." },
+          { "id": "start-1", "text": "Turn on the Report Builder feature under Tools, Features. The Reports (OpenXml) feature adds Excel exports." },
           { "id": "start-2", "text": "The Report Builder appears under Reports in the admin menu. It lists every report you can open, and the filter at the top shows published reports or drafts." },
           { "id": "start-3", "text": "From the list, run a report, edit it, or delete it. The Actions menu clones a report into your own copy, which is not shared with anybody." }
         ] }

@@ -21,7 +21,7 @@ video (`src/CrestApps.Docs/static/img/docs/report-builder.mp4`). Read it before 
 
 | | |
 |---|---|
-| Output | 1920x1080, 30 fps, H.264 (`-preset slow -crf 34 -tune stillimage`), AAC 48 kbps mono, `+faststart`; under 10 MB up to about 7 minutes, under 15 MB for longer overviews |
+| Output | 1920x1080, 30 fps, H.264 (`-preset slow -crf 30 -tune stillimage`), AAC 48 kbps mono, `+faststart`; under 25 MB, and linked rather than attached to a pull request when over 10 MB |
 | Recording | Chromium at 1536x864 CSS pixels, device scale 1.25, light color scheme, en-US, shown at 1728x972 in an amber frame |
 | Branding | Navy background with an amber and a steel blue glow, the CrestApps logo (`src/CrestApps.Docs/branding/CrestAppsMainLogo.png`), Inter from `src/CrestApps.Docs/branding/fonts` |
 | Colors | Amber `#EAA429` (accents, frame, pills, highlights, clicks), navy `#081B26` (background and text on amber), steel blue `#2A81BB`, silver `#BEC3C8`, mist `#EDF4FA` |
@@ -105,8 +105,7 @@ its narration describes, with no error message, empty list, or real person's dat
 python .agents/skills/crestapps-video-producer/scripts/assemble.py <workspace>
 ```
 
-It prints the length and size. If it's over the limit, shorten the video, or raise the CRF one step at a time
-(`CRF=35 python .../assemble.py <workspace>`) and check that text stays readable. Extract a few frames with ffmpeg
+It prints the length and size. If it's over 25 MB, shorten the video or split it into parts; don't raise the CRF, which blurs small text. Extract a few frames with ffmpeg
 and look at them: a recording, a slide with code, and a card.
 
 ### 6. Check for private data

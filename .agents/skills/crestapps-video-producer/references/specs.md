@@ -9,10 +9,10 @@ Every CrestApps video follows these values. They are applied by `scripts/brand.p
 |---|---|---|
 | Resolution | 1920x1080 | Full HD: sharp text on any screen. |
 | Frame rate | 30 fps | Smooth cursor movement, small files. |
-| Video codec | H.264 High, `yuv420p`, `-preset slow -crf 34 -tune stillimage`, keyframe every 10 s | Plays everywhere; screen content compresses well, and text stays readable at CRF 34. |
+| Video codec | H.264 High, `yuv420p`, `-preset slow -crf 30 -tune stillimage`, keyframe every 10 s | Plays everywhere; screen content compresses well, and small text stays crisp at CRF 30. |
 | Audio codec | AAC, 48 kbps, 48 kHz, mono | Speech only: higher rates add about 2 MB per 10 minutes and nothing audible. |
 | Container | MP4 with `-movflags +faststart` | Starts playing before it's fully downloaded. |
-| Size | Under 10 MB for videos up to about 7 minutes (GitHub's attachment limit); under 15 MB for longer overviews | A 10-minute overview is about 13.5 MB. |
+| Size | Under 25 MB. Videos over 10 MB (GitHub's attachment limit) are linked from a pull request, not attached | A 10-minute overview is about 18 MB. |
 | Master | `build/master.mp4`, CRF 16, AAC 192 kbps stereo | Kept in the workspace to encode again without rebuilding. |
 | Captions | WebVTT (docs) and SRT, at most about 13 words each, split at sentence ends | Accessibility, and viewing without sound. |
 
@@ -53,7 +53,7 @@ Every CrestApps video follows these values. They are applied by `scripts/brand.p
 
 ## Recording
 
-- Chromium, headless, through Playwright for .NET, captured with the DevTools screencast (JPEG, quality 92).
+- Chromium, headless, through Playwright for .NET, captured with the DevTools screencast at the full device resolution (1920x1080, JPEG quality 95), scaled down to the frame by ffmpeg with Lanczos.
 - Viewport 1536x864 CSS pixels, device scale factor 1.25, light color scheme, `en-US` locale.
 - A drawn cursor (white arrow with a dark outline), an amber ripple on each click, amber highlight rings with an
   optional amber caption in navy text, all injected in the page by `Scene.cs`.

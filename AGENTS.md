@@ -364,7 +364,7 @@ Every narrated CrestApps video (module overviews, feature walkthroughs, pull req
 whenever a video is asked for, and never change its specification for a single video: change the skill instead.
 
 - **Voice**: always `en-US-AvaMultilingualNeural` at `-5%` through `edge-tts` (a clear, professional woman's voice).
-- **Look**: 1920x1080, 30 fps, H.264 CRF 34 with AAC 48 kbps mono; navy `#081B26` background, amber `#EAA429`
+- **Look**: 1920x1080, 30 fps, H.264 CRF 30 with AAC 48 kbps mono; navy `#081B26` background, amber `#EAA429`
   accents and frame, Inter, and the logo in `src/CrestApps.Docs/branding/CrestAppsMainLogo.png`.
 - **Structure**: an opening card, numbered chapters (slides or screen recordings), a closing card, and WebVTT/SRT
   captions generated from the narration.
