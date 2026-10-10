@@ -47,6 +47,15 @@ public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, Paymen
     }
 
     /// <inheritdoc/>
+    public async Task<IEnumerable<PaymentAttempt>> GetByReferenceAsync(string referenceType, string referenceId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(referenceType);
+        ArgumentException.ThrowIfNullOrEmpty(referenceId);
+
+        return await Session.Query<PaymentAttempt, PaymentAttemptIndex>(x => x.ReferenceType == referenceType && x.ReferenceId == referenceId).ListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IEnumerable<PaymentAttempt>> GetPendingAsync(DateTime olderThanUtc, CancellationToken cancellationToken = default)
     {
         return await Session.Query<PaymentAttempt, PaymentAttemptIndex>(x =>

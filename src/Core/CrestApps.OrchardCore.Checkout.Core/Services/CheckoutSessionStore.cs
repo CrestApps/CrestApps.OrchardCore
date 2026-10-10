@@ -194,7 +194,16 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
             Status = CheckoutSessionStatus.Pending,
         };
 
-        if (_contextAccessor.HttpContext.User.Identity.IsAuthenticated)
+        var httpContext = _contextAccessor.HttpContext;
+
+        if (httpContext is null)
+        {
+            // A session started outside a request (a scheduled charge) has no current user or browser. Its
+            // owner is set explicitly by the caller through the configure callback.
+            return checkoutSession;
+        }
+
+        if (httpContext.User.Identity?.IsAuthenticated == true)
         {
             checkoutSession.OwnerId = CurrentUserId();
         }

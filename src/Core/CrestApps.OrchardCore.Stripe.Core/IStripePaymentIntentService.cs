@@ -30,6 +30,14 @@ public interface IStripePaymentIntentService
     Task<CreatePaymentIntentResponse> CreateForCheckoutAsync(CreateCheckoutPaymentIntentRequest model);
 
     /// <summary>
+    /// Charges a payment method the customer saved earlier, server-side and without the customer present. A
+    /// declined card is reported in the response rather than thrown, so the caller can record why.
+    /// </summary>
+    /// <param name="model">The charge to make.</param>
+    /// <returns>Whether Stripe accepted the charge, and why not when it did not.</returns>
+    Task<ChargeOffSessionResponse> ChargeOffSessionAsync(ChargeOffSessionRequest model);
+
+    /// <summary>
     /// Retrieves the authoritative state of a Stripe payment intent so a checkout can verify what really
     /// happened at the gateway rather than trusting a cached notification.
     /// </summary>

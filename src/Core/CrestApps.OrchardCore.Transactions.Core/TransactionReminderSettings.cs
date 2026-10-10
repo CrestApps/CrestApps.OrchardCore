@@ -28,4 +28,10 @@ public sealed class TransactionReminderSettings
     /// of 0 or less means there is no limit.
     /// </summary>
     public int MaxReminders { get; set; } = 3;
+
+    /// <summary>
+    /// Gets or sets how many days before a payment falls due the owner is told it is coming due. One such
+    /// reminder is sent per transaction. Defaults to 3. A value of 0 or less turns these reminders off.
+    /// </summary>
+    public int UpcomingReminderDays { get; set; } = 3;
 }

@@ -38,6 +38,21 @@
                 <dt class="col-sm-4">@T["Due"]</dt>
                 <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
             }
+
+            @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+            {
+                <dt class="col-sm-4">@T["Invoice"]</dt>
+                <dd class="col-sm-8">
+                    @if (Model.ShowReceipts)
+                    {
+                        <a asp-action="Index" asp-controller="TransactionInvoice" asp-route-itemId="@transaction.ItemId">@transaction.InvoiceNumber</a>
+                    }
+                    else
+                    {
+                        @transaction.InvoiceNumber
+                    }
+                </dd>
+            }
         </dl>
     </div>
     @if (canPay)
@@ -66,7 +81,13 @@
             {
                 <li class="list-group-item">
                     <div class="d-flex justify-content-between">
-                        <span>@evt.Message</span>
+                        <span>
+                            @evt.Message
+                            @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))
+                            {
+                                <a class="ms-1 small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
+                            }
+                        </span>
                         <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
                     </div>
                 </li>

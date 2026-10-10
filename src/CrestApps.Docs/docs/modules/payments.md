@@ -58,8 +58,11 @@ The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Provid
 Configure the connection at the top of the settings page. Choose the environment with **Enable Production** (off = test), then connect that environment.
 
 1. Open your [Stripe API keys](https://dashboard.stripe.com/apikeys) (use the *Test mode* switch to pick test or live keys).
-2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout.
-3. Click **Connect**. The app verifies the key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
+2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout. **Save** the settings: the **Connect** button appears once a secret key is saved, and is hidden again while you edit a key, so a key you typed is never lost to connecting.
+3. Click **Connect**. The app verifies the saved key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
+
+Connecting also registers the site's domain with the account for wallet payments (see
+[Apple Pay and Google Pay](#apple-pay-and-google-pay)); a `localhost` site is skipped, since Stripe cannot reach it.
 
 The connection status is shown for the active environment, including the resolved Stripe account id. To unlink, click **Disconnect** and confirm; the app deletes the provisioned webhook and clears the stored credentials.
 
@@ -172,6 +175,45 @@ Beyond the subscription-specific endpoints, Stripe also registers a **generic `I
 - **`BeginAsync`** creates an *unconfirmed* PaymentIntent for the attempt's gross amount (base plus the tax the checkout determined) and returns its client secret, so the browser confirms it through Strong Customer Authentication with embedded Stripe Elements.
 - **`VerifyAsync`** retrieves the PaymentIntent from Stripe's authoritative API and reports the net/tax split the durable ledger validates, so an obligation is never marked paid on a cached webhook.
 - Every amount crosses the Stripe boundary through **`StripeCurrency`**, which honors zero-decimal (JPY) and three-decimal (KWD, rounded to a multiple of ten) currencies.
+
+### Saved cards and charges without the customer
+
+The provider also keeps a card for later and charges it without the customer present, which is what
+[installment plans](subscriptions#installment-plans) are built on (`SupportsSavedPaymentMethods`). Both are asked
+for through the provider-neutral `CheckoutPaymentDataKeys` on an ordinary checkout begin:
+
+- **`savePaymentMethod`** — the browser tokenizes the card first; the PaymentIntent is created for a Stripe
+  customer with that card and `setup_future_usage = off_session`, and the customer (or the administrator entering
+  the card for them) confirms it as usual. Authenticating this payment is what lets later charges skip it.
+  `ICheckoutSavedPaymentMethodProvider.GetSavedPaymentMethodAsync` then reads back the customer, the card, its
+  brand, last four digits and expiry.
+- **`offSession`** with **`savedCustomerReference`** and **`savedPaymentMethodReference`** — the PaymentIntent is
+  created and confirmed server-side with `off_session = true`. A declined card is reported as a decline carrying
+  Stripe's reason, and the engine records the attempt as failed; a bank that insists on authenticating the
+  cardholder declines with `authentication_required`, and that payment has to be made by the customer. A network
+  failure is not a decline, so it is retried without counting against the card. Only server code sets these keys:
+  the down payment page strips them from anything the browser sends.
+
+### Apple Pay and Google Pay
+
+The card panel of the checkout also offers the wallets a device already holds, through Stripe's Express Checkout
+Element: Apple Pay in Safari on an iPhone, iPad or Mac, and Google Pay in Chrome on Android and the desktop. A payer
+on a phone confirms with a tap, Face ID or a fingerprint instead of typing a card number. The buttons appear above the
+card form only when the device has a wallet set up and there is an amount to pay now; elsewhere the card form shows
+alone.
+
+- A wallet pays with a card, so everything the card form does still holds: the payment goes through the same
+  checkout, the server decides the amount and verifies the result with Stripe, and a card kept for later charges
+  (an installment plan, a subscription) is kept the same way. Only wallets that produce a card are offered; Link,
+  PayPal, Amazon Pay and Klarna are turned off.
+- Stripe offers a wallet only on a domain registered with the account. **Connect** registers the site's own domain
+  for you; a site served from another domain too can add it under *Settings → Payment method domains* in the Stripe
+  Dashboard. Wallets need HTTPS.
+- Samsung Pay is not a separate button: on a Samsung phone the payer pays through Google Pay, which can hold the
+  same cards.
+
+Taking a card that is tapped against the administrator's own phone (Stripe's *Tap to Pay*) needs Stripe Terminal
+inside a native iOS or Android app, and cannot be done from a web page.
 
 ### Refunds
 

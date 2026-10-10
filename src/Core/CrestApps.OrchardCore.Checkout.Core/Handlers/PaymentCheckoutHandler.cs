@@ -84,6 +84,13 @@ public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
                 break;
             }
 
+            // A step that collects nothing has nothing to save, so it never counts as unfinished; the engine judges
+            // completeness the same way. Waiting for it to be saved would send the customer back to it forever.
+            if (!step.CollectData)
+            {
+                continue;
+            }
+
             if (!context.Flow.Session.SavedSteps.ContainsKey(step.Key))
             {
                 context.Flow.SetCurrentStep(step.Key);

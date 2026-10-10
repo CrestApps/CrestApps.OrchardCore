@@ -5,10 +5,17 @@ using CrestApps.OrchardCore.Checkout.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.Checkout.Controllers;
 
@@ -24,6 +31,9 @@ namespace CrestApps.OrchardCore.Checkout.Controllers;
 [Admin("coupons/{action}/{itemId?}", "Coupons{action}")]
 public sealed class CouponsAdminController : Controller
 {
+    private const string _optionsSearch = "Options.Search";
+    private const string _optionsStatus = "Options.Status";
+
     private readonly ICouponStore _couponStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -57,16 +67,113 @@ public sealed class CouponsAdminController : Controller
     /// Lists the coupons.
     /// </summary>
     [Admin("coupons", "CouponsIndex")]
-    public async Task<IActionResult> Index()
+    /// <param name="options">The filters.</param>
+    /// <param name="pagerParameters">The page to show.</param>
+    /// <param name="pagerOptions">The site's pager options.</param>
+    /// <param name="shapeFactory">The shape factory the pager is built with.</param>
+    /// <param name="clock">The clock deciding which coupons are redeemable now.</param>
+    public async Task<IActionResult> Index(
+        CouponsIndexOptions options,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] IClock clock)
     {
         if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
         {
             return Forbid();
         }
 
-        var coupons = await _couponStore.GetAllAsync();
+        options ??= new CouponsIndexOptions();
 
-        return View(coupons.OrderByDescending(coupon => coupon.CreatedUtc).ToArray());
+        // A site has tens of coupons, not thousands, so they are filtered and paged in memory.
+        var now = clock.UtcNow;
+        var all = (await _couponStore.GetAllAsync()).ToArray();
+        IEnumerable<Coupon> coupons = all;
+
+        if (!string.IsNullOrWhiteSpace(options.Search))
+        {
+            var search = options.Search.Trim();
+
+            coupons = coupons.Where(coupon =>
+                (coupon.Code?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (coupon.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
+        }
+
+        coupons = options.Status switch
+        {
+            CouponStatusFilter.Active => coupons.Where(coupon => coupon.IsEnabled && coupon.IsRedeemable(now)),
+            CouponStatusFilter.NotAvailable => coupons.Where(coupon => coupon.IsEnabled && !coupon.IsRedeemable(now)),
+            CouponStatusFilter.Disabled => coupons.Where(coupon => !coupon.IsEnabled),
+            _ => coupons,
+        };
+
+        var matching = coupons.OrderByDescending(coupon => coupon.CreatedUtc).ToArray();
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
+
+        var routeData = new RouteData();
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            routeData.Values.TryAdd(_optionsSearch, options.Search);
+        }
+
+        if (options.Status != CouponStatusFilter.All)
+        {
+            routeData.Values.TryAdd(_optionsStatus, options.Status);
+        }
+
+        options.Statuses =
+        [
+            new SelectListItem(S["Any status"], nameof(CouponStatusFilter.All), options.Status == CouponStatusFilter.All),
+            new SelectListItem(S["Active"], nameof(CouponStatusFilter.Active), options.Status == CouponStatusFilter.Active),
+            new SelectListItem(S["Not available"], nameof(CouponStatusFilter.NotAvailable), options.Status == CouponStatusFilter.NotAvailable),
+            new SelectListItem(S["Disabled"], nameof(CouponStatusFilter.Disabled), options.Status == CouponStatusFilter.Disabled),
+        ];
+
+        return View(new CouponsIndexViewModel
+        {
+            Options = options,
+            Coupons = [.. matching.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
+            HasUnboundedCoupons = all.Any(coupon => coupon.IsEnabled && !coupon.MaxRedemptions.HasValue && !coupon.EndsUtc.HasValue),
+            Pager = await shapeFactory.PagerAsync(pager, matching.Length, routeData),
+        });
+    }
+
+    /// <summary>
+    /// Applies the list filters.
+    /// </summary>
+    /// <param name="options">The filters.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("coupons", "CouponsIndex")]
+    public async Task<IActionResult> IndexFilterPost(CouponsIndexOptions options, PagerParameters pagerParameters)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
+        {
+            return Forbid();
+        }
+
+        var routeValues = new RouteValueDictionary();
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            routeValues.TryAdd(_optionsSearch, options.Search);
+        }
+
+        if (options.Status != CouponStatusFilter.All)
+        {
+            routeValues.TryAdd(_optionsStatus, options.Status);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
+        }
+
+        return RedirectToAction(nameof(Index), routeValues);
     }
 
     /// <summary>

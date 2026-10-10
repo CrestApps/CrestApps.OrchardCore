@@ -85,7 +85,7 @@ public sealed class TransactionController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var query = new TransactionQuery
         {
@@ -126,11 +126,12 @@ public sealed class TransactionController : Controller
     /// Preserves the statement filter when the toolbar is submitted.
     /// </summary>
     /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("my-transactions", "MyTransactions")]
-    public async Task<IActionResult> IndexFilterPost(MyTransactionsOptions options)
+    public async Task<IActionResult> IndexFilterPost(MyTransactionsOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ViewOwnTransactions))
         {
@@ -147,6 +148,11 @@ public sealed class TransactionController : Controller
         if (options.Status != TransactionStatusFilter.All)
         {
             routeValues.TryAdd(_optionsStatus, options.Status);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
         }
 
         return RedirectToAction(nameof(Index), routeValues);
@@ -174,6 +180,7 @@ public sealed class TransactionController : Controller
         {
             Transaction = transaction,
             CanManage = false,
+            ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
         };
 
         return View(model);

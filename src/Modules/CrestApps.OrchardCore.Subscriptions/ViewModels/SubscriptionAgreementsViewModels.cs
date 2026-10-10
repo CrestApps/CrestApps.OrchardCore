@@ -51,12 +51,53 @@ public sealed class SubscriptionAgreementsIndexViewModel
 public sealed class MySubscriptionsViewModel
 {
     /// <summary>
-    /// Gets or sets the customer's agreements, most recent first.
+    /// Gets or sets the customer's agreements on this page, most recent first.
     /// </summary>
     public IList<Subscription> Subscriptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the status shown, or <see langword="null"/> for every status.
+    /// </summary>
+    public SubscriptionStatus? Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status choices.
+    /// </summary>
+    public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the pager shape.
+    /// </summary>
+    public dynamic Pager { get; set; }
 
     /// <summary>
     /// Gets or sets the current UTC time, so the view can say whether an agreement still grants access.
     /// </summary>
     public DateTime UtcNow { get; set; }
+}
+
+/// <summary>
+/// A page of site provisioning jobs: the customer's own sites, or every site for an administrator.
+/// </summary>
+public sealed class TenantProvisioningListViewModel
+{
+    /// <summary>
+    /// Gets or sets the jobs on this page, most recent first.
+    /// </summary>
+    public IList<TenantProvisioningJob> Jobs { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the status shown, or <see langword="null"/> for every status.
+    /// </summary>
+    public TenantProvisioningStatus? Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status choices.
+    /// </summary>
+    public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the pager shape.
+    /// </summary>
+    public dynamic Pager { get; set; }
 }

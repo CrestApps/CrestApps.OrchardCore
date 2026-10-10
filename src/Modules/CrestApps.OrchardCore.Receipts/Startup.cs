@@ -19,6 +19,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IReceiptService, DefaultReceiptService>();
+        services.AddScoped<IReceiptHtmlRenderer, DefaultReceiptHtmlRenderer>();
 
         services
             .AddSiteDisplayDriver<ReceiptSettingsDisplayDriver>()

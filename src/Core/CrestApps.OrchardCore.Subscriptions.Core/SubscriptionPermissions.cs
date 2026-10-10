@@ -21,4 +21,10 @@ public static class SubscriptionPermissions
     /// Allows a user to manage subscription sessions they own and is implied by <see cref="ManageSubscriptions"/>.
     /// </summary>
     public static readonly Permission ManageOwnSubscriptions = new("ManageOwnSubscriptions", "Manage own subscriptions", [ManageSubscriptions]);
+
+    /// <summary>
+    /// Allows a user to create installment plans for customers, take their down payment by card, and manage the
+    /// plans' payments. It charges customers' saved cards, so it is granted to administrators only by default.
+    /// </summary>
+    public static readonly Permission ManageInstallmentPlans = new("ManageInstallmentPlans", "Manage installment plans and charge customers' saved cards");
 }

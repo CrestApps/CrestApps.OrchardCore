@@ -213,6 +213,7 @@ public sealed class StripeSubscriptionVerificationTests
     private static StripeCheckoutPaymentProvider CreateProvider(IStripeSubscriptionService subscriptionService)
         => new(
             Mock.Of<IStripePaymentIntentService>(),
+            Mock.Of<IStripePaymentMethodService>(),
             subscriptionService,
             Mock.Of<IStripeRefundService>(),
             new StripeCheckoutCustomerResolver(Mock.Of<IStripeCustomerService>()),

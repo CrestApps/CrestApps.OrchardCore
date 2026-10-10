@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions;
 using OrchardCore.Modules.Manifest;
 
@@ -29,6 +30,19 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         TransactionsConstants.Features.Area,
+        "OrchardCore.Notifications",
+    ]
+)]
+
+[assembly: Feature(
+    Name = "Payment Receipts",
+    Id = TransactionsConstants.Features.Receipts,
+    Description = "Sends the customer a receipt after every payment applied to a transaction, however it was paid, and lets the customer and administrators print it.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        TransactionsConstants.Features.Area,
+        ReceiptsConstants.Feature.Area,
         "OrchardCore.Notifications",
     ]
 )]

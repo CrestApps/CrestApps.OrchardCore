@@ -21,4 +21,9 @@ public enum ReceiptStatus
     /// The payment did not complete successfully.
     /// </summary>
     Failed,
+
+    /// <summary>
+    /// The document asks for a payment that has not been made yet, as an invoice does.
+    /// </summary>
+    Due,
 }

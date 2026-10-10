@@ -30,6 +30,19 @@ public static class TransactionsConstants
         /// It depends on <c>OrchardCore.Notifications</c> so reminders honor each owner's channel preference.
         /// </summary>
         public const string Notification = "CrestApps.OrchardCore.Transactions.Notification";
+
+        public const string Receipts = "CrestApps.OrchardCore.Transactions.Receipts";
+    }
+
+    /// <summary>
+    /// The names of the routes other features link to.
+    /// </summary>
+    public static class RouteNames
+    {
+        /// <summary>
+        /// The public page a signed pay link opens, where the owner pays one transaction without signing in.
+        /// </summary>
+        public const string Pay = "TransactionsPay";
     }
 
     /// <summary>

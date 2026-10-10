@@ -38,6 +38,8 @@ public sealed class Startup : StartupBase
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
+
+        services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
     }
 }
 
@@ -72,5 +74,22 @@ public sealed class NotificationStartup : StartupBase
             .AddNavigationProvider<TransactionReminderSettingsAdminMenu>();
 
         services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Registers the receipts sent after every payment applied to a transaction, and the printable receipt page.
+/// </summary>
+[Feature(TransactionsConstants.Features.Receipts)]
+public sealed class ReceiptsStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
+        services.AddScoped<ITransactionInvoiceBuilder, TransactionInvoiceBuilder>();
+        services.AddScoped<PaymentReceiptTransactionPaymentHandler>();
+        services.AddScoped<ITransactionPaymentHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());
+        services.AddScoped<IPaymentRefundHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());
     }
 }

@@ -30,4 +30,24 @@ public class StripeCheckoutPaymentMethodViewModel
     /// the card before the payment starts. A checkout with nothing recurring skips that round trip.
     /// </remarks>
     public bool HasRecurringItems { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the card is kept for later charges without the payer present.
+    /// </summary>
+    public bool SavePaymentMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount collected now, in the currency's minor units, shown on the wallet sheet when the
+    /// payer pays with Apple Pay or Google Pay. Wallet buttons are offered only when this is greater than zero.
+    /// </summary>
+    /// <remarks>
+    /// It only labels the wallet sheet. The amount actually charged is decided on the server when the payment
+    /// starts, never taken from the browser.
+    /// </remarks>
+    public long WalletAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lower-case ISO currency code of <see cref="WalletAmount"/>.
+    /// </summary>
+    public string WalletCurrency { get; set; }
 }

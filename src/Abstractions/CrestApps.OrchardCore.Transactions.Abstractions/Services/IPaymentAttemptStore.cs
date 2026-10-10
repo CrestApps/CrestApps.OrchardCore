@@ -29,6 +29,16 @@ public interface IPaymentAttemptStore : ICatalog<PaymentAttempt>
     Task<IEnumerable<PaymentAttempt>> GetBySessionAsync(string sessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets every attempt made to pay for the given reference, across all of its checkout sessions. It is the durable
+    /// answer to "was this already paid for?", because an attempt is committed before anything that records its
+    /// outcome elsewhere.
+    /// </summary>
+    /// <param name="referenceType">The kind of thing paid for, for example a transaction.</param>
+    /// <param name="referenceId">The identifier of the thing paid for.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IEnumerable<PaymentAttempt>> GetByReferenceAsync(string referenceType, string referenceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets attempts that are still in a non-terminal state (<see cref="PaymentAttemptState.Created"/> or
     /// <see cref="PaymentAttemptState.Pending"/>) and are older than <paramref name="olderThanUtc"/>, so a
     /// background reconciliation sweep can verify them against the provider.

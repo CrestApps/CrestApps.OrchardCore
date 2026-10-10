@@ -35,6 +35,8 @@ public sealed class CouponsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+                .AddClass("commerce")
+                .Id("commerce")
                 .Add(S["Coupons"], S["Coupons"].PrefixPosition("9"), coupons => coupons
                     .AddClass("coupons")
                     .Id("coupons")

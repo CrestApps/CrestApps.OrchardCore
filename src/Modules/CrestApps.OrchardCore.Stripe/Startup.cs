@@ -115,6 +115,7 @@ public sealed class CheckoutStartup : StartupBase
         services.AddScoped<StripeCheckoutPaymentProvider>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
+        services.AddScoped<ICheckoutSavedPaymentMethodProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutRecurringPaymentProvider, StripeRecurringPaymentProvider>();
         services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, StripeCheckoutPaymentMethodDisplayDriver>();
     }

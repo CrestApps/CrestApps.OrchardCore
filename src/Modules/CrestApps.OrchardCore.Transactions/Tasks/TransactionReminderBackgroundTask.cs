@@ -69,7 +69,49 @@ public sealed class TransactionReminderBackgroundTask : IBackgroundTask
                 logger.LogError(ex, "Failed to send a payment reminder for transaction '{TransactionId}'.", transaction.ItemId);
             }
         }
+
+        if (settings.UpcomingReminderDays <= 0)
+        {
+            return;
+        }
+
+        var comingDue = await manager.GetComingDueAsync(utcNow, utcNow.AddDays(settings.UpcomingReminderDays), cancellationToken);
+
+        foreach (var transaction in comingDue)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                break;
+            }
+
+            if (!IsUpcomingReminderDue(transaction, settings, utcNow))
+            {
+                continue;
+            }
+
+            try
+            {
+                if (await reminderService.SendUpcomingReminderAsync(transaction, cancellationToken))
+                {
+                    await manager.UpdateAsync(transaction, data: null, cancellationToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to send an upcoming payment reminder for transaction '{TransactionId}'.", transaction.ItemId);
+            }
+        }
     }
+
+    // One notice per payment, inside the window before it falls due. A payment created already inside the
+    // window (a plan whose next payment is two days away) still gets it, because the window is measured from now.
+    internal static bool IsUpcomingReminderDue(Transaction transaction, TransactionReminderSettings settings, DateTime utcNow)
+        => settings.UpcomingReminderDays > 0 &&
+            transaction.UpcomingReminderSentUtc is null &&
+            transaction.OutstandingAmount > 0m &&
+            transaction.DueUtc is DateTime dueUtc &&
+            dueUtc > utcNow &&
+            dueUtc <= utcNow.AddDays(settings.UpcomingReminderDays);
 
     internal static bool IsReminderDue(Transaction transaction, TransactionReminderSettings settings, DateTime utcNow)
     {

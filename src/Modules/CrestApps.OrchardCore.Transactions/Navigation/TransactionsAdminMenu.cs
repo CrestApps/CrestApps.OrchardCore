@@ -40,6 +40,8 @@ public sealed class TransactionsAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+                .AddClass("commerce")
+                .Id("commerce")
                 .Add(S["Transactions"], S["Transactions"].PrefixPosition("5"), transactions => transactions
                     .AddClass("transactions")
                     .Id("transactions")

@@ -50,6 +50,21 @@
                         <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
                     }
 
+                    @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+                    {
+                        <dt class="col-sm-4">@T["Invoice"]</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.ShowReceipts)
+                            {
+                                <a asp-action="Index" asp-controller="TransactionInvoice" asp-route-itemId="@transaction.ItemId">@transaction.InvoiceNumber</a>
+                            }
+                            else
+                            {
+                                @transaction.InvoiceNumber
+                            }
+                        </dd>
+                    }
+
                     @if (transaction.SettledUtc.HasValue)
                     {
                         <dt class="col-sm-4">@T["Settled"]</dt>
@@ -75,6 +90,10 @@
                                 <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
                             </div>
                             <div>@evt.Message</div>
+                            @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))
+                            {
+                                <a class="small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
+                            }
                             @if (!string.IsNullOrEmpty(evt.ActorName))
                             {
                                 <div class="text-muted small">@T["By {0}", evt.ActorName]</div>
@@ -120,7 +139,10 @@
                             <label class="form-label" for="Note">@T["Note"]</label>
                             <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["How the payment was received"]" />
                         </div>
-                        <button type="submit" class="btn btn-success" disabled="@(!canSettle)">@T["Record payment"]</button>
+                        <button type="submit" class="btn btn-success" disabled="@(!canSettle)"
+                                data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">
+                            @T["Record payment"]
+                        </button>
                     </form>
                 </div>
             </div>
@@ -130,7 +152,7 @@
                     <form asp-action="MarkPaid" method="post">
                         <input type="hidden" name="itemId" value="@transaction.ItemId" />
                         <button type="submit" class="btn btn-outline-success w-100" disabled="@(!canSettle)"
-                                data-url-af="RemoveUrl" data-title="@T["Mark as paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]">
+                                data-url-af="RemoveUrl" data-title="@T["Mark as paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]" data-ok-text="@T["Mark as paid"]" data-cancel-text="@T["Cancel"]">
                             @T["Mark as paid"]
                         </button>
                     </form>
@@ -138,7 +160,7 @@
                         <input type="hidden" name="itemId" value="@transaction.ItemId" />
                         <input type="text" class="form-control mb-2" name="note" placeholder="@T["Cancellation reason (optional)"]" />
                         <button type="submit" class="btn btn-outline-danger w-100" disabled="@(transaction.Status == TransactionStatus.Canceled)"
-                                data-title="@T["Cancel transaction"]" data-message="@T["Are you sure you want to cancel this transaction?"]">
+                                data-url-af="RemoveUrl" data-title="@T["Cancel transaction"]" data-message="@T["Are you sure you want to cancel this transaction? Nothing more will be collected for it."]" data-ok-text="@T["Cancel transaction"]" data-cancel-text="@T["Keep it"]">
                             @T["Cancel transaction"]
                         </button>
                     </form>

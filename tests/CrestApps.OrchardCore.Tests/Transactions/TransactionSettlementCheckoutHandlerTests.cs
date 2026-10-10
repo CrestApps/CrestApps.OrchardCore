@@ -4,8 +4,10 @@ using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -40,6 +42,25 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         Assert.Equal(transaction.ItemId, billingItem.ItemId);
         Assert.Equal(transaction.OutstandingAmount, billingItem.Amount);
         Assert.Equal("USD", session.Currency);
+
+        // The step asks the payer nothing, so the checkout opens straight on the payment.
+        Assert.False(step.CollectData);
+        Assert.True(step.Conceal);
+    }
+
+    [Fact]
+    public async Task InitializingAsync_HidesTheBalanceStepAgainWhenTheSessionIsLoaded()
+    {
+        // Arrange: concealment is not stored, so a reloaded session has the step visible again.
+        var handler = CreateHandler(new FakeTransactionStore(CreateOutstandingTransaction()));
+        var session = new CheckoutSession { SessionId = "settlement-1" };
+        session.Steps.Add(new CheckoutFlowStep { Key = "TransactionSettlement", Conceal = false });
+
+        // Act
+        await handler.InitializingAsync(new CheckoutFlowInitializingContext(new CheckoutFlow(session)));
+
+        // Assert
+        Assert.True(Assert.Single(session.Steps).Conceal);
     }
 
     [Fact]
@@ -304,11 +325,124 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             UpdatedUtc = _now,
         };
 
-    private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null)
-        => new(
-            TransactionManagerFactory.Create(store),
+    [Fact]
+    public async Task ActivatingAsync_LeavesTheBalanceOutOfTheTaxDetermination()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var handler = CreateHandler(new FakeTransactionStore(transaction));
+        var session = new CheckoutSession
+        {
+            SessionId = "settlement-1",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+        };
+
+        // Act
+        await handler.ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        // Assert
+        // The transaction already carries its own tax; settling it must not tax it again.
+        Assert.True(Assert.Single(Assert.Single(session.Steps).BillingItems).ExcludeFromTax);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_TellsThePaymentHandlersWhatWasPaid()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            ItemId = "attempt-9",
+            SessionId = "settlement-1",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 100m,
+            ConfirmedTaxAmount = 8m,
+        });
+
+        var recorder = new RecordingPaymentHandler();
+        var handler = CreateHandler(store, attempts, recorder);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(CreateSettlementSession(transaction, "settlement-1"))));
+
+        // Assert
+        var recorded = Assert.Single(recorder.Contexts);
+
+        Assert.Same(transaction, recorded.Transaction);
+        Assert.Equal(108m, recorded.Payment.Amount);
+        Assert.Equal(TransactionsConstants.SettlementMethods.Online, recorded.Payment.Method);
+        Assert.Equal("attempt-9", recorded.Payment.PaymentAttemptId);
+        Assert.False(string.IsNullOrEmpty(recorded.Payment.Id));
+        Assert.Equal(TransactionEventType.PaymentRecorded, recorded.Payment.Type);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_AHandlerThatThrows_DoesNotUndoThePayment()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            SessionId = "settlement-1",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 108m,
+        });
+
+        var recorder = new RecordingPaymentHandler();
+        var handler = CreateHandler(store, attempts, new ThrowingPaymentHandler(), recorder);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(CreateSettlementSession(transaction, "settlement-1"))));
+
+        // Assert
+        Assert.Equal(TransactionStatus.Paid, (await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken)).Status);
+        Assert.Single(recorder.Contexts);
+    }
+
+    private sealed class RecordingPaymentHandler : ITransactionPaymentHandler
+    {
+        public List<TransactionPaymentRecordedContext> Contexts { get; } = [];
+
+        public Task PaymentRecordedAsync(TransactionPaymentRecordedContext context, CancellationToken cancellationToken = default)
+        {
+            Contexts.Add(context);
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingPaymentHandler : ITransactionPaymentHandler
+    {
+        public Task PaymentRecordedAsync(TransactionPaymentRecordedContext context, CancellationToken cancellationToken = default)
+            => throw new InvalidOperationException("The receipt could not be sent.");
+    }
+
+    private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null, params ITransactionPaymentHandler[] paymentHandlers)
+    {
+        var services = new ServiceCollection();
+
+        foreach (var paymentHandler in paymentHandlers)
+        {
+            services.AddSingleton(paymentHandler);
+        }
+
+        var manager = TransactionManagerFactory.Create(store);
+
+        return new(
+            manager,
             attempts ?? new InMemoryPaymentAttemptStore(),
-            new TestClock(_now),
+            new TransactionSettlementService(
+                manager,
+                services.BuildServiceProvider(),
+                new TestClock(_now),
+                NullLogger<TransactionSettlementService>.Instance,
+                new PassThroughStringLocalizer<TransactionSettlementService>()),
             NullLogger<TransactionSettlementCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
+    }
 }

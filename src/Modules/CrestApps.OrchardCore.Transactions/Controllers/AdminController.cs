@@ -11,7 +11,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -42,6 +44,8 @@ public sealed class AdminController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly TransactionSourceOptions _sourceOptions;
+    private readonly IEnumerable<ITransactionPaymentHandler> _paymentHandlers;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -67,6 +71,8 @@ public sealed class AdminController : Controller
         IClock clock,
         INotifier notifier,
         IOptions<TransactionSourceOptions> sourceOptions,
+        IEnumerable<ITransactionPaymentHandler> paymentHandlers,
+        ILogger<AdminController> logger,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         ITransactionReminderService reminderService = null)
@@ -79,6 +85,8 @@ public sealed class AdminController : Controller
         _clock = clock;
         _notifier = notifier;
         _sourceOptions = sourceOptions.Value;
+        _paymentHandlers = paymentHandlers;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -102,7 +110,7 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var query = BuildQuery(options);
 
@@ -150,11 +158,12 @@ public sealed class AdminController : Controller
     /// Preserves the report filter when the toolbar is submitted.
     /// </summary>
     /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("transactions", "TransactionsIndex")]
-    public async Task<IActionResult> IndexFilterPost(TransactionsAdminIndexOptions options)
+    public async Task<IActionResult> IndexFilterPost(TransactionsAdminIndexOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
         {
@@ -176,6 +185,11 @@ public sealed class AdminController : Controller
         if (!string.IsNullOrEmpty(options.Source))
         {
             routeValues.TryAdd(_optionsSource, options.Source);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
         }
 
         return RedirectToAction(nameof(Index), routeValues);
@@ -210,6 +224,7 @@ public sealed class AdminController : Controller
             OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId),
             CanManage = true,
             CanSendReminder = _reminderService is not null,
+            ShowReceipts = HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not null,
         };
 
         return View(model);
@@ -319,14 +334,16 @@ public sealed class AdminController : Controller
             ? string.Empty
             : S[" Note: {0}", model.Note].Value;
 
-        transaction.Events.Add(new TransactionEvent
-        {
-            CreatedUtc = now,
-            Type = TransactionEventType.PaymentRecorded,
-            Message = S["An offline payment of {0} {1} was recorded.{2}", transaction.Currency, CurrencyScale.Format(applied, transaction.Currency), noteSuffix].Value,
-            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorName = await GetCurrentUserNameAsync(),
-        });
+        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
+            now,
+            applied,
+            TransactionsConstants.SettlementMethods.Offline,
+            S["An offline payment of {0} {1} was recorded.{2}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, noteSuffix].Value);
+
+        payment.ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        payment.ActorName = await GetCurrentUserNameAsync();
+
+        transaction.Events.Add(payment);
 
         if (transaction.OutstandingAmount <= 0m)
         {
@@ -346,6 +363,7 @@ public sealed class AdminController : Controller
 
         if (await TrySaveAsync(transaction))
         {
+            await _paymentHandlers.PaymentRecordedAsync(transaction, [payment], _logger);
             await _notifier.SuccessAsync(H["The payment was recorded."]);
         }
 
@@ -380,22 +398,33 @@ public sealed class AdminController : Controller
 
         var now = _clock.UtcNow;
 
+        // Marking paid settles whatever was still owed, so that remainder is the payment it records.
+        var settled = transaction.OutstandingAmount;
+
         transaction.AmountPaid = transaction.TotalAmount;
         transaction.Status = TransactionStatus.Paid;
         transaction.SettledUtc = now;
         transaction.UpdatedUtc = now;
         transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
-        transaction.Events.Add(new TransactionEvent
-        {
-            CreatedUtc = now,
-            Type = TransactionEventType.StatusChanged,
-            Message = S["The transaction was marked as paid."].Value,
-            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorName = await GetCurrentUserNameAsync(),
-        });
+
+        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
+            now,
+            settled,
+            TransactionsConstants.SettlementMethods.Offline,
+            S["The transaction was marked as paid."].Value);
+
+        payment.ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        payment.ActorName = await GetCurrentUserNameAsync();
+
+        transaction.Events.Add(payment);
 
         if (await TrySaveAsync(transaction))
         {
+            if (settled > 0m)
+            {
+                await _paymentHandlers.PaymentRecordedAsync(transaction, [payment], _logger);
+            }
+
             await _notifier.SuccessAsync(H["The transaction was marked as paid."]);
         }
 
@@ -540,7 +569,7 @@ public sealed class AdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new(S["All sources"], string.Empty, string.IsNullOrEmpty(selected)),
+            new(S["Any source"], string.Empty, string.IsNullOrEmpty(selected)),
         };
 
         foreach (var source in _sourceOptions.Sources.Values)

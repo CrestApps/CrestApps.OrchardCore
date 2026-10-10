@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Transactions.Core.Services;
+using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CrestApps.OrchardCore.Transactions.Core;
 
@@ -18,6 +20,9 @@ public static class TransactionsServiceCollectionExtensions
     {
         services.AddScoped<ITransactionStore, TransactionStore>();
         services.AddScoped<ITransactionManager, TransactionManager>();
+        services.AddScoped<ITransactionSettlementService, TransactionSettlementService>();
+        services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
+        services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
 
         return services;
     }

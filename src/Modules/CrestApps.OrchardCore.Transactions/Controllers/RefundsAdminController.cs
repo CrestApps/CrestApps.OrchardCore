@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -88,7 +90,7 @@ public sealed class RefundsAdminController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _refundStore.PageAsync(pager.Page, pager.PageSize, new PaymentRefundQuery
         {
@@ -124,11 +126,12 @@ public sealed class RefundsAdminController : Controller
     /// Preserves the ledger filter when the toolbar is submitted.
     /// </summary>
     /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("refunds", "RefundsIndex")]
-    public async Task<IActionResult> IndexFilterPost(RefundsAdminIndexOptions options)
+    public async Task<IActionResult> IndexFilterPost(RefundsAdminIndexOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageRefunds))
         {
@@ -147,6 +150,11 @@ public sealed class RefundsAdminController : Controller
             routeValues.TryAdd("Options.Status", options.Status.Value);
         }
 
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
+        }
+
         return RedirectToAction(nameof(Index), routeValues);
     }
 
@@ -155,8 +163,9 @@ public sealed class RefundsAdminController : Controller
     /// </summary>
     /// <param name="itemId">The refund identifier.</param>
     /// <param name="reference">The operator's reference for the money they moved.</param>
+    /// <param name="logger">The logger for refund handler failures.</param>
     [HttpPost]
-    public async Task<IActionResult> Resolve(string itemId, string reference)
+    public async Task<IActionResult> Resolve(string itemId, string reference, [FromServices] ILogger<RefundsAdminController> logger)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageRefunds))
         {
@@ -179,11 +188,14 @@ public sealed class RefundsAdminController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        var previousStatus = refund.Status;
+
         refund.Status = RefundStatus.Succeeded;
         refund.CompletedUtc = _clock.UtcNow;
         refund.ProviderRefundReference = string.IsNullOrWhiteSpace(reference) ? refund.ProviderRefundReference : reference.Trim();
 
         await _refundStore.UpdateAsync(refund);
+        await HttpContext.RequestServices.RefundSucceededAsync(refund, previousStatus, logger, HttpContext.RequestAborted);
 
         await _notifier.SuccessAsync(H["The refund was marked as settled."]);
 
@@ -194,7 +206,7 @@ public sealed class RefundsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All statuses"], Value = string.Empty, Selected = !selected.HasValue },
+            new() { Text = S["Any status"], Value = string.Empty, Selected = !selected.HasValue },
         };
 
         foreach (var status in Enum.GetValues<RefundStatus>())
@@ -214,7 +226,7 @@ public sealed class RefundsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All methods"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
+            new() { Text = S["Any method"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
         };
 
         foreach (var provider in _paymentProviders)

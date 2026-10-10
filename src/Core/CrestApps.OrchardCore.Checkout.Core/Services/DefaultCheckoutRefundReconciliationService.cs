@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 
@@ -25,6 +26,7 @@ public sealed class DefaultCheckoutRefundReconciliationService : ICheckoutRefund
     private readonly IPaymentRefundStore _refundStore;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -33,16 +35,19 @@ public sealed class DefaultCheckoutRefundReconciliationService : ICheckoutRefund
     /// <param name="refundStore">The durable refund ledger.</param>
     /// <param name="distributedLock">The distributed lock used to serialize refunds of a payment.</param>
     /// <param name="clock">The clock used for timestamps.</param>
+    /// <param name="serviceProvider">The provider the refund handlers are resolved from once a refund succeeds.</param>
     /// <param name="logger">The logger.</param>
     public DefaultCheckoutRefundReconciliationService(
         IPaymentRefundStore refundStore,
         IDistributedLock distributedLock,
         IClock clock,
+        IServiceProvider serviceProvider,
         ILogger<DefaultCheckoutRefundReconciliationService> logger)
     {
         _refundStore = refundStore;
         _distributedLock = distributedLock;
         _clock = clock;
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -146,6 +151,8 @@ public sealed class DefaultCheckoutRefundReconciliationService : ICheckoutRefund
 
     private async Task<PaymentRefund> UpdateLocalRefundAsync(PaymentRefund local, ReconcileRemoteRefundContext context, CancellationToken cancellationToken)
     {
+        var previousStatus = local.Status;
+
         // Adopt the gateway's authoritative reference and status. The gateway is the source of truth, so a
         // pending local record advances to the confirmed terminal state the gateway reports.
         if (string.IsNullOrEmpty(local.ProviderRefundReference) && !string.IsNullOrEmpty(context.ProviderRefundReference))
@@ -191,6 +198,7 @@ public sealed class DefaultCheckoutRefundReconciliationService : ICheckoutRefund
         }
 
         await _refundStore.UpdateAsync(local, cancellationToken);
+        await _serviceProvider.RefundSucceededAsync(local, previousStatus, _logger, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

@@ -74,13 +74,16 @@ var checkoutPayment = function () {
     }
   }
   async function postJson(url, body) {
+    // A page whose endpoints are antiforgery-protected (an admin page taking a payment for a customer) passes
+    // its token here; the storefront endpoints rely on the same-origin check instead and pass nothing.
+    var headers = Object.assign({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }, config.requestHeaders || {});
     var response = await fetch(url, {
       method: 'POST',
       credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
+      headers: headers,
       body: JSON.stringify(body || {})
     });
     var payload = null;
@@ -129,6 +132,7 @@ var checkoutPayment = function () {
     showError(config.stillProcessingMessage);
     return false;
   }
+  var running = false;
   async function pay(event) {
     // A submit that names an action is asking the server to change the step, not to take a payment.
     // Applying a promotion code is one of those: swallowing it here would drop the code silently and
@@ -138,11 +142,22 @@ var checkoutPayment = function () {
       return;
     }
     event.preventDefault();
-    var providerKey = selectedProviderKey();
+    await run(selectedProviderKey());
+  }
+
+  // Takes the payment with the given provider. It resolves to true once the checkout settled (the page is then
+  // on its way to the confirmation), and to false when the payment did not go through, having shown why.
+  async function run(providerKey) {
     if (!providerKey) {
       showError(config.selectMethodMessage);
-      return;
+      return false;
     }
+
+    // A second press while a payment is under way must not start another one.
+    if (running) {
+      return false;
+    }
+    running = true;
     clearError();
     setBusy(true);
     try {
@@ -154,8 +169,7 @@ var checkoutPayment = function () {
         // A handler that could not produce what it needs has already told the customer why. Starting
         // the payment anyway would create a durable attempt that can never settle.
         if (providerData === false) {
-          setBusy(false);
-          return;
+          return false;
         }
       }
       var begun = await postJson(config.beginEndpoint, {
@@ -166,30 +180,47 @@ var checkoutPayment = function () {
       });
       if (!begun.ok) {
         showError(begun.payload && begun.payload.errorMessage);
-        setBusy(false);
-        return;
+        return false;
       }
       var steps = begun.payload && begun.payload.steps || [];
       for (var i = 0; i < steps.length; i++) {
         var step = steps[i];
         if (step.redirectUrl) {
           window.location.assign(step.redirectUrl);
-          return;
+          return true;
         }
         if (step.requiresAction && handler && typeof handler.confirm === 'function') {
           var confirmed = await handler.confirm(step, config);
           if (!confirmed) {
-            setBusy(false);
-            return;
+            return false;
           }
         }
       }
-      await pollUntilSettled();
+      return await pollUntilSettled();
     } catch (e) {
       showError(null);
+      return false;
     } finally {
+      running = false;
       setBusy(false);
     }
+  }
+
+  /**
+   * Takes the payment with the given provider without the form being submitted, for a provider whose own
+   * button starts the payment (a wallet such as Apple Pay or Google Pay). The provider is selected first so
+   * its panel stays the one shown.
+   *
+   * @param {string} providerKey The provider's stable key.
+   * @returns {Promise<boolean>} True once the checkout settled; false when the payment did not go through.
+   */
+  function submit(providerKey) {
+    var radio = document.querySelector('input[name="checkout-payment-method"][value="' + providerKey + '"]');
+    if (radio && !radio.checked) {
+      radio.checked = true;
+      syncPanels();
+    }
+    return run(providerKey);
   }
   function initialize(options) {
     config = Object.assign({
@@ -211,6 +242,7 @@ var checkoutPayment = function () {
   }
   return {
     initialize: initialize,
-    register: register
+    register: register,
+    submit: submit
   };
 }();

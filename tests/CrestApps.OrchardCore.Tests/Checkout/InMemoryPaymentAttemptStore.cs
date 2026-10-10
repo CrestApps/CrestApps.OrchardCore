@@ -77,6 +77,9 @@ internal sealed class InMemoryPaymentAttemptStore : IPaymentAttemptStore
     public Task<IEnumerable<PaymentAttempt>> GetBySessionAsync(string sessionId, CancellationToken cancellationToken = default)
         => Task.FromResult(_attempts.Values.Where(a => a.SessionId == sessionId));
 
+    public Task<IEnumerable<PaymentAttempt>> GetByReferenceAsync(string referenceType, string referenceId, CancellationToken cancellationToken = default)
+        => Task.FromResult(_attempts.Values.Where(a => a.ReferenceType == referenceType && a.ReferenceId == referenceId));
+
     public Task<IEnumerable<PaymentAttempt>> GetPendingAsync(DateTime olderThanUtc, CancellationToken cancellationToken = default)
         => Task.FromResult(_attempts.Values.Where(a =>
             (a.State == PaymentAttemptState.Created || a.State == PaymentAttemptState.Pending) &&

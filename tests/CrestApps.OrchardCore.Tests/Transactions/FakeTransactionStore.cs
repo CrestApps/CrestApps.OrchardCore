@@ -106,6 +106,17 @@ internal sealed class FakeTransactionStore : ITransactionStore
         return Task.FromResult<IReadOnlyList<Transaction>>(results);
     }
 
+    public Task<IReadOnlyList<Transaction>> GetComingDueAsync(DateTime afterUtc, DateTime untilUtc, CancellationToken cancellationToken = default)
+    {
+        var results = _transactions.Values
+            .Where(t =>
+                (t.Status == TransactionStatus.Pending || t.Status == TransactionStatus.Outstanding || t.Status == TransactionStatus.PartiallyPaid) &&
+                t.DueUtc.HasValue && t.DueUtc.Value > afterUtc && t.DueUtc.Value <= untilUtc)
+            .ToArray();
+
+        return Task.FromResult<IReadOnlyList<Transaction>>(results);
+    }
+
     public Task<IReadOnlyList<Transaction>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         var results = _transactions.Values

@@ -45,6 +45,8 @@ public sealed class PaymentLedgerAdminMenu : AdminNavigationProvider
     {
         builder
             .Add(S["Commerce"], S["Commerce"].PrefixPosition(), commerce => commerce
+                .AddClass("commerce")
+                .Id("commerce")
                 .Add(S["Payments"], S["Payments"].PrefixPosition("7"), payments => payments
                     .AddClass("payments")
                     .Id("payments")

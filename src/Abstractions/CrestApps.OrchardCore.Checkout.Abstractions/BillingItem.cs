@@ -35,4 +35,11 @@ public sealed class BillingItem
     /// because there is no reusable offer to point at.
     /// </remarks>
     public string PriceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the amount is left out of the tax determination. Set it for an
+    /// amount whose tax was already decided elsewhere, such as a balance being settled that already carries its
+    /// own tax; taxing it again would charge the tax twice.
+    /// </summary>
+    public bool ExcludeFromTax { get; set; }
 }

@@ -193,6 +193,10 @@ The framework never calculates tax itself. It consumes the [Taxation](taxation) 
 
 An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes.
 
+A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
+determination. Settling an outstanding [transaction](transactions) does this: the transaction already carries its
+own tax, and paying it is not a new sale.
+
 ## The checkout engine
 
 **`ICheckoutEngine`** is the single entry point for every money-moving step. Controllers, endpoints, webhooks, and background tasks all go through it and never call a payment provider, the attempt ledger, or the reconciliation service directly. Centralizing the orchestration is what makes the guarantees above real rather than conventions each caller has to remember.
@@ -203,6 +207,15 @@ An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer dest
 | `BeginPaymentAsync` | Creates one durable attempt **per obligation**, persists each before contacting the provider, stores the provider's reference the moment it returns, and hands back what the client needs to finish (a client secret, a redirect, or nothing). |
 | `TryCompleteAsync` | Verifies every outstanding obligation against the provider's own API and, only when all are confirmed, runs the completion handlers and marks the session complete. |
 | `CancelAsync` | Releases the remote resources of a checkout the customer abandoned. |
+
+A checkout normally belongs to whoever starts it. **`StartCheckoutRequest.OwnerId`** names someone else instead:
+an administrator taking a payment for a customer, or a background charge with no request at all. The session,
+its attempts and what it settles then belong to that customer. Only server code sets it.
+
+When a provider reaches the gateway and the payment is refused — a saved card charged without the customer, for
+example — it returns `PaymentBeginResult.Decline`. The engine records the attempt as **failed** with the gateway's
+reason, reports it as `PaymentBeginOutcome.Declined` with `ProviderErrorMessage`, and gives the next attempt for the
+same obligation its own idempotency key, so retrying with another card is not answered with the old decline.
 
 ### Completion never blocks a request
 

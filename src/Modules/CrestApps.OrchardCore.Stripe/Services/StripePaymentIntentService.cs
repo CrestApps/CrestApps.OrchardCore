@@ -128,6 +128,18 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Metadata = model.Metadata,
         };
 
+        if (!string.IsNullOrEmpty(model.PaymentMethodId))
+        {
+            paymentIntentOptions.PaymentMethod = model.PaymentMethodId;
+        }
+
+        if (model.SaveForOffSessionUse)
+        {
+            // Authenticating this payment with the customer present is what lets the card be charged later
+            // without them: the bank is told up front that future charges will follow.
+            paymentIntentOptions.SetupFutureUsage = "off_session";
+        }
+
         var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions, model.ToRequestOptions());
 
         return new CreatePaymentIntentResponse
@@ -137,6 +149,61 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             CustomerId = paymentIntent.CustomerId,
             Status = paymentIntent.Status,
         };
+    }
+
+    /// <summary>
+    /// Charges a saved payment method server-side, without the customer present.
+    /// </summary>
+    /// <param name="model">The charge to make.</param>
+    /// <returns>Whether Stripe accepted the charge, and why not when it did not.</returns>
+    public async Task<ChargeOffSessionResponse> ChargeOffSessionAsync(ChargeOffSessionRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.CustomerId);
+        ArgumentException.ThrowIfNullOrEmpty(model.PaymentMethodId);
+
+        var paymentIntentOptions = new PaymentIntentCreateOptions
+        {
+            Amount = StripeCurrency.ToMinorUnits(model.Amount, model.Currency),
+            Currency = model.Currency,
+            Customer = model.CustomerId,
+            PaymentMethod = model.PaymentMethodId,
+            Description = model.Description,
+            Metadata = model.Metadata,
+
+            // Confirmed here, with no customer to authenticate. Stripe uses the authorization the customer gave
+            // when the card was saved; if the bank insists on authenticating anyway, the charge fails with
+            // 'authentication_required' and the customer has to pay this one themselves.
+            Confirm = true,
+            OffSession = true,
+        };
+
+        try
+        {
+            var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions, model.ToRequestOptions());
+
+            return new ChargeOffSessionResponse
+            {
+                Succeeded = paymentIntent.Status is "succeeded" or "processing",
+                PaymentIntentId = paymentIntent.Id,
+                Status = paymentIntent.Status,
+                ErrorMessage = paymentIntent.LastPaymentError?.Message,
+                DeclineCode = paymentIntent.LastPaymentError?.DeclineCode,
+            };
+        }
+        catch (StripeException ex) when (ex.StripeError is not null)
+        {
+            // A declined card is an answer, not a fault: report it so the caller can record why and retry later.
+            return new ChargeOffSessionResponse
+            {
+                Succeeded = false,
+                PaymentIntentId = ex.StripeError.PaymentIntent?.Id,
+                Status = ex.StripeError.PaymentIntent?.Status,
+                ErrorMessage = ex.StripeError.Message ?? ex.Message,
+                DeclineCode = ex.StripeError.DeclineCode,
+                RequiresAuthentication = string.Equals(ex.StripeError.Code, "authentication_required", StringComparison.Ordinal),
+            };
+        }
     }
 
     /// <summary>
@@ -186,5 +253,9 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             Currency = paymentIntent.Currency,
             LiveMode = paymentIntent.Livemode,
             LatestChargeId = paymentIntent.LatestChargeId,
+            CustomerId = paymentIntent.CustomerId,
+            PaymentMethodId = paymentIntent.PaymentMethodId,
+            SetupFutureUsage = paymentIntent.SetupFutureUsage,
+            LastPaymentErrorMessage = paymentIntent.LastPaymentError?.Message,
         };
 }

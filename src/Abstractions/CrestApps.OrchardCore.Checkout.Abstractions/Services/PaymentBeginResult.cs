@@ -40,6 +40,13 @@ public sealed class PaymentBeginResult
     public string ErrorMessage { get; set; }
 
     /// <summary>
+    /// Whether the provider reached the gateway and the payment was refused (for example a declined card on a
+    /// charge confirmed server-side), as opposed to the payment never having been started. A declined attempt
+    /// is final: the engine records it as failed instead of leaving it for a retry to resume.
+    /// </summary>
+    public bool Declined { get; set; }
+
+    /// <summary>
     /// Creates a successful result.
     /// </summary>
     /// <param name="providerReference">The provider's authoritative reference.</param>
@@ -52,4 +59,12 @@ public sealed class PaymentBeginResult
     /// <param name="errorMessage">The error message.</param>
     public static PaymentBeginResult Failure(string errorMessage)
         => new() { Succeeded = false, ErrorMessage = errorMessage };
+
+    /// <summary>
+    /// Creates a result for a payment the gateway refused.
+    /// </summary>
+    /// <param name="errorMessage">The gateway's explanation, suitable to show the payer.</param>
+    /// <param name="providerReference">The reference of the refused payment, when the gateway created one.</param>
+    public static PaymentBeginResult Decline(string errorMessage, string providerReference = null)
+        => new() { Succeeded = false, Declined = true, ErrorMessage = errorMessage, ProviderReference = providerReference };
 }

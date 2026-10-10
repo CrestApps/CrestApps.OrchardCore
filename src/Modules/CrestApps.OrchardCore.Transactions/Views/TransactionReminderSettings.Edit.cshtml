@@ -37,3 +37,12 @@
         <span class="hint">@T["The maximum number of reminders to send for a single transaction. Use 0 for no limit."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="UpcomingReminderDays">
+    <label asp-for="UpcomingReminderDays" class="ocat-label">@T["Remind before the due date (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="UpcomingReminderDays" type="number" min="0" class="form-control" />
+        <span asp-validation-for="UpcomingReminderDays"></span>
+        <span class="hint">@T["How many days before a payment falls due the customer is told it is coming due, once per payment. A payment charged automatically to a saved card names the card. Use 0 to send no such reminder."]</span>
+    </div>
+</div>

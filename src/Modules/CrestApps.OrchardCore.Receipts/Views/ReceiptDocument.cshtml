@@ -74,6 +74,9 @@
                     case ReceiptStatus.Failed:
                         <span class="badge bg-danger">@T["Failed"]</span>
                         break;
+                    case ReceiptStatus.Due:
+                        <span class="badge bg-warning text-dark">@T["Due"]</span>
+                        break;
                     default:
                         <span class="badge bg-secondary">@T["Pending"]</span>
                         break;

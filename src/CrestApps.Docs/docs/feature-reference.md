@@ -188,6 +188,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
+| `CrestApps.OrchardCore.Transactions.Receipts` | Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
 
 ## Payment Providers
 
@@ -201,6 +202,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Subscriptions` | Subscriptions | [Subscriptions](./modules/subscriptions) |
 | `CrestApps.OrchardCore.Subscriptions.Tenants` | Subscriptions - Sites | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Subscriptions.Installments` | Subscriptions - Installment Plans | [Subscriptions](./modules/subscriptions#installment-plans) |
 
 ## Communication
 

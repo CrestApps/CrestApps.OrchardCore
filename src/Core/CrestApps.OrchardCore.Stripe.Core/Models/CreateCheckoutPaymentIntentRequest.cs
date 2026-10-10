@@ -24,6 +24,17 @@ public sealed class CreateCheckoutPaymentIntentRequest : StripeWriteRequest
     public string CustomerId { get; set; }
 
     /// <summary>
+    /// Gets or sets the payment method the browser tokenized, when the intent is created against one.
+    /// </summary>
+    public string PaymentMethodId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the payment method is kept on the customer for charges made later
+    /// without the payer present (<c>setup_future_usage = off_session</c>). Requires <see cref="CustomerId"/>.
+    /// </summary>
+    public bool SaveForOffSessionUse { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional description shown on the Stripe dashboard and receipts.
     /// </summary>
     public string Description { get; set; }

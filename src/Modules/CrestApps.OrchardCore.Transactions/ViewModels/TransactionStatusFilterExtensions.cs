@@ -61,7 +61,7 @@ public static class TransactionStatusFilterExtensions
     {
         return
         [
-            new SelectListItem(S["All"], nameof(TransactionStatusFilter.All), selected == TransactionStatusFilter.All),
+            new SelectListItem(S["Any status"], nameof(TransactionStatusFilter.All), selected == TransactionStatusFilter.All),
             new SelectListItem(S["Outstanding"], nameof(TransactionStatusFilter.Outstanding), selected == TransactionStatusFilter.Outstanding),
             new SelectListItem(S["Pending"], nameof(TransactionStatusFilter.Pending), selected == TransactionStatusFilter.Pending),
             new SelectListItem(S["Partially paid"], nameof(TransactionStatusFilter.PartiallyPaid), selected == TransactionStatusFilter.PartiallyPaid),

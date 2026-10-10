@@ -22,6 +22,19 @@ public sealed class PaymentBeginOutcome
     public string ErrorMessage { get; set; }
 
     /// <summary>
+    /// Gets or sets the explanation the payment provider gave when it refused to begin the payment, for
+    /// example why a card was declined. <see cref="ErrorMessage"/> stays generic for a customer-facing page;
+    /// this is what an operator, or the record of a scheduled charge, needs.
+    /// </summary>
+    public string ProviderErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider reached the gateway and the payment was refused,
+    /// rather than the payment never having been started.
+    /// </summary>
+    public bool Declined { get; set; }
+
+    /// <summary>
     /// Gets the per-obligation steps the client must complete.
     /// </summary>
     public IList<PaymentBeginStep> Steps { get; init; } = [];

@@ -92,7 +92,7 @@ public sealed class PaymentsAdminController : Controller
             return Forbid();
         }
 
-        var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
 
         var result = await _attemptStore.PageAsync(pager.Page, pager.PageSize, new PaymentAttemptQuery
         {
@@ -129,11 +129,12 @@ public sealed class PaymentsAdminController : Controller
     /// Preserves the ledger filter when the toolbar is submitted.
     /// </summary>
     /// <param name="options">The filter options.</param>
+    /// <param name="pagerParameters">The page size to keep while filtering.</param>
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
     [Admin("payments", "PaymentsIndex")]
-    public async Task<IActionResult> IndexFilterPost(PaymentsAdminIndexOptions options)
+    public async Task<IActionResult> IndexFilterPost(PaymentsAdminIndexOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageRefunds))
         {
@@ -150,6 +151,11 @@ public sealed class PaymentsAdminController : Controller
         if (options.State.HasValue)
         {
             routeValues.TryAdd("Options.State", options.State.Value);
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues.TryAdd("pageSize", pagerParameters.PageSize.Value);
         }
 
         return RedirectToAction(nameof(Index), routeValues);
@@ -296,7 +302,7 @@ public sealed class PaymentsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All states"], Value = string.Empty, Selected = !selected.HasValue },
+            new() { Text = S["Any state"], Value = string.Empty, Selected = !selected.HasValue },
         };
 
         foreach (var state in Enum.GetValues<PaymentAttemptState>())
@@ -316,7 +322,7 @@ public sealed class PaymentsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All methods"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
+            new() { Text = S["Any method"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
         };
 
         foreach (var provider in _paymentProviders)

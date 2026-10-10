@@ -28,4 +28,6 @@ public class TransactionDetailViewModel
     /// the Transaction Reminders feature is enabled.
     /// </summary>
     public bool CanSendReminder { get; set; }
+
+    public bool ShowReceipts { get; set; }
 }

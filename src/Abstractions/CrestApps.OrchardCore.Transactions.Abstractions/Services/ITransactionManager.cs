@@ -38,6 +38,15 @@ public interface ITransactionManager : ICatalogManager<Transaction>
     Task<IReadOnlyList<Transaction>> GetOutstandingDueAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the unpaid transactions that fall due after <paramref name="afterUtc"/> and on or before
+    /// <paramref name="untilUtc"/>, so the owner can be told a payment is coming due before it is.
+    /// </summary>
+    /// <param name="afterUtc">The exclusive lower bound for the due date.</param>
+    /// <param name="untilUtc">The inclusive upper bound for the due date.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<Transaction>> GetComingDueAsync(DateTime afterUtc, DateTime untilUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the recurring transactions whose billing period has ended and whose next cycle has not been
     /// created yet.
     /// </summary>
