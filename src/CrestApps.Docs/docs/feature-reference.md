@@ -202,7 +202,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Subscriptions` | Subscriptions | [Subscriptions](./modules/subscriptions) |
 | `CrestApps.OrchardCore.Subscriptions.Tenants` | Subscriptions - Sites | [Subscriptions](./modules/subscriptions) |
-| `CrestApps.OrchardCore.Subscriptions.Installments` | Subscriptions - Installment Plans | [Subscriptions](./modules/subscriptions#installment-plans) |
+| `CrestApps.OrchardCore.Subscriptions.Installments` | Subscriptions - Installment Plans | [Installment Plans](./modules/installment-plans) |
 
 ## Communication
 

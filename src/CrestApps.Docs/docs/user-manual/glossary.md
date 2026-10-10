@@ -20,6 +20,7 @@ The words this manual uses, in plain language. Each term links to the page that 
 - **Agent bar**: see *Docked agent bar*.
 - **Agent entitlement**: see *Entitlement*.
 - **Agent state**: why an agent is not taking work, such as *Lunch* or *Team meeting*. Also called a reason code. Each one maps to a presence such as Break, Away or Meeting. See [Agent states](agent-states.md).
+- **Agreement**: the record of one customer's subscription to a plan: what they bought, its price, its status and when it renews. See [Subscriptions](commerce/subscriptions.md).
 - **AI agent**: an AI profile that holds a conversation with a customer by itself, by text or on a call. See [Automated AI SMS and voice](automated-ai.md).
 - **AI profile**: a configured AI assistant: its instructions, the AI model it uses, its knowledge and its tools. Chat, the website widget and AI agents all run on a profile. See [AI profiles](ai/profiles.md).
 - **Automated activity**: an activity the AI works on its own, created by an automatic load or by the AI answering a number. See [Automated AI SMS and voice](automated-ai.md).
@@ -41,10 +42,12 @@ The words this manual uses, in plain language. Each term links to the page that 
 - **Channel endpoint**: the older name for an *omnichannel address*.
 - **Chat interaction**: an ad-hoc AI chat that does not need a profile set up first. See [Chat interactions](ai/chat-interactions.md).
 - **Chat widget**: a floating AI chat window, on your public website or on every admin page. See [Chat widgets](ai/chat-widgets.md).
+- **Checkout**: the pages a buyer goes through to pay: their details, an optional coupon, and the payment. See [Checkout](commerce/checkout.md).
 - **Connection**: the link to an AI service, such as OpenAI or Azure OpenAI, that your AI profiles use. See [AI connections](ai/connections.md).
 - **Contact**: a person you call or text, such as a customer. Every activity, call and conversation is linked to a contact. See [Contacts](contacts.md).
 - **Contact method**: a phone number or email address on a contact. See [Contacts](contacts.md).
 - **Conversion**: turning a qualified lead into a contact, optionally with an account and an opportunity. See [Leads, accounts and opportunities](leads-accounts-opportunities.md).
+- **Coupon**: a discount code a buyer enters at checkout. See [Coupons](commerce/coupons.md).
 
 ## D
 
@@ -58,6 +61,7 @@ The words this manual uses, in plain language. Each term links to the page that 
 - **Do-not-call registry**: a list of numbers that must not be called, either national (such as the USA FTC registry) or your company's own. See [Do-not-call lists](administration/do-not-call-lists.md).
 - **Docked agent bar**: the small bar at the bottom of every admin page that pops up with each offer while an agent is signed in. See [Agent workspace](agent-workspace.md).
 - **Document**: a file you upload to an AI profile so it answers from it. See [Knowledge](ai/knowledge.md).
+- **Down payment**: the part of an installment plan's total that is paid on the day the plan is set up. See [Installment plans](commerce/installment-plans.md).
 
 ## E
 
@@ -76,8 +80,10 @@ The words this manual uses, in plain language. Each term links to the page that 
 
 ## I
 
+- **Installment plan**: a payment plan for one customer: a down payment today, then a fixed number of scheduled payments, charged to their card or invoiced. See [Installment plans](commerce/installment-plans.md).
 - **Interaction**: the record of one call or conversation with a customer, shown in the agent workspace and in reports. See [Agent workspace](agent-workspace.md).
 - **Interaction Center**: the admin menu that holds the CRM and the contact center. See [Finding your way](getting-started/finding-your-way.md).
+- **Invoice**: a numbered request for a payment the customer pays themselves, such as *INV-1001*, with a link that pays it. See [Invoices and receipts](commerce/invoices-and-receipts.md).
 - **IVR menu**: a keypad menu callers hear, such as "For support press 1". Each key sends the caller to a queue, a person, voicemail or another menu. See [Inbound entry points and IVR menus](entry-points-and-ivr.md).
 
 ## K
@@ -115,6 +121,9 @@ The words this manual uses, in plain language. Each term links to the page that 
 
 ## P
 
+- **Pay later**: a checkout option where the customer pays offline after buying; what they owe is tracked as a transaction. See [Payment providers](commerce/payment-providers.md).
+- **Pay link**: the link in an invoice or reminder that pays it without signing in. It expires after 60 days. See [Invoices and receipts](commerce/invoices-and-receipts.md).
+- **Payment**: one attempt to take money through the checkout, successful or not. Payments can be refunded. See [Payments and refunds](commerce/payments-and-refunds.md).
 - **Permission**: the right to do one thing, such as *Manage Contact Center queues*. Roles are bundles of permissions. See [Roles and permissions](getting-started/roles-and-permissions.md).
 - **Power dialing**, **Preview dialing**, **Progressive dialing**: see *Dialer modes*.
 - **Presence**: whether an agent can take work right now: **Available**, a reason such as *Lunch*, or **Offline**. See [Agent workspace](agent-workspace.md).
@@ -129,6 +138,8 @@ The words this manual uses, in plain language. Each term links to the page that 
 ## R
 
 - **Reason code**: see *Agent state*.
+- **Receipt**: proof of a payment, numbered such as *R-1001*, sent to the customer after every payment. See [Invoices and receipts](commerce/invoices-and-receipts.md).
+- **Refund**: money given back to a customer for a payment, in full or in part. See [Payments and refunds](commerce/payments-and-refunds.md).
 - **Role**: a named bundle of permissions, such as Agent or Supervisor, given to users. See [Roles and permissions](getting-started/roles-and-permissions.md).
 - **Routing strategy**: how a queue picks the next agent: longest idle, round robin, or least busy. See [Queues](queues.md).
 
@@ -139,13 +150,16 @@ The words this manual uses, in plain language. Each term links to the page that 
 - **Shared voicemail**: a queue's voicemail box, which the team works together. See [Voicemail](voicemail.md).
 - **Skill**: something an agent can do, such as *Spanish* or *Billing*, with a proficiency from 1 to 5. Queues can require or prefer skills. See [Skills and agent entitlements](skills-and-entitlements.md).
 - **Soft phone**: the phone in your browser, run in the browser extension or the Windows app, where agents make and take calls. See [Soft phone](soft-phone.md).
+- **Stripe**: the payment service the site uses to take cards, Apple Pay and Google Pay. See [Payment providers](commerce/payment-providers.md).
 - **Subject**: what a call or message is about, such as *Support request*, with the fields the agent fills in. It is inbound or outbound. See [Subjects](subjects.md).
 - **Subject flow**: what happens after each disposition of a subject: finish, try again later, or create a new activity. See [Subject flows](subject-flows.md).
+- **Subscription**: a plan a customer pays for every month or year until they cancel. See [Subscriptions](commerce/subscriptions.md).
 - **Supervisor**: a team lead who watches the queues, helps on live calls and reads reports. Also the name of a built-in role. See [Roles and permissions](getting-started/roles-and-permissions.md).
 
 ## T
 
 - **Tool**: an action the AI can take during a conversation, such as searching your content or calling another system. See [Tools and agents](ai/tools-and-agents.md).
+- **Transaction**: a payment a customer owes you, such as a Pay Later order or a scheduled payment of an installment plan, with what has been paid so far. See [Transactions](commerce/transactions.md).
 - **Transfer**: handing a call to someone else. **Blind** hands it over at once; **warm** lets you talk to the person first. See [Placing and handling calls](calls.md).
 
 ## V

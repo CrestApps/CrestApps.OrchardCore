@@ -393,6 +393,7 @@ html[data-manual='technical'] .navbar__link--active {
 .sidebar-icon--shield-check { --sidebar-icon: url('/img/icons/shield-check.svg'); }
 .sidebar-icon--sliders-horizontal { --sidebar-icon: url('/img/icons/sliders-horizontal.svg'); }
 .sidebar-icon--hexagon-nodes { --sidebar-icon: url('/img/icons/hexagon-nodes.svg'); }
+.sidebar-icon--shopping-cart { --sidebar-icon: url('/img/icons/shopping-cart.svg'); }
 .sidebar-icon--tags { --sidebar-icon: url('/img/icons/tags.svg'); }
 
 /* ---------- Table of contents ---------- */

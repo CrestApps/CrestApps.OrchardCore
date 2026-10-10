@@ -24,7 +24,7 @@ The module ships several composable features:
 | --- | --- | --- |
 | Subscriptions | `CrestApps.OrchardCore.Subscriptions` | Subscription plans, the durable agreement, its lifecycle, entitlements, and the admin and customer screens. Depends on the [Checkout](checkout) framework. |
 | Subscriptions - Sites | `CrestApps.OrchardCore.Subscriptions.Tenants` | Sells whole Orchard Core sites, provisioning each from a durable job (default tenant only). |
-| Subscriptions - Installment Plans | `CrestApps.OrchardCore.Subscriptions.Installments` | Payment plans an administrator sets up for a customer: a down payment taken by card, then a fixed number of scheduled payments. See [Installment plans](#installment-plans). |
+| Subscriptions - Installment Plans | `CrestApps.OrchardCore.Subscriptions.Installments` | Payment plans an administrator sets up for a customer: a down payment taken by card, then a fixed number of scheduled payments. See [Installment Plans](installment-plans). |
 
 Payment options are contributed by other modules rather than by dedicated Subscriptions sub-features:
 
@@ -258,55 +258,13 @@ A site sold this way carries a `Tenant` entitlement naming it, so the site runs 
 
 ## Installment plans
 
-**Subscriptions - Installment Plans** lets an administrator sell something on a payment plan without the customer
-going through the storefront — over the phone or at a counter. It needs a payment provider that can keep a card
-for later charges and show its card form on the page; the [Stripe](payments) provider does both.
+**Subscriptions - Installment Plans** lets an administrator sell something on a payment plan from one admin screen, without the customer going through the storefront:
 
-From **Subscriptions → Installment Plans → New plan** the administrator:
+- a down payment taken by card (or Apple Pay / Google Pay) on the spot;
+- a fixed number of equal payments after it, weekly, every two weeks, monthly or quarterly;
+- each payment either charged to the kept card on its due date, with retries, or invoiced to the customer with a pay link.
 
-1. Picks the customer, or enters a name and email to create their account. A new account has no password; the
-   customer sets one with **Forgot password** when they want to sign in.
-2. Enters the **total**, the **down payment** collected today, the **number of payments** after it, how often they
-   fall due (weekly, every two weeks, monthly, or quarterly) and the **first due date**. The page previews the
-   schedule as it is typed.
-3. Chooses how the later payments are collected: **charge the card on each due date**, or **invoice the customer**,
-   who pays each one from **My Transactions**.
-4. Enters the customer's card on the next page. The down payment is charged at once and, when the plan charges
-   the card, the card is kept for the schedule.
-
-The remaining balance is split into equal payments at the currency's precision; the last absorbs the rounding, so
-the schedule always adds up to the total exactly. Monthly and quarterly payments are counted from the first due
-date, so a plan that starts on the 31st falls on the last day of a short month and returns to the 31st afterwards.
-
-### How a plan runs
-
-Every payment on a plan, the down payment included, is an ordinary [transaction](transactions) with the source
-`installment-plan`, and every charge goes through the [Checkout](checkout) engine. So the payments appear in the
-Transactions report and in the customer's **My Transactions**, can be paid early or recorded by hand, are
-verified against the gateway, and can be refunded from **Commerce → Payments**, like any other payment.
-
-Nothing is scheduled until the down payment is received. A background task then runs every 15 minutes:
-
-- A payment the card is charged for is charged on its due date, once. A charge still settling at the gateway is
-  finished, never repeated.
-- A declined card is retried after the days set under **Settings → Subscriptions → Installment Plans** (by default
-  1, 3 and 5 days), and the customer is told each time. After the last retry the payment becomes an outstanding
-  balance the customer pays themselves, and the [overdue reminders](transactions#reminders) take over.
-- A payment that is invoiced becomes outstanding on its due date.
-- The plan is **Active**, **Past due** when a charge failed or an invoiced payment is overdue, and **Completed**
-  once every payment is received.
-
-With the **Transaction Reminders** feature enabled, the customer is told a few days before each payment falls
-due; a payment that will be charged names the card. With **Payment Receipts** enabled, they get a receipt after
-each payment.
-
-The plan's page shows every payment and where it stands, the card on file and its expiry, and the plan's history.
-From there an administrator can **Charge now** (to collect early, or retry a declined card at once) and
-**Cancel the plan**, which cancels every payment not yet received. Both ask for confirmation first, and a customer
-whose plan had started is told when it is canceled. A declined early charge leaves the payment on schedule, so it is
-still charged on its due date. Managing plans requires the
-**Manage installment plans** permission, granted to administrators by default; it is separate from the other
-subscription permissions because it charges customers' saved cards.
+Every payment is an ordinary [transaction](transactions) and every charge goes through the [Checkout](checkout) engine. Configuration, the payment lifecycle, the double-charge safeguards and the extension points are described on their own page: [Installment Plans](installment-plans).
 
 ## Payment safety and multi-instance operation
 

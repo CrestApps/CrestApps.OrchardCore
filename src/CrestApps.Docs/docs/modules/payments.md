@@ -179,7 +179,7 @@ Beyond the subscription-specific endpoints, Stripe also registers a **generic `I
 ### Saved cards and charges without the customer
 
 The provider also keeps a card for later and charges it without the customer present, which is what
-[installment plans](subscriptions#installment-plans) are built on (`SupportsSavedPaymentMethods`). Both are asked
+[installment plans](installment-plans) are built on (`SupportsSavedPaymentMethods`). Both are asked
 for through the provider-neutral `CheckoutPaymentDataKeys` on an ordinary checkout begin:
 
 - **`savePaymentMethod`** — the browser tokenizes the card first; the PaymentIntent is created for a Stripe
