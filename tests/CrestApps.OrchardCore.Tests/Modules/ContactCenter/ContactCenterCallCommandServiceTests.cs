@@ -101,6 +101,34 @@ public sealed class ContactCenterCallCommandServiceTests
             Times.Never);
     }
 
+    // A preview record offered before its dialer profile was turned off used to be dialed anyway when the agent
+    // accepted it. A turned-off profile places no calls, so the offer is canceled and the record goes back to its queue.
+    [Fact]
+    public async Task AcceptInboundOfferAsync_WhenPreviewDialProfileWasTurnedOff_CancelsTheOfferWithoutDialing()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupPreviewDialAttempt(profileEnabled: false);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        harness.ReservationService.Verify(
+            service => service.CancelAsync("r1", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.DialerAttemptService.Verify(
+            attemptService => attemptService.TryDialAsync(It.IsAny<DialerProfile>(), It.IsAny<ActivityReservation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ReservationService.Verify(
+            service => service.AcceptAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     // A queued callback has no dialer profile of its own: it is dialed with the platform's built-in callback profile,
     // from the default caller id, and the caller who asked for it is never refused as do-not-call.
     [Fact]
@@ -961,12 +989,13 @@ public sealed class ContactCenterCallCommandServiceTests
         };
     }
 
-    private static DialerProfile CreatePreviewDialProfile()
+    private static DialerProfile CreatePreviewDialProfile(bool enabled = true)
     {
         return new DialerProfile
         {
             ItemId = "profile-1",
             Mode = DialerMode.Preview,
+            Enabled = enabled,
         };
     }
 
@@ -1146,7 +1175,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 .Returns(ValueTask.CompletedTask);
         }
 
-        public void SetupPreviewDialAttempt()
+        public void SetupPreviewDialAttempt(bool profileEnabled = true)
         {
             ActivityManager
                 .Setup(manager => manager.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
@@ -1154,7 +1183,7 @@ public sealed class ContactCenterCallCommandServiceTests
 
             DialerProfileReader
                 .Setup(manager => manager.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(CreatePreviewDialProfile());
+                .ReturnsAsync(CreatePreviewDialProfile(profileEnabled));
 
             DialerAttemptService
                 .Setup(service => service.TryDialAsync(

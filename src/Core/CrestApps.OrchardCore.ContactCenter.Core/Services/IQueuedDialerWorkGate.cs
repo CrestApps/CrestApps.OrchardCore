@@ -13,9 +13,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface IQueuedDialerWorkGate
 {
     /// <summary>
-    /// Holds back a waiting campaign record that may not be dialed now: one scheduled for later or still cooling down
-    /// after its last attempt goes to the back of its queue, and one that has used every attempt its dialer profile
-    /// allows is taken out of the queue and completed by the dialer.
+    /// Holds back a waiting campaign record that may not be dialed now: one whose dialer profile is turned off, scheduled
+    /// for later or still cooling down after its last attempt goes to the back of its queue, and one that has used every
+    /// attempt its dialer profile allows is taken out of the queue and completed by the dialer.
     /// </summary>
     /// <param name="queueItem">The waiting item routing is about to offer.</param>
     /// <param name="utcNow">The current time.</param>

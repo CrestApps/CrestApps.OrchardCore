@@ -23,7 +23,7 @@
         <div class="form-check">
             <input asp-for="Enabled" class="form-check-input" />
             <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
-            <span class="hint dashed">@T["When turned off, this profile places no calls and is skipped by the pacing engine."]</span>
+            <span class="hint dashed">@T["When turned off, this profile places no calls: the pacing engine skips it, and the records loaded under it are not offered to agents until it is turned back on."]</span>
         </div>
     </div>
 </div>
