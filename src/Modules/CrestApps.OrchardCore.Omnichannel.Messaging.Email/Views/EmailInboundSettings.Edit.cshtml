@@ -37,7 +37,7 @@ else
 
 <div class="mb-3">
     <label asp-for="MailgunSigningKey" class="form-label">@T["Mailgun HTTP webhook signing key"]</label>
-    <input asp-for="MailgunSigningKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasMailgunSigningKey ? T["Stored; leave empty to keep it"] : string.Empty)" />
+    <input asp-for="MailgunSigningKey" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasMailgunSigningKey ? T["Stored; leave empty to keep it"] : string.Empty)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
     <span class="hint">@T["When set, a Mailgun call must also carry a valid signature. Find it in Mailgun under Sending > Webhooks."]</span>
     @if (Model.HasMailgunSigningKey)
     {
