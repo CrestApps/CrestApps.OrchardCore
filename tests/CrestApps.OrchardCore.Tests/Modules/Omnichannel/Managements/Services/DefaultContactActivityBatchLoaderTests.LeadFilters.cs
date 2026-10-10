@@ -93,12 +93,12 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
     }
 
     [Fact]
-    public async Task LoadAsync_WhenAListAndAnOwnerArePicked_LoadsOnlyLeadsMatchingBoth()
+    public async Task LoadAsync_WhenAnImportedFileAndAnOwnerArePicked_LoadsOnlyLeadsMatchingBoth()
     {
         // Arrange
-        // Every lead filter narrows the load. A lead on the right list but owned by somebody else, or owned by the
-        // right person but on another list, is not part of "list X owned by Z".
-        var databasePath = DatabasePath("leads-list-owner");
+        // Every lead filter narrows the load. A lead from the right file but owned by somebody else, or owned by the
+        // right person but from another file, is not part of "file X owned by Z".
+        var databasePath = DatabasePath("leads-import-owner");
         var connectionString = $"Data Source={databasePath};Pooling=False";
         var store = await CreateStoreAsync(connectionString);
 
@@ -108,16 +108,17 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
 
             await using (var seedSession = store.CreateSession())
             {
-                matchingLeadId = await SaveLeadAsync(seedSession, "5556680001", OpenStatusId, listName: "Spring Import", ownerId: "owner-z");
-                await SaveLeadAsync(seedSession, "5556680002", OpenStatusId, listName: "Spring Import", ownerId: "owner-y");
-                await SaveLeadAsync(seedSession, "5556680003", OpenStatusId, listName: "Trade Show Scans", ownerId: "owner-z");
+                matchingLeadId = await SaveLeadAsync(seedSession, "5556680001", OpenStatusId, importEntryIds: ["spring-import", "older-import"], ownerId: "owner-z");
+                await SaveLeadAsync(seedSession, "5556680002", OpenStatusId, importEntryIds: ["spring-import"], ownerId: "owner-y");
+                await SaveLeadAsync(seedSession, "5556680003", OpenStatusId, importEntryIds: ["trade-show-scans"], ownerId: "owner-z");
+                await SaveLeadAsync(seedSession, "5556680004", OpenStatusId, ownerId: "owner-z");
 
                 await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             var batch = NewLeadBatch(new LeadBatchFilter
             {
-                ListName = "Spring Import",
+                ImportEntryId = "spring-import",
                 OwnerId = "owner-z",
             });
 
@@ -150,7 +151,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         string nationalNumber,
         string statusId,
         bool isClosed = false,
-        string listName = null,
+        string[] importEntryIds = null,
         string ownerId = null)
     {
         return SaveContactAsync(
@@ -161,7 +162,9 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             {
                 part.StatusId = statusId;
                 part.IsClosed = isClosed;
-                part.ListName = new TextField { Text = listName };
+                part.Imports = (importEntryIds ?? [])
+                    .Select(entryId => new LeadImport { EntryId = entryId, FileName = $"{entryId}.csv", ImportedUtc = DateTime.UtcNow })
+                    .ToList();
                 part.Owner = new UserPickerField { UserIds = ownerId is null ? [] : [ownerId] };
             });
     }

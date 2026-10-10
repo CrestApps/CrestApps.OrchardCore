@@ -42,12 +42,12 @@
         </div>
 
         <div class="ocat-wrapper">
-            <label asp-for="ListName" class="ocat-label">@T["List"]</label>
+            <label asp-for="ImportEntryId" class="ocat-label">@T["Imported file"]</label>
             <div class="ocat-end">
-                <select asp-for="ListName" asp-items="Model.Lists" class="selectpicker show-tick" data-live-search="true" data-none-results-text="@T["No list matches {0}"].Value">
-                    <option value="">@T["Any list"]</option>
+                <select asp-for="ImportEntryId" asp-items="Model.Imports" class="selectpicker show-tick" data-live-search="true" data-none-results-text="@T["No imported file matches {0}"].Value">
+                    <option value="">@T["Any imported file"]</option>
                 </select>
-                <span class="hint">@T["Load only the leads of this list, for example a file imported earlier."]</span>
+                <span class="hint">@T["Load only the leads imported from this file. A lead imported from more than one file is part of each one."]</span>
             </div>
         </div>
 

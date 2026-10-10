@@ -258,6 +258,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email
 {
     public static class EmailChannelConstants
     {
+        public const string ChannelName = "Email";
         public const string DeliverabilityCollectionName = "EmailDelivery";
         public const string DeliveryEventsInboxHandlerName = "email-delivery-events";
         public const string DeliveryEventsRoute = "api/omnichannel/email/events/{provider}";

@@ -61,7 +61,7 @@ public sealed class ActivityBatchClonerTests
         var copy = ActivityBatchCloner.CreateCopy(source, NewBatch(), "Copy");
 
         Assert.True(copy.TryGet<LeadBatchFilter>(out var filter));
-        Assert.Equal("Purchased list", filter.ListName);
+        Assert.Equal("purchased-list-import", filter.ImportEntryId);
         Assert.Equal(["status-1"], filter.StatusIds);
         Assert.True(copy.TryGet<LeadAIConversionSettings>(out var conversion));
         Assert.True(conversion.Enabled);
@@ -164,7 +164,7 @@ public sealed class ActivityBatchClonerTests
 
         source.Put(new LeadBatchFilter
         {
-            ListName = "Purchased list",
+            ImportEntryId = "purchased-list-import",
             StatusIds = ["status-1"],
         });
         source.Put(new LeadAIConversionSettings

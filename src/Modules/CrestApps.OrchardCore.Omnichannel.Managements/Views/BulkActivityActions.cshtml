@@ -176,14 +176,8 @@
                         }
                     </select>
                     <div class="form-text">
-                        @T["Applying a dialer profile sets the activity source to that profile's dialing mode and makes the activities agent-handled calls. Each activity keeps its current campaign."]
+                        @T["Applying a dialer profile sets the activity source to that profile's dialing mode, makes the activities agent-handled calls, and queues them for the dialer on their current campaign. Each activity keeps its campaign, which must not already have records waiting under another dialer profile. Their assignment is cleared: the dialer offers each one to whichever agent signed in to the campaign is free."]
                     </div>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="clear-assignment-for-profile" name="ClearCurrentAssignment" value="true" checked>
-                    <label class="form-check-label" for="clear-assignment-for-profile">
-                        @T["Clear assignment and reservation state"]
-                    </label>
                 </div>
             </div>
 

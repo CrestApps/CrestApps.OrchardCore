@@ -3711,10 +3711,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterActivityDialerContributor : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor
     {
-        public ContactCenterActivityDialerContributor(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileManager dialerProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService activityQueueService) { }
+        public ContactCenterActivityDialerContributor(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileManager dialerProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService activityQueueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager) { }
         public System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterActivityWriter : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter
     {

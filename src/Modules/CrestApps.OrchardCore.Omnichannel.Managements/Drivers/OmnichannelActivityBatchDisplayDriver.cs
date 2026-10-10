@@ -490,17 +490,31 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["The selected campaign is invalid."]);
         }
-        else if (string.IsNullOrWhiteSpace(model.CampaignId) &&
-            string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase) &&
-            !string.IsNullOrWhiteSpace(model.SubjectContentType))
+        else if (string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
         {
-            // Dialer activities are queued on their campaign's queue, and agents sign in to the campaign to
-            // receive them, so a dialer load needs a campaign: its own, or the subject's default one.
-            var subjectFlowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
+            var dialerCampaignId = model.CampaignId;
 
-            if (subjectFlowSettings is not null && string.IsNullOrWhiteSpace(subjectFlowSettings.CampaignId))
+            if (string.IsNullOrWhiteSpace(dialerCampaignId) && !string.IsNullOrWhiteSpace(model.SubjectContentType))
             {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["A campaign is required for dialer activity loads because the selected subject has no default campaign."]);
+                // Dialer activities are queued on their campaign's queue, and agents sign in to the campaign to
+                // receive them, so a dialer load needs a campaign: its own, or the subject's default one.
+                var subjectFlowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(model.SubjectContentType);
+
+                if (subjectFlowSettings is not null && string.IsNullOrWhiteSpace(subjectFlowSettings.CampaignId))
+                {
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.CampaignId), S["A campaign is required for dialer activity loads because the selected subject has no default campaign."]);
+                }
+
+                dialerCampaignId = subjectFlowSettings?.CampaignId;
+            }
+
+            // A campaign's waiting records are worked under one dialer profile, so records loaded under another one
+            // behind them were never dialed.
+            var conflicts = await _optionsProvider.FindDialerProfileConflictsAsync(dialerCampaignId, model.DialerProfileId);
+
+            if (conflicts.Count > 0)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.DialerProfileId), S["The campaign already has records waiting under {0}. A campaign's waiting records must all use one dialer profile, so load these with that profile or into another campaign.", DialerCampaignProfileGuard.Describe(conflicts)]);
             }
         }
 

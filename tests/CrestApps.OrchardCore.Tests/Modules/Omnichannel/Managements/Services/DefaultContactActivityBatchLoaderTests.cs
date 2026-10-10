@@ -1077,6 +1077,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             CreateContactIndexProvider(),
             new OmnichannelActivityIndexProvider(),
             new LeadIndexProvider(),
+            new LeadImportIndexProvider(),
         ]);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
@@ -1147,6 +1148,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             collection: OmnichannelConstants.CollectionName);
 
         await CrmMigrations.CreateLeadIndexAsync(schemaBuilder);
+        await CrmMigrations.CreateLeadImportIndexAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

@@ -80,6 +80,64 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
         Assert.True(context.Updater.ModelState.IsValid);
     }
 
+    // A campaign's waiting records are worked under the profile of the one at the head of its queue, so records loaded
+    // under a second profile behind another profile's records were never dialed. The editor refuses such a load.
+    [Fact]
+    public async Task UpdateAsync_DialerLoad_WhenCampaignHasRecordsWaitingUnderAnotherProfile_AddsProfileError()
+    {
+        // Arrange
+        var driver = CreateDriver(
+            subjectDefaultCampaignId: null,
+            new ActivityDialerWaitingRecord { ActivityId = "waiting-1", ProfileId = "preview-profile" });
+        var context = PostedFormUpdateModel.CreateContext(NewDialerModel(campaignId: CampaignId), isNew: true);
+
+        // Act
+        await driver.UpdateAsync(new OmnichannelActivityBatch(), context);
+
+        // Assert
+        Assert.Contains(DialerProfileErrors(context), error => error.Contains("one dialer profile", StringComparison.Ordinal));
+    }
+
+    // The campaign a blank load falls back to is checked the same way.
+    [Fact]
+    public async Task UpdateAsync_DialerLoadWithoutCampaign_WhenSubjectCampaignHasRecordsWaitingUnderAnotherProfile_AddsProfileError()
+    {
+        // Arrange
+        var driver = CreateDriver(
+            subjectDefaultCampaignId: CampaignId,
+            new ActivityDialerWaitingRecord { ActivityId = "waiting-1", ProfileId = "preview-profile" });
+        var context = PostedFormUpdateModel.CreateContext(NewDialerModel(campaignId: null), isNew: true);
+
+        // Act
+        await driver.UpdateAsync(new OmnichannelActivityBatch(), context);
+
+        // Assert
+        Assert.NotEmpty(DialerProfileErrors(context));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DialerLoad_WhenCampaignHasRecordsWaitingUnderTheSameProfile_AddsNoProfileError()
+    {
+        // Arrange
+        var driver = CreateDriver(
+            subjectDefaultCampaignId: null,
+            new ActivityDialerWaitingRecord { ActivityId = "waiting-1", ProfileId = DialerProfileId });
+        var context = PostedFormUpdateModel.CreateContext(NewDialerModel(campaignId: CampaignId), isNew: true);
+
+        // Act
+        await driver.UpdateAsync(new OmnichannelActivityBatch(), context);
+
+        // Assert
+        Assert.Empty(DialerProfileErrors(context));
+        Assert.True(context.Updater.ModelState.IsValid);
+    }
+
+    private static IEnumerable<string> DialerProfileErrors(UpdateEditorContext context)
+        => context.Updater.ModelState
+            .Where(entry => entry.Key.EndsWith(nameof(OmnichannelActivityBatchViewModel.DialerProfileId), StringComparison.Ordinal))
+            .SelectMany(entry => entry.Value.Errors)
+            .Select(error => error.ErrorMessage);
+
     private static IEnumerable<string> CampaignErrors(UpdateEditorContext context)
         => context.Updater.ModelState
             .Where(entry => entry.Key.EndsWith(nameof(OmnichannelActivityBatchViewModel.CampaignId), StringComparison.Ordinal))
@@ -107,7 +165,7 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
         return options;
     }
 
-    private static OmnichannelActivityBatchDisplayDriver CreateDriver(string subjectDefaultCampaignId)
+    private static OmnichannelActivityBatchDisplayDriver CreateDriver(string subjectDefaultCampaignId, params ActivityDialerWaitingRecord[] waitingRecords)
     {
         var sourceOptions = new ActivityBatchSourceOptions();
         sourceOptions.AddSource(ActivitySources.Dialer, entry => entry.RequiresUserAssignment = false);
@@ -129,7 +187,7 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
 
         var optionsProvider = new BulkActivityAdminFormOptionsProvider(
             Mock.Of<ICatalogManager<OmnichannelCampaign>>(),
-            [new StubDialerContributor()],
+            [new StubDialerContributor(waitingRecords)],
             Options.Create(new ActivitySourceOptions()),
             Options.Create(new ActivityChannelOptions()),
             new PassThroughStringLocalizer<BulkActivityAdminFormOptionsProvider>());
@@ -160,6 +218,13 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
     /// </summary>
     private sealed class StubDialerContributor : IActivityDialerContributor
     {
+        private readonly IReadOnlyCollection<ActivityDialerWaitingRecord> _waitingRecords;
+
+        public StubDialerContributor(IReadOnlyCollection<ActivityDialerWaitingRecord> waitingRecords)
+        {
+            _waitingRecords = waitingRecords;
+        }
+
         public Task<IEnumerable<ActivityDialerProfileDescriptor>> GetProfilesAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IEnumerable<ActivityDialerProfileDescriptor>>([]);
 
@@ -172,6 +237,9 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
                     ActivitySource = ActivitySources.Dialer,
                 }
                 : null);
+
+        public Task<IReadOnlyCollection<ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, CancellationToken cancellationToken = default)
+            => Task.FromResult(campaignId == CampaignId ? _waitingRecords : []);
 
         public Task EnqueueAsync(
             string activityId,

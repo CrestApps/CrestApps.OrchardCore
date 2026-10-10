@@ -79,6 +79,25 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
             return false;
         }
 
+        // A turned-off profile places no calls. Its records used to be offered to agents anyway -- the pacer skips a
+        // disabled profile, but agent-driven (Preview and Manual) inventory is offered by routing, which never looked.
+        // They wait at the back of the queue, untouched, until the profile is turned back on.
+        if (!profile.Enabled)
+        {
+            await SendToBackAsync(queueItem, utcNow, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Held back campaign record '{ActivityId}' in queue '{QueueId}' without reserving an agent: dialer profile '{Profile}' is turned off.",
+                    activity.ItemId.SanitizeLogValue(),
+                    queueItem.QueueId.SanitizeLogValue(),
+                    profile.Name);
+            }
+
+            return true;
+        }
+
         var workState = await _workStateService.GetAsync(activity.ItemId, cancellationToken);
         var nextAttempt = ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
         var lastInteraction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
@@ -107,8 +126,7 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
             return false;
         }
 
-        queueItem.EnqueuedUtc = utcNow;
-        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+        await SendToBackAsync(queueItem, utcNow, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
@@ -120,6 +138,12 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
         }
 
         return true;
+    }
+
+    private async Task SendToBackAsync(QueueItem queueItem, DateTime utcNow, CancellationToken cancellationToken)
+    {
+        queueItem.EnqueuedUtc = utcNow;
+        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
     }
 
     private async Task<bool> TakeOutExhaustedAsync(
