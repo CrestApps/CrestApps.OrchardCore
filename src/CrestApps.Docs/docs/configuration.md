@@ -1554,8 +1554,8 @@ The phone number verification providers have no configuration section. Set them 
 | **Feature** | Report Builder |
 | **Controls** | The size limits of one designed report run |
 
-Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`) and
-`MaxFilterOptions` (`500`).
+Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`),
+`MaxFilterOptions` (`500`), `MaxJoinKeys` (`10000`) and `JoinKeyBatchSize` (`500`).
 
 ```json
 {

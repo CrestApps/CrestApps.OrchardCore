@@ -41,13 +41,31 @@ The builder is split over the three Reports layers, so the engine can be reused 
 A run goes through these steps:
 
 1. **Plan.** Every data set's schema is read with the principal the run reads data for. A data set the principal may not read fails the plan. Joins, calculated fields, columns, filters, sorts and the limit are checked, and every problem is reported at once.
-2. **Read.** Each data source returns only the fields the query uses, up to the row limit. Row filters on data sets that no outer join can fill with empty values are offered to the source as `ReportDataCondition`s, which it may apply to read less; the engine always applies every filter again.
+2. **Read.** Each data source returns only the fields the query uses, up to the row limit, newest first. Row filters on data sets that no outer join can fill with empty values are offered to the source as `ReportDataCondition`s, which it may apply to read less; the engine always applies every filter again. Data sets are read in join order: a joined data set is read only for the keys the rows before it hold (see [Large data](#large-data)).
 3. **Join.** Data sets are hash-joined in order (inner, left, right or full). Keys of different types (text and number) are compared as text; empty keys never match.
 4. **Calculate, filter, group.** Row-level calculated fields are evaluated, then fixed filters, then the exposed filters with the viewer's values. When any column is a measure, rows are grouped by the dimension columns.
 5. **Shape.** Result filters, sorts, the row limit and the result-size limit are applied.
 6. **Render.** Visuals regroup the rows behind the result by fewer dimensions (charts, metrics, pivot tables, totals), so non-additive measures such as averages and distinct counts stay correct.
 
-All processing runs in memory over the rows the sources return, so every source gets joins, formulas and aggregation without implementing them.
+Processing runs in memory over the rows the sources return, so every source gets joins, formulas and aggregation without implementing them. Sources can take on part of the work to handle large data, as described next.
+
+## Large data
+
+The engine reads each data set up to `MaxRowsPerDataSet` rows (newest first) and warns when a data set has more. Four mechanisms keep large data sets fast and complete:
+
+1. **A date filter from the start.** Data sets name their main date (`ReportDataSetDescriptor.DefaultDateField`, such as when a record was created). When the first data set of a new report has one, the builder adds a filter on it that viewers see as a **recent period** (today, the last 7, 30 or 90 days, the last 12 months, or all time), starting at the last 30 days. Relative date filters (in the last or next N days) are passed to the sources as a date range, so they read only that period.
+2. **Grouping in the data source.** A report over one data set that groups by fields or date periods and counts, sums, averages, or takes the smallest or largest values can be answered by its source (`IReportAggregateDataSource`). The source returns per group the row count and the count, sum, smallest and largest value of each measured field; the engine merges these partial aggregates wherever it would aggregate rows, so sorting, result filters, totals, charts and pivots give the same result as reading every row. Row filters are sent as exact conditions and date periods as UTC boundaries of local hours, days or months. Whatever a source cannot answer exactly (a computed field, a text "contains" filter, a median or distinct count, a calculated field, an exposed filter that lists options) is read row by row as before. `ReportIndexAggregator` answers such a query with one `GROUP BY` statement over a YesSql index table; Omnichannel activities and the Contact Center data sets use it for the fields their index holds.
+3. **Joins read only what can match.** For an inner or left join on a field the source can filter exactly (`ReportFieldDescriptor.IsKeyFilterable`), the engine sends the distinct keys of the rows before it as an `IN` condition marked `IsJoinKey`, in batches of `JoinKeyBatchSize` up to `MaxJoinKeys` keys. The joined data set then reads the records that can match instead of its newest records. Users, content items, Omnichannel activities, Contact Center records, AI chat sessions and messaging conversations and messages filter their key columns this way; a join with more keys, or on another field, reads the joined data set in full.
+4. **Scheduled views.** A view can refresh every 15 minutes, hour, 6 hours or day instead of running every time a report reads it (see [Scheduled views](#scheduled-views)).
+
+## Scheduled views
+
+A view's **Refresh** setting (`ReportView.RefreshIntervalMinutes`, `0` for live) stores its result:
+
+- The **Report view refresh** background task runs every 5 minutes and refreshes each due view in its own scope, with a distributed lock so two nodes never refresh the same view. A failed refresh keeps the previous rows and records the error. Tenants can turn the task off under **Background Tasks**.
+- A scheduled view runs with its **owner's** current access, since there is no reader at refresh time; it does not refresh when its owner is deleted or disabled or can no longer read it. Reports that read the view still need to be allowed to read it and to plan its query, but they get the rows the owner's access produced. Schedule only views whose data everyone who can read the view may see.
+- Reports read the stored rows (at most `MaxRowsPerDataSet`) while the stored fields match the view. Editing the view's query, switching it to live, or importing a changed view drops the stored rows, and reports run the view live until the next refresh.
+- **Refresh now** (`POST /Admin/reports/views/{id}/refresh`) refreshes a view at once and returns its status.
 
 ### Time zones
 
@@ -119,7 +137,9 @@ The size limits of one run can be changed in the host's `appsettings.json` (a te
             "MaxRowsPerDataSet": 50000,
             "MaxJoinedRows": 250000,
             "MaxResultRows": 10000,
-            "MaxFilterOptions": 500
+            "MaxFilterOptions": 500,
+            "MaxJoinKeys": 10000,
+            "JoinKeyBatchSize": 500
           },
           "Versions": {
             "MaxVersions": 50
@@ -138,6 +158,8 @@ OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=50000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxJoinedRows=250000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxResultRows=10000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxFilterOptions=500
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxJoinKeys=10000
+OrchardCore__CrestApps__Reports__Builder__Limits__JoinKeyBatchSize=500
 OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 ```
 
@@ -147,6 +169,8 @@ OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 | `MaxJoinedRows` | `250000` | Rows the joins may produce. |
 | `MaxResultRows` | `10000` | Result rows kept after sorting. |
 | `MaxFilterOptions` | `500` | Values listed by a drop-down filter. |
+| `MaxJoinKeys` | `10000` | Distinct keys a join sends to the data set it joins; with more, that data set is read in full. |
+| `JoinKeyBatchSize` | `500` | Keys sent in one read of a joined data set. |
 | `Versions:MaxVersions` | `50` | Published versions kept per report; the oldest are deleted. `0` keeps them all. |
 
 ## Adding a data source

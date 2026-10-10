@@ -42,6 +42,8 @@ People who only run reports that were shared with them need no permission: they 
 
 Drag a column along the **Columns** shelf to move it. Click the cross on a column to remove it.
 
+A new report starts filtered on the last 30 days of its first data set's main date, such as when records were created, which keeps reports over a lot of data quick. People who run the report can pick another period; to change the default or remove the filter, click it under **Filters**.
+
 The builder fills the window, and each pane scrolls on its own. Collapse the **Data** pane, the **Properties and visuals** pane, or the **Columns and filters** section to give the preview more room; the builder remembers your choice.
 
 ## Drafts, publishing and versions
@@ -102,7 +104,7 @@ Drag a field onto **Filters**, or click the filter icon next to it, then set it 
 | **Value** | What to compare with. A date without a time covers the whole day. |
 | **Let viewers change this filter** | Shows the filter above the report so the people who run it can change it. The values you set become its defaults. |
 | **Filter label** | The label viewers see. |
-| **Control** | How viewers pick values: **Automatic**, **Text box**, **Drop-down list**, **List with several choices**, **Date range**, **Number range** or **Yes or no**. Lists show the values found in the data. |
+| **Control** | How viewers pick values: **Automatic**, **Text box**, **Drop-down list**, **List with several choices**, **Recent period**, **Date range**, **Number range** or **Yes or no**. Lists show the values found in the data. A **Recent period** offers today, the last 7, 30 or 90 days, the last 12 months, or all time; its **Default period** is what the report opens with. |
 
 Filters that viewers cannot change always apply, and viewers cannot see or remove them.
 
@@ -151,6 +153,8 @@ A view saves a prepared data set (joined, filtered and calculated) so other repo
 1. Open **Reports > Report Views** and click **Add View**.
 2. Design it like a report: add data sets, relationships, calculated fields, filters and columns.
 3. Save it.
+
+A view runs every time a report reads it. For a view over a lot of data, pick a schedule under **Refresh** on its **Settings** tab (every 15 minutes, hour, 6 hours or day): the view's result is stored, and reports read it quickly, as of the last refresh. **Refresh now** updates it at once. A scheduled view reads data with its owner's access, so schedule only views whose data everyone who can use the view may see. The views list shows each view's schedule and when it last refreshed.
 
 In any report, click **Add data set**, pick **Report views** as the data source, and pick your view. Its columns appear as fields. A view cannot use itself, directly or through other views, and a view that a report uses cannot be deleted.
 
