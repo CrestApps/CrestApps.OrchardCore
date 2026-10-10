@@ -43,6 +43,8 @@ const PAGE_GLOBALS = [
     'flatpickr',        // The flatpickr date picker the range picker and query builder decorate.
     'flatpickrCulture', // Created (as a deliberate sloppy-mode global) by Resources' flatpickr-culture.js.
     'confirmDialog',    // Orchard Core's admin theme confirmation dialog, used by the list bulk actions.
+    'Stripe',           // Stripe.js, loaded from js.stripe.com ahead of the Stripe payment scripts.
+    'checkoutPayment',  // The checkout's payment driver (checkout-payment.js), which payment providers register with.
 ];
 
 const KNOWN_GLOBALS = new Set([...LANGUAGE_GLOBALS, ...BROWSER_GLOBALS, ...PAGE_GLOBALS]);

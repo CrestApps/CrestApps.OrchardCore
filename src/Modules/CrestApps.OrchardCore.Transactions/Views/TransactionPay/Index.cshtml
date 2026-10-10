@@ -7,6 +7,10 @@
     var outstanding = $"{transaction.Currency} {CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)}";
 }
 
+<zone Name="Title">
+    <breadcrumb name="TransactionsPay" title="@title" />
+</zone>
+
 <style>
     @@media print {
         .no-print {

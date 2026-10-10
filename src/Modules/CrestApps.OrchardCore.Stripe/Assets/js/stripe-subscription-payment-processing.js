@@ -1,4 +1,5 @@
-stripePaymentProcessing = function () {
+// Exposed on window explicitly: assigning an undeclared name only creates a global in sloppy mode.
+window.stripePaymentProcessing = function () {
 
     const initialize = (options) => {
 
