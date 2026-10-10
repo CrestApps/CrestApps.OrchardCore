@@ -8,7 +8,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="TransactionsPay" title="@title" />
+    <breadcrumb name="TransactionsPay" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(title))" />
 </zone>
 
 <style>
