@@ -96,6 +96,13 @@
     }
 }
 
+@if (!string.IsNullOrWhiteSpace(entry.Error))
+{
+    <span class="badge ta-badge font-weight-normal text-danger text-wrap text-start" data-bs-toggle="tooltip" title="@T["Error"]">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @entry.Error
+    </span>
+}
+
 @if (entry.ProcessSaveUtc.HasValue)
 {
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Last processed at"]">

@@ -57,7 +57,11 @@ public sealed partial class InboundVoiceCallProcessor
     // Which message, if any, the caller hears before they go on, and where they go once it has been said. Nothing is
     // said when the message is empty, and nothing is said to a caller who has nowhere to go afterwards: they are
     // turned away exactly as before, rather than welcomed and then dropped.
-    private EntryPointAnnouncement ResolveAnnouncement(EntryPointRoutingPlan plan, bool hasMenu, bool isDirect, ActivityQueue queue)
+    //
+    // The recording disclosure goes ahead of the message for a caller who goes on to the menu, an agent or a queue,
+    // and is reason enough on its own to announce: a line with no welcome message still tells its callers they are
+    // recorded. A caller sent to voicemail or turned away is not put through to anyone, so is not told.
+    private EntryPointAnnouncement ResolveAnnouncement(EntryPointRoutingPlan plan, bool hasMenu, bool isDirect, ActivityQueue queue, bool discloseRecording)
     {
         var entryPoint = plan?.EntryPoint;
 
@@ -68,7 +72,7 @@ public sealed partial class InboundVoiceCallProcessor
 
         if (plan.IsOpen)
         {
-            if (string.IsNullOrWhiteSpace(entryPoint.WelcomeMessage))
+            if (string.IsNullOrWhiteSpace(entryPoint.WelcomeMessage) && !discloseRecording)
             {
                 LogNoAnnouncement(entryPoint, EntryPointAnnouncement.Welcome);
 
@@ -77,12 +81,22 @@ public sealed partial class InboundVoiceCallProcessor
 
             if (hasMenu)
             {
-                return new EntryPointAnnouncement { Kind = EntryPointAnnouncement.Welcome, Next = EntryPointAnnouncement.NextMenu };
+                return new EntryPointAnnouncement
+                {
+                    Kind = EntryPointAnnouncement.Welcome,
+                    Next = EntryPointAnnouncement.NextMenu,
+                    IncludesDisclosure = discloseRecording,
+                };
             }
 
             if (isDirect || queue is not null)
             {
-                return new EntryPointAnnouncement { Kind = EntryPointAnnouncement.Welcome, Next = EntryPointAnnouncement.NextTarget };
+                return new EntryPointAnnouncement
+                {
+                    Kind = EntryPointAnnouncement.Welcome,
+                    Next = EntryPointAnnouncement.NextTarget,
+                    IncludesDisclosure = discloseRecording,
+                };
             }
 
             LogAnnouncementWithoutDestination(entryPoint, EntryPointAnnouncement.Welcome);
@@ -90,7 +104,9 @@ public sealed partial class InboundVoiceCallProcessor
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(entryPoint.ClosedMessage))
+        var discloseToHeldCaller = discloseRecording && plan.ShouldQueue && queue is not null;
+
+        if (string.IsNullOrWhiteSpace(entryPoint.ClosedMessage) && !discloseToHeldCaller)
         {
             LogNoAnnouncement(entryPoint, EntryPointAnnouncement.Closed);
 
@@ -111,6 +127,7 @@ public sealed partial class InboundVoiceCallProcessor
                 Kind = EntryPointAnnouncement.Closed,
                 Next = EntryPointAnnouncement.NextQueue,
                 QueueId = queue.ItemId,
+                IncludesDisclosure = discloseToHeldCaller,
             };
         }
 
@@ -142,7 +159,7 @@ public sealed partial class InboundVoiceCallProcessor
             interaction.TechnicalMetadata[IvrExecutionService.StateMetadataKey] = new IvrFlowState { Completed = true };
         }
 
-        EntryPointAnnouncement.Schedule(interaction, announcement.Kind, announcement.Next, announcement.QueueId);
+        EntryPointAnnouncement.Schedule(interaction, announcement.Kind, announcement.Next, announcement.QueueId, announcement.IncludesDisclosure);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
         var interactionId = interaction.ItemId;
@@ -169,6 +186,27 @@ public sealed partial class InboundVoiceCallProcessor
         }
 
         return result;
+    }
+
+    // Whether a caller on this entry point is told the call is recorded. Only an entry point's caller is: the
+    // disclosure is said through the entry point's announcement, and a call with no entry point has none, so its
+    // agent is asked to give it instead.
+    private async Task<bool> DisclosesRecordingAsync(EntryPointRoutingPlan plan, CancellationToken cancellationToken)
+    {
+        if (plan?.EntryPoint is null)
+        {
+            return false;
+        }
+
+        foreach (var provider in _disclosureProviders)
+        {
+            if (!string.IsNullOrWhiteSpace(await provider.GetDisclosureAsync(RecordingDisclosureCallType.Inbound, cancellationToken)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void LogNoAnnouncement(ContactCenterEntryPoint entryPoint, string kind)

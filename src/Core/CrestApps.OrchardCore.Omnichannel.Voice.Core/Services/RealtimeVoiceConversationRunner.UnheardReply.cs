@@ -7,15 +7,23 @@ public sealed partial class RealtimeVoiceConversationRunner
 {
     /// <summary>
     /// How long after the caller's reply the provider is given to report hearing it before the assistant asks for
-    /// it again. The provider reports speech a few hundred milliseconds after it begins; a reply it has not
-    /// reported a second after it ended is one it is not going to.
+    /// it again. The provider reports speech a few hundred milliseconds after it begins, so a reply it has not
+    /// reported by now is one it is not going to. Two seconds rather than one: live, at one and a bit, a soft "um"
+    /// before an answer was taken for a missed reply and the question came just as the caller began to answer.
+    /// The reply this exists for went unanswered for seven.
     /// </summary>
-    private static readonly TimeSpan UnheardReplyWait = TimeSpan.FromMilliseconds(1200);
+    private static readonly TimeSpan UnheardReplyWait = TimeSpan.FromSeconds(2);
 
     /// <summary>
     /// How often the unheard-reply watchdog looks. Fine enough that the assistant asks within a breath.
     /// </summary>
     private static readonly TimeSpan UnheardReplyPollInterval = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>
+    /// How late the provider may report a reply heard on the line before that is logged as it running behind.
+    /// Normally under half a second.
+    /// </summary>
+    private static readonly TimeSpan ProviderLagWorthReporting = TimeSpan.FromMilliseconds(1500);
 
     /// <summary>
     /// How many times on one call the assistant asks for a reply it did not catch. A line that keeps producing
@@ -33,6 +41,9 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// Listens for the caller answering after the assistant has finished; see <see cref="CallerReplyListener"/>.
     /// </summary>
     private CallerReplyListener _replyListener;
+
+    // The assistant's last finished line, for the prompt that asks for an answer it did not hear.
+    private string _lastAssistantLine;
 
     /// <summary>
     /// When the provider last reported anything of the caller's turn: its start, or its being committed.
@@ -117,11 +128,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
 
                 await conversation.RequestUnpromptedResponseAsync(
-                    WithSessionInstructions(
-                        "The customer just answered you, but their answer was too short or too faint for you to " +
-                        "hear. Say one short sentence only, asking them to say it again -- after a yes-or-no " +
-                        "question, for example, \"Sorry, was that a yes?\". Do not repeat your whole question, do " +
-                        "not ask anything new, and do not move on."),
+                    WithSessionInstructions(UnheardReplyPrompt(Volatile.Read(ref _lastAssistantLine))),
                     callToken);
             }
         }
@@ -158,6 +165,28 @@ public sealed partial class RealtimeVoiceConversationRunner
             leveler.AverageSpeechGainDb,
             AssistantVoiceLeveler.TargetDbfs,
             leveler.LimitedSamples);
+    }
+
+    /// <summary>
+    /// What the model is asked to say when the caller's answer went unheard.
+    /// </summary>
+    /// <remarks>
+    /// It is told what it last said. Asked only to "say it again", a model that had just read an email address back
+    /// and asked "did I get that right?" asked the caller for the whole address again, and the caller -- who had
+    /// said "yes" -- answered that they had already given it and it had already been confirmed.
+    /// </remarks>
+    /// <param name="lastAssistantLine">The assistant's last line, or <see langword="null"/> when there is none.</param>
+    internal static string UnheardReplyPrompt(string lastAssistantLine)
+    {
+        var asked = string.IsNullOrWhiteSpace(lastAssistantLine)
+            ? string.Empty
+            : $"Your last words to them were: \"{lastAssistantLine.Trim()}\" ";
+
+        return
+            "The customer just answered you, but their answer was too short or too faint for you to hear. " + asked +
+            "Say one short sentence only, asking them to repeat their answer to that -- after a yes-or-no question, " +
+            "simply \"Sorry, was that a yes?\". Do not ask them to repeat anything they told you earlier, do not repeat " +
+            "your whole question, do not ask anything new, and do not move on.";
     }
 
     /// <summary>

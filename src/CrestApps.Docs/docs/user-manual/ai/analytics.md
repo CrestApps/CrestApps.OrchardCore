@@ -26,7 +26,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 | **AI Chat Session Analytics** | How chats with your assistants go: volume, resolution, timing, ratings and token use. |
 | **AI Chat Extracted Data** | The details an assistant collected in each chat, one row per chat. |
 | **AI Chat Conversion Goals** | How each chat scored against the assistant's goals. |
-| **AI Usage Analytics** | Tokens used by every AI request, and the minutes of automated AI phone calls. |
+| **AI Usage Analytics** | Every request sent to an AI service, per model and per feature, and the minutes of automated AI phone calls. |
 
 ## Collect the data
 
@@ -117,16 +117,19 @@ Shows how each finished chat scored against the profile's conversion goals.
 
 ## AI Usage Analytics
 
-Shows what AI used across the whole site: every completion from chats and chat interactions, and the automated AI phone calls.
+Shows what AI used across the whole site: every request sent to an AI service, the completions from chats and chat interactions, and the automated AI phone calls. Use it to see which models and which features your AI budget goes to.
 
-1. Open **Artificial Intelligence > Reports > AI Usage Analytics**.
+1. Open **Reports > Billing & Usage > AI Usage Analytics**. It needs only the **AI Chat** feature, not **AI Chat Session Analytics**.
 2. Choose **From**, **To**, and optionally an **AI profile**.
 3. Choose how to group the figures:
+   - **Group metered usage by**: **Model**, **Model and category** (which feature made the request: chat, SMS, voice calls, the API, workflows) or **Model and purpose** (why: answering, searching, indexing documents, transcribing, and so on).
    - **Group completions by**: **User and model**, **Model**, **Deployment**, **AI profile** or **Connection**.
    - **Group voice calls by**: **Deployment (model)**, **AI profile**, **Campaign**, **Channel**, **Engine** or **Day**.
 4. Click **Show**.
 
-The top tiles show **Provider calls**, **Chat sessions**, **Chat interactions** and **Total tokens**. The table shows, per group, the **Calls**, **Sessions**, **Interactions**, **Input**, **Output** and total **Tokens**, and the **Avg latency**.
+The **Metered usage** table counts every request sent to an AI service, of every kind: chat, embeddings for search, images, speech-to-text, text-to-speech and realtime voice. One answer can take several requests, such as searching your documents, using a tool and writing the reply, and each is counted. Next to the tokens it shows the other things AI services charge for: cached input, reasoning, audio tokens, audio minutes, characters spoken and images. These are the figures to compare with your AI provider's bill.
+
+Under **Chat completions**, the top tiles show **Provider calls**, **Chat sessions**, **Chat interactions** and **Total tokens**. The table shows, per group, the **Calls**, **Sessions**, **Interactions**, **Input**, **Output** and total **Tokens**, and the **Avg latency**.
 
 The **Voice** section covers automated AI phone calls:
 

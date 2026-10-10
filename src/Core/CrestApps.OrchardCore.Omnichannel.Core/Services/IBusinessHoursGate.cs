@@ -2,9 +2,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 /// <summary>
 /// Abstracts the business-hours check used to gate background-initiated sends (such as re-engagement nudges) without
-/// coupling the Omnichannel automation to the module that owns business-hours calendars. A feature that provides
-/// calendars (for example ContactCenter) registers an implementation; when none is registered the automation treats
-/// every moment as open, so the gate degrades gracefully.
+/// coupling the Omnichannel automation to the module that owns business-hours calendars. The Omnichannel Activities
+/// feature registers <see cref="AlwaysOpenBusinessHoursGate"/>, which treats every moment as open, and a feature that
+/// provides calendars (for example the Contact Center business hours) replaces it.
 /// </summary>
 public interface IBusinessHoursGate
 {

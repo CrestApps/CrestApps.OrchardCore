@@ -1556,14 +1556,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     }
     public sealed class ContactCenterRecordingSettings
     {
+        public const int MaxRecordingDisclosureLength = 500;
         public const int MaxRetentionDays = 36500;
         public const int MaxSecurePauseSecondsLimit = 86400;
         public ContactCenterRecordingSettings() { }
         public bool AllowAgentSecurePause { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingConsentModel ConsentModel { get; set; }
+        public bool DiscloseOnAIVoiceCalls { get; set; }
+        public bool DiscloseOnInboundCalls { get; set; }
+        public bool EnableRecordingDisclosure { get; set; }
         public bool LegalHoldByDefault { get; set; }
         public int MaxSecurePauseSeconds { get; set; }
+        public bool PromptAgentsToDisclose { get; set; }
         public bool RecordAllCalls { get; set; }
+        public string RecordingDisclosureText { get; set; }
         public bool RequireExplicitConsent { get; set; }
         public bool RequirePauseReason { get; set; }
         public int RetentionDays { get; set; }
@@ -2013,6 +2019,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? RecordingConsentCapturedUtc { get; set; }
         public string RecordingConsentJurisdiction { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
+        public System.DateTime? RecordingDisclosedUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? RecordingErasedUtc { get; set; }
         public bool RecordingLegalHold { get; set; }
@@ -2770,6 +2778,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public RecordingDeniedEventData() { }
         public string DenyReasonCode { get; set; }
+    }
+    public sealed class RecordingDisclosedEventData
+    {
+        public RecordingDisclosedEventData() { }
+        public string Method { get; set; }
+        public string Text { get; set; }
     }
     public sealed class RecordingErasedEventData
     {
@@ -4330,6 +4344,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public const string Closed = "Closed";
         public const string ClosedRejectReasonCode = "entry_point_closed_reject";
         public const string ClosedVoicemailReasonCode = "entry_point_closed_voicemail";
+        public const string DisclosureMetadataKey = "entryPointAnnouncementDisclosure";
         public const string Failed = "Failed";
         public const string KindMetadataKey = "entryPointAnnouncement";
         public const string NextMenu = "Menu";
@@ -4346,12 +4361,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public const string StatusMetadataKey = "entryPointAnnouncementStatus";
         public const string Welcome = "Welcome";
         public EntryPointAnnouncement() { }
+        public bool IncludesDisclosure { get; init; }
         public string Kind { get; init; }
         public string Next { get; init; }
         public string QueueId { get; init; }
         public string Status { get; init; }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.EntryPointAnnouncement Read(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
-        public static void Schedule(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string kind, string next, string queueId = null) { }
+        public static void Schedule(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string kind, string next, string queueId = null, bool includesDisclosure = false) { }
+        public static void SetIncludesDisclosure(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, bool includesDisclosure) { }
         public static void SetStatus(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string status) { }
     }
     public sealed class EntryPointFlowResolver : CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointFlowResolver
@@ -5293,6 +5310,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string purpose, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IRecordingDisclosureService : CrestApps.OrchardCore.ContactCenter.IRecordingDisclosureProvider
+    {
+        System.Threading.Tasks.Task<bool> RecordDisclosedAsync(string interactionId, string method, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IRecordingGovernancePolicy
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingGovernanceDecision> EvaluateAutomaticStartAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -5544,7 +5565,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public const string UnroutableVoicemailReasonCode = "ivr_unroutable_voicemail";
         public const string VoicemailReasonCode = "ivr_voicemail";
-        public IvrCallRouter(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointFlowResolver flowResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService ivrExecutionService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueLimitService queueLimitService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceQueueOfferService offerService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService treatmentService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundVoiceCallProcessor inboundProcessor, CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExternalTransferService externalTransfers, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.IvrCallRouter> logger) { }
+        public IvrCallRouter(
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IEntryPointFlowResolver flowResolver,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService ivrExecutionService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueLimitService queueLimitService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceQueueOfferService offerService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueTreatmentService treatmentService,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundVoiceCallProcessor inboundProcessor,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExternalTransferService externalTransfers,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingDisclosureService> disclosureServices,
+                    YesSql.ISession session,
+                    OrchardCore.Modules.IClock clock,
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.IvrCallRouter> logger) { }
         public System.Threading.Tasks.Task AnnounceAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> CompleteAnnouncementAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecoverFailedTransferAsync(string interactionId, string failedDestinationId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -6106,6 +6143,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public RecordingAccessGovernanceService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.RecordingErasureDecision> EraseAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string purpose, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class RecordingDisclosureService : CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingDisclosureService, CrestApps.OrchardCore.ContactCenter.IRecordingDisclosureProvider
+    {
+        public RecordingDisclosureService(System.IServiceProvider serviceProvider, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, OrchardCore.Settings.ISiteService siteService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.RecordingDisclosureService> logger) { }
+        public System.Threading.Tasks.Task<string> GetDisclosureAsync(CrestApps.OrchardCore.ContactCenter.Models.RecordingDisclosureCallType callType, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RecordDisclosedAsync(string interactionId, string method, System.Threading.CancellationToken cancellationToken = default) { }
+        public static string GetDisclosure(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRecordingSettings settings, CrestApps.OrchardCore.ContactCenter.Models.RecordingDisclosureCallType callType) { }
     }
     public sealed class RecordingGovernancePolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.IRecordingGovernancePolicy
     {

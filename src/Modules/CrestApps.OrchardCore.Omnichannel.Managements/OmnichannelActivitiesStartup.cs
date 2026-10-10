@@ -69,6 +69,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         // them?" the same way. Whichever feature registers it first provides it.
         services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
+        // The load editor and the automated sends take the business-hours gate as a plain dependency, and the
+        // contract is declared here, in Omnichannel, so its always-open default is registered here too. The business
+        // hours feature replaces it with the calendar-backed gate. It used to be registered by the Contact Center
+        // feature only, so a tenant without Contact Center could not open Load Activities.
+        services.TryAddScoped<IBusinessHoursGate, AlwaysOpenBusinessHoursGate>();
+
         // Which content types are contacts and which are leads, for channels that match callers and search
         // contacts without the administration screens. Whichever feature registers it first provides it.
         services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();

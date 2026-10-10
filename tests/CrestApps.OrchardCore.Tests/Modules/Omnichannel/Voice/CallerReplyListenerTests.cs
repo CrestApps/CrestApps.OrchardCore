@@ -145,6 +145,25 @@ public sealed class CallerReplyListenerTests
     }
 
     [Fact]
+    public void AReply_IsNotTaken_WhileTheCallerIsStillMakingSound()
+    {
+        // Arrange
+        // Live, a soft "um" was taken for a reply, and the question came just as the caller began their answer.
+        var listener = new CallerReplyListener();
+        var replyEnds = Feed(listener, Frames(Speech, 10), _start + Ms(1_000), _start);
+        var now = replyEnds + _wait.Ticks;
+
+        // More voice, too short yet to be a reply of its own, right before the reply would be taken.
+        Feed(listener, Frames(Speech, 3), now - Ms(100), _start);
+
+        // Act
+        var unheard = listener.TryTakeUnheardReply(now, providerHeardCallerTicks: 0, _wait);
+
+        // Assert
+        Assert.False(unheard);
+    }
+
+    [Fact]
     public void ASecondReply_AfterTheFirstWasHeard_CanStillGoUnheard()
     {
         // Arrange
@@ -163,6 +182,25 @@ public sealed class CallerReplyListenerTests
     }
 
     // Feeds the frames one every 20 ms from the start, and returns when the last one arrived.
+    [Fact]
+    public void AReply_RecordsWhenItBeganOnTheLine()
+    {
+        // Arrange
+        // What the provider's report of the caller starting is measured against, to show a session running behind.
+        var listener = new CallerReplyListener();
+        var replyStarts = _start + Ms(1_000);
+
+        // Act
+        Feed(listener, Frames(Speech, 10), replyStarts, _start);
+
+        // Assert
+        Assert.Equal(replyStarts, listener.LatestReplyStartTicks);
+    }
+
+    [Fact]
+    public void BeforeAnyReply_NothingHasBegun()
+        => Assert.Equal(0, new CallerReplyListener().LatestReplyStartTicks);
+
     private static long Feed(CallerReplyListener listener, byte[][] frames, long startTicks, long assistantPlaysUntilTicks)
     {
         var now = startTicks;

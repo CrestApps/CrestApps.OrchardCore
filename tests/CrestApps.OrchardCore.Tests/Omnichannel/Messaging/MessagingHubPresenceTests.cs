@@ -14,6 +14,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Security;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
@@ -35,6 +36,19 @@ public sealed class MessagingHubPresenceTests
         harness.Presence.Verify(tracker => tracker.TouchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         Assert.Contains(Group(MessagingHub.AgentGroup(AgentId)), harness.JoinedGroups);
         Assert.Contains(Group(MessagingHub.QueueGroup("queue-1")), harness.JoinedGroups);
+    }
+
+    // A queue's group hears every new message in the queue, with the customer's address and a preview, so only a role
+    // that may see the queue's shared inbox joins it.
+    [Fact]
+    public async Task OnConnected_WithoutTheQueuePermission_JoinsOnlyTheAgentsOwnGroup()
+    {
+        var harness = CreateHarness(passive: true, grantQueues: false);
+
+        await harness.Hub.OnConnectedAsync();
+
+        Assert.Contains(Group(MessagingHub.AgentGroup(AgentId)), harness.JoinedGroups);
+        Assert.DoesNotContain(Group(MessagingHub.QueueGroup("queue-1")), harness.JoinedGroups);
     }
 
     [Fact]
@@ -83,7 +97,7 @@ public sealed class MessagingHubPresenceTests
 
     private static string Group(string name) => TenantSignalRGroupName.ForGroup(TenantName, name);
 
-    private static Harness CreateHarness(bool passive, bool grantWorkspace = true)
+    private static Harness CreateHarness(bool passive, bool grantWorkspace = true, bool grantQueues = true)
     {
         var agentProfiles = new Mock<IAgentProfileManager>();
         agentProfiles
@@ -121,6 +135,12 @@ public sealed class MessagingHubPresenceTests
             ? new HashSet<string> { MessagingPermissions.UseMessagingWorkspace.Name }
             : [];
 
+        if (grantWorkspace)
+        {
+            // The Agent role: their own conversations, and their queues' unclaimed ones unless the test takes them away.
+            granted.Add(grantQueues ? MessagingPermissions.ViewQueueConversations.Name : MessagingPermissions.ViewOwnConversations.Name);
+        }
+
         var hub = new MessagingHub(
             agentProfiles.Object,
             new PermissiveAgentEntitlementPolicy(),
@@ -143,15 +163,18 @@ public sealed class MessagingHubPresenceTests
         public HttpContext HttpContext { get; set; } = httpContext;
     }
 
-    // Grants the named permissions and nothing else.
+    // Grants the named permissions, and what they imply, and nothing else.
     private sealed class PermissionGrants(ISet<string> granted) : IAuthorizationService
     {
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, IEnumerable<IAuthorizationRequirement> requirements)
         {
-            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => granted.Contains(requirement.Permission.Name));
+            var allowed = requirements.OfType<PermissionRequirement>().All(requirement => IsGranted(requirement.Permission));
 
             return Task.FromResult(allowed ? AuthorizationResult.Success() : AuthorizationResult.Failed());
         }
+
+        private bool IsGranted(Permission permission)
+            => permission is not null && (granted.Contains(permission.Name) || (permission.ImpliedBy ?? []).Any(IsGranted));
 
         public Task<AuthorizationResult> AuthorizeAsync(ClaimsPrincipal user, object resource, string policyName)
             => Task.FromResult(AuthorizationResult.Failed());

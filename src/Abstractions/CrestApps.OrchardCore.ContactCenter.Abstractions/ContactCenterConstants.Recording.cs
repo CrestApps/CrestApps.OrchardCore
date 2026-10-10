@@ -53,6 +53,28 @@ public static partial class ContactCenterConstants
     }
 
     /// <summary>
+    /// Contains stable machine-readable codes describing how a caller was told the call is recorded, carried on the
+    /// <see cref="Events.RecordingDisclosed"/> event.
+    /// </summary>
+    public static class RecordingDisclosureMethod
+    {
+        /// <summary>
+        /// The platform spoke the disclosure to the caller before the entry point's welcome, menu or queue.
+        /// </summary>
+        public const string Announcement = "announcement";
+
+        /// <summary>
+        /// The agent read the disclosure out and confirmed it from the agent workspace.
+        /// </summary>
+        public const string Agent = "agent";
+
+        /// <summary>
+        /// An automated voice agent gave the disclosure as the start of its opening line.
+        /// </summary>
+        public const string AIVoiceAgent = "aiVoiceAgent";
+    }
+
+    /// <summary>
     /// Contains stable machine-readable reason codes describing why a recording governance policy denied a
     /// right-to-erasure request, shared between the erasure service and the denial events it publishes.
     /// </summary>

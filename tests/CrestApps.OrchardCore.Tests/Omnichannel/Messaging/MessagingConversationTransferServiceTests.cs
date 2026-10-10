@@ -3,13 +3,16 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Moq;
 using OrchardCore.Modules;
+using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
@@ -244,7 +247,10 @@ public sealed class MessagingConversationTransferServiceTests
         Assert.Equal(SenderId, conversation.AssignedAgentId);
         context.Store.Verify(store => store.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>()), Times.Never);
         context.Authorization.Verify(
-            service => service.AuthorizeAsync(request.Principal, conversation, ConversationOperation.Transfer, It.IsAny<CancellationToken>()),
+            service => service.AuthorizeAsync(
+                request.Principal,
+                It.Is<ConversationAuthorizationResource>(resource => resource.Conversation == conversation && resource.Operation == ConversationOperation.Transfer),
+                It.Is<IEnumerable<IAuthorizationRequirement>>(requirements => requirements.OfType<PermissionRequirement>().Single().Permission == MessagingPermissions.ViewAllConversations)),
             Times.Once);
     }
 
@@ -438,8 +444,8 @@ public sealed class MessagingConversationTransferServiceTests
             Store.Setup(store => store.UpdateAsync(It.IsAny<MessagingConversation>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 
             Authorization
-                .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<MessagingConversation>(), It.IsAny<ConversationOperation>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(allowTransfer);
+                .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+                .ReturnsAsync(allowTransfer ? AuthorizationResult.Success() : AuthorizationResult.Failed());
 
             var agents = new Mock<IAgentProfileManager>();
             agents
@@ -482,7 +488,7 @@ public sealed class MessagingConversationTransferServiceTests
 
         public Mock<IMessagingConversationStore> Store { get; } = new();
 
-        public Mock<IMessagingConversationAuthorizationService> Authorization { get; } = new();
+        public Mock<IAuthorizationService> Authorization { get; } = new();
 
         public Mock<IMessagingRealTimeNotifier> Notifier { get; } = new();
 

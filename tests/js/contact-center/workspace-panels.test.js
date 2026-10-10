@@ -55,6 +55,14 @@ describe('activeInteractionSignature', () => {
         expect(activeInteractionSignature(base)).not.toBe(activeInteractionSignature({ ...base, recordingState: 'Paused', isRecordingPaused: true }));
         expect(activeInteractionSignature(base)).not.toBe(NO_ACTIVE_INTERACTION);
     });
+
+    // The card kept showing the recording disclosure after the agent confirmed it, because nothing it was keyed on
+    // had changed.
+    it('changes when the recording disclosure is no longer owed', () => {
+        const owed = { interactionId: 'i-1', status: 'Connected', recordingDisclosure: 'This call may be recorded.' };
+
+        expect(activeInteractionSignature(owed)).not.toBe(activeInteractionSignature({ ...owed, recordingDisclosure: null }));
+    });
 });
 
 describe('emptyStateHtml', () => {

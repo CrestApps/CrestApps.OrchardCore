@@ -14,6 +14,12 @@ internal sealed class PermissionProvider : IPermissionProvider
         OmnichannelConstants.Permissions.EditActivity,
     ];
 
+    // A supervisor reads every report; the reports of each feature are granted by that feature's own provider.
+    private readonly IEnumerable<Permission> _supervisorPermissions =
+    [
+        OmnichannelConstants.Permissions.ViewReports,
+    ];
+
     private readonly IEnumerable<Permission> _allPermissions =
     [
         OmnichannelConstants.Permissions.ListActivities,
@@ -49,6 +55,11 @@ internal sealed class PermissionProvider : IPermissionProvider
         {
             Name = OmnichannelConstants.AgentRole,
             Permissions = _agentPermissions,
+        },
+        new PermissionStereotype
+        {
+            Name = OmnichannelConstants.SupervisorRole,
+            Permissions = _supervisorPermissions,
         },
     ];
 

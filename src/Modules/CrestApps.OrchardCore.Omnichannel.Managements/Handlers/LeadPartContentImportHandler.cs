@@ -255,6 +255,8 @@ public sealed class LeadPartContentImportHandler : ContentImportHandlerBase, ICo
             part.LastScrubbedUtc = _clock.UtcNow;
         }
 
+        LeadImports.Record(part, context.Entry);
+
         context.ContentItem.Apply(part);
     }
 

@@ -69,9 +69,37 @@ Configure the feature under the Orchard Core shell configuration section:
 | Setting | Description |
 | --- | --- |
 | `ConnectionString` | Azure Storage account connection string. |
-| `ContainerName` | Azure Blob container name. This must follow Azure container naming rules and should be lowercase. |
-| `BasePath` | Optional subdirectory inside the container where recordings are stored. Supports Orchard Core liquid shell-token formatting, so a per-tenant path (for example `{{ ShellSettings.Name }}`) keeps tenants isolated within a shared container. |
+| `ContainerName` | Azure Blob container name. Supports Liquid, so `recordings-{{ ShellSettings.Name }}` gives each tenant its own container. See [Separating tenants](#separating-tenants). |
+| `BasePath` | Optional subdirectory inside the container where recordings are stored. Supports Liquid, so a per-tenant path (for example `{{ ShellSettings.Name }}`) keeps tenants isolated within a shared container. |
 | `CreateContainer` | When `true`, the feature creates the blob container automatically if it does not already exist. |
+
+## Separating tenants
+
+`ContainerName` and `BasePath` both accept Liquid, with the tenant's `ShellSettings` available, so one
+configuration in the root `appsettings.json` serves every tenant. There are two ways to keep tenants apart:
+
+- **A container per tenant.** Set `ContainerName` to a template such as `recordings-{{ ShellSettings.Name }}`
+  and leave `BasePath` empty. Each tenant's recordings are in a container of their own, created automatically
+  when `CreateContainer` is `true`, and access policies or lifecycle rules can be applied to one tenant at a
+  time. Deleting the tenant purges its recordings, as described below, but leaves the empty container; remove
+  it in Azure if you no longer need it.
+- **One shared container.** Keep a fixed `ContainerName` and set `BasePath` to `{{ ShellSettings.Name }}`.
+  Every tenant's recordings are in the same container, separated by a folder prefix. Deleting a tenant purges
+  only that tenant's recordings.
+
+```json
+{
+  "ContainerName": "recordings-{{ ShellSettings.Name }}",
+  "CreateContainer": true
+}
+```
+
+For a tenant named `Contoso`, this resolves to the container `recordings-contoso`.
+
+The resolved container name is lowercased and must be a valid Azure container name: 3 to 63 characters,
+lowercase letters, digits and single hyphens, starting and ending with a letter or digit. A tenant name that
+breaks these rules, for example one with an underscore, resolves to an invalid name, and an error is logged
+when the tenant starts. Use the shared container for such tenants.
 
 ## Encryption note
 
@@ -79,11 +107,11 @@ Enabling this feature does **not** weaken recording protection. The same encrypt
 
 ## Tenant removal and cleanup
 
-Removing a tenant purges that tenant's recording blobs through the base Telephony recording-media cleanup, which blocks tenant removal until the purge completes. The container itself is **not** removed, because it is designed to be shared across tenants through the per-tenant `BasePath`. Use a distinct container per tenant only if your deployment requires it.
+Removing a tenant purges that tenant's recording blobs through the base Telephony recording-media cleanup, which blocks tenant removal until the purge completes. The container itself is **not** removed, whether it is shared through a per-tenant `BasePath` or belongs to one tenant through a per-tenant `ContainerName`. An emptied per-tenant container can be deleted in Azure.
 
 ## Notes
 
-- `BasePath` supports Orchard Core liquid shell-token formatting through Orchard's blob-storage options pipeline.
+- `ContainerName` and `BasePath` support Orchard Core Liquid shell-token formatting through Orchard's blob-storage options pipeline. See [Separating tenants](#separating-tenants).
 - Container names are normalized to lowercase during configuration.
 - This feature changes only where encrypted recording bytes are stored. Provider recording, ingest, orchestration, and erasure behavior stay the same.
 - Use local file-system storage unless you specifically need shared cloud storage or Azure-hosted deployments.

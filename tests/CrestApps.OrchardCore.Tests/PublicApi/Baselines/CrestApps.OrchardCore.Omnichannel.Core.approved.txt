@@ -31,6 +31,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         public const string CollectionName = "Omnichannel";
         public const string CompleteActivityGroup = "complete";
         public const string NotInServiceDispositionName = "Number Not In Service";
+        public const string SupervisorRole = "Supervisor";
         public static class ActionTypes
         {
             public const string ConvertLead = "ConvertLead";
@@ -147,6 +148,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public System.DateTime CreatedUtc { get; set; }
         public string DisplayText { get; set; }
         public bool Enabled { get; set; }
+    }
+    public sealed class LeadImportIndex : YesSql.Indexes.MapIndex
+    {
+        public LeadImportIndex() { }
+        public string ContentItemId { get; set; }
+        public string ContentType { get; set; }
+        public string EntryId { get; set; }
+        public string FileName { get; set; }
+        public System.DateTime ImportedUtc { get; set; }
+        public bool Latest { get; set; }
+        public bool Published { get; set; }
     }
     public sealed class LeadIndex : YesSql.Indexes.MapIndex
     {
@@ -634,7 +646,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class LeadBatchFilter
     {
         public LeadBatchFilter() { }
-        public string ListName { get; set; }
+        public string ImportEntryId { get; set; }
         public string OwnerId { get; set; }
         public string[] Ratings { get; set; }
         public bool SkipLeadsThatAreContacts { get; set; }
@@ -684,6 +696,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OrchardCore.ContentManagement.ContentItem Opportunity { get; set; }
         public bool Succeeded { get; }
     }
+    public sealed class LeadImport
+    {
+        public LeadImport() { }
+        public string EntryId { get; set; }
+        public string FileName { get; set; }
+        public System.DateTime ImportedUtc { get; set; }
+    }
     public enum LeadOpenActivityMode
     {
         Move = 0,
@@ -700,6 +719,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string ConvertedContactType { get; set; }
         public string ConvertedOpportunityItemId { get; set; }
         public System.DateTime? ConvertedUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadImport> Imports { get; set; }
         public bool IsClosed { get; set; }
         public bool IsConverted { get; set; }
         public System.DateTime? LastScrubbedUtc { get; set; }

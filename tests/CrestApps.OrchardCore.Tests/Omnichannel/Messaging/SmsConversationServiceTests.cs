@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -19,6 +20,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
+using OrchardCore.Security;
 using OrchardCore.Sms;
 using YesSql;
 
@@ -358,23 +360,13 @@ public class SmsConversationServiceTests
         => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-7")], "Test"));
 
     // The real conversation rule for a queue member who is not a supervisor.
-    private static MessagingConversationAuthorizationService CreateQueueMemberAuthorization()
-    {
-        var authorizationService = new Mock<IAuthorizationService>();
-        authorizationService
-            .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
-            .ReturnsAsync(AuthorizationResult.Failed());
-
-        var agentProfileManager = new Mock<IAgentProfileManager>();
-        agentProfileManager
-            .Setup(manager => manager.FindByUserIdAsync("user-7", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new AgentProfile { ItemId = "agent-7", UserId = "user-7", QueueIds = ["queue-1"], AllowedQueueIds = ["queue-1"] });
-
-        return new MessagingConversationAuthorizationService(
-            authorizationService.Object,
-            agentProfileManager.Object,
-            new PermissiveAgentEntitlementPolicy());
-    }
+    // A queue member with the Agent role: they may see their queues' shared inbox, but not every conversation.
+    private static MessagingTestAuthorization CreateQueueMemberAuthorization()
+        => MessagingTestAuthorization.Create(
+            new AgentProfile { ItemId = "agent-7", UserId = "user-7", QueueIds = ["queue-1"], AllowedQueueIds = ["queue-1"] },
+            new PermissiveAgentEntitlementPolicy(),
+            MessagingPermissions.UseMessagingWorkspace,
+            MessagingPermissions.ViewQueueConversations);
 
     [Fact]
     public async Task SendAsync_WithAPicture_SendsItsSignedLink_AndKeepsThePictureOnTheMessage()
@@ -463,7 +455,7 @@ public class SmsConversationServiceTests
         Action<OmnichannelMessage> onSave,
         ContentItem contact = null,
         bool conversationAuthorized = true,
-        IMessagingConversationAuthorizationService conversationAuthorization = null,
+        IAuthorizationService conversationAuthorization = null,
         Mock<IMessagingRealTimeNotifier> notifier = null,
         IMessagingAttachmentUrlProvider attachmentUrlProvider = null)
     {
@@ -517,17 +509,16 @@ public class SmsConversationServiceTests
         return (service, dispatcher);
     }
 
-    private static IMessagingConversationAuthorizationService CreateConversationAuthorizationService(bool authorized)
+    private static IAuthorizationService CreateConversationAuthorizationService(bool authorized)
     {
-        var authorizationService = new Mock<IMessagingConversationAuthorizationService>();
+        var authorizationService = new Mock<IAuthorizationService>();
 
         authorizationService
             .Setup(service => service.AuthorizeAsync(
                 It.IsAny<ClaimsPrincipal>(),
-                It.IsAny<MessagingConversation>(),
-                It.IsAny<ConversationOperation>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(authorized);
+                It.IsAny<object>(),
+                It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
+            .ReturnsAsync(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
 
         return authorizationService.Object;
     }

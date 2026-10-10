@@ -64,6 +64,7 @@ internal static class ApiAICompletionEndpoint
             return TypedResults.BadRequest();
         }
 
+        using var usageScope = AIUsageScope.Begin(contextType: AIUsageCategories.Api);
         var profile = await chatProfileManager.FindByIdAsync(requestData.ProfileId);
 
         if (profile is null)
@@ -336,6 +337,7 @@ internal static class ApiAICompletionEndpoint
             return Str.Truncate(userPrompt, 255);
         }
 
+        using var usageScope = AIUsageScope.Begin(purpose: AIUsagePurposes.TitleGeneration);
         var titleResponse = await completionService.CompleteAsync(
             deployment,
             [
@@ -361,6 +363,7 @@ internal static class ApiAICompletionEndpoint
             return TypedResults.BadRequest("Unable to resolve a chat deployment for the profile.");
         }
 
+        using var usageScope = AIUsageScope.Begin(purpose: AIUsageFeaturePurposes.Utility);
         var completion = await completionService.CompleteAsync(deployment, [new ChatMessage(ChatRole.User, prompt)], context);
 
         var result = new AIChatResponse

@@ -14,6 +14,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// </remarks>
 public sealed class ContactCenterAutomatedVoiceCallObserver : IAutomatedVoiceCallObserver
 {
+    // Enough of a missed opening line to see what was said instead, without storing a whole monologue.
+    private const int MaxOpeningLineLength = 500;
+
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterAuditRecorder _auditRecorder;
 
@@ -45,6 +48,8 @@ public sealed class ContactCenterAutomatedVoiceCallObserver : IAutomatedVoiceCal
             AutomatedVoiceCallObservationKind.Answered => ContactCenterConstants.Events.AiCallAnswered,
             AutomatedVoiceCallObservationKind.AnswererDetected => ContactCenterConstants.Events.AiAnswererDetected,
             AutomatedVoiceCallObservationKind.ConversationEnded => ContactCenterConstants.Events.AiConversationEnded,
+            AutomatedVoiceCallObservationKind.RecordingDisclosed => ContactCenterConstants.Events.RecordingDisclosed,
+            AutomatedVoiceCallObservationKind.RecordingDisclosureMissed => ContactCenterConstants.Events.RecordingDisclosureMissed,
             _ => null,
         };
 
@@ -74,6 +79,21 @@ public sealed class ContactCenterAutomatedVoiceCallObserver : IAutomatedVoiceCal
         if (!string.IsNullOrEmpty(observation.DispositionId))
         {
             data.Details["dispositionId"] = observation.DispositionId;
+        }
+
+        // The words the caller was to hear are kept with the record, so the notice can be proven later even after
+        // the tenant changes it; a missed one also keeps what was said instead.
+        if (!string.IsNullOrEmpty(observation.RecordingDisclosure))
+        {
+            data.Details["method"] = ContactCenterConstants.RecordingDisclosureMethod.AIVoiceAgent;
+            data.Details["text"] = observation.RecordingDisclosure;
+        }
+
+        if (!string.IsNullOrEmpty(observation.OpeningLine))
+        {
+            data.Details["openingLine"] = observation.OpeningLine.Length > MaxOpeningLineLength
+                ? observation.OpeningLine[..MaxOpeningLineLength]
+                : observation.OpeningLine;
         }
 
         // Each moment happens once per call, and providers redeliver the events that report them.

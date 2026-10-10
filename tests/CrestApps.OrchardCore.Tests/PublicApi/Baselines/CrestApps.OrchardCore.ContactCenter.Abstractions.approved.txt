@@ -145,6 +145,8 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string RecordingAccessed = "RecordingAccessed";
             public const string RecordingAutoResumed = "RecordingAutoResumed";
             public const string RecordingDenied = "RecordingDenied";
+            public const string RecordingDisclosed = "RecordingDisclosed";
+            public const string RecordingDisclosureMissed = "RecordingDisclosureMissed";
             public const string RecordingErased = "RecordingErased";
             public const string RecordingErasureDenied = "RecordingErasureDenied";
             public const string RecordingMediaDeleted = "RecordingMediaDeleted";
@@ -219,6 +221,12 @@ namespace CrestApps.OrchardCore.ContactCenter
         {
             public const string MaxWaitVoicemailReasonCode = "queue_max_wait_voicemail";
             public const string QueueFullVoicemailReasonCode = "queue_full_voicemail";
+        }
+        public static class RecordingDisclosureMethod
+        {
+            public const string AIVoiceAgent = "aiVoiceAgent";
+            public const string Agent = "agent";
+            public const string Announcement = "announcement";
         }
         public static class RecordingErasureDenyReason
         {
@@ -484,6 +492,10 @@ namespace CrestApps.OrchardCore.ContactCenter
     {
         System.Threading.Tasks.Task CallerAbandonedAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IRecordingDisclosureProvider
+    {
+        System.Threading.Tasks.Task<string> GetDisclosureAsync(CrestApps.OrchardCore.ContactCenter.Models.RecordingDisclosureCallType callType, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IRecordingErasureGuard
     {
         System.Threading.Tasks.Task<bool> IsCallRecordingErasedAsync(string providerRecordingId, System.Threading.CancellationToken cancellationToken = default);
@@ -589,15 +601,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string DispositionId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.AutomatedVoiceCallObservationKind Kind { get; set; }
         public System.DateTime OccurredUtc { get; set; }
+        public string OpeningLine { get; set; }
         public string Outcome { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+        public string RecordingDisclosure { get; set; }
     }
     public enum AutomatedVoiceCallObservationKind
     {
         Answered = 0,
         AnswererDetected = 1,
         ConversationEnded = 2,
+        RecordingDisclosed = 3,
+        RecordingDisclosureMissed = 4,
     }
     public sealed class CallQualityAlertNotification
     {
@@ -1012,6 +1028,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public System.DateTime ChangedUtc { get; set; }
         public string QueueId { get; set; }
         public int WaitingCount { get; set; }
+    }
+    public enum RecordingDisclosureCallType
+    {
+        Inbound = 0,
+        AIVoiceAgent = 1,
+        Agent = 2,
     }
     public sealed class RecordingStateNotification
     {

@@ -98,16 +98,12 @@ public sealed class Startup : StartupBase
             .AddScoped<IMessagingConversationTransferService, MessagingConversationTransferService>()
             .AddScoped<IMessagingAgentNameProvider, MessagingAgentNameProvider>();
 
-        // Per-thread authorization: the workspace permission grants the workspace, this decides which threads
-        // inside it a caller owns or serves. The handler narrows the workspace permission when a conversation is
-        // supplied as the authorization resource.
-        services
-            .AddScoped<IMessagingConversationAuthorizationService, MessagingConversationAuthorizationService>()
-            .AddScoped<IAuthorizationHandler, MessagingConversationAuthorizationHandler>();
+        // A conversation is authorized against ViewAllMessagingConversations; this handler grants the agent whose
+        // conversation it is through the narrower own and queue permissions.
+        services.AddScoped<IAuthorizationHandler, MessagingConversationAuthorizationHandler>();
 
-        // The handler declares the authorization service it narrows, but takes it lazily: that service consults
-        // the authorization system, which is what runs the handler.
-        services.AddScoped(sp => new Lazy<IMessagingConversationAuthorizationService>(sp.GetRequiredService<IMessagingConversationAuthorizationService>));
+        // The handler takes the authorization service lazily, because that service is what runs it.
+        services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
 
         // Inbound routing chain (deterministic order via IMessagingInboundRouter.Order). The routed (push) router
         // is contributed by the Routed Distribution feature, which owns the Work Distribution dependency.
@@ -244,6 +240,7 @@ public sealed class Startup : StartupBase
 
         // Permissions.
         services.AddPermissionProvider<MessagingPermissionProvider>();
+        services.AddDataMigration<MessagingPermissionMigrations>();
 
         // Redact contact/service addresses in logs, matching the other telephony modules.
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));

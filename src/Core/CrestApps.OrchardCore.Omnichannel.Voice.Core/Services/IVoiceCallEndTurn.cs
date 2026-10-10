@@ -99,4 +99,26 @@ public interface IVoiceCallEndTurn
     /// <returns><see langword="true"/> when the call should stay open for the customer's answer.</returns>
     bool TryHoldForAnswer()
         => false;
+
+    /// <summary>
+    /// Gets a value indicating whether the assistant has not said goodbye since the customer last spoke, so a call
+    /// ended now would end with no closing line: the customer spoke last, or the assistant's last line was not one.
+    /// </summary>
+    /// <remarks>
+    /// Live, a customer confirmed their email with "yes", the model answered with the end-call tool alone, was told
+    /// to say nothing further, and the line went dead four seconds later: to the customer, hung up on mid-sentence.
+    /// </remarks>
+    bool ClosingLineOwed
+        => false;
+
+    /// <summary>
+    /// Gets a value indicating whether the model has already asked to end the call since the customer last spoke.
+    /// </summary>
+    /// <remarks>
+    /// Live, a model said goodbye, ended the call, read "say nothing further" back and answered it by ending the call
+    /// again -- twelve times, every half second, each one a response that kept the line open as if it were still
+    /// talking. A repeat is not a new decision, and the tool tells the model so.
+    /// </remarks>
+    bool EndCallAlreadyRequested
+        => false;
 }

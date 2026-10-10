@@ -29,5 +29,14 @@ internal sealed class PhoneNumberVerificationsPermissionProvider : IPermissionPr
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
             },
+            new PermissionStereotype
+            {
+                // A supervisor reads every report, this one included.
+                Name = "Supervisor",
+                Permissions =
+                [
+                    PhoneNumberVerificationsPermissions.RunPhoneNumberVerificationsReport,
+                ],
+            },
         ];
 }

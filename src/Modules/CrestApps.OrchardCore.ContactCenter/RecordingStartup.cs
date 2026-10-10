@@ -40,6 +40,13 @@ public sealed class RecordingStartup : StartupBase
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
         services.AddScoped<IAgentRecordingControlService, AgentRecordingControlService>();
         services.AddScoped<ISecurePauseAutoResumeService, SecurePauseAutoResumeService>();
+
+        // The notice that the call is recorded: spoken on inbound and automated voice agent calls, read out by an
+        // agent on any other call, and recorded as the caller's consent once given.
+        services
+            .AddScoped<RecordingDisclosureService>()
+            .AddScoped<IRecordingDisclosureService>(serviceProvider => serviceProvider.GetRequiredService<RecordingDisclosureService>())
+            .AddScoped<IRecordingDisclosureProvider>(serviceProvider => serviceProvider.GetRequiredService<RecordingDisclosureService>());
         // IRecordingAccessGovernanceService is registered by the Recording.Core feature (a dependency of this
         // feature), so voicemail playback can reuse the same governance without enabling full call recording.
         services.AddScoped<IContactCenterEventHandler, RecordingMediaDeletionHandler>();
