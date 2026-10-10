@@ -4,6 +4,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging
     {
         public static class Feature
         {
+            public const string Email = "CrestApps.OrchardCore.Omnichannel.Messaging.Email";
             public const string RoutedDistribution = "CrestApps.OrchardCore.Omnichannel.Messaging.RoutedDistribution";
             public const string Sms = "CrestApps.OrchardCore.Omnichannel.Messaging.Sms";
             public const string Workspace = "CrestApps.OrchardCore.Omnichannel.Messaging";

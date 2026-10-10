@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
@@ -15,6 +16,7 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
 {
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
+    private readonly ActivityChannelOptions _activityChannelOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -23,14 +25,17 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
     /// </summary>
     /// <param name="campaignCatalog">The campaign catalog.</param>
     /// <param name="channelEndpointsCatalog">The channel endpoints catalog.</param>
+    /// <param name="activityChannelOptions">The channels activities can be created on.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelSubjectPartSettingsDisplayDriver(
         ICatalog<OmnichannelCampaign> campaignCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
+        IOptions<ActivityChannelOptions> activityChannelOptions,
         IStringLocalizer<OmnichannelSubjectPartSettingsDisplayDriver> stringLocalizer)
     {
         _campaignCatalog = campaignCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
+        _activityChannelOptions = activityChannelOptions.Value;
         S = stringLocalizer;
     }
 
@@ -59,14 +64,14 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
                 new(S["Automated"], nameof(ActivityInteractionType.Automated)),
             ];
 
-            model.Channels =
-            [
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-            ];
+            // The channels the enabled features create activities on: Phone and SMS always, and each channel feature's
+            // own (Email, for one) when it is enabled.
+            model.Channels = _activityChannelOptions.Channels.Values
+                .Select(channel => new SelectListItem(channel.DisplayName.Value, channel.Channel))
+                .ToList();
 
             model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync())
-                .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) || endpoint.HasCapability(OmnichannelConstants.Channels.Sms))
+                .Where(endpoint => _activityChannelOptions.Channels.Keys.Any(endpoint.HasCapability))
                 .Select(endpoint => new SelectListItem($"{endpoint.DisplayText} ({endpoint.Value})", endpoint.ItemId))
                 .OrderBy(item => item.Text);
 

@@ -63,4 +63,10 @@ public sealed class OmnichannelContactIndex : MapIndex
     /// Gets or sets the primary email address.
     /// </summary>
     public string PrimaryEmailAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the primary email address in its canonical lower-case form (see <see cref="OmnichannelEmailAddress"/>),
+    /// which is what an inbound email's sender is matched on.
+    /// </summary>
+    public string NormalizedPrimaryEmailAddress { get; set; }
 }

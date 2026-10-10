@@ -66,6 +66,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class Events
         {
+            public const string EmailReceived = "EmailReceived";
             public const string SmsReceived = "SmsReceived";
         }
         public static class Features
@@ -76,6 +77,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
             public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
             public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
+        }
+        public static class MessagingErrorCodes
+        {
+            public const string RecipientRejected = "recipient_rejected";
         }
         public static class NamedParts
         {
@@ -130,6 +135,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string NumberNotInService = "number_not_in_service";
             public static bool IsHandoff(string terminalReasonCode) { }
         }
+    }
+    public static class OmnichannelEmailAddress
+    {
+        public static bool IsValid(string address) { }
+        public static string Normalize(string address) { }
     }
     public static class StringExtensions
     {
@@ -234,6 +244,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public bool IsConverted { get; set; }
         public bool Latest { get; set; }
         public string NormalizedPrimaryCellPhoneNumber { get; set; }
+        public string NormalizedPrimaryEmailAddress { get; set; }
         public string NormalizedPrimaryHomePhoneNumber { get; set; }
         public string PrimaryCellPhoneNumber { get; set; }
         public string PrimaryEmailAddress { get; set; }
@@ -950,6 +961,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public OmnichannelAddressCapability() { }
         public string AddressType { get; set; }
+        public Microsoft.Extensions.Localization.LocalizedString CardName { get; set; }
         public Microsoft.Extensions.Localization.LocalizedString Description { get; set; }
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; set; }
         public string Name { get; set; }

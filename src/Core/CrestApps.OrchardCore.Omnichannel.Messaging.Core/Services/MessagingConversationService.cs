@@ -110,7 +110,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed($"{channel.DisplayName.Value} cannot carry attachments.");
         }
 
-        var message = CreateOutboundMessage(conversation, request.Body, request.ActingAgentId);
+        var subject = channel.Capabilities.SupportsSubject ? request.Subject : null;
+        var message = CreateOutboundMessage(conversation, subject, request.Body, request.ActingAgentId);
         message.MediaReferences = request.MediaUrls?.ToList() ?? [];
 
         if (attachments.Length > 0)
@@ -118,7 +119,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
             message.SetAttachments(attachments);
         }
 
-        var mediaUrls = await BuildMediaUrlsAsync(request.MediaUrls, attachments, cancellationToken);
+        var mediaUrls = await BuildMediaUrlsAsync(channel, request.MediaUrls, attachments, cancellationToken);
 
         var dispatch = mediaUrls is null
             ? MessageDispatchResult.Failed("The site has no public address the provider could download the pictures from. Set the site's base URL.")
@@ -126,12 +127,15 @@ public sealed class MessagingConversationService : IMessagingConversationService
             {
                 ServiceAddress = conversation.ServiceAddress,
                 ContactAddress = conversation.ContactAddress,
-                Subject = request.Subject,
+                ConversationId = conversation.ItemId,
+                Purpose = MessagingOutboundPurpose.Reply,
+                Subject = subject,
                 Body = request.Body,
                 MediaUrls = mediaUrls,
+                Attachments = attachments,
             }, cancellationToken);
 
-        ApplyDispatchOutcome(message, dispatch, conversation.ItemId);
+        ApplyDispatchOutcome(message, dispatch, conversation.ItemId, MessagingOutboundPurpose.Reply);
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 
@@ -175,27 +179,47 @@ public sealed class MessagingConversationService : IMessagingConversationService
     }
 
     /// <inheritdoc/>
-    public async Task<MessagingSendResult> SendDirectAsync(string channel, string serviceAddress, string contactAddress, string body, string actingAgentId, CancellationToken cancellationToken = default)
+    public Task<MessagingSendResult> SendDirectAsync(string channel, string serviceAddress, string contactAddress, string body, string actingAgentId, CancellationToken cancellationToken = default)
+        => SendDirectAsync(new MessagingDirectSendRequest
+        {
+            Channel = channel,
+            ServiceAddress = serviceAddress,
+            ContactAddress = contactAddress,
+            Body = body,
+            ActingAgentId = actingAgentId,
+            Purpose = string.IsNullOrEmpty(actingAgentId)
+                ? MessagingOutboundPurpose.Automation
+                : MessagingOutboundPurpose.Reply,
+        }, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<MessagingSendResult> SendDirectAsync(MessagingDirectSendRequest request, CancellationToken cancellationToken = default)
     {
-        var messagingChannel = _channelResolver.Get(channel);
+        ArgumentNullException.ThrowIfNull(request);
+
+        var messagingChannel = _channelResolver.Get(request.Channel);
 
         if (messagingChannel is null)
         {
-            return MessagingSendResult.Failed($"The '{channel}' channel is not enabled.");
+            return MessagingSendResult.Failed($"The '{request.Channel}' channel is not enabled.");
         }
 
-        if (string.IsNullOrWhiteSpace(serviceAddress) || string.IsNullOrWhiteSpace(contactAddress))
+        if (string.IsNullOrWhiteSpace(request.ServiceAddress) || string.IsNullOrWhiteSpace(request.ContactAddress))
         {
             return MessagingSendResult.Failed("Both a sending address and a recipient are required.");
         }
+
+        var body = request.Body;
 
         if (string.IsNullOrWhiteSpace(body))
         {
             return MessagingSendResult.Failed("The message body is required.");
         }
 
-        serviceAddress = messagingChannel.NormalizeAddress(serviceAddress);
-        contactAddress = messagingChannel.NormalizeAddress(contactAddress);
+        var actingAgentId = request.ActingAgentId;
+        var subject = messagingChannel.Capabilities.SupportsSubject ? request.Subject : null;
+        var serviceAddress = messagingChannel.NormalizeAddress(request.ServiceAddress);
+        var contactAddress = messagingChannel.NormalizeAddress(request.ContactAddress);
 
         // Enforce a single conversation per contact address on the channel: reuse any existing thread for this
         // contact (on any of our endpoints) rather than creating a duplicate; only create when none exists.
@@ -227,16 +251,19 @@ public sealed class MessagingConversationService : IMessagingConversationService
             return MessagingSendResult.Failed($"The contact has opted out of {messagingChannel.DisplayName.Value}.");
         }
 
-        var message = CreateOutboundMessage(conversation, body, actingAgentId);
+        var message = CreateOutboundMessage(conversation, subject, body, actingAgentId);
 
         var dispatch = await messagingChannel.SendAsync(new MessagingOutboundMessage
         {
             ServiceAddress = conversation.ServiceAddress,
             ContactAddress = conversation.ContactAddress,
+            ConversationId = isNew ? null : conversation.ItemId,
+            Purpose = request.Purpose,
+            Subject = subject,
             Body = body,
         }, cancellationToken);
 
-        ApplyDispatchOutcome(message, dispatch, conversation.ItemId);
+        ApplyDispatchOutcome(message, dispatch, conversation.ItemId, request.Purpose);
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 
@@ -437,9 +464,15 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
     // The links a provider downloads the pictures from, after any external media links the caller supplied. Null when a
     // picture has no public address to be fetched from, which refuses the send rather than delivering the text alone.
-    private async Task<IList<string>> BuildMediaUrlsAsync(IList<string> mediaUrls, IReadOnlyList<MessagingAttachment> attachments, CancellationToken cancellationToken)
+    private async Task<IList<string>> BuildMediaUrlsAsync(IMessagingChannel channel, IList<string> mediaUrls, IReadOnlyList<MessagingAttachment> attachments, CancellationToken cancellationToken)
     {
         var urls = mediaUrls?.Where(url => !string.IsNullOrWhiteSpace(url)).ToList() ?? [];
+
+        // A channel that embeds the files in the message reads them from the store, so it needs no public link.
+        if (!channel.Capabilities.Attachments.DeliveredAsLinks)
+        {
+            return urls;
+        }
 
         foreach (var attachment in attachments)
         {
@@ -458,8 +491,9 @@ public sealed class MessagingConversationService : IMessagingConversationService
         return urls;
     }
 
-    private OmnichannelMessage CreateOutboundMessage(MessagingConversation conversation, string body, string actingAgentId)
-        => new()
+    private OmnichannelMessage CreateOutboundMessage(MessagingConversation conversation, string subject, string body, string actingAgentId)
+    {
+        var message = new OmnichannelMessage
         {
             Id = UniqueId.GenerateId(),
             Channel = conversation.Channel,
@@ -472,6 +506,14 @@ public sealed class MessagingConversationService : IMessagingConversationService
             SentByAgentId = actingAgentId,
             DeliveryStatus = MessageDeliveryStatus.Queued.ToString(),
         };
+
+        if (!string.IsNullOrWhiteSpace(subject))
+        {
+            message.SetSubject(subject);
+        }
+
+        return message;
+    }
 
     private async Task<MessagingSendResult> AssignInternalAsync(MessagingConversation conversation, string agentId, CancellationToken cancellationToken)
     {
@@ -557,11 +599,12 @@ public sealed class MessagingConversationService : IMessagingConversationService
     // Records what the provider said about one attempt. An accepted message stores the provider's own id so a
     // later receipt matches it exactly; a refused one is left Queued with a scheduled retry until the backoff
     // schedule is exhausted, at which point it becomes a visible failure on the bubble.
-    private void ApplyDispatchOutcome(OmnichannelMessage message, MessageDispatchResult dispatch, string conversationId)
+    private void ApplyDispatchOutcome(OmnichannelMessage message, MessageDispatchResult dispatch, string conversationId, MessagingOutboundPurpose purpose)
     {
         var state = message.GetOrCreate<OutboundDeliveryState>();
 
         state.Attempts += 1;
+        state.Purpose = purpose;
 
         if (dispatch.Succeeded)
         {

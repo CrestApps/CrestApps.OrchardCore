@@ -23,6 +23,9 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 {
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
     private const int ReindexBatchSize = 100;
+    private const string EmailIndexName = "IDX_OCIndex_Email";
+
+    private static readonly string[] _emailIndexColumns = ["NormalizedPrimaryEmailAddress", "Published", "Latest"];
 
     private static readonly (string Name, string[] Columns)[] _contactIndexIndexes =
     [
@@ -78,9 +81,11 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         await CreateContactIndexTableAsync(SchemaBuilder);
         await CreateContactIndexIndexesAsync(SchemaBuilder);
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+            table.CreateIndex(EmailIndexName, _emailIndexColumns));
         ScheduleContactDefinitionRepair();
 
-        return 12;
+        return 13;
     }
 
     /// <summary>
@@ -250,6 +255,56 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         return 12;
     }
 
+    /// <summary>
+    /// Adds the canonical (lower-case) primary email column, so an inbound email finds its contact however the sender
+    /// typed their address, and fills it from the email already indexed. No content item is saved again: the value is
+    /// copied in SQL, and an address stored with a display name is corrected the next time its contact is saved.
+    /// </summary>
+    public async Task<int> UpdateFrom12Async()
+    {
+        await EnsureColumnExistsAsync<OmnichannelContactIndex>(
+            collection: null,
+            columnName: nameof(OmnichannelContactIndex.NormalizedPrimaryEmailAddress),
+            addColumn: table => table.AddColumn<string>(nameof(OmnichannelContactIndex.NormalizedPrimaryEmailAddress), column => column.WithLength(255)),
+            operation: "add the 'NormalizedPrimaryEmailAddress' column to the contact index");
+
+        await ApplyIsolatedSchemaChangeAsync(
+            builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
+                table.CreateIndex(EmailIndexName, _emailIndexColumns)),
+            $"create the '{EmailIndexName}' index");
+
+        var failure = await TryApplyIsolatedAsync(BackfillNormalizedEmailAddressesAsync);
+
+        if (failure is not null)
+        {
+            // A row left without the canonical email is filled the next time its contact is saved; until then an
+            // inbound email from that contact starts as an unknown sender.
+            Logger.LogWarning(failure, "The canonical primary email of the existing contact index rows could not be filled in.");
+        }
+
+        return 13;
+    }
+
+    private async Task BackfillNormalizedEmailAddressesAsync(ISchemaBuilder builder)
+    {
+        var dialect = Store.Configuration.SqlDialect;
+        var contactTable = dialect.QuoteForTableName(
+            $"{Store.Configuration.TablePrefix}{Store.Configuration.TableNameConvention.GetIndexTable(typeof(OmnichannelContactIndex))}",
+            Store.Configuration.Schema);
+        var primary = dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.PrimaryEmailAddress));
+        var normalized = dialect.QuoteForColumnName(nameof(OmnichannelContactIndex.NormalizedPrimaryEmailAddress));
+
+        // LOWER, LTRIM and RTRIM are spelled the same by every supported database.
+        var updated = await builder.Connection.ExecuteAsync(
+            $"UPDATE {contactTable} SET {normalized} = LOWER(LTRIM(RTRIM({primary}))) WHERE {primary} IS NOT NULL AND {normalized} IS NULL",
+            transaction: builder.Transaction);
+
+        if (Logger.IsEnabled(LogLevel.Information))
+        {
+            Logger.LogInformation("Filled in the canonical primary email of {RowCount} contact index row(s).", updated);
+        }
+    }
+
     private async Task BackfillContactIndexContentTypesAsync(ISchemaBuilder builder)
     {
         var dialect = Store.Configuration.SqlDialect;
@@ -314,6 +369,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
             .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
+            .Column<string>("NormalizedPrimaryEmailAddress", column => column.WithLength(255))
             .Column<string>("TimeZoneId", column => column.WithLength(64))
         );
     }

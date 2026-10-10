@@ -72,6 +72,9 @@ the reference channel — copy its shape.
 | SMS compliance rules | `Sms.Core/Services/SmsKeywordInboundHandler.cs`, `SmsKeywordPolicy.cs` |
 | SMS feature | `src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging.Sms/Manifest.cs`, `Startup.cs`, `Drivers/SmsEndpointProviderDisplayDriver.cs` |
 | Provider webhook (signed, durable) | `src/Modules/CrestApps.OrchardCore.Telnyx/Endpoints/TelnyxSmsWebhookEndpoint.cs` |
+| **Email channel** (a second, provider-agnostic reference) | `src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core/Services/EmailMessagingChannel.cs`, `EmailDispatcher.cs`, `Transports/IEmailTransport.cs` (pluggable send seam), `Inbound/EmailInboundReceiver.cs` (one receiver for every inbound source), `Webhooks/IInboundEmailWebhookParser.cs`, `Mailbox/EmailMailboxPoller.cs` (polling for providers without webhooks) |
+| Channel-specific message data | `Messaging.Core/Models/MessagingMessageExtensions.cs` (`GetSubject`/`SetSubject`), `Email.Core/Models/EmailMessageMetadata.cs`: stored with `Put<T>()`, never as new `OmnichannelMessage` properties |
+| AI automation on a channel | `src/Core/CrestApps.OrchardCore.Omnichannel.Automation.Core/IAutomatedMessagingChannel.cs`, `AddAutomatedMessagingChannel<T>()`; example `src/Modules/CrestApps.OrchardCore.Omnichannel.Email/Services/EmailAutomatedMessagingChannel.cs` |
 | Tests to copy | `tests/CrestApps.OrchardCore.Tests/Omnichannel/Messaging/MessagingChannelWorkspaceTests.cs`, `SmsInboundProcessorTests.cs`, `MessagingTestChannels.cs` |
 
 ## Workflow
@@ -81,8 +84,8 @@ the reference channel — copy its shape.
    `*.Core` project for testable logic and a module for the feature, depending on
    `MessagingConstants.Feature.Workspace`.
 3. **Implement `IMessagingChannel`** and register it with `services.AddMessagingChannel<TChannel>()`.
-4. **Register the channel as a channel-endpoint source** (`services.AddChannelEndpointSource(name, …)`) so tenants
-   can add the addresses they send from, plus a `DisplayDriver<OmnichannelChannelEndpoint>` for per-endpoint
+4. **Offer the channel as an address capability** (`services.AddOmnichannelAddressCapability(addressType, name, …)`)
+   so tenants can tick it on the addresses they send from, plus a `DisplayDriver<OmnichannelChannelEndpoint>` for per-endpoint
    provider settings if the channel has several providers. The workspace already normalizes and validates endpoint
    addresses through your channel and adds the inbound-routing editor to your endpoints.
 5. **Wire inbound and delivery receipts.** Follow [references/inbound-and-delivery.md](references/inbound-and-delivery.md).
@@ -97,7 +100,7 @@ the reference channel — copy its shape.
 - [ ] `IMessagingChannel` implemented: identity, `Order`, capabilities, `NormalizeAddress`, `FormatAddress`,
       `IsValidAddress`, `SendAsync`, `IsOptedOut`, `GetContactAddresses`, `FindContactIdsAsync`,
       `SearchContactIdsByAddressAsync`.
-- [ ] `AddMessagingChannel<T>()` and `AddChannelEndpointSource(...)` registered in the channel feature's startup.
+- [ ] `AddMessagingChannel<T>()` and `AddOmnichannelAddressCapability(...)` registered in the channel feature's startup.
 - [ ] Inbound: signed webhook → durable provider inbox → `IMessagingInboundProcessor.ProcessAsync` with a normalized
       `OmnichannelMessage` (`Channel`, `ServiceAddress`, `CustomerAddress`, `Content`, `IsInbound = true`,
       `ProviderMessageId`, `CreatedUtc`).

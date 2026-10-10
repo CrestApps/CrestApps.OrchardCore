@@ -703,6 +703,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> CreateAsync() { }
         public System.Threading.Tasks.Task<int> UpdateFrom10Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom11Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom12Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }

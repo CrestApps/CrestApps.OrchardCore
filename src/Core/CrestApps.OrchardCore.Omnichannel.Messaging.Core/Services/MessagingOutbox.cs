@@ -123,8 +123,10 @@ public sealed class MessagingOutbox : IMessagingOutbox
             attempted++;
 
             // A picture message is re-sent with fresh links: the ones the first attempt carried may have expired.
-            var mediaUrls = await BuildMediaUrlsAsync(message, cancellationToken);
+            var mediaUrls = await BuildMediaUrlsAsync(channel, message, cancellationToken);
 
+            // The retry carries everything the first attempt did, the subject and the thread included, so the
+            // contact receives the same message rather than a stripped-down copy of it.
             var dispatch = mediaUrls is null
                 ? MessageDispatchResult.Failed("The site has no public address the provider could download the pictures from. Set the site's base URL.")
                 : await channel.SendAsync(
@@ -132,8 +134,12 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     {
                         ServiceAddress = message.ServiceAddress,
                         ContactAddress = message.CustomerAddress,
+                        ConversationId = message.ConversationId,
+                        Purpose = state.Purpose,
+                        Subject = message.GetSubject(),
                         Body = message.Content,
                         MediaUrls = mediaUrls,
+                        Attachments = message.GetAttachments().ToList(),
                     },
                     cancellationToken);
 
@@ -184,9 +190,14 @@ public sealed class MessagingOutbox : IMessagingOutbox
         return accepted;
     }
 
-    private async Task<IList<string>> BuildMediaUrlsAsync(OmnichannelMessage message, CancellationToken cancellationToken)
+    private async Task<IList<string>> BuildMediaUrlsAsync(IMessagingChannel channel, OmnichannelMessage message, CancellationToken cancellationToken)
     {
         var urls = message.MediaReferences?.Where(url => !string.IsNullOrWhiteSpace(url)).ToList() ?? [];
+
+        if (!channel.Capabilities.Attachments.DeliveredAsLinks)
+        {
+            return urls;
+        }
 
         foreach (var attachment in message.GetAttachments())
         {

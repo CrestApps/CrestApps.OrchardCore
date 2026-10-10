@@ -323,9 +323,20 @@ public sealed class AdminController : Controller
 
         // A single recipient starts a 1:1 conversation; multiple recipients fan out as a broadcast (each gets their
         // own private 1:1 thread).
+        var subject = channel.Capabilities.SupportsSubject ? MessagingSubjects.Clean(model.Subject) : null;
+
         if (recipients.Count == 1)
         {
-            var result = await _conversationService.SendDirectAsync(channel.Name, endpoint.Value, recipients[0], model.Body.Trim(), agent?.ItemId);
+            var result = await _conversationService.SendDirectAsync(new MessagingDirectSendRequest
+            {
+                Channel = channel.Name,
+                ServiceAddress = endpoint.Value,
+                ContactAddress = recipients[0],
+                Subject = subject,
+                Body = model.Body.Trim(),
+                ActingAgentId = agent?.ItemId,
+                Purpose = MessagingOutboundPurpose.Reply,
+            });
 
             if (!result.Succeeded)
             {
@@ -343,6 +354,7 @@ public sealed class AdminController : Controller
         broadcast.Name = S["Group message to {0} recipients", recipients.Count].Value;
         broadcast.Channel = channel.Name;
         broadcast.ServiceAddress = endpoint.Value;
+        broadcast.Subject = subject;
         broadcast.Body = model.Body.Trim();
         broadcast.Recipients = recipients;
         broadcast.OwnerAgentId = agent?.ItemId;
@@ -753,14 +765,20 @@ public sealed class AdminController : Controller
 
     private async Task<string> GetAgentTextingAddressIdAsync(string channel)
     {
-        if (!string.IsNullOrEmpty(channel) && !string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase))
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        // Texts have a tenant-wide default number besides the agent's own line. Every other channel starts from the
+        // agent's line on it, the address they were made a messaging line of, when they have one.
+        if (string.IsNullOrEmpty(channel) || string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase))
         {
-            return null;
+            var addresses = await _agentAddressResolver.ResolveAsync(userId, HttpContext.RequestAborted);
+
+            return addresses.SmsAddress?.ItemId;
         }
 
-        var addresses = await _agentAddressResolver.ResolveAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
+        var endpoints = await _endpointManager.GetAllAsync(HttpContext.RequestAborted);
 
-        return addresses.SmsAddress?.ItemId;
+        return MessagingLines.FindAssignedLine(endpoints, userId, channel)?.ItemId;
     }
 
     private async Task PopulateEndpointsAsync(ComposeViewModel model, string selectedEndpointId = null)
@@ -769,5 +787,6 @@ public sealed class AdminController : Controller
 
         model.Endpoints = options.Items;
         model.EndpointChannels = options.EndpointChannels;
+        model.SubjectChannels = _workspaceBuilder.GetSubjectChannels();
     }
 }

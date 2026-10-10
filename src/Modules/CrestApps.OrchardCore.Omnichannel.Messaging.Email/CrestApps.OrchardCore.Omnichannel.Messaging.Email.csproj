@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Omnichannel Messaging Email Channel</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Adds email as a channel of the Omnichannel Messaging workspace: email addresses as omnichannel addresses with
+      a per-address sending transport, two-way send and receive, inbound email from provider webhooks (SendGrid,
+      Mailgun, Postmark, Amazon SES, raw MIME, JSON) or the address's own mailbox over IMAP, email entry points,
+      threading, bounces and one-click unsubscribe.
+    </Description>
+    <PackageTags>$(PackageTags) Omnichannel Messaging Email</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.ResourceManagement" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Core" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -134,6 +134,11 @@ public static class OmnichannelConstants
     public static class Events
     {
         public const string SmsReceived = "SmsReceived";
+
+        /// <summary>
+        /// Raised when an email from a customer reaches one of the business's email addresses.
+        /// </summary>
+        public const string EmailReceived = "EmailReceived";
     }
 
     /// <summary>
@@ -222,6 +227,19 @@ public static class OmnichannelConstants
         /// Retrying cannot succeed.
         /// </summary>
         public const string MediaNotSupported = "media_not_supported";
+    }
+
+    /// <summary>
+    /// Provider-neutral reasons a messaging provider refused a message on any channel. Each provider maps its own
+    /// codes onto these, so the code that reacts to a refusal never needs to know which provider sent it.
+    /// </summary>
+    public static class MessagingErrorCodes
+    {
+        /// <summary>
+        /// The provider permanently refused the recipient's address: it does not exist, or the receiving system
+        /// rejects it (an email hard bounce, for example). Retrying cannot succeed.
+        /// </summary>
+        public const string RecipientRejected = "recipient_rejected";
     }
 
     /// <summary>
