@@ -101,6 +101,7 @@ public sealed class AgentWorkspaceController : Controller
             SetPresenceUrl = Url.RouteUrl(AgentWorkspaceEndpoints.SetPresenceRouteName),
             PauseRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.PauseRecordingRouteName),
             ResumeRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.ResumeRecordingRouteName),
+            RecordingDisclosedUrl = Url.RouteUrl(AgentWorkspaceEndpoints.RecordingDisclosedRouteName),
             CanSecurePause = canSecurePause,
             RequirePauseReason = recordingSettings.RequirePauseReason,
             BeginSecureCaptureUrl = beginSecureCaptureUrl,

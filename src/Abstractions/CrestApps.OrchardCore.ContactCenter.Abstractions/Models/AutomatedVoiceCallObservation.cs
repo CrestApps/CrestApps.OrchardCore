@@ -46,4 +46,18 @@ public sealed class AutomatedVoiceCallObservation
     /// Gets or sets the disposition the conversation was concluded with, when it was concluded.
     /// </summary>
     public string DispositionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recording disclosure the agent was to give, for
+    /// <see cref="AutomatedVoiceCallObservationKind.RecordingDisclosed"/> and
+    /// <see cref="AutomatedVoiceCallObservationKind.RecordingDisclosureMissed"/>.
+    /// </summary>
+    public string RecordingDisclosure { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the agent actually opened with, for
+    /// <see cref="AutomatedVoiceCallObservationKind.RecordingDisclosureMissed"/>, or <see langword="null"/> when it
+    /// never spoke.
+    /// </summary>
+    public string OpeningLine { get; set; }
 }

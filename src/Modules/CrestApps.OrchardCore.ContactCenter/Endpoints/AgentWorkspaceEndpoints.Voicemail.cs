@@ -135,7 +135,8 @@ internal static partial class AgentWorkspaceEndpoints
             return TypedResults.NotFound();
         }
 
-        return Results.Stream(stream, "audio/mpeg");
+        // The store's stream seeks when the stored file does, so the player can seek with byte ranges.
+        return Results.File(stream, "audio/mpeg", enableRangeProcessing: true);
     }
 
     /// <summary>

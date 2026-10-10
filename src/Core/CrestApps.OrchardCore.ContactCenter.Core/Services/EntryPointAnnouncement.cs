@@ -37,6 +37,11 @@ public sealed class EntryPointAnnouncement
     public const string StatusMetadataKey = "entryPointAnnouncementStatus";
 
     /// <summary>
+    /// The technical-metadata key that records whether the tenant's recording disclosure is said ahead of the message.
+    /// </summary>
+    public const string DisclosureMetadataKey = "entryPointAnnouncementDisclosure";
+
+    /// <summary>
     /// The entry point's welcome message, said to a caller who rings while it is open.
     /// </summary>
     public const string Welcome = "Welcome";
@@ -127,13 +132,20 @@ public sealed class EntryPointAnnouncement
     public string Status { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether the tenant's recording disclosure is said ahead of the message. A caller owed
+    /// only the disclosure has an empty message and still hears this.
+    /// </summary>
+    public bool IncludesDisclosure { get; init; }
+
+    /// <summary>
     /// Records that the caller is owed a message before they go on.
     /// </summary>
     /// <param name="interaction">The caller's interaction.</param>
     /// <param name="kind"><see cref="Welcome"/> or <see cref="Closed"/>.</param>
     /// <param name="next">What happens once the message has been said.</param>
     /// <param name="queueId">The queue the caller waits in, when <paramref name="next"/> is <see cref="NextQueue"/>.</param>
-    public static void Schedule(Interaction interaction, string kind, string next, string queueId = null)
+    /// <param name="includesDisclosure">Whether the tenant's recording disclosure is said ahead of the message.</param>
+    public static void Schedule(Interaction interaction, string kind, string next, string queueId = null, bool includesDisclosure = false)
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
@@ -141,6 +153,7 @@ public sealed class EntryPointAnnouncement
         interaction.TechnicalMetadata[KindMetadataKey] = kind;
         interaction.TechnicalMetadata[NextMetadataKey] = next;
         interaction.TechnicalMetadata[StatusMetadataKey] = Scheduled;
+        SetIncludesDisclosure(interaction, includesDisclosure);
 
         if (!string.IsNullOrEmpty(queueId))
         {
@@ -159,6 +172,21 @@ public sealed class EntryPointAnnouncement
 
         interaction.TechnicalMetadata ??= new Dictionary<string, object>();
         interaction.TechnicalMetadata[StatusMetadataKey] = status;
+    }
+
+    /// <summary>
+    /// Records whether the tenant's recording disclosure is said ahead of the message.
+    /// </summary>
+    /// <param name="interaction">The caller's interaction.</param>
+    /// <param name="includesDisclosure">Whether the disclosure is said.</param>
+    public static void SetIncludesDisclosure(Interaction interaction, bool includesDisclosure)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        interaction.TechnicalMetadata ??= new Dictionary<string, object>();
+
+        // Stored as a string like every other value here, so it reads back the same whatever the store's serializer.
+        interaction.TechnicalMetadata[DisclosureMetadataKey] = includesDisclosure ? bool.TrueString : bool.FalseString;
     }
 
     /// <summary>
@@ -182,6 +210,7 @@ public sealed class EntryPointAnnouncement
             Next = ReadString(interaction, NextMetadataKey),
             QueueId = ReadString(interaction, QueueMetadataKey),
             Status = ReadString(interaction, StatusMetadataKey),
+            IncludesDisclosure = bool.TryParse(ReadString(interaction, DisclosureMetadataKey), out var includesDisclosure) && includesDisclosure,
         };
     }
 

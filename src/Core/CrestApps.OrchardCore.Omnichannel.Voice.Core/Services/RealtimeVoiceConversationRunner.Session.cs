@@ -92,6 +92,17 @@ public sealed partial class RealtimeVoiceConversationRunner
                   "other name, and never guess or invent one — if the person says they are somebody else, believe " +
                   "them and adjust.");
 
+        // The tenant's notice that the call is recorded, ahead of the guidance about the opening it belongs to.
+        var recordingDisclosure = VoiceCallGuidance.RecordingDisclosure(call?.RecordingDisclosure);
+
+        if (recordingDisclosure is not null)
+        {
+            orchestration.SystemMessageBuilder.AppendLine();
+            orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.RecordingDisclosureHeading);
+            orchestration.SystemMessageBuilder.AppendLine();
+            orchestration.SystemMessageBuilder.AppendLine(recordingDisclosure);
+        }
+
         // Being talked over cuts the model's own line back to what the caller heard, so an interrupted opening is
         // a word long in its record — and a profile that says "open by introducing yourself" then has it start
         // the introduction again. Live, four times in fifteen seconds. See VoiceCallGuidance.WhenTalkedOver.

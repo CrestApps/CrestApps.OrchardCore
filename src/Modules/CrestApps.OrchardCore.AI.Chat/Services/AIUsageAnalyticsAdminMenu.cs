@@ -24,10 +24,13 @@ public sealed class AIUsageAnalyticsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         // The top-level Reports menu is built by the Reports module, which merges this entry into its category by name.
+        // The merged node may keep this entry's id and classes, so they match the Reports module's; without the
+        // "reports" id the menu loses its icon, which is rendered by the NavigationItemText-reports.Id shape.
         var category = new LocalizedString(ReportsConstants.Categories.BillingUsage, ReportsConstants.Categories.BillingUsage);
 
         builder
             .Add(S["Reports"], "after.40", reports => reports
+                .AddClass("reports")
                 .Id("reports")
                 .Add(category, category.PrefixPosition(), categoryNode => categoryNode
                     .AddClass("report-category")
