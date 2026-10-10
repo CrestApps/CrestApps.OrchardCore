@@ -35,6 +35,17 @@ public static class TransactionsConstants
     }
 
     /// <summary>
+    /// The names of the routes other features link to.
+    /// </summary>
+    public static class RouteNames
+    {
+        /// <summary>
+        /// The public page a signed pay link opens, where the owner pays one transaction without signing in.
+        /// </summary>
+        public const string Pay = "TransactionsPay";
+    }
+
+    /// <summary>
     /// The canonical, well-known values for <see cref="Models.Transaction.ReferenceType"/>.
     /// </summary>
     public static class ReferenceTypes

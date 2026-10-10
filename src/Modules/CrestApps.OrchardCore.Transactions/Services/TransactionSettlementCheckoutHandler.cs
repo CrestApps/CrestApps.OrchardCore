@@ -15,6 +15,8 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 /// </summary>
 public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 {
+    private const string StepKey = "TransactionSettlement";
+
     private readonly ITransactionManager _transactionManager;
     private readonly IPaymentAttemptStore _paymentAttemptStore;
     private readonly ITransactionSettlementService _settlementService;
@@ -45,6 +47,22 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
     }
 
     /// <inheritdoc/>
+    public override Task InitializingAsync(CheckoutFlowInitializingContext context)
+    {
+        // Concealment is decided per request rather than stored, so the balance step is hidden again every time
+        // the session is loaded.
+        foreach (var step in context.Flow.Session.Steps)
+        {
+            if (string.Equals(step.Key, StepKey, StringComparison.Ordinal))
+            {
+                step.Conceal = true;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public override async Task ActivatingAsync(CheckoutFlowActivatingContext context)
     {
         var session = context.Session;
@@ -68,10 +86,15 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 
         session.Steps.Add(new CheckoutFlowStep
         {
-            Key = "TransactionSettlement",
+            Key = StepKey,
             Title = S["Outstanding payment"],
             Description = transaction.Title,
             Order = 0,
+
+            // The balance is what the customer came to pay, so the step asks them nothing; it exists only because
+            // billing items belong to steps. Concealed, the checkout opens straight on the payment.
+            CollectData = false,
+            Conceal = true,
             BillingItems =
             [
                 new BillingItem

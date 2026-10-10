@@ -125,7 +125,7 @@ public sealed class CouponsAdminController : Controller
 
         options.Statuses =
         [
-            new SelectListItem(S["All coupons"], nameof(CouponStatusFilter.All), options.Status == CouponStatusFilter.All),
+            new SelectListItem(S["Any status"], nameof(CouponStatusFilter.All), options.Status == CouponStatusFilter.All),
             new SelectListItem(S["Active"], nameof(CouponStatusFilter.Active), options.Status == CouponStatusFilter.Active),
             new SelectListItem(S["Not available"], nameof(CouponStatusFilter.NotAvailable), options.Status == CouponStatusFilter.NotAvailable),
             new SelectListItem(S["Disabled"], nameof(CouponStatusFilter.Disabled), options.Status == CouponStatusFilter.Disabled),

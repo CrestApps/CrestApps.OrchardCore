@@ -80,6 +80,42 @@ public sealed class PaymentCheckoutHandlerTests
             () => handler.CompletingAsync(new CheckoutFlowCompletingContext(flow)));
     }
 
+    [Fact]
+    public async Task LoadingAsync_DoesNotSendTheCustomerBackToAStepThatCollectsNothing()
+    {
+        // Arrange: a visible step that only contributes billing items, so nothing is ever saved for it.
+        var session = new CheckoutSession { SessionId = "checkout-1" };
+        session.Steps.Add(new CheckoutFlowStep { Key = "Balance", Order = 0, CollectData = false });
+        session.Steps.Add(new CheckoutFlowStep { Key = CheckoutConstants.PaymentStepKey, Order = int.MaxValue, CollectData = false });
+
+        var flow = new CheckoutFlow(session);
+        flow.SetCurrentStep(CheckoutConstants.PaymentStepKey);
+
+        // Act
+        await CreateHandler().LoadingAsync(new CheckoutFlowLoadingContext(flow));
+
+        // Assert
+        Assert.Equal(CheckoutConstants.PaymentStepKey, flow.GetCurrentStep().Key);
+    }
+
+    [Fact]
+    public async Task LoadingAsync_StillSendsTheCustomerBackToAnUnfinishedStepThatCollectsData()
+    {
+        // Arrange
+        var session = new CheckoutSession { SessionId = "checkout-1" };
+        session.Steps.Add(new CheckoutFlowStep { Key = "Details", Order = 0, CollectData = true });
+        session.Steps.Add(new CheckoutFlowStep { Key = CheckoutConstants.PaymentStepKey, Order = int.MaxValue, CollectData = false });
+
+        var flow = new CheckoutFlow(session);
+        flow.SetCurrentStep(CheckoutConstants.PaymentStepKey);
+
+        // Act
+        await CreateHandler().LoadingAsync(new CheckoutFlowLoadingContext(flow));
+
+        // Assert
+        Assert.Equal("Details", flow.GetCurrentStep().Key);
+    }
+
     private static CheckoutSession BuildSessionWithInvoice(decimal oneTimeAmount)
     {
         var session = new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending };

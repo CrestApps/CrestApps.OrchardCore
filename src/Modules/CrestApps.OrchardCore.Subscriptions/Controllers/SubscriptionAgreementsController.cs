@@ -263,7 +263,7 @@ public sealed class SubscriptionAgreementsController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All statuses"], Value = string.Empty, Selected = !selected.HasValue },
+            new() { Text = S["Any status"], Value = string.Empty, Selected = !selected.HasValue },
         };
 
         foreach (var status in Enum.GetValues<SubscriptionStatus>())

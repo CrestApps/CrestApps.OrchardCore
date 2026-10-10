@@ -38,6 +38,8 @@ public sealed class Startup : StartupBase
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
+
+        services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
     }
 }
 
@@ -85,6 +87,7 @@ public sealed class ReceiptsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
+        services.AddScoped<ITransactionInvoiceBuilder, TransactionInvoiceBuilder>();
         services.AddScoped<PaymentReceiptTransactionPaymentHandler>();
         services.AddScoped<ITransactionPaymentHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());
         services.AddScoped<IPaymentRefundHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());

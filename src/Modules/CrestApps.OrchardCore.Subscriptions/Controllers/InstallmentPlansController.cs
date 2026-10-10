@@ -594,7 +594,7 @@ public sealed class InstallmentPlansController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new(S["All statuses"], string.Empty, !selected.HasValue),
+            new(S["Any status"], string.Empty, !selected.HasValue),
         };
 
         foreach (var status in Enum.GetValues<InstallmentPlanStatus>())

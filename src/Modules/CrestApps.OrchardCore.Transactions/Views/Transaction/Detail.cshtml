@@ -38,6 +38,21 @@
                 <dt class="col-sm-4">@T["Due"]</dt>
                 <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
             }
+
+            @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+            {
+                <dt class="col-sm-4">@T["Invoice"]</dt>
+                <dd class="col-sm-8">
+                    @if (Model.ShowReceipts)
+                    {
+                        <a asp-action="Index" asp-controller="TransactionInvoice" asp-route-itemId="@transaction.ItemId">@transaction.InvoiceNumber</a>
+                    }
+                    else
+                    {
+                        @transaction.InvoiceNumber
+                    }
+                </dd>
+            }
         </dl>
     </div>
     @if (canPay)

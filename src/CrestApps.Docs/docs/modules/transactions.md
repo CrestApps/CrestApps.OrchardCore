@@ -87,6 +87,26 @@ The same feature tells the owner when a payment is refunded, however the refund 
 straight away, confirmed later by a gateway notification, or recorded by an administrator who paid it back by hand.
 The notice names the amount and what it was for, and the transaction's timeline records that it was sent.
 
+### Invoices and pay links
+
+A transaction its owner pays themselves (one that is not charged automatically) is invoiced:
+
+- **Invoice numbers.** The first time the owner is told about the payment, by the reminder before the due date, the
+  notice on the due date, or a reminder an administrator sends, the transaction is numbered `INV-1001`, `INV-1002`
+  and so on (`Transaction.InvoiceNumber`, from `ITransactionInvoiceService`). The number never changes, and a notice
+  that could not be delivered still keeps the number it was given.
+- **Pay links.** Each of those notices carries a link that pays the transaction without signing in, as text and as a
+  button. The link names one transaction, is signed with the site's data protection keys so it cannot be altered,
+  and expires after 60 days; every notice sends a fresh one. It opens a public page with the invoice and a **Pay**
+  button that starts the normal checkout, so a customer an administrator created (with no password) or a guest can
+  pay. A link that was altered or expired shows nothing about any transaction. Links use the site's **Base URL**
+  from the general settings, so set it to the public address; without it, a link made outside a request is left out
+  and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
+- **The invoice page.** With **Payment Receipts** enabled, the transaction's page links its invoice: the same layout
+  as a receipt, headed *Invoice*, with a *Due* status until it is paid. Administrators also see the pay link there,
+  to send it by hand. The receipt for the payment names the invoice it settled.
+- **The first reminder on the due date** reads as the payment being due today; later ones chase the unpaid balance.
+
 ### Reacting to a payment
 
 `ITransactionPaymentHandler.PaymentRecordedAsync` is raised after a payment is applied to a transaction, however it
@@ -104,7 +124,7 @@ Refund notices use it. A handler that fails is logged and never undoes the refun
 
 ### Customer statement — "My Transactions"
 
-Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online.
+Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online. Paying opens the checkout straight on the payment step: the balance being paid is shown in the order summary, so there is no separate step for it.
 
 ### Administrator report and console
 

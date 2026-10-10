@@ -106,7 +106,7 @@ public sealed class MySubscriptionsController : Controller
             routeData.Values.TryAdd(nameof(status), status.Value);
         }
 
-        var statuses = new List<SelectListItem> { new(S["All statuses"], string.Empty, !status.HasValue) };
+        var statuses = new List<SelectListItem> { new(S["Any status"], string.Empty, !status.HasValue) };
         statuses.AddRange(Enum.GetValues<SubscriptionStatus>().Select(value => new SelectListItem(value.ToString(), value.ToString(), status == value)));
 
         return View(new MySubscriptionsViewModel

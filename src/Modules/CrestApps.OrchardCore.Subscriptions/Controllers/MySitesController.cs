@@ -163,7 +163,7 @@ public sealed class TenantProvisioningAdminController : Controller
             routeData.Values.TryAdd(nameof(status), status.Value);
         }
 
-        var statuses = new List<SelectListItem> { new(H["All statuses"].Value, string.Empty, !status.HasValue) };
+        var statuses = new List<SelectListItem> { new(H["Any status"].Value, string.Empty, !status.HasValue) };
         statuses.AddRange(Enum.GetValues<TenantProvisioningStatus>().Select(value => new SelectListItem(value.ToString(), value.ToString(), status == value)));
 
         return View(new TenantProvisioningListViewModel

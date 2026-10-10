@@ -171,6 +171,12 @@ public sealed class Transaction : CatalogItem
     public DateTime? UpcomingReminderSentUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the invoice number, for example <c>INV-1001</c>, of a transaction the owner pays themselves. It is
+    /// issued the first time the owner is told about the payment and never changes after that.
+    /// </summary>
+    public string InvoiceNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets how the transaction will be collected without the owner acting, when it will be: for example
     /// a saved card charged on the due date. <see langword="null"/> means the owner pays it themselves.
     /// </summary>

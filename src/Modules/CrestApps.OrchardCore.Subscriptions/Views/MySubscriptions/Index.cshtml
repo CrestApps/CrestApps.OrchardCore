@@ -102,9 +102,13 @@
 
 @await DisplayAsync(Model.Pager)
 
-<p class="text-muted small mt-2">
-    @T["Cancelling stops the next payment. You keep access until the end of the period you have already paid for."]
-</p>
+@if (Model.Subscriptions.Any(subscription => subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing or SubscriptionStatus.PastDue))
+{
+    @* Only worth saying when there is something here the customer can cancel. *@
+    <p class="text-muted small mt-2">
+        @T["Cancelling stops the next payment. You keep access until the end of the period you have already paid for."]
+    </p>
+}
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="commerce-admin-list" at="Foot"></script>

@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Payments;
@@ -69,23 +70,50 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
 
         var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
         var title = GetTitle(transaction);
-        var isGuest = transaction.OwnerKind == CustomerOwnerKind.Guest;
+        var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
+
+        // The first notice on the due date is the invoice itself coming due; later ones chase an unpaid balance.
+        var dueToday = transaction.ReminderCount == 0 &&
+            transaction.DueUtc.HasValue &&
+            transaction.DueUtc.Value.Date == _clock.UtcNow.Date;
+
+        string body;
+
+        if (dueToday)
+        {
+            body = S["A payment of {0} for {1} is due today.", amount, title].Value;
+        }
+        else if (transaction.DueUtc.HasValue && transaction.DueUtc.Value.Date > _clock.UtcNow.Date)
+        {
+            // Sent by hand before the due date.
+            body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, transaction.DueUtc.Value].Value;
+        }
+        else if (transaction.DueUtc.HasValue)
+        {
+            body = S["This is a reminder that you have an outstanding balance of {0} for {1}, which was due on {2:d}.", amount, title, transaction.DueUtc.Value].Value;
+        }
+        else
+        {
+            body = S["This is a reminder that you have an outstanding balance of {0} for {1}.", amount, title].Value;
+        }
 
         var reminder = new Reminder
         {
-            Subject = S["Payment reminder: {0} outstanding", amount].Value,
-            Summary = S["You have an outstanding balance of {0} for {1}.", amount, title].Value,
-            Body = (transaction.DueUtc.HasValue, isGuest) switch
-            {
-                (true, false) => S["This is a reminder that you have an outstanding balance of {0} for {1}, due on {2:d}. Please sign in to settle it.", amount, title, transaction.DueUtc.Value].Value,
-                (false, false) => S["This is a reminder that you have an outstanding balance of {0} for {1}. Please sign in to settle it.", amount, title].Value,
-                (true, true) => S["This is a reminder that you have an outstanding balance of {0} for {1}, due on {2:d}. Please settle it at your earliest convenience.", amount, title, transaction.DueUtc.Value].Value,
-                (false, true) => S["This is a reminder that you have an outstanding balance of {0} for {1}. Please settle it at your earliest convenience.", amount, title].Value,
-            },
+            Subject = dueToday
+                ? S["Payment due today: {0}", amount].Value
+                : S["Payment reminder: {0} outstanding", amount].Value,
+            Summary = dueToday
+                ? S["A payment of {0} for {1} is due today.", amount, title].Value
+                : S["You have an outstanding balance of {0} for {1}.", amount, title].Value,
+            Body = body + invoice.Instructions,
+            ActionUrl = invoice.PayUrl,
+            ActionText = S["Pay {0}", amount].Value,
         };
 
         if (!await DeliverAsync(transaction, reminder, cancellationToken))
         {
+            await KeepIssuedInvoiceNumberAsync(transaction, invoice, cancellationToken);
+
             return false;
         }
 
@@ -133,17 +161,28 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
                     ? S["This is a reminder that your scheduled payment of {0} for {1} will be charged to your card on file on {2:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, dueUtc].Value
                     : S["This is a reminder that your scheduled payment of {0} for {1} will be charged to {2} on {3:d}. You do not need to do anything. If the card has changed, please contact us before then.", amount, title, paymentMethod, dueUtc].Value,
             }
-            : new Reminder
+            : null;
+
+        // A payment the owner makes themselves: the reminder is their invoice, with a link that pays it.
+        var invoice = default(InvoiceDetails);
+
+        if (reminder is null)
+        {
+            invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
+            reminder = new Reminder
             {
                 Subject = S["Payment due on {1:d}: {0}", amount, dueUtc].Value,
                 Summary = S["A payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value,
-                Body = transaction.OwnerKind == CustomerOwnerKind.Guest
-                    ? S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value
-                    : S["This is a reminder that a payment of {0} for {1} is due on {2:d}. Please sign in to pay it by then.", amount, title, dueUtc].Value,
+                Body = S["This is a reminder that a payment of {0} for {1} is due on {2:d}.", amount, title, dueUtc].Value + invoice.Instructions,
+                ActionUrl = invoice.PayUrl,
+                ActionText = S["Pay {0}", amount].Value,
             };
+        }
 
         if (!await DeliverAsync(transaction, reminder, cancellationToken))
         {
+            await KeepIssuedInvoiceNumberAsync(transaction, invoice, cancellationToken);
+
             return false;
         }
 
@@ -159,6 +198,60 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         });
 
         return true;
+    }
+
+    // Numbers the invoice the first time the owner is told about it, and creates the link that pays it without signing
+    // in. Both services are optional, so a site without them still sends a plain reminder.
+    private async Task<InvoiceDetails> PrepareInvoiceAsync(Transaction transaction, CancellationToken cancellationToken)
+    {
+        var issued = _serviceProvider.GetService<ITransactionInvoiceService>() is { } invoices &&
+            await invoices.EnsureInvoiceNumberAsync(transaction, cancellationToken);
+
+        var payUrl = _serviceProvider.GetService<ITransactionPayLinkService>() is { } payLinks
+            ? await payLinks.CreatePayUrlAsync(transaction, cancellationToken)
+            : null;
+
+        var instructions = string.Empty;
+
+        if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+        {
+            instructions += " " + S["Invoice {0}.", transaction.InvoiceNumber].Value;
+        }
+
+        if (!string.IsNullOrEmpty(payUrl))
+        {
+            instructions += " " + S["Pay it online, no sign-in needed: {0}", payUrl].Value;
+        }
+        else if (transaction.OwnerKind != CustomerOwnerKind.Guest)
+        {
+            instructions += " " + S["Please sign in to pay it."].Value;
+        }
+
+        return new InvoiceDetails(issued, payUrl, instructions);
+    }
+
+    // An invoice number is issued once. When the notice that carried it could not be delivered, the number is kept on
+    // the transaction anyway, so the next attempt sends the same number instead of using up another.
+    private async Task KeepIssuedInvoiceNumberAsync(Transaction transaction, InvoiceDetails invoice, CancellationToken cancellationToken)
+    {
+        if (invoice.Issued && _serviceProvider.GetService<ITransactionManager>() is { } manager)
+        {
+            await manager.UpdateAsync(transaction, data: null, cancellationToken);
+        }
+    }
+
+    // The same text with the pay link as a button, for channels that show HTML.
+    private static string BuildHtmlBody(Reminder reminder)
+    {
+        if (string.IsNullOrEmpty(reminder.ActionUrl))
+        {
+            return null;
+        }
+
+        var encoder = HtmlEncoder.Default;
+
+        return $"<p>{encoder.Encode(reminder.Body)}</p>" +
+            $"<p><a href=\"{encoder.Encode(reminder.ActionUrl)}\" style=\"display:inline-block;padding:10px 18px;background:#0d6efd;color:#ffffff;text-decoration:none;border-radius:6px;\">{encoder.Encode(reminder.ActionText)}</a></p>";
     }
 
     private string GetTitle(Transaction transaction)
@@ -182,11 +275,14 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             return false;
         }
 
+        var htmlBody = BuildHtmlBody(reminder);
         var message = new NotificationMessage
         {
             Subject = reminder.Subject,
             Summary = reminder.Summary,
             TextBody = reminder.Body,
+            HtmlBody = htmlBody,
+            IsHtmlPreferred = htmlBody is not null,
         };
 
         var result = await _notificationService.SendAsync(user, message, cancellationToken);
@@ -226,6 +322,7 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
             To = contact.Email,
             Subject = reminder.Subject,
             TextBody = reminder.Body,
+            HtmlBody = BuildHtmlBody(reminder),
         };
 
         var result = await emailService.SendAsync(message, cancellationToken: cancellationToken);
@@ -256,5 +353,11 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         public string Summary { get; init; }
 
         public string Body { get; init; }
+
+        public string ActionUrl { get; init; }
+
+        public string ActionText { get; init; }
     }
+
+    private readonly record struct InvoiceDetails(bool Issued, string PayUrl, string Instructions);
 }

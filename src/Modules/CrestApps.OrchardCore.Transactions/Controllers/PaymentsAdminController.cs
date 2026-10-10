@@ -302,7 +302,7 @@ public sealed class PaymentsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All states"], Value = string.Empty, Selected = !selected.HasValue },
+            new() { Text = S["Any state"], Value = string.Empty, Selected = !selected.HasValue },
         };
 
         foreach (var state in Enum.GetValues<PaymentAttemptState>())
@@ -322,7 +322,7 @@ public sealed class PaymentsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All methods"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
+            new() { Text = S["Any method"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
         };
 
         foreach (var provider in _paymentProviders)

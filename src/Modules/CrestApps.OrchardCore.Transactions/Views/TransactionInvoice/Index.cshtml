@@ -1,0 +1,80 @@
+@using CrestApps.OrchardCore.Transactions.Core
+@addTagHelper *, OrchardCore.Navigation.Core
+@model TransactionInvoiceViewModel
+
+@{
+    var transaction = Model.Transaction;
+    var transactionTitle = string.IsNullOrEmpty(transaction.Title) ? T["Transaction"].Value : transaction.Title;
+    var payable = transaction.OutstandingAmount > 0m && transaction.Status is not (TransactionStatus.Canceled or TransactionStatus.Paid or TransactionStatus.Refunded);
+}
+
+<zone Name="Title">
+    @if (Model.IsAdministrator)
+    {
+        <breadcrumb name="TransactionsInvoice" title="@T["Invoice {0}", transaction.InvoiceNumber]">
+            <breadcrumb-item id="TransactionsIndex" action="Index" controller="Admin" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManageTransactions.Name">@T["Transactions"]</breadcrumb-item>
+            <breadcrumb-item id="TransactionsDetail" action="Detail" controller="Admin" area="CrestApps.OrchardCore.Transactions" route-itemId="@transaction.ItemId" permission="@TransactionsPermissions.ManageTransactions.Name">@transactionTitle</breadcrumb-item>
+        </breadcrumb>
+    }
+    else
+    {
+        <breadcrumb name="TransactionsMyInvoice" title="@T["Invoice {0}", transaction.InvoiceNumber]">
+            <breadcrumb-item id="TransactionsMyTransactions" action="Index" controller="Transaction" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ViewOwnTransactions.Name">@T["My Transactions"]</breadcrumb-item>
+            <breadcrumb-item id="TransactionsMyDetail" action="Detail" controller="Transaction" area="CrestApps.OrchardCore.Transactions" route-itemId="@transaction.ItemId" permission="@TransactionsPermissions.ViewOwnTransactions.Name">@transactionTitle</breadcrumb-item>
+        </breadcrumb>
+    }
+</zone>
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .receipt-print-area,
+        .receipt-print-area * {
+            visibility: visible;
+        }
+
+        .receipt-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="d-flex flex-wrap gap-2 mb-3 no-print">
+    <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print invoice"]</button>
+
+    @if (!Model.IsAdministrator && payable)
+    {
+        <form asp-action="Pay" asp-controller="Transaction" asp-area="CrestApps.OrchardCore.Transactions" method="post">
+            <input type="hidden" name="itemId" value="@transaction.ItemId" />
+            <button type="submit" class="btn btn-success">@T["Pay now"]</button>
+        </form>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(Model.PayUrl))
+{
+    <div class="card mb-3 no-print">
+        <div class="card-body">
+            <label for="invoice-pay-link" class="form-label">@T["Payment link"]</label>
+            <div class="input-group">
+                <input id="invoice-pay-link" type="text" class="form-control" value="@Model.PayUrl" readonly />
+                <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('invoice-pay-link').value); this.textContent = this.dataset.copied;" data-copied="@T["Copied"]">@T["Copy"]</button>
+            </div>
+            <span class="hint">@T["Anyone with this link can pay this invoice without signing in. It expires in 60 days; the reminders send a fresh one each time."]</span>
+        </div>
+    </div>
+}
+
+<div class="receipt-print-area">
+    <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model.Invoice" />
+</div>

@@ -569,7 +569,7 @@ public sealed class AdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new(S["All sources"], string.Empty, string.IsNullOrEmpty(selected)),
+            new(S["Any source"], string.Empty, string.IsNullOrEmpty(selected)),
         };
 
         foreach (var source in _sourceOptions.Sources.Values)

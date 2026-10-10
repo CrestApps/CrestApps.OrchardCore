@@ -22,6 +22,7 @@ public static class TransactionsServiceCollectionExtensions
         services.AddScoped<ITransactionManager, TransactionManager>();
         services.AddScoped<ITransactionSettlementService, TransactionSettlementService>();
         services.TryAddScoped<IFinancialDocumentNumberGenerator, SequentialFinancialDocumentNumberGenerator>();
+        services.TryAddScoped<ITransactionInvoiceService, TransactionInvoiceService>();
 
         return services;
     }

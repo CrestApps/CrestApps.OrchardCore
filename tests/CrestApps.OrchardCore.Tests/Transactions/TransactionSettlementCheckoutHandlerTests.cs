@@ -42,6 +42,25 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         Assert.Equal(transaction.ItemId, billingItem.ItemId);
         Assert.Equal(transaction.OutstandingAmount, billingItem.Amount);
         Assert.Equal("USD", session.Currency);
+
+        // The step asks the payer nothing, so the checkout opens straight on the payment.
+        Assert.False(step.CollectData);
+        Assert.True(step.Conceal);
+    }
+
+    [Fact]
+    public async Task InitializingAsync_HidesTheBalanceStepAgainWhenTheSessionIsLoaded()
+    {
+        // Arrange: concealment is not stored, so a reloaded session has the step visible again.
+        var handler = CreateHandler(new FakeTransactionStore(CreateOutstandingTransaction()));
+        var session = new CheckoutSession { SessionId = "settlement-1" };
+        session.Steps.Add(new CheckoutFlowStep { Key = "TransactionSettlement", Conceal = false });
+
+        // Act
+        await handler.InitializingAsync(new CheckoutFlowInitializingContext(new CheckoutFlow(session)));
+
+        // Assert
+        Assert.True(Assert.Single(session.Steps).Conceal);
     }
 
     [Fact]

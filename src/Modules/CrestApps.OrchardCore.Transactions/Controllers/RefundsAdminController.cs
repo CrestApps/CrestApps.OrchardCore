@@ -206,7 +206,7 @@ public sealed class RefundsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All statuses"], Value = string.Empty, Selected = !selected.HasValue },
+            new() { Text = S["Any status"], Value = string.Empty, Selected = !selected.HasValue },
         };
 
         foreach (var status in Enum.GetValues<RefundStatus>())
@@ -226,7 +226,7 @@ public sealed class RefundsAdminController : Controller
     {
         var items = new List<SelectListItem>
         {
-            new() { Text = S["All methods"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
+            new() { Text = S["Any method"], Value = string.Empty, Selected = string.IsNullOrEmpty(selected) },
         };
 
         foreach (var provider in _paymentProviders)

@@ -89,6 +89,10 @@
 
 @await DisplayAsync(Model.Pager)
 
-<p class="text-muted small mt-2">
-    @T["A new site usually takes a minute or two to appear. This page refreshes when you reload it."]
-</p>
+@if (Model.Jobs.Any(job => job.Status is not (TenantProvisioningStatus.Succeeded or TenantProvisioningStatus.Abandoned)))
+{
+    @* Only worth saying while a site is still being created. *@
+    <p class="text-muted small mt-2">
+        @T["A new site usually takes a minute or two to appear. This page refreshes when you reload it."]
+    </p>
+}

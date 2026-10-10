@@ -105,9 +105,7 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
             TaxAmount = taxAmount,
             Total = paid,
             Status = ReceiptStatus.Paid,
-            Notes = string.Equals(payment.Method, TransactionsConstants.SettlementMethods.Offline, StringComparison.Ordinal)
-                ? S["Paid offline."].Value
-                : null,
+            Notes = BuildNotes(transaction, payment),
         };
 
         if (taxAmount > 0m)
@@ -131,6 +129,24 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
         }
 
         return await _receiptService.BuildAsync(request);
+    }
+
+    private string BuildNotes(Transaction transaction, TransactionEvent payment)
+    {
+        var notes = new List<string>();
+
+        if (string.Equals(payment.Method, TransactionsConstants.SettlementMethods.Offline, StringComparison.Ordinal))
+        {
+            notes.Add(S["Paid offline."].Value);
+        }
+
+        // A receipt for an invoiced payment names the invoice it settles.
+        if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+        {
+            notes.Add(S["Payment for invoice {0}.", transaction.InvoiceNumber].Value);
+        }
+
+        return notes.Count == 0 ? null : string.Join(' ', notes);
     }
 
     // A transaction's tax was decided when it was raised. A payment of part of it carries the same share of tax as
