@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -149,6 +150,22 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                 !string.IsNullOrWhiteSpace(reservation.DialerProfileId))
             {
                 var profile = await _dialerProfileReader.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
+
+                // A profile turned off after this record was offered places no calls. The offer is canceled so the
+                // record goes back to its queue, where routing holds it until the profile is turned back on, and the
+                // agent is free for other work.
+                if (profile is not null && !profile.Enabled)
+                {
+                    await _reservationService.CancelAsync(reservationId, cancellationToken);
+
+                    _logger.LogWarning(
+                        "Refused to dial preview record '{ActivityItemId}' for reservation '{ReservationId}' because dialer profile '{Profile}' is turned off; the offer was canceled and the record returned to its queue.",
+                        reservation.ActivityItemId.SanitizeLogValue(),
+                        reservationId.SanitizeLogValue(),
+                        profile.Name.SanitizeLogValue());
+
+                    return CallCommandResult.Failure("The dialer profile for this record is turned off, so it can't be dialed.");
+                }
 
                 if (profile is not null)
                 {
