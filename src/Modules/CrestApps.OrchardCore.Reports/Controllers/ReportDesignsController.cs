@@ -69,10 +69,18 @@ public sealed class ReportDesignsController : Controller
         };
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        foreach (var design in model.Status == ReportDesignListStatus.Unpublished ? [] : await _designService.GetAllAsync())
+        // Every report and draft is authorized; the status filter and the search only narrow what the user may open.
+        var showPublished = model.Status != ReportDesignListStatus.Unpublished;
+        var showDrafts = model.Status != ReportDesignListStatus.Published;
+
+        foreach (var design in await _designService.GetAllAsync())
         {
-            // Authorization comes first: the search only narrows the reports the user may open.
             if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design))
+            {
+                continue;
+            }
+
+            if (!showPublished)
             {
                 continue;
             }
@@ -92,7 +100,7 @@ public sealed class ReportDesignsController : Controller
             });
         }
 
-        if (model.CanDesign && model.Status != ReportDesignListStatus.Published)
+        if (model.CanDesign)
         {
             foreach (var draft in await _history.ListUnpublishedAsync())
             {
@@ -101,7 +109,7 @@ public sealed class ReportDesignsController : Controller
                     continue;
                 }
 
-                if (string.IsNullOrWhiteSpace(q) || draft.Design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) == true)
+                if (showDrafts && (string.IsNullOrWhiteSpace(q) || draft.Design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) == true))
                 {
                     model.Drafts.Add(new ReportDesignListEntry
                     {
