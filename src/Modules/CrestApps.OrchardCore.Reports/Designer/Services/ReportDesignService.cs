@@ -1,7 +1,9 @@
 using System.Security.Claims;
+using System.Text.Json;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
+using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -18,6 +20,7 @@ public sealed class ReportDesignService
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
     private readonly ReportShareLinkService _shareLinks;
+    private readonly ReportViewSnapshotStore _snapshots;
     private readonly ReportQueryPlanner _planner;
     private readonly ReportDesignDocumentBuilder _documentBuilder;
     private readonly IClock _clock;
@@ -29,6 +32,7 @@ public sealed class ReportDesignService
     /// <param name="designs">The report catalog.</param>
     /// <param name="views">The view catalog.</param>
     /// <param name="shareLinks">The share link service.</param>
+    /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="planner">The query planner.</param>
     /// <param name="documentBuilder">The document builder used to check visuals.</param>
     /// <param name="clock">The clock.</param>
@@ -37,6 +41,7 @@ public sealed class ReportDesignService
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
         ReportShareLinkService shareLinks,
+        ReportViewSnapshotStore snapshots,
         ReportQueryPlanner planner,
         ReportDesignDocumentBuilder documentBuilder,
         IClock clock,
@@ -45,6 +50,7 @@ public sealed class ReportDesignService
         _designs = designs;
         _views = views;
         _shareLinks = shareLinks;
+        _snapshots = snapshots;
         _planner = planner;
         _documentBuilder = documentBuilder;
         _clock = clock;
@@ -164,7 +170,9 @@ public sealed class ReportDesignService
     }
 
     /// <summary>
-    /// Saves a view, creating it when <paramref name="existing"/> is <see langword="null"/>.
+    /// Saves a view, creating it when <paramref name="existing"/> is <see langword="null"/>. The stored result of a
+    /// scheduled view is deleted when its query changes or it becomes live, so reports never read rows the view no
+    /// longer returns.
     /// </summary>
     /// <param name="incoming">The view received from the designer.</param>
     /// <param name="existing">The stored view being changed, or <see langword="null"/> for a new one.</param>
@@ -176,6 +184,7 @@ public sealed class ReportDesignService
         ArgumentNullException.ThrowIfNull(user);
 
         var result = new ReportSaveResult();
+        var previousQuery = existing is null ? null : SerializeQuery(existing.Query);
         var view = existing ?? new ReportView
         {
             OwnerId = user.FindFirstValue(ClaimTypes.NameIdentifier),
@@ -186,6 +195,7 @@ public sealed class ReportDesignService
         view.DisplayText = ReportDesignNormalizer.Truncate(incoming.DisplayText);
         view.Description = incoming.Description?.Trim();
         view.Query = ReportDesignNormalizer.Normalize(incoming.Query);
+        view.RefreshIntervalMinutes = ReportViewRefreshIntervals.Normalize(incoming.RefreshIntervalMinutes);
 
         if (string.IsNullOrEmpty(view.DisplayText))
         {
@@ -211,6 +221,11 @@ public sealed class ReportDesignService
         else
         {
             await _views.UpdateAsync(view);
+
+            if (view.RefreshIntervalMinutes == ReportViewRefreshIntervals.Live || HasQueryChanged(previousQuery, view.Query))
+            {
+                await _snapshots.DeleteAsync(view.ItemId);
+            }
         }
 
         await CheckAsync(view.Query, null, user, result);
@@ -235,7 +250,7 @@ public sealed class ReportDesignService
     }
 
     /// <summary>
-    /// Deletes a view.
+    /// Deletes a view and its stored result.
     /// </summary>
     /// <param name="view">The view.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
@@ -243,6 +258,7 @@ public sealed class ReportDesignService
     {
         ArgumentNullException.ThrowIfNull(view);
 
+        await _snapshots.DeleteAsync(view.ItemId);
         await _views.DeleteAsync(view);
     }
 
@@ -300,6 +316,27 @@ public sealed class ReportDesignService
                 result.Warnings.Add(error);
             }
         }
+    }
+
+    /// <summary>
+    /// Serializes a view query so it can be compared with another one.
+    /// </summary>
+    /// <param name="query">The query.</param>
+    /// <returns>The JSON of the query, or <see langword="null"/>.</returns>
+    internal static string SerializeQuery(ReportQueryDefinition query)
+    {
+        return query is null ? null : JsonSerializer.Serialize(query, ReportDesignerJson.Options);
+    }
+
+    /// <summary>
+    /// Determines whether a view query differs from the one it had before.
+    /// </summary>
+    /// <param name="previousQuery">The JSON of the earlier query, from <see cref="SerializeQuery"/>.</param>
+    /// <param name="query">The query now.</param>
+    /// <returns><see langword="true"/> when the query changed.</returns>
+    internal static bool HasQueryChanged(string previousQuery, ReportQueryDefinition query)
+    {
+        return !string.Equals(previousQuery, SerializeQuery(query), StringComparison.Ordinal);
     }
 
     private static List<string> Distinct(IEnumerable<string> values)

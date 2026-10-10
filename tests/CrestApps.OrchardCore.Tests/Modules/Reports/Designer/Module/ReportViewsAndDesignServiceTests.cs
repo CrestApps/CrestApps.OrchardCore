@@ -265,12 +265,16 @@ public sealed class ReportViewsAndDesignServiceTests
         ReportQueryEngine engine = null;
 
         var authorization = DesignerAuthorization();
-        var source = new ReportViewsDataSource(
-            Catalog(views),
-            authorization,
+        var runner = new ReportViewRunner(
             new Lazy<ReportQueryPlanner>(() => planner),
             new Lazy<ReportQueryEngine>(() => engine),
             ContextFactory(),
+            new PassThroughStringLocalizer<ReportViewRunner>());
+        var source = new ReportViewsDataSource(
+            Catalog(views),
+            authorization,
+            runner,
+            NoSnapshots(),
             new PassThroughStringLocalizer<ReportViewsDataSource>());
 
         planner = new ReportQueryPlanner(new ReportDataSourceManager([SalesData(), source]), new PassThroughStringLocalizer<ReportQueryPlanner>());
@@ -314,6 +318,7 @@ public sealed class ReportViewsAndDesignServiceTests
             designs,
             Catalog(views ?? []),
             new ReportShareLinkService(Catalog<ReportShareLink>(), clock.Object),
+            NoSnapshots(),
             Planner(SalesData()),
             DocumentBuilder(),
             clock.Object,

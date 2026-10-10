@@ -29,6 +29,7 @@ public sealed class ReportDesignerController : Controller
     private readonly ReportDesignService _designService;
     private readonly ReportDesignHistoryService _history;
     private readonly ReportDesignRunner _runner;
+    private readonly ReportViewSnapshotStore _snapshots;
     private readonly IAuthorizationService _authorizationService;
     private readonly IRoleService _roleService;
     private readonly IStringLocalizer S;
@@ -39,6 +40,7 @@ public sealed class ReportDesignerController : Controller
     /// <param name="designService">The design service.</param>
     /// <param name="history">The service that keeps drafts and versions.</param>
     /// <param name="runner">The report runner used by the preview.</param>
+    /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="roleService">The role service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -46,6 +48,7 @@ public sealed class ReportDesignerController : Controller
         ReportDesignService designService,
         ReportDesignHistoryService history,
         ReportDesignRunner runner,
+        ReportViewSnapshotStore snapshots,
         IAuthorizationService authorizationService,
         IRoleService roleService,
         IStringLocalizer<ReportDesignerController> stringLocalizer)
@@ -53,6 +56,7 @@ public sealed class ReportDesignerController : Controller
         _designService = designService;
         _history = history;
         _runner = runner;
+        _snapshots = snapshots;
         _authorizationService = authorizationService;
         _roleService = roleService;
         S = stringLocalizer;
@@ -155,7 +159,11 @@ public sealed class ReportDesignerController : Controller
             return Forbid();
         }
 
-        return View("Designer", await BuildViewModelAsync(ReportDesignerPayload.From(view), isView: true));
+        var model = await BuildViewModelAsync(ReportDesignerPayload.From(view), isView: true);
+
+        model.Snapshot = await _snapshots.GetStatusAsync(view.ItemId);
+
+        return View("Designer", model);
     }
 
     /// <summary>
@@ -272,6 +280,9 @@ public sealed class ReportDesignerController : Controller
             result.Errors,
             result.Warnings,
             EditUrl = result.Saved ? Url.RouteUrl("ReportViewsEdit", new { id = result.Id }) : null,
+
+            // Saving a changed view drops its stored result, which the builder then stops showing.
+            Snapshot = result.Saved ? await _snapshots.GetStatusAsync(result.Id) : null,
         }, ReportDesignerJson.Options);
     }
 

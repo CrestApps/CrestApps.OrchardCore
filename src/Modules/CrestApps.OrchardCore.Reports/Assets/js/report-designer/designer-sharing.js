@@ -81,7 +81,9 @@
             app.isView() ? null : checkbox(app.t('Let people the report is shared with export it'), design.allowExport !== false, function (value) {
                 design.allowExport = value;
                 touch();
-            })))]);
+            }),
+            // A view's refresh schedule (see designer-refresh.js).
+            app.isView() && app.renderRefresh ? app.renderRefresh() : null))]);
     };
 
     function userPicker() {

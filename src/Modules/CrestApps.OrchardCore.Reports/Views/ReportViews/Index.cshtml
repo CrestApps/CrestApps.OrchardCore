@@ -22,14 +22,48 @@
 
     @foreach (var (view, canEdit) in Model.Entries)
     {
+        var scheduled = view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live;
+        var snapshot = scheduled ? Model.Snapshots.GetValueOrDefault(view.ItemId) : null;
+        var schedule = view.RefreshIntervalMinutes switch
+        {
+            ReportViewRefreshIntervals.Minimum => T["Every 15 minutes"],
+            ReportViewRefreshIntervals.Hourly => T["Every hour"],
+            ReportViewRefreshIntervals.EverySixHours => T["Every 6 hours"],
+            ReportViewRefreshIntervals.Daily => T["Every day"],
+            _ => T["Every {0} minutes", view.RefreshIntervalMinutes],
+        };
         <li class="list-group-item d-flex flex-wrap gap-2 align-items-center">
             <div class="flex-grow-1">
-                <div class="fw-semibold">@view.DisplayText</div>
+                <div class="fw-semibold">
+                    @view.DisplayText
+                    @if (scheduled)
+                    {
+                        <span class="badge text-bg-info ms-1" title="@T["The view's result is stored on this schedule, and reports read the stored result."]">@schedule</span>
+                    }
+                </div>
                 @if (!string.IsNullOrWhiteSpace(view.Description))
                 {
                     <div class="small text-muted">@view.Description</div>
                 }
-                <div class="small text-muted">@T.Plural(view.Query?.Columns?.Count ?? 0, "1 column", "{0} columns") · @(view.Author ?? "?")</div>
+                <div class="small text-muted">
+                    @T.Plural(view.Query?.Columns?.Count ?? 0, "1 column", "{0} columns") · @(view.Author ?? "?")
+                    @if (scheduled)
+                    {
+                        if (snapshot?.RefreshedUtc is DateTime refreshedUtc)
+                        {
+                            <span> · @T["Last refreshed {0}", refreshedUtc.ToString("g", System.Globalization.CultureInfo.CurrentCulture)] UTC</span>
+                        }
+                        else
+                        {
+                            <span> · @T["Not refreshed yet"]</span>
+                        }
+
+                        if (!string.IsNullOrEmpty(snapshot?.LastError))
+                        {
+                            <span class="text-danger" title="@snapshot.LastError"> · @T["The last refresh failed"]</span>
+                        }
+                    }
+                </div>
             </div>
             @if (canEdit)
             {

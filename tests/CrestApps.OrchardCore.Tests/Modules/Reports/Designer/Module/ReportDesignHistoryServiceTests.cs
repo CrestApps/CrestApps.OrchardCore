@@ -423,6 +423,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
             designs,
             Catalog<ReportView>(),
             new ReportShareLinkService(Catalog<ReportShareLink>(), clock.Object),
+            new ReportViewSnapshotStore(session),
             Planner(SalesData()),
             DocumentBuilder(),
             clock.Object,

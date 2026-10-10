@@ -62,6 +62,31 @@ public sealed class ReportDesignsRecipeStepTests
         Assert.Single(context.Errors);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_ImportsTheRefreshScheduleOfViews_NeverShorterThanTheShortestOne()
+    {
+        // Arrange
+        var views = Catalog<ReportView>();
+        var step = Step(Catalog<ReportDesign>(), views);
+        var context = Context(new JsonObject
+        {
+            ["name"] = ReportDesignsRecipeStep.Name,
+            ["Views"] = new JsonArray(
+                new JsonObject { ["itemId"] = "hourly", ["displayText"] = "Hourly", ["refreshIntervalMinutes"] = 60 },
+                new JsonObject { ["itemId"] = "too-often", ["displayText"] = "Too often", ["refreshIntervalMinutes"] = 1 },
+                new JsonObject { ["itemId"] = "live", ["displayText"] = "Live" }),
+        });
+
+        // Act
+        await step.ExecuteAsync(context);
+
+        // Assert
+        Assert.Equal(60, (await views.FindByIdAsync("hourly", TestContext.Current.CancellationToken)).RefreshIntervalMinutes);
+        Assert.Equal(ReportViewRefreshIntervals.Minimum, (await views.FindByIdAsync("too-often", TestContext.Current.CancellationToken)).RefreshIntervalMinutes);
+        Assert.Equal(ReportViewRefreshIntervals.Live, (await views.FindByIdAsync("live", TestContext.Current.CancellationToken)).RefreshIntervalMinutes);
+        Assert.Empty(context.Errors);
+    }
+
     private static ReportDesignsRecipeStep Step(CrestApps.Core.Services.ICatalog<ReportDesign> designs, CrestApps.Core.Services.ICatalog<ReportView> views)
     {
         var alice = Mock.Of<IUser>();
@@ -73,7 +98,7 @@ public sealed class ReportDesignsRecipeStepTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 3, 15, 0, 0, 0, DateTimeKind.Utc));
 
-        return new ReportDesignsRecipeStep(designs, views, userManager.Object, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
+        return new ReportDesignsRecipeStep(designs, views, NoSnapshots(), userManager.Object, clock.Object, new PassThroughStringLocalizer<ReportDesignsRecipeStep>());
     }
 
     private static RecipeExecutionContext Context(JsonObject step)

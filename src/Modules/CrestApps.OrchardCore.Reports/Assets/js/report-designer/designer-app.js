@@ -232,7 +232,8 @@
             showInAdminMenu: design.showInAdminMenu,
             allowExport: design.allowExport,
             sharedUserNames: design.sharedUserNames,
-            sharedRoles: design.sharedRoles
+            sharedRoles: design.sharedRoles,
+            refreshIntervalMinutes: app.isView() ? (parseInt(design.refreshIntervalMinutes, 10) || 0) : undefined
         };
     };
 
@@ -260,6 +261,13 @@
             app.design.id = result.id;
             app.dirty = false;
             app.renderStatus();
+
+            // Saving a view changes its schedule, and a changed query drops its stored result.
+            if (app.isView()) {
+                app.savedRefreshIntervalMinutes = parseInt(app.design.refreshIntervalMinutes, 10) || 0;
+                app.config.snapshot = result.snapshot || null;
+                app.renderSettings();
+            }
 
             if (result.warnings && result.warnings.length) {
                 app.showMessage('warning', app.t('Saved. Fix these problems before people run it:'), result.warnings);

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.BackgroundTasks;
 using CrestApps.OrchardCore.Reports.Designer.Deployments;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
 using CrestApps.OrchardCore.Reports.Designer.Indexes;
@@ -10,6 +11,7 @@ using CrestApps.OrchardCore.Reports.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -23,7 +25,8 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
 /// Registers the report builder: the query engine, the stores of designed reports, views, and share links, the
-/// built-in views data source, the sharing-aware authorization handler, and the admin menu.
+/// built-in views data source and the scheduled refresh of views, the sharing-aware authorization handler, and the
+/// admin menu.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
 public sealed class DesignerStartup : StartupBase
@@ -63,6 +66,9 @@ public sealed class DesignerStartup : StartupBase
             .AddScoped<ReportDesignRunner>()
             .AddScoped<ReportShareLinkService>()
             .AddScoped<DesignedReportPresenter>()
+            .AddScoped<ReportViewRunner>()
+            .AddScoped<ReportViewSnapshotStore>()
+            .AddScoped<ReportViewSnapshotRefresher>()
             .AddScoped<IReportDataSource, ReportViewsDataSource>()
             .AddScoped<IReportDataSource, UsersReportDataSource>();
 
@@ -70,6 +76,9 @@ public sealed class DesignerStartup : StartupBase
         services.AddIndexProvider<ReportDesignDraftIndexProvider>();
         services.AddIndexProvider<ReportDesignVersionIndexProvider>();
         services.AddDataMigration<ReportDesignHistoryMigrations>();
+        services.AddIndexProvider<ReportViewSnapshotIndexProvider>();
+        services.AddDataMigration<ReportViewSnapshotMigrations>();
+        services.AddSingleton<IBackgroundTask, ReportViewSnapshotBackgroundTask>();
 
         services.TryAddScoped(sp => new Lazy<IAuthorizationService>(sp.GetRequiredService<IAuthorizationService>));
         services.AddScoped<IAuthorizationHandler, ReportDesignAuthorizationHandler>();

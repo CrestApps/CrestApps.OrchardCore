@@ -48,6 +48,12 @@ public sealed class ReportView : CatalogItem, IDisplayTextAwareModel, IModifiedU
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets how often, in minutes, the view's result is refreshed and stored for the reports that read it.
+    /// <c>0</c> runs the view live every time a report reads it. See <see cref="ReportViewRefreshIntervals"/>.
+    /// </summary>
+    public int RefreshIntervalMinutes { get; set; }
+
+    /// <summary>
     /// Creates a deep copy of the view so a cached instance is never changed by the code that reads it.
     /// </summary>
     /// <returns>The copy.</returns>

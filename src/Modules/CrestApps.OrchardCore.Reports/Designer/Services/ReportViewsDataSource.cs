@@ -9,18 +9,15 @@ namespace CrestApps.OrchardCore.Reports.Designer.Services;
 /// <summary>
 /// Exposes saved report views as data sets, so a report or another view can build on a view's prepared result. Each
 /// result column of the view becomes a field named after the column identifier. A view that reads itself, directly or
-/// through other views, is refused.
+/// through other views, is refused. A scheduled view is read from its stored result while that result still has the
+/// view's fields; otherwise, and for a live view, the view runs.
 /// </summary>
 public sealed class ReportViewsDataSource : IReportDataSource
 {
-    private const string StackKey = "ReportViews:Stack";
-    private const int MaximumDepth = 8;
-
     private readonly ICatalog<ReportView> _views;
     private readonly IAuthorizationService _authorizationService;
-    private readonly Lazy<ReportQueryPlanner> _planner;
-    private readonly Lazy<ReportQueryEngine> _engine;
-    private readonly ReportExecutionContextFactory _contextFactory;
+    private readonly ReportViewRunner _runner;
+    private readonly ReportViewSnapshotStore _snapshots;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -28,23 +25,20 @@ public sealed class ReportViewsDataSource : IReportDataSource
     /// </summary>
     /// <param name="views">The view catalog.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="planner">The query planner, resolved lazily because it reads this data source.</param>
-    /// <param name="engine">The query engine, resolved lazily because it reads this data source.</param>
-    /// <param name="contextFactory">The run context factory.</param>
+    /// <param name="runner">The view runner.</param>
+    /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportViewsDataSource(
         ICatalog<ReportView> views,
         IAuthorizationService authorizationService,
-        Lazy<ReportQueryPlanner> planner,
-        Lazy<ReportQueryEngine> engine,
-        ReportExecutionContextFactory contextFactory,
+        ReportViewRunner runner,
+        ReportViewSnapshotStore snapshots,
         IStringLocalizer<ReportViewsDataSource> stringLocalizer)
     {
         _views = views;
         _authorizationService = authorizationService;
-        _planner = planner;
-        _engine = engine;
-        _contextFactory = contextFactory;
+        _runner = runner;
+        _snapshots = snapshots;
         S = stringLocalizer;
     }
 
@@ -89,24 +83,13 @@ public sealed class ReportViewsDataSource : IReportDataSource
             return null;
         }
 
-        var plan = await EnterAsync(view, context, () => _planner.Value.PlanAsync(view.Query, context, cancellationToken));
-
-        if (!plan.IsValid)
-        {
-            throw new ReportQueryException(S["The view '{0}' cannot run: {1}", view.DisplayText, string.Join(" ", plan.Errors)]);
-        }
+        // The schema is always the view's planned one, so designs keep working whether the view is live or scheduled.
+        var plan = await _runner.EnterAsync(view, context, () => _runner.PlanValidAsync(view, context, cancellationToken));
 
         return new ReportDataSetSchema
         {
             DataSet = new ReportDataSetDescriptor(view.ItemId, view.DisplayText, view.Description),
-            Fields = plan.Columns
-                .Select(column => new ReportFieldDescriptor(column.Definition.Id, column.Label, column.DataType)
-                {
-                    IsIdentifier = column.Field.Kind == PlannedFieldKind.DataSetField &&
-                        column.Definition.Aggregate == ReportAggregate.None &&
-                        column.Field.FieldName.EndsWith("Id", StringComparison.Ordinal),
-                })
-                .ToList(),
+            Fields = ReportViewRunner.DescribeFields(plan),
         };
     }
 
@@ -118,39 +101,23 @@ public sealed class ReportViewsDataSource : IReportDataSource
         var view = await FindReadableAsync(query.DataSet, query.Context, cancellationToken) ??
             throw new ReportQueryException(S["The view '{0}' does not exist or is not available.", query.DataSet]);
 
-        return await EnterAsync(view, query.Context, async () =>
+        return await _runner.EnterAsync(view, query.Context, async () =>
         {
-            var plan = await _planner.Value.PlanAsync(view.Query, query.Context, cancellationToken);
-            var context = await _contextFactory.CreateAsync(query.Context.User, query.Context);
+            var plan = await _runner.PlanAsync(view, query.Context, cancellationToken);
 
-            context.Limits.MaxResultRows = Math.Max(1, query.MaxRows);
-
-            var result = await _engine.Value.ExecuteAsync(plan, context, cancellationToken);
-            var fields = result.Columns
-                .Select(column => new ReportFieldDescriptor(column.Id, column.Label, column.DataType))
-                .ToList();
-            var rows = new List<object[]>(result.Rows.Count);
-
-            foreach (var source in result.Rows)
+            if (view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live && plan.IsValid)
             {
-                var row = new object[source.Length];
+                var snapshot = await _snapshots.FindAsync(view.ItemId);
 
-                for (var index = 0; index < source.Length; index++)
+                // A snapshot taken before the view changed its fields is ignored, and the view runs, until the next
+                // refresh. A view whose first refresh has not happened yet runs too.
+                if (snapshot?.RefreshedUtc is not null && ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)))
                 {
-                    row[index] = result.Columns[index].DataType == ReportDataType.DateTime && source[index] is DateTime local
-                        ? context.ToUtc(local)
-                        : source[index];
+                    return ReportViewSnapshotData.ToTable(snapshot, query.Fields, query.MaxRows);
                 }
-
-                rows.Add(row);
             }
 
-            return new ReportDataTable
-            {
-                Fields = fields,
-                Rows = rows,
-                Truncated = result.Warnings.Count > 0 && rows.Count >= query.MaxRows,
-            };
+            return await _runner.ExecuteAsync(plan, query.Context, query.MaxRows, cancellationToken);
         });
     }
 
@@ -170,35 +137,5 @@ public sealed class ReportViewsDataSource : IReportDataSource
     {
         return context.User is not null &&
             await _authorizationService.AuthorizeAsync(context.User, ReportDesignerPermissions.ViewAllReportDesigns, view);
-    }
-
-    private async Task<T> EnterAsync<T>(ReportView view, ReportDataSourceContext context, Func<Task<T>> action)
-    {
-        if (!context.Properties.TryGetValue(StackKey, out var value) || value is not HashSet<string> stack)
-        {
-            stack = new HashSet<string>(StringComparer.Ordinal);
-            context.Properties[StackKey] = stack;
-        }
-
-        if (stack.Contains(view.ItemId))
-        {
-            throw new ReportQueryException(S["The view '{0}' reads itself through other views. Remove the loop.", view.DisplayText]);
-        }
-
-        if (stack.Count >= MaximumDepth)
-        {
-            throw new ReportQueryException(S["Views are nested more than {0} levels deep.", MaximumDepth]);
-        }
-
-        stack.Add(view.ItemId);
-
-        try
-        {
-            return await action();
-        }
-        finally
-        {
-            stack.Remove(view.ItemId);
-        }
     }
 }

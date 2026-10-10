@@ -22,6 +22,7 @@
         ["payload"] = Model.Payload,
         ["canSharePublicly"] = Model.CanSharePublicly,
         ["roles"] = Model.Roles,
+        ["snapshot"] = Model.Snapshot,
         ["urls"] = new Dictionary<string, string>
         {
             ["sources"] = Url.RouteUrl("ReportDesignerApiSources"),
@@ -33,6 +34,7 @@
             ["preview"] = Url.RouteUrl("ReportDesignerPreview"),
             ["save"] = Url.RouteUrl("ReportDesignerSave"),
             ["saveView"] = Url.RouteUrl("ReportViewsSave"),
+            ["refreshView"] = Url.RouteUrl("ReportViewsRefresh", new { id = "__id__" }),
             ["links"] = Url.RouteUrl("ReportDesignerApiLinks", new { id = "__id__" }),
             ["createLink"] = Url.RouteUrl("ReportDesignerApiCreateLink", new { id = "__id__" }),
             ["revokeLink"] = Url.RouteUrl("ReportDesignerApiRevokeLink", new { id = "__id__", linkId = "__link__" }),

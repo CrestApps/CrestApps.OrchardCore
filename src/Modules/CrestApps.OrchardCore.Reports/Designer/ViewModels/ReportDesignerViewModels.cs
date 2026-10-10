@@ -34,6 +34,12 @@ public class ReportDesignerViewModel
     public IList<string> Categories { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the refresh status of the view being designed, or <see langword="null"/> when it has no stored
+    /// result.
+    /// </summary>
+    public ReportViewSnapshotStatus Snapshot { get; set; }
+
+    /// <summary>
     /// Gets or sets the localized texts and option labels of the designer script.
     /// </summary>
     public IDictionary<string, object> Labels { get; set; } = new Dictionary<string, object>();
@@ -143,6 +149,11 @@ public class ReportViewsIndexViewModel
     /// Gets or sets the views, with whether the user may change each.
     /// </summary>
     public IList<(ReportView View, bool CanEdit)> Entries { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the refresh status of the views that have a stored result, by view identifier.
+    /// </summary>
+    public IReadOnlyDictionary<string, ReportViewSnapshotStatus> Snapshots { get; set; } = new Dictionary<string, ReportViewSnapshotStatus>();
 }
 
 /// <summary>

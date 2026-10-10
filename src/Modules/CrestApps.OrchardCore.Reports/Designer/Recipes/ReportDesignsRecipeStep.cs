@@ -30,6 +30,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
 
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
+    private readonly ReportViewSnapshotStore _snapshots;
     private readonly UserManager<IUser> _userManager;
     private readonly IClock _clock;
     private readonly IStringLocalizer S;
@@ -39,12 +40,14 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     /// </summary>
     /// <param name="designs">The report catalog.</param>
     /// <param name="views">The view catalog.</param>
+    /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="userManager">The user manager used to match owners by user name.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportDesignsRecipeStep(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
+        ReportViewSnapshotStore snapshots,
         UserManager<IUser> userManager,
         IClock clock,
         IStringLocalizer<ReportDesignsRecipeStep> stringLocalizer)
@@ -52,6 +55,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
     {
         _designs = designs;
         _views = views;
+        _snapshots = snapshots;
         _userManager = userManager;
         _clock = clock;
         S = stringLocalizer;
@@ -70,8 +74,23 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
             }
 
             view.Query = ReportDesignNormalizer.Normalize(view.Query);
+            view.RefreshIntervalMinutes = ReportViewRefreshIntervals.Normalize(view.RefreshIntervalMinutes);
             view.OwnerId = await ResolveOwnerAsync(node, view.OwnerId);
-            await SaveAsync(_views, view, view.DisplayText, context);
+
+            var existing = await _views.FindByIdAsync(view.ItemId);
+            var previousQuery = existing is null ? null : ReportDesignService.SerializeQuery(existing.Query);
+
+            if (!await SaveAsync(_views, view, view.DisplayText, context))
+            {
+                continue;
+            }
+
+            // A replaced view's stored result is dropped when it would no longer match, as saving it in the builder does.
+            if (existing is not null &&
+                (view.RefreshIntervalMinutes == ReportViewRefreshIntervals.Live || ReportDesignService.HasQueryChanged(previousQuery, view.Query)))
+            {
+                await _snapshots.DeleteAsync(view.ItemId);
+            }
         }
 
         foreach (var node in context.Step["Reports"]?.AsArray() ?? [])
@@ -133,14 +152,14 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         return ownerId;
     }
 
-    private async Task SaveAsync<T>(ICatalog<T> catalog, T item, string displayText, RecipeExecutionContext context)
+    private async Task<bool> SaveAsync<T>(ICatalog<T> catalog, T item, string displayText, RecipeExecutionContext context)
         where T : CatalogItem
     {
         if (string.IsNullOrWhiteSpace(displayText))
         {
             context.Errors.Add(S["The report design '{0}' in the recipe has no title.", item.ItemId]);
 
-            return;
+            return false;
         }
 
         if (item is IModifiedUtcAwareModel modified)
@@ -156,5 +175,7 @@ public sealed class ReportDesignsRecipeStep : NamedRecipeStepHandler
         {
             await catalog.UpdateAsync(item);
         }
+
+        return true;
     }
 }

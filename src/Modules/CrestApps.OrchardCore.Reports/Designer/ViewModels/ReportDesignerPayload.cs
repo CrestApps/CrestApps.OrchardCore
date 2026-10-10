@@ -60,6 +60,11 @@ public class ReportDesignerPayload
     public IList<string> SharedRoles { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets how often a view's result is refreshed and stored, in minutes; <c>0</c> runs the view live.
+    /// </summary>
+    public int RefreshIntervalMinutes { get; set; }
+
+    /// <summary>
     /// Gets or sets the values entered for exposed filters in the preview.
     /// </summary>
     public Dictionary<string, IList<string>> FilterValues { get; set; }
@@ -154,6 +159,7 @@ public class ReportDesignerPayload
             DisplayText = view.DisplayText,
             Description = view.Description,
             Query = view.Query,
+            RefreshIntervalMinutes = view.RefreshIntervalMinutes,
         };
     }
 
@@ -190,6 +196,7 @@ public class ReportDesignerPayload
             DisplayText = DisplayText,
             Description = Description,
             Query = Query,
+            RefreshIntervalMinutes = RefreshIntervalMinutes,
         };
     }
 }

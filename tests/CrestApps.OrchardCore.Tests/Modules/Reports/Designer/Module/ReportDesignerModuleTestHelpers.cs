@@ -2,9 +2,12 @@ using System.Security.Claims;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Reports.Designer;
+using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 using Microsoft.AspNetCore.Authorization;
+using Moq;
 using OrchardCore.Security;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 
@@ -82,4 +85,10 @@ internal static class ReportDesignerPrincipals
     }
 
     public static string Design => ReportDesignerPermissions.ManageOwnReportDesigns.Name;
+
+    // A snapshot store for tests whose views are all live, so it is never read.
+    public static ReportViewSnapshotStore NoSnapshots()
+    {
+        return new ReportViewSnapshotStore(Mock.Of<ISession>());
+    }
 }

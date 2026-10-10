@@ -108,6 +108,7 @@ public sealed class ReportsHubTests
             Catalog(new ReportDesign { ItemId = "r1", DisplayText = "Sales", OwnerId = "owner" }),
             Catalog<ReportView>(),
             new ReportShareLinkService(Catalog<ReportShareLink>(), clock.Object),
+            NoSnapshots(),
             Planner(SalesData()),
             DocumentBuilder(),
             clock.Object,
