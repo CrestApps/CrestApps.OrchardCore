@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using OrchardCore;
-using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using YesSql;
@@ -12,22 +11,22 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
 
 /// <summary>
-/// A SQLite store with the content item index and the lead index. The lead index table comes from the CRM migration
-/// itself, so the lead queries under test run against the schema a tenant actually has.
+/// A SQLite store with the content item index, the lead index and the lead import index. The lead tables come from the
+/// CRM migration itself, so the lead queries under test run against the schema a tenant actually has.
 /// </summary>
 internal static class LeadTestStore
 {
     public const string LeadContentType = "Lead";
 
     /// <summary>
-    /// Creates the store and its two index tables.
+    /// Creates the store and its index tables.
     /// </summary>
     /// <param name="connectionString">The SQLite connection string.</param>
     public static async Task<IStore> CreateAsync(string connectionString)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite(connectionString));
 
-        store.RegisterIndexes([new ContentItemIndexProvider(), new LeadIndexProvider()]);
+        store.RegisterIndexes([new ContentItemIndexProvider(), new LeadIndexProvider(), new LeadImportIndexProvider()]);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
 
@@ -49,6 +48,7 @@ internal static class LeadTestStore
             .Column<string>("DisplayText", column => column.WithLength(255)));
 
         await CrmMigrations.CreateLeadIndexAsync(schemaBuilder);
+        await CrmMigrations.CreateLeadImportIndexAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
@@ -56,12 +56,12 @@ internal static class LeadTestStore
     }
 
     /// <summary>
-    /// Saves a published lead carrying the given list.
+    /// Saves a published lead recording the given file imports.
     /// </summary>
     /// <param name="session">The session to save the lead in.</param>
-    /// <param name="listName">The list the lead arrived in, if any.</param>
+    /// <param name="imports">The file imports the lead arrived in.</param>
     /// <returns>The content item identifier of the lead.</returns>
-    public static async Task<string> SaveLeadAsync(ISession session, string listName)
+    public static async Task<string> SaveLeadAsync(ISession session, params LeadImport[] imports)
     {
         var lead = new ContentItem
         {
@@ -73,7 +73,7 @@ internal static class LeadTestStore
             Latest = true,
         };
 
-        lead.Alter<LeadPart>(part => part.ListName = new TextField { Text = listName });
+        lead.Alter<LeadPart>(part => part.Imports = imports.ToList());
 
         await session.SaveAsync(lead, cancellationToken: TestContext.Current.CancellationToken);
 
