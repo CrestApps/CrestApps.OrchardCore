@@ -18,6 +18,11 @@ describe('local URLs', () => {
         expect(ui.localUrl('  /Admin')).toBe('/Admin');
     });
 
+    it('encodes characters a URL cannot hold, but not the ones it already has', () => {
+        expect(ui.localUrl('/Admin/a"><b')).toBe('/Admin/a%22%3E%3Cb');
+        expect(ui.localUrl('/Admin/reports/builder/__id__/draft')).toBe('/Admin/reports/builder/__id__/draft');
+    });
+
     it('leaves a missing URL empty', () => {
         expect(ui.localUrl('')).toBe('');
         expect(ui.localUrl(null)).toBe('');

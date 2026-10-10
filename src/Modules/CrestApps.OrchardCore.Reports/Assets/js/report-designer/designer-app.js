@@ -31,13 +31,14 @@
 
     // The address of a builder endpoint or page, from the server's root-relative URLs.
     app.url = function (name, replacements) {
-        var url = app.config.urls[name] || '';
+        // The template is kept on this site first; the values are then encoded into its placeholders.
+        var url = ui.localUrl(app.config.urls[name] || '');
 
         Object.keys(replacements || {}).forEach(function (key) {
             url = url.replace('__' + key + '__', encodeURIComponent(replacements[key]));
         });
 
-        return ui.localUrl(url);
+        return url;
     };
 
     app.isView = function () {
