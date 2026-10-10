@@ -20,6 +20,10 @@ Refunding is kept apart from managing transactions on purpose: giving money back
 
 <AskYourAdmin />
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of refunding part of a card payment and finding it in the Refunds list">
+  <source src="/img/docs/um-refund.mp4" type="video/mp4" />
+</video>
+
 ## Review payments
 
 1. Open **Commerce > Payments**. The newest payments are at the top.

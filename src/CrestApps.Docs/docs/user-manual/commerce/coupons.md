@@ -16,6 +16,10 @@ A **coupon** is a promotion code a buyer types at checkout to get a discount, fo
 
 <AskYourAdmin />
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating a percentage coupon for the first billing cycle">
+  <source src="/img/docs/um-coupons.mp4" type="video/mp4" />
+</video>
+
 ## Find a coupon
 
 **Commerce > Coupons** lists your coupons, newest first.

@@ -78,6 +78,12 @@ The site-wide settings are under **Settings > Subscriptions**, with the **Manage
 | **Currency** | The default currency of your plans. |
 | **Default roles to assign for new subscribers** | Roles every new subscriber gets, whatever plan they buy. |
 
+This is what a visitor sees when they sign up to a plan on your site:
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of a visitor signing up to a plan, creating an account and paying by card in the checkout">
+  <source src="/img/docs/um-subscription-signup.mp4" type="video/mp4" />
+</video>
+
 ## Manage subscriptions
 
 | | |

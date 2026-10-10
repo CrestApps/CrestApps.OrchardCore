@@ -22,6 +22,10 @@ When it is done:
 - the customer is reminded before each payment and gets a receipt after it;
 - every payment appears under **Commerce > Transactions** and **Commerce > Payments**, where it can be refunded.
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an installment plan for a new customer and taking the down payment by card">
+  <source src="/img/docs/um-installment-plan-create.mp4" type="video/mp4" />
+</video>
+
 ## Before you start
 
 | You need | Who sets it up |

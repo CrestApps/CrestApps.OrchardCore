@@ -22,6 +22,10 @@ An **installment plan** lets you sell something on a payment plan without the cu
 Installment plans need a payment provider that can keep a card for later payments and show its card form on the page, such as Stripe. Without one, **New plan** shows the warning *No payment provider that can keep a card for later payments is enabled*. See [Payment providers](payment-providers.md).
 :::
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of creating an installment plan for a new customer and taking the down payment by card">
+  <source src="/img/docs/um-installment-plan-create.mp4" type="video/mp4" />
+</video>
+
 ## How a plan works
 
 A plan is made of:
@@ -98,6 +102,10 @@ A plan that is still **Waiting for down payment** shows **Take down payment** in
 If the card used for the down payment cannot be kept for later payments, the plan's **History** says so and the scheduled payments are invoiced to the customer instead.
 
 ## Manage a plan
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of finding a plan, opening it, and the Charge now and Cancel the plan confirmations">
+  <source src="/img/docs/um-installment-plan-manage.mp4" type="video/mp4" />
+</video>
 
 Open a plan by clicking its title or **Manage** in the list. The plan page has these cards:
 
