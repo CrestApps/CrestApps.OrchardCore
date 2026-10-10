@@ -152,7 +152,7 @@ public sealed class SharedReportsController : Controller
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("Share link '{LinkId}' exported designed report '{ReportId}' as '{Format}'.", link.ItemId, design.ItemId, format);
+            _logger.LogInformation("Share link '{LinkId}' exported designed report '{ReportId}' as '{Format}'.", link.ItemId, design.ItemId, format?.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal));
         }
 
         return await ExportAsync(design, format);

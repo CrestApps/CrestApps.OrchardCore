@@ -387,7 +387,7 @@ public sealed class ReportDesignerApiController : Controller
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("User '{UserName}' revoked share link '{LinkId}' of designed report '{ReportId}'.", User.Identity?.Name, linkId, design.ItemId);
+            _logger.LogInformation("User '{UserName}' revoked share link '{LinkId}' of designed report '{ReportId}'.", User.Identity?.Name, linkId.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal), design.ItemId);
         }
 
         return NoContent();

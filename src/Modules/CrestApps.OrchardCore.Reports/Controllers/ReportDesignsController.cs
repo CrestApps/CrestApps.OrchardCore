@@ -71,14 +71,15 @@ public sealed class ReportDesignsController : Controller
 
         foreach (var design in model.Status == ReportDesignListStatus.Unpublished ? [] : await _designService.GetAllAsync())
         {
-            if (!string.IsNullOrWhiteSpace(q) &&
-                design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true &&
-                design.Category?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true)
+            // Authorization comes first: the search only narrows the reports the user may open.
+            if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design))
             {
                 continue;
             }
 
-            if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design))
+            if (!string.IsNullOrWhiteSpace(q) &&
+                design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true &&
+                design.Category?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true)
             {
                 continue;
             }
@@ -95,8 +96,12 @@ public sealed class ReportDesignsController : Controller
         {
             foreach (var draft in await _history.ListUnpublishedAsync())
             {
-                if ((string.IsNullOrWhiteSpace(q) || draft.Design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) == true) &&
-                    await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
+                if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(q) || draft.Design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) == true)
                 {
                     model.Drafts.Add(new ReportDesignListEntry
                     {
