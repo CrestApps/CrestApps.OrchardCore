@@ -75,41 +75,27 @@ public sealed class ReportDesignsController : Controller
 
         foreach (var design in await _designService.GetAllAsync())
         {
-            if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design))
-            {
-                continue;
-            }
+            var canView = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ViewAllReportDesigns, design);
+            var canEdit = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, design);
 
-            if (!showPublished)
+            if (canView && showPublished && Matches(q, design.DisplayText, design.Category))
             {
-                continue;
+                model.Entries.Add(new ReportDesignListEntry
+                {
+                    Design = design,
+                    CanEdit = canEdit,
+                    IsOwner = string.Equals(design.OwnerId, userId, StringComparison.Ordinal),
+                });
             }
-
-            if (!string.IsNullOrWhiteSpace(q) &&
-                design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true &&
-                design.Category?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) != true)
-            {
-                continue;
-            }
-
-            model.Entries.Add(new ReportDesignListEntry
-            {
-                Design = design,
-                CanEdit = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, design),
-                IsOwner = string.Equals(design.OwnerId, userId, StringComparison.Ordinal),
-            });
         }
 
         if (model.CanDesign)
         {
             foreach (var draft in await _history.ListUnpublishedAsync())
             {
-                if (!await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design))
-                {
-                    continue;
-                }
+                var canEdit = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, draft.Design);
 
-                if (showDrafts && (string.IsNullOrWhiteSpace(q) || draft.Design.DisplayText?.Contains(q.Trim(), StringComparison.CurrentCultureIgnoreCase) == true))
+                if (canEdit && showDrafts && Matches(q, draft.Design.DisplayText))
                 {
                     model.Drafts.Add(new ReportDesignListEntry
                     {
@@ -303,5 +289,18 @@ public sealed class ReportDesignsController : Controller
         await _notifier.SuccessAsync(H["The report has been cloned. The copy is not shared with anybody."]);
 
         return RedirectToRoute("ReportDesignerEdit", new { id = result.Id });
+    }
+
+    // Whether any of the texts contains the search, ignoring case; an empty search matches everything.
+    private static bool Matches(string search, params string[] texts)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return true;
+        }
+
+        var term = search.Trim();
+
+        return texts.Any(text => text?.Contains(term, StringComparison.CurrentCultureIgnoreCase) == true);
     }
 }
