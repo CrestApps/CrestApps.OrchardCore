@@ -1432,7 +1432,7 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.ChangeDialerProfile:
-                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId, viewModel.ClearCurrentAssignment);
+                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId);
                 break;
         }
 
@@ -1694,10 +1694,9 @@ public sealed class ActivitiesController : Controller
         return processedCount;
     }
 
-    private async Task<int> BulkChangeDialerProfileAsync(
+    internal async Task<int> BulkChangeDialerProfileAsync(
         List<OmnichannelActivity> activities,
-        string dialerProfileId,
-        bool clearCurrentAssignment)
+        string dialerProfileId)
     {
         if (string.IsNullOrWhiteSpace(dialerProfileId))
         {
@@ -1718,27 +1717,70 @@ public sealed class ActivitiesController : Controller
             return 0;
         }
 
+        // Dialer work waits on its campaign's queue, which is what agents sign in to, so a record without a campaign
+        // cannot be dialed. It used to be relabeled with the dialer's source anyway and then sat where nothing found it.
+        var withoutCampaignCount = activities.Count(activity => string.IsNullOrWhiteSpace(activity.CampaignId));
+
+        if (withoutCampaignCount > 0)
+        {
+            await _notifier.WarningAsync(H["{0} activities have no campaign, so they cannot be dialed and were left unchanged. Set their campaign first.", withoutCampaignCount]);
+        }
+
         var processedCount = 0;
 
-        foreach (var activity in activities)
+        foreach (var campaignActivities in activities
+            .Where(activity => !string.IsNullOrWhiteSpace(activity.CampaignId))
+            .GroupBy(activity => activity.CampaignId, StringComparer.Ordinal))
         {
-            // The profile no longer owns a campaign; changing the dialer profile keeps the activity's own campaign.
-            activity.Source = profile.ActivitySource;
-            activity.InteractionType = ActivityInteractionType.Manual;
-            activity.AISessionId = null;
+            var activityIds = campaignActivities
+                .Select(activity => activity.ItemId)
+                .ToHashSet(StringComparer.Ordinal);
 
-            if (clearCurrentAssignment)
+            var conflicts = await DialerCampaignProfileGuard.FindConflictsAsync(
+                dialerContributor,
+                campaignActivities.Key,
+                profile.ProfileId,
+                activityIds,
+                HttpContext.RequestAborted);
+
+            if (conflicts.Count > 0)
             {
+                await _notifier.WarningAsync(H["{0} activities were left unchanged: their campaign already has records waiting under {1}. A campaign's waiting records must all use one dialer profile, so include those records in the change or move these to another campaign.", activityIds.Count, DialerCampaignProfileGuard.Describe(conflicts)]);
+
+                continue;
+            }
+
+            foreach (var activityId in activityIds)
+            {
+                // Queueing a record commits the unit of work, and a committed session no longer tracks what it loaded
+                // before, so saving an activity read earlier would store a second copy. Each is read as the last commit left it.
+                var activity = await _omnichannelActivityManager.FindByIdAsync(activityId);
+
+                if (!IsBulkManageableActivity(activity))
+                {
+                    continue;
+                }
+
+                // The profile no longer owns a campaign; changing the dialer profile keeps the activity's own campaign.
+                activity.Source = profile.ActivitySource;
+                activity.DialerProfileId = profile.ProfileId;
+                activity.InteractionType = ActivityInteractionType.Manual;
+                activity.AISessionId = null;
+
+                // The dialer offers each record to whichever agent signed in to the campaign is free, so an assignee
+                // routes nothing. Keeping one left the record in that user's own list as well, where it could be
+                // called by hand while the dialer offered it to someone else.
                 ResetAssignment(activity);
-            }
-            else if (string.IsNullOrEmpty(activity.AssignedToId))
-            {
-                activity.AssignmentStatus = ActivityAssignmentStatus.Available;
-                ApplyInitialStatus(activity, hasAssignedUser: false);
-            }
 
-            await _omnichannelActivityManager.UpdateAsync(activity);
-            processedCount++;
+                await _omnichannelActivityManager.UpdateAsync(activity);
+
+                // The change used to stop at the label: a record loaded by hand was never queued for the dialer, and a
+                // queued one kept its old profile, so neither was dialed under the new one. It is queued on its
+                // campaign now, or keeps its place there under the new profile.
+                await dialerContributor.EnqueueAsync(activity.ItemId, activity.CampaignId, profile, HttpContext.RequestAborted);
+
+                processedCount++;
+            }
         }
 
         return processedCount;

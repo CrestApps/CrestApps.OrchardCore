@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -23,7 +24,8 @@ public sealed class ContactCenterActivityDialerContributorTests
             ]);
         var contributor = new ContactCenterActivityDialerContributor(
             profileManager.Object,
-            Mock.Of<IActivityQueueService>());
+            Mock.Of<IActivityQueueService>(),
+            Mock.Of<IQueueItemManager>());
 
         // Act
         var descriptors = (await contributor.GetProfilesAsync(TestContext.Current.CancellationToken)).ToArray();
@@ -55,7 +57,8 @@ public sealed class ContactCenterActivityDialerContributorTests
             .ReturnsAsync((DialerProfile)null);
         var contributor = new ContactCenterActivityDialerContributor(
             profileManager.Object,
-            Mock.Of<IActivityQueueService>());
+            Mock.Of<IActivityQueueService>(),
+            Mock.Of<IQueueItemManager>());
 
         // Act
         var descriptor = await contributor.FindByIdAsync(
@@ -73,7 +76,8 @@ public sealed class ContactCenterActivityDialerContributorTests
         var queueService = new Mock<IActivityQueueService>();
         var contributor = new ContactCenterActivityDialerContributor(
             Mock.Of<IDialerProfileManager>(),
-            queueService.Object);
+            queueService.Object,
+            Mock.Of<IQueueItemManager>());
         var profile = new ActivityDialerProfileDescriptor
         {
             ProfileId = "profile-1",
@@ -106,7 +110,8 @@ public sealed class ContactCenterActivityDialerContributorTests
         // Arrange
         var contributor = new ContactCenterActivityDialerContributor(
             Mock.Of<IDialerProfileManager>(),
-            Mock.Of<IActivityQueueService>());
+            Mock.Of<IActivityQueueService>(),
+            Mock.Of<IQueueItemManager>());
         var profile = new ActivityDialerProfileDescriptor
         {
             ProfileId = "profile-1",
@@ -119,6 +124,95 @@ public sealed class ContactCenterActivityDialerContributorTests
                 string.Empty,
                 profile,
                 TestContext.Current.CancellationToken));
+    }
+
+    // Moving a waiting record to another dialer profile used to leave its queue item on the old profile, because
+    // queueing a record that is already waiting returns its queue item untouched. It keeps its place and takes the new one.
+    [Fact]
+    public async Task EnqueueAsync_WhenTheRecordIsAlreadyWaitingInTheCampaignQueue_RetagsItWithTheNewProfile()
+    {
+        // Arrange
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+        var waiting = new QueueItem
+        {
+            ItemId = "item-1",
+            QueueId = campaignQueueId,
+            ActivityItemId = "activity-1",
+            DialerProfileId = "preview-profile",
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.FindByActivityIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(waiting);
+        queueItemManager
+            .Setup(manager => manager.UpdateAsync(It.IsAny<QueueItem>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var queueService = new Mock<IActivityQueueService>();
+        var contributor = new ContactCenterActivityDialerContributor(
+            Mock.Of<IDialerProfileManager>(),
+            queueService.Object,
+            queueItemManager.Object);
+
+        // Act
+        await contributor.EnqueueAsync(
+            "activity-1",
+            "campaign-1",
+            new ActivityDialerProfileDescriptor { ProfileId = "power-profile" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("power-profile", waiting.DialerProfileId);
+        Assert.Equal(QueueItemStatus.Waiting, waiting.Status);
+        queueItemManager.Verify(
+            manager => manager.UpdateAsync(waiting, It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        queueService.Verify(
+            service => service.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<InteractionPriority?>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetWaitingRecordsAsync_ReadsTheCampaignQueueWithEachRecordsProfile()
+    {
+        // Arrange
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(manager => manager.GetWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(
+            [
+                new QueueItem { ItemId = "item-1", ActivityItemId = "activity-1", DialerProfileId = "preview-profile" },
+                new QueueItem { ItemId = "item-2", ActivityItemId = "activity-2", DialerProfileId = "power-profile" },
+            ]);
+
+        var contributor = new ContactCenterActivityDialerContributor(
+            Mock.Of<IDialerProfileManager>(),
+            Mock.Of<IActivityQueueService>(),
+            queueItemManager.Object);
+
+        // Act
+        var records = await contributor.GetWaitingRecordsAsync("campaign-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Collection(
+            records,
+            record =>
+            {
+                Assert.Equal("activity-1", record.ActivityId);
+                Assert.Equal("preview-profile", record.ProfileId);
+            },
+            record =>
+            {
+                Assert.Equal("activity-2", record.ActivityId);
+                Assert.Equal("power-profile", record.ProfileId);
+            });
     }
 
     private static DialerProfile CreateProfile(

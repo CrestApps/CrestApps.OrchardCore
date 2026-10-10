@@ -218,6 +218,9 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
                 ActivitySource = ActivitySources.Dialer,
             });
 
+        public Task<IReadOnlyCollection<ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyCollection<ActivityDialerWaitingRecord>>([]);
+
         public Task EnqueueAsync(
             string activityId,
             string campaignId,

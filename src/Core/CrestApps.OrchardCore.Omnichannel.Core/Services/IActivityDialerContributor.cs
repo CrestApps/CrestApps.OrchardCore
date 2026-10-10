@@ -26,9 +26,20 @@ public interface IActivityDialerContributor
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the activities waiting in the campaign's dialer queue, with the dialer profile each is queued under.
+    /// </summary>
+    /// <param name="campaignId">The campaign identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The waiting activities.</returns>
+    Task<IReadOnlyCollection<ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(
+        string campaignId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Enqueues an activity for outbound dialing under the given campaign, tagging it with the profile that
     /// dials it. The routing target is derived from the campaign, so activities loaded for the same campaign
-    /// share one queue regardless of which profile dials them.
+    /// share one queue regardless of which profile dials them. An activity already waiting in that queue keeps
+    /// its place and is tagged with the given profile instead.
     /// </summary>
     /// <param name="activityId">The activity identifier.</param>
     /// <param name="campaignId">The campaign the inventory was loaded for.</param>

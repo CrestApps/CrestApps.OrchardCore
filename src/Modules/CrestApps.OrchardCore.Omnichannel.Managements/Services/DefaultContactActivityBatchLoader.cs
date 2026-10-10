@@ -198,6 +198,25 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the activity load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
                 return;
             }
+
+            // The load editor refuses this too, but a scheduled load runs later, when other records may be waiting.
+            var dialerCampaignId = string.IsNullOrWhiteSpace(batch.CampaignId) ? flowSettings.CampaignId : batch.CampaignId;
+            var conflicts = await DialerCampaignProfileGuard.FindConflictsAsync(
+                dialerContributor,
+                dialerCampaignId,
+                dialerProfile.ProfileId,
+                movingActivityIds: null,
+                cancellationToken);
+
+            if (conflicts.Count > 0)
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because its campaign '{CampaignId}' already has records waiting under the dialer profiles {Profiles}, and a campaign's waiting records must all use one dialer profile. Load it with that profile, into another campaign, or once those records are worked.", batch.ItemId, dialerCampaignId, DialerCampaignProfileGuard.Describe(conflicts));
+                return;
+            }
         }
 
         long documentId = 0;
