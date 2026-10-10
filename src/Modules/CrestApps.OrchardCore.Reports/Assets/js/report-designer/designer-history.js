@@ -447,6 +447,7 @@
             return ui.request(app.url('preview'), { body: version.design, html: true });
         }).then(function (html) {
             body.innerHTML = html;
+            ui.initPickers(body);
 
             if (root.CrestAppsReportCharts) {
                 root.CrestAppsReportCharts.render(body);

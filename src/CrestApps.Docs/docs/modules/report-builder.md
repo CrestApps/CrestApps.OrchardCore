@@ -45,7 +45,7 @@ A run goes through these steps:
 3. **Join.** Data sets are hash-joined in order (inner, left, right or full). Keys of different types (text and number) are compared as text; empty keys never match.
 4. **Calculate, filter, group.** Row-level calculated fields are evaluated, then fixed filters, then the exposed filters with the viewer's values. When any column is a measure, rows are grouped by the dimension columns.
 5. **Shape.** Result filters, sorts, the row limit and the result-size limit are applied.
-6. **Render.** Visuals regroup the rows behind the result by fewer dimensions (charts, metrics, pivot tables, totals), so non-additive measures such as averages and distinct counts stay correct.
+6. **Render.** Visuals regroup the rows behind the result by fewer dimensions (charts, metrics, pivot tables, totals and table subtotals), so non-additive measures such as averages and distinct counts stay correct. A table with `ShowSubtotals` keeps its rows together by its leading dimensions and adds a subtotal after each group, innermost first: with Role, User and Status, a subtotal per user within each role, then per role, then the grand total.
 
 Processing runs in memory over the rows the sources return, so every source gets joins, formulas and aggregation without implementing them. Sources can take on part of the work to handle large data, as described next.
 
@@ -296,7 +296,7 @@ The **Users** data source is part of the builder. It is listed only for principa
 | **Users** | One per user account | `UserId` (identifier), `UserName`, `Email`, `EmailConfirmed`, `PhoneNumber`, `PhoneNumberConfirmed`, `IsEnabled`, `TwoFactorEnabled`, `IsLockoutEnabled`, `LockoutEndUtc`, `AccessFailedCount`, `Roles` (comma separated), and `Properties.*` for the custom user settings stored with the users |
 | **User roles** | One per user and role | `UserId` (references **Users**), `UserName`, `Role` |
 
-Password hashes, security stamps, tokens and external login keys are never exposed. The `Properties.*` fields are found the same way as query fields: nested objects become dotted names and types are inferred from the stored values. Content item owners and user picker fields reference **Users**, so they join to it automatically.
+Password hashes, security stamps, tokens and external login keys are never exposed. Neither is any `Properties.*` value whose path names a secret, such as an access or refresh token, a client secret, a password or an API key, which modules sometimes store with a user. The `Properties.*` fields are found the same way as query fields: nested objects become dotted names and types are inferred from the stored values. Content item owners and user picker fields reference **Users**, so they join to it automatically.
 
 ## Business records
 

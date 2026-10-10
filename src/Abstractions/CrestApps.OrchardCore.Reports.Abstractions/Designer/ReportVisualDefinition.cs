@@ -61,6 +61,13 @@ public sealed class ReportVisualDefinition
     public bool ShowTotals { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether a table of a grouped report shows a subtotal row after each group of its
+    /// leading dimensions: with dimensions Role, User and Status, a subtotal per user within each role, then per role.
+    /// Rows are kept together by those dimensions, in their order within each group.
+    /// </summary>
+    public bool ShowSubtotals { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether a bar or area chart stacks its series.
     /// </summary>
     public bool Stacked { get; set; }

@@ -121,17 +121,31 @@
                 {
                     <a class="btn btn-sm btn-outline-secondary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Edit"]</a>
                 }
-                @if (Model.CanDesign)
-                {
-                    <form method="post" asp-route="ReportDesignsDuplicate" asp-route-id="@design.ItemId" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Duplicate"]</button>
-                    </form>
-                }
                 @if (entry.CanEdit)
                 {
                     <form method="post" asp-route="ReportDesignsDelete" asp-route-id="@design.ItemId" class="d-inline">
                         <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
                     </form>
+                }
+                @if (Model.CanDesign)
+                {
+                    <div class="btn-group" title="@T["Actions"]">
+                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle actions" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span>@T["Actions"]</span>
+                        </button>
+                        <ul class="actions-menu dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a asp-route="ReportDesignsClone"
+                                   asp-route-id="@design.ItemId"
+                                   class="dropdown-item"
+                                   data-url-af="UnsafeUrl"
+                                   data-title="@T["Clone"]"
+                                   data-message="@T["Create your own copy of this report? The copy is not shared with anybody."]"
+                                   data-ok-text="@T["Yes"]"
+                                   data-cancel-text="@T["Cancel"]">@T["Clone"]</a>
+                            </li>
+                        </ul>
+                    </div>
                 }
             </div>
         </li>

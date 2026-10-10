@@ -672,6 +672,17 @@
     var path = String(url).replace(/^[\s\\/]+/, '');
     return encodeURI('/' + path);
   };
+
+  // Turns the drop-down lists of server-rendered HTML the builder inserted, such as a preview's filters, into
+  // searchable pickers. Pages initialise their own lists on load; inserted HTML needs this.
+  ui.initPickers = function (container) {
+    if (!container || !root.Selectpicker || typeof root.Selectpicker.getOrCreateInstance !== 'function') {
+      return;
+    }
+    container.querySelectorAll('select.selectpicker').forEach(function (select) {
+      root.Selectpicker.getOrCreateInstance(select);
+    });
+  };
   ui.clear = function (element) {
     while (element && element.firstChild) {
       element.removeChild(element.firstChild);
@@ -1007,6 +1018,7 @@
     }).then(function (html) {
       target.classList.remove('is-loading');
       target.innerHTML = html;
+      ui.initPickers(target);
       app.bindPreview(target);
       if (root.CrestAppsReportCharts) {
         root.CrestAppsReportCharts.render(target);
@@ -3012,7 +3024,7 @@
         }), check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
         break;
       default:
-        parts.push(labelled(app.t('Columns shown'), checkboxList(all, visual.columnIds || [], set('columnIds')), app.t('Leave all unchecked to show every visible column.')), check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
+        parts.push(labelled(app.t('Columns shown'), checkboxList(all, visual.columnIds || [], set('columnIds')), app.t('Leave all unchecked to show every visible column.')), check(app.t('Show totals'), visual.showTotals, set('showTotals', false)), check(app.t('Show subtotals'), visual.showSubtotals, set('showSubtotals', false), app.t('Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.')));
         break;
     }
     return parts;
@@ -4372,6 +4384,7 @@
       });
     }).then(function (html) {
       body.innerHTML = html;
+      ui.initPickers(body);
       if (root.CrestAppsReportCharts) {
         root.CrestAppsReportCharts.render(body);
       }

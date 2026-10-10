@@ -194,6 +194,7 @@
         ui.request(app.url('preview') + (app.isView() ? '?view=true' : ''), { body: payload, html: true }).then(function (html) {
             target.classList.remove('is-loading');
             target.innerHTML = html;
+            ui.initPickers(target);
             app.bindPreview(target);
 
             if (root.CrestAppsReportCharts) {

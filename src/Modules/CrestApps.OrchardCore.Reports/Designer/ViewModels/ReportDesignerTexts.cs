@@ -122,6 +122,8 @@ public static class ReportDesignerTexts
             ["Show totals"] = S["Show totals"].Value,
             ["Columns shown"] = S["Columns shown"].Value,
             ["Leave all unchecked to show every visible column."] = S["Leave all unchecked to show every visible column."].Value,
+            ["Show subtotals"] = S["Show subtotals"].Value,
+            ["Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role."] = S["Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role."].Value,
             ["Move up"] = S["Move up"].Value,
             ["Visuals"] = S["Visuals"].Value,
             ["Without visuals the report shows one table of the result."] = S["Without visuals the report shows one table of the result."].Value,

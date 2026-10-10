@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Reports.Controllers;
 
 /// <summary>
 /// Serves designed reports in the admin: the list of reports the user can see, running and exporting a report, and
-/// deleting or duplicating one.
+/// deleting or cloning one.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
 [Admin]
@@ -252,8 +252,8 @@ public sealed class ReportDesignsController : Controller
     /// <param name="id">The report identifier.</param>
     /// <returns>A redirect to the designer of the copy.</returns>
     [HttpPost]
-    [Admin("reports/designs/{id}/duplicate", "ReportDesignsDuplicate")]
-    public async Task<IActionResult> Duplicate(string id)
+    [Admin("reports/designs/{id}/clone", "ReportDesignsClone")]
+    public async Task<IActionResult> Clone(string id)
     {
         var design = await _designService.FindAsync(id);
 
@@ -282,12 +282,12 @@ public sealed class ReportDesignsController : Controller
 
         if (!result.Saved)
         {
-            await _notifier.ErrorAsync(H["The report could not be copied."]);
+            await _notifier.ErrorAsync(H["The report could not be cloned."]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        await _notifier.SuccessAsync(H["The report has been copied. The copy is not shared with anybody."]);
+        await _notifier.SuccessAsync(H["The report has been cloned. The copy is not shared with anybody."]);
 
         return RedirectToRoute("ReportDesignerEdit", new { id = result.Id });
     }

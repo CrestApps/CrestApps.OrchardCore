@@ -88,6 +88,18 @@
         return encodeURI('/' + path);
     };
 
+    // Turns the drop-down lists of server-rendered HTML the builder inserted, such as a preview's filters, into
+    // searchable pickers. Pages initialise their own lists on load; inserted HTML needs this.
+    ui.initPickers = function (container) {
+        if (!container || !root.Selectpicker || typeof root.Selectpicker.getOrCreateInstance !== 'function') {
+            return;
+        }
+
+        container.querySelectorAll('select.selectpicker').forEach(function (select) {
+            root.Selectpicker.getOrCreateInstance(select);
+        });
+    };
+
     ui.clear = function (element) {
         while (element && element.firstChild) {
             element.removeChild(element.firstChild);

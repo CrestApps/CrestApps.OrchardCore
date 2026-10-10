@@ -169,9 +169,11 @@ public sealed class ReportDesignDocumentBuilder
         var columns = indexes
             .Select(index => new ReportColumn(result.Columns[index].Label, Align(result.Columns[index])))
             .ToList();
-        var rows = result.Rows
-            .Select(values => new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()))
-            .ToList();
+        var rows = visual.ShowSubtotals && result.IsAggregated
+            ? BuildRowsWithSubtotals(result, indexes)
+            : result.Rows
+                .Select(values => new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()))
+                .ToList();
 
         if (visual.ShowTotals && indexes.Any(index => IsTotalled(result, index)))
         {
@@ -189,6 +191,115 @@ public sealed class ReportDesignDocumentBuilder
         }
 
         return ReportSection.ForTable(visual.Title, columns, rows);
+    }
+
+    // The rows of a grouped table with a subtotal after each group of its leading dimensions (every shown dimension but
+    // the last). Rows are kept together by those dimensions, keeping their order within each group. Each subtotal is
+    // the result regrouped by the dimensions up to its level, so averages and distinct counts stay correct.
+    private List<ReportRow> BuildRowsWithSubtotals(ReportQueryResult result, int[] indexes)
+    {
+        var dimensions = indexes.Where(index => !result.Columns[index].IsMeasure).ToArray();
+        var levels = dimensions.Length - 1;
+
+        if (levels < 1)
+        {
+            return result.Rows
+                .Select(values => new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()))
+                .ToList();
+        }
+
+        string Key(object[] values, int level)
+        {
+            return string.Join('\u001F', dimensions.Take(level + 1).Select(index => ReportDataValues.ToKey(values[index])));
+        }
+
+        // The subtotals of each level, by the values of the dimensions up to it.
+        var subtotals = new Dictionary<string, object[]>[levels];
+
+        for (var level = 0; level < levels; level++)
+        {
+            var ids = dimensions.Take(level + 1).Select(index => result.Columns[index].Id).ToArray();
+            var current = level;
+
+            subtotals[level] = result.Regroup(ids)
+                .GroupBy(group => Key(group.Values, current), StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First().Values, StringComparer.Ordinal);
+        }
+
+        // Keep each group together, in the order its first row appears, without reordering rows within it: stable sorts
+        // from the innermost level out leave the rows ordered by their outermost group first.
+        var ordered = result.Rows
+            .Select((values, position) => (values, position))
+            .ToList();
+
+        for (var level = levels - 1; level >= 0; level--)
+        {
+            var current = level;
+            var positions = new Dictionary<string, int>(StringComparer.Ordinal);
+
+            for (var position = 0; position < ordered.Count; position++)
+            {
+                positions.TryAdd(Key(ordered[position].values, current), position);
+            }
+
+            ordered = ordered
+                .Select((entry, position) => (entry, position))
+                .OrderBy(item => positions[Key(item.entry.values, current)])
+                .ThenBy(item => item.position)
+                .Select(item => item.entry)
+                .ToList();
+        }
+
+        var rows = new List<ReportRow>();
+        var previous = default(object[]);
+
+        void AddSubtotals(object[] values, int fromLevel)
+        {
+            for (var level = levels - 1; level >= fromLevel; level--)
+            {
+                if (!subtotals[level].TryGetValue(Key(values, level), out var totals))
+                {
+                    continue;
+                }
+
+                var cells = new List<string>(indexes.Length);
+
+                foreach (var index in indexes)
+                {
+                    var position = Array.IndexOf(dimensions, index);
+
+                    cells.Add(position == level
+                        ? S["{0} total", _formatter.Format(values[index], result.Columns[index])].Value
+                        : position >= 0 ? string.Empty : _formatter.Format(totals[index], result.Columns[index]));
+                }
+
+                rows.Add(new ReportRow(cells, ReportRowKind.Subtotal));
+            }
+        }
+
+        foreach (var (values, _) in ordered)
+        {
+            if (previous is not null)
+            {
+                // The outermost level whose group changes closes that group and every group inside it.
+                var changed = Enumerable.Range(0, levels).FirstOrDefault(level => Key(previous, level) != Key(values, level), -1);
+
+                if (changed >= 0)
+                {
+                    AddSubtotals(previous, changed);
+                }
+            }
+
+            rows.Add(new ReportRow(indexes.Select(index => _formatter.Format(values[index], result.Columns[index])).ToList()));
+            previous = values;
+        }
+
+        if (previous is not null)
+        {
+            AddSubtotals(previous, 0);
+        }
+
+        return rows;
     }
 
     private ReportSection BuildMetrics(ReportVisualDefinition visual, ReportQueryResult result)

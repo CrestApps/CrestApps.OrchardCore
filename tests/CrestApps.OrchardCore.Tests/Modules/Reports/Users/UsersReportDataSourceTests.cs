@@ -80,6 +80,16 @@ public sealed class UsersReportDataSourceTests : IAsyncLifetime
                         ["FirstName"] = "Ada",
                         ["Age"] = 36,
                     },
+                    ["Connections"] = new JsonObject
+                    {
+                        ["Phone"] = new JsonObject
+                        {
+                            ["ProviderName"] = "Phone",
+                            ["AccessToken"] = "secret-access-token",
+                            ["RefreshToken"] = "secret-refresh-token",
+                            ["ClientSecret"] = "secret-client",
+                        },
+                    },
                 },
             }, false, cancellationToken: TestContext.Current.CancellationToken);
             await session.SaveAsync(new User
@@ -139,6 +149,23 @@ public sealed class UsersReportDataSourceTests : IAsyncLifetime
         Assert.Equal(ReportDataType.Integer, schema.FindField("Properties.Profile.Age").DataType);
         Assert.DoesNotContain(schema.Fields, field => field.Name.Contains("Password", StringComparison.OrdinalIgnoreCase) ||
             field.Name.Contains("SecurityStamp", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(ReportDataType.Text, schema.FindField("Properties.Connections.Phone.ProviderName").DataType);
+        Assert.DoesNotContain(schema.Fields, field => field.Name.Contains("Token", StringComparison.OrdinalIgnoreCase) ||
+            field.Name.Contains("Secret", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Query_NeverReturnsSecretProperties_EvenWhenAsked()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var source = Source(session);
+
+        // Act
+        var table = await source.QueryAsync(Query(ReportsConstants.UsersDataSet, ReportsConstants.UserIdField, "Properties.Connections.Phone.AccessToken"), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.DoesNotContain(table.Rows.SelectMany(row => row), value => value is string text && text.StartsWith("secret-", StringComparison.Ordinal));
     }
 
     [Fact]

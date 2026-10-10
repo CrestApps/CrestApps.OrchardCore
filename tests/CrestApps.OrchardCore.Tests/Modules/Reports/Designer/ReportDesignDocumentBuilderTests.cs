@@ -157,6 +157,70 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         Assert.Contains(errors, error => error.Contains("unique identifier", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task Table_WithSubtotals_ClosesEachGroupOfTheLeadingDimensions()
+    {
+        // Arrange
+        var query = CustomersWithOrders();
+        query.Columns =
+        [
+            new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
+            new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
+            new ReportColumnDefinition { Id = "order", Field = "o.Id", Label = "Order" },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = ReportAggregate.Sum, Format = "0" },
+            new ReportColumnDefinition { Id = "average", Field = "o.Total", Label = "Average", Aggregate = ReportAggregate.Average, Format = "0.00" },
+        ];
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ShowTotals = true, ShowSubtotals = true };
+
+        // Act
+        var section = DocumentBuilder().Build("Revenue", [visual], result).Sections.Single();
+
+        // Assert
+        // The region average is the average of its orders (170 / 3), not the average of its customers' averages.
+        Assert.Equal(
+            [
+                ["East", "Globex", "o3", "300", "300.00"],
+                [string.Empty, "Globex total", string.Empty, "300", "300.00"],
+                ["East total", string.Empty, string.Empty, "300", "300.00"],
+                ["West", "Acme", "o1", "100", "100.00"],
+                ["West", "Acme", "o2", "50", "50.00"],
+                [string.Empty, "Acme total", string.Empty, "150", "75.00"],
+                ["West", "Initech", "o4", "20", "20.00"],
+                [string.Empty, "Initech total", string.Empty, "20", "20.00"],
+                ["West total", string.Empty, string.Empty, "170", "56.67"],
+                ["Total", string.Empty, string.Empty, "470", "117.50"],
+            ],
+            section.Rows.Select(row => row.Cells.ToArray()));
+        Assert.Equal(
+            [ReportRowKind.Detail, ReportRowKind.Subtotal, ReportRowKind.Subtotal, ReportRowKind.Detail, ReportRowKind.Detail, ReportRowKind.Subtotal, ReportRowKind.Detail, ReportRowKind.Subtotal, ReportRowKind.Subtotal, ReportRowKind.GrandTotal],
+            section.Rows.Select(row => row.Kind));
+    }
+
+    [Fact]
+    public async Task Table_WithSubtotals_KeepsGroupsTogetherWhenSortedByAMeasure()
+    {
+        // Arrange
+        var query = CustomersWithOrders();
+        query.Columns =
+        [
+            new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
+            new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = ReportAggregate.Sum, Format = "0" },
+        ];
+        query.Sorts = [new ReportSortDefinition { ColumnId = "revenue", Descending = true }];
+        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ShowSubtotals = true };
+
+        // Act
+        var section = DocumentBuilder().Build("Revenue", [visual], result).Sections.Single();
+
+        // Assert: East comes first (its first row is the largest), West's customers stay in revenue order.
+        Assert.Equal(
+            ["Globex", "East total", "Acme", "Initech", "West total"],
+            section.Rows.Select(row => row.Cells[1].Length > 0 ? row.Cells[1] : row.Cells[0]));
+    }
+
     private static Task<ReportQueryResult> RevenueByRegionAndCustomer()
     {
         var query = CustomersWithOrders();

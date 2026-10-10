@@ -647,7 +647,8 @@
             default:
                 parts.push(
                     labelled(app.t('Columns shown'), checkboxList(all, visual.columnIds || [], set('columnIds')), app.t('Leave all unchecked to show every visible column.')),
-                    check(app.t('Show totals'), visual.showTotals, set('showTotals', false)));
+                    check(app.t('Show totals'), visual.showTotals, set('showTotals', false)),
+                    check(app.t('Show subtotals'), visual.showSubtotals, set('showSubtotals', false), app.t('Adds a subtotal after each group of the leading dimensions, such as per user within each role, then per role.')));
                 break;
         }
 

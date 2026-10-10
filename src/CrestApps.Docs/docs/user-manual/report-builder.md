@@ -104,7 +104,7 @@ Drag a field onto **Filters**, or click the filter icon next to it, then set it 
 | **Value** | What to compare with. A date without a time covers the whole day. |
 | **Let viewers change this filter** | Shows the filter above the report so the people who run it can change it. The values you set become its defaults. |
 | **Filter label** | The label viewers see. |
-| **Control** | How viewers pick values: **Automatic**, **Text box**, **Drop-down list**, **List with several choices**, **Recent period**, **Date range**, **Number range** or **Yes or no**. Lists show the values found in the data. A **Recent period** offers today, the last 7, 30 or 90 days, the last 12 months, or all time; its **Default period** is what the report opens with. |
+| **Control** | How viewers pick values: **Automatic**, **Text box**, **Drop-down list**, **List with several choices**, **Recent period**, **Date range**, **Number range** or **Yes or no**. Lists show the values found in the data; long lists can be searched. A **Recent period** offers today, the last 7, 30 or 90 days, the last 12 months, or all time; its **Default period** is what the report opens with. |
 
 Filters that viewers cannot change always apply, and viewers cannot see or remove them.
 
@@ -137,7 +137,7 @@ The **Visuals** card on the right lists what the report shows, in order. Without
 
 | Visual | What it shows |
 | --- | --- |
-| **Table** | The result rows. Pick the **Columns shown** and whether to **Show totals**. |
+| **Table** | The result rows. Pick the **Columns shown**, whether to **Show totals**, and whether to **Show subtotals**. With subtotals on and columns Role, User and Status, the table shows a subtotal for each user within a role, then for each role, then the grand total. |
 | **Chart** | A **Bar**, **Horizontal bar**, **Line**, **Area**, **Pie** or **Doughnut** chart of the **Values** by **Categories**. **Split into series by** draws one series per value of another column, and **Stack series** stacks them. |
 | **Metrics** | Headline numbers: the total of each value column over the whole report. |
 | **Pivot table** | A cross-tab: **Rows** down the side, the values of **Columns across** along the top, and the **Value** in each cell, with optional totals. |
@@ -172,7 +172,7 @@ On the **Sharing** tab:
 | **Roles** | Everyone in a checked role may run the report. **Authenticated** means everyone who is signed in. **Anonymous** means everyone, including visitors who are not signed in, and needs the *Share custom reports publicly and through share links* permission. |
 | **Let people the report is shared with export it** | On the **Settings** tab. Turn it off to let them view the report but not download it. |
 
-A shared report reads data with **your** access: people see what the report shows even when they could not open that data themselves. Share only what they should see. If your account is disabled or deleted, your reports stop running; someone who designs reports can duplicate them and share the copies again.
+A shared report reads data with **your** access: people see what the report shows even when they could not open that data themselves. Share only what they should see. If your account is disabled or deleted, your reports stop running; someone who designs reports can clone them and share the copies again.
 
 People who cannot open the admin can open a shared report at its own page outside the admin.
 
@@ -186,13 +186,13 @@ A share link opens one report for anyone who has the link, without an account. Y
 
 To stop a link working, click **Revoke**. The list shows each link's note, the first characters of its address, when it expires, and whether it is **Active**, **Expired** or **Revoked**.
 
-## Run, export, copy and delete
+## Run, export, clone and delete
 
 **Reports > Report Builder** (or **Shared Reports**) lists every report you can open. From the list:
 
 - **Run** opens the report. Change the filters and click **Show**. Click **Export** to download it as CSV, or as Excel when the Reports (OpenXml) feature is on.
 - **Edit** opens the builder (when you may change the report).
-- **Duplicate** makes your own copy. The copy is not shared with anybody.
+- **Clone**, under **Actions**, makes your own copy. The copy is not shared with anybody.
 - **Delete** removes the report and all its share links.
 
 ## Troubleshooting
@@ -200,7 +200,7 @@ To stop a link working, click **Revoke**. The list shows each link's note, the f
 | Problem | What to do |
 | --- | --- |
 | A data set says it is not available to you | You may not view that content type. Ask your administrator. |
-| The report says it cannot run because its owner has no active account | Ask someone who designs reports to duplicate it, and share the copy again. |
+| The report says it cannot run because its owner has no active account | Ask someone who designs reports to clone it, and share the copy again. |
 | A warning says only the first rows were read | The data set is larger than the builder reads at once. Add filters that narrow the data, or ask your administrator to raise the limits. |
 | A formula says it mixes aggregated values with row-level fields | Wrap every field in an aggregate function, or remove the aggregate function. |
 | The **Anonymous** role cannot be checked | You need the *Share custom reports publicly and through share links* permission. |
