@@ -62,6 +62,15 @@ jobs:
     # proves that a tenant cannot reach another one outside the broker, that delegated access works end to end
     # over HTTP, and that the guards hold. The SQL Server and PostgreSQL provisioning tests skip unless their
     # connection-string variables are set.
+    # It runs under dotnet-coverage (pinned in dotnet-tools.json), limited to the tenant hierarchy assemblies by
+    # tests/tenant-hierarchy.coverage.xml, and the Cobertura report is kept as an artifact of the run.
     - name: Tenant hierarchy integration tests
       run: |
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj
+        dotnet tool restore
+        dotnet dotnet-coverage collect --settings tests/tenant-hierarchy.coverage.xml -f cobertura -o tenant-hierarchy.cobertura.xml "dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj"
+    - name: Upload the tenant hierarchy coverage report
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v7
+      with:
+        name: tenant-hierarchy-coverage
+        path: tenant-hierarchy.cobertura.xml

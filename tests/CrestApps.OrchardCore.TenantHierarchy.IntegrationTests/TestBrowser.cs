@@ -50,6 +50,15 @@ public sealed partial class TestBrowser : IDisposable
         => SendAsync(HttpMethod.Post, new Uri(url), new FormUrlEncodedContent(fields), null);
 
     /// <summary>
+    /// Sends a POST request with form fields that may repeat, such as the selected items of a list, without
+    /// following redirects.
+    /// </summary>
+    /// <param name="url">The absolute URL, with the tenant host.</param>
+    /// <param name="fields">The form fields, in order.</param>
+    public Task<HttpResponseMessage> PostAsync(string url, IEnumerable<KeyValuePair<string, string>> fields)
+        => SendAsync(HttpMethod.Post, new Uri(url), new FormUrlEncodedContent(fields), null);
+
+    /// <summary>
     /// Sends a GET request and follows redirects, across hosts, until a response that is not a redirect.
     /// </summary>
     /// <param name="url">The absolute URL, with the tenant host.</param>
