@@ -21,7 +21,7 @@ video (`src/CrestApps.Docs/static/img/docs/report-builder.mp4`). Read it before 
 
 | | |
 |---|---|
-| Output | 1920x1080, 30 fps, H.264 (`-preset slow -crf 30 -tune stillimage`), AAC 48 kbps mono, `+faststart`; under 25 MB, and linked rather than attached to a pull request when over 10 MB |
+| Output | 1920x1080, 30 fps, H.264 (`-preset veryslow -crf 30 -tune stillimage`, more reference frames), AAC 48 kbps mono, `+faststart`; under 25 MB, and linked rather than attached to a pull request when over 10 MB |
 | Recording | Chromium at 1536x864 CSS pixels, device scale 1.25, light color scheme, en-US, shown at 1728x972 in an amber frame |
 | Branding | Navy background with an amber and a steel blue glow, the CrestApps logo (`src/CrestApps.Docs/branding/CrestAppsMainLogo.png`), Inter from `src/CrestApps.Docs/branding/fonts` |
 | Colors | Amber `#EAA429` (accents, frame, pills, highlights, clicks), navy `#081B26` (background and text on amber), steel blue `#2A81BB`, silver `#BEC3C8`, mist `#EDF4FA` |
@@ -79,7 +79,8 @@ It writes `audio/` and `durations.json`. Run it again after any change to the te
 generated again. **Record after narrating**, since the recorder holds each step for the length of its narration.
 
 If the voice mispronounces a word, add it to `SPOKEN` in `scripts/narrate.py` (for every video) or to `"spoken"` in
-the storyboard (for this one). The captions keep the written form. "CrestApps" is already spoken as "Crest Apps".
+the storyboard (for this one). The captions keep the written form. "CrestApps" is already spoken as "Crest Apps",
+and "ASP.NET" as "A.S.P. dot net". Spell an initialism with dots and no spaces ("C.S.V."), never with commas.
 Check a spelling with `scripts/pronounce.py`, which shows the words the voice speaks and the gaps between them.
 
 ### 4. Record the clips

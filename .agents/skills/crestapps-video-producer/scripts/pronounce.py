@@ -3,11 +3,11 @@ one starts, and the gap to the next one. Optionally writes the audio of each spe
 
 Usage: python pronounce.py "<sentence with {}>" "<spelling>" ["<spelling>"...] [--save <folder>]
 
-Example: python pronounce.py "It encrypts secrets with {} Core Data Protection." "ASP.NET" "A S P dot net" "A, S, P dot net"
+Example: python pronounce.py "It encrypts secrets with {} Core Data Protection." "ASP.NET" "A.S.P. dot net" "A, S, P dot net"
 
-Letters spelled out must be separate words, with gaps of about 0.4 to 0.8 seconds: "A S P" gives 0.25 second gaps,
-and the letters run together into "asp"; "A, S, P" spaces them like a person spelling them. A single token such as
-"A.S.P." can't be checked this way.
+Spell an initialism with dots and no spaces, "A.S.P.": the voice says it as one word of about 0.2 seconds a letter,
+the natural pace of an initialism. "A, S, P" pauses almost a second after each letter, and "A S P" runs the letters
+together into "asp".
 """
 import asyncio
 import sys
@@ -25,13 +25,15 @@ async def probe(sentence, spelling, save):
         if chunk["type"] == "audio":
             audio += chunk["data"]
         elif chunk["type"] == "WordBoundary":
-            words.append((chunk["text"], chunk["offset"] / 1e7))
+            words.append((chunk["text"], chunk["offset"] / 1e7, chunk["duration"] / 1e7))
 
     # The words of the spelling, and the word after it.
     before = len(sentence.split("{}")[0].split())
     spoken = words[before:before + len(spelling.split()) + 1]
     gaps = [round(b[1] - a[1], 2) for a, b in zip(spoken, spoken[1:])]
-    print(f"{spelling!r:28} words {[w for w, _ in spoken[:-1]]}  gaps {gaps}  ends {words[-1][1]:.2f}s")
+    lengths = [round(length, 2) for _, _, length in spoken[:-1]]
+    print(f"{spelling!r:28} words {[w for w, _, _ in spoken[:-1]]}  lengths {lengths}  gaps {gaps}  "
+          f"ends {words[-1][1]:.2f}s")
 
     if save:
         name = "".join(c if c.isalnum() else "_" for c in spelling)

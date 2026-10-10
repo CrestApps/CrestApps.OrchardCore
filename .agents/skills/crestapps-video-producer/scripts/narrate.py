@@ -21,7 +21,7 @@ RATE = "-5%"
 # How the voice must say words it misreads. The subtitles keep the written form. A storyboard can add its own in
 # "spoken"; add the ones that apply to every video here.
 SPOKEN = {
-    "ASP.NET": "A, S, P dot net",
+    "ASP.NET": "A.S.P. dot net",
     "CrestApps": "Crest Apps",
 }
 

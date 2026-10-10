@@ -2,7 +2,7 @@
   "title": "The CrestApps Report Builder",
   "output": "report-builder",
   "spoken": {
-    "CSV": "C, S, V",
+    "CSV": "C.S.V.",
     "IReportDataSource": "I Report Data Source",
     "ReportRecordDataSource": "Report Record Data Source",
     "SignalR": "Signal R"

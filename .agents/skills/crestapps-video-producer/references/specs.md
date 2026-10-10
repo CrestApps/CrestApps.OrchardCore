@@ -9,10 +9,10 @@ Every CrestApps video follows these values. They are applied by `scripts/brand.p
 |---|---|---|
 | Resolution | 1920x1080 | Full HD: sharp text on any screen. |
 | Frame rate | 30 fps | Smooth cursor movement, small files. |
-| Video codec | H.264 High, `yuv420p`, `-preset slow -crf 30 -tune stillimage`, keyframe every 10 s | Plays everywhere; screen content compresses well, and small text stays crisp at CRF 30. |
+| Video codec | H.264 High, `yuv420p`, `-preset veryslow -crf 30 -tune stillimage`, `-x264-params ref=8:bframes=8:b-adapt=2:me=umh:subme=10:aq-mode=3`, keyframe every 30 s | Plays everywhere; screen content compresses well, and small text stays crisp at CRF 30. The slower search makes the file about 15% smaller than `-preset slow` at the same or better quality (SSIM against the master). |
 | Audio codec | AAC, 48 kbps, 48 kHz, mono | Speech only: higher rates add about 2 MB per 10 minutes and nothing audible. |
 | Container | MP4 with `-movflags +faststart` | Starts playing before it's fully downloaded. |
-| Size | Under 25 MB. Videos over 10 MB (GitHub's attachment limit) are linked from a pull request, not attached | A 10-minute overview is about 18 MB. |
+| Size | Under 25 MB. Videos over 10 MB (GitHub's attachment limit) are linked from a pull request, not attached | A 9-minute overview is about 9 MB. |
 | Master | `build/master.mp4`, CRF 16, AAC 192 kbps stereo | Kept in the workspace to encode again without rebuilding. |
 | Captions | WebVTT (docs) and SRT, at most about 13 words each, split at sentence ends | Accessibility, and viewing without sound. |
 
@@ -77,6 +77,8 @@ Every CrestApps video follows these values. They are applied by `scripts/brand.p
 - `en-US-AvaMultilingualNeural` at `-5%` rate, through `edge-tts`: a clear, professional woman's voice, the same in
   every CrestApps video.
 - Pronunciation fixes in `SPOKEN` (`scripts/narrate.py`), such as "CrestApps" spoken as "Crest Apps" and "ASP.NET" as
-  "A, S, P dot net". The captions keep the written form.
-- Acronyms said letter by letter are written with commas ("C, S, V"), so each letter is distinct: with spaces only,
-  the letters run together. Check them with `scripts/pronounce.py`.
+  "A.S.P. dot net". The captions keep the written form.
+- Acronyms said letter by letter are written with dots and no spaces ("A.S.P.", "C.S.V."), so the voice says them at
+  a natural pace, the way people say an initialism. Never separate the letters with commas ("A, S, P"): the voice
+  pauses almost a second after each letter. Never with spaces only ("A S P"): the letters run together. Check them
+  with `scripts/pronounce.py`.

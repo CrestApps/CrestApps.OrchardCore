@@ -7,7 +7,7 @@ clip. `narrate.py`, the recorder and `assemble.py` all read it.
 {
   "title": "The CrestApps Report Builder",
   "output": "report-builder",
-  "spoken": { "CSV": "C, S, V" },
+  "spoken": { "Program.cs": "Program dot C.S." },
   "chapters": [
     {
       "id": "00", "title": "The CrestApps Report Builder", "subtitle": "Drag-and-drop reports over the data of your site",
@@ -62,8 +62,9 @@ A pull request demo can be shorter: an opening card, the recordings, and a closi
 - **Plain, direct, present tense.** Address the viewer as "you", or use "let's" for actions in a recording.
 - **Name UI elements as they're labeled** on screen, so the viewer can find them: "Reports, Report Builder".
 - **Acronyms**: the voice reads most of them correctly (API, SMTP, SMS, RSA). For one that must be spelled out letter by
-  letter, add a `spoken` entry with commas between the letters, such as "A, S, P dot net" for "ASP.NET", and check it
-  with `scripts/pronounce.py`.
+  letter, add a `spoken` entry with dots between the letters and no spaces, such as "A.S.P. dot net" for "ASP.NET"
+  or "Program dot C.S." for "Program.cs", and check it with `scripts/pronounce.py`. Commas between the letters
+  ("A, S, P") make the voice pause after each one; spaces alone ("A S P") run them together.
 - **Spell out** what a voice could misread: say "I Report Data Source" for `IReportDataSource`, "an X.509
   certificate", "Azure AI Search". Check every name of the narration for pronunciation, and add fixes to `spoken`.
 - **No marketing words**: no "powerful", "seamless", "simply", "easily".
