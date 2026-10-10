@@ -29,7 +29,8 @@ The channel works with any email provider. Each address picks how it sends, and 
 - Two-way email in the workspace: subjects, threaded replies (`Re:` and, with the SMTP transport, `In-Reply-To` and `References`), attachments of any document or picture format the workspace knows, and the history a reply quoted folded away under **Show quoted text**.
 - Email **entry points** that route each address's mail with the workspace's distribution, opening hours and auto-replies.
 - Inbound email from provider webhooks and from mailboxes, committed to the durable provider inbox and recognised by its `Message-ID`, so a redelivered email is never recorded or answered twice.
-- Bounce handling: a delivery report marks the email it bounced as failed.
+- Bounce handling: a delivery report marks the email it bounced as failed, and a hard bounce suppresses the address.
+- Sending limits, warm-up, pacing by receiving domain, a suppression list, bounce and complaint webhooks, and pauses when servers push back or sending health turns bad (see [Send email at volume](#send-email-at-volume)).
 - Loop protection: automatic mail (out-of-office replies, bulk mail, bounces) is recorded but never auto-replied to, and mail from one of the business's own addresses is ignored.
 - One-click unsubscribe on broadcasts and campaign email, which marks every contact holding the address **Do not email**.
 - Email on Load Activities, subject flows and the activity report filters.
@@ -142,9 +143,47 @@ With **Email Omnichannel Automation** on:
 
 The AI's requests are recorded under the **Email** category of the AI usage report.
 
+## Send email at volume
+
+Mailbox providers (Gmail, Outlook, Yahoo) judge a sender by its sending history: how much it sends and how steadily, how many of its emails bounce, and how many people report them as spam. A campaign that ignores that is throttled, then sent to spam, then blocked, and the block lands on the address and the domain, not just the campaign. The channel does the parts that live in the platform; the rest is set up at your domain and your sending provider.
+
+### What the channel does
+
+- **Sending limits.** Each email address has a limit per hour, per day and per receiving domain, and a minimum gap between bulk emails, on the address's **Email** card. Broadcasts, campaign opening emails and follow-ups over a limit wait for their turn instead of failing: they are spread out at the address's pace (two hundred an hour is one every 18 seconds), so a campaign of ten thousand drains over hours rather than bursting. Replies to customers count against the limits but are never held back.
+- **Warm-up.** **Warm up this address** starts a new address at a small daily limit (50 by default) and doubles it every day until it reaches the daily limit, spreading each day's allowance over twelve hours.
+- **Reacting to the server.** A failed send is read by its SMTP code and enhanced status code:
+
+  | The server says | The channel |
+  | --- | --- |
+  | `5.1.x`, `5.2.1` (no such mailbox, disabled) | Suppresses the address and never retries it. |
+  | `5.7.x` (policy, reputation, authentication) | Keeps the recipient, and pauses the address's bulk mail for an hour, then 2, 4… up to a day if it repeats. |
+  | `421`, `4.7.x`, "rate limit", "too many" | Pauses bulk mail for 15 minutes, then 30, 60… up to 4 hours; held mail is sent when the pause ends. |
+  | Other `4xx` | Retries later as an ordinary failure. |
+
+- **Suppression list.** A hard bounce, a third soft bounce in two weeks, or a spam complaint puts the address on **Interaction Center > Management > Email Suppressions**, and nothing is sent to it again from any address. Automated activities to a suppressed address are cancelled before anything is composed. An address can be taken off the list, or added by hand, on that page.
+- **Bounce and complaint webhooks.** A provider that reports what happened after the email left posts it to `POST ~/api/omnichannel/email/events/{provider}?key=…` (`sendgrid`, `mailgun`, `postmark`, `ses`, `json`), listed under **Settings > Communication > Email**, **Inbound email**. Point SendGrid's Event Webhook, Mailgun's webhooks, Postmark's bounce and spam complaint webhooks, or an Amazon SES bounce and complaint SNS topic at it. A complaint also marks every contact with the address **Do not email**. Bounce reports that come back to a mailbox the channel reads are handled the same way.
+- **Receiving domains that push back.** When one receiving domain defers or soft-bounces three emails within half an hour, bulk mail to that domain waits half an hour while mail to every other domain goes on.
+- **Sending health.** The **Email** card shows the last seven days: emails sent, the bounce and complaint rates, and where the address stands against its limits. When 5% of a week's emails bounce, or 0.3% are reported as spam (Gmail asks bulk senders to stay under 0.1%), bulk sending pauses until someone ticks **Resume bulk sending** after cleaning the list. Replies are never paused.
+- **Unsubscribe.** Broadcasts and campaign email carry one-click unsubscribe (see [Answer email in the workspace](#answer-email-in-the-workspace)).
+
+:::note[Throughput]
+Limits apply to campaign and broadcast mail. A campaign larger than the address's daily limit takes more than a day; that is the point. Raise the limits gradually as the address builds a history, and only on a dedicated sending service.
+:::
+
+### What you set up outside the platform
+
+- **Authenticate the sending domain.** Publish SPF, sign with DKIM, and publish a DMARC policy, with the DKIM domain aligned with the From address. Gmail and Yahoo refuse bulk mail without them. Your sending provider gives the records.
+- **Use a sending service for campaigns.** A mailbox host limits one mailbox: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. For campaigns, use a dedicated sending service (Amazon SES, SendGrid, Mailgun, Postmark, Azure Communication Services) through Orchard Core's email service or its SMTP relay, and connect its bounce and complaint webhook.
+- **Keep campaign mail apart.** Send campaigns from their own address on their own subdomain (for example `news.contoso.com`), so a campaign that goes badly cannot hurt the address customers reply to or the mail your business depends on. Each address has its own limits, health and pause.
+- **Warm up gradually, and start with your most engaged contacts.** Recipients who open and reply build the history; old or bought lists tear it down.
+- **Do not rotate addresses or domains to get around a block.** Providers recognise the pattern and the content, and rotating looks more like spam, not less.
+
+The channel does not measure inbox placement (accepted by the server is not the same as delivered to the inbox), monitor blocklists, or check the domain's DNS records; use your sending service's tools and Google Postmaster Tools for those.
+
 ## Extend the channel
 
 - **Another sending provider** (an HTTP API): implement `IEmailTransport` and register it with `services.AddEmailTransport<TTransport>()`. It appears in **Send through**.
 - **Another inbound webhook format**: implement `IInboundEmailWebhookParser` and register it with `services.AddInboundEmailWebhookParser<TParser>()`. It is served at `api/omnichannel/email/inbound/{name}`.
+- **Another bounce and complaint format**: implement `IEmailDeliveryEventParser` and register it with `services.AddEmailDeliveryEventParser<TParser>()`. It is served at `api/omnichannel/email/events/{name}`.
 - **Another inbound source** (a provider's push API, a Microsoft Graph subscription): build an `InboundEmail` and call `IEmailInboundReceiver.ReceiveAsync`. The receiver does the rest: address matching, files, quote stripping, loop and bounce handling, and the durable inbox.
 - **Another automated channel**: implement `IAutomatedMessagingChannel` and register it with `services.AddAutomatedMessagingChannel<TChannel>()`. The engine in `CrestApps.OrchardCore.Omnichannel.Automation.Core` provides the opening message, the reply loop, the conclusion, the handoff, the entry-point starter, the owed-reply recovery and the cadence follow-ups.

@@ -215,6 +215,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes
         public string Status { get; set; }
         public int UnreadCount { get; set; }
     }
+    public sealed class MessagingOutboxIndex : YesSql.Indexes.MapIndex
+    {
+        public MessagingOutboxIndex() { }
+        public string Channel { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string ServiceAddress { get; set; }
+    }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core
 {
@@ -279,6 +286,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public string Name { get; set; }
         public string OwnerAgentId { get; set; }
         public System.Collections.Generic.IList<string> ProcessedRecipients { get; set; }
+        public int QueuedCount { get; set; }
         public System.Collections.Generic.IList<string> Recipients { get; set; }
         public int SentCount { get; set; }
         public string ServiceAddress { get; set; }

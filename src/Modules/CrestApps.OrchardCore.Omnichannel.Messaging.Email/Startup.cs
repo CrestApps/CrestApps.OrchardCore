@@ -4,10 +4,14 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.BackgroundTasks;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
@@ -16,8 +20,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 
@@ -70,6 +77,33 @@ public sealed class Startup : StartupBase
         services.AddScoped<AmazonSnsMessageVerifier>();
         services.AddHttpClient(AmazonSnsMessageVerifier.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(15));
 
+        // Deliverability: every send is checked against the suppression list and, for bulk mail, against the address's
+        // limits and pauses; every outcome is logged, and what providers report later (bounces, complaints, blocks)
+        // suppresses addresses, pauses senders and slows mail to receiving domains that push back.
+        // The log, the suppression list and the sending state live in a collection of their own, so a high-volume log
+        // never shares a document table with the rest of the tenant's content.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(EmailChannelConstants.DeliverabilityCollectionName));
+        services.AddIndexProvider<EmailDeliveryLogIndexProvider>();
+        services.AddIndexProvider<EmailSuppressionIndexProvider>();
+        services.AddIndexProvider<EmailSendingStateIndexProvider>();
+        services.AddDataMigration<EmailDeliverabilityMigrations>();
+        services.AddScoped<IEmailDeliveryLog, EmailDeliveryLog>();
+        services.AddScoped<IEmailSuppressionList, EmailSuppressionList>();
+        services.AddScoped<IEmailSendingStateStore, EmailSendingStateStore>();
+        services.AddScoped<IEmailSentMessageFinder, EmailSentMessageFinder>();
+        services.AddScoped<IEmailSendingGovernor, EmailSendingGovernor>();
+        services.AddScoped<IEmailDeliveryEventProcessor, EmailDeliveryEventProcessor>();
+        services.AddScoped<IProviderWebhookInboxHandler, EmailDeliveryEventsInboxHandler>();
+        services.AddScoped<IOmnichannelSendPacer, EmailSendPacer>();
+        services.AddScoped<IAutomatedActivityScreener, EmailSuppressionScreener>();
+        services.AddEmailDeliveryEventParser<SendGridDeliveryEventParser>();
+        services.AddEmailDeliveryEventParser<MailgunDeliveryEventParser>();
+        services.AddEmailDeliveryEventParser<PostmarkDeliveryEventParser>();
+        services.AddEmailDeliveryEventParser<AmazonSesDeliveryEventParser>();
+        services.AddEmailDeliveryEventParser<JsonDeliveryEventParser>();
+        services.AddSingleton<IBackgroundTask, EmailDeliveryLogPruningBackgroundTask>();
+        services.AddNavigationProvider<EmailSuppressionsAdminMenu>();
+
         // The mailbox reader, for the mail hosts that cannot call a webhook.
         services.AddScoped<IEmailMailboxReader, ImapEmailMailboxReader>();
         services.AddScoped<IEmailMailboxPoller, EmailMailboxPoller>();
@@ -110,5 +144,6 @@ public sealed class Startup : StartupBase
     {
         routes.AddEmailInboundWebhookEndpoint();
         routes.AddEmailUnsubscribeEndpoint();
+        routes.AddEmailDeliveryEventsWebhookEndpoint();
     }
 }

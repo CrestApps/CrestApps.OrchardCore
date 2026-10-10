@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -39,6 +40,23 @@ public static class EmailChannelServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IInboundEmailWebhookParser, TParser>());
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds a provider format the delivery events webhook reads (bounces, complaints, blocks), served at
+    /// <c>api/omnichannel/email/events/{name}</c>, where the name is the parser's <see cref="IEmailDeliveryEventParser.Name"/>.
+    /// </summary>
+    /// <typeparam name="TParser">The parser.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddEmailDeliveryEventParser<TParser>(this IServiceCollection services)
+        where TParser : class, IEmailDeliveryEventParser
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IEmailDeliveryEventParser, TParser>());
 
         return services;
     }

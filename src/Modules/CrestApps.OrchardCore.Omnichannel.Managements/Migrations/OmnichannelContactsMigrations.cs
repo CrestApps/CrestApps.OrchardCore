@@ -23,7 +23,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 {
     private const string LegacyPhoneIndexTableName = "OmnichannelContactPhoneIndex";
     private const int ReindexBatchSize = 100;
-    private const string EmailIndexName = "IDX_OCIndex_Email";
+    private const string PrimaryAddressIndexName = "IDX_OCIndex_Email";
 
     private static readonly string[] _emailIndexColumns = ["NormalizedPrimaryEmailAddress", "Published", "Latest"];
 
@@ -82,7 +82,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         await CreateContactIndexTableAsync(SchemaBuilder);
         await CreateContactIndexIndexesAsync(SchemaBuilder);
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
-            table.CreateIndex(EmailIndexName, _emailIndexColumns));
+            table.CreateIndex(PrimaryAddressIndexName, _emailIndexColumns));
         ScheduleContactDefinitionRepair();
 
         return 13;
@@ -270,8 +270,8 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         await ApplyIsolatedSchemaChangeAsync(
             builder => builder.AlterIndexTableAsync<OmnichannelContactIndex>(table =>
-                table.CreateIndex(EmailIndexName, _emailIndexColumns)),
-            $"create the '{EmailIndexName}' index");
+                table.CreateIndex(PrimaryAddressIndexName, _emailIndexColumns)),
+            $"create the '{PrimaryAddressIndexName}' index");
 
         var failure = await TryApplyIsolatedAsync(BackfillNormalizedEmailAddressesAsync);
 

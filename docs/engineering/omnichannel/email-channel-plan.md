@@ -121,8 +121,22 @@ The inbox handler raises `EmailReceived` on the Omnichannel event bus. The works
 7. Unsubscribe endpoint and campaign compliance.
 8. Tests, docs, changelog, feature reference, skill update.
 
+## Deliverability
+
+Added after the channel landed, to keep bulk mail from getting an address blocked:
+
+- `IEmailSendingGovernor` is asked before every send. Replies are checked only against the suppression list; bulk mail (broadcasts, opening emails, follow-ups) is also held to the address's `EmailSendingLimits` (per hour, per day, per receiving domain, minimum gap, warm-up) and to its pause. Held mail is a deferral (`MessageDispatchResult.Deferred`, `OmnichannelActivityDeferredException`) rescheduled without spending an attempt, spread by a per-address turn cursor (`EmailSendingState.NextBulkSlotUtc`).
+- The delivery log (`EmailDeliveryLogEntry`, own YesSql collection `EmailDelivery`, pruned after 30 days) records every send and every bounce, complaint, block, throttle and deferral; limits and health are counted from it.
+- `EmailFailureClassifier` reads SMTP and enhanced status codes: 5.1.x and 5.2.1 suppress; 5.7.x pauses the address (1 h doubling to 24 h); 421 and 4.7.x pause it (15 min doubling to 4 h).
+- Delivery events webhook (`api/omnichannel/email/events/{provider}`: SendGrid, Mailgun, Postmark, SES, JSON) commits batches to the provider inbox; `IEmailDeliveryEventProcessor` acts on them, idempotent by event id.
+- Health: 5% hard bounces (100+ sent) or 0.3% complaints (300+ sent) in 7 days pauses bulk mail until resumed; warnings at 2% and 0.1%.
+- The messaging outbox now reads `MessagingOutboxIndex` (only waiting messages); it used to scan the oldest outbound messages and missed retries once a tenant had sent more than one batch.
+
 ## Open follow-ups
 
 - Move SMS automation onto the shared engine.
 - OAuth (XOAUTH2) mailbox sign-in for Microsoft 365 and Google, and Microsoft Graph / Gmail push subscriptions as further inbound sources.
 - Rich (HTML) composing in the workspace.
+- Inbox-placement seed tests, blocklist monitoring, and in-app SPF/DKIM/DMARC checks of a sending domain (needs a DNS library).
+- Engagement-based warm-up ordering (send the most engaged contacts first) and suppressing contacts who never respond across campaigns.
+- ECDSA signature verification of SendGrid's Event Webhook (the site key guards it today).

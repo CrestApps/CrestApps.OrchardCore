@@ -38,4 +38,10 @@ public class EmailInboundSettingsViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyList<KeyValuePair<string, string>> WebhookUrls { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the delivery events webhook URLs (bounces, complaints, blocks), by provider.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<KeyValuePair<string, string>> DeliveryEventUrls { get; set; } = [];
 }

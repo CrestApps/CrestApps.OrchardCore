@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using Microsoft.AspNetCore.Http;
@@ -14,6 +15,7 @@ public sealed class EmailWebhookUrls : IEmailWebhookUrls
     private readonly ISiteService _siteService;
     private readonly IEmailSecretProtector _secretProtector;
     private readonly IEnumerable<IInboundEmailWebhookParser> _parsers;
+    private readonly IEnumerable<IEmailDeliveryEventParser> _eventParsers;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     /// <summary>
@@ -22,21 +24,31 @@ public sealed class EmailWebhookUrls : IEmailWebhookUrls
     /// <param name="siteService">The site service the settings and base URL are read from.</param>
     /// <param name="secretProtector">The protector the webhook key is read with.</param>
     /// <param name="parsers">The registered provider formats.</param>
+    /// <param name="eventParsers">The registered delivery event formats.</param>
     /// <param name="httpContextAccessor">The accessor of the current request.</param>
     public EmailWebhookUrls(
         ISiteService siteService,
         IEmailSecretProtector secretProtector,
         IEnumerable<IInboundEmailWebhookParser> parsers,
+        IEnumerable<IEmailDeliveryEventParser> eventParsers,
         IHttpContextAccessor httpContextAccessor)
     {
         _siteService = siteService;
         _secretProtector = secretProtector;
         _parsers = parsers;
+        _eventParsers = eventParsers;
         _httpContextAccessor = httpContextAccessor;
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<KeyValuePair<string, string>>> GetAllAsync()
+    public Task<IReadOnlyList<KeyValuePair<string, string>>> GetAllAsync()
+        => BuildAsync(EmailChannelConstants.InboundWebhookRoute, _parsers.Select(parser => parser.Name));
+
+    /// <inheritdoc/>
+    public Task<IReadOnlyList<KeyValuePair<string, string>>> GetDeliveryEventUrlsAsync()
+        => BuildAsync(EmailChannelConstants.DeliveryEventsRoute, _eventParsers.Select(parser => parser.Name));
+
+    private async Task<IReadOnlyList<KeyValuePair<string, string>>> BuildAsync(string route, IEnumerable<string> providers)
     {
         var settings = await _siteService.GetSettingsAsync<EmailInboundSettings>();
         var key = _secretProtector.Unprotect(settings.WebhookKey);
@@ -53,10 +65,10 @@ public sealed class EmailWebhookUrls : IEmailWebhookUrls
             return [];
         }
 
-        return _parsers
-            .Select(parser => KeyValuePair.Create(
-                parser.Name,
-                $"{baseUrl}/{EmailChannelConstants.InboundWebhookRoute.Replace("{provider}", parser.Name, StringComparison.Ordinal)}?key={Uri.EscapeDataString(key)}"))
+        return providers
+            .Select(provider => KeyValuePair.Create(
+                provider,
+                $"{baseUrl}/{route.Replace("{provider}", provider, StringComparison.Ordinal)}?key={Uri.EscapeDataString(key)}"))
             .ToArray();
     }
 

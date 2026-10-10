@@ -93,7 +93,7 @@ public sealed class SmtpEmailTransport : IEmailTransport
             {
                 Succeeded = false,
                 ErrorCode = OmnichannelConstants.MessagingErrorCodes.RecipientRejected,
-                Errors = [S["The mail server refused the recipient: {0}", ex.Message]],
+                Errors = [S["The mail server refused the recipient ({0}): {1}", (int)ex.StatusCode, ex.Message]],
             };
         }
         catch (AuthenticationException ex)
@@ -102,7 +102,15 @@ public sealed class SmtpEmailTransport : IEmailTransport
 
             return MessageDispatchResult.Failed(S["The mail server refused the sign-in. Check the user name and password on the address."]);
         }
-        catch (Exception ex) when (ex is SmtpCommandException or SmtpProtocolException or ServiceNotConnectedException or SocketException or IOException or SslHandshakeException or TimeoutException)
+        catch (SmtpCommandException ex)
+        {
+            // The server's code and words travel in the error, so the dispatcher can tell a throttle (421, 4.7.x) or a
+            // policy block (5.7.x) from a passing failure.
+            _logger.LogWarning(ex, "The SMTP server {Host} did not accept an email ({StatusCode}).", server.Host.SanitizeLogValue(), (int)ex.StatusCode);
+
+            return MessageDispatchResult.Failed(S["The mail server did not accept the email ({0}): {1}", (int)ex.StatusCode, ex.Message]);
+        }
+        catch (Exception ex) when (ex is SmtpProtocolException or ServiceNotConnectedException or SocketException or IOException or SslHandshakeException or TimeoutException)
         {
             // Anything else is worth another try: the server was busy, unreachable or broke off the conversation.
             _logger.LogWarning(ex, "The SMTP server {Host} did not accept an email.", server.Host.SanitizeLogValue());

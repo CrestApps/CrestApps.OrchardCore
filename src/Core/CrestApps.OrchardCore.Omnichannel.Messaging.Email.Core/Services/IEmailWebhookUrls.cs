@@ -11,4 +11,10 @@ public interface IEmailWebhookUrls
     /// </summary>
     /// <returns>The URLs keyed by provider name; empty while the tenant has no webhook key yet.</returns>
     Task<IReadOnlyList<KeyValuePair<string, string>>> GetAllAsync();
+
+    /// <summary>
+    /// Gets the delivery events webhook URL (bounces, complaints, blocks) of every registered provider format.
+    /// </summary>
+    /// <returns>The URLs keyed by provider name; empty while the tenant has no webhook key yet.</returns>
+    Task<IReadOnlyList<KeyValuePair<string, string>>> GetDeliveryEventUrlsAsync();
 }

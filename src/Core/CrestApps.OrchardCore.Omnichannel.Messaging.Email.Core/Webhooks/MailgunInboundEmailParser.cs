@@ -44,18 +44,20 @@ public sealed class MailgunInboundEmailParser : IInboundEmailWebhookParser
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        if (!request.HasFormContentType)
-        {
-            return InboundEmailWebhookResult.Invalid("Mailgun posts inbound email as form data.");
-        }
-
-        var form = await request.ReadFormAsync(cancellationToken);
+        // The signature is checked before anything the caller chooses (the content type included) can end the call early,
+        // so no shape of request reaches the email without passing it.
+        var form = request.HasFormContentType ? await request.ReadFormAsync(cancellationToken) : FormCollection.Empty;
         var signingKey = _secretProtector.Unprotect(settings?.MailgunSigningKey);
 
         if (!string.IsNullOrEmpty(signingKey) &&
             !IsSignatureValid(signingKey, form["timestamp"].ToString(), form["token"].ToString(), form["signature"].ToString(), _clock.UtcNow))
         {
             return InboundEmailWebhookResult.Unauthorized("The Mailgun signature is missing, wrong or too old.");
+        }
+
+        if (!request.HasFormContentType)
+        {
+            return InboundEmailWebhookResult.Invalid("Mailgun posts inbound email as form data.");
         }
 
         InboundEmail email;

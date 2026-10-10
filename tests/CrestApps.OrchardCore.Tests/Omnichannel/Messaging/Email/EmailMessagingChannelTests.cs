@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -33,6 +34,14 @@ public sealed class EmailMessagingChannelTests
         Assert.False(capabilities.ObservesQuietHours);
         Assert.True(capabilities.SupportsBroadcast);
         Assert.Null(capabilities.MaxBodyLength);
+    }
+
+    [Fact]
+    public void ChannelName_IsTheOmnichannelEmailChannel()
+    {
+        // The channel spells its name out (see EmailChannelConstants.ChannelName); this keeps it the shared value.
+        Assert.Equal(OmnichannelConstants.Channels.Email, EmailChannelConstants.ChannelName);
+        Assert.Equal(OmnichannelConstants.Channels.Email, new global::CrestApps.OrchardCore.Omnichannel.Email.Services.EmailAutomatedMessagingChannel().Channel);
     }
 
     [Fact]

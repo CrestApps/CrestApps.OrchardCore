@@ -738,6 +738,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =
     [
         new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Migrations/MessagingOutboxBackfill.cs",
+            "MessagingOutboxBackfill",
+            "RunAsync",
+            "ce8c16f0d73c749b",
+            "Deferred backfill that runs after the outbox index migration commits. It reads the outbound messages of the last two days through YesSql's typed query (a SELECT on the omnichannel message index) and saves the queued ones again so the outbox index maps them. It reads and rewrites documents only; it creates, alters and drops no schema object."),
+        new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",

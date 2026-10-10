@@ -37,6 +37,7 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IEnumerable<IOmnichannelSendPacer> _pacers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -54,6 +55,7 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
     /// <param name="liquidTemplateManager">The Liquid template manager the opening message is rendered with.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="optOutResolver">The resolver of a contact's opt-outs.</param>
+    /// <param name="pacers">The pacers that hold outreach back while a sending address is at its limit or paused.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public AutomatedConversationProcessor(
@@ -68,6 +70,7 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IContactOptOutResolver optOutResolver,
+        IEnumerable<IOmnichannelSendPacer> pacers,
         IClock clock,
         ILogger<AutomatedConversationProcessor> logger)
     {
@@ -82,6 +85,7 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _optOutResolver = optOutResolver;
+        _pacers = pacers;
         _clock = clock;
         _logger = logger;
     }
@@ -120,6 +124,15 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
 
         var endpoint = await ResolveSendingAddressAsync(activity, flowSettings, cancellationToken)
             ?? throw new InvalidOperationException($"The activity '{activity.ItemId}' has no {_automatedChannel.Channel} address to send its opening message from. Pick one on the activity load or on the subject.");
+
+        // Asked before anything is composed or sent: an address at its sending limit, warming up or paused holds the
+        // activity back for its turn, and the caller reschedules it without counting an attempt.
+        var sendTime = await GetBulkSendTimeAsync(endpoint, cancellationToken);
+
+        if (sendTime is not null)
+        {
+            throw new OmnichannelActivityDeferredException(sendTime.Value, $"The {_automatedChannel.Channel} address '{endpoint.Value}' may not send more outreach until {sendTime.Value:u}.");
+        }
 
         var chatSession = string.IsNullOrWhiteSpace(activity.AISessionId)
             ? null
@@ -166,8 +179,21 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
             Body = body,
         }, cancellationToken);
 
+        if (result.IsDeferred)
+        {
+            throw new OmnichannelActivityDeferredException(result.RetryAfterUtc.Value, result.GetErrorText() ?? "The opening message was held back.");
+        }
+
         if (!result.Succeeded)
         {
+            // A refused recipient cannot succeed on any retry, and mailing it again is what damages a sender's standing.
+            if (string.Equals(result.ErrorCode, OmnichannelConstants.MessagingErrorCodes.RecipientRejected, StringComparison.Ordinal))
+            {
+                throw new OmnichannelActivityRefusedException(
+                    OmnichannelConstants.TerminalReasons.AddressUndeliverable,
+                    $"The {_automatedChannel.Channel} opening message was refused for {activity.PreferredDestination}: {result.GetErrorText()}");
+            }
+
             throw new InvalidOperationException($"The {_automatedChannel.Channel} opening message of the activity '{activity.ItemId}' was not sent: {result.GetErrorText()}");
         }
 
@@ -206,6 +232,28 @@ public sealed class AutomatedConversationProcessor : IOmnichannelProcessor
     }
 
     // The address the activity was loaded with, else the one its subject answers on, as long as it is used on the channel.
+    private async Task<DateTime?> GetBulkSendTimeAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        DateTime? latest = null;
+
+        foreach (var pacer in _pacers)
+        {
+            if (!string.Equals(pacer.Channel, _automatedChannel.Channel, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var sendTime = await pacer.GetBulkSendTimeAsync(endpoint, reserveTurn: true, cancellationToken);
+
+            if (sendTime is not null && (latest is null || sendTime > latest))
+            {
+                latest = sendTime;
+            }
+        }
+
+        return latest;
+    }
+
     private async Task<OmnichannelChannelEndpoint> ResolveSendingAddressAsync(OmnichannelActivity activity, SubjectFlowSettings flowSettings, CancellationToken cancellationToken)
     {
         foreach (var id in new[] { activity.ChannelEndpointId, flowSettings.ChannelEndpointId })

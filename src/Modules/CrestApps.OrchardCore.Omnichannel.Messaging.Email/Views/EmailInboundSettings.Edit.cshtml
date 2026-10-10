@@ -27,6 +27,29 @@ else
     </table>
 }
 
+@if (Model.DeliveryEventUrls.Count > 0)
+{
+    <h6 class="mt-4">@T["Bounce and complaint webhooks"]</h6>
+    <p class="text-muted">@T["Point your sending provider's event webhook here (SendGrid Event Webhook, Mailgun webhooks, Postmark bounce and spam complaint webhooks, an Amazon SES bounce and complaint SNS topic). A hard bounce or a spam complaint takes the address off every list; a block pauses the sending address; deferrals slow mail to that receiving domain. The same key protects them."]</p>
+    <table class="table table-sm align-middle">
+        <thead>
+            <tr>
+                <th>@T["Provider"]</th>
+                <th>@T["Webhook address"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var (provider, url) in Model.DeliveryEventUrls)
+            {
+                <tr>
+                    <td class="text-nowrap">@provider</td>
+                    <td class="text-break"><code>@url</code></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
 <div class="mb-3">
     <div class="form-check">
         <input type="checkbox" class="form-check-input" asp-for="RegenerateWebhookKey" />

@@ -120,6 +120,31 @@ public sealed class MessagingSubjectChannelTests
     }
 
     [Fact]
+    public async Task SendAsync_WhenTheChannelHoldsTheMessageBack_QueuesItWithoutSpendingARetry()
+    {
+        // Arrange
+        var retryAt = new DateTime(2026, 10, 9, 12, 30, 0, DateTimeKind.Utc);
+        var channel = new RecordingChannel(supportsSubject: true)
+        {
+            NextResult = MessageDispatchResult.Deferred(retryAt, new LocalizedString("held", "The address is at its sending limit.")),
+        };
+
+        var (service, saved) = CreateService(channel, Conversation(channel.Name));
+
+        // Act
+        var result = await service.SendAsync(new MessagingSendRequest { ConversationId = "conv-1", Body = "Hi" }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+
+        var message = Assert.Single(saved);
+        Assert.Equal(MessageDeliveryStatus.Queued.ToString(), message.DeliveryStatus);
+        Assert.True(message.TryGet<OutboundDeliveryState>(out var state));
+        Assert.Equal(0, state.Attempts);
+        Assert.Equal(retryAt, state.NextAttemptUtc);
+    }
+
+    [Fact]
     public void CanRetry_IsFalse_WhenTheProviderRejectedTheRecipient()
     {
         // A hard bounce is refused on every attempt; retrying only spends the sending address's reputation.
@@ -194,6 +219,8 @@ public sealed class MessagingSubjectChannelTests
 
         public List<MessagingOutboundMessage> Sent { get; } = [];
 
+        public MessageDispatchResult NextResult { get; set; }
+
         public string Name => "Letters";
 
         public LocalizedString DisplayName => new("Letters", "Letters");
@@ -214,7 +241,7 @@ public sealed class MessagingSubjectChannelTests
         {
             Sent.Add(message);
 
-            return Task.FromResult(MessageDispatchResult.Success("m-1"));
+            return Task.FromResult(NextResult ?? MessageDispatchResult.Success("m-1"));
         }
 
         public bool IsOptedOut(ContentItem contact) => false;

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -125,6 +126,28 @@ public class EmailAddressSettingsViewModel
     /// Gets or sets how many days of unread mail the first read receives.
     /// </summary>
     public int InitialLookbackDays { get; set; }
+
+    public int MaxPerHour { get; set; }
+
+    public int MaxPerDay { get; set; }
+
+    public int MaxPerHourPerDomain { get; set; }
+
+    public int MinimumSecondsBetweenSends { get; set; }
+
+    public bool WarmUp { get; set; }
+
+    public int WarmUpFirstDayLimit { get; set; }
+
+    public bool PauseOnPoorHealth { get; set; }
+
+    public bool ResumeBulkSending { get; set; }
+
+    [BindNever]
+    public DateTime? WarmUpStartedUtc { get; set; }
+
+    [BindNever]
+    public EmailAddressHealth Health { get; set; }
 
     /// <summary>
     /// Gets or sets the address's identifier, for the connection test.

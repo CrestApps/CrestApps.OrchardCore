@@ -103,6 +103,11 @@ public sealed class MessagingBroadcastService : IMessagingBroadcastService
             {
                 broadcast.SentCount++;
             }
+            else if (string.Equals(result.Message?.DeliveryStatus, MessageDeliveryStatus.Queued.ToString(), StringComparison.Ordinal))
+            {
+                // Held back by the address's sending limits, or waiting for a retry: the outbox sends it later.
+                broadcast.QueuedCount++;
+            }
             else
             {
                 broadcast.FailedCount++;

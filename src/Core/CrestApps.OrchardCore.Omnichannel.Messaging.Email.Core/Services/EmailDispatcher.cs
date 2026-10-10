@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -26,6 +27,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
     private readonly IEnumerable<IEmailTransport> _transports;
     private readonly IMessagingAttachmentStore _attachmentStore;
     private readonly IEmailUnsubscribeLinks _unsubscribeLinks;
+    private readonly IEmailSendingGovernor _governor;
     private readonly ISession _session;
     private readonly ILogger _logger;
     private readonly IStringLocalizer S;
@@ -37,6 +39,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
     /// <param name="transports">The registered sending transports.</param>
     /// <param name="attachmentStore">The store the files are read from.</param>
     /// <param name="unsubscribeLinks">The builder of unsubscribe links.</param>
+    /// <param name="governor">The governor of the address's limits, pauses and suppression list.</param>
     /// <param name="session">The session the conversation's earlier emails are read from.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -45,6 +48,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
         IEnumerable<IEmailTransport> transports,
         IMessagingAttachmentStore attachmentStore,
         IEmailUnsubscribeLinks unsubscribeLinks,
+        IEmailSendingGovernor governor,
         ISession session,
         ILogger<EmailDispatcher> logger,
         IStringLocalizer<EmailDispatcher> stringLocalizer)
@@ -53,6 +57,7 @@ public sealed class EmailDispatcher : IEmailDispatcher
         _transports = transports;
         _attachmentStore = attachmentStore;
         _unsubscribeLinks = unsubscribeLinks;
+        _governor = governor;
         _session = session;
         _logger = logger;
         S = stringLocalizer;
@@ -95,6 +100,25 @@ public sealed class EmailDispatcher : IEmailDispatcher
         var senderName = string.IsNullOrWhiteSpace(settings.SenderName) ? endpoint.DisplayText : settings.SenderName.Trim();
         var isBulk = message.Purpose is MessagingOutboundPurpose.Broadcast or MessagingOutboundPurpose.Outreach;
 
+        // Nothing goes to a suppressed address; bulk mail also waits while the address is at its limits or paused. A
+        // held-back email is a deferral the caller reschedules, not a failure.
+        var decision = await _governor.EvaluateAsync(endpoint, settings, contactAddress, isBulk, reserveTurn: true, cancellationToken);
+
+        if (decision.IsRefused)
+        {
+            return new MessageDispatchResult
+            {
+                Succeeded = false,
+                ErrorCode = OmnichannelConstants.MessagingErrorCodes.RecipientRejected,
+                Errors = [decision.Reason],
+            };
+        }
+
+        if (!decision.IsAllowed)
+        {
+            return MessageDispatchResult.Deferred(decision.RetryAfterUtc.Value, decision.Reason);
+        }
+
         // A reply threads under the customer's last email; bulk and outreach mail starts a thread of its own.
         var replyTo = isBulk ? null : await FindReplyToAsync(message, cancellationToken);
         var replyMetadata = replyTo?.GetEmailMetadata();
@@ -129,6 +153,15 @@ public sealed class EmailDispatcher : IEmailDispatcher
 
         var result = await transport.SendAsync(transportMessage, settings, cancellationToken);
 
+        if (result.Succeeded)
+        {
+            await _governor.RecordSentAsync(endpoint, contactAddress, result.ProviderMessageId ?? transportMessage.MessageId, isBulk, cancellationToken);
+        }
+        else
+        {
+            result = await RecordFailureAsync(endpoint, settings, contactAddress, isBulk, result, cancellationToken);
+        }
+
         if (result.Succeeded && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -137,6 +170,44 @@ public sealed class EmailDispatcher : IEmailDispatcher
                 endpoint.ItemId.SanitizeLogValue(),
                 transport.Name,
                 replyMetadata?.MessageId is null ? string.Empty : " as a threaded reply");
+        }
+
+        return result;
+    }
+
+    // Reads what the server's refusal means and acts on it: a dead address is suppressed and never retried, a block or
+    // a throttle pauses the address's bulk mail, and a throttled bulk email waits for the pause instead of spending a
+    // retry.
+    private async Task<MessageDispatchResult> RecordFailureAsync(
+        OmnichannelChannelEndpoint endpoint,
+        EmailAddressSettings settings,
+        string contactAddress,
+        bool isBulk,
+        MessageDispatchResult result,
+        CancellationToken cancellationToken)
+    {
+        var detail = result.GetErrorText();
+        var kind = EmailFailureClassifier.Classify(result.ErrorCode, detail);
+        var pausedUntil = await _governor.RecordFailureAsync(endpoint, settings, contactAddress, kind, detail, isBulk, cancellationToken);
+
+        switch (kind)
+        {
+            case EmailFailureKind.HardBounce:
+                result.ErrorCode = OmnichannelConstants.MessagingErrorCodes.RecipientRejected;
+                break;
+
+            case EmailFailureKind.Blocked:
+                result.ErrorCode = OmnichannelConstants.MessagingErrorCodes.SenderBlocked;
+                break;
+
+            case EmailFailureKind.Throttled when isBulk && pausedUntil is not null:
+                return new MessageDispatchResult
+                {
+                    Succeeded = false,
+                    RetryAfterUtc = pausedUntil,
+                    ErrorCode = OmnichannelConstants.MessagingErrorCodes.Deferred,
+                    Errors = result.Errors,
+                };
         }
 
         return result;

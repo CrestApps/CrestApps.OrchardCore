@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
@@ -44,22 +42,15 @@ internal static class EmailInboundWebhookEndpoint
         ILogger<EmailInboundReceiver> logger)
     {
         var settings = await siteService.GetSettingsAsync<EmailInboundSettings>();
-        var key = secretProtector.Unprotect(settings.WebhookKey);
+        var keyMatches = EmailWebhookKey.Check(httpContext.Request, settings, secretProtector);
 
         // Without a key the webhook is not set up on this tenant, and it answers as if it did not exist.
-        if (string.IsNullOrEmpty(key))
+        if (keyMatches is null)
         {
             return TypedResults.NotFound();
         }
 
-        var providedKey = httpContext.Request.Query["key"].ToString();
-
-        if (string.IsNullOrEmpty(providedKey))
-        {
-            providedKey = httpContext.Request.Headers[EmailChannelConstants.WebhookKeyHeaderName].ToString();
-        }
-
-        if (!KeysMatch(key, providedKey))
+        if (keyMatches == false)
         {
             logger.LogWarning("An inbound email webhook call for provider {Provider} carried a wrong or missing key and was refused.", provider.SanitizeLogValue());
 
@@ -132,8 +123,4 @@ internal static class EmailInboundWebhookEndpoint
 
         return TypedResults.Ok();
     }
-
-    private static bool KeysMatch(string expected, string provided)
-        => !string.IsNullOrEmpty(provided) &&
-            CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(provided));
 }

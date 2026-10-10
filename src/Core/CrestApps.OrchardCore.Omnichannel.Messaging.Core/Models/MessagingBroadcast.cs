@@ -63,6 +63,12 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public int SentCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of recipients whose message is queued: held back by the sending address's limits, or
+    /// waiting for a retry. The outbox sends them later; they are neither sent nor failed yet.
+    /// </summary>
+    public int QueuedCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of recipients that failed to send.
     /// </summary>
     public int FailedCount { get; set; }

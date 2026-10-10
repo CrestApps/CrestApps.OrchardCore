@@ -62,6 +62,26 @@ public sealed class EmailAddressSettingsRule : IChannelEndpointRule
             }
         }
 
+        var limits = settings.Limits;
+
+        if (limits is not null)
+        {
+            if (limits.MaxPerHour < 0 || limits.MaxPerDay < 0 || limits.MaxPerHourPerDomain < 0 || limits.MinimumSecondsBetweenSends < 0)
+            {
+                context.Result.Fail(new ValidationResult(S["Sending limits cannot be negative. Use 0 for no limit."], ["MaxPerHour"]));
+            }
+
+            if (limits.MaxPerHour > 0 && limits.MaxPerDay > 0 && limits.MaxPerHour > limits.MaxPerDay)
+            {
+                context.Result.Fail(new ValidationResult(S["The hourly limit cannot be above the daily limit."], ["MaxPerHour"]));
+            }
+
+            if (limits.WarmUp && limits.WarmUpFirstDayLimit < 1)
+            {
+                context.Result.Fail(new ValidationResult(S["Enter how many emails the address may send on the first day of its warm-up."], ["WarmUpFirstDayLimit"]));
+            }
+        }
+
         return Task.CompletedTask;
     }
 }

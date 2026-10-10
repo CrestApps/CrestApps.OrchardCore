@@ -603,8 +603,23 @@ public sealed class MessagingConversationService : IMessagingConversationService
     {
         var state = message.GetOrCreate<OutboundDeliveryState>();
 
-        state.Attempts += 1;
         state.Purpose = purpose;
+
+        // Held back by the channel (the address is at its sending limit, or paused): queued for its turn, and the wait
+        // is not one of the message's retries.
+        if (dispatch.IsDeferred)
+        {
+            state.NextAttemptUtc = dispatch.RetryAfterUtc;
+            state.LastError = dispatch.GetErrorText();
+
+            message.DeliveryStatus = MessageDeliveryStatus.Queued.ToString();
+            message.ErrorCode = state.LastError;
+            message.Put(state);
+
+            return;
+        }
+
+        state.Attempts += 1;
 
         if (dispatch.Succeeded)
         {

@@ -102,6 +102,125 @@
         </div>
     </div>
 
+    <h6 class="mt-4 mb-1">@T["Sending limits"]</h6>
+    <p class="text-muted small mb-3">@T["Broadcasts, campaign opening emails and follow-ups are held to these limits and wait their turn instead of failing; replies to customers are counted but never held back. Mailbox hosts limit one mailbox too: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. Raise the limits gradually, and only on a dedicated sending service. 0 means no limit."]</p>
+
+    @if (Model.Health is { } health)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="card mb-0">
+                    <div class="card-body py-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <strong>@T["Sending health, last 7 days"]</strong>
+                            @if (health.IsPaused)
+                            {
+                                <span class="badge text-bg-danger">@T["Bulk sending paused"]</span>
+                            }
+                            else if (health.Level == EmailHealthLevel.Poor)
+                            {
+                                <span class="badge text-bg-danger">@T["Poor"]</span>
+                            }
+                            else if (health.Level == EmailHealthLevel.Warning)
+                            {
+                                <span class="badge text-bg-warning">@T["Needs attention"]</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-success">@T["Healthy"]</span>
+                            }
+                            @if (health.IsWarmingUp)
+                            {
+                                <span class="badge text-bg-info">@T["Warming up: {0} today", health.DailyLimit]</span>
+                            }
+                        </div>
+                        <div class="small">
+                            @T["{0} sent · {1} bounced ({2:P1}) · {3} soft bounces · {4} spam complaints ({5:P2}) · {6} blocks", health.Sent, health.HardBounces, health.BounceRate, health.SoftBounces, health.Complaints, health.ComplaintRate, health.Blocks]
+                        </div>
+                        <div class="small text-muted">
+                            @T["Last hour: {0} of {1}. Last 24 hours: {2} of {3}.", health.SentLastHour, Model.MaxPerHour > 0 ? Model.MaxPerHour.ToString() : T["no limit"].Value, health.SentLastDay, health.DailyLimit > 0 ? health.DailyLimit.ToString() : T["no limit"].Value]
+                        </div>
+                        @if (health.IsPaused && health.State is { } state)
+                        {
+                            <div class="alert alert-danger small mt-2 mb-2">
+                                @(state.PausedUntilUtc is { } until
+                                    ? T["Bulk sending is paused until {0}: {1}", until.ToLocalTime().ToString("g"), state.PauseReason]
+                                    : T["Bulk sending is paused until someone resumes it: {0}", state.PauseReason])
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" asp-for="ResumeBulkSending" />
+                                <label class="form-check-label" asp-for="ResumeBulkSending">@T["Resume bulk sending when I save"]</label>
+                                <span class="hint dashed">@T["Resume once the cause is dealt with: remove the addresses that bounce, or wait out the provider's block. Replies to customers were never paused."]</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPerHour" class="ocat-label">@T["Emails per hour"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPerHour" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPerDay" class="ocat-label">@T["Emails per day"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPerDay" type="number" min="0" class="form-control" />
+            <span asp-validation-for="MaxPerHour" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MaxPerHourPerDomain" class="ocat-label">@T["Emails per hour to one domain"]</label>
+        <div class="ocat-end">
+            <input asp-for="MaxPerHourPerDomain" type="number" min="0" class="form-control" />
+            <span class="hint">@T["The most bulk emails sent to one receiving domain (gmail.com, outlook.com) in an hour, so no mailbox provider sees a burst. Mail to a domain that keeps deferring also waits by itself."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="MinimumSecondsBetweenSends" class="ocat-label">@T["Seconds between emails"]</label>
+        <div class="ocat-end">
+            <input asp-for="MinimumSecondsBetweenSends" type="number" min="0" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="WarmUp" data-email-warm-up />
+                <label class="form-check-label" asp-for="WarmUp">@T["Warm up this address"]</label>
+                <span class="hint dashed">@T["For a new address or sending domain: the daily limit starts small and doubles every day until it reaches the one above, spread over the day. Send your most engaged contacts first."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper @(Model.WarmUp ? string.Empty : "d-none")" data-email-warm-up-section>
+        <label asp-for="WarmUpFirstDayLimit" class="ocat-label">@T["First day's emails"]</label>
+        <div class="ocat-end">
+            <input asp-for="WarmUpFirstDayLimit" type="number" min="1" class="form-control" />
+            <span asp-validation-for="WarmUpFirstDayLimit" class="text-danger"></span>
+            @if (Model.WarmUpStartedUtc is { } warmUpStarted)
+            {
+                <span class="hint">@T["Warming up since {0}.", warmUpStarted.ToLocalTime().ToString("d")]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="PauseOnPoorHealth" />
+                <label class="form-check-label" asp-for="PauseOnPoorHealth">@T["Pause bulk sending when bounces or spam complaints run high"]</label>
+                <span class="hint dashed">@T["Pauses broadcasts and campaigns, until someone resumes them, once 5% of the week's emails bounce or 0.3% are reported as spam: the levels at which mailbox providers start blocking a sender. Gmail asks bulk senders to stay under 0.1% spam complaints."]</span>
+            </div>
+        </div>
+    </div>
+
     <h6 class="mt-4 mb-3">@T["Receiving"]</h6>
 
     <div class="ocat-wrapper">
@@ -266,6 +385,15 @@
         if (afterProcessing && processedFolder) {
             afterProcessing.addEventListener('change', function () {
                 processedFolder.classList.toggle('d-none', afterProcessing.value !== '@EmailMailboxAfterProcessing.MoveToFolder');
+            });
+        }
+
+        var warmUp = root.querySelector('[data-email-warm-up]');
+        var warmUpSection = root.querySelector('[data-email-warm-up-section]');
+
+        if (warmUp && warmUpSection) {
+            warmUp.addEventListener('change', function () {
+                warmUpSection.classList.toggle('d-none', !warmUp.checked);
             });
         }
 

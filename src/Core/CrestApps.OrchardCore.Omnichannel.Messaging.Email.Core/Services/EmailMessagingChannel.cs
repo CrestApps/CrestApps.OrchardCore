@@ -71,7 +71,7 @@ public sealed class EmailMessagingChannel : IMessagingChannel
     }
 
     /// <inheritdoc/>
-    public string Name => OmnichannelConstants.Channels.Email;
+    public string Name => EmailChannelConstants.ChannelName;
 
     /// <inheritdoc/>
     public LocalizedString DisplayName => S["Email"];

@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -231,7 +232,8 @@ public sealed class EmailInboundReceiverTests
     private static EmailInboundReceiver CreateReceiver(
         RecordingInbox inbox,
         IReadOnlyCollection<string> ownAddresses = null,
-        IMessagingAttachmentStore attachmentStore = null)
+        IMessagingAttachmentStore attachmentStore = null,
+        IEmailDeliveryEventProcessor deliveryEvents = null)
     {
         var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
         endpointManager
@@ -251,8 +253,7 @@ public sealed class EmailInboundReceiverTests
             attachmentStore ?? Mock.Of<IMessagingAttachmentStore>(),
             [inbox],
             [],
-            Mock.Of<IMessagingConversationService>(),
-            Mock.Of<ISession>(),
+            deliveryEvents ?? Mock.Of<IEmailDeliveryEventProcessor>(),
             clock.Object,
             NullLogger<EmailInboundReceiver>.Instance);
     }

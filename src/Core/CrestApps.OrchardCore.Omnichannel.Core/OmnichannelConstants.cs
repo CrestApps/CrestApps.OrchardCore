@@ -172,6 +172,12 @@ public static class OmnichannelConstants
         public const string LeadConverted = "lead_converted";
 
         /// <summary>
+        /// The activity was not started because its address cannot receive the message: it bounced before, the
+        /// receiving system refused it, or it is on the channel's suppression list.
+        /// </summary>
+        public const string AddressUndeliverable = "address_undeliverable";
+
+        /// <summary>
         /// The set of terminal reason codes that count as an escalation to a human for reporting.
         /// </summary>
         public static bool IsHandoff(string terminalReasonCode)
@@ -240,6 +246,20 @@ public static class OmnichannelConstants
         /// rejects it (an email hard bounce, for example). Retrying cannot succeed.
         /// </summary>
         public const string RecipientRejected = "recipient_rejected";
+
+        /// <summary>
+        /// The message was held back, not refused: the sending address is at its sending limit, or paused because a
+        /// provider asked it to slow down. It goes out at the time the dispatch result gives, and the wait is not a
+        /// failed attempt.
+        /// </summary>
+        public const string Deferred = "deferred";
+
+        /// <summary>
+        /// The receiving system refused the message because of the sender (a policy or reputation block, such as an
+        /// email 5.7.x answer), not because of the recipient. Suppressing the recipient would be wrong; the sending
+        /// address is slowed down instead.
+        /// </summary>
+        public const string SenderBlocked = "sender_blocked";
     }
 
     /// <summary>

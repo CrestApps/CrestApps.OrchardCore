@@ -45,6 +45,11 @@ public sealed class EmailAddressSettings
     public bool IncludeUnsubscribeLink { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets how fast the address may send bulk mail, and whether it pauses when its sending health turns bad.
+    /// </summary>
+    public EmailSendingLimits Limits { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets how mail sent to the address reaches the workspace.
     /// </summary>
     public EmailInboundMode InboundMode { get; set; }

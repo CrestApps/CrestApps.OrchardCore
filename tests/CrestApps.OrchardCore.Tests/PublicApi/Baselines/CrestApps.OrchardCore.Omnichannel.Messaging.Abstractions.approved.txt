@@ -126,9 +126,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Services
         public MessageDispatchResult() { }
         public string ErrorCode { get; set; }
         public System.Collections.Generic.IList<Microsoft.Extensions.Localization.LocalizedString> Errors { get; set; }
+        public bool IsDeferred { get; }
         public string ProviderMessageId { get; set; }
+        public System.DateTime? RetryAfterUtc { get; set; }
         public bool Succeeded { get; set; }
         public string GetErrorText() { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Deferred(System.DateTime retryAfterUtc, Microsoft.Extensions.Localization.LocalizedString reason) { }
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Failed(params Microsoft.Extensions.Localization.LocalizedString[] errors) { }
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Failed(string error) { }
         public static CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult Success(string providerMessageId = null) { }

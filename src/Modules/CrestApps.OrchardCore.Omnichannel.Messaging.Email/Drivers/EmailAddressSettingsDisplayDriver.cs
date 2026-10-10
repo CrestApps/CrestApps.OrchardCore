@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Email.Services;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Drivers;
 
@@ -26,6 +28,8 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
     private readonly IEmailSecretProtector _secretProtector;
     private readonly IEmailWebhookUrls _webhookUrls;
     private readonly ICatalog<EmailMailboxSyncState> _syncStates;
+    private readonly IEmailSendingGovernor _governor;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailAddressSettingsDisplayDriver"/> class.
@@ -40,13 +44,17 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         IOptionsMonitor<EmailProviderOptions> providerOptions,
         IEmailSecretProtector secretProtector,
         IEmailWebhookUrls webhookUrls,
-        ICatalog<EmailMailboxSyncState> syncStates)
+        ICatalog<EmailMailboxSyncState> syncStates,
+        IEmailSendingGovernor governor,
+        IClock clock)
     {
         _transports = transports;
         _providerOptions = providerOptions;
         _secretProtector = secretProtector;
         _webhookUrls = webhookUrls;
         _syncStates = syncStates;
+        _governor = governor;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -86,7 +94,23 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
             model.AfterProcessing = mailbox.AfterProcessing;
             model.ProcessedFolder = mailbox.ProcessedFolder;
             model.InitialLookbackDays = mailbox.InitialLookbackDays;
+            var limits = settings.Limits ?? new EmailSendingLimits();
+
+            model.MaxPerHour = limits.MaxPerHour;
+            model.MaxPerDay = limits.MaxPerDay;
+            model.MaxPerHourPerDomain = limits.MaxPerHourPerDomain;
+            model.MinimumSecondsBetweenSends = limits.MinimumSecondsBetweenSends;
+            model.WarmUp = limits.WarmUp;
+            model.WarmUpFirstDayLimit = limits.WarmUpFirstDayLimit;
+            model.WarmUpStartedUtc = limits.WarmUpStartedUtc;
+            model.PauseOnPoorHealth = limits.PauseOnPoorHealth;
             model.WebhookUrls = await _webhookUrls.GetAllAsync();
+
+            // A new address has sent nothing; its health shows once it exists.
+            if (!string.IsNullOrEmpty(endpoint.ItemId))
+            {
+                model.Health = await _governor.GetHealthAsync(endpoint, settings);
+            }
 
             if (!string.IsNullOrEmpty(endpoint.ItemId) && await _syncStates.FindByIdAsync(endpoint.ItemId) is { } state)
             {
@@ -136,6 +160,31 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         settings.Mailbox.AfterProcessing = model.AfterProcessing;
         settings.Mailbox.ProcessedFolder = model.ProcessedFolder?.Trim();
         settings.Mailbox.InitialLookbackDays = Math.Clamp(model.InitialLookbackDays, 0, 30);
+
+        settings.Limits ??= new EmailSendingLimits();
+        settings.Limits.MaxPerHour = model.MaxPerHour;
+        settings.Limits.MaxPerDay = model.MaxPerDay;
+        settings.Limits.MaxPerHourPerDomain = model.MaxPerHourPerDomain;
+        settings.Limits.MinimumSecondsBetweenSends = model.MinimumSecondsBetweenSends;
+        settings.Limits.WarmUpFirstDayLimit = model.WarmUpFirstDayLimit;
+        settings.Limits.PauseOnPoorHealth = model.PauseOnPoorHealth;
+
+        // The warm-up counts its days from when it was turned on; turning it off and on again starts it over.
+        if (model.WarmUp && !settings.Limits.WarmUp)
+        {
+            settings.Limits.WarmUpStartedUtc = _clock.UtcNow;
+        }
+        else if (!model.WarmUp)
+        {
+            settings.Limits.WarmUpStartedUtc = null;
+        }
+
+        settings.Limits.WarmUp = model.WarmUp;
+
+        if (model.ResumeBulkSending && !string.IsNullOrEmpty(endpoint.ItemId))
+        {
+            await _governor.ResumeAsync(endpoint.ItemId);
+        }
 
         // Whether the settings can work is checked by EmailAddressSettingsRule, which a recipe import runs too.
         endpoint.Put(settings);

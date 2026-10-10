@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
@@ -225,7 +226,8 @@ public sealed class EmailDispatcherTests
         RecordingTransport transport,
         OmnichannelChannelEndpoint address,
         IEmailUnsubscribeLinks unsubscribeLinks = null,
-        IMessagingAttachmentStore attachmentStore = null)
+        IMessagingAttachmentStore attachmentStore = null,
+        IEmailSendingGovernor governor = null)
     {
         var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
         endpointManager
@@ -237,9 +239,20 @@ public sealed class EmailDispatcherTests
             [transport],
             attachmentStore ?? Mock.Of<IMessagingAttachmentStore>(),
             unsubscribeLinks ?? Mock.Of<IEmailUnsubscribeLinks>(),
+            governor ?? AllowingGovernor(),
             Mock.Of<ISession>(),
             NullLogger<EmailDispatcher>.Instance,
             new PassThroughStringLocalizer<EmailDispatcher>());
+    }
+
+    private static IEmailSendingGovernor AllowingGovernor()
+    {
+        var governor = new Mock<IEmailSendingGovernor>();
+        governor
+            .Setup(value => value.EvaluateAsync(It.IsAny<OmnichannelChannelEndpoint>(), It.IsAny<EmailAddressSettings>(), It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmailSendDecision.Allow());
+
+        return governor.Object;
     }
 
     private sealed class RecordingTransport : IEmailTransport

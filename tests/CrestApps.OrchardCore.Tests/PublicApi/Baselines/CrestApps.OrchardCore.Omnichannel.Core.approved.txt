@@ -15,6 +15,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         string Channel { get; }
         System.Threading.Tasks.Task StartAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken);
     }
+    public sealed class OmnichannelActivityDeferredException : System.Exception
+    {
+        public OmnichannelActivityDeferredException(System.DateTime retryAtUtc, string message) { }
+        public System.DateTime RetryAtUtc { get; }
+    }
+    public sealed class OmnichannelActivityRefusedException : System.Exception
+    {
+        public OmnichannelActivityRefusedException(string terminalReasonCode, string message) { }
+        public string TerminalReasonCode { get; }
+    }
     public static class OmnichannelAddressTypes
     {
         public const string EmailAddress = "EmailAddress";
@@ -80,7 +90,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class MessagingErrorCodes
         {
+            public const string Deferred = "deferred";
             public const string RecipientRejected = "recipient_rejected";
+            public const string SenderBlocked = "sender_blocked";
         }
         public static class NamedParts
         {
@@ -129,6 +141,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class TerminalReasons
         {
+            public const string AddressUndeliverable = "address_undeliverable";
             public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
             public const string HandedOffToAgent = "handed_off_to_agent";
             public const string LeadConverted = "lead_converted";
@@ -1577,6 +1590,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         string Reason { get; }
         void RequestHandoff(string reason);
         void Reset();
+    }
+    public interface IOmnichannelSendPacer
+    {
+        string Channel { get; }
+        System.Threading.Tasks.Task<System.DateTime?> GetBulkSendTimeAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, bool reserveTurn, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISmsProviderRouter
     {

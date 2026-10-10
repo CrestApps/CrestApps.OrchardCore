@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Automation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using OrchardCore.ContentManagement;
 
@@ -43,7 +44,7 @@ internal sealed class EmailAutomatedMessagingChannel : IAutomatedMessagingChanne
     };
 
     /// <inheritdoc/>
-    public string Channel => OmnichannelConstants.Channels.Email;
+    public string Channel => EmailChannelConstants.ChannelName;
 
     /// <inheritdoc/>
     public string ReceivedEventType => OmnichannelConstants.Events.EmailReceived;

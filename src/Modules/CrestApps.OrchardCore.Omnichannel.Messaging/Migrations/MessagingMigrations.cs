@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using Microsoft.Extensions.Logging;
@@ -134,7 +135,42 @@ internal sealed class MessagingMigrations : DataMigration
         // which deadlocks SQLite.
         ShellScope.AddDeferredTask(scope => LegacySmsPortalImport.ImportAsync(scope.ServiceProvider));
 
-        return 1;
+        await CreateOutboxIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index of outbound messages waiting for another attempt, which the outbox reads instead of scanning every
+    /// outbound message.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateOutboxIndexAsync();
+
+        // A message queued before the index existed is in it only once it is saved again. Retries run out within about
+        // an hour and a half, so re-saving the queued messages of the last two days covers every one still waiting. It
+        // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
+        ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
+
+        return 2;
+    }
+
+    private async Task CreateOutboxIndexAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<MessagingOutboxIndex>(table => table
+            .Column<string>("Channel", column => column.WithLength(50))
+            .Column<string>("ServiceAddress", column => column.WithLength(255))
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull()),
+            collection: OmnichannelConstants.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingOutboxIndex>(table => table
+            .CreateIndex("IDX_MessagingOutboxIndex_Due",
+                "NextAttemptUtc",
+                "Channel",
+                "DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
     }
 
     private async Task CreateAddressesUniqueIndexAsync()

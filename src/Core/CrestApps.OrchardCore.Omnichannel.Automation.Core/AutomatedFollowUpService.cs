@@ -45,6 +45,7 @@ public sealed class AutomatedFollowUpService
     private readonly ICatalog<Cadence> _cadenceCatalog;
     private readonly IContentManager _contentManager;
     private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IEnumerable<IOmnichannelSendPacer> _pacers;
     private readonly IOmnichannelActivityStore _activityStore;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IBusinessHoursGate _businessHoursGate;
@@ -69,6 +70,7 @@ public sealed class AutomatedFollowUpService
     /// <param name="cadenceCatalog">The cadence catalog.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="optOutResolver">The resolver of a contact's opt-outs.</param>
+    /// <param name="pacers">The pacers that hold outreach back while a sending address is at its limit or paused.</param>
     /// <param name="activityStore">The activity store.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="businessHoursGate">The gate that keeps follow-ups within business hours.</param>
@@ -90,6 +92,7 @@ public sealed class AutomatedFollowUpService
         ICatalog<Cadence> cadenceCatalog,
         IContentManager contentManager,
         IContactOptOutResolver optOutResolver,
+        IEnumerable<IOmnichannelSendPacer> pacers,
         IOmnichannelActivityStore activityStore,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IBusinessHoursGate businessHoursGate,
@@ -111,6 +114,7 @@ public sealed class AutomatedFollowUpService
         _cadenceCatalog = cadenceCatalog;
         _contentManager = contentManager;
         _optOutResolver = optOutResolver;
+        _pacers = pacers;
         _activityStore = activityStore;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _businessHoursGate = businessHoursGate;
@@ -242,6 +246,13 @@ public sealed class AutomatedFollowUpService
             return false;
         }
 
+        // A follow-up is outreach: an address at its sending limit or paused waits, and is asked again on a later pass,
+        // before anything is composed.
+        if (await IsHeldBackAsync(channel.Channel, endpoint, cancellationToken))
+        {
+            return false;
+        }
+
         var profileId = string.IsNullOrWhiteSpace(chatSession.ProfileId) ? activity.AIProfileId : chatSession.ProfileId;
         var profile = string.IsNullOrWhiteSpace(profileId) ? null : await _profileManager.FindByIdAsync(profileId, cancellationToken);
 
@@ -339,6 +350,20 @@ public sealed class AutomatedFollowUpService
 
     // Every send here starts unprompted, so it keeps to business hours in the contact's time zone. An activity naming a
     // calendar nothing can evaluate is declined rather than followed up out of hours.
+    private async Task<bool> IsHeldBackAsync(string channelName, OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        foreach (var pacer in _pacers)
+        {
+            if (string.Equals(pacer.Channel, channelName, StringComparison.OrdinalIgnoreCase) &&
+                await pacer.GetBulkSendTimeAsync(endpoint, reserveTurn: false, cancellationToken) is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private async Task<bool> IsWithinBusinessHoursAsync(OmnichannelActivity activity, ContentItem contact, DateTime now, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(activity.BusinessHoursCalendarId))
