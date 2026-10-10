@@ -2623,6 +2623,90 @@
       }
     }, attrs || {}));
   }
+
+  // The common formats offered next to a column's format, by what the column holds. The examples are those of the
+  // en-US culture; the report uses the site's culture.
+  function numberFormats() {
+    return [['N0', app.t('Whole number, such as 1,235')], ['N2', app.t('Two decimals, such as 1,234.57')], ['C2', app.t('Currency, such as $1,234.57')], ['P1', app.t('Percentage of a fraction, such as 0.123 as 12.3%')], ['0.0', app.t('One decimal without separators, such as 1234.6')]];
+  }
+  function dateFormats() {
+    return [['d', app.t('Short date, such as 10/9/2026')], ['yyyy-MM-dd', app.t('Year, month and day, such as 2026-10-09')], ['MMM yyyy', app.t('Month and year, such as Oct 2026')], ['dddd', app.t('Day of the week, such as Friday')], ['g', app.t('Date and time, such as 10/9/2026 2:30 PM')], ['HH:mm', app.t('Time of day, such as 14:30')]];
+  }
+
+  // The format box of a column, with a help button that lists common formats; picking one fills the box.
+  function formatEditor(column, field) {
+    var dataType = field.dataType;
+    var counts = column.aggregate === 'Count' || column.aggregate === 'CountDistinct';
+    var numbers = counts || dataType === 'Integer' || dataType === 'Decimal' || column.transform === 'Length';
+    var dates = !counts && (dataType === 'Date' || dataType === 'DateTime');
+    var groups = [];
+    if (numbers || !dates) {
+      groups.push({
+        title: app.t('Numbers'),
+        formats: numberFormats()
+      });
+    }
+    if (dates || !numbers) {
+      groups.push({
+        title: app.t('Dates and times'),
+        formats: dateFormats()
+      });
+    }
+    var input = textInput(column.format, function (value) {
+      column.format = value;
+      app.changed({
+        render: false
+      });
+    }, {
+      placeholder: 'N2, C2, P1, yyyy-MM-dd',
+      list: 'report-designer-formats',
+      'aria-label': app.t('Format')
+    });
+    var panelId = 'rd-format-help-' + column.id;
+    var panel = h('div', {
+      className: 'rd-format-help card card-body p-2 mt-1 d-none',
+      id: panelId
+    });
+    var button = h('button', {
+      type: 'button',
+      className: 'btn btn-outline-secondary',
+      title: app.t('Common formats'),
+      'aria-label': app.t('Common formats'),
+      'aria-expanded': 'false',
+      'aria-controls': panelId,
+      onclick: function () {
+        var open = panel.classList.toggle('d-none') === false;
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+    }, ui.icon('fa-circle-question'));
+    groups.forEach(function (group) {
+      panel.appendChild(h('div', {
+        className: 'small fw-semibold text-muted mb-1'
+      }, group.title));
+      group.formats.forEach(function (format) {
+        panel.appendChild(h('button', {
+          type: 'button',
+          className: 'rd-format-option btn btn-sm btn-link text-start text-decoration-none d-flex gap-2 w-100 p-1',
+          onclick: function () {
+            column.format = format[0];
+            input.value = format[0];
+            panel.classList.add('d-none');
+            button.setAttribute('aria-expanded', 'false');
+            app.changed({
+              render: false
+            });
+          }
+        }, h('code', {
+          className: 'text-nowrap'
+        }, format[0]), h('span', {
+          className: 'text-body'
+        }, format[1])));
+      });
+    });
+    return h('div', null, h('div', {
+      className: 'input-group input-group-sm'
+    }, input, button), panel);
+  }
   function columnProperties(column) {
     var field = app.fields()[column.field] || {
       dataType: 'Text',
@@ -2658,15 +2742,7 @@
         column.transform = event.target.value;
         app.changed();
       }
-    })), labelled(app.t('Format'), textInput(column.format, function (value) {
-      column.format = value;
-      app.changed({
-        render: false
-      });
-    }, {
-      placeholder: 'N2, C2, P1, yyyy-MM-dd',
-      list: 'report-designer-formats'
-    }), app.t('A .NET format, such as N0 for whole numbers, C2 for currency, or MMM yyyy for months.')), check(app.t('Hide from tables'), column.hidden, function (value) {
+    })), labelled(app.t('Format'), formatEditor(column, field), app.t('How values are shown. Click the question mark for common formats.')), check(app.t('Hide from tables'), column.hidden, function (value) {
       column.hidden = value;
       app.changed({
         render: false

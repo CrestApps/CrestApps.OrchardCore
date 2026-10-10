@@ -530,6 +530,15 @@
     white-space: nowrap;
 }
 
+/* The common formats listed under a column's format. */
+.report-designer .rd-format-help code {
+    min-width: 5.5rem;
+}
+
+.report-designer .rd-format-option:hover {
+    background-color: var(--bs-tertiary-bg);
+}
+
 /* Field wells of a visual: a field dropped on a well is added to the visual. */
 .report-designer .rd-well {
     padding: .35rem;
