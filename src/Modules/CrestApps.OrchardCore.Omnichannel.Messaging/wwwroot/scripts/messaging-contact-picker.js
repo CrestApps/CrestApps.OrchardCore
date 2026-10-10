@@ -89,8 +89,44 @@
       }, 250);
     });
   }
+
+  /*
+   * A subject line belongs only to channels whose messages carry one, so it follows the "send from" pick:
+   *
+   *   <div data-messaging-subject-line
+   *        data-endpoint-select="#endpoint-id"     the "send from" select
+   *        data-endpoint-channels='{"id":"Email"}' endpoint id -> channel name
+   *        data-subject-channels='["Email"]'>      the channels with subjects
+   *
+   * A hidden line's inputs are disabled, so a subject typed for one channel is not posted for another.
+   */
+  function initSubjectLine(line) {
+    var endpointSelect = document.querySelector(line.getAttribute('data-endpoint-select'));
+    var endpointChannels = {};
+    var subjectChannels = [];
+    try {
+      endpointChannels = JSON.parse(line.getAttribute('data-endpoint-channels') || '{}');
+      subjectChannels = JSON.parse(line.getAttribute('data-subject-channels') || '[]');
+    } catch (e) {
+      endpointChannels = {};
+      subjectChannels = [];
+    }
+    function update() {
+      var channel = endpointSelect ? endpointChannels[endpointSelect.value] || '' : '';
+      var visible = subjectChannels.indexOf(channel) !== -1;
+      line.classList.toggle('d-none', !visible);
+      Array.prototype.forEach.call(line.querySelectorAll('input, textarea'), function (input) {
+        input.disabled = !visible;
+      });
+    }
+    if (endpointSelect) {
+      endpointSelect.addEventListener('change', update);
+    }
+    update();
+  }
   function initAll() {
     Array.prototype.forEach.call(document.querySelectorAll('[data-messaging-contact-picker]'), init);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-messaging-subject-line]'), initSubjectLine);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAll);

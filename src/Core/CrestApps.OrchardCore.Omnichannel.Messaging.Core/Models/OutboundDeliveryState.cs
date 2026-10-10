@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 
@@ -33,6 +34,11 @@ public sealed class OutboundDeliveryState
     public string LastError { get; set; }
 
     /// <summary>
+    /// Gets or sets why the message was sent, so a retry presents it to the channel the way the first attempt did.
+    /// </summary>
+    public MessagingOutboundPurpose Purpose { get; set; }
+
+    /// <summary>
     /// Gets the maximum number of attempts, which is the first attempt plus one per scheduled delay.
     /// </summary>
     public static int MaxAttempts => RetryDelayMinutes.Length + 1;
@@ -53,7 +59,8 @@ public sealed class OutboundDeliveryState
     public static bool CanRetry(int attempts, string errorCode)
         => CanRetry(attempts) &&
             !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal) &&
-            !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.MediaNotSupported, StringComparison.Ordinal);
+            !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.MediaNotSupported, StringComparison.Ordinal) &&
+            !string.Equals(errorCode, OmnichannelConstants.MessagingErrorCodes.RecipientRejected, StringComparison.Ordinal);
 
     /// <summary>
     /// Gets the delay before the attempt that follows the given number of attempts.

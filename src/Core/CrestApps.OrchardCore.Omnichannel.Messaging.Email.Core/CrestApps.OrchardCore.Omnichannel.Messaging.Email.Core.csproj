@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Omnichannel.Messaging.Email</RootNamespace>
+    <Title>CrestApps OrchardCore Omnichannel Messaging Email Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The email channel of the CrestApps OrchardCore Omnichannel Messaging workspace: the email messaging channel,
+      the per-address sending transports (Orchard Core email providers or the address's own SMTP server), inbound
+      email parsing for provider webhooks and raw MIME, the mailbox (IMAP) reader, reply and quote stripping, and
+      the receiver that commits inbound email to the durable provider inbox.
+    </Description>
+    <PackageTags>$(PackageTags) Omnichannel Messaging Email</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel.Messaging.Email" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel.Email" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="MimeKit" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Abstractions" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="CrestApps.Core.Support" />
+    <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="YesSql.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Messaging.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
+  </ItemGroup>
+
+</Project>

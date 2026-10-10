@@ -5,6 +5,12 @@ using CrestApps.OrchardCore.Omnichannel.Messaging;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -242,6 +248,85 @@ public sealed class MessagingFeatureActivationTests
 
         Assert.Empty(channelsWithoutSms);
         Assert.Equal([OmnichannelConstants.Channels.Sms], channelsWithSms);
+    }
+
+    [Fact]
+    public async Task FreshTenant_EmailChannelAlone_ResolvesTheWholeInboundAndOutboundChain()
+    {
+        // Arrange
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "messaging-email-channel",
+            ProviderProfile = "none",
+            Features = [MessagingConstants.Feature.Email],
+        });
+
+        // Act & Assert
+        // Every source of inbound mail (the webhook parsers, the mailbox poller) ends in the receiver and the durable
+        // inbox handler, and every send in the dispatcher and a transport; all of it must resolve on a tenant that
+        // enabled nothing but the email channel.
+        await host.ExecuteInTenantScopeAsync(tenant, services =>
+        {
+            Assert.NotNull(services.GetRequiredService<IEmailInboundReceiver>());
+            Assert.NotNull(services.GetRequiredService<IEmailMailboxPoller>());
+            Assert.NotNull(services.GetRequiredService<IEmailDispatcher>());
+            Assert.NotEmpty(services.GetServices<IEmailTransport>());
+
+            Assert.Equal(
+                [
+                    EmailChannelConstants.Providers.Json,
+                    EmailChannelConstants.Providers.Mailgun,
+                    EmailChannelConstants.Providers.Mime,
+                    EmailChannelConstants.Providers.Postmark,
+                    EmailChannelConstants.Providers.SendGrid,
+                    EmailChannelConstants.Providers.AmazonSes,
+                ],
+                services.GetServices<IInboundEmailWebhookParser>().Select(parser => parser.Name).Order(StringComparer.Ordinal));
+
+            var inboxHandler = Assert.Single(
+                services.GetServices<IProviderWebhookInboxHandler>(),
+                handler => handler.TechnicalName == EmailChannelConstants.InboxHandlerName);
+            Assert.Equal(ContactCenterHandlerReplaySafety.GuardedByDurableStore, inboxHandler.ReplaySafety);
+
+            return Task.CompletedTask;
+        });
+    }
+
+    [Fact]
+    public async Task FreshTenant_EmailChannel_IsTheOnlyChannelItAdds()
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "messaging-email-only",
+            ProviderProfile = "none",
+            Features = [MessagingConstants.Feature.Email],
+        });
+
+        var channels = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => Task.FromResult(services.GetRequiredService<IMessagingChannelResolver>().GetAll().Select(channel => channel.Name).ToArray()));
+
+        Assert.Equal([OmnichannelConstants.Channels.Email], channels);
+    }
+
+    [Fact]
+    public async Task FreshTenant_EmailAutomation_RegistersTheEmailActivityProcessor()
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "omnichannel-email-automation",
+            ProviderProfile = "none",
+            Features = ["CrestApps.OrchardCore.Omnichannel.Email"],
+        });
+
+        var channels = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            services => Task.FromResult(services.GetServices<IOmnichannelProcessor>().Select(processor => processor.Channel).ToArray()));
+
+        Assert.Contains(OmnichannelConstants.Channels.Email, channels);
     }
 
     [Fact]

@@ -77,6 +77,7 @@ public sealed class Startup : StartupBase
         {
             capability.DisplayName = S["Text messages (SMS)"];
             capability.Description = S["Texts sent and received on this number in the messaging workspace."];
+            capability.CardName = S["Text messages"];
         });
 
         // Texts are a channel entry points answer: an SMS entry point says where texts to its numbers go, with the

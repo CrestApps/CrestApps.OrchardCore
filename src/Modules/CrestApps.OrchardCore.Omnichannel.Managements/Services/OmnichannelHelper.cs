@@ -109,9 +109,13 @@ internal static class OmnichannelHelper
         {
             foreach (var contentMethod in bagPart.ContentItems)
             {
-                if (contentMethod.TryGet<EmailInfoPart>(out var emailPart) && !string.IsNullOrEmpty(emailPart.Email?.Text))
+                // The destination is the canonical form of the address, which is what a reply from the contact is
+                // matched to its activity by. An entry that is not an address at all is passed over.
+                if (contentMethod.TryGet<EmailInfoPart>(out var emailPart) &&
+                    OmnichannelEmailAddress.IsValid(emailPart.Email?.Text) &&
+                    isExcluded?.Invoke(emailPart.Email.Text) != true)
                 {
-                    return emailPart.Email.Text;
+                    return OmnichannelEmailAddress.Normalize(emailPart.Email.Text);
                 }
             }
 

@@ -15,6 +15,11 @@ public static class AIUsageCategories
     public const string Sms = "Sms";
 
     /// <summary>
+    /// Automated email conversations.
+    /// </summary>
+    public const string Email = "Email";
+
+    /// <summary>
     /// Automated voice calls.
     /// </summary>
     public const string Voice = "Voice";

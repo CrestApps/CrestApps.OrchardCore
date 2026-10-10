@@ -105,6 +105,15 @@ public sealed class MessagingWorkspaceBuilder
         => _channelResolver.GetAll().Select(ToViewModel).ToArray();
 
     /// <summary>
+    /// Gets the technical names of the enabled channels whose messages carry a subject line.
+    /// </summary>
+    public IReadOnlyCollection<string> GetSubjectChannels()
+        => _channelResolver.GetAll()
+            .Where(channel => channel.Capabilities.SupportsSubject)
+            .Select(channel => channel.Name)
+            .ToArray();
+
+    /// <summary>
     /// Resolves the current user's operator identity, reusing the shared Contact Center agent-profile directory.
     /// When the workspace runs without the full Contact Center Agents/Work Distribution administration (its only
     /// hard dependency is the Agent Services directory), there is no entitlements screen to onboard operators, so a
@@ -446,6 +455,7 @@ public sealed class MessagingWorkspaceBuilder
             ContactAddressDisplay = channel?.FormatAddress(conversation.ContactAddress) ?? conversation.ContactAddress,
             ServiceAddressDisplay = channel?.FormatAddress(conversation.ServiceAddress) ?? conversation.ServiceAddress,
             SupportsSubject = channel?.Capabilities.SupportsSubject == true,
+            ReplySubject = channel?.Capabilities.SupportsSubject == true ? MessagingSubjects.ForReplyTo(messages) : null,
             MaxBodyLength = channel?.Capabilities.MaxBodyLength,
             Attachments = channel?.Capabilities.Attachments ?? MessagingAttachmentCapabilities.None,
             Messages = messages,

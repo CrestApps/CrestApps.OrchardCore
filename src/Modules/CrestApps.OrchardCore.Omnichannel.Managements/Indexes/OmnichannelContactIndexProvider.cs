@@ -60,6 +60,7 @@ internal sealed class OmnichannelContactIndexProvider : IndexProvider<ContentIte
                 !string.IsNullOrEmpty(emailPart.Email?.Text))
             {
                 index.PrimaryEmailAddress = Truncate(emailPart.Email.Text, 255);
+                index.NormalizedPrimaryEmailAddress = Truncate(OmnichannelEmailAddress.Normalize(emailPart.Email.Text), 255);
             }
 
             if (!string.Equals(contactMethod.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) ||

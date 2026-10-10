@@ -87,6 +87,9 @@ public sealed class AutoReplyRouter : IMessagingInboundRouter
             {
                 ContactAddress = conversation.ContactAddress,
                 ServiceAddress = conversation.ServiceAddress,
+                ConversationId = context.IsNewConversation ? null : conversation.ItemId,
+                ReplyTo = context.Message,
+                Purpose = MessagingOutboundPurpose.AutoReply,
                 Body = routing.AutoReplyMessage,
             },
             cancellationToken);

@@ -44,6 +44,15 @@
         <span asp-validation-for="RecipientsText" class="text-danger"></span>
     </div>
 
+    <div class="mb-3 d-none" data-messaging-subject-line
+         data-endpoint-select="#endpoint-select"
+         data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
+         data-subject-channels="@JsonSerializer.Serialize(Model.SubjectChannels)">
+        <label asp-for="Subject" class="form-label">@T["Subject"]</label>
+        <input asp-for="Subject" class="form-control" maxlength="255" />
+        <span asp-validation-for="Subject" class="text-danger"></span>
+    </div>
+
     <div class="mb-3">
         <label asp-for="Body" class="form-label">@T["Message"]</label>
         <textarea asp-for="Body" class="form-control" rows="3"></textarea>

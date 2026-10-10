@@ -52,6 +52,14 @@
         <input asp-for="Recipients" class="form-control border-0 shadow-none px-0" autocomplete="off" placeholder="@T["Addresses not in your contacts, comma-separated"]" />
     </div>
 
+    <div class="messaging-compose-line d-none" data-messaging-subject-line
+         data-endpoint-select="#endpoint-select"
+         data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
+         data-subject-channels="@JsonSerializer.Serialize(Model.SubjectChannels)">
+        <label asp-for="Subject" class="messaging-compose-label">@T["Subject"]</label>
+        <input asp-for="Subject" class="form-control border-0 shadow-none px-0" autocomplete="off" maxlength="255" />
+    </div>
+
     <textarea asp-for="Body" class="messaging-compose-body form-control border-0 rounded-0 shadow-none flex-grow-1 px-3 py-3" placeholder="@T["Write your message…"]"></textarea>
 
     <div class="d-flex justify-content-between align-items-center gap-3 px-3 py-2 border-top flex-shrink-0">

@@ -1,0 +1,116 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Omnichannel.Email")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Automation
+{
+    public sealed class AutomatedConversationHandler : CrestApps.OrchardCore.Omnichannel.Core.IOmnichannelEventHandler
+    {
+        public AutomatedConversationHandler(
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel> channels,
+                    CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver,
+                    CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager,
+                    CrestApps.Core.AI.IAIChatSessionPromptStore promptStore,
+                    CrestApps.Core.AI.Completions.IAICompletionService completionService,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate conversationGate,
+                    CrestApps.Core.AI.Clients.IAIClientFactory aiClientFactory,
+                    CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
+                    CrestApps.Core.AI.Completions.IAICompletionContextBuilder completionContextBuilder,
+                    CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,
+                    CrestApps.Core.Templates.Services.ITemplateService templateService,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    OrchardCore.ContentManagement.IContentManager contentManager,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffService> handoffServices,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAIConversationStarter> conversationStarters,
+                    OrchardCore.Locking.ILocalLock localLock,
+                    YesSql.ISession session,
+                    OrchardCore.Modules.IClock clock,
+                    Microsoft.Extensions.Options.IOptions<OrchardCore.Json.DocumentJsonSerializerOptions> jsonSerializerOptions,
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedConversationHandler> logger,
+                    Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedConversationHandler> stringLocalizer) { }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default) { }
+        public static string GetLockKey(string sessionId) { }
+    }
+    public sealed class AutomatedConversationProcessor : CrestApps.OrchardCore.Omnichannel.Core.IOmnichannelProcessor
+    {
+        public AutomatedConversationProcessor(CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel automatedChannel, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Profiles.IAIProfileManager profileManager, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignCatalog, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelSendPacer> pacers, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedConversationProcessor> logger) { }
+        public string Channel { get; }
+        public System.Threading.Tasks.Task StartAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class AutomatedConversationThread
+    {
+        public AutomatedConversationThread() { }
+        public string OpeningMessageId { get; set; }
+        public string Subject { get; set; }
+    }
+    public static class AutomatedConversationTranscript
+    {
+        public static System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffMessage> Build(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
+        public static CrestApps.Core.AI.Models.AIChatSessionPrompt CreateCustomerPrompt(string sessionId, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.DateTime createdUtc) { }
+        public static System.Collections.Generic.List<CrestApps.Core.AI.Models.AIChatSessionPrompt> GetTrailingUserMessages(System.Collections.Generic.IReadOnlyList<CrestApps.Core.AI.Models.AIChatSessionPrompt> conversation) { }
+    }
+    public sealed class AutomatedEntryPointConversationStarter : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAIConversationStarter
+    {
+        public static readonly System.TimeSpan RestartQuietPeriod;
+        public AutomatedEntryPointConversationStarter(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel> channels, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRoutingResolver routingResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactResolver contactResolver, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.Core.AI.Profiles.IAIProfileManager profileManager, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Locking.ILocalLock localLock, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedEntryPointConversationStarter> logger) { }
+        public System.Threading.Tasks.Task<bool> TryStartAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AutomatedFollowUpService
+    {
+        public AutomatedFollowUpService(
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel> channels,
+                    CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver,
+                    CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager,
+                    CrestApps.Core.AI.IAIChatSessionPromptStore promptStore,
+                    CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,
+                    CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
+                    CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,
+                    CrestApps.Core.AI.Completions.IAICompletionService completionService,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager,
+                    CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence> cadenceCatalog,
+                    OrchardCore.ContentManagement.IContentManager contentManager,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelSendPacer> pacers,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate businessHoursGate,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate conversationGate,
+                    OrchardCore.Locking.ILocalLock localLock,
+                    YesSql.ISession session,
+                    OrchardCore.Modules.IClock clock,
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedFollowUpService> logger) { }
+        public System.Threading.Tasks.Task<int> SendDueAsync(System.DateTime deadlineUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AutomatedInboundPromptSource
+    {
+        public AutomatedInboundPromptSource() { }
+        public string ProviderMessageId { get; set; }
+    }
+    public sealed class AutomatedOwedReplyRecovery
+    {
+        public static readonly System.TimeSpan MaxOwedReplyAge;
+        public AutomatedOwedReplyRecovery(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Automation.IAutomatedMessagingChannel> channels, CrestApps.OrchardCore.Omnichannel.Automation.AutomatedConversationHandler handler, CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate conversationGate, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Automation.AutomatedOwedReplyRecovery> logger) { }
+        public System.Threading.Tasks.Task<int> RecoverAsync(System.DateTime deadlineUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface IAutomatedMessagingChannel
+    {
+        CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityKind ActivityKind { get; }
+        string Channel { get; }
+        string ConclusionPromptTemplateId { get; }
+        string ConversationNoun { get; }
+        string ReceivedEventType { get; }
+        string UsageCategory { get; }
+        void ApplyOptOut(OrchardCore.ContentManagement.ContentItem contact, System.DateTime utcNow);
+        System.TimeSpan? GetDefaultResponseDelay(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings);
+        System.TimeSpan GetReadingDelay(System.TimeSpan? configuredDelay, int pendingCharacters);
+        System.TimeSpan GetTypingDelay(int replyCharacters);
+        bool IsAutomaticMessage(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message);
+        bool IsOptOutRequest(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings);
+        string NormalizeAddress(string address);
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Subject",
+                "Body"})]
+        System.ValueTuple<string, string> SplitOpeningMessage(string renderedMessage);
+    }
+}

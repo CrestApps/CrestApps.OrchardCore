@@ -36,6 +36,7 @@
                     <th>@T["Status"]</th>
                     <th>@T["Recipients"]</th>
                     <th>@T["Sent"]</th>
+                    <th>@T["Queued"]</th>
                     <th>@T["Failed"]</th>
                     <th>@T["Created"]</th>
                 </tr>
@@ -59,6 +60,7 @@
                         <td>@broadcast.Status.ToString()</td>
                         <td>@broadcast.Recipients.Count</td>
                         <td>@broadcast.SentCount</td>
+                        <td>@broadcast.QueuedCount</td>
                         <td>@broadcast.FailedCount</td>
                         <td>@broadcast.CreatedUtc.ToString("g")</td>
                     </tr>

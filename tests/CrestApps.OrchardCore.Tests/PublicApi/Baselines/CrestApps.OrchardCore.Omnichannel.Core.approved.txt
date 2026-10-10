@@ -15,6 +15,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         string Channel { get; }
         System.Threading.Tasks.Task StartAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken);
     }
+    public sealed class OmnichannelActivityDeferredException : System.Exception
+    {
+        public OmnichannelActivityDeferredException(System.DateTime retryAtUtc, string message) { }
+        public System.DateTime RetryAtUtc { get; }
+    }
+    public sealed class OmnichannelActivityRefusedException : System.Exception
+    {
+        public OmnichannelActivityRefusedException(string terminalReasonCode, string message) { }
+        public string TerminalReasonCode { get; }
+    }
     public static class OmnichannelAddressTypes
     {
         public const string EmailAddress = "EmailAddress";
@@ -66,6 +76,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class Events
         {
+            public const string EmailReceived = "EmailReceived";
             public const string SmsReceived = "SmsReceived";
         }
         public static class Features
@@ -76,6 +87,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
             public const string Crm = "CrestApps.OrchardCore.Omnichannel.Crm";
             public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
+        }
+        public static class MessagingErrorCodes
+        {
+            public const string Deferred = "deferred";
+            public const string RecipientRejected = "recipient_rejected";
+            public const string SenderBlocked = "sender_blocked";
         }
         public static class NamedParts
         {
@@ -124,12 +141,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
         }
         public static class TerminalReasons
         {
+            public const string AddressUndeliverable = "address_undeliverable";
             public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
             public const string HandedOffToAgent = "handed_off_to_agent";
             public const string LeadConverted = "lead_converted";
             public const string NumberNotInService = "number_not_in_service";
             public static bool IsHandoff(string terminalReasonCode) { }
         }
+    }
+    public static class OmnichannelEmailAddress
+    {
+        public static bool IsValid(string address) { }
+        public static string Normalize(string address) { }
     }
     public static class StringExtensions
     {
@@ -245,6 +268,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public bool IsConverted { get; set; }
         public bool Latest { get; set; }
         public string NormalizedPrimaryCellPhoneNumber { get; set; }
+        public string NormalizedPrimaryEmailAddress { get; set; }
         public string NormalizedPrimaryHomePhoneNumber { get; set; }
         public string PrimaryCellPhoneNumber { get; set; }
         public string PrimaryEmailAddress { get; set; }
@@ -975,6 +999,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public OmnichannelAddressCapability() { }
         public string AddressType { get; set; }
+        public Microsoft.Extensions.Localization.LocalizedString CardName { get; set; }
         public Microsoft.Extensions.Localization.LocalizedString Description { get; set; }
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; set; }
         public string Name { get; set; }
@@ -1591,6 +1616,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         string Reason { get; }
         void RequestHandoff(string reason);
         void Reset();
+    }
+    public interface IOmnichannelSendPacer
+    {
+        string Channel { get; }
+        System.Threading.Tasks.Task<System.DateTime?> GetBulkSendTimeAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, bool reserveTurn, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISmsProviderRouter
     {

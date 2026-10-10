@@ -173,6 +173,42 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
                     await processor.StartAsync(activity, cancellationToken);
                 }
+                catch (OmnichannelActivityDeferredException ex)
+                {
+                    // Held back, not failed: the sending address is at its limit or paused. The activity waits for its
+                    // turn without spending an attempt, so a large campaign drains at the address's pace instead of
+                    // failing everything past the first hour's allowance.
+                    activity.ScheduledUtc = ex.RetryAtUtc > now ? ex.RetryAtUtc : now.AddMinutes(1);
+
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug(
+                            "Activity '{ActivityId}' was held back until {RetryAtUtc}: {Reason}",
+                            activity.ItemId.SanitizeLogValue(),
+                            activity.ScheduledUtc,
+                            ex.Message.SanitizeLogValue());
+                    }
+                }
+                catch (OmnichannelActivityRefusedException ex)
+                {
+                    // The provider refused the destination for good. Retrying would spend the remaining attempts mailing
+                    // or messaging an address that cannot answer, which is exactly what costs a sender its reputation.
+                    activity.Status = ActivityStatus.Cancelled;
+                    activity.CompletedUtc ??= now;
+                    activity.TerminalReasonCode = ex.TerminalReasonCode;
+                    activity.Notes = string.IsNullOrWhiteSpace(activity.Notes)
+                        ? ex.Message
+                        : activity.Notes + Environment.NewLine + ex.Message;
+
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation(
+                            "Activity '{ActivityId}' was cancelled on '{Channel}' because the destination was refused: {Reason}",
+                            activity.ItemId.SanitizeLogValue(),
+                            activity.Channel.SanitizeLogValue(),
+                            ex.Message.SanitizeLogValue());
+                    }
+                }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "An error occurred while processing the activity with id '{ActivityId}'", activity.ItemId);

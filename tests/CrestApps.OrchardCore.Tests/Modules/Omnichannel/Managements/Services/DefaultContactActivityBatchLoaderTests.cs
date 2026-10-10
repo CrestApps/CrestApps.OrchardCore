@@ -1113,7 +1113,8 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             .Column<string>("NormalizedPrimaryCellPhoneNumber", column => column.WithLength(50))
             .Column<string>("PrimaryHomePhoneNumber", column => column.WithLength(50))
             .Column<string>("NormalizedPrimaryHomePhoneNumber", column => column.WithLength(50))
-            .Column<string>("PrimaryEmailAddress", column => column.WithLength(255)));
+            .Column<string>("PrimaryEmailAddress", column => column.WithLength(255))
+            .Column<string>("NormalizedPrimaryEmailAddress", column => column.WithLength(255)));
 
         await schemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))

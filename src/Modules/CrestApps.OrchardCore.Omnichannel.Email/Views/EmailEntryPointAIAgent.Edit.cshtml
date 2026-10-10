@@ -1,0 +1,16 @@
+@model CrestApps.OrchardCore.Omnichannel.Email.ViewModels.EmailEntryPointAIAgentViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@* Shown for an AI agent target only: the entry point's routing card shows the fields marked for AI agents when it routes to one. *@
+<div class="ocat-wrapper" asp-validation-class-for="TargetAIProfileId" data-entry-point-ai-field>
+    <label asp-for="TargetAIProfileId" class="ocat-label">@T["AI agent"]</label>
+    <div class="ocat-end">
+        <select asp-for="TargetAIProfileId" asp-items="Model.ProfileOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select an AI profile"]" data-width="100%" title="@T["No AI agent"]">
+            <option value="">@T["No AI agent"]</option>
+        </select>
+        <span asp-validation-for="TargetAIProfileId" class="text-danger"></span>
+        <span class="hint">@T["The AI chat profile that answers email sent to these addresses, such as one made from the \"Customer care by email\" template. It replies to the customer's first email in the same thread and holds the conversation. While the entry point is closed, email goes to people with the closed auto-reply."]</span>
+    </div>
+</div>

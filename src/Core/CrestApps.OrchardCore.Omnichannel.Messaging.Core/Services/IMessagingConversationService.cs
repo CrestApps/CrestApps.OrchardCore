@@ -33,6 +33,16 @@ public interface IMessagingConversationService
     Task<MessagingSendResult> SendDirectAsync(string channel, string serviceAddress, string contactAddress, string body, string actingAgentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Sends an outbound message on the conversation for a contact address on a channel, creating a personal
+    /// conversation owned by the acting agent when none exists, with a subject on a channel that supports one and the
+    /// reason it is sent. Enforces the contact's opt-out of the channel and sends through it.
+    /// </summary>
+    /// <param name="request">The send request.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The send outcome.</returns>
+    Task<MessagingSendResult> SendDirectAsync(MessagingDirectSendRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Applies a provider delivery receipt to the matching outbound message and notifies the workspace.
     /// </summary>
     /// <param name="receipt">The normalized delivery receipt.</param>

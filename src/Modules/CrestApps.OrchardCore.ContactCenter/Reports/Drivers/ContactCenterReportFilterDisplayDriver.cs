@@ -203,17 +203,24 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         if (model.ShowChannelFilter)
         {
             // Contact Center interactions are only ever voice calls. A report that also counts CRM activities (it
-            // offers an activity source or status filter) can narrow them to SMS when activities can use SMS. No
-            // feature creates email or chat work, so neither is offered; a value saved before stays listed.
+            // offers an activity source or status filter) can narrow them to SMS or email when activities can use
+            // that channel. No feature creates chat work, so it is not offered; a value saved before stays listed.
             var channels = new List<SelectListItem>
             {
                 new(S["Voice"], InteractionChannel.Voice.ToString()),
             };
 
-            if ((model.ShowActivitySourceFilter || model.ShowActivityStatusFilter) &&
-                _activityChannelOptions.Channels.TryGetValue(OmnichannelConstants.Channels.Sms, out var smsChannel))
+            if (model.ShowActivitySourceFilter || model.ShowActivityStatusFilter)
             {
-                channels.Add(new SelectListItem(smsChannel.DisplayName?.Value ?? S["SMS"].Value, InteractionChannel.Sms.ToString()));
+                if (_activityChannelOptions.Channels.TryGetValue(OmnichannelConstants.Channels.Sms, out var smsChannel))
+                {
+                    channels.Add(new SelectListItem(smsChannel.DisplayName?.Value ?? S["SMS"].Value, InteractionChannel.Sms.ToString()));
+                }
+
+                if (_activityChannelOptions.Channels.TryGetValue(OmnichannelConstants.Channels.Email, out var emailChannel))
+                {
+                    channels.Add(new SelectListItem(emailChannel.DisplayName?.Value ?? S["Email"].Value, InteractionChannel.Email.ToString()));
+                }
             }
 
             ActivityFilterSelectListBuilder.KeepSelectedValue(channels, model.Channel);

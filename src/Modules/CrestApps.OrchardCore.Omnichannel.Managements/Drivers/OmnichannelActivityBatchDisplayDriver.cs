@@ -46,6 +46,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
+    private readonly ActivityChannelOptions _activityChannelOptions;
     private readonly IAIProfileManager _aiProfileManager;
     private readonly IBusinessHoursGate _businessHoursGate;
 
@@ -66,6 +67,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="optionsProvider">The bulk activity options provider.</param>
     /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
+    /// <param name="activityChannelOptions">The channels activities can be loaded on.</param>
     /// <param name="aiProfileManagers">The optional AI profile managers, present only when the AI feature is enabled.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityBatchDisplayDriver(
@@ -82,6 +84,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ISubjectFlowSettingsService subjectFlowSettingsService,
         BulkActivityAdminFormOptionsProvider optionsProvider,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
+        IOptions<ActivityChannelOptions> activityChannelOptions,
         IEnumerable<IAIProfileManager> aiProfileManagers,
         IBusinessHoursGate businessHoursGate,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
@@ -99,6 +102,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _optionsProvider = optionsProvider;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
+        _activityChannelOptions = activityChannelOptions.Value;
         _aiProfileManager = aiProfileManagers.FirstOrDefault();
         _businessHoursGate = businessHoursGate;
         S = stringLocalizer;
@@ -343,11 +347,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 model.ShowBusinessHoursCalendar = calendars.Count > 0;
             }
 
-            model.Channels =
-            [
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-            ];
+            // The channels the enabled features create activities on: Phone and SMS always, and each channel feature's
+            // own (Email, for one) when it is enabled.
+            model.Channels = _activityChannelOptions.Channels.Values
+                .Select(channel => new SelectListItem(channel.DisplayName.Value, channel.Channel))
+                .ToList();
 
             var isDialerLoad = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
             var channelEndpointItems = new List<SelectListItem>
@@ -355,11 +359,11 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 new(isDialerLoad ? S["Default caller ID"] : S["No address"], ""),
             };
 
-            // Only addresses used for calls or texts can reach contacts on a load's channel, and a dialer load only calls.
-            // Each address says what it is used for, so the editor offers only those used for the channel picked.
+            // Only addresses used on one of those channels can reach contacts on a load's channel, and a dialer load only
+            // calls. Each address says what it is used for, so the editor offers only those used for the channel picked.
             foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync())
                 .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) ||
-                    (!isDialerLoad && endpoint.HasCapability(OmnichannelConstants.Channels.Sms)))
+                    (!isDialerLoad && _activityChannelOptions.Channels.Keys.Any(endpoint.HasCapability)))
                 .OrderBy(endpoint => endpoint.DisplayText))
             {
                 var text = string.IsNullOrWhiteSpace(endpoint.DisplayText) || endpoint.DisplayText == endpoint.Value
@@ -649,10 +653,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         return entry;
     }
 
-    // The editor offers only Phone and SMS, and no feature loads email activities, so any other value is refused.
-    private static bool IsKnownChannel(string channel)
-    {
-        return string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
-    }
+    // The editor offers the channels the enabled features create activities on, so any other value is refused.
+    private bool IsKnownChannel(string channel)
+        => _activityChannelOptions.Channels.ContainsKey(channel);
 }

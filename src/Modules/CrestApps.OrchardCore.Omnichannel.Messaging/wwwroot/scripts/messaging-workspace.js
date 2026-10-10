@@ -1125,9 +1125,12 @@
   if (composerBody) {
     composerBody.addEventListener('input', updateCounter);
 
-    // Enter sends, Shift+Enter starts a new line, the way every chat surface behaves.
+    // Enter sends, Shift+Enter starts a new line, the way every chat surface behaves. A channel written like a
+    // letter (one with a subject line) keeps Enter for new lines, as a mail client does, and sends on Ctrl+Enter.
+    var enterSends = composerBody.getAttribute('data-enter-sends') !== 'false';
     composerBody.addEventListener('keydown', function (event) {
-      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      var sends = enterSends ? !event.shiftKey && !event.ctrlKey && !event.metaKey : event.ctrlKey || event.metaKey;
+      if (event.key === 'Enter' && sends && !event.isComposing) {
         event.preventDefault();
         if (composerBody.value.trim() || pending.length > 0) {
           composerBody.form.requestSubmit();
