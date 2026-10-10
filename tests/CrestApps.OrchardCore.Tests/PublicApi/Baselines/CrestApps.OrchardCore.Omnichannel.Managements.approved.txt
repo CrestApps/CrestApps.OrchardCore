@@ -696,6 +696,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> CreateAsync() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
@@ -975,11 +976,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public void Mark(System.Data.DataRow row) { }
         public void MarkScreened(System.Data.DataRow row) { }
     }
-    public sealed class LeadListProvider
+    public sealed class LeadImportProvider
     {
-        public LeadListProvider(YesSql.ISession session) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> GetNamesAsync() { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedName) { }
+        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>> GetImportsAsync() { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedEntryId) { }
+    }
+    public sealed class LeadImportSummary : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>
+    {
+        public LeadImportSummary(string EntryId, string FileName, System.DateTime ImportedUtc, long LeadCount) { }
+        public string EntryId { get; init; }
+        public string FileName { get; init; }
+        public System.DateTime ImportedUtc { get; init; }
+        public long LeadCount { get; init; }
     }
     public sealed class LeadMatchFinder
     {
@@ -1326,11 +1335,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     public class LeadBatchFilterViewModel
     {
         public LeadBatchFilterViewModel() { }
+        public string ImportEntryId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Imports { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string[] LeadContentTypes { get; set; }
-        public string ListName { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Lists { get; set; }
         public string OwnerId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Ratings { get; set; }

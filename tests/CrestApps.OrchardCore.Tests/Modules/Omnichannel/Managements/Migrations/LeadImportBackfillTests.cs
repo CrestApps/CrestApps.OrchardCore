@@ -61,7 +61,7 @@ public sealed class LeadImportBackfillTests
             await using var session = store.CreateSession();
             var rows = await session.QueryIndex<LeadImportIndex>(index => index.Latest).ListAsync(TestContext.Current.CancellationToken);
 
-            Assert.Equal([created, updated], rows.Select(row => row.ContentItemId).Order(StringComparer.Ordinal), StringComparer.Ordinal);
+            Assert.Equal(new[] { created, updated }.Order(StringComparer.Ordinal), rows.Select(row => row.ContentItemId).Order(StringComparer.Ordinal), StringComparer.Ordinal);
             Assert.All(rows, row =>
             {
                 Assert.Equal("july", row.EntryId);
