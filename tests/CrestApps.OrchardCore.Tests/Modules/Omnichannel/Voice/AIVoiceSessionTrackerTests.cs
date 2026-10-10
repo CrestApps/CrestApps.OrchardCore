@@ -192,12 +192,19 @@ public sealed class AIVoiceSessionTrackerTests
         var writing = 0;
         var mostAtOnce = 0;
         var written = new CountdownEvent(2);
+        var started = new CountdownEvent(2);
         var tracker = new AIVoiceSessionTracker(
             CreateShellHost(services => services.AddScoped(_ =>
             {
                 var now = Interlocked.Increment(ref writing);
                 InterlockedMax(ref mostAtOnce, now);
-                Thread.Sleep(500);
+
+                // Each summary stays open until the other call's summary has started too. Summaries that run side by
+                // side meet here at once; summaries that queue behind one another never do, so the first gives up after
+                // the bound and the second starts alone. A fixed sleep instead depended on the runner starting the
+                // second one inside it, which a loaded build agent does not always do.
+                started.Signal();
+                started.Wait(TimeSpan.FromSeconds(5));
                 Interlocked.Decrement(ref writing);
                 written.Signal();
 
