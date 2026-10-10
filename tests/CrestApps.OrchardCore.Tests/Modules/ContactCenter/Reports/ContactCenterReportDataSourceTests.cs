@@ -11,6 +11,8 @@ using CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 using CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer;
+using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -230,6 +232,63 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         // Assert
         Assert.Equal(["interaction-newest", "interaction-middle"], Rows(table).Select(row => row[ContactCenterReportDataSets.ItemIdField]));
         Assert.True(table.Truncated);
+    }
+
+    [Fact]
+    public async Task Interactions_GroupedInTheDatabase_GiveTheSameReportAsReadingRows()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+        var grouping = Source(session);
+        var rowsOnly = new ReportDataSourceWithoutGrouping(grouping);
+        var query = new ReportQueryDefinition
+        {
+            DataSets = [new ReportDataSetReference { Alias = "I", Source = grouping.Name, DataSet = ContactCenterReportDataSets.Interactions }],
+            Columns =
+            [
+                ReportDesignerTestServices.Column("day", "I.CreatedUtc", transform: ReportFieldTransform.Day),
+                ReportDesignerTestServices.Column("direction", "I.Direction"),
+                ReportDesignerTestServices.Column("n", "$count"),
+            ],
+        };
+        var context = ReportDesignerTestServices.Context(_midnight.AddDays(1));
+        context.DataSourceContext = new ReportDataSourceContext { User = _user };
+        context.ToLocal = utc => DateTime.SpecifyKind(utc.AddHours(-5), DateTimeKind.Unspecified);
+        context.ToUtc = local => DateTime.SpecifyKind(local.AddHours(5), DateTimeKind.Utc);
+
+        // Act
+        var expected = await ReportDesignerTestServices.Engine(rowsOnly).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+        var actual = await ReportDesignerTestServices.Engine(grouping).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(actual.GroupedBySource);
+        Assert.NotEmpty(actual.Rows);
+        Assert.Equal(expected.Rows, actual.Rows);
+    }
+
+    private sealed class ReportDataSourceWithoutGrouping : IReportDataSource
+    {
+        private readonly IReportDataSource _inner;
+
+        public ReportDataSourceWithoutGrouping(IReportDataSource inner)
+        {
+            _inner = inner;
+        }
+
+        public string Name => _inner.Name;
+
+        public LocalizedString DisplayName => _inner.DisplayName;
+
+        public LocalizedString Description => _inner.Description;
+
+        public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+            => _inner.GetDataSetsAsync(context, cancellationToken);
+
+        public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+            => _inner.GetSchemaAsync(dataSet, context, cancellationToken);
+
+        public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
+            => _inner.QueryAsync(query, cancellationToken);
     }
 
     [Fact]

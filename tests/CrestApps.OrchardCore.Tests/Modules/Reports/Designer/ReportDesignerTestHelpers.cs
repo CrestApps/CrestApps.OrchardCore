@@ -57,6 +57,11 @@ internal sealed class InMemoryReportDataSource : IReportDataSource
         return this;
     }
 
+    public (ReportDataSetSchema Schema, List<object[]> Rows) Table(string dataSet)
+    {
+        return _dataSets[dataSet];
+    }
+
     public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
     {
         IReadOnlyList<ReportDataSetDescriptor> dataSets = _dataSets

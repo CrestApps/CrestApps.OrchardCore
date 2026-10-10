@@ -201,6 +201,125 @@ public static class ReportFilterPredicates
         };
     }
 
+    /// <summary>
+    /// Builds the conditions that keep exactly the rows the filter keeps, for a data source that groups and aggregates
+    /// itself (see <see cref="IReportAggregateDataSource"/>), where a loose condition would change the totals.
+    /// </summary>
+    /// <param name="fieldName">The data set field name.</param>
+    /// <param name="filterOperator">The comparison operator.</param>
+    /// <param name="dataType">The type of the field.</param>
+    /// <param name="rawValues">The filter values as invariant text.</param>
+    /// <param name="toUtc">Converts a tenant-local date-time to UTC.</param>
+    /// <param name="today">The tenant-local current date-time.</param>
+    /// <returns>
+    /// The conditions, an empty list when the filter is off, or <see langword="null"/> when the filter cannot be
+    /// expressed exactly (text matching such as Contains, or a date-only equality inside a list).
+    /// </returns>
+    public static IReadOnlyList<ReportDataCondition> BuildExactConditions(
+        string fieldName,
+        ReportFilterOperator filterOperator,
+        ReportDataType dataType,
+        IList<string> rawValues,
+        Func<DateTime, DateTime> toUtc,
+        DateTime today)
+    {
+        ArgumentNullException.ThrowIfNull(toUtc);
+
+        if (Build(filterOperator, dataType, rawValues, today) is null)
+        {
+            return [];
+        }
+
+        var temporal = ReportDataValues.IsTemporal(dataType);
+        var values = (rawValues ?? []).Select(raw => Parse(raw, dataType)).ToList();
+        var present = values.Where(value => value.Value is not null).ToList();
+        var first = present.FirstOrDefault();
+
+        object Bound(object value)
+        {
+            return dataType == ReportDataType.DateTime && value is DateTime date ? toUtc(date) : value;
+        }
+
+        ReportDataCondition On(ReportFilterOperator op, params object[] conditionValues)
+        {
+            return Condition(fieldName, op, conditionValues.Select(Bound).ToArray());
+        }
+
+        switch (filterOperator)
+        {
+            case ReportFilterOperator.IsEmpty:
+            case ReportFilterOperator.IsNotEmpty:
+                return [Condition(fieldName, filterOperator)];
+
+            case ReportFilterOperator.Between:
+                {
+                    var lower = values.Count > 0 ? values[0] : default;
+                    var upper = values.Count > 1 ? values[1] : default;
+                    var conditions = new List<ReportDataCondition> { Condition(fieldName, ReportFilterOperator.IsNotEmpty) };
+
+                    if (lower.Value is not null)
+                    {
+                        conditions.Add(On(ReportFilterOperator.GreaterThanOrEqual, lower.Value));
+                    }
+
+                    if (upper.Value is not null)
+                    {
+                        conditions.Add(upper.IsDateOnly
+                            ? On(ReportFilterOperator.LessThan, NextDay(upper.Value))
+                            : On(ReportFilterOperator.LessThanOrEqual, upper.Value));
+                    }
+
+                    return conditions;
+                }
+
+            case ReportFilterOperator.Equals:
+                return temporal && first.IsDateOnly
+                    ? [On(ReportFilterOperator.GreaterThanOrEqual, first.Value), On(ReportFilterOperator.LessThan, NextDay(first.Value))]
+                    : [On(ReportFilterOperator.Equals, first.Value)];
+
+            case ReportFilterOperator.NotEquals:
+            case ReportFilterOperator.In:
+            case ReportFilterOperator.NotIn:
+                if (present.Any(value => value.IsDateOnly))
+                {
+                    return null;
+                }
+
+                return filterOperator == ReportFilterOperator.NotEquals
+                    ? [On(ReportFilterOperator.NotEquals, first.Value)]
+                    : [On(filterOperator, present.Select(value => value.Value).ToArray())];
+
+            case ReportFilterOperator.GreaterThan:
+                return first.IsDateOnly
+                    ? [On(ReportFilterOperator.GreaterThanOrEqual, NextDay(first.Value))]
+                    : [On(ReportFilterOperator.GreaterThan, first.Value)];
+
+            case ReportFilterOperator.GreaterThanOrEqual:
+                return [On(ReportFilterOperator.GreaterThanOrEqual, first.Value)];
+
+            case ReportFilterOperator.LessThan:
+                return [On(ReportFilterOperator.LessThan, first.Value)];
+
+            case ReportFilterOperator.LessThanOrEqual:
+                return first.IsDateOnly
+                    ? [On(ReportFilterOperator.LessThan, NextDay(first.Value))]
+                    : [On(ReportFilterOperator.LessThanOrEqual, first.Value)];
+
+            case ReportFilterOperator.InLastDays:
+            case ReportFilterOperator.InNextDays:
+                {
+                    var days = (long)ReportDataValues.Coerce(rawValues.First(value => !string.IsNullOrWhiteSpace(value)).Trim(), ReportDataType.Integer);
+                    var start = filterOperator == ReportFilterOperator.InLastDays ? today.Date.AddDays(1 - days) : today.Date;
+                    var end = filterOperator == ReportFilterOperator.InLastDays ? today.Date.AddDays(1) : today.Date.AddDays(days);
+
+                    return [On(ReportFilterOperator.GreaterThanOrEqual, start), On(ReportFilterOperator.LessThan, end)];
+                }
+
+            default:
+                return null;
+        }
+    }
+
     // The range of a relative date filter, as the same days the full filter keeps: from the start of the first day to the
     // start of the day after the last one, as an inclusive range, which keeps every row the filter keeps.
     private static ReportDataCondition RelativeCondition(

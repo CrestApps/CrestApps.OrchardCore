@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+    <PackageReference Include="YesSql.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

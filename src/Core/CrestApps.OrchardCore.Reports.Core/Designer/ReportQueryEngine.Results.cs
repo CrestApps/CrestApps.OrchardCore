@@ -145,6 +145,12 @@ public sealed partial class ReportQueryEngine
 
     private static object Measure(PlannedColumn column, List<object[]> rows, ExpressionContext expressionContext)
     {
+        // Rows a data source grouped itself each stand for several rows; the row count adds them up.
+        if (expressionContext.WeightSlot is int weightSlot && column.Field.Key == ReportQueryPlanner.RowCountField)
+        {
+            return ReportTransforms.Apply(column.Definition.Transform, rows.Sum(row => row[weightSlot] is long weight ? weight : 0L));
+        }
+
         if (column.Field.IsAggregate)
         {
             expressionContext.Group = rows;

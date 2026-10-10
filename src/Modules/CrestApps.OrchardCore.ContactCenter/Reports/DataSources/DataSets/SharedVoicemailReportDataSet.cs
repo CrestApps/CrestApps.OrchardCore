@@ -72,6 +72,11 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
     }
 
     /// <inheritdoc/>
+    // Only the queues the principal may answer are read, which the grouping statement cannot apply.
+    /// <inheritdoc/>
+    protected override bool CanAggregate => false;
+
+    /// <inheritdoc/>
     protected override (string Field, Expression<Func<SharedVoicemailIndex, DateTime>> Column)? DateColumn
         => (nameof(SharedVoicemail.ReceivedUtc), index => index.ReceivedUtc);
 

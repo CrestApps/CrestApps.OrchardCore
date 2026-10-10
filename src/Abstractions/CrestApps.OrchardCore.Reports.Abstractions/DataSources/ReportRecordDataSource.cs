@@ -4,9 +4,10 @@ namespace CrestApps.OrchardCore.Reports.DataSources;
 
 /// <summary>
 /// A data source made of <see cref="IReportRecordDataSet"/>s, each of which checks who may read it. Modules that
-/// expose their records to the report builder derive from it and list their data sets.
+/// expose their records to the report builder derive from it and list their data sets. Data sets that implement
+/// <see cref="IReportAggregateDataSet"/> also group and aggregate themselves.
 /// </summary>
-public abstract class ReportRecordDataSource : IReportDataSource
+public abstract class ReportRecordDataSource : IReportDataSource, IReportAggregateDataSource
 {
     /// <inheritdoc/>
     public abstract string Name { get; }
@@ -73,6 +74,18 @@ public abstract class ReportRecordDataSource : IReportDataSource
         var found = await FindReadableAsync(query.DataSet, query.Context);
 
         return found is null ? new ReportDataTable() : await found.QueryAsync(query, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ReportAggregateTable> AggregateAsync(ReportAggregateQuery query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var found = await FindReadableAsync(query.DataSet, query.Context);
+
+        return found is IReportAggregateDataSet aggregating
+            ? await aggregating.AggregateAsync(query, cancellationToken)
+            : null;
     }
 
     private async Task<IReportRecordDataSet> FindReadableAsync(string name, ReportDataSourceContext context)

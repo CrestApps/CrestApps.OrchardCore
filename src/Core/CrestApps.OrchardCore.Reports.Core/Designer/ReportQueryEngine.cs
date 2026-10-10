@@ -83,6 +83,13 @@ public sealed partial class ReportQueryEngine
             .Select(filter => new ActiveFilter(filter, EffectiveValues(filter.Definition, context)))
             .ToList();
 
+        // A simple aggregated report over one data set can be grouped by its source, which then reads a few groups
+        // instead of every row.
+        if (await TryAggregateAsync(plan, filters, context, today, warnings, cancellationToken) is { } grouped)
+        {
+            return grouped;
+        }
+
         // Data sets are read in join order, so a joined data set can be read for the keys the rows before it hold.
         var current = await ReadAsync(plan, plan.DataSets[0], filters, context, warnings, keys: null, cancellationToken);
         var sourceRows = current.Count;

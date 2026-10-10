@@ -63,6 +63,12 @@ public sealed class ReportQueryResult
     public int FilteredRowCount { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the data source grouped and aggregated the rows itself, so the report
+    /// read groups instead of rows.
+    /// </summary>
+    public bool GroupedBySource { get; set; }
+
+    /// <summary>
     /// Finds the index of a column.
     /// </summary>
     /// <param name="columnId">The column identifier.</param>

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using YesSql;
@@ -102,7 +103,7 @@ internal sealed class OmnichannelReportAccess
 /// <summary>
 /// One row per activity: a task, call, message, or any other unit of work, including the dialer's attempts.
 /// </summary>
-internal sealed class ActivitiesDataSet : ReportRecordDataSet<OmnichannelActivity>
+internal sealed class ActivitiesDataSet : ReportRecordDataSet<OmnichannelActivity>, IReportAggregateDataSet
 {
     public const string Name = "Activities";
 
@@ -184,6 +185,16 @@ internal sealed class ActivitiesDataSet : ReportRecordDataSet<OmnichannelActivit
     public override Task<bool> CanReadAsync(ReportDataSourceContext context)
     {
         return _access.CanReadAsync(context);
+    }
+
+    // The fields the activity index copies unchanged, which the database can group, aggregate, and filter on.
+    private IReadOnlyDictionary<string, string> _aggregateColumns;
+
+    public Task<ReportAggregateTable> AggregateAsync(ReportAggregateQuery query, CancellationToken cancellationToken)
+    {
+        _aggregateColumns ??= ReportIndexAggregator.MapByName<OmnichannelActivityIndex>(Fields.Select(field => field.Name));
+
+        return ReportIndexAggregator.AggregateAsync<OmnichannelActivityIndex>(_session, OmnichannelConstants.CollectionName, query, _aggregateColumns, cancellationToken);
     }
 
     // Index columns a join can narrow the read on.

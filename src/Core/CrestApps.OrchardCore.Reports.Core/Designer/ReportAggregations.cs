@@ -18,6 +18,11 @@ public static class ReportAggregations
     {
         ArgumentNullException.ThrowIfNull(values);
 
+        if (values.Count > 0 && values[0] is ReportPartialAggregate)
+        {
+            return Merge(aggregate, values.OfType<ReportPartialAggregate>().ToArray());
+        }
+
         return aggregate switch
         {
             ReportAggregate.Count => Count(values),
@@ -29,6 +34,38 @@ public static class ReportAggregations
             ReportAggregate.Median => Median(values),
             _ => values.FirstOrDefault(value => value is not null),
         };
+    }
+
+    // Combines the aggregates a data source computed per group, as if the rows had been aggregated here.
+    private static object Merge(ReportAggregate aggregate, ReportPartialAggregate[] parts)
+    {
+        switch (aggregate)
+        {
+            case ReportAggregate.Count:
+                return parts.Sum(part => part.Count);
+
+            case ReportAggregate.Sum:
+                return Sum(parts.Select(part => part.Sum).ToArray());
+
+            case ReportAggregate.Average:
+                {
+                    var count = parts.Sum(part => part.Count);
+                    var total = Sum(parts.Select(part => part.Sum).ToArray());
+
+                    return count == 0 || ReportDataValues.Coerce(total, ReportDataType.Decimal) is not decimal sum
+                        ? null
+                        : sum / count;
+                }
+
+            case ReportAggregate.Min:
+                return Min(parts.Select(part => part.Min).ToArray());
+
+            case ReportAggregate.Max:
+                return Max(parts.Select(part => part.Max).ToArray());
+
+            default:
+                return null;
+        }
     }
 
     /// <summary>

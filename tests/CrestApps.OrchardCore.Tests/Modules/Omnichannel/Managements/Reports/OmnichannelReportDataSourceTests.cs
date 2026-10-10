@@ -7,9 +7,12 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
+using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Security;
 using YesSql;
@@ -196,6 +199,69 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         Assert.Equal("CreatedUtc", schema.DataSet.DefaultDateField);
     }
 
+    public static TheoryData<string> GroupedReports => new(GroupedQueries.Keys);
+
+    private static Dictionary<string, Func<ReportQueryDefinition>> GroupedQueries { get; } = new(StringComparer.Ordinal)
+    {
+        ["Count by status and channel"] = () => Activities(Column("status", "A.Status"), Column("channel", "A.Channel"), Column("n", "$count")),
+        ["Attempts by local day"] = () => Activities(
+            Column("day", "A.CreatedUtc", transform: ReportFieldTransform.Day),
+            Column("attempts", "A.Attempts", ReportAggregate.Sum),
+            Column("average", "A.Attempts", ReportAggregate.Average),
+            Column("first", "A.ScheduledUtc", ReportAggregate.Min)),
+        ["By month, completed only"] = () => Filtered(
+            Activities(Column("month", "A.CreatedUtc", transform: ReportFieldTransform.Month), Column("n", "$count")),
+            new ReportFilterDefinition { Id = "done", Field = "A.Status", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.Equals, Values = ["completed"] }),
+        ["By agent, last days, not SMS"] = () => Filtered(
+            Filtered(
+                Activities(Column("agent", "A.AssignedToId"), Column("n", "$count"), Column("max", "A.Attempts", ReportAggregate.Max)),
+                new ReportFilterDefinition { Id = "recent", Field = "A.CreatedUtc", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.Between, Values = ["2026-05-02", "2026-05-04"] }),
+            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.NotEquals, Values = ["sms"] }),
+    };
+
+    [Theory]
+    [MemberData(nameof(GroupedReports))]
+    public async Task Activities_GroupedInTheDatabase_GiveTheSameReportAsReadingRows(string report)
+    {
+        // Arrange
+        await using (var seed = _store.CreateSession())
+        {
+            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b1", Kind = ActivityKind.Sms, Channel = "Sms", Status = ActivityStatus.Completed, AssignedToId = "agent-2", Attempts = 7, CreatedUtc = _day.AddDays(2).AddHours(3), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            await seed.SaveAsync(new OmnichannelActivity { ItemId = "b2", Kind = ActivityKind.Call, Channel = OmnichannelConstants.Channels.Phone, Status = ActivityStatus.Completed, Attempts = 2, CreatedUtc = _day.AddMonths(1).AddHours(2), ScheduledUtc = _day }, false, OmnichannelConstants.CollectionName, TestContext.Current.CancellationToken);
+            await seed.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var session = _store.CreateSession();
+        var grouping = Source(session);
+        var rowsOnly = new RowsOnly(grouping);
+
+        // Act
+        var expected = await ReportDesignerTestServices.Engine(rowsOnly).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
+        var actual = await ReportDesignerTestServices.Engine(grouping).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(actual.GroupedBySource, "The database should have grouped the report.");
+        Assert.Equal(expected.Rows, actual.Rows);
+        Assert.Equal(expected.Regroup([]).Select(group => group.Values), actual.Regroup([]).Select(group => group.Values));
+    }
+
+    [Fact]
+    public async Task Activities_AComputedField_IsReadRowByRow()
+    {
+        // Arrange
+        await using var session = _store.CreateSession();
+
+        // Act: the disposition name is looked up, not stored in the index.
+        var result = await ReportDesignerTestServices.Engine(Source(session)).ExecuteAsync(
+            Activities(Column("disposition", "A.Disposition"), Column("n", "$count")),
+            LocalContext(),
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.GroupedBySource);
+        Assert.Contains(result.Rows, row => (string)row[0] == "Sale");
+    }
+
     [Fact]
     public async Task Dispositions_AreReadWithTheirOutcome()
     {
@@ -245,6 +311,65 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
             groups.Object,
             authorizationService.Object,
             new ContentReportTestLocalizer<OmnichannelReportDataSource>());
+    }
+
+    // The tenant is five hours behind UTC, so local days differ from UTC ones.
+    private static ReportQueryExecutionContext LocalContext()
+    {
+        var context = ReportDesignerTestServices.Context(_day.AddDays(4));
+
+        context.DataSourceContext = new ReportDataSourceContext { User = _user };
+        context.ToLocal = utc => DateTime.SpecifyKind(utc.AddHours(-5), DateTimeKind.Unspecified);
+        context.ToUtc = local => DateTime.SpecifyKind(local.AddHours(5), DateTimeKind.Utc);
+
+        return context;
+    }
+
+    private static ReportQueryDefinition Activities(params ReportColumnDefinition[] columns)
+    {
+        return new ReportQueryDefinition
+        {
+            DataSets = [new ReportDataSetReference { Alias = "A", Source = OmnichannelReportDataSource.SourceName, DataSet = "Activities" }],
+            Columns = columns,
+        };
+    }
+
+    private static ReportQueryDefinition Filtered(ReportQueryDefinition query, ReportFilterDefinition filter)
+    {
+        query.Filters.Add(filter);
+
+        return query;
+    }
+
+    private static ReportColumnDefinition Column(string id, string field, ReportAggregate aggregate = ReportAggregate.None, ReportFieldTransform transform = ReportFieldTransform.None)
+    {
+        return ReportDesignerTestServices.Column(id, field, aggregate, transform);
+    }
+
+    // The same source without its grouping, so the engine reads rows.
+    private sealed class RowsOnly : IReportDataSource
+    {
+        private readonly IReportDataSource _inner;
+
+        public RowsOnly(IReportDataSource inner)
+        {
+            _inner = inner;
+        }
+
+        public string Name => _inner.Name;
+
+        public LocalizedString DisplayName => _inner.DisplayName;
+
+        public LocalizedString Description => _inner.Description;
+
+        public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+            => _inner.GetDataSetsAsync(context, cancellationToken);
+
+        public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+            => _inner.GetSchemaAsync(dataSet, context, cancellationToken);
+
+        public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
+            => _inner.QueryAsync(query, cancellationToken);
     }
 
     private static ReportDataSourceQuery Query(string dataSet)

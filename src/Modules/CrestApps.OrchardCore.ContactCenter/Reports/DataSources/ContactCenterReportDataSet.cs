@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.Security.Permissions;
 using System.Reflection;
@@ -19,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 /// </summary>
 /// <typeparam name="TRecord">The record type.</typeparam>
 /// <typeparam name="TIndex">The index the records are queried through.</typeparam>
-public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecordDataSet<TRecord>, IContactCenterReportDataSet
+public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecordDataSet<TRecord>, IContactCenterReportDataSet, IReportAggregateDataSet
     where TRecord : class
     where TIndex : CatalogItemIndex
 {
@@ -31,6 +32,7 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     private static readonly MethodInfo _isIn = ((MethodCallExpression)((Expression<Func<string, bool>>)(value => value.IsIn(Array.Empty<string>()))).Body).Method;
 
     private readonly ISession _session;
+    private IReadOnlyDictionary<string, string> _aggregateColumns;
     private readonly IAuthorizationService _authorizationService;
     private readonly Permission[] _permissions;
 
@@ -74,6 +76,28 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
 
     /// <inheritdoc/>
     protected override IEnumerable<string> KeyFilterableFields => KeyColumns.Keys;
+
+    /// <summary>
+    /// Gets a value indicating whether the data set can group and aggregate itself in the database. Data sets that
+    /// restrict which records a principal reads (<see cref="RestrictAsync"/>) cannot, since the grouping statement
+    /// reads the whole index.
+    /// </summary>
+    protected virtual bool CanAggregate => true;
+
+    /// <inheritdoc/>
+    public Task<ReportAggregateTable> AggregateAsync(ReportAggregateQuery query, CancellationToken cancellationToken)
+    {
+        if (!CanAggregate)
+        {
+            return Task.FromResult<ReportAggregateTable>(null);
+        }
+
+        // The index copies these fields from the record unchanged, so a field with an index column of the same name
+        // can be grouped, aggregated, and filtered there.
+        _aggregateColumns ??= ReportIndexAggregator.MapByName<TIndex>(Fields.Select(field => field.Name));
+
+        return ReportIndexAggregator.AggregateAsync<TIndex>(_session, ContactCenterStorage.CollectionName, query, _aggregateColumns, cancellationToken);
+    }
 
     /// <inheritdoc/>
     public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
