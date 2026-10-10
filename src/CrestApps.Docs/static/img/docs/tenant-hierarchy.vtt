@@ -312,33 +312,33 @@ parent from a script, and the address of a suspended or removed tenant
 00:07:54.249 --> 00:07:56.076
 never shows another site.
 
-00:08:00.276 --> 00:08:05.360
+00:08:00.276 --> 00:08:05.221
 In Program.cs, call AddTenantHierarchy inside AddOrchardCms.
 
-00:08:05.360 --> 00:08:12.756
+00:08:05.221 --> 00:08:12.416
 It installs the guards in every tenant, and does nothing for a tenant outside a hierarchy.
 
-00:08:13.506 --> 00:08:19.697
+00:08:13.166 --> 00:08:19.357
 In appsettings.json, the Tenant Hierarchy section names the platform domain that parent addresses
 
-00:08:19.697 --> 00:08:24.086
+00:08:19.357 --> 00:08:23.746
 go under, and the database servers child tenants can be created on.
 
-00:08:24.836 --> 00:08:27.856
+00:08:24.496 --> 00:08:27.516
 SQL Server and PostgreSQL are built in.
 
-00:08:27.856 --> 00:08:33.762
+00:08:27.516 --> 00:08:33.422
 For another server, implement I Child Tenant Database Provisioner and register it:
 
-00:08:33.762 --> 00:08:38.326
+00:08:33.422 --> 00:08:37.986
 it creates each client's database and login, and removes them.
 
-00:08:40.326 --> 00:08:45.046
+00:08:39.986 --> 00:08:44.706
 The Tenant Hierarchy gives an organization its own sites to run for its
 
-00:08:45.046 --> 00:08:50.441
+00:08:44.706 --> 00:08:50.101
 customers, one sign-in to reach them all, and a record of everything done in them.
 
-00:08:50.441 --> 00:08:52.036
+00:08:50.101 --> 00:08:51.696
 Thanks for watching.
 

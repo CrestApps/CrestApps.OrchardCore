@@ -8,7 +8,7 @@ technical_manual:
 
 Some organizations run a separate site for each business they look after. A bookkeeping firm, for example, may keep one site per client. In this system your organization's site is the **parent** and each site you run for someone else is a **child tenant**. Use this page to add a child tenant, open it without signing in again, change its features, and choose who on your team may open it.
 
-This video shows how a parent adds, opens and manages its clients, decides who may open them, and sees what happened.
+This video is the whole tour: how a parent adds, opens and manages its clients, decides who may open them, and sees what happened. Each section below also has a short screencast of just that task.
 
 <video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
   <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
@@ -32,6 +32,7 @@ Your platform administrator may have renamed these words for your organization. 
 - People on your team **open** a child tenant from your site. They arrive signed in, with the roles that an access rule gives them there. They never need a password for the child tenant.
 - The child tenant's own staff, if it has any, sign in there directly with their own accounts. They cannot see your site or any other child tenant.
 - Everything your team does in a child tenant is recorded under their own name, so you can always tell who did what.
+- Other organizations on the same platform never see your site or your child tenants, and you never see theirs. See [Kept apart from other organizations](#kept-apart-from-other-organizations).
 
 ## See your child tenants
 
@@ -50,6 +51,11 @@ Your plan sets how many child tenants you may have. When you reach it, **Add chi
 
 ## Add a child tenant
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of adding a child tenant: typing its name, checking its address, picking what it starts from, and watching it go from Setting up to Running">
+  <source src="/img/docs/tenant-hierarchy-create.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-create.vtt" srcLang="en" label="English" default />
+</video>
+
 1. Open **Child tenants > All child tenants** and click **Add child tenant**.
 2. Type the **Name** everybody sees, for example *Northwind Traders*.
 3. Check the **Address**. It is filled in from the name, and you can change it. Use lowercase letters, digits and hyphens, 3 to 40 characters. The screen tells you at once whether the address is available.
@@ -60,6 +66,11 @@ Your plan sets how many child tenants you may have. When you reach it, **Add chi
 The list shows the new child tenant as **Setting up**, then **Running**. When it is running, an **Open** button appears.
 
 ## Open a child tenant
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of opening a child tenant without a password, the building icon that shows where you are, switching to another child tenant and going back">
+  <source src="/img/docs/tenant-hierarchy-open.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-open.vtt" srcLang="en" label="English" default />
+</video>
 
 - Click **Open** next to the child tenant in the list, or
 - open **Child tenants > Open a child tenant** and pick it from the list.
@@ -81,6 +92,11 @@ When you sign out of your own site, are disabled, change your password, or lose 
 :::
 
 ## Change a child tenant
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of managing a child tenant: its features, suspending and resuming it, removing it, and restoring it while its removal is scheduled">
+  <source src="/img/docs/tenant-hierarchy-manage.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-manage.vtt" srcLang="en" label="English" default />
+</video>
 
 Open **Child tenants > All child tenants**, click **Manage** next to the child tenant, and pick a choice:
 
@@ -106,6 +122,11 @@ If your plan keeps removed child tenants for a number of days, the child tenant 
 
 ## Decide who may open child tenants
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of the access rules: letting everyone with a role open every child tenant, and adding a rule for one person">
+  <source src="/img/docs/tenant-hierarchy-access.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-access.vtt" srcLang="en" label="English" default />
+</video>
+
 People on your team never get a password for a child tenant. They open it from your site and are signed in to it automatically. **Access rules** decide who may open which child tenants, and which roles they have once they are inside. Someone who matches no rule cannot open a child tenant.
 
 Open **Child tenants > Access** for rules that cover every child tenant, or **Manage > Access** next to one child tenant for rules that cover only that one. The **Rules** table reads like a sentence: *Who in your organization*, *Can open*, *Roles inside the child tenant*. A child tenant's page also lists the rules for every child tenant, because they apply there too.
@@ -124,6 +145,34 @@ Give access through roles rather than one user at a time. When someone joins or 
 
 ## See what happened
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of the activity in the Audit Trail: the tenant hierarchy events, who did each one, and the details of an event">
+  <source src="/img/docs/tenant-hierarchy-activity.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-activity.vtt" srcLang="en" label="English" default />
+</video>
+
 Everything that happens to your child tenants is recorded in the **Audit Trail**, under the **Tenant Hierarchy** category. Open **Child tenants > Activity** for the whole history, or **Manage > Activity** for one child tenant. Each line shows what happened, when, who did it, and which child tenant, with details such as the roles someone received, how they signed in, why a session ended and the network address it came from. Click **Details** for the full event.
 
 The Audit Trail keeps events for as long as its settings say, under **Settings > Audit Trail**. There you can also turn single events off.
+
+## Kept apart from other organizations
+
+Your platform may host many organizations, each with its own child tenants. They are kept apart from yours in every direction:
+
+- Your lists, searches, tenant switcher and Audit Trail show only your own child tenants. Another organization's child tenants never appear, even when you search for their name or address.
+- Nobody in your organization can open, change, suspend or remove another organization's child tenant, and nobody there can do it to yours. A link to another organization's child tenant gives the same **You cannot open this** page as one that does not exist.
+- Being signed in to your own site does not sign you in anywhere else. Another organization's site, and its child tenants, ask for their own sign-in, and your account does not exist there.
+- Access rules only ever cover your own child tenants, and only your own team.
+- A child tenant cannot see or reach your site, the other child tenants, or any other organization.
+
+## Troubleshooting
+
+| What you see | Why, and what to do |
+| --- | --- |
+| **Add child tenant** is greyed out | You reached the number of child tenants your plan allows. Point at the button to see the limit, and ask your platform administrator to raise it, or remove a child tenant you no longer need. |
+| **This address is already in use** or **This address is reserved** | Another of your child tenants uses the address, or it is kept for the system. Pick another one. |
+| **Setup failed** | The site could not be created. Click **Retry**. If it fails again, click **Remove from list** and tell your platform administrator. |
+| **You cannot open this** | You have no access rule for the child tenant, it is suspended, or it is not one of yours. Ask the person who manages access in your organization. |
+| **Two-factor sign-in required** | Your organization requires it before you open a child tenant. Sign out of your own site, and sign in again with two-factor authentication. |
+| You are signed out of a child tenant | Your session ended: you were idle too long, it reached its maximum length, you signed out of your own site, or your access rule changed. Open the child tenant again from your site. |
+| A child tenant's address shows **This site is not available** | The child tenant is suspended or removed. Resume or restore it, or check the address. |
+| **Changed by platform** | Your platform administrator moved the child tenant to another organization, or made it an ordinary tenant. Click **Remove from list** to clear it. |

@@ -1,0 +1,59 @@
+WEBVTT
+
+00:00:03.186 --> 00:00:09.220
+On the platform, Multi-Tenancy, Tenant Hierarchy lists every parent with its child tenants,
+
+00:00:09.220 --> 00:00:12.144
+the way the Tenants screen lists tenants.
+
+00:00:12.144 --> 00:00:16.126
+Riverside Accounting is already a parent, with one client.
+
+00:00:16.580 --> 00:00:19.388
+Let's make Contoso Bookkeeping a parent.
+
+00:00:19.388 --> 00:00:22.685
+Click Make a Parent Tenant, and pick the tenant.
+
+00:00:22.685 --> 00:00:28.240
+Its display name and address fill in from the tenant, so its address does not change.
+
+00:00:28.693 --> 00:00:33.481
+The policy sets how many child tenants the parent may have, the setup
+
+00:00:33.481 --> 00:00:37.439
+recipes they can start from, and where their data lives:
+
+00:00:37.439 --> 00:00:41.653
+a file, a database, a schema or a table prefix for each one.
+
+00:00:42.106 --> 00:00:47.041
+It also lists the features child tenants never get, the permissions their own
+
+00:00:47.041 --> 00:00:52.156
+users never get, and how many days a removed child tenant can still be restored.
+
+00:00:52.156 --> 00:00:54.416
+Let's keep them for thirty days.
+
+00:00:54.869 --> 00:01:02.460
+Opening child tenants can require two-factor authentication, and sessions can end after a period without activity.
+
+00:01:02.460 --> 00:01:06.889
+The tenant switcher opens a picker page, or shows it in a panel.
+
+00:01:07.342 --> 00:01:09.600
+Finally, the words on screen.
+
+00:01:09.600 --> 00:01:15.021
+Contoso calls itself a practice, and calls its child tenants clients, so every
+
+00:01:15.021 --> 00:01:18.312
+screen of the parent says Client and Clients.
+
+00:01:18.762 --> 00:01:20.945
+Click Make parent tenant.
+
+00:01:20.945 --> 00:01:25.382
+Contoso Bookkeeping is now a parent, with no clients yet.
+

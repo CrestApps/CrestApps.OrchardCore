@@ -9,7 +9,7 @@ user_manual:
 
 The Tenant Hierarchy module lets a tenant that the platform marks as a **parent** create and manage its own **child** tenants, and lets the parent's users open a child tenant without signing in again. The motivating case is a bookkeeping firm (the parent) that runs one site per client business (the children). The Default tenant stays the platform root and still manages every tenant through the standard Tenants admin.
 
-This video walks through the problem the module solves, each screen, and how it keeps tenants isolated.
+This video walks through the problem the module solves, each screen, and how it keeps tenants isolated. The [setup](#install-the-host-guards) and [security](#isolation-between-parents) parts are also below as short screencasts, and the [User Manual](../user-manual/administration/child-tenants.md) has one for each task.
 
 <video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
   <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
@@ -27,6 +27,11 @@ The Parent and Child features never depend on the Platform feature or on `Orchar
 How people use the screens is described in the User Manual: [Child tenants](../user-manual/administration/child-tenants.md) for a parent's users and [Tenant hierarchy](../user-manual/administration/tenant-hierarchy.md) for platform administrators.
 
 ## Install the host guards
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of setting up the tenant hierarchy: AddTenantHierarchy in Program.cs, the TenantHierarchy section of appsettings.json, and a provisioner for another database server">
+  <source src="/img/docs/tenant-hierarchy-setup.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-setup.vtt" srcLang="en" label="English" default />
+</video>
 
 The module needs host-level services that run in every tenant: the scope guard, the feature guard, the egress guard, the cookie hardening, the parent removal guard, the Fetch Metadata guard and the unavailable-address guard. Register them in `Program.cs`:
 
@@ -150,6 +155,27 @@ The Parent feature depends on `OrchardCore.AuditTrail` and records every life-cy
 
 When the Default tenant has no host name, Orchard Core sends it every request that no running tenant claims. Without a guard, the address of a suspended or removed child, or any address under a parent's host, would show the platform site and its sign-in page. In the Default tenant, a middleware answers such a request with `404` and a short "This site is not available" page instead. It matches the hosts of every parent and child tenant, with or without a port, and every host under a parent's host. A host of an ordinary tenant is left alone.
 
+## Isolation between parents
+
+One parent never reaches another parent or the other parent's children, and their children never reach each other. Each door between two hierarchies has its own block, and most have two, so one mistake does not open it.
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of how the tenant hierarchy stays secure: the one-time code with PKCE, linked accounts, the guards between tenants, and cookies and addresses">
+  <source src="/img/docs/tenant-hierarchy-security.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-security.vtt" srcLang="en" label="English" default />
+</video>
+
+| Door | What blocks it |
+| --- | --- |
+| Code in a parent calls `IShellHost` for another hierarchy | `GuardedShellHost` hides the other parent and its children from `GetAllSettings` and `TryGetSettings`, and `GetScopeAsync`, `UpdateShellSettingsAsync`, `ReloadShellContextAsync` and `RemoveShellSettingsAsync` throw `TenantHierarchyAccessDeniedException`, inside a broker call or not. A settings object crafted to name the caller as parent is checked against the host's own copy. |
+| The parent's broker or services get another parent's identifier | The registry, the access grants, the codes and the sessions live in each parent's own database, so another parent's entry, grant or session identifier does not exist there. The broker also requires the child's settings to name the caller as its parent. A tenant name or tenant identifier is never accepted where an entry identifier is expected. |
+| The admin screens get another parent's child | Every page and action under `/Admin/children/{id}` answers `404` and changes nothing, whether `{id}` is that child's entry identifier, tenant identifier or tenant name. Bulk actions skip identifiers that are not in the parent's registry, and an access rule cannot name another parent's child or remove another parent's rule. |
+| Delegated access to another parent's child | `/delegated-access/open` and `/authorize` issue a code only for a child in the caller's registry that a grant covers. A code is bound to one child, its parent and the browser's PKCE verifier, so another parent's child cannot redeem it. |
+| A session of one hierarchy shown to another | A child validates and ends sessions only with its own parent. Another parent's session identifier is unknown there, and a child cannot end a session of a child of another parent. |
+| A sign-in carried from one tenant to another | Users, cookies and data protection keys belong to each tenant. Cookies are host-only, and a cookie copied to another tenant, even under that tenant's cookie name, does not sign in. Entering another parent's child sends the browser to that parent's sign-in page. |
+| Outbound requests | The egress guard refuses requests from a parent or a child to the host of any tenant of the application, before any DNS lookup, and to internal addresses after it. |
+| The platform screens | They run only in the Default tenant. A parent's request for them is refused. |
+| The data | `DatabasePerChild` gives each child its own database and login; `SchemaPerChild` its own schema and login; `SqlitePerChild` its own file. `TablePrefixPerChild` shares the pool's login, so `OrchardCore.Queries.Sql` is blocked in such children. |
+
 ## Configuration
 
 The module reads the `TenantHierarchy` section of the **application** configuration. It is host configuration on purpose: tenant configuration cannot change it.
@@ -260,3 +286,16 @@ When a tenant becomes a parent, a parent-wide grant gives the parent's **Adminis
 - A federated OpenID Connect mode for children that run in another application.
 - Custom domains for children, and inviting the business owner as a local user when a child is created. The child's own Users admin adds local users.
 - An idle-release service for inactive children, and metrics.
+
+## Troubleshooting
+
+| Symptom | Cause and fix |
+| --- | --- |
+| The platform and parent screens say **The host guards are not installed** | `AddTenantHierarchy()` is not called in `Program.cs`. Add it and restart. |
+| An outbound request fails with *it is the address of a tenant of this application* | The egress guard refused a request from a parent or a child to one of the application's own tenants. Tenants of a hierarchy do not call each other over HTTP; module code that must reach a parent or child goes through `ITenantHierarchyBroker`. |
+| An outbound request to an internal address fails | `Egress:BlockPrivateNetworks` refuses loopback, link-local, private and shared addresses. Add the host to `Egress:AllowedHosts`, for example a local model server. |
+| Signing in to a parent or a child loops back to the sign-in page | The `__Host-` cookies need HTTPS. Serve every tenant over HTTPS, or turn `UseHostPrefixedCookies` off only on a test machine. |
+| A `TenantHierarchyAccessDeniedException` is logged | Code in one tenant tried to reach another tenant outside the broker. The log names both tenants. It is the guard working; find the module that made the call. |
+| A child's setup fails | The application log has the error. A database strategy needs a pool whose login can create databases, schemas and logins. Fix it, then click **Retry**. |
+| Users are signed out when a request reaches another node | The nodes do not share a data protection key ring or the shell settings. See [Deployment](#deployment). |
+| The address of a suspended child shows the platform's sign-in page | The application runs without `AddTenantHierarchy()`, so the unavailable-address guard is not installed. |

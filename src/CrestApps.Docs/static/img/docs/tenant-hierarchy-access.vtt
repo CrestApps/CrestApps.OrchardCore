@@ -1,0 +1,32 @@
+WEBVTT
+
+00:00:03.201 --> 00:00:05.527
+Clients, Access holds the rules.
+
+00:00:05.527 --> 00:00:10.056
+Each one says who in Contoso may open which clients, and which roles
+
+00:00:10.056 --> 00:00:12.321
+they have once they are inside.
+
+00:00:12.774 --> 00:00:17.637
+The parent's administrators can open every client, as administrators.
+
+00:00:17.637 --> 00:00:22.954
+Let's let everyone with the Bookkeeper role open every client, as an editor.
+
+00:00:23.406 --> 00:00:25.802
+A rule can also name one person.
+
+00:00:25.802 --> 00:00:29.646
+Rules on a client's own page apply to that client only.
+
+00:00:30.098 --> 00:00:34.648
+Someone who matches several rules gets all of their roles, and someone who
+
+00:00:34.648 --> 00:00:37.037
+matches none cannot open the client.
+
+00:00:37.037 --> 00:00:41.188
+Removing a rule ends the sessions that depend on it within minutes.
+

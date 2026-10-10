@@ -8,7 +8,7 @@ technical_manual:
 
 The tenant hierarchy lets one tenant, a **parent**, create and manage its own **child tenants**. A bookkeeping firm, for example, can run one site per client business without asking you for each one. This page is for platform administrators, who work in the main site (the platform). The parent's own team uses [Child Tenants](child-tenants.md).
 
-This video shows how the platform makes a tenant a parent and keeps every parent and child tenant in view.
+This video is the whole tour of the tenant hierarchy, from the platform and from a parent. Each section below also has a short screencast of just that task.
 
 <video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
   <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
@@ -35,11 +35,21 @@ If the screen shows **The host guards are not installed**, the application was s
 
 ## See the hierarchy
 
+<video controls preload="metadata" width="100%" aria-label="Screencast of the platform's Tenant Hierarchy screen: two parents with their child tenants, searching for a parent, and managing one">
+  <source src="/img/docs/tenant-hierarchy-oversight.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-oversight.vtt" srcLang="en" label="English" default />
+</video>
+
 Open **Multi-Tenancy > Tenant Hierarchy**. It looks like the **Tenants** screen. Each parent is listed with its address and badges for its state, a count such as **3 of 25 child tenants** and where its child tenants' data lives, with its child tenants underneath. Use the search box to find a parent by its name or address, or by the name or address of one of its child tenants. Click a parent's name, or **Manage**, to see all its child tenants and the actions for the parent. **View** opens the site.
 
 **Orphaned child tenants** are child tenants whose parent no longer exists. Move each one to a parent, or make it an ordinary tenant.
 
 ## Make a tenant a parent
+
+<video controls preload="metadata" width="100%" aria-label="Screencast of making a tenant a parent: picking the tenant, setting its policy, and the words its team sees">
+  <source src="/img/docs/tenant-hierarchy-platform.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy-platform.vtt" srcLang="en" label="English" default />
+</video>
 
 Any tenant that is set up and not yet part of the hierarchy can become a parent. If there is none, click **Add Tenant**, create and set up the tenant on the **Tenants** screen, then come back.
 
@@ -84,3 +94,24 @@ On a parent's page:
 | **Remove everything** | Only for a suspended parent. Removes each child tenant, then the parent, with all their data. Type the tenant name to confirm. This cannot be undone. |
 
 A parent cannot be removed on the **Tenants** screen while it still has child tenants, so that no child tenant is left without its parent by accident.
+
+## Orphaned child tenants
+
+A child tenant is orphaned when its parent no longer exists, for example after an older backup of the tenant list is restored. The hierarchy lists it under **orphaned child tenants**:
+
+- Pick a **New parent** and click **Move** to give it to that parent. Its address changes to one under the new parent.
+- **Make ordinary** turns it into an ordinary tenant that keeps its address and data.
+
+## How parents are kept apart
+
+Each parent sees and changes only its own child tenants. It cannot list, open, change or sign in to another parent or to another parent's child tenants, and the child tenants of different parents cannot reach each other. Their sign-ins, cookies, access rules, sessions and activity are all separate. Only the platform, the main site, sees every parent.
+
+## Troubleshooting
+
+| What you see | Why, and what to do |
+| --- | --- |
+| **The host guards are not installed** | The application was started without the protections the hierarchy needs. Ask the people who host it to follow the Technical Manual. |
+| A tenant is missing from **Make a Parent Tenant** | Only a tenant that is set up and not yet part of the hierarchy can become a parent. Set it up on the **Tenants** screen first. |
+| **Remove everything** is refused | Suspend the parent first. |
+| A blocked feature is listed on a parent's page | A child tenant has a feature on that the policy now blocks. Ask the parent to turn it off in that child tenant, or allow the feature again. |
+| A parent's team cannot add child tenants | The parent reached its **Limit**. Raise it in the parent's **Policy**. |
