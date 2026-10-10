@@ -8,6 +8,13 @@ technical_manual:
 
 Some organizations run a separate site for each business they look after. A bookkeeping firm, for example, may keep one site per client. In this system your organization's site is the **parent** and each site you run for someone else is a **child tenant**. Use this page to add a child tenant, open it without signing in again, change its features, and choose who on your team may open it.
 
+This video shows how a parent adds, opens and manages its clients, decides who may open them, and sees what happened.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
+  <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy.vtt" srcLang="en" label="English" default />
+</video>
+
 Your platform administrator may have renamed these words for your organization. A bookkeeping firm might see **Practice**, **Client** and **Clients** instead of *parent*, *child tenant* and *child tenants*. The screens work the same way whatever the words are.
 
 | | |

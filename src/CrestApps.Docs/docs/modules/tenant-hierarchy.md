@@ -9,6 +9,13 @@ user_manual:
 
 The Tenant Hierarchy module lets a tenant that the platform marks as a **parent** create and manage its own **child** tenants, and lets the parent's users open a child tenant without signing in again. The motivating case is a bookkeeping firm (the parent) that runs one site per client business (the children). The Default tenant stays the platform root and still manages every tenant through the standard Tenants admin.
 
+This video walks through the problem the module solves, each screen, and how it keeps tenants isolated.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
+  <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy.vtt" srcLang="en" label="English" default />
+</video>
+
 | Feature name | Feature ID | Where it runs |
 | --- | --- | --- |
 | Tenant Hierarchy Platform | `CrestApps.OrchardCore.TenantHierarchy.Platform` | The Default tenant only. Makes tenants parents, edits their policies and shows the whole hierarchy. |

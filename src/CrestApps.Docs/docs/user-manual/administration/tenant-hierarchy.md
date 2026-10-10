@@ -8,6 +8,13 @@ technical_manual:
 
 The tenant hierarchy lets one tenant, a **parent**, create and manage its own **child tenants**. A bookkeeping firm, for example, can run one site per client business without asking you for each one. This page is for platform administrators, who work in the main site (the platform). The parent's own team uses [Child Tenants](child-tenants.md).
 
+This video shows how the platform makes a tenant a parent and keeps every parent and child tenant in view.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
+  <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/tenant-hierarchy.vtt" srcLang="en" label="English" default />
+</video>
+
 | | |
 | --- | --- |
 | **Menu** | Multi-Tenancy > Tenant Hierarchy |
