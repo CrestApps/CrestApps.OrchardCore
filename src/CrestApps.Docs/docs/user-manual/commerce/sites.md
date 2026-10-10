@@ -59,6 +59,10 @@ The tab also has domain options. It saves only when **Use custom domains** is ti
 
 **My Sites** opens the **My sites** page, where a customer sees every site they bought and opens the ones that are ready.
 
+:::note[Customers need admin access]
+**My Sites** is in the admin area, so a customer also needs the **Access admin panel** permission to open it, in a role they belong to. Without it they see *You do not have access to this resource*.
+:::
+
 | Badge | What it means |
 | --- | --- |
 | **Being created** | The site is paid for and is being set up. |

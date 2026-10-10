@@ -78,10 +78,11 @@ The site-wide settings are under **Settings > Subscriptions**, with the **Manage
 | **Currency** | The default currency of your plans. |
 | **Default roles to assign for new subscribers** | Roles every new subscriber gets, whatever plan they buy. |
 
-This is what a visitor sees when they sign up to a plan on your site:
+This video shows a visitor signing up to a plan, then the Agreements screen:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a visitor signing up to a plan, creating an account and paying by card in the checkout">
-  <source src="/img/docs/um-subscription-signup.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
+  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
 </video>
 
 ## Manage subscriptions
@@ -167,6 +168,10 @@ The status filter in the list header shows the status names in their short form,
 | **Feature** | Subscriptions |
 
 <AskYourAdmin />
+
+:::note[Customers need admin access]
+**My Plans** is in the admin area, so a customer also needs the **Access admin panel** permission to open it, in a role they belong to. Without it they see *You do not have access to this resource*. Pay links in reminders work without it.
+:::
 
 **My Plans** opens the **My subscriptions** page, where a subscriber sees every plan they subscribe to and cancels it themselves.
 

@@ -38,8 +38,9 @@ The report lists every transaction on the site, newest first.
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of filtering the Transactions report, opening a transaction, recording an offline payment and the reminder settings">
-  <source src="/img/docs/um-transactions.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-transactions.jpg" aria-label="Narrated video of the Transactions report, a transaction, and the reminder settings">
+  <source src="/img/docs/commerce-transactions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-transactions.vtt" srcLang="en" label="English" default />
 </video>
 
 ### Find a transaction
@@ -188,6 +189,10 @@ Customers see and pay their own balances on **My Transactions**. Every signed-in
 | **Feature** | Transactions |
 
 <AskYourAdmin />
+
+:::note[Customers need admin access]
+**My Transactions** is in the admin area, so a customer also needs the **Access admin panel** permission to open it, in a role they belong to. Without it they see *You do not have access to this resource*. Pay links in reminders work without it.
+:::
 
 ### See what you owe
 

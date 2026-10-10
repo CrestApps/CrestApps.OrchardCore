@@ -1,0 +1,347 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:05.572
+The CrestApps Commerce modules let an Orchard Core site take payments.
+
+00:00:05.572 --> 00:00:11.045
+Sell subscriptions online, set up payment plans for your customers, send invoices and
+
+00:00:11.045 --> 00:00:13.933
+receipts, and keep track of every payment.
+
+00:00:13.933 --> 00:00:19.286
+This video walks through each part, from connecting a payment provider to extending
+
+00:00:19.286 --> 00:00:20.850
+the modules in code.
+
+00:00:25.450 --> 00:00:29.859
+Selling online and selling over the phone often end up in different places:
+
+00:00:29.859 --> 00:00:34.160
+a payment page here, and a spreadsheet of who still owes what over there.
+
+00:00:34.910 --> 00:00:40.584
+The Commerce modules send every payment through one checkout, whether a visitor buys
+
+00:00:40.584 --> 00:00:45.690
+a plan, a customer pays an invoice, or a saved card is charged on schedule.
+
+00:00:46.440 --> 00:00:50.592
+Every amount owed is a transaction, so there is one list of what
+
+00:00:50.592 --> 00:00:55.100
+each customer owes and has paid, with reminders and receipts built in.
+
+00:00:59.300 --> 00:01:01.342
+The checkout takes the money.
+
+00:01:01.342 --> 00:01:03.500
+Payment providers plug into it:
+
+00:01:03.500 --> 00:01:08.983
+Stripe for cards, Apple Pay and Google Pay, and Pay Later for customers who pay offline.
+
+00:01:08.983 --> 00:01:11.900
+Coupons and taxes are applied along the way.
+
+00:01:12.650 --> 00:01:16.132
+Transactions record what customers owe and pay.
+
+00:01:16.132 --> 00:01:21.716
+Reminders, numbered invoices with a link that pays them, and receipts are built
+
+00:01:21.716 --> 00:01:26.380
+on them, and the Payments and Refunds screens show every attempt.
+
+00:01:27.130 --> 00:01:29.391
+On top, you choose what to sell:
+
+00:01:29.391 --> 00:01:35.817
+Subscriptions for plans that renew, Subscriptions Sites for ready-made websites, and Installment Plans
+
+00:01:35.817 --> 00:01:39.030
+for payment plans that an administrator sets up.
+
+00:01:43.212 --> 00:01:47.853
+Under Settings, Payments, Stripe, paste your Stripe keys and save them.
+
+00:01:47.853 --> 00:01:52.072
+Then click Connect, which links your Stripe account to the site.
+
+00:01:52.526 --> 00:01:56.742
+While Enable Production is cleared, Stripe runs in test mode:
+
+00:01:56.742 --> 00:02:01.146
+you can try every flow with test cards, and no real money moves.
+
+00:02:01.599 --> 00:02:05.779
+Under Commerce, Currencies, choose the currencies you sell in.
+
+00:02:05.779 --> 00:02:09.469
+Plans and products pick their currency from this list.
+
+00:02:13.656 --> 00:02:16.748
+Under Commerce, Coupons, click Add coupon.
+
+00:02:16.748 --> 00:02:21.646
+Give it a code, a description, and a percentage or a fixed amount off.
+
+00:02:22.656 --> 00:02:26.817
+Choose what it applies to, such as the first billing cycle, how many
+
+00:02:26.817 --> 00:02:29.347
+times it can be used, and when it ends.
+
+00:02:29.347 --> 00:02:30.696
+Then click Create.
+
+00:02:31.148 --> 00:02:35.677
+The list shows each coupon with its discount, how often it was used,
+
+00:02:35.677 --> 00:02:37.084
+and its end date.
+
+00:02:37.084 --> 00:02:39.838
+Filter it by status in the list header.
+
+00:02:44.022 --> 00:02:48.262
+A subscription plan is a content item with a price and a billing
+
+00:02:48.262 --> 00:02:51.714
+period, and it can add a setup fee or a free trial.
+
+00:02:51.714 --> 00:02:54.682
+Visitors see your plans, and click Sign up.
+
+00:02:55.134 --> 00:02:58.161
+The checkout walks the buyer through its steps.
+
+00:02:58.161 --> 00:03:03.414
+Here they create an account, while the order summary shows the plan and its setup fee.
+
+00:03:11.312 --> 00:03:16.042
+On the payment step, they enter their card, and can apply a promotion code.
+
+00:03:18.901 --> 00:03:22.958
+Stripe confirms the payment, and the purchase is complete.
+
+00:03:22.958 --> 00:03:25.241
+The subscriber gets a receipt.
+
+00:03:26.825 --> 00:03:32.451
+Administrators find every subscriber under Subscriptions, Agreements, with its status.
+
+00:03:32.451 --> 00:03:36.975
+Each agreement shows the plan, its billing, and what happened to it.
+
+00:03:37.426 --> 00:03:43.686
+Under Actions, Cancel subscription stops the billing, right away or when the paid period ends.
+
+00:03:43.686 --> 00:03:47.316
+Pause billing holds the payments without cancelling.
+
+00:03:51.492 --> 00:03:56.407
+Installment plans sell something on a payment plan, for example over the phone.
+
+00:03:56.407 --> 00:04:01.728
+Under Subscriptions, Installment Plans, click New plan, and pick a customer, or create
+
+00:04:01.728 --> 00:04:03.752
+one from a name and an email.
+
+00:04:04.203 --> 00:04:08.156
+Enter what the plan is for, the total, the down payment, the number
+
+00:04:08.156 --> 00:04:12.272
+of payments after it, how often they fall due, and the first due date.
+
+00:04:12.272 --> 00:04:14.383
+The schedule updates as you type.
+
+00:04:14.835 --> 00:04:17.408
+Choose how the payments are collected:
+
+00:04:17.408 --> 00:04:22.145
+charge the card on each due date, or invoice the customer for each payment.
+
+00:04:22.145 --> 00:04:24.485
+Then continue to the down payment.
+
+00:04:24.935 --> 00:04:26.983
+Enter the customer's card.
+
+00:04:26.983 --> 00:04:31.909
+The down payment is charged now, and the card is kept for the schedule.
+
+00:04:31.909 --> 00:04:36.835
+On devices that support them, Apple Pay and Google Pay appear here too.
+
+00:04:37.287 --> 00:04:38.798
+The plan is active.
+
+00:04:38.798 --> 00:04:43.213
+Its page shows every payment and where it stands, the card on file,
+
+00:04:43.213 --> 00:04:44.967
+and the plan's history.
+
+00:04:49.169 --> 00:04:55.035
+The list shows every plan with its customer, what was received, and the next payment.
+
+00:04:55.035 --> 00:04:59.419
+Search it, or filter it by status, such as Active or Past due.
+
+00:04:59.871 --> 00:05:02.660
+Each payment is charged on its due date.
+
+00:05:02.660 --> 00:05:06.963
+A declined card is tried again after a few days, and the customer
+
+00:05:06.963 --> 00:05:08.418
+is told each time.
+
+00:05:08.418 --> 00:05:12.661
+After the last try, the payment is left for the customer to pay.
+
+00:05:13.114 --> 00:05:18.614
+Charge now collects a payment early, or retries a declined card straight away.
+
+00:05:18.614 --> 00:05:21.494
+It always asks for confirmation first.
+
+00:05:21.945 --> 00:05:27.003
+Cancel the plan stops the payments not yet received, and tells the customer.
+
+00:05:27.003 --> 00:05:31.135
+Payments already received stay received, and can be refunded.
+
+00:05:35.310 --> 00:05:41.740
+Every payment of a plan, every Pay Later order, and any other balance is a transaction.
+
+00:05:41.740 --> 00:05:48.100
+Commerce, Transactions lists them, and the filters narrow them by status or by source.
+
+00:05:48.551 --> 00:05:53.117
+A transaction shows its total, what was paid, and what is outstanding, with
+
+00:05:53.117 --> 00:05:55.991
+a timeline of everything that happened to it.
+
+00:05:56.444 --> 00:06:02.113
+Record a payment taken by cash or bank transfer, mark it as paid, or cancel it.
+
+00:06:02.113 --> 00:06:04.914
+Each of these asks for confirmation.
+
+00:06:05.364 --> 00:06:11.041
+Reminders tell customers before a payment falls due, and again while it is overdue.
+
+00:06:11.041 --> 00:06:15.634
+Under Settings, Commerce, Transactions, choose when they are sent.
+
+00:06:19.812 --> 00:06:23.086
+A payment the customer pays themselves is invoiced.
+
+00:06:23.086 --> 00:06:27.451
+The first time they are told about it, it gets a short invoice number.
+
+00:06:27.451 --> 00:06:29.462
+Send reminder tells them now.
+
+00:06:29.916 --> 00:06:32.348
+The invoice is ready to print.
+
+00:06:32.348 --> 00:06:37.752
+Its payment link pays it without signing in, and expires after sixty days.
+
+00:06:37.752 --> 00:06:40.116
+Copy it, to send it yourself.
+
+00:06:41.720 --> 00:06:45.582
+The customer opens the link, sees the invoice, and clicks Pay.
+
+00:06:45.582 --> 00:06:50.580
+The checkout opens straight on the payment, with the balance in the order summary.
+
+00:06:51.032 --> 00:06:54.702
+They enter their card, just like in any other checkout.
+
+00:06:57.607 --> 00:07:02.907
+The transaction is settled, and a receipt with its own short number is sent to them.
+
+00:07:07.078 --> 00:07:12.378
+Commerce, Payments lists every attempt to take money, successful or not, and why
+
+00:07:12.378 --> 00:07:14.228
+a failed payment failed.
+
+00:07:16.581 --> 00:07:21.454
+Refund sends money back to the card it came from, in full or in part.
+
+00:07:21.454 --> 00:07:26.781
+It asks for confirmation, and the customer is told when the refund succeeds.
+
+00:07:27.232 --> 00:07:30.346
+Commerce, Refunds lists every refund.
+
+00:07:30.346 --> 00:07:36.212
+A refund that the gateway can't finish on its own is settled by hand, here.
+
+00:07:40.412 --> 00:07:42.742
+The plan defaults are site settings:
+
+00:07:42.742 --> 00:07:46.627
+how a new plan collects its payments, and the days after which a
+
+00:07:46.627 --> 00:07:48.569
+declined card is tried again.
+
+00:07:48.569 --> 00:07:51.232
+A recipe sets them with the Settings step.
+
+00:07:51.982 --> 00:07:57.341
+Set the site's Base URL, so the links in reminders point at your public address.
+
+00:07:57.341 --> 00:08:03.137
+A background task collects the scheduled payments every fifteen minutes, and on several
+
+00:08:03.137 --> 00:08:07.562
+servers, a distributed lock, such as Redis, keeps each plan safe.
+
+00:08:11.762 --> 00:08:16.509
+Developers create and manage plans with IInstallmentPlanService:
+
+00:08:16.509 --> 00:08:19.289
+create, charge, process and cancel.
+
+00:08:19.289 --> 00:08:22.612
+Money only ever moves through the checkout.
+
+00:08:23.362 --> 00:08:27.732
+To react to a payment, implement ITransactionPaymentHandler.
+
+00:08:27.732 --> 00:08:33.227
+It runs once for every payment applied to a transaction, however it was paid.
+
+00:08:33.227 --> 00:08:35.942
+Refunds have IPaymentRefundHandler.
+
+00:08:36.692 --> 00:08:39.909
+Any payment provider can take installment plans.
+
+00:08:39.909 --> 00:08:44.257
+It keeps a card when asked, charges it without the payer, and reads
+
+00:08:44.257 --> 00:08:47.712
+it back through ICheckoutSavedPaymentMethodProvider.
+
+00:08:49.712 --> 00:08:54.828
+The CrestApps Commerce modules take every payment through one checkout, and keep one
+
+00:08:54.828 --> 00:08:57.614
+record of what each customer owes and paid.
+
+00:08:57.614 --> 00:08:59.092
+Thanks for watching.
+

@@ -17,8 +17,9 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of sending a reminder that numbers an invoice, opening the invoice and copying its pay link">
-  <source src="/img/docs/um-invoice.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-invoices.jpg" aria-label="Narrated video of an invoice, its pay link, and a customer paying through the link">
+  <source src="/img/docs/commerce-invoices.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-invoices.vtt" srcLang="en" label="English" default />
 </video>
 
 ## Invoice numbers
@@ -38,10 +39,6 @@ Every reminder for a payment the customer pays themselves carries a **link that 
 - The link opens a page for that one payment. Nobody needs an account or a password to use it, so a guest who bought without an account can pay too.
 - Each link works for **60 days**. Every reminder sends a fresh link, so the newest reminder always has one that works.
 - Anyone who has the link can pay with it. Forwarding the reminder to someone else, such as the person who handles payments at the customer's company, is fine.
-
-<video controls preload="metadata" width="100%" aria-label="Screencast of a customer opening a pay link without signing in and paying the invoice by card">
-  <source src="/img/docs/um-pay-link.mp4" type="video/mp4" />
-</video>
 
 ### The pay page
 

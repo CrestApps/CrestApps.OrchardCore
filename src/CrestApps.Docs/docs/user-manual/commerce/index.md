@@ -10,6 +10,13 @@ The commerce features let your site take money. You can sell subscriptions and w
 
 This section explains each feature in plain words. For installation, configuration files and the technical details, see the [Technical Manual commerce overview](../../modules/commerce.md).
 
+This video walks through the commerce features, from connecting Stripe to refunds:
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce.jpg" aria-label="Narrated video overview of the CrestApps Commerce modules">
+  <source src="/img/docs/commerce.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce.vtt" srcLang="en" label="English" default />
+</video>
+
 ## What each feature does
 
 | Feature | What it does for your business | Page |

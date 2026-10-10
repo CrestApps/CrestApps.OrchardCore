@@ -19,8 +19,9 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 There is no checkout settings screen. What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a visitor signing up to a plan, creating an account and paying by card in the checkout">
-  <source src="/img/docs/um-subscription-signup.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
+  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
 </video>
 
 ## The checkout page
