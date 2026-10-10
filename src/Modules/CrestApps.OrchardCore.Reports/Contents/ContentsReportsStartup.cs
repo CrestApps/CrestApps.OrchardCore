@@ -20,6 +20,7 @@ public sealed class ContentsReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ContentReportSchemaBuilder>();
+        services.AddScoped<ContentReportPropertyDiscovery>();
         services.AddScoped<IReportDataSource, ContentsReportDataSource>();
 
         services
@@ -42,5 +43,18 @@ public sealed class ContentsReportsStartup : StartupBase
         services.AddScoped<IContentReportFieldProvider, ContentPickerFieldReportProvider>();
         services.AddScoped<IContentReportFieldProvider, UserPickerFieldReportProvider>();
         services.AddScoped<IContentReportPartProvider, CommonPartsReportProvider>();
+    }
+}
+
+/// <summary>
+/// Types the properties of parts from the JSON schemas of the CrestApps Recipes feature, when it is on.
+/// </summary>
+[Feature(ReportsConstants.BuilderFeature)]
+[RequireFeatures("OrchardCore.Contents", "CrestApps.OrchardCore.Recipes")]
+public sealed class ContentsRecipeSchemaReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentReportPropertySource, RecipeSchemaContentReportPropertySource>();
     }
 }

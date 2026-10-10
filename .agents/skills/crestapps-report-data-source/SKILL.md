@@ -112,7 +112,13 @@ For a custom content field or part, do not write a new source:
 
 - `IContentReportFieldProvider` (keyed by `FieldType`, last registration wins) or
   `services.AddContentReportFieldProvider("MyField", ReportDataType.Text, ContentReportValueMode.Single, "Text")`.
-- `IContentReportPartProvider` for part data (all providers are combined).
+- Every property a part stores is already a column: `ContentReportPropertyDiscovery` reads the newest published items
+  and adds what no provider or field describes, under a "(more)" group per part (secret-looking paths, content fields
+  and lists of objects are skipped). To type your part's properties, including before any item stores them, implement
+  `IContentReportPropertySource` (path within the part + `ReportDataType`); with the CrestApps Recipes feature on,
+  `RecipeSchemaContentReportPropertySource` already does it from each part's recipe JSON schema.
+- `IContentReportPartProvider` for part data that needs friendlier names, computed values or references (all
+  providers are combined).
 - Derive fields from `ContentReportField`; use `PrepareAsync` for per-query batch work (it runs only when the report
   uses the field) and `GetValue` to read a value. Name fields `{PartName}.{FieldName}[.{Suffix}]`.
 

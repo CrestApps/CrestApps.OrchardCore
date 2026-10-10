@@ -221,7 +221,8 @@ internal static class ContentReportTestHelpers
         services.AddSingleton(typeof(IStringLocalizer<>), typeof(ContentReportTestLocalizer<>));
         services.AddSingleton(contentDefinitionManager ?? Definitions().Object);
         services.AddSingleton(authorizationService ?? AuthorizationFor().Object);
-        services.AddSingleton(session ?? Mock.Of<ISession>());
+        // Without a store, queries return nothing: the content items data source reads items to discover part properties.
+        services.AddSingleton(session ?? new Mock<ISession> { DefaultValue = DefaultValue.Mock }.Object);
 
         new ContentsReportsStartup().ConfigureServices(services);
         configure?.Invoke(services);

@@ -35,10 +35,19 @@ When `OrchardCore.Contents` is enabled, the **Content items** data source offers
 | Metadata | `ContentItemId` (identifier), `ContentItemVersionId`, `DisplayText`, `ContentType`, `Owner` (identifier), `Author`, `CreatedUtc`, `ModifiedUtc`, `PublishedUtc`, `Published` |
 | Content field | `{PartName}.{FieldName}`, with `.{Suffix}` for extra values |
 | Part data | `TitlePart.Title`, `AutoroutePart.Path`, `ContainedPart.ListContentItemId`, and other common parts |
+| Every other part property | `{PartName}.{Path}`, such as `OmnichannelContactPart.DoNotCall` or `AutoroutePart.RouteContainedItems`, in a **(more)** group named after the part |
 
 For example, a `Customer` type with an `Email` text field and an `Order` type with a `Customer` content picker give `Customer.Email` and `Order.Customer` (the first picked id, an identifier), `Order.Customer.ContentItemIds` and `Order.Customer.DisplayText`. Join the order to the customer on `Order.Customer` = `ContentItemId`.
 
 Built-in providers cover the Orchard Core text, numeric, boolean, date, date-time, time, HTML, Markdown, multi-text, link, content picker, user picker, media, taxonomy, localization set and YouTube fields, and the CrestApps phone field. An unknown field type is read as text from its `Text` or `Value` property. Date range filters on the content item index columns are passed down to the query; text filters are not, because database collations may compare case differently from the engine. `ContentItemId` and `Owner` filter join keys exactly (see [Large data](large-data.md#joins-read-only-what-can-match)).
+
+### Every property of every part
+
+Anything a content type stores can be a column, including the properties of parts written in code that no provider describes. When the builder loads the fields of a content type, the source reads its 50 newest published items and adds every property their parts store that is not already a field: each scalar value, nested objects (up to four levels, named with dots, such as `Settings.Mode`), and lists of plain values (joined with commas). Parts an item stores without the content type listing them, such as a part attached in code, are included too. The types come from the stored values; a property that is always empty and ends with `Utc` is taken as a date and time.
+
+When the **CrestApps Recipes** feature is on, the JSON schemas it keeps for parts also describe their properties, typed, even before any item stores them; a property a schema describes keeps the schema's type. Modules can describe the properties of their own parts the same way with `IContentReportPropertySource` (see [Content fields and parts](custom-data-sources.md#content-fields-and-parts)).
+
+The content fields of a part, lists of objects, and properties whose path names a secret (such as a token, password, API key, hash or salt) are never added. The items are read only for the schema and for a report that uses one of these properties.
 
 A content type is listed only when the principal holds `ViewContent` for it (see [Permissions](permissions.md#data-sources-are-the-security-boundary)). To add fields for your own content field types or parts, see [Content fields and parts](custom-data-sources.md#content-fields-and-parts).
 

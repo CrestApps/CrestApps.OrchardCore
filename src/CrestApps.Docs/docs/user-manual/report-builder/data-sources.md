@@ -43,6 +43,8 @@ If a data source or data set is missing, your site may not use the feature that 
 
 Each content type is a data set with the information every item has (**Content item ID**, **Display text**, **Content type**, **Owner**, **Author**, **Created**, **Modified**, **Published on**, **Published**) and its own fields, grouped by part. Some fields give extra values: a content picker gives the ID of the item it picks and the display text of the items, and a link gives its address and its text.
 
+Everything else a content type stores can be a column too, including the settings and values of parts added by modules, such as the contact preferences of a contact. Look for them in the **(more)** group of each part, such as **Omnichannel Contact (more)**. Values that look secret, such as passwords and access tokens, are never offered.
+
 To protect sensitive content from report builders, your administrator can make its content type **Securable** and allow only some roles to view it.
 
 ## Queries

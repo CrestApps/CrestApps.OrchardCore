@@ -24,6 +24,7 @@ public sealed class ContentsReportDataSource : IReportDataSource
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly ContentReportSchemaBuilder _schemaBuilder;
+    private readonly ContentReportPropertyDiscovery _discovery;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
@@ -39,12 +40,14 @@ public sealed class ContentsReportDataSource : IReportDataSource
         IContentDefinitionManager contentDefinitionManager,
         IAuthorizationService authorizationService,
         ContentReportSchemaBuilder schemaBuilder,
+        ContentReportPropertyDiscovery discovery,
         ISession session,
         IStringLocalizer<ContentsReportDataSource> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _authorizationService = authorizationService;
         _schemaBuilder = schemaBuilder;
+        _discovery = discovery;
         _session = session;
         S = stringLocalizer;
     }
@@ -109,7 +112,7 @@ public sealed class ContentsReportDataSource : IReportDataSource
         return new ReportDataSetSchema
         {
             DataSet = Describe(definition),
-            Fields = (await BuildFieldsAsync(definition))
+            Fields = (await BuildFieldsAsync(definition, null, cancellationToken))
                 .Select(field => field.Descriptor)
                 .ToList(),
         };
@@ -128,7 +131,7 @@ public sealed class ContentsReportDataSource : IReportDataSource
             return new ReportDataTable();
         }
 
-        var fields = SelectFields(await BuildFieldsAsync(definition), query.Fields);
+        var fields = SelectFields(await BuildFieldsAsync(definition, query.Fields, cancellationToken), query.Fields);
         var maxRows = Math.Max(1, query.MaxRows);
         var take = maxRows == int.MaxValue
             ? maxRows
@@ -271,9 +274,19 @@ public sealed class ContentsReportDataSource : IReportDataSource
 
     // The fields of a content type, plus the container of a type that lists hold: a ListPart that contains the type
     // makes Orchard Core add a ContainedPart to its items at run time, so the type definition alone does not show it.
-    private async Task<IReadOnlyList<ContentReportField>> BuildFieldsAsync(ContentTypeDefinition definition)
+    // Then every other property its parts store, discovered only when the schema or a requested field needs them.
+    private async Task<IReadOnlyList<ContentReportField>> BuildFieldsAsync(ContentTypeDefinition definition, ISet<string> requested, CancellationToken cancellationToken)
     {
-        return BuildFields(definition, (await _contentDefinitionManager.ListTypeDefinitionsAsync()).ToList());
+        var fields = BuildFields(definition, (await _contentDefinitionManager.ListTypeDefinitionsAsync()).ToList());
+
+        if (requested is { Count: > 0 } && requested.All(name => fields.Any(field => string.Equals(field.Descriptor.Name, name, StringComparison.Ordinal))))
+        {
+            return fields;
+        }
+
+        fields.AddRange(await _discovery.DiscoverAsync(definition, fields, cancellationToken));
+
+        return fields;
     }
 
     private List<ContentReportField> BuildFields(ContentTypeDefinition definition, IReadOnlyList<ContentTypeDefinition> definitions)

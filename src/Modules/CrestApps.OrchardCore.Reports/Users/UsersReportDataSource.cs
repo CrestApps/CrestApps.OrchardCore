@@ -26,31 +26,6 @@ public sealed class UsersReportDataSource : IReportDataSource
 
     private const string PropertiesPrefix = "Properties.";
 
-    // Modules keep more than profile settings with a user, such as the access and refresh tokens of a connected phone
-    // system or other account. A property is left out when any part of its path names one of these.
-    private static readonly string[] _secretNames =
-    [
-        "token",
-        "secret",
-        "password",
-        "passcode",
-        "credential",
-        "apikey",
-        "api_key",
-        "accesskey",
-        "privatekey",
-        "private_key",
-        "signingkey",
-        "encryptionkey",
-        "hash",
-        "stamp",
-        "salt",
-        "otp",
-        "recoverycode",
-        "authenticator",
-        "cookie",
-    ];
-
     private readonly ISession _session;
     private readonly IAuthorizationService _authorizationService;
     private readonly IStringLocalizer S;
@@ -254,14 +229,9 @@ public sealed class UsersReportDataSource : IReportDataSource
         }
 
         return QueryResultSchema.Flatten(user.Properties)
-            .Where(pair => !IsSecret(pair.Key))
+            .Where(pair => !ReportSecretNames.IsSecret(pair.Key))
             .Select(pair => new KeyValuePair<string, JsonNode>(PropertiesPrefix + pair.Key, pair.Value))
             .ToArray();
-    }
-
-    private static bool IsSecret(string path)
-    {
-        return path.Split('.').Any(segment => _secretNames.Any(name => segment.Contains(name, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static object UserValue(User user, Dictionary<string, JsonNode> properties, ReportFieldDescriptor field)
