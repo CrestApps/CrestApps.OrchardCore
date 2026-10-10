@@ -320,11 +320,11 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Bulk email from address '{AddressId}' to {Domain} waits until {Until}: the domain deferred {Count} emails in the last {Minutes} minutes.",
+                "Bulk email from address '{AddressId}' to {Domain} waits until {Until}: the domain deferred at least {Count} emails in the last {Minutes} minutes.",
                 addressId.SanitizeLogValue(),
                 recipientDomain.SanitizeLogValue(),
                 state.DomainBackoffs[recipientDomain],
-                deferrals,
+                EmailHealthPolicy.DomainDeferralsBeforeBackoff,
                 (int)EmailHealthPolicy.DomainDeferralWindow.TotalMinutes);
         }
     }
