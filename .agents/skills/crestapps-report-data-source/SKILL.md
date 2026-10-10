@@ -37,7 +37,7 @@ Read these first; they are authoritative:
 - `src/Modules/CrestApps.OrchardCore.Reports/Queries/QueriesReportDataSource.cs` — a source whose schema is inferred from results.
 - `src/Modules/CrestApps.OrchardCore.Reports/Designer/Services/ReportViewsDataSource.cs` — a source built on the engine.
 - `src/Core/CrestApps.OrchardCore.Reports.Core/Designer/ReportQueryEngine.cs` — how sources are called.
-- Docs: `src/CrestApps.Docs/docs/modules/report-builder.md`.
+- Docs: `src/CrestApps.Docs/docs/modules/report-builder/` (`custom-data-sources.md` for building a source).
 
 ## The contract (all members required)
 
@@ -132,6 +132,8 @@ Use `TestContext.Current.CancellationToken` (xUnit1051) and build with
 
 ## Docs (required)
 
-Add the source to `src/CrestApps.Docs/docs/modules/report-builder.md` (or its own technical page linked from
-there), its feature to `docs/feature-reference.md`, configuration to `docs/configuration.md`, and the data source name
-to the User Manual page `docs/user-manual/report-builder.md` under "Words you will see".
+Add the source to the built-in sources of `src/CrestApps.Docs/docs/modules/report-builder/data-sources.md` (or its own
+technical page linked from there; `custom-data-sources.md` explains how to build one), its feature to
+`docs/feature-reference.md`, configuration to `docs/configuration.md`, what people can report on with it to the User
+Manual page `docs/user-manual/report-builder/data-sources.md`, and its name to "Words you will see" in
+`docs/user-manual/report-builder/index.md`.

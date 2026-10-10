@@ -1644,7 +1644,7 @@ them all.
 OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=100
 ```
 
-See [Report Builder](modules/report-builder.md#configuration).
+See [Report Builder](modules/report-builder/index.md#configuration).
 
 ## Orchard Core sections the modules depend on
 

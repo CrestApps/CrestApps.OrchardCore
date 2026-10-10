@@ -5,7 +5,7 @@ title: Reports
 description: Find a report, set its date range and filters, and export it to CSV or Excel.
 technical_manual:
   - contact-center/report-catalog
-  - modules/report-builder
+  - modules/report-builder/index
   - modules/reports
   - omnichannel/crm
 ---
@@ -26,7 +26,7 @@ Reports show what happened in your contact center over a period you choose: call
 
 You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 
-To build your own reports with drag and drop, see [Report Builder](report-builder.md).
+To build your own reports with drag and drop, see [Report Builder](report-builder/index.md).
 
 ## Run a report
 

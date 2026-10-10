@@ -13,6 +13,7 @@ user_manual:
   - user-manual/administration/phone-number-verification
   - user-manual/administration/time-zones
   - user-manual/reports
+  - user-manual/report-builder/index
 ---
 
 # Standard Modules
@@ -32,7 +33,7 @@ The administrators who use these features in the browser have their own guides i
 [Bulk Import and Export](../user-manual/administration/import-and-export.md),
 [Do Not Call Lists](../user-manual/administration/do-not-call-lists.md),
 [Phone Number Verification](../user-manual/administration/phone-number-verification.md),
-[Time Zones](../user-manual/administration/time-zones.md) and [Reports](../user-manual/reports.md).
+[Time Zones](../user-manual/administration/time-zones.md), [Reports](../user-manual/reports.md) and the [Report Builder](../user-manual/report-builder/index.md).
 :::
 
 ## Modules
@@ -51,6 +52,7 @@ The administrators who use these features in the browser have their own guides i
 | [Twilio provider](phone-number-verifications-twilio.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Twilio Lookup provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
 | [Recipes](recipes.md) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes | |
 | [Reports](reports.md) | `CrestApps.OrchardCore.Reports`, `CrestApps.OrchardCore.Reports.OpenXml` | Shared Reports area, extensible filters, uniform renderer and CSV / Excel exports | [Reports](../user-manual/reports.md) |
+| [Report Builder](report-builder/index.md) | `CrestApps.OrchardCore.Reports.Builder` | Drag-and-drop report designer with pluggable data sources, joins, formulas, charts, pivots, reusable views and sharing | [Report Builder](../user-manual/report-builder/index.md) |
 | [Resources](resources.md) | `CrestApps.OrchardCore.Resources` | Shared scripts, stylesheets and view components | |
 | [SignalR compatibility](signalr.md) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module | |
 | [Time Zones](time-zones.md) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps that replace the Orchard Core time zone list | [Time Zones](../user-manual/administration/time-zones.md) |
