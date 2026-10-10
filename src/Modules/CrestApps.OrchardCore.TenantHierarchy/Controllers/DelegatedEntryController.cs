@@ -115,7 +115,15 @@ public sealed class DelegatedEntryController : Controller
             ["code_challenge_method"] = "S256",
         });
 
-        return Redirect($"{parentAddress}/{TenantHierarchyConstants.Routes.Authorize}{query}");
+        // The browser may only go to the host of the parent the broker names.
+        var target = new Uri($"{parentAddress}/{TenantHierarchyConstants.Routes.Authorize}{query}", UriKind.Absolute);
+
+        if (target.Host != new Uri(parentAddress, UriKind.Absolute).Host)
+        {
+            return ErrorView(EntryErrorKind.NoAccess, null);
+        }
+
+        return Redirect(target.AbsoluteUri);
     }
 
     /// <summary>

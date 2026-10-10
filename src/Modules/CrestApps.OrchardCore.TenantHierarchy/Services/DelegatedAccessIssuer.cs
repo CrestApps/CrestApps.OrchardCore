@@ -195,6 +195,25 @@ public sealed class DelegatedAccessIssuer
     }
 
     /// <summary>
+    /// Returns the address of a child tenant of this parent, from its shell settings, or <see langword="null"/> when
+    /// the tenant is not one of its child tenants.
+    /// </summary>
+    /// <param name="childTenantId">The tenant identifier of the child tenant.</param>
+    public async Task<string> GetChildAddressAsync(string childTenantId)
+    {
+        if (string.IsNullOrEmpty(childTenantId))
+        {
+            return null;
+        }
+
+        var entry = await _entryStore.FindByTenantIdAsync(childTenantId);
+
+        return entry is null
+            ? null
+            : (await _broker.GetChildAsync(entry.EntryId))?.Address;
+    }
+
+    /// <summary>
     /// Ends every open session a parent sign-in started.
     /// </summary>
     /// <param name="parentSessionId">The parent sign-in.</param>

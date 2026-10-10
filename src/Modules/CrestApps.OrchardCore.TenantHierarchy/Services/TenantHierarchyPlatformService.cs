@@ -288,7 +288,8 @@ public sealed class TenantHierarchyPlatformService
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
-            _logger.LogInformation("The platform made tenant '{Tenant}' a parent tenant with the host '{Host}'.", settings.Name, host);
+            // The host is left out: it comes from the form, and the tenant's settings already record it.
+            _logger.LogInformation("The platform made tenant '{Tenant}' a parent tenant.", settings.Name);
         }
 
         return (TenantHierarchyResult.Success, errors);

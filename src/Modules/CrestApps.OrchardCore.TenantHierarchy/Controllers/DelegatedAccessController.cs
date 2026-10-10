@@ -92,14 +92,22 @@ public sealed class DelegatedAccessController : Controller
             return ErrorView(EntryErrorKind.MfaRequired);
         }
 
-        var target = $"{child.Address}/{TenantHierarchyConstants.Routes.Enter}";
+        var address = $"{child.Address}/{TenantHierarchyConstants.Routes.Enter}";
 
         if (TenantHierarchyUrls.IsLocalUrl(returnUrl))
         {
-            target += QueryString.Create("returnUrl", returnUrl);
+            address += QueryString.Create("returnUrl", returnUrl);
         }
 
-        return Redirect(target);
+        // The browser may only go to the host the child's settings name.
+        var target = new Uri(address, UriKind.Absolute);
+
+        if (target.Host != new Uri(child.Address, UriKind.Absolute).Host)
+        {
+            return ErrorView(EntryErrorKind.NoAccess);
+        }
+
+        return Redirect(target.AbsoluteUri);
     }
 
     /// <summary>
@@ -136,10 +144,22 @@ public sealed class DelegatedAccessController : Controller
         }
 
         var callback = await _issuer.IssueCodeAsync(User, client_id, code_challenge, state);
+        var childAddress = callback is null ? null : await _issuer.GetChildAddressAsync(client_id);
 
-        return callback is null
-            ? ErrorView(EntryErrorKind.NoAccess)
-            : Redirect(callback);
+        if (childAddress is null)
+        {
+            return ErrorView(EntryErrorKind.NoAccess);
+        }
+
+        // The callback is built from the child's settings; the browser may only go to the host they name.
+        var target = new Uri(callback, UriKind.Absolute);
+
+        if (target.Host != new Uri(childAddress, UriKind.Absolute).Host)
+        {
+            return ErrorView(EntryErrorKind.NoAccess);
+        }
+
+        return Redirect(target.AbsoluteUri);
     }
 
     /// <summary>
