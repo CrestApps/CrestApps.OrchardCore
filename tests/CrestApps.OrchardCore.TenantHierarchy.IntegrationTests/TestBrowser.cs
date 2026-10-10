@@ -131,6 +131,33 @@ public sealed partial class TestBrowser : IDisposable
         => _cookies.TryGetValue(host, out var jar) && jar.Keys.Any(name => name.StartsWith(namePrefix, StringComparison.Ordinal));
 
     /// <summary>
+    /// Returns the cookies of a host whose names start with the given text.
+    /// </summary>
+    /// <param name="host">The host.</param>
+    /// <param name="namePrefix">The start of the cookie name.</param>
+    public IReadOnlyList<KeyValuePair<string, string>> GetCookies(string host, string namePrefix)
+        => _cookies.TryGetValue(host, out var jar)
+            ? jar.Where(cookie => cookie.Key.StartsWith(namePrefix, StringComparison.Ordinal)).ToList()
+            : [];
+
+    /// <summary>
+    /// Sets a cookie for a host, as an attacker who copied it from another site would.
+    /// </summary>
+    /// <param name="host">The host.</param>
+    /// <param name="name">The cookie name.</param>
+    /// <param name="value">The cookie value.</param>
+    public void SetCookie(string host, string name, string value)
+    {
+        if (!_cookies.TryGetValue(host, out var jar))
+        {
+            jar = new Dictionary<string, string>(StringComparer.Ordinal);
+            _cookies[host] = jar;
+        }
+
+        jar[name] = value;
+    }
+
+    /// <summary>
     /// Removes every cookie of a host.
     /// </summary>
     /// <param name="host">The host.</param>
