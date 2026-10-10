@@ -57,7 +57,7 @@ internal sealed class EmailInboundSettingsDisplayDriver : SiteDisplayDriver<Emai
             model.HasMailgunSigningKey = !string.IsNullOrEmpty(settings.MailgunSigningKey);
             model.AmazonSnsTopicArns = string.Join(Environment.NewLine, settings.AmazonSnsTopicArns ?? []);
             model.WebhookUrls = await _webhookUrls.GetAllAsync();
-        }).Location("Content:10%Inbound email;10")
+        }).Location("Content:10#Inbound email;10")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, OmnichannelConstants.Permissions.ManageChannelEndpoints));
     }
