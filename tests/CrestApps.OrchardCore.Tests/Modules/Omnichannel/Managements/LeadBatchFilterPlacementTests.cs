@@ -14,6 +14,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Implementation;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Zones;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
@@ -102,7 +103,7 @@ public sealed class LeadBatchFilterPlacementTests
         return new LeadBatchFilterDisplayDriver(
             statuses.Object,
             new LeadSourceProvider(session),
-            new LeadListProvider(session),
+            new LeadImportProvider(session, Mock.Of<ILocalClock>(), new PassThroughStringLocalizer<LeadImportProvider>()),
             new LeadRatingProvider(contentDefinitionManager.Object),
             contentTypeProvider,
             new PassThroughStringLocalizer<LeadBatchFilterDisplayDriver>());

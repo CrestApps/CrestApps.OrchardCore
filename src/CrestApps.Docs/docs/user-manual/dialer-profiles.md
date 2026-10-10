@@ -51,7 +51,7 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 ## Create a profile
 
 1. Open **Interaction Center > Management > Dialer Profiles** and click **Add Dialer Profile**.
-2. On **General**, enter a **Name**, an optional **Description**, and leave **Enabled** ticked. A disabled profile places no calls.
+2. On **General**, enter a **Name**, an optional **Description**, and leave **Enabled** ticked. A disabled profile places no calls, and the records loaded under it aren't offered to agents until you turn it back on.
 3. On **Dialing**, pick the **Mode** and the **Voice call provider** (or *Default provider*). Power, Progressive and Predictive show extra fields:
 
    | Field | Modes | What it does |

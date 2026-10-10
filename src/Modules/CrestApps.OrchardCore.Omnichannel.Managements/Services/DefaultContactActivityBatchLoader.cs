@@ -198,6 +198,25 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the activity load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
                 return;
             }
+
+            // The load editor refuses this too, but a scheduled load runs later, when other records may be waiting.
+            var dialerCampaignId = string.IsNullOrWhiteSpace(batch.CampaignId) ? flowSettings.CampaignId : batch.CampaignId;
+            var conflicts = await DialerCampaignProfileGuard.FindConflictsAsync(
+                dialerContributor,
+                dialerCampaignId,
+                dialerProfile.ProfileId,
+                movingActivityIds: null,
+                cancellationToken);
+
+            if (conflicts.Count > 0)
+            {
+                batch.Status = OmnichannelActivityBatchStatus.New;
+
+                await _catalog.UpdateAsync(batch, cancellationToken);
+
+                _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because its campaign '{CampaignId}' already has records waiting under the dialer profiles {Profiles}, and a campaign's waiting records must all use one dialer profile. Load it with that profile, into another campaign, or once those records are worked.", batch.ItemId, dialerCampaignId, DialerCampaignProfileGuard.Describe(conflicts));
+                return;
+            }
         }
 
         long documentId = 0;
@@ -746,13 +765,6 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => !index.IsClosed || index.IsConverted);
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.ListName))
-        {
-            var listName = filter.ListName.Trim();
-
-            query = query.Where(index => index.ListName == listName);
-        }
-
         if (!string.IsNullOrEmpty(filter.SourceId))
         {
             var sourceId = filter.SourceId;
@@ -774,9 +786,29 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             query = query.Where(index => index.Rating.IsIn(ratings));
         }
 
-        return (await query.ListAsync(cancellationToken))
+        var leadIds = (await query.ListAsync(cancellationToken))
             .Select(index => index.ContentItemId)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        // A file can hold more leads than a database accepts as query parameters, so the leads of the import are read
+        // on their own and the two sets are intersected here.
+        if (!string.IsNullOrWhiteSpace(filter.ImportEntryId) && leadIds.Count > 0)
+        {
+            var entryId = filter.ImportEntryId.Trim();
+            var contentType = batch.ContactContentType;
+
+            var importQuery = batch.OnlyPublishedLeads
+                ? session.QueryIndex<LeadImportIndex>(index => index.Published && index.EntryId == entryId && index.ContentType == contentType)
+                : session.QueryIndex<LeadImportIndex>(index => index.Latest && index.EntryId == entryId && index.ContentType == contentType);
+
+            var importedIds = (await importQuery.ListAsync(cancellationToken))
+                .Select(index => index.ContentItemId)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            leadIds.IntersectWith(importedIds);
+        }
+
+        return leadIds;
     }
 
     /// <summary>
