@@ -24,6 +24,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions/CrestApps.OrchardCore.Omnichannel.Messaging.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions/CrestApps.OrchardCore.TenantHierarchy.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />
   </Folder>
@@ -45,6 +46,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core/CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/CrestApps.OrchardCore.Omnichannel.Voice.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.TenantHierarchy.Core/CrestApps.OrchardCore.TenantHierarchy.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
   </Folder>
@@ -60,6 +62,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.TenantHierarchy/CrestApps.OrchardCore.TenantHierarchy.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
   </Folder>
@@ -130,6 +133,7 @@
     <Project Path="tests/CrestApps.OrchardCore.Benchmarks/CrestApps.OrchardCore.Benchmarks.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj" />
+    <Project Path="tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />
   </Folder>

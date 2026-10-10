@@ -191,6 +191,14 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | [Users](./modules/users) |
 
+## Multi-Tenancy
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.TenantHierarchy.Platform` | Tenant Hierarchy Platform (Default tenant only) | [Tenant Hierarchy](./modules/tenant-hierarchy) |
+| `CrestApps.OrchardCore.TenantHierarchy.Parent` | Parent Tenant (turned on by the platform) | [Tenant Hierarchy](./modules/tenant-hierarchy) |
+| `CrestApps.OrchardCore.TenantHierarchy.Child` | Child Tenant (turned on by the platform) | [Tenant Hierarchy](./modules/tenant-hierarchy) |
+
 ## Infrastructure, Resources, and Roles
 
 | Feature ID | Name | Docs |
