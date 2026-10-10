@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -25,6 +26,13 @@ public static class HierarchyAuditText
         if (data.Name == HierarchyAuditEventNames.Entered && !string.IsNullOrEmpty(data.Details))
         {
             return T.GetString("Roles: {0}", data.Details).Value;
+        }
+
+        // A scheduled removal stores, in the universal "u" format, the time until which the child can be restored.
+        if (data.Name == HierarchyAuditEventNames.RemovalScheduled &&
+            DateTime.TryParse(data.Details, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var until))
+        {
+            return T.GetString("Can be restored until {0}", until.ToString("d", CultureInfo.CurrentCulture)).Value;
         }
 
         if (data.Name != HierarchyAuditEventNames.SessionEnded)

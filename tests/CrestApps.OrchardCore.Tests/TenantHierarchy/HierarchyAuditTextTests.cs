@@ -49,6 +49,28 @@ public sealed class HierarchyAuditTextTests
     }
 
     [Fact]
+    public void DescribeDetails_OfAScheduledRemoval_ShowsTheDateUntilWhichItCanBeRestored()
+    {
+        // Arrange
+        var data = new HierarchyAuditEvent { Name = HierarchyAuditEventNames.RemovalScheduled, Details = "2026-10-16 17:06:24Z" };
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.GetCultureInfo("en-US");
+
+        try
+        {
+            // Act
+            var text = HierarchyAuditText.DescribeDetails(_localizer, data, _labels);
+
+            // Assert
+            Assert.Equal("Can be restored until 10/16/2026", text);
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
     public void DescribeDetails_OfAnotherEvent_KeepsTheDetails()
     {
         // Arrange
