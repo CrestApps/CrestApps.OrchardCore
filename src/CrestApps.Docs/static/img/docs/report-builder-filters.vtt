@@ -1,0 +1,29 @@
+WEBVTT
+
+00:00:03.183 --> 00:00:05.240
+Drag a field onto Filters.
+
+00:00:05.240 --> 00:00:08.582
+A row filter narrows the data before grouping.
+
+00:00:08.582 --> 00:00:14.173
+A result filter applies after it, such as channels with more than ten activities.
+
+00:00:14.628 --> 00:00:18.707
+Let viewers change this filter, and pick how they choose:
+
+00:00:18.707 --> 00:00:23.627
+a drop-down list, a list with several choices, a recent period, a date
+
+00:00:23.627 --> 00:00:25.958
+or number range, or yes or no.
+
+00:00:26.411 --> 00:00:31.538
+Exposed filters appear above the report, as searchable lists filled with the values
+
+00:00:31.538 --> 00:00:32.921
+found in the data.
+
+00:00:32.921 --> 00:00:35.341
+Viewers pick values and click Apply.
+

@@ -4,7 +4,8 @@ Usage: python assemble.py <workspace>
 
 Reads storyboard.json, durations.json, clips/<clip>/timeline.json and frames (from the recorder), and slides.py
 (for "slide" clips). Writes <output>.mp4, <output>.vtt and <output>.srt in the workspace, where output is the
-storyboard's "output". The intermediate files are in build/.
+storyboard's "output". A chapter with a "short" name is also written on its own, as <output>-<short>.mp4 and .vtt,
+for the documentation page about that task. The intermediate files are in build/.
 """
 import importlib.util
 import json
@@ -139,12 +140,14 @@ class Assembler:
 
     def run(self):
         segments, captions, clock = [], [], 0.0
+        shorts = []
 
         def caption(text, start, length):
             captions.extend((clock + a, clock + b, c) for a, b, c in chunks(text, start, length))
 
         for chapter in self.storyboard["chapters"]:
             title, subtitle = chapter["title"], chapter["subtitle"]
+            chapter_start, first_segment, first_caption = clock, len(segments), len(captions)
             # Chapters made only of cards, the opening and the closing, have no chapter card.
             numbered = any(clip["kind"] != "card" for clip in chapter["clips"])
             label = f"Chapter {int(chapter['id'])}" if numbered else None
@@ -188,6 +191,10 @@ class Assembler:
                     segments.append(path)
                     clock += seconds
 
+            if chapter.get("short"):
+                shorts.append((chapter["short"], segments[first_segment:],
+                               [(a - chapter_start, b - chapter_start, c) for a, b, c in captions[first_caption:]]))
+
         concat = self.build / "segments.txt"
         concat.write_text("".join(f"file '{path.as_posix()}'\n" for path in segments), encoding="utf-8")
         master = self.build / "master.mp4"
@@ -197,14 +204,19 @@ class Assembler:
         print("compressing", flush=True)
         publish(master, output)
 
-        base = output.with_suffix("")
-        with open(f"{base}.srt", "w", encoding="utf-8") as srt:
-            for index, (a, b, text) in enumerate(captions, 1):
-                srt.write(f"{index}\n{timestamp(a)} --> {timestamp(b)}\n{text}\n\n")
-        with open(f"{base}.vtt", "w", encoding="utf-8") as vtt:
-            vtt.write("WEBVTT\n\n")
-            for a, b, text in captions:
-                vtt.write(f"{timestamp(a, '.')} --> {timestamp(b, '.')}\n{text}\n\n")
+        write_captions(output.with_suffix(""), captions)
+
+        # The chapters on their own, for the pages about each task.
+        for short, parts, short_captions in shorts:
+            print("compressing", short, flush=True)
+            short_concat = self.build / f"short-{short}.txt"
+            short_concat.write_text("".join(f"file '{path.as_posix()}'\n" for path in parts), encoding="utf-8")
+            short_master = self.build / f"short-{short}.mp4"
+            run(["-f", "concat", "-safe", "0", "-i", str(short_concat), "-c", "copy", str(short_master)])
+            short_output = self.workspace / f"{self.storyboard['output']}-{short}.mp4"
+            publish(short_master, short_output)
+            write_captions(short_output.with_suffix(""), short_captions)
+            print(f"{short_output}: {short_output.stat().st_size / 1_000_000:.1f} MB")
 
         size = output.stat().st_size / 1_000_000
         print(f"{output}: {clock / 60:.1f} minutes, {len(segments)} segments, {size:.1f} MB")
@@ -219,6 +231,17 @@ def publish(master, output):
     run(["-i", str(master), "-c:v", "libx264", "-preset", "slow", "-crf", PUBLISH_CRF, "-tune", "stillimage",
          "-pix_fmt", "yuv420p", "-r", str(FPS), "-g", str(FPS * 10),
          "-c:a", "aac", "-b:a", PUBLISH_AUDIO, "-ar", "48000", "-ac", "1", "-movflags", "+faststart", str(output)])
+
+
+def write_captions(base, captions):
+    """Writes the captions as <base>.srt and <base>.vtt."""
+    with open(f"{base}.srt", "w", encoding="utf-8") as srt:
+        for index, (a, b, text) in enumerate(captions, 1):
+            srt.write(f"{index}\n{timestamp(a)} --> {timestamp(b)}\n{text}\n\n")
+    with open(f"{base}.vtt", "w", encoding="utf-8") as vtt:
+        vtt.write("WEBVTT\n\n")
+        for a, b, text in captions:
+            vtt.write(f"{timestamp(a, '.')} --> {timestamp(b, '.')}\n{text}\n\n")
 
 
 def timestamp(seconds, separator=","):

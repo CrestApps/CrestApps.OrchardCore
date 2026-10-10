@@ -4,6 +4,7 @@ from brand import MARGIN, W, bullets, draw_code, note_cards, slide_base
 WHY = [
     ("1", "Data lives in many places", "Content items, users, calls, activities, AI chats and messages"),
     ("2", "Built-in reports are fixed", "They answer the questions someone thought of in advance"),
+    ("3", "Open to any data", "More sources keep coming, and developers can plug in their own"),
     ("check", "Build your own reports", "Pick data sets, join, group, total, chart, and share"),
 ]
 
@@ -77,13 +78,5 @@ def slide(step_id, chapter_title, label):
             ("Records", "Derive from ReportRecordDataSource"),
             ("Security", "Return only what they may read"),
         ], (1190, 240, W - MARGIN, 0))
-        return image
-    if step_id == "ext-3":
-        image = slide_base(chapter_title, label, "3. Follow the skill")
-        bullets(image, [
-            ("1", "crestapps-report-data-source", "In .agents/skills of the repository"),
-            ("2", "Every contract, step by step", "Data sets, schemas, queries, joins and grouping in the source"),
-            ("check", "Then it is a source like any other", "Its data sets appear in the builder's Data pane"),
-        ])
         return image
     raise SystemExit(f"No slide for {step_id}")

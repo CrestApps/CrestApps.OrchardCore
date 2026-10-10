@@ -105,7 +105,8 @@ its narration describes, with no error message, empty list, or real person's dat
 python .agents/skills/crestapps-video-producer/scripts/assemble.py <workspace>
 ```
 
-It prints the length and size. If it's over 25 MB, shorten the video or split it into parts; don't raise the CRF, which blurs small text. Extract a few frames with ffmpeg
+It also writes `<output>-<short>.mp4` and `.vtt` for every chapter with a `"short"` name: the short task videos
+embedded on each page of the manual. It prints the length and size. If it's over 25 MB, shorten the video or split it into parts; don't raise the CRF, which blurs small text. Extract a few frames with ffmpeg
 and look at them: a recording, a slide with code, and a card.
 
 ### 6. Check for private data
@@ -116,8 +117,10 @@ numbers and tokens. Fix the site or the mask, and record again; never publish a 
 ### 7. Publish
 
 - **Documentation**: put `<name>.mp4`, `<name>.vtt` and a poster (`build/00-intro.png` saved as JPEG) in
-  `src/CrestApps.Docs/static/img/docs/`, and embed it under the introduction of both the technical page and the
-  user manual page:
+  `src/CrestApps.Docs/static/img/docs/`, and embed it under the introduction of the module's overview pages in both
+  manuals. Put each short video (`<name>-<short>.mp4`, `.vtt`, and `build/card-<id>.png` saved as
+  `<name>-<short>.jpg`) on the page about that task, under its introduction, so readers can watch, then follow the
+  written steps:
 
   ```html
   <video controls preload="metadata" width="100%" poster="/img/docs/<name>.jpg" aria-label="Video overview of ...">

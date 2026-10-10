@@ -39,7 +39,13 @@ public static partial class Scenes
             var header = Property(scene, "Header").Locator("input");
             await header.FillAsync(string.Empty);
             await scene.TypeAsync(header, "Avg. attempts", delay: 60);
-            await scene.TypeAsync(Property(scene, "Format").Locator("input"), "N1", delay: 120);
+            await scene.Page.Keyboard.PressAsync("Tab");
+            await scene.PauseAsync(900);
+            await scene.ClickAsync(Property(scene, "Format").Locator("button[aria-label='Common formats']"), pauseAfter: 900);
+            await scene.HighlightAsync(scene.Page.Locator(".rd-format-help").First);
+            await scene.PauseAsync(1500);
+            await scene.ClearHighlightsAsync();
+            await scene.ClickAsync(scene.Page.Locator(".rd-format-option").Filter(new() { HasTextString = "One decimal" }).First, pauseAfter: 800);
             await scene.HighlightAsync(scene.Page.Locator(".report-designer-properties .form-check").Filter(new() { HasTextString = "Hide from tables" }).First);
         });
 
@@ -62,8 +68,8 @@ public static partial class Scenes
             var calculated = scene.Page.Locator(".report-designer-field").Filter(new() { HasTextString = "Completion rate" }).First;
             await scene.DragToAsync(calculated, Shelf(scene, "columns"), 150);
             await scene.PauseAsync(600);
-            await scene.TypeAsync(Property(scene, "Format").Locator("input"), "P1", delay: 120);
-            await scene.Page.Keyboard.PressAsync("Tab");
+            await scene.ClickAsync(Property(scene, "Format").Locator("button[aria-label='Common formats']"), pauseAfter: 700);
+            await scene.ClickAsync(scene.Page.Locator(".rd-format-option").Filter(new() { HasTextString = "Percentage" }).First, pauseAfter: 800);
         });
     }
 

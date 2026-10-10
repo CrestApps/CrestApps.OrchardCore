@@ -1,0 +1,26 @@
+WEBVTT
+
+00:00:03.202 --> 00:00:06.675
+Report Views lists the reusable data sets.
+
+00:00:06.675 --> 00:00:09.063
+Build a view like a report:
+
+00:00:09.063 --> 00:00:13.622
+data sets, joins, calculated fields, filters and columns.
+
+00:00:20.220 --> 00:00:22.612
+Choose how often it refreshes:
+
+00:00:22.612 --> 00:00:27.329
+every fifteen minutes, every hour, every six hours, or every day.
+
+00:00:27.329 --> 00:00:31.980
+A background task stores the result, so reports read it quickly.
+
+00:00:32.434 --> 00:00:37.267
+In any report, the view appears under the Report views source, and its
+
+00:00:37.267 --> 00:00:39.874
+columns are fields like any others.
+

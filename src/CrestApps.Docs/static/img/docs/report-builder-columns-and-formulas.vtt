@@ -1,0 +1,41 @@
+WEBVTT
+
+00:00:03.184 --> 00:00:06.608
+Click a column to edit it under Properties.
+
+00:00:06.608 --> 00:00:11.360
+An aggregate turns a number into a sum, an average, a count, a
+
+00:00:11.360 --> 00:00:15.204
+distinct count, a minimum, a maximum or a median.
+
+00:00:15.659 --> 00:00:18.964
+A transform changes a value before grouping.
+
+00:00:18.964 --> 00:00:23.194
+For a date, pick the day, the week, the month or the year,
+
+00:00:23.194 --> 00:00:25.309
+to see activity over time.
+
+00:00:25.761 --> 00:00:28.571
+Give each column a header and a format.
+
+00:00:28.571 --> 00:00:34.064
+The question mark lists common formats, such as one decimal place or a percentage.
+
+00:00:34.064 --> 00:00:38.621
+Hide a column from tables while keeping it for grouping and charts.
+
+00:00:39.076 --> 00:00:45.143
+Calculated fields use formulas, with functions for text, numbers, dates and aggregates.
+
+00:00:45.143 --> 00:00:47.623
+This one is the completion rate:
+
+00:00:47.623 --> 00:00:51.146
+the completed activities divided by all of them.
+
+00:00:51.597 --> 00:00:56.877
+Drag the calculated field onto Columns, and it works like any other field.
+

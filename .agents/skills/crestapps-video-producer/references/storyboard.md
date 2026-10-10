@@ -27,6 +27,9 @@ clip. `narrate.py`, the recorder and `assemble.py` all read it.
 
 - `output`: the file name of the result, without extension: `<output>.mp4`, `.vtt`, `.srt`.
 - `spoken`: pronunciation fixes for this video only (see `SPOKEN` in `scripts/narrate.py` for those of every video).
+- Chapter `short`: optional. A chapter with a short name is also written on its own as `<output>-<short>.mp4` and
+  `.vtt` (its chapter card and clips), for the documentation page about that task. Give every task chapter of a
+  module overview one, so each page of the manual can show just its part.
 - Chapter `id`: two digits. Chapters made only of `card` clips (the opening `00` and the closing `99`) get no
   chapter card; every other chapter is numbered "Chapter N" from its id.
 - Clip `kind`:

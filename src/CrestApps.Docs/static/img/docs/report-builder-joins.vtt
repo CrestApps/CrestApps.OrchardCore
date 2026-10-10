@@ -1,0 +1,35 @@
+WEBVTT
+
+00:00:03.182 --> 00:00:04.834
+Add a second data set:
+
+00:00:04.834 --> 00:00:05.541
+Users.
+
+00:00:05.541 --> 00:00:09.966
+Data sets that reference each other, such as an activity and the user
+
+00:00:09.966 --> 00:00:12.562
+it is assigned to, are joined for you.
+
+00:00:13.013 --> 00:00:17.212
+The Data model tab draws the data sets and their relationships.
+
+00:00:17.212 --> 00:00:22.506
+To join two yourself, drag a column of one onto the matching column of the other:
+
+00:00:22.506 --> 00:00:26.523
+here, the campaign of an activity onto the ID of a campaign.
+
+00:00:26.974 --> 00:00:30.098
+Click a relationship to set its type:
+
+00:00:30.098 --> 00:00:34.894
+inner, left, right or full, on one or more pairs of columns.
+
+00:00:35.348 --> 00:00:40.196
+Back on the Design tab, the fields of both data sets are available.
+
+00:00:40.196 --> 00:00:43.848
+Here, activities are counted per user and status.
+
