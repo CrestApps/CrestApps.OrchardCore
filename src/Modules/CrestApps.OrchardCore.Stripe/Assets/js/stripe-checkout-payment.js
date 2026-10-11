@@ -1,0 +1,216 @@
+/*
+ * The Stripe handler for the generic checkout.
+ *
+ * The card is entered into Stripe's own iframe and confirmed from the browser with the client secret the
+ * server returned, so card details never reach this application. After confirmation the checkout script polls
+ * the server, which verifies the payment against Stripe's API before recording anything — a confirmation here
+ * is a hint, never proof.
+ */
+(function () {
+    'use strict';
+
+    function initialize(options) {
+        if (typeof checkoutPayment === 'undefined' || !options || !options.publishableKey) {
+            return;
+        }
+
+        var stripe = Stripe(options.publishableKey);
+        var elements = stripe.elements();
+        var card = elements.create('card');
+
+        card.mount(options.cardElementSelector);
+
+        var errorElement = document.querySelector(options.errorSelector);
+
+        card.on('change', function (event) {
+            if (errorElement) {
+                errorElement.textContent = event.error ? event.error.message : '';
+                errorElement.classList.toggle('d-none', !event.error);
+            }
+        });
+
+        // Set once the card has been tokenized. Reusing that payment method when confirming keeps the
+        // subscription's first invoice on the very card the agreement was created against, instead of
+        // silently attaching a second one.
+        var preparedPaymentMethodId = null;
+
+        function billingName() {
+            return options.nameElement ? (document.querySelector(options.nameElement) || {}).value || '' : '';
+        }
+
+        function showError(message) {
+            if (errorElement) {
+                errorElement.textContent = message;
+                errorElement.classList.remove('d-none');
+            }
+        }
+
+        // Set while a wallet (Apple Pay, Google Pay) is paying: the wallet already produced the payment method, so
+        // the card element is not read at all.
+        var walletPaymentMethodId = null;
+
+        function needsReusablePaymentMethod() {
+            return options.hasRecurringItems || options.savePaymentMethod;
+        }
+
+        function paymentMethodData(paymentMethodId) {
+            var data = { paymentMethodId: paymentMethodId };
+
+            if (options.savePaymentMethod) {
+                // Asks the server to keep this card on the customer for charges made without them present.
+                data.savePaymentMethod = 'true';
+            }
+
+            return data;
+        }
+
+        mountWallets();
+
+        // Offers Apple Pay, Google Pay and the like through Stripe's Express Checkout Element. A wallet pays with a
+        // card the device already holds, so a payer on a phone confirms with a tap or a glance instead of typing a
+        // card number. The wallet only produces the payment method; the payment itself goes through the same
+        // checkout as the card form, so the server still decides the amount and verifies the result.
+        function mountWallets() {
+            var container = options.walletSelector ? document.querySelector(options.walletSelector) : null;
+
+            if (!container || !options.walletAmount || !options.walletCurrency) {
+                return;
+            }
+
+            var elementsOptions = {
+                mode: 'payment',
+                amount: options.walletAmount,
+                currency: options.walletCurrency,
+
+                // The payment is created and confirmed through the checkout, not by the element.
+                paymentMethodCreation: 'manual'
+            };
+
+            if (needsReusablePaymentMethod()) {
+                // Tells the wallet the card will be charged again later, so the token it issues can be.
+                elementsOptions.setupFutureUsage = 'off_session';
+            }
+
+            var walletElements = stripe.elements(elementsOptions);
+            var express = walletElements.create('expressCheckout', {
+                // Only wallets that produce a card are offered: the checkout confirms card payments, and a card is
+                // what an installment plan or a subscription can charge again.
+                paymentMethods: {
+                    applePay: 'auto',
+                    googlePay: 'auto',
+                    link: 'never',
+                    paypal: 'never',
+                    amazonPay: 'never',
+                    klarna: 'never'
+                },
+                buttonHeight: 48
+            });
+
+            express.on('ready', function (event) {
+                // Nothing is shown on a device or browser with no wallet set up.
+                container.classList.toggle('d-none', !event.availablePaymentMethods);
+            });
+
+            express.on('confirm', async function (event) {
+                var submitted = await walletElements.submit();
+
+                if (submitted.error) {
+                    showError(submitted.error.message);
+
+                    return;
+                }
+
+                var created = await stripe.createPaymentMethod({
+                    elements: walletElements,
+                    params: { billing_details: event.billingDetails || {} }
+                });
+
+                if (created.error) {
+                    event.paymentFailed({ reason: 'fail' });
+                    showError(created.error.message);
+
+                    return;
+                }
+
+                walletPaymentMethodId = created.paymentMethod.id;
+
+                try {
+                    if (!await checkoutPayment.submit(options.processorKey)) {
+                        try {
+                            event.paymentFailed({ reason: 'fail' });
+                        } catch (e) {
+                            // The wallet sheet already closed; the error is shown on the page instead.
+                        }
+                    }
+                } finally {
+                    walletPaymentMethodId = null;
+                }
+            });
+
+            express.mount(options.walletButtonsSelector);
+        }
+
+        checkoutPayment.register(options.processorKey, {
+            prepare: async function () {
+                if (walletPaymentMethodId) {
+                    preparedPaymentMethodId = walletPaymentMethodId;
+
+                    return needsReusablePaymentMethod() ? paymentMethodData(preparedPaymentMethodId) : null;
+                }
+
+                // A card typed in after a wallet attempt must not be confirmed with the wallet's payment method.
+                preparedPaymentMethodId = null;
+
+                // Only a recurring agreement, or a card kept for later charges, needs a reusable payment method
+                // up front. A one-time charge is confirmed straight from the card element, so tokenizing first
+                // would be a wasted round trip.
+                if (!needsReusablePaymentMethod()) {
+                    return null;
+                }
+
+                var result = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: card,
+                    billing_details: { name: billingName() }
+                });
+
+                if (result.error) {
+                    showError(result.error.message);
+
+                    return false;
+                }
+
+                preparedPaymentMethodId = result.paymentMethod.id;
+
+                return paymentMethodData(preparedPaymentMethodId);
+            },
+            confirm: async function (step) {
+                if (!step.clientSecret) {
+                    // Nothing for the customer to confirm (for example an obligation that was already
+                    // settled), so let the checkout move on to polling.
+                    return true;
+                }
+
+                var result = await stripe.confirmCardPayment(step.clientSecret, {
+                    payment_method: preparedPaymentMethodId || {
+                        card: card,
+                        billing_details: {
+                            name: billingName()
+                        }
+                    }
+                });
+
+                if (result.error) {
+                    showError(result.error.message);
+
+                    return false;
+                }
+
+                // The server still has to verify this against Stripe before anything is recorded as paid.
+                return true;
+            }
+        });
+    }
+
+    window.stripeCheckoutPayment = { initialize: initialize };
+})();

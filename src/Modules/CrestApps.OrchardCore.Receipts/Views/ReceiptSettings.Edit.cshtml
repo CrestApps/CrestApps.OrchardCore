@@ -1,0 +1,84 @@
+@model ReceiptSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="HeaderTitle">
+    <label asp-for="HeaderTitle" class="ocat-label">@T["Header title"]</label>
+    <div class="ocat-end">
+        <input asp-for="HeaderTitle" class="form-control" />
+        <span asp-validation-for="HeaderTitle"></span>
+        <span class="hint">@T["The heading printed at the top of every receipt. Leave empty to use the default \"Payment receipt\" heading."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessName">
+    <label asp-for="BusinessName" class="ocat-label">@T["Business name"]</label>
+    <div class="ocat-end">
+        <input asp-for="BusinessName" class="form-control" />
+        <span asp-validation-for="BusinessName"></span>
+        <span class="hint">@T["The issuing business name shown on the receipt. Leave empty to use the site name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="LogoUrl">
+    <label asp-for="LogoUrl" class="ocat-label">@T["Logo URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="LogoUrl" class="form-control" />
+        <span asp-validation-for="LogoUrl"></span>
+        <span class="hint">@T["The URL of the logo shown at the top of the receipt."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="BusinessAddress">
+    <label asp-for="BusinessAddress" class="ocat-label">@T["Business address"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="BusinessAddress" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="BusinessAddress"></span>
+        <span class="hint">@T["The postal address of the issuing business."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactEmail">
+    <label asp-for="ContactEmail" class="ocat-label">@T["Contact email"]</label>
+    <div class="ocat-end">
+        <input asp-for="ContactEmail" class="form-control" />
+        <span asp-validation-for="ContactEmail"></span>
+        <span class="hint">@T["The contact email address printed in the receipt footer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactPhone">
+    <label asp-for="ContactPhone" class="ocat-label">@T["Contact phone"]</label>
+    <div class="ocat-end">
+        <input asp-for="ContactPhone" class="form-control" />
+        <span asp-validation-for="ContactPhone"></span>
+        <span class="hint">@T["The contact phone number printed in the receipt footer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Website">
+    <label asp-for="Website" class="ocat-label">@T["Website"]</label>
+    <div class="ocat-end">
+        <input asp-for="Website" class="form-control" />
+        <span asp-validation-for="Website"></span>
+        <span class="hint">@T["The website printed in the receipt footer."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="FooterText">
+    <label asp-for="FooterText" class="ocat-label">@T["Footer text"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="FooterText" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="FooterText"></span>
+        <span class="hint">@T["Free-form text printed at the bottom of every receipt, such as a thank-you note or return policy."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="ShowTestPaymentBadge" class="form-check-input" />
+            <label asp-for="ShowTestPaymentBadge" class="form-check-label">@T["Show a test-payment badge for test-mode payments"]</label>
+            <span class="hint">@T["When enabled, receipts generated from a payment gateway running in test mode display a visible test-payment badge."]</span>
+        </div>
+    </div>
+</div>

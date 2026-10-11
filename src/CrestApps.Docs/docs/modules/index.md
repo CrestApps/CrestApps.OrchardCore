@@ -49,6 +49,11 @@ The administrators who use these features in the browser have their own guides i
 | [AbstractAPI provider](phone-number-verifications-abstractapi.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | AbstractAPI Phone Validation provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
 | [Veriphone provider](phone-number-verifications-veriphone.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Veriphone provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
 | [Twilio provider](phone-number-verifications-twilio.md) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Twilio Lookup provider | [Phone Number Verification](../user-manual/administration/phone-number-verification.md) |
+| [Products](products.md) | `CrestApps.OrchardCore.Products` | Attach product pricing and type metadata to any content type | |
+| [Checkout](checkout.md) | `CrestApps.OrchardCore.Checkout` | Provider-agnostic checkout and payment framework with a durable, distributed-safe payment ledger | |
+| [Payments](payments.md) | `CrestApps.OrchardCore.Stripe` | Provider-agnostic payment framework with a hardened Stripe provider | |
+| [Subscriptions](subscriptions.md) | `CrestApps.OrchardCore.Subscriptions` | Sell recurring subscriptions and onboard tenants with a pluggable, hardened checkout | |
+| [Taxation](taxation.md) | `CrestApps.OrchardCore.Taxation` | Provider-agnostic, extensible taxation framework with the TaxationPart | |
 | [Recipes](recipes.md) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes | |
 | [Reports](reports.md) | `CrestApps.OrchardCore.Reports`, `CrestApps.OrchardCore.Reports.OpenXml` | Shared Reports area, extensible filters, uniform renderer and CSV / Excel exports | [Reports](../user-manual/reports.md) |
 | [Resources](resources.md) | `CrestApps.OrchardCore.Resources` | Shared scripts, stylesheets and view components | |

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscribedTenantFailedSetupEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+    @T["Subscribed Tenant Failed Setup"]
+</h4>
+<p class="text-muted">@T["Triggered when the setup of a tenant provisioned through a subscription fails."]</p>

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Wizard.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<WizardFailedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Wizard Failed"])
+    </h4>
+</header>

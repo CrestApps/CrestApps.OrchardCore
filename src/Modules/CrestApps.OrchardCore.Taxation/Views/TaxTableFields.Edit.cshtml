@@ -1,0 +1,134 @@
+@model TaxTableViewModel
+@{
+    var prefix = Html.ViewData.TemplateInfo.HtmlFieldPrefix;
+    var fieldPrefix = string.IsNullOrEmpty(prefix) ? string.Empty : prefix + ".";
+    var rows = Model.Rows ?? new List<TaxTableRowViewModel>();
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+            <span class="hint">@T["The name of the tax table, used to reference it from table-based tax rules. This value is stored on tax lines."]</span>
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveFromUtc" class="ocat-label">@T["Effective from"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="EffectiveFromUtc" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control ocat-limited" />
+        <span asp-validation-for="EffectiveFromUtc" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveToUtc" class="ocat-label">@T["Effective to"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="EffectiveToUtc" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control ocat-limited" />
+        <span asp-validation-for="EffectiveToUtc" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Rows"]</label>
+    <div class="ocat-end">
+        <span class="hint mb-2 d-block">@T["Each row applies to a range of the taxable base. Brackets and progressive schedules tax the portion inside each row; lookup and threshold methods use the matching row. Rows are sorted by their minimum when saved."]</span>
+        <table class="table table-sm" id="tax-table-rows">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Minimum"]</th>
+                    <th scope="col">@T["Maximum"]</th>
+                    <th scope="col">@T["Rate"]</th>
+                    <th scope="col">@T["Fixed amount"]</th>
+                    <th scope="col">@T["Base amount"]</th>
+                    <th scope="col" class="text-end">@T["Actions"]</th>
+                </tr>
+            </thead>
+            <tbody class="tax-table-rows-body">
+                @for (var i = 0; i < rows.Count; i++)
+                {
+                    var row = rows[i];
+                    <tr class="tax-table-row">
+                        <td><input type="number" step="any" class="form-control" data-field="Minimum" name="@(fieldPrefix)Rows[@i].Minimum" value="@row.Minimum" /></td>
+                        <td><input type="number" step="any" class="form-control" data-field="Maximum" name="@(fieldPrefix)Rows[@i].Maximum" value="@(row.Maximum?.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
+                        <td><input type="number" step="any" class="form-control" data-field="Rate" name="@(fieldPrefix)Rows[@i].Rate" value="@row.Rate" /></td>
+                        <td><input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[@i].FixedAmount" value="@row.FixedAmount" /></td>
+                        <td><input type="number" step="any" class="form-control" data-field="BaseAmount" name="@(fieldPrefix)Rows[@i].BaseAmount" value="@row.BaseAmount" /></td>
+                        <td class="text-end"><button type="button" class="btn btn-danger btn-sm tax-table-remove-row" title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <button type="button" class="btn btn-secondary btn-sm" id="tax-table-add-row">@T["Add row"]</button>
+    </div>
+</div>
+
+<template id="tax-table-row-template">
+    <tr class="tax-table-row">
+        <td><input type="number" step="any" class="form-control" data-field="Minimum" name="@(fieldPrefix)Rows[__i__].Minimum" value="0" /></td>
+        <td><input type="number" step="any" class="form-control" data-field="Maximum" name="@(fieldPrefix)Rows[__i__].Maximum" value="" /></td>
+        <td><input type="number" step="any" class="form-control" data-field="Rate" name="@(fieldPrefix)Rows[__i__].Rate" value="0" /></td>
+        <td><input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[__i__].FixedAmount" value="0" /></td>
+        <td><input type="number" step="any" class="form-control" data-field="BaseAmount" name="@(fieldPrefix)Rows[__i__].BaseAmount" value="0" /></td>
+        <td class="text-end"><button type="button" class="btn btn-danger btn-sm tax-table-remove-row" title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
+    </tr>
+</template>
+
+<script at="Foot" depends-on="jQuery">
+    (function () {
+        var fieldPrefix = @Html.Raw(Json.Serialize(fieldPrefix));
+        var table = document.getElementById('tax-table-rows');
+
+        if (!table) {
+            return;
+        }
+
+        var body = table.querySelector('.tax-table-rows-body');
+        var template = document.getElementById('tax-table-row-template');
+        var addButton = document.getElementById('tax-table-add-row');
+
+        function reindex() {
+            var rows = body.querySelectorAll('.tax-table-row');
+
+            for (var i = 0; i < rows.length; i++) {
+                var inputs = rows[i].querySelectorAll('input[data-field]');
+
+                for (var j = 0; j < inputs.length; j++) {
+                    var field = inputs[j].getAttribute('data-field');
+                    inputs[j].setAttribute('name', fieldPrefix + 'Rows[' + i + '].' + field);
+                }
+            }
+        }
+
+        if (addButton) {
+            addButton.addEventListener('click', function () {
+                var fragment = template.content.cloneNode(true);
+                body.appendChild(fragment);
+                reindex();
+            });
+        }
+
+        body.addEventListener('click', function (event) {
+            var button = event.target.closest('.tax-table-remove-row');
+
+            if (button) {
+                var row = button.closest('.tax-table-row');
+
+                if (row) {
+                    row.remove();
+                    reindex();
+                }
+            }
+        });
+    })();
+</script>

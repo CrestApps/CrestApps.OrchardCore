@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Taxation.ViewModels
+
+@model TaxationPartSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultTaxCategoryCode">
+    <label asp-for="DefaultTaxCategoryCode" class="ocat-label">@T["Default tax category"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultTaxCategoryCode" asp-items="Model.TaxCategories" class="form-select"></select>
+        <span asp-validation-for="DefaultTaxCategoryCode"></span>
+        <span class="hint">@T["The default tax category applied to new content items. Categories are managed under Commerce → Taxation → Categories."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultTaxClassificationCode">
+    <label asp-for="DefaultTaxClassificationCode" class="ocat-label">@T["Default tax classification"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultTaxClassificationCode" asp-items="Model.TaxCategories" class="form-select"></select>
+        <span asp-validation-for="DefaultTaxClassificationCode"></span>
+        <span class="hint">@T["An optional, more specific category that refines the default tax category for new content items."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AllowClassificationOverride">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="AllowClassificationOverride" class="form-check-input" />
+            <label asp-for="AllowClassificationOverride" class="form-check-label">@T["Allow editors to override the classification"]</label>
+            <span class="hint dashed">@T["When disabled, editors cannot change the category or classification and the defaults above are always used."]</span>
+        </div>
+    </div>
+</div>

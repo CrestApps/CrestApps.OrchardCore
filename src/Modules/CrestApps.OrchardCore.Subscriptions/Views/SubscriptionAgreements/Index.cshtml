@@ -1,0 +1,101 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@model SubscriptionAgreementsIndexViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsAgreements" title="@T["Subscriptions"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="agreements-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="has-search">
+                <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by title"]" type="search" autocomplete="off" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Subscriptions.Count, "1 subscription", "{0} subscriptions")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} subscription in total", " / {0} subscriptions in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" form="agreements-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
+    @if (Model.Subscriptions.Count > 0)
+    {
+        @foreach (var subscription in Model.Subscriptions)
+        {
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0"><a asp-action="Detail" asp-route-itemId="@subscription.ItemId">@(string.IsNullOrEmpty(subscription.Title) ? T["(untitled)"].Value : subscription.Title)</a></h5>
+                                </div>
+                                <div class="tags me-1">
+                                    <partial name="_SubscriptionStatusBadge" model="subscription.Status" />
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Method"]">
+                                    <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
+                                    @subscription.ProviderKey
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Per cycle"]">
+                                    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Per cycle"]</span>
+                                    @subscription.Currency @CurrencyScale.Format(subscription.TotalAmount, subscription.Currency)
+                                </span>
+                                <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Renews"]">
+                                    <i class="fa-solid fa-rotate text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Renews"]</span>
+                                    @(subscription.NextBillingUtc.HasValue ? subscription.NextBillingUtc.Value.ToString("d") : T["Never"].Value)
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Paid through"]">
+                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Paid through"]</span>
+                                    @subscription.CurrentPeriodEndUtc.ToString("d")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
+                            <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-route-itemId="@subscription.ItemId">@T["Manage"]</a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> There are no subscriptions that match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

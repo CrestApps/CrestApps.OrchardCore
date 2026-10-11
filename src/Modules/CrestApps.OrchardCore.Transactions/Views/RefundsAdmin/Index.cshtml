@@ -1,0 +1,129 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Payments
+@using Microsoft.AspNetCore.Mvc.Localization
+@model RefundsAdminIndexViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TransactionsRefunds" title="@T["Refunds"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="refunds-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+</form>
+
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Refunds.Count, "1 refund", "{0} refunds")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} refund in total", " / {0} refunds in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" form="refunds-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                    <select asp-for="Options.ProviderKey" asp-items="Model.Options.Providers" form="refunds-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by method"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Method"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
+    @if (Model.Refunds.Count > 0)
+    {
+        @foreach (var refund in Model.Refunds)
+        {
+            var reason = refund.FailureReason ?? refund.Reason;
+
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0">@refund.Currency @CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)</h5>
+                                </div>
+                                <div class="tags me-1">
+                                    @switch (refund.Status)
+                                    {
+                                        case RefundStatus.Succeeded:
+                                            <span class="badge text-bg-success">@T["Refunded"]</span>
+                                            break;
+                                        case RefundStatus.Failed:
+                                        case RefundStatus.Canceled:
+                                            <span class="badge text-bg-danger">@refund.Status</span>
+                                            break;
+                                        case RefundStatus.PendingManualReview:
+                                            <span class="badge text-bg-warning">@T["Needs manual settlement"]</span>
+                                            break;
+                                        default:
+                                            <span class="badge text-bg-secondary">@refund.Status</span>
+                                            break;
+                                    }
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Method"]">
+                                    <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
+                                    @refund.ProviderKey
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Updated"]">
+                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Updated"]</span>
+                                    @await DisplayAsync(await New.DateTime(Utc: refund.UpdatedUtc, Format: "g"))
+                                </span>
+                                @if (refund.RefundTaxAmount > 0m)
+                                {
+                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Tax refunded"]">
+                                        <i class="fa-solid fa-percent text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Tax refunded"]</span>
+                                        @refund.Currency @CurrencyScale.Format(refund.RefundTaxAmount, refund.Currency)
+                                    </span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(reason))
+                            {
+                                @* A reason can run to several sentences, so it is text that wraps, not a badge. *@
+                                <div class="small mt-1 @(refund.FailureReason is null ? "text-muted" : "text-danger")">
+                                    <i class="@(refund.FailureReason is null ? "fa-regular fa-comment" : "fa-solid fa-triangle-exclamation")" aria-hidden="true"></i><span class="visually-hidden">@(refund.FailureReason is null ? T["Reason"] : T["Why it failed"])</span>
+                                    @reason
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
+                            @if (refund.Status == RefundStatus.PendingManualReview)
+                            {
+                                <form asp-action="Resolve" asp-route-itemId="@refund.ItemId" method="post" class="d-inline-flex gap-1">
+                                    <input type="text" name="reference" class="form-control form-control-sm" placeholder="@T["Reference"]" aria-label="@T["Reference"]" />
+                                    <button type="submit" class="btn btn-sm btn-secondary text-nowrap"
+                                            data-url-af="RemoveUrl"
+                                            data-title="@T["Mark settled"]"
+                                            data-message="@T["Record that {0} {1} was paid back to the customer outside the application? This cannot be undone.", refund.Currency, CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)]"
+                                            data-ok-text="@T["Mark settled"]"
+                                            data-cancel-text="@T["Cancel"]">
+                                        @T["Mark settled"]
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> There are no refunds that match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

@@ -1,0 +1,89 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.ModelBinding
+
+@inject IDisplayManager<CheckoutFlowPaymentMethod> PaymentMethodDisplayManager
+@inject IUpdateModelAccessor UpdateModelAccessor
+
+@model CheckoutPaymentMethodsViewModel
+
+@if (!Model.RequiresPayment)
+{
+    <div class="alert alert-info" role="alert">
+        @T["No payment is required to complete this checkout."]
+    </div>
+
+    return;
+}
+
+@if (Model.Methods.Count == 0)
+{
+    @* Reaching payment with no usable provider means the checkout can never complete. Saying so plainly is
+       better than letting the customer submit into a flow that waits for a payment nothing can collect. *@
+    <div class="alert alert-warning" role="alert">
+        @T["This purchase requires a payment, but no payment method is available. Please contact the site administrator."]
+    </div>
+
+    return;
+}
+
+<div id="checkout-payment-error" class="alert alert-danger d-none" role="alert"></div>
+
+<fieldset class="mb-4">
+    <legend class="h6">@T["Payment method"]</legend>
+
+    <div class="row g-2">
+        @foreach (var method in Model.Methods)
+        {
+            var inputId = $"payment-method-{method.Key}";
+
+            <div class="col-md-6">
+                <input type="radio"
+                       class="btn-check"
+                       name="checkout-payment-method"
+                       id="@inputId"
+                       value="@method.Key"
+                       autocomplete="off"
+                       checked="@method.IsDefault" />
+                <label class="btn btn-outline-secondary w-100 text-start p-3" for="@inputId">
+                    <span class="d-block fw-semibold">@method.Title</span>
+                    <small class="d-block text-body-secondary">@method.Description</small>
+                </label>
+            </div>
+        }
+    </div>
+</fieldset>
+
+@* Each provider's panel is rendered by its own driver and hidden unless selected, so the provider owns its
+   own UI and this page stays provider-agnostic. Only the selected panel is visible, which also keeps a
+   hidden method's inputs out of the submitted form. *@
+<div id="checkout-payment-panels">
+    @foreach (var method in Model.Methods)
+    {
+        var panel = await PaymentMethodDisplayManager.BuildEditorAsync(
+            model: new CheckoutFlowPaymentMethod { Flow = Model.Flow },
+            updater: UpdateModelAccessor.ModelUpdater,
+            isNew: false,
+            method.Key);
+
+        var hidden = method.Key != Model.SelectedProviderKey ? " d-none" : string.Empty;
+
+        <div class="checkout-payment-panel border rounded p-3 mb-3@(hidden)" data-checkout-payment-panel="@method.Key">
+            @await DisplayAsync(panel)
+        </div>
+    }
+</div>
+
+<script asp-name="checkout-payment" at="Foot"></script>
+<script at="Foot" depends-on="checkout-payment">
+    checkoutPayment.initialize({
+        beginEndpoint: '@Url.RouteUrl(CheckoutConstants.RouteNames.BeginPayment, new { sessionId = Model.Flow.Session.SessionId })',
+        statusEndpoint: '@Url.RouteUrl(CheckoutConstants.RouteNames.PaymentStatus, new { sessionId = Model.Flow.Session.SessionId })',
+        confirmationUrl: '@Url.RouteUrl(CheckoutConstants.RouteNames.Confirmation, new { sessionId = Model.Flow.Session.SessionId })',
+        cancelUrl: '@Url.RouteUrl(CheckoutConstants.RouteNames.Step, new { sessionId = Model.Flow.Session.SessionId, step = CheckoutConstants.PaymentStepKey })',
+        genericErrorMessage: '@T["Your payment could not be completed. Please try again."]',
+        selectMethodMessage: '@T["Please choose a payment method."]',
+        stillProcessingMessage: '@T["Your payment is still being processed. You will receive a confirmation once it completes."]'
+    });
+</script>

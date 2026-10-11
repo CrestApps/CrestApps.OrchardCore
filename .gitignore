@@ -478,3 +478,7 @@ src/docs/.cache-loader/
 
 # Playwright MCP planning scaffolding (not part of the shipped product).
 .playwright-mcp/
+
+# Local Stripe/checkout browser-test scratch (not part of the shipped product).
+.playwright-cli/
+.octest/

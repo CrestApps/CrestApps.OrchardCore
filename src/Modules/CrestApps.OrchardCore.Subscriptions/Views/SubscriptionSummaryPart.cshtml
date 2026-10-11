@@ -1,0 +1,36 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionSummaryViewModel
+
+<div class="row g-2">
+    <div class="col-6">
+        <div class="border rounded p-2 text-center h-100">
+            <div class="fs-4 fw-bold">@Model.TotalSubscriptions</div>
+            <div class="text-muted small">@T["Total"]</div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="border rounded p-2 text-center h-100">
+            <div class="fs-4 fw-bold text-success">@Model.ActiveSubscriptions</div>
+            <div class="text-muted small">@T["Active"]</div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="border rounded p-2 text-center h-100">
+            <div class="fs-4 fw-bold">@Model.CompletedSubscriptions</div>
+            <div class="text-muted small">@T["Completed"]</div>
+        </div>
+    </div>
+    <div class="col-6">
+        <div class="border rounded p-2 text-center h-100">
+            <div class="fs-4 fw-bold text-warning">@Model.PendingSubscriptions</div>
+            <div class="text-muted small">@T["Pending"]</div>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="border rounded p-2 text-center h-100">
+            <div class="fs-4 fw-bold">@Model.TotalRevenue.ToString("C")</div>
+            <div class="text-muted small">@T["Total revenue"]</div>
+        </div>
+    </div>
+</div>

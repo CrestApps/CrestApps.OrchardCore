@@ -1892,6 +1892,18 @@ public sealed class A2ARecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the Products recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Products")]
+public sealed class ProductsRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, CurrenciesRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the TimeZones recipe feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.TimeZones")]

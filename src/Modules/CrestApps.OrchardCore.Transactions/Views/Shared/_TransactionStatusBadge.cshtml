@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Transactions.Models
+@model TransactionStatus
+
+@{
+    var (cssClass, label) = Model switch
+    {
+        TransactionStatus.Pending => ("bg-secondary", T["Pending"].Value),
+        TransactionStatus.Outstanding => ("bg-warning text-dark", T["Outstanding"].Value),
+        TransactionStatus.PartiallyPaid => ("bg-info text-dark", T["Partially paid"].Value),
+        TransactionStatus.Paid => ("bg-success", T["Paid"].Value),
+        TransactionStatus.Canceled => ("bg-dark", T["Canceled"].Value),
+        TransactionStatus.Failed => ("bg-danger", T["Failed"].Value),
+        TransactionStatus.Abandoned => ("bg-dark", T["Abandoned"].Value),
+        TransactionStatus.Refunded => ("bg-secondary", T["Refunded"].Value),
+        _ => ("bg-secondary", Model.ToString()),
+    };
+}
+
+<span class="badge @cssClass">@label</span>

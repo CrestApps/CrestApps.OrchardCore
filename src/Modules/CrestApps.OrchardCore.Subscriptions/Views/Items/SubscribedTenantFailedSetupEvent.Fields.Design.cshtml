@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscribedTenantFailedSetupEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Subscribed Tenant Failed Setup"])
+    </h4>
+</header>

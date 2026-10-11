@@ -166,6 +166,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.OpenXml` | Content Transfer (OpenXml) | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
+| `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
+| `CrestApps.OrchardCore.Products` | Products | [Products](./modules/products) |
+| `CrestApps.OrchardCore.Wizard` | Wizard | [Wizard](./modules/wizard) |
 
 ## Reporting
 
@@ -173,6 +176,33 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Reports` | Reports | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.Reports.OpenXml` | Reports (OpenXml) | [Reports](./modules/reports) |
+
+## Commerce
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
+| `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
+| `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
+| `CrestApps.OrchardCore.Receipts` | Receipts | [Receipts](./modules/receipts) |
+| `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
+| `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
+| `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
+| `CrestApps.OrchardCore.Transactions.Receipts` | Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
+
+## Payment Providers
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Stripe` | Stripe | [Payments](./modules/payments) |
+
+## Subscriptions
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Subscriptions` | Subscriptions | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Subscriptions.Tenants` | Subscriptions - Sites | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Subscriptions.Installments` | Subscriptions - Installment Plans | [Installment Plans](./modules/installment-plans) |
 
 ## Communication
 

@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model InstallmentPlanSettingsViewModel
+
+<h6>@T["Installment Plans"]</h6>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultCollectionMethod">
+    <label asp-for="DefaultCollectionMethod" class="ocat-label">@T["Collect scheduled payments by"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultCollectionMethod" class="form-select">
+            <option value="@InstallmentCollectionMethod.AutoCharge">@T["Charging the saved card on each due date"]</option>
+            <option value="@InstallmentCollectionMethod.Invoice">@T["Invoicing the customer for each payment"]</option>
+        </select>
+        <span class="hint">@T["What a new installment plan starts with. The administrator can change it for each plan."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RetryDays">
+    <label asp-for="RetryDays" class="ocat-label">@T["Retry a declined card after (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RetryDays" class="form-control" placeholder="1, 3, 5" />
+        <span asp-validation-for="RetryDays"></span>
+        <span class="hint">@T["When charging the saved card fails, it is tried again this many days after each failure, in order. After the last retry the payment is left for the customer to pay, and the overdue reminders take over. Leave it empty to hand a declined payment to the customer straight away."]</span>
+    </div>
+</div>

@@ -1,0 +1,114 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@model MySubscriptionsViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsMySubscriptions" title="@T["My subscriptions"]" />
+</zone>
+
+<form asp-action="Index" method="get" id="my-subscriptions-filter">
+    @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
+    {
+        <input type="hidden" name="pageSize" value="@selectedPageSize" />
+    }
+</form>
+
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Subscriptions.Count, "1 subscription", "{0} subscriptions")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} subscription in total", " / {0} subscriptions in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select name="status" asp-items="Model.Statuses" form="my-subscriptions-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
+    @if (Model.Subscriptions.Count > 0)
+    {
+        @foreach (var subscription in Model.Subscriptions)
+        {
+            var current = subscription.IsCurrent(Model.UtcNow);
+
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0">@(string.IsNullOrEmpty(subscription.Title) ? T["(untitled)"].Value : subscription.Title)</h5>
+                                </div>
+                                <div class="tags me-1">
+                                    <partial name="_SubscriptionStatusBadge" model="subscription.Status" />
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Per cycle"]">
+                                    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Per cycle"]</span>
+                                    @subscription.Currency @CurrencyScale.Format(subscription.TotalAmount, subscription.Currency)
+                                </span>
+                                <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Renews"]">
+                                    <i class="fa-solid fa-rotate text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Renews"]</span>
+                                    @(subscription.NextBillingUtc.HasValue ? subscription.NextBillingUtc.Value.ToString("d") : T["Does not renew"].Value)
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Access until"]">
+                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Access until"]</span>
+                                    @(current ? subscription.CurrentPeriodEndUtc.ToString("d") : T["Ended"].Value)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
+                            @if (subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing or SubscriptionStatus.PastDue)
+                            {
+                                <form asp-action="Cancel" asp-route-itemId="@subscription.ItemId" method="post" class="d-inline">
+                                    <input type="hidden" name="immediately" value="false" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm"
+                                            data-url-af="RemoveUrl"
+                                            data-title="@T["Cancel the subscription"]"
+                                            data-message="@T["Cancel {0}? The next payment will not be taken, and you keep access until {1:d}.", subscription.Title, subscription.CurrentPeriodEndUtc]"
+                                            data-ok-text="@T["Cancel the subscription"]"
+                                            data-cancel-text="@T["Keep it"]">
+                                        @T["Cancel"]
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> You do not have any subscriptions that match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)
+
+@if (Model.Subscriptions.Any(subscription => subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing or SubscriptionStatus.PastDue))
+{
+    @* Only worth saying when there is something here the customer can cancel. *@
+    <p class="text-muted small mt-2">
+        @T["Cancelling stops the next payment. You keep access until the end of the period you have already paid for."]
+    </p>
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

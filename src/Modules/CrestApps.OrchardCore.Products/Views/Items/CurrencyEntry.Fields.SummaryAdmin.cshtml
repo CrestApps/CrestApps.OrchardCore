@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Products.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CurrencyEntry>
+
+<div class="d-flex flex-column gap-1">
+    <h5 class="mb-0">@Model.Value.DisplayName</h5>
+    <div class="text-body-secondary">@Model.Value.Name</div>
+</div>

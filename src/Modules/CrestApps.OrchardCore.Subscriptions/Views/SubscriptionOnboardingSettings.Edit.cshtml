@@ -1,0 +1,75 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionOnboardingSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="AllowCustomDomains">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <label class="form-check-label" asp-for="AllowCustomDomains">@T["Use custom domains"]</label>
+            <input type="checkbox" class="form-check-input" asp-for="AllowCustomDomains">
+            <span class="hint dashed">@T["Allow the subscribers to provide their own custom domain names."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="LocalDomainType">
+    <label class="ocat-label" asp-for="LocalDomainType">@T["Local domains"]</label>
+    <div class="ocat-end">
+        <select asp-for="LocalDomainType" asp-items="Model.LocalDomainTypes" class="form-select"></select>
+        <span class="hint">@T["Generate domains for new tenants using a template."]</span>
+    </div>
+</div>
+
+<div id="Generated_Template_Wrapper" class="ocat-wrapper@(Model.LocalDomainType == LocalDomainType.None || Model.LocalDomainType == LocalDomainType.Prefix ? " d-none": string.Empty)" asp-validation-class-for="LocalDomainTemplate">
+    <label asp-for="LocalDomainTemplate" class="ocat-label">@T["Generated domain template"]</label>
+    <div class="ocat-end">
+        <input asp-for="LocalDomainTemplate" class="form-control" />
+        <span asp-validation-for="LocalDomainTemplate"></span>
+        <span class="hint">@T["The template must include a valid URL format and may contain the placeholders '{0}' and '{1}'. To generate multiple domains, separate them with a comma.", SubscriptionOnboardingSettings.TenantKeyVariable, SubscriptionOnboardingSettings.CurrentHostVariable]</span>
+    </div>
+</div>
+
+<div class="mb-3" asp-validation-class-for="DatabaseProvider">
+    <label asp-for="DatabaseProvider" class="ocat-label">@T["Database for new sites"]</label>
+    <div class="ocat-end">
+        <select asp-for="DatabaseProvider" asp-items="Model.DatabaseProviders" class="form-select">
+            <option value="">@T["Sqlite (a file per site)"]</option>
+        </select>
+        <span asp-validation-for="DatabaseProvider"></span>
+        <span class="hint">@T["Every site sold is created on this database. A site cannot be created without one, and the buyer never chooses it."]</span>
+    </div>
+</div>
+
+<div class="mb-3" asp-validation-class-for="ConnectionString">
+    <label asp-for="ConnectionString" class="ocat-label">@T["Connection string"]</label>
+    <div class="ocat-end">
+        <input asp-for="ConnectionString" class="form-control" />
+        <span asp-validation-for="ConnectionString"></span>
+        <span class="hint">@T["Required for every provider except Sqlite. Each site gets its own table prefix, derived from its name."]</span>
+    </div>
+</div>
+
+<div class="mb-3" asp-validation-class-for="Schema">
+    <label asp-for="Schema" class="ocat-label">@T["Schema"]</label>
+    <div class="ocat-end">
+        <input asp-for="Schema" class="form-control" />
+        <span asp-validation-for="Schema"></span>
+        <span class="hint">@T["Optional. Leave blank to use the provider's default."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const wrapperElement = document.getElementById('Generated_Template_Wrapper');
+        const typeElement = document.getElementById('@Html.IdFor(m => m.LocalDomainType)');
+
+        typeElement.addEventListener('change', (e) => {
+            if (e.target.value == '@nameof(LocalDomainType.None)' || e.target.value == '@nameof(LocalDomainType.Prefix)') {
+                wrapperElement.classList.add('d-none');
+            } else {
+                wrapperElement.classList.remove('d-none');
+            }
+        });
+    });
+</script>

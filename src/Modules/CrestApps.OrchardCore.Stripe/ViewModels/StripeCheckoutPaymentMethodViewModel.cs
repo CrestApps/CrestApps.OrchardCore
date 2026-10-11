@@ -1,0 +1,53 @@
+namespace CrestApps.OrchardCore.Stripe.ViewModels;
+
+/// <summary>
+/// The data the Stripe panel needs to mount its card element on the generic checkout payment step.
+/// </summary>
+public class StripeCheckoutPaymentMethodViewModel
+{
+    /// <summary>
+    /// Gets or sets the checkout session the payment belongs to.
+    /// </summary>
+    public string SessionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the publishable key Stripe.js is initialized with. It is safe to render: it can only
+    /// create payment methods, never read or move money.
+    /// </summary>
+    public string PublishableKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the tenant is connected to live Stripe credentials, so a test
+    /// configuration can be labelled as such on the page.
+    /// </summary>
+    public bool IsLive { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the checkout includes something billed on a recurring cycle.
+    /// </summary>
+    /// <remarks>
+    /// A recurring agreement has to be created against a reusable payment method, so the browser tokenizes
+    /// the card before the payment starts. A checkout with nothing recurring skips that round trip.
+    /// </remarks>
+    public bool HasRecurringItems { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the card is kept for later charges without the payer present.
+    /// </summary>
+    public bool SavePaymentMethod { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount collected now, in the currency's minor units, shown on the wallet sheet when the
+    /// payer pays with Apple Pay or Google Pay. Wallet buttons are offered only when this is greater than zero.
+    /// </summary>
+    /// <remarks>
+    /// It only labels the wallet sheet. The amount actually charged is decided on the server when the payment
+    /// starts, never taken from the browser.
+    /// </remarks>
+    public long WalletAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lower-case ISO currency code of <see cref="WalletAmount"/>.
+    /// </summary>
+    public string WalletCurrency { get; set; }
+}

@@ -1,0 +1,102 @@
+@using CrestApps.OrchardCore.Wizard.Contents
+@using CrestApps.OrchardCore.Wizard.Core.Models
+@model CrestApps.OrchardCore.Wizard.ViewModels.WizardPartSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Source" class="ocat-label">@T["Contained content types"]</label>
+    <div class="ocat-end w-sm-50" id="@Html.IdFor(x => x.Source)">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Source" id="SourceContentTypes" value="@(WizardPartSettingType.ContentTypes)" checked="@(Model.Source == WizardPartSettingType.ContentTypes)">
+            <label for="SourceContentTypes" class="form-check-label">
+                @T["Content types"]
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Source" id="SourceStereotype" value="@(WizardPartSettingType.Stereotypes)" checked="@(Model.Source == WizardPartSettingType.Stereotypes)">
+            <label for="SourceStereotype" class="form-check-label">
+                @T["Stereotype"] <span class="hint">@T["All content types of these stereotypes."]</span>
+            </label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" id="ContentTypesContainer">
+    <label asp-for="ContainedContentTypes" class="ocat-label">@T["Contained content types"]</label>
+    <div class="ocat-end">
+        <span class="hint">@T["The content types that a wizard step can be, e.g. a registration step."]</span>
+        @await Component.InvokeAsync("SelectContentTypes", new { selectedContentTypes = Model.ContainedContentTypes, htmlName = Html.NameFor(m => m.ContainedContentTypes) })
+    </div>
+</div>
+
+<div class="ocat-wrapper" id="StereotypesContainer">
+    <label asp-for="Stereotypes" class="ocat-label">@T["Stereotypes"]</label>
+    <div class="ocat-end w-sm-50">
+        <input asp-for="Stereotypes" class="form-control medium" />
+        <span class="hint">@T["The stereotypes of the content types that a wizard step can be. You may define multiple stereotypes using the comma (,) as a separator."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayType" class="ocat-label">@T["Display type"]</label>
+    <div class="ocat-end w-sm-50">
+        <input asp-for="DisplayType" placeholder="Summary" class="form-control medium" />
+        <span class="hint">@T["The display type used when rendering the steps. Default is Summary."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CollapseContainedItems">
+            <label class="form-check-label" asp-for="CollapseContainedItems">@T["Collapse contained steps"]</label>
+            <span class="hint">@T["When checked, the contained steps are collapsed when the edit form is loaded."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RequiresAuthenticatedUser">
+            <label class="form-check-label" asp-for="RequiresAuthenticatedUser">@T["Requires an authenticated user"]</label>
+            <span class="hint">@T["When checked, a visitor must be signed in to start the wizard."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CompletionPolicy" class="ocat-label">@T["Completion policy"]</label>
+    <div class="ocat-end w-sm-50">
+        <select asp-for="CompletionPolicy" class="form-select">
+            <option value="@((int)WizardCompletionPolicy.Publish)">@T["Create and publish the collected content items"]</option>
+            <option value="@((int)WizardCompletionPolicy.Draft)">@T["Create the collected content items as drafts"]</option>
+            <option value="@((int)WizardCompletionPolicy.None)">@T["Do not persist the collected content items"]</option>
+        </select>
+        <span class="hint">@T["What to do with the content items a visitor fills in when the wizard completes. Choose to not persist them when a workflow or custom handler consumes the collected data instead."]</span>
+    </div>
+</div>
+
+<script at="Foot" asp-name="wizardPartSettings">
+    document.addEventListener('DOMContentLoaded', function () {
+        var sources = document.getElementsByName('@Html.NameFor(x => x.Source)');
+        var contentTypesContainer = document.getElementById('ContentTypesContainer');
+        var stereotypeContainer = document.getElementById('StereotypesContainer');
+
+        for (var i = 0; i < sources.length; i++) {
+            var source = sources[i];
+            source.addEventListener('change', function (src) {
+                if (!src.target.checked) {
+                    return;
+                }
+                if (src.target.value == '@(WizardPartSettingType.Stereotypes)') {
+                    contentTypesContainer.classList.add('d-none');
+                    stereotypeContainer.classList.remove('d-none');
+                } else {
+                    contentTypesContainer.classList.remove('d-none');
+                    stereotypeContainer.classList.add('d-none');
+                }
+            });
+            source.dispatchEvent(new Event('change'));
+        }
+    });
+</script>

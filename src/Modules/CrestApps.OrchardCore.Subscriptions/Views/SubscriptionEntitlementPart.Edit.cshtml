@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model SubscriptionEntitlementPartViewModel
+
+<fieldset class="mb-3">
+    <legend class="form-label">@T["Member access"]</legend>
+
+    @if (Model.Roles.Count == 0)
+    {
+        <div class="alert alert-info" role="alert">
+            @T["There are no roles on this site yet. Create a role to grant subscribers member-only access."]
+        </div>
+    }
+    else
+    {
+        <span class="hint d-block mb-2">
+            @T["A subscriber holds these roles for as long as their subscription is current. They keep them through the period they have paid for, even after cancelling, and lose them once it lapses."]
+        </span>
+
+        @for (var i = 0; i < Model.Roles.Count; i++)
+        {
+            <div class="form-check">
+                <input type="hidden" asp-for="Roles[i].RoleName" />
+                <input type="checkbox" class="form-check-input" asp-for="Roles[i].IsSelected" />
+                <label class="form-check-label" asp-for="Roles[i].IsSelected">@Model.Roles[i].RoleName</label>
+            </div>
+        }
+    }
+</fieldset>

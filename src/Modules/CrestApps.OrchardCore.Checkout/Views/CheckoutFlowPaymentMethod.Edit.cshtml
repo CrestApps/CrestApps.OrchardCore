@@ -1,0 +1,8 @@
+@* The wrapper for a payment provider's own panel. Each provider contributes its markup into the Content
+   zone through its own display driver, so this template stays provider-agnostic. Without it the payment
+   step throws and the customer cannot pay at all. *@
+
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}

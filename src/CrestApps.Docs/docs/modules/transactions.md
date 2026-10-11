@@ -1,0 +1,222 @@
+---
+sidebar_label: Transactions
+sidebar_position: 14
+title: Transactions
+description: A provider-agnostic ledger that tracks, reports, and settles outstanding financial obligations from any payment provider, with customer statements, an administrator report and management console, and payment reminders delivered through the notification system.
+---
+
+| | |
+| --- | --- |
+| **Feature Name** | Transactions |
+| **Feature ID** | `CrestApps.OrchardCore.Transactions` |
+| **Reminders Feature** | `CrestApps.OrchardCore.Transactions.Notification` |
+| **Abstractions** | `CrestApps.OrchardCore.Transactions.Abstractions` |
+| **Core** | `CrestApps.OrchardCore.Transactions.Core` |
+| **Category** | Commerce |
+| **Depends on** | [Commerce](commerce) |
+
+The **Transactions** module is a provider-agnostic ledger of *money owed*. It answers a single question for the whole tenant — **"what has not been paid yet?"** — no matter which payment provider or purchase flow created the obligation. A transaction is created whenever a purchase is committed without being settled immediately (for example an offline [Pay Later](pay-later) commitment), and it is updated as reminders are sent and payments are recorded until it reaches a terminal state.
+
+Because the ledger is generic, one report, one customer statement, and one reminder pipeline serve every provider. A provider only needs to create a `Transaction` for a balance it leaves outstanding; the Transactions module supplies all of the reporting, settlement, and reminder machinery.
+
+## What it does
+
+- Records outstanding obligations as durable **`Transaction`** ledger entries, persisted in the tenant database so they survive cache eviction and node failure.
+- Gives every customer a **"My Transactions"** statement to view what they owe and to pay an outstanding balance online.
+- Gives administrators a **report and management console** to see everything outstanding, record payments, mark obligations paid, cancel them, add notes, and send reminders.
+- Sends **payment reminders through the [notification system](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)**, so each reminder honors the owner's preferred channel (email, and any other channel method they have enabled) rather than assuming email only. Reminders are an **opt-in feature** (see below).
+- Runs a **scheduled reminder sweep** on a cadence you configure in settings, when the reminders feature is enabled.
+
+## Concepts
+
+### Transaction
+
+A **`Transaction`** is the customer- and administrator-facing record of a single financial obligation. It carries the amounts (`Amount`, `TaxAmount`, `TotalAmount`, `AmountPaid`, and the computed `OutstandingAmount`), the owner, an optional due date, the provider-neutral origin (`Source`), and a neutral `ReferenceType` / `ReferenceId` / `ReferenceVersionId` triple that points back to whatever the obligation is for (an order, a subscription, and so on). It also keeps an audit timeline of **`TransactionEvent`** entries.
+
+The owner is described by an `OwnerId` and an `OwnerKind` (`Authenticated` or `Guest`). A purchase made by a signed-in user is owned by that user's id; a purchase made without an account is owned by a stable, tenant-scoped **guest customer id** — so a guest obligation is attributable and queryable instead of being orphaned under a null owner. A guest transaction also carries the contact (name and email) captured at purchase time, used to reach the guest for reminders.
+
+A transaction moves through a `TransactionStatus` lifecycle:
+
+| Status | Meaning |
+| --- | --- |
+| `Pending` | Recorded but not yet due for collection. |
+| `Outstanding` | Owed in full and not paid — the primary state a customer settles and an administrator chases. |
+| `PartiallyPaid` | Part of the balance has been paid; a balance remains. |
+| `Paid` | Paid in full. |
+| `Canceled` | Canceled before payment; no longer collectable. |
+| `Failed` | A collection attempt failed at the provider. |
+| `Abandoned` | Left unpaid past its collection window. |
+| `Refunded` | Paid and later refunded. |
+
+### Settlement
+
+An outstanding transaction can be settled two ways:
+
+- **Online** — the customer chooses *Pay* on an outstanding transaction. The module starts a [Checkout](checkout) session that references the transaction (`ReferenceType` = `Transaction`), contributes the outstanding balance as a one-time billing item, and settles the transaction when the checkout completes at a real gateway. Settlement is applied against the amount the payment provider **actually confirmed** (read from the durable payment-attempt ledger), never the amount the checkout requested, and the attempt currency must match the transaction currency — a mismatch is rejected rather than converted. A confirmed amount that covers the full balance marks the transaction **Paid**; a smaller confirmed amount marks it **Partially paid** and leaves the remainder outstanding. Settlement is **idempotent** (re-completing the same checkout never double-applies a payment) and records the settling `PaymentAttemptId` so a payment can always be reconciled against the gateway. Concurrent writes are guarded by optimistic concurrency, so two nodes settling the same transaction can never silently overwrite each other. This reuses the exact durable ledger and reconciliation the Checkout framework already provides, so a settlement is never recorded as paid unless the gateway confirms it.
+- **Offline** — a manager records a payment or marks the transaction paid from the admin console (for example after receiving a bank transfer or cash). The settlement is recorded with an *offline* method and an audit event.
+
+Choosing *Pay* starts a checkout through `ICheckoutEngine` and takes the customer straight into it, with the outstanding balance already contributed as the checkout's billing item. Online settlement is only available when the **[Checkout](checkout)** feature is enabled; the *Pay* action degrades gracefully (with a message) when it is not.
+
+### Reminders
+
+Reminders are delivered by `ITransactionReminderService`. An **authenticated** owner is reminded through OrchardCore's **`INotificationService`**, so the reminder reaches them on whichever channel they have configured. A **guest** owner (who has no account) is reminded by **email** through the optional email service, using the contact captured at purchase time; when no email service is registered or no guest contact is available, the guest reminder is skipped gracefully. A reminder is recorded on the transaction timeline and increments its reminder count. Managers can send a reminder manually from the admin console, and a background task sweeps outstanding transactions and sends reminders automatically on the configured cadence.
+
+Reminders are gated behind the separate **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`), which depends on the OrchardCore **Notifications** feature. The core Transactions ledger, report, statements, and settlement work without it; enable the reminders feature only when you want manual and scheduled reminders. When it is disabled, the *Send reminder* action and the reminder settings are not shown.
+
+Besides chasing what is overdue, the sweep tells the owner a payment is **coming due**, once, a few days before
+its due date (`SendUpcomingReminderAsync`). A transaction that will be collected without the owner acting — an
+installment charged to a saved card — carries a `TransactionAutoCollection` describing the card, and its notice
+says which card will be charged and when instead of asking the owner to pay.
+
+### Payment receipts
+
+The **Payment Receipts** feature (`CrestApps.OrchardCore.Transactions.Receipts`, which needs the
+[Receipts](receipts) module) sends the owner a receipt for every payment applied to a transaction: settled online,
+recorded offline, or marked paid. A receipt covers the money in that one payment, with that payment's share of the
+transaction's tax, so a balance paid in three parts gets three receipts that add up. A signed-up owner receives it
+through the notification system with an HTML body; a guest owner receives it by email. Each payment on a
+transaction's timeline links to its printable receipt, for the owner and for administrators.
+
+Each receipt gets a short sequential number per site, `R-1001`, `R-1002` and so on, issued once when it is first sent
+and shown on every copy after that (`TransactionEvent.ReceiptNumber`). The numbers come from
+`IFinancialDocumentNumberGenerator`; the shipped generator keeps the last number of each series durably and issues
+the next one under a distributed lock, so no two receipts share a number even across nodes. A payment that fails
+after taking a number leaves a gap rather than reusing it.
+
+The same feature tells the owner when a payment is refunded, however the refund finished: confirmed by the gateway
+straight away, confirmed later by a gateway notification, or recorded by an administrator who paid it back by hand.
+The notice names the amount and what it was for, and the transaction's timeline records that it was sent.
+
+### Invoices and pay links
+
+A transaction its owner pays themselves (one that is not charged automatically) is invoiced:
+
+- **Invoice numbers.** The first time the owner is told about the payment, by the reminder before the due date, the
+  notice on the due date, or a reminder an administrator sends, the transaction is numbered `INV-1001`, `INV-1002`
+  and so on (`Transaction.InvoiceNumber`, from `ITransactionInvoiceService`). The number never changes, and a notice
+  that could not be delivered still keeps the number it was given.
+- **Pay links.** Each of those notices carries a link that pays the transaction without signing in, as text and as a
+  button. The link names one transaction, is signed with the site's data protection keys so it cannot be altered,
+  and expires after 60 days; every notice sends a fresh one. It opens a public page with the invoice and a **Pay**
+  button that starts the normal checkout, so a customer an administrator created (with no password) or a guest can
+  pay. A link that was altered or expired shows nothing about any transaction. Links use the site's **Base URL**
+  from the general settings, so set it to the public address; without it, a link made outside a request is left out
+  and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
+- **The invoice page.** With **Payment Receipts** enabled, the transaction's page links its invoice: the same layout
+  as a receipt, headed *Invoice*, with a *Due* status until it is paid. Administrators also see the pay link there,
+  to send it by hand. The receipt for the payment names the invoice it settled.
+- **The first reminder on the due date** reads as the payment being due today; later ones chase the unpaid balance.
+
+### Reacting to a payment
+
+`ITransactionPaymentHandler.PaymentRecordedAsync` is raised after a payment is applied to a transaction, however it
+was paid. Receipts and installment plans use it; implement it to react to payments without caring which screen or
+process took the money. Each recorded payment is a `TransactionEvent` with an `Id`, the `Amount` applied and the
+`Method` (`online` or `offline`). A handler that fails is logged and never undoes the payment.
+
+### Reacting to a refund
+
+`IPaymentRefundHandler.RefundSucceededAsync` is raised once for every refund that succeeds, from each place a refund
+can finish. The refund names the payment it returned (`OriginalAttemptId`), and that payment names what it paid for.
+Refund notices use it. A handler that fails is logged and never undoes the refund.
+
+## Using the module
+
+### Customer statement — "My Transactions"
+
+Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online. Paying opens the checkout straight on the payment step: the balance being paid is shown in the order summary, so there is no separate step for it.
+
+### Administrator report and console
+
+Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
+
+- **Send reminder** — deliver a payment reminder now. Available only when the **Transaction Reminders** feature is enabled.
+- **Record payment** — record a full or partial payment received offline.
+- **Mark paid** — settle the remaining balance offline.
+- **Cancel** — cancel an uncollectable obligation.
+- **Add note** — attach a free-form note to the timeline.
+
+Because the report is provider-agnostic, an administrator can see and manage an unpaid balance the same way regardless of which module created it. If a customer never pays, a manager has one place to chase, settle, cancel, or annotate the obligation, and can pair it with whatever downstream action a consuming module exposes (for example disabling a service or canceling a subscription).
+
+## Registering a transaction source
+
+The `Source` stored on a transaction is a technical key. To have it appear with a friendly, localizable name in the report table and its **source** filter dropdown, register the source from a module's `Startup` using `AddTransactionSource`:
+
+```csharp
+using CrestApps.OrchardCore.Transactions.Core;
+using Microsoft.Extensions.Localization;
+
+public sealed class Startup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddTransactionSource("pay-later", source =>
+        {
+            source.DisplayName = S["Pay Later"];
+            source.Description = S["Outstanding balances committed through the offline Pay Later option."];
+        });
+    }
+}
+```
+
+The `name` must match the value the provider assigns to `Transaction.Source`. Registered sources populate the report's source filter; an unregistered source still appears in the table using its raw key.
+
+## Configuring reminders
+
+Reminder settings appear only when the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`) is enabled. Under **Settings → Commerce → Transactions** (requires the **Manage transaction settings** permission) you can configure the scheduled reminder sweep:
+
+| Setting | Purpose | Default |
+| --- | --- | --- |
+| **Enabled** | Turns the scheduled reminder sweep on or off. | `true` |
+| **First reminder delay (days)** | Days to wait after a transaction becomes due before the first reminder. | `0` |
+| **Reminder interval (days)** | Days to wait between reminders. | `7` |
+| **Maximum reminders** | Maximum reminders per transaction (`0` = no limit). | `3` |
+| **Remind before the due date (days)** | How many days before a payment falls due the owner is told it is coming due, once per payment (`0` = off). | `3` |
+
+The background task runs the sweep on a schedule and sends a reminder only when a transaction is due for one under this cadence, up to the maximum.
+
+## Payments and refunds
+
+With [Checkout](checkout) enabled, **Commerce → Payments** lists every payment the suite has attempted, filtered by state and payment method, showing what was expected, what actually settled, and the gateway's own transaction reference. It answers "did this customer actually pay?" without reading the database.
+
+It is also the only place a refund starts. The form shows what was collected and what has already been given back, refuses an amount above what is still refundable, and issues the refund through the refund service so the durable ledger, the original payment's tax allocation, and the over-refund protection all apply. Counting an in-flight refund against the remaining amount is deliberate: ignoring one would let an operator start a second refund for money already on its way back.
+
+**Commerce → Refunds** lists what came of them. A refund against a payment method that has no executable refund operation is recorded as **needing manual settlement** rather than silently dropped, and this screen is where an operator records the reference once they have moved the money by hand. Only a refund in that state can be closed this way; marking a failed gateway refund as done would tell the ledger the customer was paid when they were not.
+
+Both screens require the **Manage payments and refunds** permission.
+
+## Permissions
+
+| Permission | Grants |
+| --- | --- |
+| **Manage transactions** | View and manage every tenant transaction: send reminders, record payments, mark paid, cancel, and add notes from the administration report. |
+| **Manage transaction settings** | Configure the transaction reminder settings. |
+| **View own transactions** | View and pay your own transactions. |
+| **Manage payments and refunds** | View the payment and refund ledgers and issue a refund. It is deliberately separate from managing transactions, because giving money back is the one action in the suite that cannot be undone and should not come free with the ability to read the outstanding report. |
+
+## Enabling the feature
+
+Add the package to your Orchard Core project:
+
+```bash
+dotnet add package CrestApps.OrchardCore.Transactions
+```
+
+Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Transactions**. Enabling it also enables the **[Commerce](commerce)** feature it depends on, which owns the shared Commerce admin menu and icon.
+
+Enable **[Checkout](checkout)** as well if you want customers to settle outstanding balances online. To send manual and scheduled payment reminders, enable the **Transaction Reminders** feature (`CrestApps.OrchardCore.Transactions.Notification`); it depends on the OrchardCore **[Notifications](https://docs.orchardcore.net/en/latest/reference/modules/Notifications/)** feature, which is enabled automatically as a dependency.
+
+## Related modules
+
+- [Commerce](commerce) — owns the shared Commerce admin menu and icon this module contributes to.
+- [Pay Later](pay-later) — records offline commitments as outstanding transactions in this ledger.
+- [Checkout](checkout) — the provider-agnostic checkout framework used to settle outstanding transactions online.
+- [Subscriptions](subscriptions) — a consumer of checkout that can leave balances a transaction tracks.
+- [Payments](payments) — the lower-level payment contracts and the Stripe provider.

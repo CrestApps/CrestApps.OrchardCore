@@ -1,0 +1,121 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+@model TenantProvisioningListViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsTenantProvisioning" title="@T["Site provisioning"]" />
+</zone>
+
+<div class="alert alert-warning" role="alert">
+    @T["A job marked <strong>Abandoned</strong> means a customer paid and did not get their site. Fix the cause, then retry it, or create the site by hand and refund the purchase."]
+</div>
+
+<form asp-action="Index" method="get" id="provisioning-filter">
+    @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
+    {
+        <input type="hidden" name="pageSize" value="@selectedPageSize" />
+    }
+</form>
+
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Jobs.Count, "1 site", "{0} sites")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} site in total", " / {0} sites in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select name="status" asp-items="Model.Statuses" form="provisioning-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
+    @if (Model.Jobs.Count > 0)
+    {
+        @foreach (var job in Model.Jobs)
+        {
+            var statusClass = job.Status switch
+            {
+                TenantProvisioningStatus.Succeeded => "text-bg-success",
+                TenantProvisioningStatus.Abandoned => "text-bg-danger",
+                TenantProvisioningStatus.Failed => "text-bg-warning",
+                _ => "text-bg-secondary",
+            };
+
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0">@job.TenantName</h5>
+                                </div>
+                                <div class="tags me-1">
+                                    <span class="badge @statusClass">@job.Status</span>
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Owner"]">
+                                    <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Owner"]</span>
+                                    @(job.ContactEmail ?? job.OwnerId)
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Bought"]">
+                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Bought"]</span>
+                                    @await DisplayAsync(await New.DateTime(Utc: job.CreatedUtc, Format: "g"))
+                                </span>
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Attempts"]">
+                                    <i class="fa-solid fa-rotate text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Attempts"]</span>
+                                    @T.Plural(job.AttemptCount, "1 attempt", "{0} attempts")
+                                </span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(job.LastError))
+                            {
+                                <div class="text-danger small mt-1">
+                                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span class="visually-hidden">@T["Last error"]</span>
+                                    @job.LastError
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
+                            @if (job.Status != TenantProvisioningStatus.Succeeded)
+                            {
+                                <form asp-action="Retry" asp-route-itemId="@job.ItemId" method="post" class="d-inline">
+                                    <button type="submit" class="btn btn-secondary btn-sm"
+                                            data-url-af="RemoveUrl"
+                                            data-title="@T["Retry now"]"
+                                            data-message="@T["Try to create the site {0} again now?", job.TenantName]"
+                                            data-ok-text="@T["Retry now"]"
+                                            data-cancel-text="@T["Cancel"]">
+                                        @T["Retry now"]
+                                    </button>
+                                </form>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> No sites match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

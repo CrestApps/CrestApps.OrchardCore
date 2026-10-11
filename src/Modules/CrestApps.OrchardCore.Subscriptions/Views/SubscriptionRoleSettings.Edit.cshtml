@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionRoleSettingsViewModel
+
+<h5>@T["Default roles to assign for new subscribers"]</h5>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        @for (var i = 0; i < Model.Roles.Length; i++)
+        {
+            <div class="form-check">
+                <input asp-for="Roles[i].IsSelected" type="checkbox" class="form-check-input">
+                <input type="hidden" asp-for="Roles[i].Role" />
+                <label class="form-check-label cursor-pointer" asp-for="Roles[i].IsSelected">@Model.Roles[i].Role</label>
+            </div>
+        }
+    </div>
+</div>

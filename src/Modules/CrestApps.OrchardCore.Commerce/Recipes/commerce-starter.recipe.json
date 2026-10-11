@@ -1,0 +1,115 @@
+{
+  "name": "CommerceStarter",
+  "displayName": "Commerce starter",
+  "description": "Turns on the Commerce suite and creates a Membership subscription plan that grants a Member role, so a new site can take a real recurring payment without wiring anything by hand.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [ "commerce" ],
+  "tags": [ "commerce", "subscriptions", "checkout", "payments" ],
+  "steps": [
+    {
+      "name": "feature",
+      "enable": [
+        "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Checkout",
+        "CrestApps.OrchardCore.Transactions",
+        "CrestApps.OrchardCore.PayLater",
+        "CrestApps.OrchardCore.Subscriptions",
+        "OrchardCore.Roles",
+        "OrchardCore.Workflows"
+      ]
+    },
+    {
+      "name": "Roles",
+      "Roles": [
+        {
+          "Name": "Member",
+          "Description": "Granted to a subscriber for as long as their subscription is current.",
+          "Permissions": []
+        }
+      ]
+    },
+    {
+      "name": "ContentDefinition",
+      "ContentTypes": [
+        {
+          "Name": "MembershipPlan",
+          "DisplayName": "Membership Plan",
+          "Settings": {
+            "ContentTypeSettings": {
+              "Creatable": true,
+              "Listable": true,
+              "Draftable": true,
+              "Versionable": true,
+              "Securable": true,
+              "Stereotype": "Subscription"
+            },
+            "FullTextAspectSettings": {
+              "IncludeFullText": true
+            }
+          },
+          "ContentTypePartDefinitionRecords": [
+            {
+              "PartName": "TitlePart",
+              "Name": "TitlePart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "0"
+                }
+              }
+            },
+            {
+              "PartName": "ProductPart",
+              "Name": "ProductPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "1"
+                }
+              }
+            },
+            {
+              "PartName": "SubscriptionEntitlementPart",
+              "Name": "SubscriptionEntitlementPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "2"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "ContentParts": []
+    },
+    {
+      "name": "content",
+      "data": [
+        {
+          "ContentType": "MembershipPlan",
+          "ContentItemId": "commercestartermembership00",
+          "ContentItemVersionId": "commercestartermembershipv0",
+          "DisplayText": "Membership",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Membership"
+          },
+          "ProductPart": {
+            "Price": 10.0,
+            "Currency": "USD"
+          },
+          "SubscriptionPart": {
+            "BillingDuration": 1,
+            "DurationType": "Month",
+            "Sort": 1
+          },
+          "SubscriptionEntitlementPart": {
+            "RoleNames": [ "Member" ]
+          }
+        }
+      ]
+    }
+  ]
+}
