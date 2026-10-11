@@ -1580,6 +1580,72 @@ The phone number verification providers have no configuration section. Set them 
 **Settings > Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
 
+## Reports
+
+### Report builder limits
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Reports:Builder:Limits` |
+| **Feature** | Report Builder |
+| **Controls** | The size limits of one designed report run |
+
+Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`),
+`MaxFilterOptions` (`500`), `MaxJoinKeys` (`10000`) and `JoinKeyBatchSize` (`500`).
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Reports": {
+        "Builder": {
+          "Limits": {
+            "MaxRowsPerDataSet": 100000
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=100000
+```
+
+### Report versions
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Reports:Builder:Versions` |
+| **Feature** | Report Builder |
+| **Controls** | How many published versions of each designed report are kept |
+
+Key: `MaxVersions` (default `50`). The oldest versions beyond it are deleted when a report is published; `0` keeps
+them all.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Reports": {
+        "Builder": {
+          "Versions": {
+            "MaxVersions": 100
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=100
+```
+
+See [Report Builder](modules/report-builder/index.md#configuration).
+
 ## Multi-tenancy
 
 ### Tenant hierarchy

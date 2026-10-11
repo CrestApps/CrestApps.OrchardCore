@@ -1,0 +1,153 @@
+@model ReportDesignsIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportDesignsIndex" title="@(Model.CanDesign ? T["Report Builder"] : T["Shared Reports"])" />
+</zone>
+
+<form method="get" asp-action="Index" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-1">
+            <div class="col">
+                <div class="has-search">
+                    <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <input name="q" value="@Model.Search" class="form-control" placeholder="@T["Search reports"]" type="search" autocomplete="off" aria-label="@T["Search reports"]" />
+                </div>
+            </div>
+            @if (Model.CanDesign)
+            {
+                <div class="col-auto">
+                    <select name="status" class="form-select" aria-label="@T["Status"]">
+                        <option value="" selected="@(Model.Status == ReportDesignListStatus.All)">@T["All reports"]</option>
+                        <option value="@ReportDesignListStatus.Published" selected="@(Model.Status == ReportDesignListStatus.Published)">@T["Published"]</option>
+                        <option value="@ReportDesignListStatus.Unpublished" selected="@(Model.Status == ReportDesignListStatus.Unpublished)">@T["Not published yet"]</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-secondary">@T["Filter"]</button>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary" asp-route="ReportViewsIndex">@T["Views"]</a>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-primary create" asp-route="ReportDesignerCreate">@T["New Report"]</a>
+                </div>
+            }
+        </div>
+    </div>
+</form>
+
+@if (Model.Drafts.Count > 0)
+{
+    <h2 class="h6 text-muted text-uppercase mb-2">@T["Not published yet"]</h2>
+    <ul class="list-group mb-3">
+        @foreach (var entry in Model.Drafts)
+        {
+            var design = entry.Design;
+
+            <li class="list-group-item d-flex flex-wrap flex-md-nowrap gap-2 align-items-center">
+                <div class="flex-grow-1" style="min-width: 0">
+                    <a class="fw-semibold" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@(string.IsNullOrWhiteSpace(design.DisplayText) ? T["Untitled report"] : design.DisplayText)</a>
+                    <span class="badge text-bg-secondary ms-1"><i class="fa-solid fa-file-pen" aria-hidden="true"></i> @T["Draft"]</span>
+                    <div class="small text-muted">
+                        @(entry.IsOwner ? T["Yours"] : T["By {0}", design.Author ?? "?"])
+                        @if (entry.ModifiedUtc.HasValue)
+                        {
+                            <span> · @T["Saved {0}", entry.ModifiedUtc.Value.ToString("g", System.Globalization.CultureInfo.CurrentCulture)] UTC</span>
+                        }
+                    </div>
+                </div>
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <a class="btn btn-sm btn-primary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Edit"]</a>
+                    <form method="post" asp-route="ReportDesignsDeleteDraft" asp-route-id="@design.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                    </form>
+                </div>
+            </li>
+        }
+    </ul>
+}
+
+@if (Model.Drafts.Count > 0 && Model.Entries.Count > 0)
+{
+    <h2 class="h6 text-muted text-uppercase mb-2">@T["Published"]</h2>
+}
+
+<ul class="list-group">
+    @if (Model.Entries.Count == 0 && Model.Drafts.Count == 0)
+    {
+        <li class="list-group-item list-group-item-info text-center">
+            @if (Model.CanDesign)
+            {
+                @T["<strong>Nothing here!</strong> Design a report to see it here."]
+            }
+            else
+            {
+                @T["No reports are shared with you."]
+            }
+        </li>
+    }
+
+    @foreach (var entry in Model.Entries)
+    {
+        var design = entry.Design;
+        var shared = (design.SharedUserNames?.Count ?? 0) + (design.SharedRoles?.Count ?? 0) > 0;
+
+        <li class="list-group-item d-flex flex-wrap flex-md-nowrap gap-2 align-items-center">
+            <div class="flex-grow-1" style="min-width: 0">
+                <a class="fw-semibold" asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@design.DisplayText</a>
+                @if (!string.IsNullOrWhiteSpace(design.Category))
+                {
+                    <span class="badge text-bg-light ms-1">@design.Category</span>
+                }
+                @if (design.ShowInAdminMenu)
+                {
+                    <span class="badge text-bg-info ms-1" title="@T["Shown in the admin menu"]"><i class="fa-solid fa-bars" aria-hidden="true"></i> @T["Menu"]</span>
+                }
+                @if (shared)
+                {
+                    <span class="badge text-bg-warning ms-1" title="@T["Shared with other people"]"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i> @T["Shared"]</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(design.Description))
+                {
+                    <div class="small text-muted">@design.Description</div>
+                }
+                <div class="small text-muted">
+                    @(entry.IsOwner ? T["Yours"] : T["By {0}", design.Author ?? "?"])
+                </div>
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0">
+                <a class="btn btn-sm btn-primary" asp-route="ReportDesignsRun" asp-route-id="@design.ItemId">@T["Run"]</a>
+                @if (entry.CanEdit)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-route="ReportDesignerEdit" asp-route-id="@design.ItemId">@T["Edit"]</a>
+                }
+                @if (entry.CanEdit)
+                {
+                    <form method="post" asp-route="ReportDesignsDelete" asp-route-id="@design.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                    </form>
+                }
+                @if (Model.CanDesign)
+                {
+                    <div class="btn-group" title="@T["Actions"]">
+                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle actions" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span>@T["Actions"]</span>
+                        </button>
+                        <ul class="actions-menu dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a asp-route="ReportDesignsClone"
+                                   asp-route-id="@design.ItemId"
+                                   class="dropdown-item"
+                                   data-url-af="UnsafeUrl"
+                                   data-title="@T["Clone"]"
+                                   data-message="@T["Create your own copy of this report? The copy is not shared with anybody."]"
+                                   data-ok-text="@T["Yes"]"
+                                   data-cancel-text="@T["Cancel"]">@T["Clone"]</a>
+                            </li>
+                        </ul>
+                    </div>
+                }
+            </div>
+        </li>
+    }
+</ul>

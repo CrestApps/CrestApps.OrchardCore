@@ -16,6 +16,52 @@ public static class ReportsConstants
     public const string OpenXmlFeature = "CrestApps.OrchardCore.Reports.OpenXml";
 
     /// <summary>
+    /// The identifier of the report builder feature, which lets people build reports from data sources with drag and
+    /// drop, save reusable views, and share reports.
+    /// </summary>
+    public const string BuilderFeature = "CrestApps.OrchardCore.Reports.Builder";
+
+    /// <summary>
+    /// The technical name of the data source that exposes saved report views as data sets.
+    /// </summary>
+    public const string ViewsDataSource = "ReportViews";
+
+    /// <summary>
+    /// The technical name of the data source that exposes content types as data sets. It is registered when the report
+    /// designer and Orchard Core Contents are both enabled.
+    /// </summary>
+    public const string ContentsDataSource = "Contents";
+
+    /// <summary>
+    /// The technical name of the data source that exposes saved Orchard Core queries as data sets. It is registered when
+    /// the report builder and Orchard Core Queries are both enabled.
+    /// </summary>
+    public const string QueriesDataSource = "Queries";
+
+    /// <summary>
+    /// The technical name of the data source that exposes the users of the site.
+    /// </summary>
+    public const string UsersDataSource = "Users";
+
+    /// <summary>
+    /// The technical name of the users data set of the users data source.
+    /// </summary>
+    public const string UsersDataSet = "Users";
+
+    /// <summary>
+    /// The technical name of the users data set's identifier field, which content owners and user pickers reference.
+    /// </summary>
+    public const string UserIdField = "UserId";
+
+    /// <summary>
+    /// The priority of the top-level Reports admin menu item built by the Reports module. Orchard Core merges menu items
+    /// with the same text and keeps the identifier, classes, and position of the one with the highest priority, so other
+    /// modules that add items under Reports use a lower priority and the Reports item keeps its <c>reports</c>
+    /// identifier, which selects its icon.
+    /// </summary>
+    public const int AdminMenuPriority = 2;
+
+    /// <summary>
     /// The technical name of the built-in CSV export format.
     /// </summary>
     public const string CsvExportFormat = "csv";

@@ -1,0 +1,803 @@
+[
+  {
+    "displayText": "Activities by role and agent",
+    "description": "Activities per role, agent and status, with a subtotal for each agent within a role, a subtotal for each role, and a grand total.",
+    "category": "Operations",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "R",
+          "source": "Users",
+          "dataSet": "UserRoles"
+        },
+        {
+          "alias": "A",
+          "source": "Omnichannel",
+          "dataSet": "Activities"
+        }
+      ],
+      "joins": [
+        {
+          "alias": "A",
+          "type": "Inner",
+          "conditions": [
+            {
+              "leftField": "R.UserId",
+              "rightField": "A.AssignedToId"
+            }
+          ]
+        }
+      ],
+      "filters": [
+        {
+          "id": "created",
+          "field": "A.CreatedUtc",
+          "stage": "Rows",
+          "operator": "InLastDays",
+          "values": [
+            "365"
+          ],
+          "exposed": true,
+          "label": "Created",
+          "control": "RelativeDate"
+        },
+        {
+          "id": "role",
+          "field": "R.Role",
+          "stage": "Rows",
+          "operator": "In",
+          "exposed": true,
+          "label": "Role",
+          "control": "MultiSelect"
+        }
+      ],
+      "columns": [
+        {
+          "id": "role",
+          "field": "R.Role",
+          "label": "Role"
+        },
+        {
+          "id": "agent",
+          "field": "R.UserName",
+          "label": "Agent"
+        },
+        {
+          "id": "status",
+          "field": "A.Status",
+          "label": "Status"
+        },
+        {
+          "id": "n",
+          "field": "$count",
+          "label": "Activities"
+        },
+        {
+          "id": "att",
+          "field": "A.Attempts",
+          "label": "Attempts",
+          "aggregate": "Sum"
+        },
+        {
+          "id": "avg",
+          "field": "A.Attempts",
+          "label": "Avg. attempts",
+          "aggregate": "Average",
+          "format": "N1"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "role"
+        },
+        {
+          "columnId": "agent"
+        },
+        {
+          "columnId": "status"
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "t",
+        "type": "Table",
+        "title": "By role, agent and status",
+        "width": 12,
+        "chartType": "Line",
+        "showTotals": true,
+        "showSubtotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  },
+  {
+    "displayText": "Activity outcomes by agent",
+    "description": "Activities joined to Users across two data sources, with a calculated completion rate, an average, viewer filters, a metric strip, a bar chart and a table with totals.",
+    "category": "Operations",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "A",
+          "source": "Omnichannel",
+          "dataSet": "Activities",
+          "displayName": "Activities"
+        },
+        {
+          "alias": "U",
+          "source": "Users",
+          "dataSet": "Users",
+          "displayName": "Users"
+        }
+      ],
+      "joins": [
+        {
+          "alias": "U",
+          "type": "Left",
+          "conditions": [
+            {
+              "leftField": "A.AssignedToId",
+              "rightField": "U.UserId"
+            }
+          ]
+        }
+      ],
+      "calculatedFields": [
+        {
+          "name": "Agent",
+          "label": "Agent",
+          "expression": "IFNULL([U.UserName], 'Unassigned')"
+        },
+        {
+          "name": "CompletionRate",
+          "label": "Completion rate",
+          "expression": "SUM(IF([A.Status] = 'Completed', 1, 0)) / COUNT()"
+        }
+      ],
+      "filters": [
+        {
+          "id": "created",
+          "field": "A.CreatedUtc",
+          "stage": "Rows",
+          "operator": "Between",
+          "exposed": true,
+          "label": "Created",
+          "control": "DateRange"
+        },
+        {
+          "id": "channel",
+          "field": "A.Channel",
+          "stage": "Rows",
+          "operator": "In",
+          "exposed": true,
+          "label": "Channel",
+          "control": "MultiSelect"
+        }
+      ],
+      "columns": [
+        {
+          "id": "agent",
+          "field": "Agent",
+          "label": "Agent"
+        },
+        {
+          "id": "total",
+          "field": "$count",
+          "label": "Activities"
+        },
+        {
+          "id": "rate",
+          "field": "CompletionRate",
+          "label": "Completion rate",
+          "format": "P1"
+        },
+        {
+          "id": "minutes",
+          "field": "A.HandleMinutes",
+          "label": "Avg minutes to complete",
+          "aggregate": "Average",
+          "format": "N1"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "total",
+          "descending": true
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "m",
+        "type": "Metrics",
+        "title": "Totals",
+        "width": 12,
+        "chartType": "Line",
+        "valueColumnIds": [
+          "total",
+          "rate",
+          "minutes"
+        ],
+        "showLegend": true
+      },
+      {
+        "id": "c",
+        "type": "Chart",
+        "title": "Activities by agent",
+        "width": 6,
+        "chartType": "Bar",
+        "categoryColumnId": "agent",
+        "valueColumnIds": [
+          "total"
+        ],
+        "showLegend": true
+      },
+      {
+        "id": "t",
+        "type": "Table",
+        "title": "By agent",
+        "width": 6,
+        "chartType": "Line",
+        "showTotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  },
+  {
+    "displayText": "Call quality trend",
+    "description": "Daily average MOS and jitter per provider from the call quality records, as a line chart with a metric strip, a date filter and a table with totals.",
+    "category": "Contact Center",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "Q",
+          "source": "ContactCenter",
+          "dataSet": "CallQuality",
+          "displayName": "Call quality"
+        }
+      ],
+      "filters": [
+        {
+          "id": "observed",
+          "field": "Q.ObservedUtc",
+          "stage": "Rows",
+          "operator": "Between",
+          "exposed": true,
+          "label": "Observed",
+          "control": "DateRange"
+        }
+      ],
+      "columns": [
+        {
+          "id": "day",
+          "field": "Q.ObservedUtc",
+          "label": "Day",
+          "transform": "Day"
+        },
+        {
+          "id": "provider",
+          "field": "Q.ProviderName",
+          "label": "Provider"
+        },
+        {
+          "id": "mos",
+          "field": "Q.Mos",
+          "label": "Average MOS",
+          "aggregate": "Average",
+          "format": "N2"
+        },
+        {
+          "id": "jitter",
+          "field": "Q.JitterMs",
+          "label": "Average jitter (ms)",
+          "aggregate": "Average",
+          "format": "N1"
+        },
+        {
+          "id": "n",
+          "field": "$count",
+          "label": "Samples"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "day"
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "l",
+        "type": "Chart",
+        "title": "MOS by day",
+        "width": 12,
+        "chartType": "Line",
+        "categoryColumnId": "day",
+        "seriesColumnId": "provider",
+        "valueColumnIds": [
+          "mos"
+        ],
+        "showLegend": true
+      },
+      {
+        "id": "m",
+        "type": "Metrics",
+        "width": 12,
+        "chartType": "Line",
+        "valueColumnIds": [
+          "mos",
+          "jitter",
+          "n"
+        ],
+        "showLegend": true
+      },
+      {
+        "id": "t",
+        "type": "Table",
+        "width": 12,
+        "chartType": "Line",
+        "showTotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  },
+  {
+    "displayText": "Calls with their activities and queues",
+    "description": "Contact Center interactions joined to Omnichannel activities and queues: answer rate, wait and talk time by queue and direction, with a result filter that hides tiny groups.",
+    "category": "Contact Center",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "I",
+          "source": "ContactCenter",
+          "dataSet": "Interactions",
+          "displayName": "Interactions"
+        },
+        {
+          "alias": "A",
+          "source": "Omnichannel",
+          "dataSet": "Activities",
+          "displayName": "Activities"
+        },
+        {
+          "alias": "Q",
+          "source": "ContactCenter",
+          "dataSet": "Queues",
+          "displayName": "Queues"
+        }
+      ],
+      "joins": [
+        {
+          "alias": "A",
+          "type": "Left",
+          "conditions": [
+            {
+              "leftField": "I.ActivityItemId",
+              "rightField": "A.ItemId"
+            }
+          ]
+        },
+        {
+          "alias": "Q",
+          "type": "Left",
+          "conditions": [
+            {
+              "leftField": "I.QueueId",
+              "rightField": "Q.ItemId"
+            }
+          ]
+        }
+      ],
+      "calculatedFields": [
+        {
+          "name": "Queue",
+          "label": "Queue",
+          "expression": "IFNULL([Q.Name], 'No queue')"
+        },
+        {
+          "name": "AnswerRate",
+          "label": "Answer rate",
+          "expression": "SUM(IF(ISNULL([I.AnsweredUtc]), 0, 1)) / COUNT()"
+        }
+      ],
+      "filters": [
+        {
+          "id": "calls",
+          "field": "calls",
+          "stage": "Result",
+          "operator": "GreaterThanOrEqual",
+          "values": [
+            "2"
+          ],
+          "control": "Auto"
+        },
+        {
+          "id": "channel",
+          "field": "I.Channel",
+          "stage": "Rows",
+          "operator": "In",
+          "exposed": true,
+          "label": "Channel",
+          "control": "MultiSelect"
+        }
+      ],
+      "columns": [
+        {
+          "id": "queue",
+          "field": "Queue",
+          "label": "Queue"
+        },
+        {
+          "id": "direction",
+          "field": "I.Direction",
+          "label": "Direction"
+        },
+        {
+          "id": "calls",
+          "field": "$count",
+          "label": "Interactions"
+        },
+        {
+          "id": "answer",
+          "field": "AnswerRate",
+          "label": "Answer rate",
+          "format": "P0"
+        },
+        {
+          "id": "wait",
+          "field": "I.WaitSeconds",
+          "label": "Avg wait (s)",
+          "aggregate": "Average",
+          "format": "N0"
+        },
+        {
+          "id": "talk",
+          "field": "I.TalkSeconds",
+          "label": "Avg talk (s)",
+          "aggregate": "Average",
+          "format": "N0"
+        },
+        {
+          "id": "activityKind",
+          "field": "A.Kind",
+          "label": "Activity kinds",
+          "aggregate": "CountDistinct"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "calls",
+          "descending": true
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "h",
+        "type": "Chart",
+        "title": "Interactions by queue",
+        "width": 12,
+        "chartType": "HorizontalBar",
+        "categoryColumnId": "queue",
+        "seriesColumnId": "direction",
+        "valueColumnIds": [
+          "calls"
+        ],
+        "stacked": true,
+        "showLegend": true
+      },
+      {
+        "id": "t",
+        "type": "Table",
+        "width": 12,
+        "chartType": "Line",
+        "showTotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  },
+  {
+    "displayText": "Campaign activity summary",
+    "description": "A plain table with no chart: activities, completions and attempts per campaign and channel, with a completion rate, viewer filters and totals.",
+    "category": "Campaigns",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "A",
+          "source": "Omnichannel",
+          "dataSet": "Activities"
+        }
+      ],
+      "calculatedFields": [
+        {
+          "name": "Completed",
+          "label": "Completed",
+          "expression": "IF([A.Status] = 'Completed', 1, 0)"
+        },
+        {
+          "name": "CompletionRate",
+          "label": "Completion rate",
+          "expression": "SUM(IF([A.Status] = 'Completed', 1, 0)) / COUNT()"
+        },
+        {
+          "name": "CampaignName",
+          "label": "Campaign",
+          "expression": "IFNULL([A.Campaign], '(No campaign)')"
+        },
+        {
+          "name": "ChannelName",
+          "label": "Channel",
+          "expression": "IFNULL([A.Channel], '(None)')"
+        }
+      ],
+      "filters": [
+        {
+          "id": "created",
+          "field": "A.CreatedUtc",
+          "stage": "Rows",
+          "operator": "InLastDays",
+          "values": [
+            "365"
+          ],
+          "exposed": true,
+          "label": "Created",
+          "control": "RelativeDate"
+        },
+        {
+          "id": "channel",
+          "field": "A.Channel",
+          "stage": "Rows",
+          "operator": "In",
+          "exposed": true,
+          "label": "Channel",
+          "control": "MultiSelect"
+        }
+      ],
+      "columns": [
+        {
+          "id": "campaign",
+          "field": "CampaignName",
+          "label": "Campaign"
+        },
+        {
+          "id": "channel",
+          "field": "ChannelName",
+          "label": "Channel"
+        },
+        {
+          "id": "n",
+          "field": "$count",
+          "label": "Activities"
+        },
+        {
+          "id": "c",
+          "field": "Completed",
+          "label": "Completed",
+          "aggregate": "Sum"
+        },
+        {
+          "id": "rate",
+          "field": "CompletionRate",
+          "label": "Completion rate",
+          "format": "P1"
+        },
+        {
+          "id": "att",
+          "field": "A.Attempts",
+          "label": "Attempts",
+          "aggregate": "Sum"
+        },
+        {
+          "id": "last",
+          "field": "A.CreatedUtc",
+          "label": "Last created",
+          "aggregate": "Max",
+          "format": "g"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "n",
+          "descending": true
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "t",
+        "type": "Table",
+        "title": "Campaigns",
+        "width": 12,
+        "chartType": "Line",
+        "showTotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  },
+  {
+    "displayText": "Chat sessions by month",
+    "description": "AI chat sessions per month by status as a stacked area chart, with a metric for the total.",
+    "category": "AI",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "S",
+          "source": "AIChat",
+          "dataSet": "ChatSessions",
+          "displayName": "Chat sessions"
+        }
+      ],
+      "columns": [
+        {
+          "id": "month",
+          "field": "S.LastActivityUtc",
+          "label": "Month",
+          "transform": "Month"
+        },
+        {
+          "id": "status",
+          "field": "S.Status",
+          "label": "Status"
+        },
+        {
+          "id": "n",
+          "field": "$count",
+          "label": "Sessions"
+        },
+        {
+          "id": "users",
+          "field": "S.UserId",
+          "label": "People",
+          "aggregate": "CountDistinct"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "month"
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "m",
+        "type": "Metrics",
+        "width": 12,
+        "chartType": "Line",
+        "valueColumnIds": [
+          "n",
+          "users"
+        ],
+        "showLegend": true
+      },
+      {
+        "id": "c",
+        "type": "Chart",
+        "title": "Sessions per month",
+        "width": 12,
+        "chartType": "Area",
+        "categoryColumnId": "month",
+        "seriesColumnId": "status",
+        "valueColumnIds": [
+          "n"
+        ],
+        "stacked": true,
+        "showLegend": true
+      },
+      {
+        "id": "t",
+        "type": "Table",
+        "width": 12,
+        "chartType": "Line",
+        "showTotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  },
+  {
+    "displayText": "Dispositions by channel",
+    "description": "Activities joined to their dispositions: the share of each disposition as a pie chart, and dispositions by channel as a pivot table.",
+    "category": "Operations",
+    "query": {
+      "dataSets": [
+        {
+          "alias": "A",
+          "source": "Omnichannel",
+          "dataSet": "Activities",
+          "displayName": "Activities"
+        },
+        {
+          "alias": "D",
+          "source": "Omnichannel",
+          "dataSet": "Dispositions",
+          "displayName": "Dispositions"
+        }
+      ],
+      "joins": [
+        {
+          "alias": "D",
+          "type": "Inner",
+          "conditions": [
+            {
+              "leftField": "A.DispositionId",
+              "rightField": "D.ItemId"
+            }
+          ]
+        }
+      ],
+      "columns": [
+        {
+          "id": "disposition",
+          "field": "D.Name",
+          "label": "Disposition"
+        },
+        {
+          "id": "channel",
+          "field": "ChannelName",
+          "label": "Channel"
+        },
+        {
+          "id": "n",
+          "field": "$count",
+          "label": "Activities"
+        }
+      ],
+      "sorts": [
+        {
+          "columnId": "n",
+          "descending": true
+        }
+      ],
+      "calculatedFields": [
+        {
+          "name": "ChannelName",
+          "label": "Channel",
+          "expression": "IFNULL([A.Channel], 'Other')"
+        }
+      ]
+    },
+    "visuals": [
+      {
+        "id": "p",
+        "type": "Chart",
+        "title": "Share by disposition",
+        "width": 5,
+        "chartType": "Pie",
+        "categoryColumnId": "disposition",
+        "valueColumnIds": [
+          "n"
+        ],
+        "showLegend": true
+      },
+      {
+        "id": "v",
+        "type": "Pivot",
+        "title": "Dispositions by channel",
+        "width": 7,
+        "chartType": "Line",
+        "seriesColumnId": "channel",
+        "valueColumnIds": [
+          "n"
+        ],
+        "columnIds": [
+          "disposition"
+        ],
+        "showTotals": true,
+        "showLegend": true
+      }
+    ],
+    "allowExport": true,
+    "refreshIntervalMinutes": 0
+  }
+]

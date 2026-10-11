@@ -1,0 +1,23 @@
+WEBVTT
+
+00:00:03.202 --> 00:00:07.676
+Turn on the Report Builder feature under Tools, Features.
+
+00:00:07.676 --> 00:00:11.582
+The Reports (OpenXml) feature adds Excel exports.
+
+00:00:12.037 --> 00:00:15.775
+The Report Builder appears under Reports in the admin menu.
+
+00:00:15.775 --> 00:00:19.627
+It lists every report you can open, and the filter at the top
+
+00:00:19.627 --> 00:00:21.927
+shows published reports or drafts.
+
+00:00:22.380 --> 00:00:26.190
+From the list, run a report, edit it, or delete it.
+
+00:00:26.190 --> 00:00:32.340
+The Actions menu clones a report into your own copy, which is not shared with anybody.
+

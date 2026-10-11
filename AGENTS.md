@@ -352,6 +352,26 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-report-data-source` — how to add a data source (connector) to the Report
+  Designer (a database, a search index, an API, or a module's own records) by implementing `IReportDataSource`, and
+  how to extend the content items source for custom content fields and parts: the security boundary, value types, safe filter
+  push-down, limits, wiring, tests and docs.
+
+### Videos for the docs site and pull requests
+
+Every narrated CrestApps video (module overviews, feature walkthroughs, pull request demos) is produced with the
+`.agents/skills/crestapps-video-producer` skill, so all videos on the docs site look and sound the same. Use it
+whenever a video is asked for, and never change its specification for a single video: change the skill instead.
+
+- **Voice**: always `en-US-AvaMultilingualNeural` at `-5%` through `edge-tts` (a clear, professional woman's voice).
+- **Look**: 1920x1080, 30 fps, H.264 CRF 30 with AAC 48 kbps mono; navy `#081B26` background, amber `#EAA429`
+  accents and frame, Inter, and the logo in `src/CrestApps.Docs/branding/CrestAppsMainLogo.png`.
+- **Structure**: an opening card, numbered chapters (slides or screen recordings), a closing card, and WebVTT/SRT
+  captions generated from the narration.
+- **Data**: record a copy of a demo site with fake data, never real people, accounts or tokens, and OCR-check the
+  result before publishing.
+- **Publish**: the `.mp4`, `.vtt` and a `.jpg` poster go in `src/CrestApps.Docs/static/img/docs/`, embedded near
+  the top of both the technical page and the user manual page.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

@@ -1,0 +1,32 @@
+WEBVTT
+
+00:00:03.182 --> 00:00:07.298
+Visuals are listed under Visuals, in the order they appear.
+
+00:00:07.298 --> 00:00:10.402
+A table shows the rows, and can add totals.
+
+00:00:10.856 --> 00:00:13.688
+Add a chart, and pick its type:
+
+00:00:13.688 --> 00:00:17.897
+bar, horizontal bar, line, area, pie or doughnut.
+
+00:00:17.897 --> 00:00:21.876
+Then pick the category and the values to plot.
+
+00:00:22.327 --> 00:00:26.527
+A metric strip shows a few key numbers at the top of the report.
+
+00:00:26.978 --> 00:00:31.312
+A pivot table puts one column down the side and spreads the values
+
+00:00:31.312 --> 00:00:33.238
+of another across the top.
+
+00:00:34.173 --> 00:00:38.345
+Set the width of each visual to place them side by side.
+
+00:00:38.345 --> 00:00:44.873
+Charts, metrics and totals regroup the underlying rows, so an average stays a true average.
+

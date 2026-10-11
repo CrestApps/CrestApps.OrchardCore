@@ -1,0 +1,10 @@
+@using OrchardCore.DisplayManagement.Html
+@model DesignedReportViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReportDesignsRun" title="@(new HtmlContentString(System.Net.WebUtility.HtmlEncode(Model.Design.DisplayText ?? string.Empty)))">
+        <breadcrumb-item id="ReportDesignsIndex" action="Index" controller="ReportDesigns" area="CrestApps.OrchardCore.Reports">@T["Report Builder"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_DesignedReport" model="Model" />

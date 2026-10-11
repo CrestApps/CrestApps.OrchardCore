@@ -1,0 +1,123 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Reports.DataSources
+@model ReportFiltersViewModel
+
+@if (Model.Filters.Count > 0)
+{
+    <style asp-name="bootstrap-select"></style>
+    <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+}
+
+@foreach (var filter in Model.Filters)
+{
+    var id = filter.Definition.Id;
+    var name = ReportFilterValueBinder.FieldName(id);
+    var inputId = "report-filter-" + id;
+    var label = string.IsNullOrWhiteSpace(filter.Definition.Label) ? id : filter.Definition.Label;
+    var values = filter.Values ?? [];
+    var first = values.Count > 0 ? values[0] : string.Empty;
+    var second = values.Count > 1 ? values[1] : string.Empty;
+    var inputType = filter.DataType switch
+    {
+        ReportDataType.Integer or ReportDataType.Decimal => "number",
+        ReportDataType.Date => "date",
+        ReportDataType.DateTime => "datetime-local",
+        _ => "text",
+    };
+
+    switch (filter.Control)
+    {
+        case ReportFilterControl.DateRange when !Model.SimpleControls:
+            {
+                var from = ReportDataValues.Coerce(first, ReportDataType.DateTime) as DateTime?;
+                var to = ReportDataValues.Coerce(second, ReportDataType.DateTime) as DateTime?;
+
+                @await Component.InvokeAsync("DateRangePicker", new
+                {
+                    fromName = ReportFilterValueBinder.FieldName(id, "from"),
+                    toName = ReportFilterValueBinder.FieldName(id, "to"),
+                    from,
+                    to,
+                    label,
+                })
+            }
+
+            break;
+
+        case ReportFilterControl.DateRange:
+        case ReportFilterControl.NumberRange:
+            {
+                var rangeType = filter.Control == ReportFilterControl.NumberRange ? "number" : inputType;
+
+                <div class="col p-1">
+                    <label class="form-label" for="@(inputId)-from">@label</label>
+                    <div class="input-group">
+                        <input type="@rangeType" class="form-control" id="@(inputId)-from" name="@ReportFilterValueBinder.FieldName(id, "from")" value="@first" placeholder="@T["From"]" aria-label="@T["From"]" step="any" />
+                        <input type="@rangeType" class="form-control" id="@(inputId)-to" name="@ReportFilterValueBinder.FieldName(id, "to")" value="@second" placeholder="@T["To"]" aria-label="@T["To"]" step="any" />
+                    </div>
+                </div>
+            }
+
+            break;
+
+        case ReportFilterControl.Select:
+        case ReportFilterControl.MultiSelect:
+            {
+                var multiple = filter.Control == ReportFilterControl.MultiSelect;
+
+                <div class="col p-1">
+                    <label class="form-label" for="@inputId">@label</label>
+                    <select class="selectpicker show-tick" id="@inputId" name="@name" multiple="@multiple" data-width="100%" data-live-search="@(filter.Options.Count > 8 ? "true" : "false")" data-actions-box="@(multiple ? "true" : null)" data-selected-text-format="@(multiple ? "count > 2" : null)" title="@(multiple ? T["Any"].Value : null)">
+                        @if (!multiple)
+                        {
+                            <option value="">@T["Any"]</option>
+                        }
+                        @foreach (var option in filter.Options)
+                        {
+                            <option value="@option.Value" selected="@values.Contains(option.Value, StringComparer.OrdinalIgnoreCase)">@option.Text</option>
+                        }
+                    </select>
+                </div>
+            }
+
+            break;
+
+        case ReportFilterControl.RelativeDate:
+            <div class="col p-1">
+                <label class="form-label" for="@inputId">@label</label>
+                <select class="selectpicker show-tick" id="@inputId" name="@name" data-width="100%">
+                    <option value="" selected="@string.IsNullOrEmpty(first)">@T["All time"]</option>
+                    @foreach (var (days, text) in new[] { ("1", T["Today"]), ("7", T["Last 7 days"]), ("30", T["Last 30 days"]), ("90", T["Last 90 days"]), ("365", T["Last 12 months"]) })
+                    {
+                        <option value="@days" selected="@string.Equals(first, days, StringComparison.Ordinal)">@text</option>
+                    }
+                    @if (!string.IsNullOrEmpty(first) && first is not ("1" or "7" or "30" or "90" or "365"))
+                    {
+                        <option value="@first" selected>@T["Last {0} days", first]</option>
+                    }
+                </select>
+            </div>
+
+            break;
+
+        case ReportFilterControl.Boolean:
+            <div class="col p-1">
+                <label class="form-label" for="@inputId">@label</label>
+                <select class="selectpicker show-tick" id="@inputId" name="@name" data-width="100%">
+                    <option value="">@T["Any"]</option>
+                    <option value="true" selected="@string.Equals(first, "true", StringComparison.OrdinalIgnoreCase)">@T["Yes"]</option>
+                    <option value="false" selected="@string.Equals(first, "false", StringComparison.OrdinalIgnoreCase)">@T["No"]</option>
+                </select>
+            </div>
+
+            break;
+
+        default:
+            <div class="col p-1">
+                <label class="form-label" for="@inputId">@label</label>
+                <input type="@inputType" class="form-control" id="@inputId" name="@name" value="@first" step="any" />
+            </div>
+
+            break;
+    }
+}

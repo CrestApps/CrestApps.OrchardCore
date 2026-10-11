@@ -1,0 +1,460 @@
+{
+  "title": "The CrestApps Report Builder",
+  "output": "report-builder",
+  "spoken": {
+    "CSV": "C.S.V.",
+    "IReportDataSource": "I Report Data Source",
+    "ReportRecordDataSource": "Report Record Data Source",
+    "SignalR": "Signal R"
+  },
+  "chapters": [
+    {
+      "id": "00",
+      "title": "The CrestApps Report Builder",
+      "subtitle": "Drag-and-drop reports over the data of your site",
+      "clips": [
+        {
+          "id": "00-intro",
+          "kind": "card",
+          "steps": [
+            {
+              "id": "intro",
+              "text": "The CrestApps Report Builder lets the people who run your site build their own reports by dragging fields, instead of writing queries. This video shows why it exists, how to build, chart and share a report, and every data source it reads."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "01",
+      "title": "Why the Report Builder",
+      "subtitle": "The questions a fixed report can't answer",
+      "clips": [
+        {
+          "id": "01-why",
+          "kind": "slide",
+          "steps": [
+            {
+              "id": "why-1",
+              "text": "Your site keeps its data in many places: content items, users and roles, contact center calls, omnichannel activities, AI chat sessions, and text messages."
+            },
+            {
+              "id": "why-2",
+              "text": "Built-in reports answer the questions someone thought of in advance. A new question used to mean asking a developer for a new query."
+            },
+            {
+              "id": "why-3",
+              "text": "And the Report Builder is not limited to those. More data sources keep being added, and developers can plug in their own, so reports can cover any data your site can reach."
+            },
+            {
+              "id": "why-4",
+              "text": "The Report Builder puts the answer in the hands of the people asking. They pick data sets, join them, group and total them, add charts, and share the result."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "title": "How it is organized",
+      "subtitle": "Sources, data sets, reports and views",
+      "clips": [
+        {
+          "id": "02-concepts",
+          "kind": "slide",
+          "steps": [
+            {
+              "id": "concepts-1",
+              "text": "A data source is the data of one module, such as Contents or Contact Center. Each source offers data sets, such as Activities or Users, and each data set has fields."
+            },
+            {
+              "id": "concepts-2",
+              "text": "A report combines data sets, picks columns and filters, and shows the result in visuals: tables, charts, metric strips and pivot tables."
+            },
+            {
+              "id": "concepts-3",
+              "text": "A view is a saved, reusable data set. Other reports use its columns like any other fields, and it can refresh on a schedule."
+            },
+            {
+              "id": "concepts-4",
+              "text": "Everything respects permissions. A data source shows only what the person may read, and a saved report runs with the access of its owner."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "title": "Getting started",
+      "subtitle": "Turn on the feature and find your reports",
+      "clips": [
+        {
+          "id": "03-start",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "start-1",
+              "text": "Turn on the Report Builder feature under Tools, Features. The Reports (OpenXml) feature adds Excel exports."
+            },
+            {
+              "id": "start-2",
+              "text": "The Report Builder appears under Reports in the admin menu. It lists every report you can open, and the filter at the top shows published reports or drafts."
+            },
+            {
+              "id": "start-3",
+              "text": "From the list, run a report, edit it, or delete it. The Actions menu clones a report into your own copy, which is not shared with anybody."
+            }
+          ]
+        }
+      ],
+      "short": "getting-started"
+    },
+    {
+      "id": "04",
+      "title": "Build a report",
+      "subtitle": "Data sets, columns and a live preview",
+      "clips": [
+        {
+          "id": "04-build",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "build-1",
+              "text": "Click New report. The builder has four tabs: Settings, Design, Data model and Sharing."
+            },
+            {
+              "id": "build-2",
+              "text": "On the Settings tab, give the report a title, a description and a category, and choose whether it appears in the admin menu and whether viewers may export it."
+            },
+            {
+              "id": "build-3",
+              "text": "On the Design tab, add a data set. The list groups the data sets by source; pick Activities, from Omnichannel."
+            },
+            {
+              "id": "build-4",
+              "text": "Its fields appear in the Data pane. Drag a field onto Columns, and the preview shows the result right away."
+            },
+            {
+              "id": "build-5",
+              "text": "Add Number of rows to count them. With a count, the report groups the rows by its other columns: here, activities per channel and status."
+            },
+            {
+              "id": "build-6",
+              "text": "A new report starts filtered on the last thirty days of its main date, which keeps reports over a lot of data quick. You can change or remove that filter."
+            }
+          ]
+        }
+      ],
+      "short": "build-a-report"
+    },
+    {
+      "id": "05",
+      "title": "Aggregates, transforms and formulas",
+      "subtitle": "Shape every column",
+      "clips": [
+        {
+          "id": "05-columns",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "agg-1",
+              "text": "Click a column to edit it under Properties. An aggregate turns a number into a sum, an average, a count, a distinct count, a minimum, a maximum or a median."
+            },
+            {
+              "id": "agg-2",
+              "text": "A transform changes a value before grouping. For a date, pick the day, the week, the month or the year, to see activity over time."
+            },
+            {
+              "id": "agg-3",
+              "text": "Give each column a header and a format. The question mark lists common formats, such as one decimal place or a percentage. Hide a column from tables while keeping it for grouping and charts."
+            },
+            {
+              "id": "agg-4",
+              "text": "Calculated fields use formulas, with functions for text, numbers, dates and aggregates. This one is the completion rate: the completed activities divided by all of them."
+            },
+            {
+              "id": "agg-5",
+              "text": "Drag the calculated field onto Columns, and it works like any other field."
+            }
+          ]
+        }
+      ],
+      "short": "columns-and-formulas"
+    },
+    {
+      "id": "06",
+      "title": "Filters",
+      "subtitle": "Narrow the data, and let viewers choose",
+      "clips": [
+        {
+          "id": "06-filters",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "filter-1",
+              "text": "Drag a field onto Filters. A row filter narrows the data before grouping. A result filter applies after it, such as channels with more than ten activities."
+            },
+            {
+              "id": "filter-2",
+              "text": "Let viewers change this filter, and pick how they choose: a drop-down list, a list with several choices, a recent period, a date or number range, or yes or no."
+            },
+            {
+              "id": "filter-3",
+              "text": "Exposed filters appear above the report, as searchable lists filled with the values found in the data. Viewers pick values and click Apply."
+            }
+          ]
+        }
+      ],
+      "short": "filters"
+    },
+    {
+      "id": "07",
+      "title": "Visuals",
+      "subtitle": "Tables, charts, metrics and pivot tables",
+      "clips": [
+        {
+          "id": "07-visuals",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "vis-1",
+              "text": "Visuals are listed under Visuals, in the order they appear. A table shows the rows, and can add totals."
+            },
+            {
+              "id": "vis-2",
+              "text": "Add a chart, and pick its type: bar, horizontal bar, line, area, pie or doughnut. Then pick the category and the values to plot."
+            },
+            {
+              "id": "vis-3",
+              "text": "A metric strip shows a few key numbers at the top of the report."
+            },
+            {
+              "id": "vis-4",
+              "text": "A pivot table puts one column down the side and spreads the values of another across the top."
+            },
+            {
+              "id": "vis-5",
+              "text": "Set the width of each visual to place them side by side. Charts, metrics and totals regroup the underlying rows, so an average stays a true average."
+            }
+          ]
+        }
+      ],
+      "short": "visuals"
+    },
+    {
+      "id": "08",
+      "title": "Join data sets",
+      "subtitle": "Combine data from several sources",
+      "clips": [
+        {
+          "id": "08-joins",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "join-1",
+              "text": "Add a second data set: Users. Data sets that reference each other, such as an activity and the user it is assigned to, are joined for you."
+            },
+            {
+              "id": "join-2",
+              "text": "The Data model tab draws the data sets and their relationships. To join two yourself, drag a column of one onto the matching column of the other: here, the campaign of an activity onto the ID of a campaign."
+            },
+            {
+              "id": "join-3",
+              "text": "Click a relationship to set its type: inner, left, right or full, on one or more pairs of columns."
+            },
+            {
+              "id": "join-4",
+              "text": "Back on the Design tab, the fields of both data sets are available. Here, activities are counted per user and status."
+            }
+          ]
+        }
+      ],
+      "short": "joins"
+    },
+    {
+      "id": "09",
+      "title": "Kinds of reports",
+      "subtitle": "Data, charts, or both",
+      "clips": [
+        {
+          "id": "09-kinds",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "kinds-1",
+              "text": "A report can be only data. This campaign summary is a plain table, with viewer filters, a calculated completion rate, and totals."
+            },
+            {
+              "id": "kinds-2",
+              "text": "A report can combine charts and data. This one shows a metric strip, a bar chart and a table of activity outcomes per agent."
+            },
+            {
+              "id": "kinds-3",
+              "text": "Tables can show subtotals. With Role, Agent and Status, there is a subtotal for each agent within a role, one for each role, and a grand total."
+            },
+            {
+              "id": "kinds-4",
+              "text": "Pie charts and pivot tables suit shares and cross-tabs, such as the share of each disposition, and dispositions by channel."
+            }
+          ]
+        }
+      ],
+      "short": "kinds-of-reports"
+    },
+    {
+      "id": "10",
+      "title": "Data sources",
+      "subtitle": "Everything a report can read",
+      "clips": [
+        {
+          "id": "10-sources",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "sources-1",
+              "text": "Contents offers one data set per content type, with its parts and fields. Owners, content pickers and user pickers reference other data sets, so they join automatically."
+            },
+            {
+              "id": "sources-2",
+              "text": "Users offers the accounts of the site and their roles. Passwords, tokens and other secrets are never exposed."
+            },
+            {
+              "id": "sources-3",
+              "text": "Contact Center offers interactions, call sessions and their quality, queues and queue items, agent profiles and sessions, callbacks, voicemail and recordings."
+            },
+            {
+              "id": "sources-4",
+              "text": "Omnichannel offers activities, dispositions, campaigns and activity batches. AI Chat offers chat sessions and their metrics, and Messaging offers conversations and messages."
+            },
+            {
+              "id": "sources-5",
+              "text": "Saved queries, and the views you build, are data sets too. Modules can add their own sources."
+            }
+          ]
+        }
+      ],
+      "short": "data-sources"
+    },
+    {
+      "id": "11",
+      "title": "Publish, drafts and versions",
+      "subtitle": "Change reports safely",
+      "clips": [
+        {
+          "id": "11-publish",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "pub-1",
+              "text": "Every change is saved in a draft as you work. Close the page and come back later, and the builder picks up where you left off."
+            },
+            {
+              "id": "pub-2",
+              "text": "Click Publish to make the changes live for everybody who can open the report. Each publish keeps a version."
+            },
+            {
+              "id": "pub-3",
+              "text": "Versions lists every published version. Preview one, or restore it. When two people edit the same report, the builder shows who else has it open, and stops one from silently overwriting the other."
+            }
+          ]
+        }
+      ],
+      "short": "publish-and-versions"
+    },
+    {
+      "id": "12",
+      "title": "Reusable views",
+      "subtitle": "Prepare a data set once, use it everywhere",
+      "clips": [
+        {
+          "id": "12-views",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "view-1",
+              "text": "Report Views lists the reusable data sets. Build a view like a report: data sets, joins, calculated fields, filters and columns."
+            },
+            {
+              "id": "view-2",
+              "text": "Choose how often it refreshes: every fifteen minutes, every hour, every six hours, or every day. A background task stores the result, so reports read it quickly."
+            },
+            {
+              "id": "view-3",
+              "text": "In any report, the view appears under the Report views source, and its columns are fields like any others."
+            }
+          ]
+        }
+      ],
+      "short": "views"
+    },
+    {
+      "id": "13",
+      "title": "Share and run",
+      "subtitle": "Users, roles, links and exports",
+      "clips": [
+        {
+          "id": "13-share",
+          "kind": "clip",
+          "steps": [
+            {
+              "id": "share-1",
+              "text": "On the Sharing tab, share the report with users, and with roles."
+            },
+            {
+              "id": "share-2",
+              "text": "Share links let people without an account open the report. Each link can expire, and can be revoked at any time."
+            },
+            {
+              "id": "share-3",
+              "text": "A shared report reads data with your access, so share only what viewers should see."
+            },
+            {
+              "id": "share-4",
+              "text": "Viewers run the report, change its filters, and export it as a C S V file, or as an Excel workbook."
+            }
+          ]
+        }
+      ],
+      "short": "share-and-run"
+    },
+    {
+      "id": "14",
+      "title": "Extend it",
+      "subtitle": "Add your own data source",
+      "clips": [
+        {
+          "id": "14-extend",
+          "kind": "slide",
+          "steps": [
+            {
+              "id": "ext-1",
+              "text": "Developers add a data source by implementing IReportDataSource. It lists its data sets, describes their fields, and returns rows for the fields a report asks for."
+            },
+            {
+              "id": "ext-2",
+              "text": "For data kept in records, derive from ReportRecordDataSource, and register the source with the service collection. The source decides what each person may see."
+            }
+          ]
+        }
+      ],
+      "short": "custom-data-sources"
+    },
+    {
+      "id": "99",
+      "title": "The CrestApps Report Builder",
+      "subtitle": "orchardcore.crestapps.com",
+      "clips": [
+        {
+          "id": "99-outro",
+          "kind": "card",
+          "steps": [
+            {
+              "id": "outro",
+              "text": "The Report Builder turns the data of your site into reports that anyone can build, chart and share. Thanks for watching."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:03.200 --> 00:00:07.627
+Developers add a data source by implementing IReportDataSource.
+
+00:00:07.627 --> 00:00:12.631
+It lists its data sets, describes their fields, and returns rows for the
+
+00:00:12.631 --> 00:00:14.620
+fields a report asks for.
+
+00:00:15.370 --> 00:00:22.979
+For data kept in records, derive from ReportRecordDataSource, and register the source with the service collection.
+
+00:00:22.979 --> 00:00:26.150
+The source decides what each person may see.
+

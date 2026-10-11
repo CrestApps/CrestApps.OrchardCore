@@ -5,6 +5,7 @@ title: Reports
 description: A reusable reporting framework for OrchardCore with a shared admin Reports area, extensible filters, a uniform report renderer, and pluggable exports.
 user_manual:
   - user-manual/reports
+  - user-manual/report-builder/index
 ---
 
 | | |
@@ -21,6 +22,13 @@ The **Reports** module is a reusable reporting framework. It provides a single a
 | **Add-on Feature ID** | `CrestApps.OrchardCore.Reports.OpenXml` |
 
 The optional **Reports (OpenXml)** add-on extends the Reports area with Excel workbook (`.xlsx`) exports using the `DocumentFormat.OpenXml` library. When the add-on is enabled alongside other exporters, report pages collapse those formats into a single **Export** dropdown so operators can choose the file type they want.
+
+| | |
+| --- | --- |
+| **Add-on Feature Name** | Report Builder |
+| **Add-on Feature ID** | `CrestApps.OrchardCore.Reports.Builder` |
+
+The optional **Report Builder** add-on lets people design their own reports with drag and drop from pluggable data sources, and share them. See [Report Builder](report-builder/index.md).
 
 The implementation is split into three layers:
 

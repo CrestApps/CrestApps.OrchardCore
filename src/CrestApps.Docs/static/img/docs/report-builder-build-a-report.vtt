@@ -1,0 +1,47 @@
+WEBVTT
+
+00:00:03.188 --> 00:00:04.827
+Click New report.
+
+00:00:04.827 --> 00:00:07.108
+The builder has four tabs:
+
+00:00:07.108 --> 00:00:10.458
+Settings, Design, Data model and Sharing.
+
+00:00:10.912 --> 00:00:15.256
+On the Settings tab, give the report a title, a description and a
+
+00:00:15.256 --> 00:00:21.252
+category, and choose whether it appears in the admin menu and whether viewers may export it.
+
+00:00:21.705 --> 00:00:24.488
+On the Design tab, add a data set.
+
+00:00:24.488 --> 00:00:30.125
+The list groups the data sets by source; pick Activities, from Omnichannel.
+
+00:00:30.575 --> 00:00:33.125
+Its fields appear in the Data pane.
+
+00:00:33.125 --> 00:00:37.915
+Drag a field onto Columns, and the preview shows the result right away.
+
+00:00:38.366 --> 00:00:40.874
+Add Number of rows to count them.
+
+00:00:40.874 --> 00:00:45.248
+With a count, the report groups the rows by its other columns:
+
+00:00:45.248 --> 00:00:48.206
+here, activities per channel and status.
+
+00:00:48.659 --> 00:00:52.818
+A new report starts filtered on the last thirty days of its main
+
+00:00:52.818 --> 00:00:56.204
+date, which keeps reports over a lot of data quick.
+
+00:00:56.204 --> 00:00:58.759
+You can change or remove that filter.
+

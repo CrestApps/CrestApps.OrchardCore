@@ -65,6 +65,8 @@ public sealed partial class HubCancellationConventionTests
                 "DistributedTestHub.cs",
                 "MessagingHub.cs",
                 "MessagingHubPresenceTests.cs",
+                "ReportsHub.cs",
+                "ReportsHubTests.cs",
                 "TelephonyHub.cs",
             ],
             files);

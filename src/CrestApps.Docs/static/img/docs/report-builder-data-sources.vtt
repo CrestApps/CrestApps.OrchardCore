@@ -1,0 +1,32 @@
+WEBVTT
+
+00:00:03.151 --> 00:00:08.395
+Contents offers one data set per content type, with its parts and fields.
+
+00:00:08.395 --> 00:00:15.101
+Owners, content pickers and user pickers reference other data sets, so they join automatically.
+
+00:00:15.555 --> 00:00:19.550
+Users offers the accounts of the site and their roles.
+
+00:00:19.550 --> 00:00:23.545
+Passwords, tokens and other secrets are never exposed.
+
+00:00:23.995 --> 00:00:30.507
+Contact Center offers interactions, call sessions and their quality, queues and queue items,
+
+00:00:30.507 --> 00:00:35.225
+agent profiles and sessions, callbacks, voicemail and recordings.
+
+00:00:35.675 --> 00:00:41.152
+Omnichannel offers activities, dispositions, campaigns and activity batches.
+
+00:00:41.152 --> 00:00:47.965
+AI Chat offers chat sessions and their metrics, and Messaging offers conversations and messages.
+
+00:00:48.416 --> 00:00:52.391
+Saved queries, and the views you build, are data sets too.
+
+00:00:52.391 --> 00:00:54.876
+Modules can add their own sources.
+

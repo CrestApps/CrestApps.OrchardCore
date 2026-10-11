@@ -1,0 +1,32 @@
+WEBVTT
+
+00:00:03.171 --> 00:00:05.267
+A report can be only data.
+
+00:00:05.267 --> 00:00:12.341
+This campaign summary is a plain table, with viewer filters, a calculated completion rate, and totals.
+
+00:00:12.795 --> 00:00:15.501
+A report can combine charts and data.
+
+00:00:15.501 --> 00:00:19.466
+This one shows a metric strip, a bar chart and a table of
+
+00:00:19.466 --> 00:00:21.605
+activity outcomes per agent.
+
+00:00:22.057 --> 00:00:24.341
+Tables can show subtotals.
+
+00:00:24.341 --> 00:00:29.766
+With Role, Agent and Status, there is a subtotal for each agent within
+
+00:00:29.766 --> 00:00:33.407
+a role, one for each role, and a grand total.
+
+00:00:33.858 --> 00:00:38.727
+Pie charts and pivot tables suit shares and cross-tabs, such as the share
+
+00:00:38.727 --> 00:00:42.118
+of each disposition, and dispositions by channel.
+

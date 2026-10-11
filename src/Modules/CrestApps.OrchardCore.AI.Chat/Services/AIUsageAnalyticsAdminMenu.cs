@@ -1,4 +1,4 @@
-﻿using CrestApps.OrchardCore.Reports;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
