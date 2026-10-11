@@ -190,9 +190,6 @@ Customers see and pay their own balances on **My Transactions**. Every signed-in
 
 <AskYourAdmin />
 
-:::note[Customers need admin access]
-**My Transactions** is in the admin area, so a customer also needs the **Access admin panel** permission to open it, in a role they belong to. Without it they see *You do not have access to this resource*. Pay links in reminders work without it.
-:::
 
 ### See what you owe
 

@@ -41,7 +41,7 @@ This video walks through the commerce features, from connecting Stripe to refund
 | **Subscriptions** | **Agreements**, **My Plans**, **Installment Plans**, **Site provisioning** and **My Sites**. |
 | **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Transactions** (reminders), **Receipts** and **Pay Later**. |
 
-You only see the menus your role allows, and only for the features your site has turned on.
+You only see the menus your role allows, and only for the features your site has turned on. Customers open **My Plans**, **My Sites** and **My Transactions** with their own account; they need no other admin access, and the rest of the admin stays closed to them.
 
 <AskYourAdmin />
 

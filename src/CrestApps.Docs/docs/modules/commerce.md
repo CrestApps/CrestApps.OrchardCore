@@ -100,6 +100,31 @@ The commerce lists (installment plans, subscriptions, transactions, payments, re
 
 Build the pager with `new Pager(pagerParameters, pagerOptions.Value)` and carry `pageSize` through the filter post, so the selected page size survives a filter change.
 
+### Customer pages in the admin
+
+Some admin pages are for customers rather than staff: **My Plans**, **My Sites**, **My Transactions** and the printable invoices and receipts they link to. Customers who buy through the checkout have no admin access, so Orchard Core's admin filter would answer 403 on those pages.
+
+A controller (or action) marked with `[CustomerAdminPage]` (`CrestApps.OrchardCore.Commerce.CustomerAdminPageAttribute`, in `CrestApps.OrchardCore.Abstractions`) can be opened by any signed-in user. The Commerce feature's `CustomerAdminPageAuthorizationHandler` grants `AdminPermissions.AccessAdminPanel` for the request, but only while the endpoint carries the marker. The dashboard and every other admin page keep requiring the permission, and anonymous visitors are still sent to sign in.
+
+The marker opens the page, not the data. Every marked action must check the customer's own permission, such as `ViewOwnTransactions` or `ManageOwnSubscriptions`, and return only that customer's records:
+
+```csharp
+[Admin("my-subscriptions/{action}/{itemId?}", "MySubscriptions{action}")]
+[CustomerAdminPage]
+public sealed class MySubscriptionsController : Controller
+{
+    public async Task<IActionResult> Index()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageOwnSubscriptions))
+        {
+            return Forbid();
+        }
+
+        // Only the current user's subscriptions.
+    }
+}
+```
+
 ### The financial-document policy
 
 Money events (a settled payment, a partial payment, a refund, a chargeback or a write-off) may need different financial documents depending on the business: a receipt, or a persisted, numbered invoice or credit note. The modules that move money must not hard-code that decision, so the contracts live in `CrestApps.OrchardCore.Transactions.Abstractions` (namespace `CrestApps.OrchardCore.Transactions.FinancialDocuments`):

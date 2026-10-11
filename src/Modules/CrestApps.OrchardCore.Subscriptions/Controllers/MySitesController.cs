@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -28,6 +29,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 /// </remarks>
 [Feature(SubscriptionConstants.Features.Tenants)]
 [Admin("my-sites/{action}/{itemId?}", "MySites{action}")]
+[CustomerAdminPage]
 public sealed class MySitesController : Controller
 {
     private readonly ITenantProvisioningJobStore _jobStore;

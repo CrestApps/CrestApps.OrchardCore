@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -16,6 +17,7 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// administrators who manage transactions. Administrators also get the signed pay link, to send it by hand.
 /// </summary>
 [Admin("transaction-invoices/{itemId}", "TransactionInvoice")]
+[CustomerAdminPage]
 [Feature(TransactionsConstants.Features.Receipts)]
 public sealed class TransactionInvoiceController : Controller
 {

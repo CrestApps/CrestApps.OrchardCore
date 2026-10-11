@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -25,6 +26,7 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// Provides the customer statement of their own transactions and the online settlement entry point.
 /// </summary>
 [Admin]
+[CustomerAdminPage]
 public sealed class TransactionController : Controller
 {
     private const string _optionsSearch = "Options.Search";
