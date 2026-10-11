@@ -4,9 +4,11 @@ using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 
@@ -72,6 +74,28 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
     }
 
     /// <inheritdoc/>
+    public override Task CompletingAsync(CheckoutFlowCompletingContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (context.Flow.Session is not CheckoutSession session ||
+            !SubscriptionCheckout.IsSubscriptionReference(session.ReferenceType))
+        {
+            return Task.CompletedTask;
+        }
+
+        // A subscription checkout that bills nothing recurring paid for nothing. Completing it would still run
+        // every other completing handler: register the buyer's account, record a site to create, and so on. So
+        // it is refused, and the engine rolls back whatever those handlers wrote.
+        if (!global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutInvoice>(session, out var invoice) || invoice.GetRecurringGroups().Count == 0)
+        {
+            throw new InvalidOperationException($"Subscription checkout '{session.SessionId}' bills nothing that recurs, so it cannot be completed. The plan it was started for could not be priced as a subscription.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public override async Task ActivatingAsync(CheckoutFlowActivatingContext context)
     {
         var session = context.Session;
@@ -90,35 +114,22 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
-        contentItem.TryGet<SubscriptionPart>(out var plan);
-
         global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutPriceSelection>(session, out var selection);
 
-        var price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem)
-        {
-            PriceId = selection?.PriceId,
-            Quantity = selection?.Quantity ?? 1,
-            CustomAmount = selection?.CustomAmount,
-        });
+        var pricing = await SubscriptionPlanPricing.ResolveAsync(_priceResolver, contentItem, selection);
 
-        if (price is null)
+        if (!pricing.CanBeBought)
         {
-            _logger.LogWarning("Subscription plan '{ContentItemId}' has no resolvable price, so it cannot be bought.", session.ReferenceId);
+            // Nothing is billed, so nothing may be handed out either: completing refuses this checkout. Sign-up
+            // checks the same thing first, so this only happens when the plan changed after the checkout began.
+            _logger.LogWarning("Subscription plan '{ContentItemId}' cannot be bought ({Problem}), so checkout '{SessionId}' bills nothing and will not complete.", session.ReferenceId, pricing.Problem, session.SessionId);
 
             return;
         }
 
-        // What recurs comes from the price the buyer chose when the product lists its prices, and from the
-        // plan part when it does not. Those are the same thing expressed two ways, and a product that has
-        // been given prices is the authority on its own terms.
-        var recurrence = BuildRecurringPlan(price, plan);
-
-        if (recurrence is null)
-        {
-            _logger.LogWarning("Subscription plan '{ContentItemId}' resolves to a price that does not recur, so it cannot be sold as a subscription.", session.ReferenceId);
-
-            return;
-        }
+        var plan = pricing.Plan;
+        var price = pricing.Price;
+        var recurrence = pricing.Recurrence;
 
         // The version is recorded so a plan edited after the customer started still bills what they were
         // shown, and so the agreement can name the exact version that was agreed to.
@@ -176,51 +187,6 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
             BillingItems = [.. billingItems],
         });
     }
-
-    private static RecurringPlan BuildRecurringPlan(PriceResult price, SubscriptionPart plan)
-    {
-        if (price.Price is not null)
-        {
-            if (price.Price.Kind != PriceKind.Recurring)
-            {
-                return null;
-            }
-
-            return new RecurringPlan
-            {
-                BillingDuration = price.Price.BillingDuration ?? 1,
-                DurationType = MapInterval(price.Price.Interval),
-                BillingCycleLimit = price.Price.BillingCycleLimit,
-                StartDayDelay = price.Price.StartDayDelay,
-                TrialDays = price.Price.TrialDays,
-            };
-        }
-
-        if (plan is null)
-        {
-            return null;
-        }
-
-        return new RecurringPlan
-        {
-            BillingDuration = plan.BillingDuration,
-            DurationType = plan.DurationType,
-            BillingCycleLimit = plan.BillingCycleLimit,
-            StartDayDelay = plan.SubscriptionDayDelay,
-            TrialDays = plan.TrialDays,
-        };
-    }
-
-    // The catalog keeps its own interval vocabulary so it stays independent of any purchasing pipeline;
-    // this is the one place the two meet.
-    private static DurationType MapInterval(BillingInterval? interval)
-        => interval switch
-        {
-            BillingInterval.Day => DurationType.Day,
-            BillingInterval.Week => DurationType.Week,
-            BillingInterval.Year => DurationType.Year,
-            _ => DurationType.Month,
-        };
 
     // The plan's own title unless the buyer chose between named prices, in which case the name they picked
     // is what they expect to see on the invoice.

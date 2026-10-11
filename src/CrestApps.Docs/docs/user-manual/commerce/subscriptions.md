@@ -196,6 +196,7 @@ At the bottom of the page, the note *Cancelling stops the next payment. You keep
 - **A subscriber lost access after a failed payment.** Access lasts through the grace period after a failed renewal. Once it runs out, the subscription is **Expired** and the plan's roles are removed. The subscriber can subscribe again.
 - **A subscriber still has access after cancelling.** That is expected when the subscription was cancelled at the end of the period: access lasts until **Paid through**.
 - **The plan has no Sign up button.** Make sure the plan is published and has a price on its **Product** or **Product prices** part.
+- **Visitors see *This plan can't be bought right now* after Sign up.** The plan has no price the site can charge: usually it has no currency, and its content type sets no default currency, or its price is charged once rather than every period. Nothing is charged and no account is created. Give the plan a currency (or set a **Default currency** on the **Product** part of its content type) and a price that recurs, then publish it again.
 - **Visitors are asked to register before they can subscribe.** Tick **Allow Guest Signup** in **Settings > Subscriptions** to let them subscribe without an account.
 - **You want to sell a whole website.** See [Selling Sites](sites.md).
 - **You want to split one price into a few payments.** Use an [installment plan](installment-plans.md) instead.
