@@ -11,6 +11,13 @@ The commerce modules let an Orchard Core site take money: sell one-time purchase
 
 For the admin screens, see the User Manual's [Commerce](../user-manual/commerce/index.md) section.
 
+This video walks through the commerce modules, their screens, configuration and extension points:
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce.jpg" aria-label="Narrated video overview of the CrestApps Commerce modules">
+  <source src="/img/docs/commerce.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce.vtt" srcLang="en" label="English" default />
+</video>
+
 ## The modules
 
 | Module | Feature | What it owns | Page |

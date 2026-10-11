@@ -1,0 +1,32 @@
+WEBVTT
+
+00:00:03.178 --> 00:00:06.452
+A payment the customer pays themselves is invoiced.
+
+00:00:06.452 --> 00:00:10.817
+The first time they are told about it, it gets a short invoice number.
+
+00:00:10.817 --> 00:00:12.828
+Send reminder tells them now.
+
+00:00:13.282 --> 00:00:15.714
+The invoice is ready to print.
+
+00:00:15.714 --> 00:00:21.118
+Its payment link pays it without signing in, and expires after sixty days.
+
+00:00:21.118 --> 00:00:23.482
+Copy it, to send it yourself.
+
+00:00:25.086 --> 00:00:28.948
+The customer opens the link, sees the invoice, and clicks Pay.
+
+00:00:28.948 --> 00:00:33.946
+The checkout opens straight on the payment, with the balance in the order summary.
+
+00:00:34.398 --> 00:00:38.068
+They enter their card, just like in any other checkout.
+
+00:00:40.973 --> 00:00:46.273
+The transaction is settled, and a receipt with its own short number is sent to them.
+
