@@ -50,6 +50,11 @@ Each content item of that type becomes a purchasable plan, editable and securabl
 
 ## Buying a plan
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
+  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
+</video>
+
 ### Offering more than one price
 
 A plan sold one way needs no choice, and the plan card is a single **Sign up** button. Attach the

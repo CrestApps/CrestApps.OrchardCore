@@ -21,6 +21,11 @@ Because the ledger is generic, one report, one customer statement, and one remin
 
 ## What it does
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-transactions.jpg" aria-label="Narrated video of the Transactions report, a transaction, and the reminder settings">
+  <source src="/img/docs/commerce-transactions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-transactions.vtt" srcLang="en" label="English" default />
+</video>
+
 - Records outstanding obligations as durable **`Transaction`** ledger entries, persisted in the tenant database so they survive cache eviction and node failure.
 - Gives every customer a **"My Transactions"** statement to view what they owe and to pay an outstanding balance online.
 - Gives administrators a **report and management console** to see everything outstanding, record payments, mark obligations paid, cancel them, add notes, and send reminders.
@@ -88,6 +93,11 @@ straight away, confirmed later by a gateway notification, or recorded by an admi
 The notice names the amount and what it was for, and the transaction's timeline records that it was sent.
 
 ### Invoices and pay links
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-invoices.jpg" aria-label="Narrated video of an invoice, its pay link, and a customer paying through the link">
+  <source src="/img/docs/commerce-invoices.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-invoices.vtt" srcLang="en" label="English" default />
+</video>
 
 A transaction its owner pays themselves (one that is not charged automatically) is invoiced:
 
