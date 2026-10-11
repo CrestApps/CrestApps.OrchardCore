@@ -19,6 +19,11 @@ Creating a site happens after the purchase, in the background, so a slow or fail
 
 <AskYourAdmin />
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-sites.jpg" aria-label="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning">
+  <source src="/img/docs/commerce-sites.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-sites.vtt" srcLang="en" label="English" default />
+</video>
+
 ## Set up a plan that sells a site
 
 A site plan is an ordinary [subscription plan](subscriptions.md) with the **Tenant Onboarding** part added.

@@ -235,6 +235,11 @@ A delayed start (`SubscriptionDayDelay`) is handled the same way. To the money t
 
 ## Selling sites
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-sites.jpg" aria-label="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning">
+  <source src="/img/docs/commerce-sites.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-sites.vtt" srcLang="en" label="English" default />
+</video>
+
 With **Subscriptions - Sites** enabled on the default tenant, a plan can sell a whole Orchard Core site. The customer names their site and its administrator during checkout, and gets a running site once they have paid.
 
 The buying and the building are deliberately separate. Creating a tenant is slow, touches a database, and fails for reasons that have nothing to do with the buyer, so doing it inline in the request that completes the checkout means a slow recipe, a brief outage, or a deployment restart leaves somebody who paid with no site and nothing to retry.

@@ -1,38 +1,41 @@
 WEBVTT
 
-00:00:03.184 --> 00:00:07.424
-A subscription plan is a content item with a price and a billing
+00:00:03.192 --> 00:00:06.756
+Visitors find your plans on the Service Plans page.
 
-00:00:07.424 --> 00:00:10.876
-period, and it can add a setup fee or a free trial.
+00:00:06.756 --> 00:00:11.321
+Each plan shows its price, its billing period, and any setup fee or
 
-00:00:10.876 --> 00:00:13.844
-Visitors see your plans, and click Sign up.
+00:00:11.321 --> 00:00:13.822
+free trial, with a Sign up button.
 
-00:00:14.296 --> 00:00:17.322
+00:00:14.274 --> 00:00:17.300
 The checkout walks the buyer through its steps.
 
-00:00:17.322 --> 00:00:22.576
+00:00:17.300 --> 00:00:22.554
 Here they create an account, while the order summary shows the plan and its setup fee.
 
-00:00:30.473 --> 00:00:35.203
+00:00:28.736 --> 00:00:33.466
 On the payment step, they enter their card, and can apply a promotion code.
 
-00:00:38.063 --> 00:00:42.120
+00:00:35.421 --> 00:00:39.478
 Stripe confirms the payment, and the purchase is complete.
 
-00:00:42.120 --> 00:00:44.403
+00:00:39.478 --> 00:00:41.761
 The subscriber gets a receipt.
 
-00:00:45.987 --> 00:00:51.613
+00:00:43.345 --> 00:00:48.971
 Administrators find every subscriber under Subscriptions, Agreements, with its status.
 
-00:00:51.613 --> 00:00:56.137
+00:00:48.971 --> 00:00:53.495
 Each agreement shows the plan, its billing, and what happened to it.
 
-00:00:56.588 --> 00:01:02.848
-Under Actions, Cancel subscription stops the billing, right away or when the paid period ends.
+00:00:53.946 --> 00:00:59.161
+Under Actions, Cancel subscription stops the billing, right away or when the paid
 
-00:01:02.848 --> 00:01:06.478
-Pause billing holds the payments without cancelling.
+00:00:59.161 --> 00:01:02.518
+period ends, and Pause billing holds the payments.
+
+00:01:02.518 --> 00:01:04.796
+Both ask for confirmation first.
 

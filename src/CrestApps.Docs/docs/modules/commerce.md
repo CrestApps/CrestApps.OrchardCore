@@ -44,6 +44,17 @@ Every way of taking money goes through the same path, so there is one ledger to 
 
 Refunds follow the same pattern through the durable refund ledger, and `IPaymentRefundHandler` is raised once per refund, however it finished.
 
+## Take payments for your own module
+
+The payment modules aren't tied to subscriptions or installment plans. Any module can take a payment, and gets every payment provider, coupons, taxes, receipts, the durable ledger and refunds without writing payment code. There are two ways:
+
+| You want to | Use | How |
+| --- | --- | --- |
+| Sell something in a checkout the buyer goes through now | `ICheckoutEngine` and an `ICheckoutHandler` | Start a checkout with a `ReferenceType` and `ReferenceId` for what is being bought, and redirect to the `CheckoutStep` route. Your handler adds the billing items when the checkout starts, and finishes the purchase in `CompletedAsync` once the payment is confirmed. See [Extending checkout](checkout#extending-checkout). |
+| Bill a customer for an amount they pay later | A transaction | Create a transaction with your own source through `ITransactionManager`. The customer sees it in My Transactions, gets reminders and an invoice with a pay link, and pays it through the same checkout. React to the payment with `ITransactionPaymentHandler`. See [Registering a transaction source](transactions#registering-a-transaction-source). |
+
+Subscriptions and Installment Plans are built exactly this way, so they are working examples of both.
+
 ## The Commerce feature
 
 | | |
