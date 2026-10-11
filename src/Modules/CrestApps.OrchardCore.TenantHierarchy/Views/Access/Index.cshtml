@@ -1,0 +1,176 @@
+@model AccessGrantsViewModel
+
+@{
+    var labels = Model.Labels;
+    var childId = Model.Child?.Entry.EntryId;
+    var title = Model.Child is null
+        ? T.GetString("Access to every {0}", labels.ChildLower).Value
+        : T.GetString("Access to {0}", Model.Child.Entry.DisplayName).Value;
+    var target = Model.Child is null
+        ? T.GetString("every {0}", labels.ChildLower).Value
+        : Model.Child.Entry.DisplayName;
+
+    // On a client's page, the rules for every client apply too, so they are listed with its own rules.
+    var rows = Model.Grants.Select(grant => (Grant: grant, Inherited: false))
+        .Concat(Model.InheritedGrants.Select(grant => (Grant: grant, Inherited: true)))
+        .ToList();
+}
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.Child is null ? "TenantHierarchyAccess" : "TenantHierarchyChildAccess")" title="@T["{0}", title]">
+        <breadcrumb-item id="TenantHierarchyChildren" action="Index" controller="ChildTenants" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ViewChildTenants.Name">@labels.Children</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="alert alert-light border d-flex gap-3 mb-4">
+    <i class="fa-solid fa-circle-info text-primary mt-1" aria-hidden="true"></i>
+    <div>
+        <div class="fw-semibold mb-1">@T["How access works"]</div>
+        <ul class="mb-0 ps-3">
+            <li>@T["People in {0} never need a password for a {1}. They open it from here, and are signed in to it automatically.", Model.ParentName, labels.ChildLower]</li>
+            <li>@T["A rule says who in {0} may open {1}, and which roles they have once they are inside.", Model.ParentName, target]</li>
+            <li>@T["Someone who matches several rules gets all of their roles. Someone who matches no rule cannot open it."]</li>
+        </ul>
+        @if (Model.Child is not null)
+        {
+            <div class="mt-2 small">@T["Rules for every {0} apply here too.", labels.ChildLower] <a asp-action="Index">@T["Edit the rules for every {0}", labels.ChildLower]</a></div>
+        }
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header fw-semibold">@T["Rules"]</div>
+    @if (rows.Count == 0)
+    {
+        <div class="card-body text-muted">@T["No rule yet, so nobody in {0} can open {1}. Add a rule below.", Model.ParentName, target]</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Who in {0}", Model.ParentName]</th>
+                        <th scope="col">@T["Can open"]</th>
+                        <th scope="col">@T["Roles inside the {0}", labels.ChildLower]</th>
+                        <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var (grant, inherited) in rows)
+                    {
+                        <tr>
+                            <td>
+                                @if (grant.PrincipalType == AccessGrantPrincipalType.Role)
+                                {
+                                    <i class="fa-solid fa-users fa-fw text-muted me-1" aria-hidden="true"></i>
+                                    @T["Everyone with the <strong>{0}</strong> role", grant.PrincipalName]
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-user fa-fw text-muted me-1" aria-hidden="true"></i>
+                                    <strong>@grant.PrincipalName</strong>
+                                }
+                            </td>
+                            <td>
+                                @if (string.IsNullOrEmpty(grant.ChildEntryId))
+                                {
+                                    @T["Every {0}", labels.ChildLower]
+                                }
+                                else
+                                {
+                                    @(Model.Child?.Entry.DisplayName ?? T["This {0}", labels.ChildLower].Value)
+                                }
+                            </td>
+                            <td>
+                                @foreach (var role in grant.ChildRoles)
+                                {
+                                    <span class="badge text-bg-primary me-1">@role</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                @if (inherited)
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary" asp-action="Index">@T["Edit"]</a>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-outline-danger" asp-action="Remove" asp-route-grantId="@grant.GrantId" asp-route-id="@childId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove access"]" data-message="@T["Remove this rule? Open sessions that depend on it end at their next check."]">@T["Remove"]</a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<div class="card">
+    <div class="card-header fw-semibold">@T["Add a rule for {0}", target]</div>
+    <div class="card-body">
+        <form asp-action="Add" asp-route-id="@childId" method="post" class="no-multisubmit" id="th-grant-form">
+            <div class="mb-3">
+                <span class="form-label d-block">@T["Who in {0}", Model.ParentName]</span>
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" asp-for="PrincipalType" value="@AccessGrantPrincipalType.Role" id="th-type-role" checked />
+                    <label class="btn btn-outline-secondary" for="th-type-role"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Everyone with a role"]</label>
+                    <input type="radio" class="btn-check" asp-for="PrincipalType" value="@AccessGrantPrincipalType.User" id="th-type-user" />
+                    <label class="btn btn-outline-secondary" for="th-type-user"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["One person"]</label>
+                </div>
+            </div>
+
+            <div class="mb-3" data-th-for="Role">
+                <label asp-for="PrincipalRole" class="form-label">@T["Their role in {0}", Model.ParentName]</label>
+                <select asp-for="PrincipalRole" class="form-select">
+                    @foreach (var role in Model.ParentRoles)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3 d-none" data-th-for="User">
+                <span class="form-label d-block">@T["Person"]</span>
+                @await Component.InvokeAsync("UserPicker", new
+                {
+                    name = Html.NameFor(m => m.Principal).ToString(),
+                    selectedValues = string.IsNullOrEmpty(Model.Principal) ? Array.Empty<string>() : new[] { Model.Principal },
+                    valueType = "userName",
+                    multiple = false,
+                    buttonText = T["Select a person"].Value,
+                    searchPlaceholder = T["Search users"].Value,
+                    smallButton = false,
+                })
+            </div>
+
+            <div class="mb-3">
+                <span class="form-label d-block">@T["Their roles inside the {0}", labels.ChildLower]</span>
+                @foreach (var role in Model.ChildRoles)
+                {
+                    var id = $"th-child-role-{role}";
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" name="SelectedChildRoles" value="@role" id="@id" />
+                        <label class="form-check-label" for="@id">@role</label>
+                    </div>
+                }
+                <span class="hint">@T["These decide what they can see and do once they open the {0}. A role that does not exist in a {0} is ignored there.", labels.ChildLower]</span>
+            </div>
+
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add rule"]</button>
+        </form>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const form = document.getElementById('th-grant-form');
+        const update = () => {
+            const type = form.querySelector('input[name="PrincipalType"]:checked').value;
+            form.querySelectorAll('[data-th-for]').forEach((element) => element.classList.toggle('d-none', element.dataset.thFor !== type));
+        };
+
+        form.querySelectorAll('input[name="PrincipalType"]').forEach((input) => input.addEventListener('change', update));
+        update();
+    })();
+</script>

@@ -1,0 +1,114 @@
+@model ChildTenantEditViewModel
+
+@{
+    var labels = Model.Labels;
+    var suffix = Model.HostPattern?.Replace("{business}", string.Empty);
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyChildrenEdit" title="@T["Edit {0}", Model.Info?.Entry.DisplayName]">
+        <breadcrumb-item id="TenantHierarchyChildren" action="Index" controller="ChildTenants" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ViewChildTenants.Name">@labels.Children</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Edit" asp-route-id="@Model.EntryId" method="post" class="no-multisubmit" id="th-child-form">
+    @Html.ValidationSummary(true, string.Empty, new { @class = "text-danger" })
+
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayName" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayName" class="form-control" autocomplete="off" maxlength="100" />
+            <span asp-validation-for="DisplayName" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Slug" class="ocat-label">@T["Address"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <span class="input-group-text">@($"{Model.Scheme}://")</span>
+                <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" data-th-slug data-original="@Model.Info?.Entry.Slug" data-check-url="@Url.Action("CheckAddress", new { id = Model.EntryId })" />
+                @if (!string.IsNullOrEmpty(suffix))
+                {
+                    <span class="input-group-text">@suffix</span>
+                }
+            </div>
+            <span asp-validation-for="Slug" class="text-danger" data-th-slug-error></span>
+            <span class="hint" data-th-slug-status data-available-text="@T["Available:"]">@T["If you change the address, the old address stops working at once. Tell the people who use it."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Description" class="form-control" rows="2" maxlength="500"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+    </div>
+
+    @if (Model.Info is not null)
+    {
+        <div class="ocat-wrapper">
+            <span class="ocat-label">@T["Details"]</span>
+            <div class="ocat-end">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3">@T["Created"]</dt>
+                    <dd class="col-sm-9">@Model.Info.Entry.CreatedUtc.ToLocalTime().ToString("f") @if (!string.IsNullOrEmpty(Model.Info.Entry.CreatedByName)) { <span class="text-muted">@T["by {0}", Model.Info.Entry.CreatedByName]</span> }</dd>
+                    <dt class="col-sm-3">@T["Setup recipe"]</dt>
+                    <dd class="col-sm-9">@Model.Info.Entry.RecipeName</dd>
+                </dl>
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>
+
+<script at="Foot">
+    (function () {
+        const form = document.getElementById('th-child-form');
+        const slug = form.querySelector('[data-th-slug]');
+        const status = form.querySelector('[data-th-slug-status]');
+        const error = form.querySelector('[data-th-slug-error]');
+        const defaultHint = status.textContent;
+        let timer = null;
+
+        slug.addEventListener('input', () => {
+            window.clearTimeout(timer);
+            slug.value = slug.value.toLowerCase();
+
+            if (!slug.value || slug.value === slug.dataset.original) {
+                status.textContent = defaultHint;
+                status.classList.remove('text-success', 'text-danger');
+                return;
+            }
+
+            timer = window.setTimeout(async () => {
+                try {
+                    const url = new URL(slug.dataset.checkUrl, window.location.origin);
+                    url.searchParams.set('slug', slug.value);
+                    const response = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const result = await response.json();
+                    error.textContent = '';
+                    status.classList.toggle('text-success', result.available);
+                    status.classList.toggle('text-danger', !result.available);
+                    status.textContent = result.available
+                        ? status.dataset.availableText + ' ' + result.address
+                        : result.message;
+                } catch (e) {
+                    status.textContent = defaultHint;
+                }
+            }, 300);
+        });
+    })();
+</script>

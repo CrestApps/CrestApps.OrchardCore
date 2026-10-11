@@ -1,0 +1,20 @@
+WEBVTT
+
+00:00:03.200 --> 00:00:09.029
+Clients, Activity opens the audit trail, filtered to the tenant hierarchy:
+
+00:00:09.029 --> 00:00:15.440
+every client created, opened, suspended or removed, and every access rule changed.
+
+00:00:15.894 --> 00:00:19.571
+Each event says who did it and when, with the client, the roles
+
+00:00:19.571 --> 00:00:23.194
+someone received, how they signed in, and the network address.
+
+00:00:23.646 --> 00:00:25.800
+Details shows the whole event.
+
+00:00:25.800 --> 00:00:30.346
+Events can be turned off and trimmed like any other audit trail event.
+
