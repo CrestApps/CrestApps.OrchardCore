@@ -138,6 +138,7 @@ public class ChatInteractionHub : ChatInteractionHubBase
         "pastMessagesCount" => S["Past messages must be between 2 and 50."].Value,
         "maxTokens" => S["Max response tokens must be 4 or greater."].Value,
         "documentRetrievalMode" => S["Document retrieval mode is invalid."].Value,
+        "filter" => S["Invalid filter value. It must be a valid OData filter."].Value,
         _ => S["One or more settings are invalid."].Value,
     };
 

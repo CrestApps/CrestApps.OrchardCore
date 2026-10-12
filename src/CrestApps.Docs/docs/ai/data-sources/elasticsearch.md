@@ -24,7 +24,7 @@ When AI profiles are configured with data sources, the system needs to search an
 - **Document indexing** — Indexes source documents with their embeddings into Elasticsearch knowledge base indexes.
 - **Vector search** — Performs k-NN similarity searches to find the most relevant documents for a given query.
 - **Filter execution** — Executes Elasticsearch DSL filter queries translated from OData for filtered vector search.
-- **OData filter translation** — Translates OData filter expressions into Elasticsearch-compatible bool queries targeting root-level filter fields.
+- **OData filter translation** — Registers the CrestApps.Core Elasticsearch `IODataFilterTranslator`, which translates the OData filter of an AI profile, a chat interaction or a data source search tool instance into an Elasticsearch bool query on the `filters.` fields of the knowledge base index. See [Filters on an Elasticsearch knowledge base](#filters-on-an-elasticsearch-knowledge-base).
 - **Batch document reading** — Reads source documents from Elasticsearch indexes in batches for efficient indexing.
 - **Automatic source sync** — When Orchard Core updates or deletes documents in Elasticsearch, the module forwards those provider notifications into the shared data-source indexing queue so mapped knowledge-base indexes stay aligned.
 - **External source connections** — Adds **Elasticsearch** as a selectable AI data-source **Source type** so operators can read directly from an external Elasticsearch index by configuring either a self-managed endpoint URL or an Elastic Cloud ID, selecting the authentication type, setting the remote index name, and optionally supplying a certificate fingerprint.
@@ -92,3 +92,25 @@ OrchardCore__CrestApps__Elasticsearch__Password
 ```
 
 Connection settings stored on a data source always win over the configured values. This section is separate from `OrchardCore:OrchardCore_Elasticsearch`, which configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.
+
+## Filters on an Elasticsearch knowledge base
+
+The feature registers the Elasticsearch `IODataFilterTranslator` with `AddElasticsearchODataFilterTranslator()`, keyed by the `Elasticsearch` provider name that the knowledge base index profile uses. It registers only the translator, because Orchard Core already provides the Elasticsearch client. For how a filter is set and validated, see [Filtering retrieval](index.md#filtering-retrieval).
+
+The translator prefixes each field with `filters.`, so `category eq 'docs'` becomes a `term` query on `filters.category`:
+
+| OData | Elasticsearch query |
+| --- | --- |
+| `eq`, `ne` | `term` (in a `must_not` for `ne`) |
+| `gt`, `ge`, `lt`, `le` | `range` |
+| `contains(field, 'value')`, `endswith(field, 'value')` | `wildcard` |
+| `startswith(field, 'value')` | `prefix` |
+| `and`, `or`, `not`, parentheses | `bool` with `must`, `should` or `must_not` |
+
+The knowledge base index maps the `filters` object with dynamic mapping, so Elasticsearch maps each string field as `text` with a `keyword` sub-field. A `term` query on the `text` field compares against the analyzed tokens, which are lower case and split into words, so `category eq 'Support Docs'` does not match. For an exact match on a string, use the `keyword` sub-field:
+
+```text
+category.keyword eq 'Support Docs'
+```
+
+The same applies to `contains`, `startswith` and `endswith` when the value must match the whole stored string, including its case.

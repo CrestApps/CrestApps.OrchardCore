@@ -1,8 +1,8 @@
 ﻿using System.Security.Claims;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Core.Models;
@@ -311,21 +311,9 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var clonedInteraction = await _interactionManager.NewAsync(JsonSerializer.SerializeToNode(interaction.Properties));
+        var clonedInteraction = await _interactionManager.NewAsync();
         clonedInteraction.Title = GetNextTitle(interaction.Title);
-        clonedInteraction.ChatDeploymentName = interaction.ChatDeploymentName;
-        clonedInteraction.ConnectionName = interaction.ConnectionName;
-        clonedInteraction.SystemMessage = interaction.SystemMessage;
-        clonedInteraction.Temperature = interaction.Temperature;
-        clonedInteraction.TopP = interaction.TopP;
-        clonedInteraction.FrequencyPenalty = interaction.FrequencyPenalty;
-        clonedInteraction.PresencePenalty = interaction.PresencePenalty;
-        clonedInteraction.MaxTokens = interaction.MaxTokens;
-        clonedInteraction.PastMessagesCount = interaction.PastMessagesCount;
-        clonedInteraction.ToolNames = interaction.ToolNames.ToList();
-        clonedInteraction.McpConnectionIds = interaction.McpConnectionIds.ToList();
-        clonedInteraction.Documents = interaction.Documents.ToList();
-        clonedInteraction.DocumentIndex = interaction.Documents.Count; // Set the document index based on the cloned documents.
+        ChatInteractionCloner.CopySettings(interaction, clonedInteraction);
 
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.EditChatInteractions, clonedInteraction))
         {
