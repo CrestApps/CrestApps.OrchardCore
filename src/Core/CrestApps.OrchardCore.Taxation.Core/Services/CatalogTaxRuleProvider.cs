@@ -46,8 +46,11 @@ public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
             return false;
         }
 
-        if (query.JurisdictionIds.Count > 0 &&
-            !string.IsNullOrEmpty(rule.JurisdictionId) &&
+        // A rule for a jurisdiction applies only where that jurisdiction was resolved for the item. When none was
+        // resolved (no address, or one outside every jurisdiction), such a rule doesn't apply: taxing a buyer for a
+        // place they may not be in is worse than leaving it to a rule with no jurisdiction. Rules with no
+        // jurisdiction apply everywhere.
+        if (!string.IsNullOrEmpty(rule.JurisdictionId) &&
             !query.JurisdictionIds.Contains(rule.JurisdictionId))
         {
             return false;
