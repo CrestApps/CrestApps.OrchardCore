@@ -3577,19 +3577,28 @@
   var app = designer.app;
   var linkCache = null;
   var newLinkUrl = null;
+
+  // A field in Orchard Core's admin layout: the label on the left, the control and its hint on the right, one field
+  // under the other.
   function field(label, control, hint) {
+    var id = control && control.id ? control.id : null;
     return h('div', {
-      className: 'mb-3'
+      className: 'ocat-wrapper'
     }, h('label', {
-      className: 'form-label'
-    }, label), control, hint ? h('div', {
-      className: 'form-text'
-    }, hint) : null);
+      className: 'ocat-label',
+      for: id
+    }, label), h('div', {
+      className: 'ocat-end'
+    }, control, hint ? h('span', {
+      className: 'hint'
+    }, hint) : null));
   }
-  function checkbox(label, checked, onChange, hint, disabled) {
+
+  // A checkbox on its own line of a list, such as a role.
+  function check(label, checked, onChange, hint, disabled) {
     var id = 'rd-' + Math.random().toString(36).slice(2, 9);
     return h('div', {
-      className: 'form-check mb-2'
+      className: 'form-check'
     }, h('input', {
       type: 'checkbox',
       className: 'form-check-input',
@@ -3606,6 +3615,18 @@
       className: 'hint dashed'
     }, hint) : null);
   }
+
+  // A checkbox setting in Orchard Core's admin layout, lined up with the controls of the fields above it.
+  function checkbox(label, checked, onChange, hint, disabled) {
+    return h('div', {
+      className: 'ocat-wrapper'
+    }, h('div', {
+      className: 'ocat-end-offset'
+    }, check(label, checked, onChange, hint, disabled)));
+  }
+  function newId() {
+    return 'rd-' + Math.random().toString(36).slice(2, 9);
+  }
   app.renderSettings = function () {
     var target = app.elements.settings;
     var design = app.design;
@@ -3616,11 +3637,8 @@
       return;
     }
     ui.clear(target);
-    ui.append(target, [h('div', {
-      className: 'row'
-    }, h('div', {
-      className: 'col-12 col-lg-8'
-    }, field(app.isView() ? app.t('View name') : app.t('Report title'), h('input', {
+    ui.append(target, [field(app.isView() ? app.t('View name') : app.t('Report title'), h('input', {
+      id: newId(),
       type: 'text',
       className: 'form-control',
       value: design.displayText || '',
@@ -3632,6 +3650,7 @@
         touch();
       }
     }), app.isView() ? app.t('Other reports list the view by this name.') : app.t('Shown at the top of the report and in the report list.')), field(app.t('Description'), h('textarea', {
+      id: newId(),
       className: 'form-control',
       rows: '3',
       oninput: function (event) {
@@ -3639,6 +3658,7 @@
         touch();
       }
     }, design.description || ''), app.isView() ? app.t('Tells other report builders what the view prepares.') : app.t('Shown above the report.')), app.isView() ? null : field(app.t('Category'), h('input', {
+      id: newId(),
       type: 'text',
       className: 'form-control',
       value: design.category || '',
@@ -3656,7 +3676,7 @@
       touch();
     }),
     // A view's refresh schedule (see designer-refresh.js).
-    app.isView() && app.renderRefresh ? app.renderRefresh() : null))]);
+    app.isView() && app.renderRefresh ? app.renderRefresh() : null]);
   };
   function userPicker() {
     var design = app.design;
@@ -3728,7 +3748,7 @@
       var shared = design.sharedRoles.indexOf(role) >= 0;
       var isAnonymous = role === 'Anonymous';
       var hint = isAnonymous ? app.t('Everyone, including visitors who are not signed in, can open the report.') : role === 'Authenticated' ? app.t('Everyone who is signed in can open the report.') : null;
-      return checkbox(role, shared, function (value) {
+      return check(role, shared, function (value) {
         design.sharedRoles = design.sharedRoles.filter(function (other) {
           return other !== role;
         });
@@ -3762,12 +3782,14 @@
       return container;
     }
     var name = h('input', {
+      id: 'rd-link-note',
       type: 'text',
       className: 'form-control',
       placeholder: app.t('What the link is for'),
       maxlength: '200'
     });
     var expires = h('input', {
+      id: 'rd-link-expires',
       type: 'datetime-local',
       className: 'form-control'
     });
@@ -3855,33 +3877,33 @@
         renderLinks();
       });
     };
-    ui.append(container, [h('div', {
-      className: 'row g-2 align-items-end mb-3'
+    ui.append(container, [field(app.t('Note'), name, app.t('What the link is for, shown in the list of links.')), field(app.t('Expires'), expires, app.t('Leave empty for a link that does not expire.')), h('div', {
+      className: 'ocat-wrapper'
     }, h('div', {
-      className: 'col-12 col-md-4'
-    }, h('label', {
-      className: 'form-label'
-    }, app.t('Note')), name), h('div', {
-      className: 'col-12 col-md-3'
-    }, h('label', {
-      className: 'form-label'
-    }, app.t('Expires')), expires), h('div', {
-      className: 'col-12 col-md-3'
+      className: 'ocat-end-offset'
     }, h('div', {
       className: 'form-check'
     }, allowExport, h('label', {
       className: 'form-check-label',
       for: 'rd-link-export'
-    }, app.t('Allow export'))), h('div', {
+    }, app.t('Allow export'))))), h('div', {
+      className: 'ocat-wrapper'
+    }, h('div', {
+      className: 'ocat-end-offset'
+    }, h('div', {
       className: 'form-check'
     }, requireSignIn, h('label', {
       className: 'form-check-label',
       for: 'rd-link-signin'
-    }, app.t('Require sign-in')))), h('div', {
-      className: 'col-12 col-md-2'
+    }, app.t('Require sign-in')), h('span', {
+      className: 'hint dashed'
+    }, app.t('Only signed-in people can open the link.'))))), h('div', {
+      className: 'ocat-wrapper'
+    }, h('div', {
+      className: 'ocat-end-offset'
     }, h('button', {
       type: 'button',
-      className: 'btn btn-primary w-100',
+      className: 'btn btn-primary',
       onclick: function () {
         var expiry = expires.value ? new Date(expires.value) : null;
         ui.request(app.url('createLink', {
@@ -3920,17 +3942,7 @@
     ui.clear(target);
     ui.append(target, [h('p', {
       className: 'text-muted'
-    }, app.t('A shared report shows its data with your access, so people see what the report shows even if they cannot open that data themselves.')), h('div', {
-      className: 'row g-4'
-    }, h('div', {
-      className: 'col-12 col-lg-6'
-    }, h('h2', {
-      className: 'h6'
-    }, app.t('People')), userPicker()), h('div', {
-      className: 'col-12 col-lg-6'
-    }, h('h2', {
-      className: 'h6'
-    }, app.t('Roles')), rolesList())), h('h2', {
+    }, app.t('A shared report shows its data with your access, so people see what the report shows even if they cannot open that data themselves.')), field(app.t('People'), userPicker(), app.t('The people who can open the report. Search by user name or email.')), field(app.t('Roles'), rolesList(), app.t('Everyone in these roles can open the report.')), h('h2', {
       className: 'h6 mt-4'
     }, app.t('Share links')), h('p', {
       className: 'text-muted small'
@@ -4053,6 +4065,7 @@
       app.savedRefreshIntervalMinutes = design.id ? current : 0;
     }
     var select = ui.select(designer.refreshOptions(app, current), current, {
+      id: 'rd-view-refresh',
       className: 'form-select',
       onchange: function (event) {
         design.refreshIntervalMinutes = parseInt(event.target.value, 10) || 0;
@@ -4060,16 +4073,19 @@
       }
     });
     return h('div', {
-      className: 'mb-3'
+      className: 'ocat-wrapper'
     }, h('label', {
-      className: 'form-label'
-    }, app.t('Refresh')), select, h('div', {
-      className: 'form-text'
+      className: 'ocat-label',
+      for: 'rd-view-refresh'
+    }, app.t('Refresh')), h('div', {
+      className: 'ocat-end'
+    }, select, h('span', {
+      className: 'hint'
     }, app.t('Live runs the view every time a report reads it. A schedule stores the result, so reports read it quickly; the data is as old as the last refresh.')),
     // The status is of the saved view, so it shows only once the view is saved with a schedule.
     design.id && app.savedRefreshIntervalMinutes > 0 ? h('div', {
       className: 'mt-2'
-    }, status()) : null);
+    }, status()) : null));
   };
 })(typeof window !== 'undefined' ? window : globalThis);
 /*

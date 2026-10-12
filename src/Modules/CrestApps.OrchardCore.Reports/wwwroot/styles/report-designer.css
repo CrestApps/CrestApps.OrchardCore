@@ -8,8 +8,10 @@
 }
 
 /* Header: tabs on the left sit flush on the body; the title and actions share the same row. */
+/* On narrow screens the tools wrap onto a line above the tabs, so the tabs stay attached to the panes. */
 .report-designer .rd-header {
     display: flex;
+    flex-wrap: wrap-reverse;
     align-items: flex-end;
     gap: .75rem;
     padding: .5rem .5rem 0;
@@ -39,10 +41,10 @@
 
 .report-designer .rd-header-tools {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: .5rem;
     flex: 1 1 auto;
-    min-width: 0;
     justify-content: flex-end;
     padding-bottom: .375rem;
 }

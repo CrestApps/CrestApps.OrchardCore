@@ -50,13 +50,13 @@ Everything is under **Reports** in the admin menu:
 
 The **Report Builder** page lists the reports you can open.
 
-- Type in **Search reports** to find a report by its title or category, and press Enter.
-- If you build reports, use the status list next to it to show **All reports**, only the **Published** ones, or only the ones **Not published yet**, then click **Filter**.
-- **Views** opens the list of reusable views, and **New Report** opens the builder on a new report. Both are shown to people who build reports.
+- Type in **Search reports** to find a report by its title or category, and press Enter or click **Go**.
+- **New Report** opens the builder on a new report. It is shown to people who build reports.
+- The header of the list says how many reports it shows. If you build reports, the **Status** menu on the right of it shows **All** reports, only the **Published** ones, or only the ones **Not published**.
 
-Reports you started but never published are listed first, under **Not published yet**, with a **Draft** badge. Only you, and the people who manage every report, can see them. Click **Edit** to keep working on one, or **Delete** to throw it away.
+Reports you started but never published are listed first, with a **Not published** badge. Only you, and the people who manage every report, can see them. Click **Edit** to keep working on one, or **Delete** to throw it away.
 
-Published reports are listed under **Published**. Each one shows its category, a **Menu** badge when it is in the admin menu, a **Shared** badge when it is shared with other people, and **Yours** or the name of its owner. The buttons depend on what you may do:
+Each published report shows its category, a **Menu** badge when it is in the admin menu, a **Shared** badge when it is shared with other people, and **Yours** or the name of its owner. The buttons depend on what you may do:
 
 | Button | What it does |
 | --- | --- |

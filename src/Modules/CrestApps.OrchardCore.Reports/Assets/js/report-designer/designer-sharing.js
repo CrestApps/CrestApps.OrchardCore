@@ -13,22 +13,38 @@
     var linkCache = null;
     var newLinkUrl = null;
 
+    // A field in Orchard Core's admin layout: the label on the left, the control and its hint on the right, one field
+    // under the other.
     function field(label, control, hint) {
-        return h('div', { className: 'mb-3' },
-            h('label', { className: 'form-label' }, label),
-            control,
-            hint ? h('div', { className: 'form-text' }, hint) : null);
+        var id = control && control.id ? control.id : null;
+
+        return h('div', { className: 'ocat-wrapper' },
+            h('label', { className: 'ocat-label', for: id }, label),
+            h('div', { className: 'ocat-end' },
+                control,
+                hint ? h('span', { className: 'hint' }, hint) : null));
     }
 
-    function checkbox(label, checked, onChange, hint, disabled) {
+    // A checkbox on its own line of a list, such as a role.
+    function check(label, checked, onChange, hint, disabled) {
         var id = 'rd-' + Math.random().toString(36).slice(2, 9);
 
-        return h('div', { className: 'form-check mb-2' },
+        return h('div', { className: 'form-check' },
             h('input', { type: 'checkbox', className: 'form-check-input', id: id, checked: !!checked, disabled: !!disabled, onchange: function (event) {
                 onChange(event.target.checked);
             } }),
             h('label', { className: 'form-check-label', for: id }, label),
             hint ? h('span', { className: 'hint dashed' }, hint) : null);
+    }
+
+    // A checkbox setting in Orchard Core's admin layout, lined up with the controls of the fields above it.
+    function checkbox(label, checked, onChange, hint, disabled) {
+        return h('div', { className: 'ocat-wrapper' },
+            h('div', { className: 'ocat-end-offset' }, check(label, checked, onChange, hint, disabled)));
+    }
+
+    function newId() {
+        return 'rd-' + Math.random().toString(36).slice(2, 9);
     }
 
     app.renderSettings = function () {
@@ -42,8 +58,9 @@
         }
 
         ui.clear(target);
-        ui.append(target, [h('div', { className: 'row' }, h('div', { className: 'col-12 col-lg-8' },
+        ui.append(target, [
             field(app.isView() ? app.t('View name') : app.t('Report title'), h('input', {
+                id: newId(),
                 type: 'text',
                 className: 'form-control',
                 value: design.displayText || '',
@@ -56,6 +73,7 @@
                 }
             }), app.isView() ? app.t('Other reports list the view by this name.') : app.t('Shown at the top of the report and in the report list.')),
             field(app.t('Description'), h('textarea', {
+                id: newId(),
                 className: 'form-control',
                 rows: '3',
                 oninput: function (event) {
@@ -64,6 +82,7 @@
                 }
             }, design.description || ''), app.isView() ? app.t('Tells other report builders what the view prepares.') : app.t('Shown above the report.')),
             app.isView() ? null : field(app.t('Category'), h('input', {
+                id: newId(),
                 type: 'text',
                 className: 'form-control',
                 value: design.category || '',
@@ -83,7 +102,7 @@
                 touch();
             }),
             // A view's refresh schedule (see designer-refresh.js).
-            app.isView() && app.renderRefresh ? app.renderRefresh() : null))]);
+            app.isView() && app.renderRefresh ? app.renderRefresh() : null]);
     };
 
     function userPicker() {
@@ -146,7 +165,7 @@
                 ? app.t('Everyone, including visitors who are not signed in, can open the report.')
                 : (role === 'Authenticated' ? app.t('Everyone who is signed in can open the report.') : null);
 
-            return checkbox(role, shared, function (value) {
+            return check(role, shared, function (value) {
                 design.sharedRoles = design.sharedRoles.filter(function (other) {
                     return other !== role;
                 });
@@ -186,8 +205,8 @@
             return container;
         }
 
-        var name = h('input', { type: 'text', className: 'form-control', placeholder: app.t('What the link is for'), maxlength: '200' });
-        var expires = h('input', { type: 'datetime-local', className: 'form-control' });
+        var name = h('input', { id: 'rd-link-note', type: 'text', className: 'form-control', placeholder: app.t('What the link is for'), maxlength: '200' });
+        var expires = h('input', { id: 'rd-link-expires', type: 'datetime-local', className: 'form-control' });
         var allowExport = h('input', { type: 'checkbox', className: 'form-check-input', id: 'rd-link-export' });
         var requireSignIn = h('input', { type: 'checkbox', className: 'form-check-input', id: 'rd-link-signin' });
         var table = h('div');
@@ -247,13 +266,14 @@
         };
 
         ui.append(container, [
-            h('div', { className: 'row g-2 align-items-end mb-3' },
-                h('div', { className: 'col-12 col-md-4' }, h('label', { className: 'form-label' }, app.t('Note')), name),
-                h('div', { className: 'col-12 col-md-3' }, h('label', { className: 'form-label' }, app.t('Expires')), expires),
-                h('div', { className: 'col-12 col-md-3' },
-                    h('div', { className: 'form-check' }, allowExport, h('label', { className: 'form-check-label', for: 'rd-link-export' }, app.t('Allow export'))),
-                    h('div', { className: 'form-check' }, requireSignIn, h('label', { className: 'form-check-label', for: 'rd-link-signin' }, app.t('Require sign-in')))),
-                h('div', { className: 'col-12 col-md-2' }, h('button', { type: 'button', className: 'btn btn-primary w-100', onclick: function () {
+            field(app.t('Note'), name, app.t('What the link is for, shown in the list of links.')),
+            field(app.t('Expires'), expires, app.t('Leave empty for a link that does not expire.')),
+            h('div', { className: 'ocat-wrapper' }, h('div', { className: 'ocat-end-offset' },
+                h('div', { className: 'form-check' }, allowExport, h('label', { className: 'form-check-label', for: 'rd-link-export' }, app.t('Allow export'))))),
+            h('div', { className: 'ocat-wrapper' }, h('div', { className: 'ocat-end-offset' },
+                h('div', { className: 'form-check' }, requireSignIn, h('label', { className: 'form-check-label', for: 'rd-link-signin' }, app.t('Require sign-in')),
+                    h('span', { className: 'hint dashed' }, app.t('Only signed-in people can open the link.'))))),
+            h('div', { className: 'ocat-wrapper' }, h('div', { className: 'ocat-end-offset' }, h('button', { type: 'button', className: 'btn btn-primary', onclick: function () {
                     var expiry = expires.value ? new Date(expires.value) : null;
 
                     ui.request(app.url('createLink', { id: design.id }), {
@@ -295,9 +315,8 @@
         ui.clear(target);
         ui.append(target, [
             h('p', { className: 'text-muted' }, app.t('A shared report shows its data with your access, so people see what the report shows even if they cannot open that data themselves.')),
-            h('div', { className: 'row g-4' },
-                h('div', { className: 'col-12 col-lg-6' }, h('h2', { className: 'h6' }, app.t('People')), userPicker()),
-                h('div', { className: 'col-12 col-lg-6' }, h('h2', { className: 'h6' }, app.t('Roles')), rolesList())),
+            field(app.t('People'), userPicker(), app.t('The people who can open the report. Search by user name or email.')),
+            field(app.t('Roles'), rolesList(), app.t('Everyone in these roles can open the report.')),
             h('h2', { className: 'h6 mt-4' }, app.t('Share links')),
             h('p', { className: 'text-muted small' }, app.t('A share link opens the report for anyone who has it, until it expires or you revoke it.')),
             linksSection()

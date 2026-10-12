@@ -103,6 +103,7 @@
         }
 
         var select = ui.select(designer.refreshOptions(app, current), current, {
+            id: 'rd-view-refresh',
             className: 'form-select',
             onchange: function (event) {
                 design.refreshIntervalMinutes = parseInt(event.target.value, 10) || 0;
@@ -110,11 +111,12 @@
             }
         });
 
-        return h('div', { className: 'mb-3' },
-            h('label', { className: 'form-label' }, app.t('Refresh')),
-            select,
-            h('div', { className: 'form-text' }, app.t('Live runs the view every time a report reads it. A schedule stores the result, so reports read it quickly; the data is as old as the last refresh.')),
-            // The status is of the saved view, so it shows only once the view is saved with a schedule.
-            design.id && app.savedRefreshIntervalMinutes > 0 ? h('div', { className: 'mt-2' }, status()) : null);
+        return h('div', { className: 'ocat-wrapper' },
+            h('label', { className: 'ocat-label', for: 'rd-view-refresh' }, app.t('Refresh')),
+            h('div', { className: 'ocat-end' },
+                select,
+                h('span', { className: 'hint' }, app.t('Live runs the view every time a report reads it. A schedule stores the result, so reports read it quickly; the data is as old as the last refresh.')),
+                // The status is of the saved view, so it shows only once the view is saved with a schedule.
+                design.id && app.savedRefreshIntervalMinutes > 0 ? h('div', { className: 'mt-2' }, status()) : null));
     };
 })(typeof window !== 'undefined' ? window : globalThis);
