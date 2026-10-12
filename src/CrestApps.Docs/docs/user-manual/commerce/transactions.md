@@ -79,16 +79,17 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | **Reference** | What the transaction is for, such as the order or plan it belongs to. |
 | **Total** | The full amount. |
 | **Paid** | How much has been paid so far. |
+| **Refunded** | How much has been given back, once anything has. |
 | **Outstanding** | How much is still owed. |
 | **Created** | When the transaction was recorded. |
 | **Due** | When the payment is due, if it has a due date. |
 | **Invoice** | The invoice number, such as *INV-1001*, once the customer has been sent an invoice. With the **Payment Receipts** feature on, it opens the [printable invoice](invoices-and-receipts.md#print-an-invoice). |
-| **Settled** | When the transaction was settled, and whether it was paid *online* or *offline*. |
+| **Settled** | When the transaction was settled, and how: *Paid online* or *Recorded by hand*. |
 | **Reminders sent** | How many payment reminders the customer has been sent. |
 
 ### Timeline
 
-The **Timeline** lists everything that happened to the transaction, newest first: when it was created, each payment, each reminder, status changes, cancellations and notes. Each entry shows who did it, when a person did. A payment entry has a **View receipt** link when the **Payment Receipts** feature is on; see [Invoices and Receipts](invoices-and-receipts.md).
+The **Timeline** lists everything that happened to the transaction, newest first. Each entry is headed **Created**, **Payment received**, **Reminder sent**, **Status changed**, **Canceled**, **Refunded** or **Note**, and shows who did it, when a person did. A payment entry has a **View receipt** link when the **Payment Receipts** feature is on; see [Invoices and Receipts](invoices-and-receipts.md).
 
 ### Record a payment taken outside the site
 
@@ -108,6 +109,8 @@ The note you type on a recorded payment becomes part of the payment's entry in t
 ### Mark a transaction as paid
 
 Use this to settle the whole balance at once, for example when the customer paid the full amount another way.
+
+**Record payment**, **Mark as paid** and **Cancel transaction** are only available while the transaction can still be collected: **Pending**, **Outstanding**, **Partially paid** or **Failed**. On a **Paid**, **Canceled**, **Abandoned** or **Refunded** transaction they are greyed out.
 
 1. Open the transaction.
 2. Click **Mark as paid**, then click **Mark as paid** in the confirmation box.
@@ -129,9 +132,9 @@ The transaction becomes **Canceled**, and no more reminders are sent for it. The
 The **Send a reminder** card appears when the **Transaction Reminders** feature is on.
 
 1. Open the transaction.
-2. In **Send a reminder**, click **Send reminder**.
+2. In **Send a reminder**, click **Send reminder**, then click **Send reminder** in the confirmation box, which names the amount still owed.
 
-The reminder goes out at once, with no confirmation, and counts toward **Reminders sent**. The button is unavailable when nothing is owed. If you see *The reminder could not be sent. The owner may not have a notification channel configured.*, the customer has no way to receive notifications; contact them another way.
+The reminder goes out at once and counts toward **Reminders sent**. The button is unavailable when nothing is owed or the transaction can no longer be collected. If you see *The reminder could not be sent. The owner may not have a notification channel configured.*, the customer has no way to receive notifications; contact them another way.
 
 ### Add an internal note
 
@@ -204,11 +207,11 @@ Each row shows the status, the **Total**, the **Outstanding** amount when someth
 Click the transaction's title or **View**. The page shows:
 
 - **Details:** the **Total**, how much is **Paid**, what is **Outstanding**, when it was **Created**, the **Due** date and the **Invoice** number, once you have been sent an invoice. Click the invoice number to see and print the invoice.
-- **History:** each payment, reminder and change, newest first. A payment has a **View receipt** link to its printable receipt.
+- **History:** each payment, reminder, refund and change, newest first. A payment has a **View receipt** link to its printable receipt.
 
 ### Pay online
 
-1. Click **Pay now**, either on the row in **My Transactions** or on the transaction's page.
+1. Click **Pay now**, either on the row in **My Transactions** or on the transaction's page. It is offered only while something is owed and the transaction can still be paid, so not on one that is **Canceled**, **Abandoned** or **Refunded**.
 2. The site opens checkout with the outstanding balance ready to pay. Finish the payment there; see [Checkout](checkout.md).
 
 When the payment is confirmed, the transaction becomes **Paid**, or **Partially paid** if less than the balance was collected, and you are sent a receipt. If you see *Online settlement is not available*, online payment isn't set up on this site; contact the site's administrator to pay another way.

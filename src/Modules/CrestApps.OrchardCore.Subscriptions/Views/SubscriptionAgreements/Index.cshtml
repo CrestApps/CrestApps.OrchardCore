@@ -1,8 +1,10 @@
 @using CrestApps.OrchardCore.Payments
 @using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.Services
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 @model SubscriptionAgreementsIndexViewModel
+@inject SubscriptionDisplayText DisplayText
 
 @{
     var pager = (dynamic)Model.Pager;
@@ -10,7 +12,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="SubscriptionsAgreements" title="@T["Subscriptions"]" />
+    <breadcrumb name="SubscriptionsAgreements" title="@T["Agreements"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="agreements-filter" class="no-multisubmit">
@@ -59,7 +61,7 @@
                             <div class="metadata mt-1">
                                 <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Method"]">
                                     <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
-                                    @subscription.ProviderKey
+                                    @(DisplayText.PaymentMethodName(subscription.ProviderKey) ?? T["None"].Value)
                                 </span>
                                 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Per cycle"]">
                                     <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Per cycle"]</span>

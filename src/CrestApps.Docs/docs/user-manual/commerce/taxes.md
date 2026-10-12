@@ -51,7 +51,7 @@ A **jurisdiction** is a place that taxes, such as a country, a state or a city.
 | --- | --- |
 | **Name** | For example *California*. Required. |
 | **Code** | A short code, for example *US-CA*. Required. |
-| **Level** | **Country**, **State**, **Province**, **Region**, **County**, **City**, **Special** or **Other**. |
+| **Level** | **Country**, **State**, **Province**, **Region**, **County**, **City**, **Special district** or **Other**. |
 | **Parent jurisdiction** | The larger place this one belongs to, for example *United States* for *California*. Leave at **— None —** for a top-level jurisdiction. |
 | **Country** | The country the jurisdiction is in. |
 | **Region** / **County** / **City** / **Postal code** | The parts of an address that fall in this jurisdiction. Fill in only what defines it; leave the rest empty. |
@@ -72,7 +72,6 @@ A **tax table** is a list of amount ranges, each with its own rate. You need one
 | **Maximum** | Where the range ends; it must be greater than the minimum. Leave empty on the top range only. |
 | **Rate** | The rate for this range, written as a fraction: *0.2* means 20%. |
 | **Fixed amount** | An amount added on top of the rate for this range. |
-| **Base amount** | Stored with the row, but not used by the built-in calculation methods. Leave it at 0. |
 
 Ranges cannot overlap, and only one row can be open-ended. A table that a rule uses cannot be deleted: the message says how many rules use it, so update or remove those rules first.
 

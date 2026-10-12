@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -38,6 +39,8 @@ public sealed class PaymentsAdminController : Controller
     private readonly IEnumerable<ICheckoutPaymentProvider> _paymentProviders;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly TransactionDisplayText _displayText;
+    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -51,6 +54,8 @@ public sealed class PaymentsAdminController : Controller
     /// <param name="paymentProviders">The registered payment providers, used to build the method filter.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier used to surface outcomes.</param>
+    /// <param name="displayText">The labels for stored states and payment methods.</param>
+    /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PaymentsAdminController(
@@ -60,6 +65,8 @@ public sealed class PaymentsAdminController : Controller
         IEnumerable<ICheckoutPaymentProvider> paymentProviders,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        TransactionDisplayText displayText,
+        ILogger<PaymentsAdminController> logger,
         IHtmlLocalizer<PaymentsAdminController> htmlLocalizer,
         IStringLocalizer<PaymentsAdminController> stringLocalizer)
     {
@@ -69,6 +76,8 @@ public sealed class PaymentsAdminController : Controller
         _paymentProviders = paymentProviders;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _displayText = displayText;
+        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -122,6 +131,7 @@ public sealed class PaymentsAdminController : Controller
             Attempts = [.. result.Entries],
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             CanRefund = true,
+            RefundableAttemptIds = result.Entries.Where(IsRefundable).Select(attempt => attempt.ItemId).ToHashSet(StringComparer.Ordinal),
         });
     }
 
@@ -234,13 +244,38 @@ public sealed class PaymentsAdminController : Controller
             return View(model);
         }
 
-        var refund = await _refundService.RequestRefundAsync(new RequestPaymentRefundContext
+        var refunds = await _refundStore.GetByOriginalTransactionAsync(attempt.TransactionId);
+
+        if (refunds.Any(existing => existing.Status == RefundStatus.PendingManualReview))
         {
-            SessionId = attempt.SessionId,
-            OriginalTransactionId = attempt.TransactionId,
-            Amount = model.Amount,
-            Reason = model.Reason,
-        });
+            await _notifier.WarningAsync(H["A refund for this payment is waiting to be settled by hand. Mark it settled on the Refunds page before starting another."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        PaymentRefund refund;
+
+        try
+        {
+            refund = await _refundService.RequestRefundAsync(new RequestPaymentRefundContext
+            {
+                SessionId = attempt.SessionId,
+                OriginalTransactionId = attempt.TransactionId,
+                Amount = model.Amount,
+                Reason = model.Reason,
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The service refuses a refund it can't safely start: another refund for the same payment holds the
+            // lock, the checkout is gone, or the payment changed since the form opened. None of these is the
+            // operator's mistake, so they get a message rather than an error page.
+            _logger.LogWarning(ex, "The refund of payment attempt '{AttemptId}' was refused.", attempt.ItemId);
+
+            await _notifier.ErrorAsync(H["The refund couldn't be started. Another refund for this payment may still be in progress, or the payment changed since the page opened. Reload the page and try again."]);
+
+            return RedirectToAction(nameof(Index));
+        }
 
         switch (refund.Status)
         {
@@ -276,13 +311,14 @@ public sealed class PaymentsAdminController : Controller
 
         var attempt = await _attemptStore.FindByIdAsync(itemId);
 
-        if (attempt is null || attempt.State != PaymentAttemptState.Succeeded || string.IsNullOrEmpty(attempt.TransactionId))
-        {
-            return null;
-        }
-
-        return attempt;
+        return IsRefundable(attempt) ? attempt : null;
     }
+
+    private bool IsRefundable(PaymentAttempt attempt)
+        => attempt is not null &&
+            attempt.State == PaymentAttemptState.Succeeded &&
+            !string.IsNullOrEmpty(attempt.TransactionId) &&
+            _displayText.FindPaymentProvider(attempt.ProviderKey)?.Capabilities?.DefersPayment != true;
 
     // Everything already given back against this payment, whether it settled or is still in flight. Counting
     // an in-flight refund is deliberate: ignoring it would let an operator start a second refund for money
@@ -309,7 +345,7 @@ public sealed class PaymentsAdminController : Controller
         {
             items.Add(new SelectListItem
             {
-                Text = state.ToString(),
+                Text = _displayText.PaymentStateName(state),
                 Value = state.ToString(),
                 Selected = selected == state,
             });

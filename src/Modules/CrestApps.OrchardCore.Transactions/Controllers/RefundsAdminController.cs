@@ -39,6 +39,7 @@ public sealed class RefundsAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly TransactionDisplayText _displayText;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -51,6 +52,7 @@ public sealed class RefundsAdminController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier used to surface outcomes.</param>
     /// <param name="clock">The clock used to stamp a manual resolution.</param>
+    /// <param name="displayText">The labels for stored refund statuses.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public RefundsAdminController(
@@ -59,6 +61,7 @@ public sealed class RefundsAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        TransactionDisplayText displayText,
         IHtmlLocalizer<RefundsAdminController> htmlLocalizer,
         IStringLocalizer<RefundsAdminController> stringLocalizer)
     {
@@ -67,6 +70,7 @@ public sealed class RefundsAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayText = displayText;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -213,7 +217,7 @@ public sealed class RefundsAdminController : Controller
         {
             items.Add(new SelectListItem
             {
-                Text = status.ToString(),
+                Text = _displayText.RefundStatusName(status),
                 Value = status.ToString(),
                 Selected = selected == status,
             });

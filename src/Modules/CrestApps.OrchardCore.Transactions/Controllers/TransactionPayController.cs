@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -99,6 +100,5 @@ public sealed class TransactionPayController : Controller
     }
 
     private static bool IsPayable(Transaction transaction)
-        => transaction.OutstandingAmount > 0m &&
-            transaction.Status is not (TransactionStatus.Canceled or TransactionStatus.Paid or TransactionStatus.Refunded);
+        => TransactionStateMachine.CanRecordPayment(transaction);
 }

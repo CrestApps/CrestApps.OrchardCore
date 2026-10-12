@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -72,8 +73,7 @@ public sealed class TransactionInvoiceController : Controller
             return NotFound();
         }
 
-        var payable = transaction.OutstandingAmount > 0m &&
-            transaction.Status is not (TransactionStatus.Canceled or TransactionStatus.Paid or TransactionStatus.Refunded);
+        var payable = TransactionStateMachine.CanRecordPayment(transaction);
 
         return View(new TransactionInvoiceViewModel
         {

@@ -140,12 +140,14 @@ public sealed class TenantProvisioningAdminController : Controller
     /// <param name="pagerParameters">The page to show.</param>
     /// <param name="pagerOptions">The site's pager options.</param>
     /// <param name="shapeFactory">The shape factory the pager is built with.</param>
+    /// <param name="displayText">The labels for stored statuses.</param>
     [Admin("provisioning", "TenantProvisioningIndex")]
     public async Task<IActionResult> Index(
         TenantProvisioningStatus? status,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] SubscriptionDisplayText displayText)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
         {
@@ -166,7 +168,7 @@ public sealed class TenantProvisioningAdminController : Controller
         }
 
         var statuses = new List<SelectListItem> { new(H["Any status"].Value, string.Empty, !status.HasValue) };
-        statuses.AddRange(Enum.GetValues<TenantProvisioningStatus>().Select(value => new SelectListItem(value.ToString(), value.ToString(), status == value)));
+        statuses.AddRange(Enum.GetValues<TenantProvisioningStatus>().Select(value => new SelectListItem(displayText.ProvisioningStatusName(value), value.ToString(), status == value)));
 
         return View(new TenantProvisioningListViewModel
         {
@@ -203,6 +205,22 @@ public sealed class TenantProvisioningAdminController : Controller
             return RedirectToAction(nameof(Index));
         }
 
+        if (job.Status == TenantProvisioningStatus.Running)
+        {
+            await _notifier.WarningAsync(H["That site is being created right now. Reload the page in a minute to see how it went."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // The password is dropped once a job reaches a terminal state, so an abandoned job can't complete however
+        // often it is queued. Checked before the job is touched, so refusing leaves it exactly as it was.
+        if (!TenantProvisioningJobActions.CanRetry(job))
+        {
+            await _notifier.WarningAsync(H["This job no longer holds the administrator password, so the site can't be created automatically. Create the site by hand under Tenants, then use Mark as created."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
         // Retrying an abandoned job means an operator believes the cause is fixed, so the attempt counter and
         // the back-off are reset. Without that reset the job would be abandoned again on the next attempt and
         // the retry button would do nothing.
@@ -211,16 +229,6 @@ public sealed class TenantProvisioningAdminController : Controller
         job.NextAttemptUtc = null;
 
         await _jobStore.UpdateAsync(job);
-
-        if (string.IsNullOrEmpty(job.ProtectedAdminPassword))
-        {
-            // The password is dropped once a job reaches a terminal state, so an abandoned job can be queued
-            // again but cannot complete. Saying so beats letting it fail once more for a reason nobody can
-            // see from the screen.
-            await _notifier.WarningAsync(H["This job no longer holds an administrator password, so the site cannot be created automatically. Create it manually and cancel the job."]);
-
-            return RedirectToAction(nameof(Index));
-        }
 
         var status = await _provisioningService.ProvisionAsync(job.ItemId);
 
@@ -232,6 +240,54 @@ public sealed class TenantProvisioningAdminController : Controller
         {
             await _notifier.WarningAsync(H["The site was not created. The job is queued for another attempt."]);
         }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Closes an abandoned job whose site an operator created by hand, so the customer sees it as ready.
+    /// </summary>
+    /// <param name="itemId">The provisioning job identifier.</param>
+    /// <param name="siteUrl">The address of the site, shown to the customer on their sites page.</param>
+    /// <param name="clock">The clock.</param>
+    [HttpPost]
+    public async Task<IActionResult> MarkCreated(string itemId, string siteUrl, [FromServices] IClock clock)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
+        {
+            return Forbid();
+        }
+
+        var job = string.IsNullOrEmpty(itemId) ? null : await _jobStore.FindByIdAsync(itemId);
+
+        if (job is null)
+        {
+            return NotFound();
+        }
+
+        if (!TenantProvisioningJobActions.CanMarkCreated(job))
+        {
+            await _notifier.WarningAsync(H["Only an abandoned job can be marked as created. Retry the others instead."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var now = clock.UtcNow;
+
+        job.Status = TenantProvisioningStatus.Succeeded;
+        job.CompletedUtc = now;
+        job.UpdatedUtc = now;
+        job.NextAttemptUtc = null;
+        job.LastError = null;
+
+        if (!string.IsNullOrWhiteSpace(siteUrl))
+        {
+            job.SiteUrl = siteUrl.Trim();
+        }
+
+        await _jobStore.UpdateAsync(job);
+
+        await _notifier.SuccessAsync(H["The job was marked as created."]);
 
         return RedirectToAction(nameof(Index));
     }

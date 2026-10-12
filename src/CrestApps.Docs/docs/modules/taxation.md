@@ -76,9 +76,8 @@ When the [Addresses](./addresses.md) feature is enabled, the **Country** dropdow
 Go to **Commerce → Taxation → Tables** when you need a rule whose amount depends on where the taxable base falls in a set of brackets rather than a single rate. A tax table is a named, versioned list of rows, and it is the data source for the **Tax table lookup**, **Progressive**, and **Threshold** calculation methods. Skip this step if you only use flat rates or fixed amounts. A tax table has:
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
-- **Description** — optional notes.
 - **Effective from/to** — optional date-only window during which the table is valid. A table is only used for a transaction whose date falls inside this window; a rule that requires a table but has no table in effect on the transaction date is **skipped** (it never silently taxes at zero).
-- **Rows** — one or more brackets, each with a **Minimum** (inclusive lower bound), an optional **Maximum** (exclusive upper bound; leave empty for the top bracket), a **Rate**, a **Fixed amount**, and an optional **Base amount**. Use **Add row** / **Remove** to manage the list.
+- **Rows** — one or more brackets, each with a **Minimum** (inclusive lower bound), an optional **Maximum** (exclusive upper bound; leave empty for the top bracket), a **Rate**, and a **Fixed amount**. Use **Add row** / **Remove** to manage the list. A row also has a `BaseAmount`, which the built-in calculation methods don't read; the editor doesn't show it, but keeps a value a recipe set for a custom method.
 
 Rows are validated when you save. Minimums cannot be negative, at most one open-ended row (no maximum) is allowed, bounded ranges must be ordered and non-overlapping, and an open-ended row must start at or above the highest bounded maximum. This prevents overlapping brackets from double-counting in progressive calculations. A table that is still referenced by a rule cannot be deleted; remove or repoint the rules first.
 

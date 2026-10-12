@@ -23,16 +23,6 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="CheckoutMode">
-    <label asp-for="CheckoutMode" class="ocat-label">@T["Checkout Mode"]</label>
-    <div class="ocat-end">
-        <select asp-for="CheckoutMode" class="form-select" asp-items="Html.GetEnumSelectList<StripeCheckoutMode>()"></select>
-        <span class="hint">
-            @T["Choose how customers pay. <strong>Payment Elements</strong> collects card details on your site (the original integration). <strong>Hosted Checkout</strong> redirects customers to a secure Stripe-hosted page, which Stripe recommends and which minimizes your PCI scope."]
-        </span>
-    </div>
-</div>
-
 <div class="alert alert-info" role="alert">
     <p class="mb-1">
         @T["Paste your Stripe keys, <strong>save</strong> the settings, then click <strong>Connect</strong>. The saved key is verified and the webhook is created for you automatically \u2014 no dashboard setup required. Get your keys from <a href=\"https://dashboard.stripe.com/apikeys\" target=\"_blank\" rel=\"noopener\">Developers &rarr; API keys</a> (use the <code>Test mode</code> switch to choose test or live keys)."]
@@ -51,7 +41,7 @@
         <div class="ocat-end">
             <input asp-for="LivePublishableKey" class="form-control" type="text" placeholder="pk_live_..." data-stripe-publishable />
             <span asp-validation-for="LivePublishableKey"></span>
-            <span class="hint">@T["Required for Payment Elements checkout; optional for Hosted Checkout."]</span>
+            <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
         </div>
     </div>
 
@@ -114,7 +104,7 @@
         <div class="ocat-end">
             <input asp-for="TestPublishableKey" class="form-control" type="text" placeholder="pk_test_..." data-stripe-publishable />
             <span asp-validation-for="TestPublishableKey"></span>
-            <span class="hint">@T["Required for Payment Elements checkout; optional for Hosted Checkout."]</span>
+            <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
         </div>
     </div>
 
@@ -169,7 +159,7 @@
 
 </div>
 
-<script data-disconnect-confirm="@T["Are you sure you want to disconnect this Stripe account? The app will stop processing Stripe payments and the provisioned webhook will be removed."]">
+<script data-disconnect-confirm="@T["Are you sure you want to disconnect this Stripe account? Card payments stop, the webhook this site created is removed, and the saved publishable key, secret key and webhook signing secret are deleted. To connect again you'll need to enter the keys again."]">
     const stripeSettingsScript = document.currentScript;
 
     document.addEventListener('DOMContentLoaded', () => {

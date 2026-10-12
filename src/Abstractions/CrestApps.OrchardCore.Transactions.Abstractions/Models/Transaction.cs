@@ -118,6 +118,12 @@ public sealed class Transaction : CatalogItem
         => Math.Max(0m, TotalAmount - AmountPaid);
 
     /// <summary>
+    /// Gets or sets the amount given back to the customer so far, in <see cref="Currency"/>. A refund doesn't
+    /// reduce <see cref="AmountPaid"/>, so a refunded transaction never turns collectable again.
+    /// </summary>
+    public decimal AmountRefunded { get; set; }
+
+    /// <summary>
     /// Gets or sets the current lifecycle state of the transaction.
     /// </summary>
     public TransactionStatus Status { get; set; }

@@ -36,8 +36,8 @@ The header shows how many payments are on this page and how many match in total.
 
 | State | What it means |
 | --- | --- |
-| **Created** | The payment was recorded, and the payment provider has not been asked yet. |
-| **Pending** | The provider was asked, and the result is not known yet. |
+| **Started** | The payment was recorded, and the payment provider has not been asked yet. |
+| **Processing** | The provider was asked, and the result is not known yet. |
 | **Succeeded** | The provider confirmed the payment. Shown in green. |
 | **Failed** | The provider declined or could not take the payment. Shown in red. |
 | **Canceled** | The payment was canceled before it went through. |
@@ -49,7 +49,7 @@ The row's title is the amount, tax included. For a payment that went through, it
 | Badge | What it shows |
 | --- | --- |
 | State | The payment's state. |
-| **Method** | The payment method used, by its short name. |
+| **Method** | The payment method used, for example *Credit or debit card (Stripe)* or *Pay Later*. |
 | **Updated** | When the payment last changed. |
 | **Tax included** | The tax in the amount, when there was any. |
 | **Gateway reference** | The payment provider's own reference for the payment. Use it to find the same payment in the provider's dashboard. |
@@ -59,7 +59,7 @@ When a payment **Failed**, the reason the provider gave is shown in red under th
 The buttons on the right:
 
 - **Transaction** opens the transaction the payment paid, when it paid one.
-- **Refund** opens the refund form. It appears only on a payment that **Succeeded**.
+- **Refund** opens the refund form. It appears only on a payment that **Succeeded** with money actually taken, so not on a Pay Later promise: settle a Pay Later balance on its [transaction](transactions.md) instead.
 
 ## Refund a payment
 
@@ -84,12 +84,14 @@ After you confirm, the site tells you what happened:
 | *The refund failed:* followed by a reason | The provider refused the refund. Nothing was sent back. |
 | *This payment method cannot refund automatically. The refund was recorded for you to settle by hand.* | Pay the customer back yourself, then [mark the refund settled](#settle-a-refund-by-hand). |
 | *The refund was submitted and is still being processed.* | The provider hasn't confirmed it yet. Check the **Refunds** list later. |
+| *A refund for this payment is waiting to be settled by hand.* | An earlier refund of the same payment **Needs manual settlement**. [Mark it settled](#settle-a-refund-by-hand) first, then refund again. |
+| *The refund couldn't be started.* | Another refund of the same payment is still in progress, or the payment changed after the page opened. Nothing was sent. Reload the page and try again. |
 
 ## What the customer is told
 
 When a refund of a payment on a transaction succeeds, and the **Payment Receipts** feature is on, the customer is sent a notice titled *Your refund of*, followed by the amount. It says the money went back to the card or account they paid with and can take a few business days to appear on their statement. Customers with an account get it through the site's notifications; guests get it by email. The transaction's **Timeline** notes that the customer was told. See [Invoices and Receipts](invoices-and-receipts.md#refund-notices).
 
-A refund doesn't change the transaction's status or balance.
+A finished refund is also recorded on the transaction it gives money back for: its **Timeline** gets a **Refunded** entry with the amount and reason, its summary shows the total **Refunded**, and once everything paid has been refunded its status becomes **Refunded**. After a partial refund the transaction stays **Paid**. A refund never makes a transaction collectable again.
 
 ## Review refunds
 
@@ -100,10 +102,10 @@ The row's title is the amount refunded. Its badge shows the status:
 
 | Badge | What it means |
 | --- | --- |
-| **Refunded** | The money went back to the customer. In the status list, this is **Succeeded**. |
-| **Needs manual settlement** | The site couldn't send the money back itself. In the status list, this is **PendingManualReview**. |
+| **Refunded** | The money went back to the customer. |
+| **Needs manual settlement** | The site couldn't send the money back itself. |
 | **Requested** | The refund was recorded, and the provider has not been asked yet. |
-| **Pending** | The provider was asked, and has not confirmed it yet. |
+| **Processing** | The provider was asked, and has not confirmed it yet. |
 | **Failed** | The provider refused the refund. |
 | **Canceled** | The refund was canceled before it was sent. |
 
@@ -111,9 +113,9 @@ The row also shows the **Method**, when it was **Updated**, and the **Tax refund
 
 ## Settle a refund by hand
 
-A refund **Needs manual settlement** when the site can't send the money back itself, for example for a payment method with no online refunds, such as Pay Later, or when the payment collected tax and the site can't work out how much of it to give back. Pay the customer back yourself, by bank transfer, check or through your payment provider's dashboard, then record it:
+A refund **Needs manual settlement** when the site can't send the money back itself, for example for a payment method with no online refunds, or when the payment collected tax and the site can't work out how much of it to give back. Pay the customer back yourself, by bank transfer, check or through your payment provider's dashboard, then record it:
 
-1. Open **Commerce > Refunds**. Picking **PendingManualReview** in the **Any status** list helps.
+1. Open **Commerce > Refunds**. Picking **Needs manual settlement** in the **Any status** list helps.
 2. Optionally, type your own reference for the repayment, such as a bank transfer number, in **Reference** on the refund's row.
 3. Click **Mark settled**, then click **Mark settled** in the confirmation box.
 

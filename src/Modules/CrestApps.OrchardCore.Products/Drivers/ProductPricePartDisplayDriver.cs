@@ -57,9 +57,13 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
                 new SelectListItem(S["Charged once"], nameof(PriceKind.OneTime)),
                 new SelectListItem(S["Recurring"], nameof(PriceKind.Recurring)),
             ];
-            model.Intervals = Enum.GetValues<BillingInterval>()
-                .Select(value => new SelectListItem(value.ToString(), value.ToString()))
-                .ToArray();
+            model.Intervals =
+            [
+                new SelectListItem(S["Days"], nameof(BillingInterval.Day)),
+                new SelectListItem(S["Weeks"], nameof(BillingInterval.Week)),
+                new SelectListItem(S["Months"], nameof(BillingInterval.Month)),
+                new SelectListItem(S["Years"], nameof(BillingInterval.Year)),
+            ];
         });
     }
 

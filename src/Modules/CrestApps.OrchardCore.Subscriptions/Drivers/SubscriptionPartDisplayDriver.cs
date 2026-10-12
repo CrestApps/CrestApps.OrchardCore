@@ -53,6 +53,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
                 // The card shows what a visitor would pay if they clicked through without choosing, so a
                 // plan that lists prices is summarized by its default rather than by the product part.
                 model.Price = headline?.Amount ?? price?.Price ?? 0;
+                model.Currency = headline is not null ? headline.Currency : price?.Currency;
                 model.DurationType = part.DurationType;
                 model.BillingDuration = part.BillingDuration;
                 model.SubscriptionDayDelay = part.SubscriptionDayDelay;

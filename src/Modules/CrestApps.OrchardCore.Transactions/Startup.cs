@@ -40,6 +40,8 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<TransactionsPermissionProvider>();
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
+        services.AddScoped<TransactionDisplayText>();
+        services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
     }
 }
 

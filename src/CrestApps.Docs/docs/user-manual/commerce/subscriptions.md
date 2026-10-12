@@ -43,12 +43,12 @@ The **Subscription** part has these fields:
 
 | Field | What it does |
 | --- | --- |
-| **Billing Duration** | How often the subscriber is billed: a number and a unit (**Year**, **Month**, **Week** or **Day**). *1 Month* bills monthly; *3 Month* bills every three months. It cannot be less than one. |
-| **Initial Amount** | An optional one-time charge at sign-up, such as a setup fee. |
-| **Initial Amount Description** | How that charge is named on the invoice, for example *Setup fee*. Required when you enter an **Initial Amount**. |
-| **Billing Cycle Limit** | Optionally stop the subscription after this many billing cycles. Leave it empty to bill until the subscription is cancelled. |
-| **Free Trial Days** | Give the subscriber this many days free before the first cycle is billed. The payment method is still collected up front, so the trial converts without asking them to buy again. Leave it empty for no trial. |
-| **Subscription Day Delay** | Delay the first recurring payment by this many days after sign-up. Leave it empty or set it to 0 to start billing immediately. |
+| **Billing duration** | How often the subscriber is billed: a number and a unit (**Year**, **Month**, **Week** or **Day**). *1 Month* bills monthly; *3 Month* bills every three months. It cannot be less than one. |
+| **Initial amount** | An optional one-time charge at sign-up, such as a setup fee. |
+| **Initial amount description** | How that charge is named on the invoice, for example *Setup fee*. Required when you enter an **Initial amount**. |
+| **Billing cycle limit** | Optionally stop the subscription after this many billing cycles. Leave it empty to bill until the subscription is cancelled. |
+| **Free trial days** | Give the subscriber this many days free before the first cycle is billed. The payment method is still collected up front, so the trial converts without asking them to buy again. Leave it empty for no trial. |
+| **Subscription day delay** | Delay the first recurring payment by this many days after sign-up. Leave it empty or set it to 0 to start billing immediately. |
 
 The **Product** part has the **Price**, its **Currency** (empty uses the default currency) and an optional **SKU**. See [Products and currencies](products-and-currencies.md).
 
@@ -74,7 +74,7 @@ The site-wide settings are under **Settings > Subscriptions**, with the **Manage
 
 | Field | What it does |
 | --- | --- |
-| **Allow Guest Signup** | By default, people must sign in or register to subscribe. Tick this to let them subscribe without an account. |
+| **Allow guest sign-up** | By default, people must sign in or register to subscribe. Tick this to let them subscribe without an account. |
 | **Currency** | The default currency of your plans. |
 | **Default roles to assign for new subscribers** | Roles every new subscriber gets, whatever plan they buy. |
 
@@ -95,13 +95,13 @@ This video shows a visitor signing up to a plan, then the Agreements screen:
 
 <AskYourAdmin />
 
-The **Agreements** menu item opens the **Subscriptions** list: one row per subscription bought on the site, whoever bought it.
+The **Agreements** page lists one row per subscription bought on the site, whoever bought it.
 
 ### Find a subscription
 
 - Type in **Search by title** and press Enter to find subscriptions by plan name.
 - Use the status filter in the list header to show one status, or **Any status** for all.
-- Each row shows the status and these badges: **Method** (how it is paid), **Per cycle** (the amount billed each cycle), **Renews** (the next billing date, or **Never**), and **Paid through**.
+- Each row shows the status and these badges: **Method** (the payment method, for example *Pay Later*), **Per cycle** (the amount billed each cycle), **Renews** (the next billing date, or **Never**), and **Paid through**.
 - Use the pager at the bottom, and **Items per page** to show more or fewer rows.
 
 Click a title or **Manage** to open a subscription.
@@ -111,15 +111,16 @@ Click a title or **Manage** to open a subscription.
 | Item | What it shows |
 | --- | --- |
 | **Status** | Where the subscription stands (see [Subscription statuses](#subscription-statuses)). |
-| **Billed** | The amount and how often it is billed. |
+| **Billed** | The amount and how often it is billed, for example *USD 20.00 every month*. |
 | **Cycles billed** | How many cycles have been billed, and the limit when the plan has one. |
 | **Current period** | The period the subscriber has paid for. |
 | **Renews** | When the next cycle is billed, or **Never**. |
 | **Grace ends** | Shown when a renewal failed: the last day the subscriber keeps access while the payment is retried. |
-| **Payment method** | The payment provider that bills the subscription. |
-| **Owner** | Who owns the subscription. |
+| **Payment method** | The payment method that bills the subscription. |
+| **Gateway reference** | The payment provider's own reference for the subscription, when it has one. Use it to find the subscription in the provider's dashboard. |
+| **Owner** | The subscriber's name, or the email address of a guest. |
 | **What is billed** | Each line of the subscription with its quantity and price. |
-| **History** | Everything that happened to the subscription, newest first. |
+| **History** | Everything that happened to the subscription, newest first, such as **Started**, **Renewed**, **Payment failed**, **Billing paused**, **Billing resumed** and **Canceled**. |
 
 ### Cancel a subscription
 
@@ -155,10 +156,6 @@ Each action is written to the subscription's **History**.
 | **Expired** | Ended because the grace period ran out after a failed payment, or because the plan billed all of its cycles. |
 | **Incomplete** | The subscription was created, but its first payment never went through, so nothing is owed to the subscriber yet. |
 
-:::note[Status filter names]
-The status filter in the list header shows the status names in their short form, for example **Trialing** for **Trial** and **PastDue** for **Past due**.
-:::
-
 ## My Plans (for subscribers)
 
 | | |
@@ -170,7 +167,7 @@ The status filter in the list header shows the status names in their short form,
 <AskYourAdmin />
 
 
-**My Plans** opens the **My subscriptions** page, where a subscriber sees every plan they subscribe to and cancels it themselves.
+**My Plans** lists every plan the subscriber subscribes to, and lets them cancel one themselves.
 
 ### See your plans
 
@@ -199,6 +196,6 @@ At the bottom of the page, the note *Cancelling stops the next payment. You keep
 - **A subscriber still has access after cancelling.** That is expected when the subscription was cancelled at the end of the period: access lasts until **Paid through**.
 - **The plan has no Sign up button.** Make sure the plan is published and has a price on its **Product** or **Product prices** part.
 - **Visitors see *This plan can't be bought right now* after Sign up.** The plan has no price the site can charge: usually it has no currency, and its content type sets no default currency, or its price is charged once rather than every period. Nothing is charged and no account is created. Give the plan a currency (or set a **Default currency** on the **Product** part of its content type) and a price that recurs, then publish it again.
-- **Visitors are asked to register before they can subscribe.** Tick **Allow Guest Signup** in **Settings > Subscriptions** to let them subscribe without an account.
+- **Visitors are asked to register before they can subscribe.** Tick **Allow guest sign-up** in **Settings > Subscriptions** to let them subscribe without an account.
 - **You want to sell a whole website.** See [Selling Sites](sites.md).
 - **You want to split one price into a few payments.** Use an [installment plan](installment-plans.md) instead.

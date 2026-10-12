@@ -40,14 +40,17 @@ public sealed class FeatureProfilesTenantOnboardingPartDisplayDriver : ContentPa
     /// <returns>The editor display result.</returns>
     public override IDisplayResult Edit(TenantOnboardingPart part, BuildPartEditorContext context)
     {
-        return Initialize<FeatureProfilesViewModel>(GetEditorShapeType(context), async model =>
+        // A shape of its own: sharing the part's editor shape rendered the recipe editor's view with this model,
+        // which failed, and the saved profile was never shown as selected.
+        return Initialize<FeatureProfilesViewModel>("TenantOnboardingPartFeatureProfile_Edit", async model =>
         {
             var profiles = await _featureProfilesService.GetFeatureProfilesAsync();
 
+            model.FeatureProfile = part.FeatureProfile;
             model.FeatureProfiles = profiles.Values
-            .Select(profile => new SelectListItem(profile.Name, profile.Id))
-            .ToArray();
-        });
+                .Select(profile => new SelectListItem(profile.Name, profile.Id))
+                .ToArray();
+        }).Location("Content:5");
     }
 
     /// <summary>

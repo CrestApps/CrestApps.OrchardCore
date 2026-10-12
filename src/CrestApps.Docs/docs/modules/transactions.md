@@ -128,7 +128,12 @@ process took the money. Each recorded payment is a `TransactionEvent` with an `I
 
 `IPaymentRefundHandler.RefundSucceededAsync` is raised once for every refund that succeeds, from each place a refund
 can finish. The refund names the payment it returned (`OriginalAttemptId`), and that payment names what it paid for.
-Refund notices use it. A handler that fails is logged and never undoes the refund.
+Refund notices use it, and so does the module itself: `TransactionRefundHandler` records each refund on the
+transaction it returns money for. It adds a `Refunded` timeline event, keyed by the refund's identifier so a refund
+reported twice counts once, and adds to `Transaction.AmountRefunded`. Once everything paid has been refunded, it moves
+the transaction to `TransactionStatus.Refunded`. A refund never lowers `AmountPaid`, so a refunded transaction never
+becomes collectable again. The transaction is found through the payment's reference or, for a purchase checkout,
+through the refund's session and obligation. A handler that fails is logged and never undoes the refund.
 
 ## Using the module
 
@@ -196,7 +201,7 @@ The background task runs the sweep on a schedule and sends a reminder only when 
 
 With [Checkout](checkout) enabled, **Commerce → Payments** lists every payment the suite has attempted, filtered by state and payment method, showing what was expected, what actually settled, and the gateway's own transaction reference. It answers "did this customer actually pay?" without reading the database.
 
-It is also the only place a refund starts. The form shows what was collected and what has already been given back, refuses an amount above what is still refundable, and issues the refund through the refund service so the durable ledger, the original payment's tax allocation, and the over-refund protection all apply. Counting an in-flight refund against the remaining amount is deliberate: ignoring one would let an operator start a second refund for money already on its way back.
+It is also the only place a refund starts. **Refund** isn't offered on a payment from a provider that defers payment (`PaymentProviderCapabilities.DefersPayment`, such as Pay Later), since nothing was collected to give back. A refund the service refuses, because another refund for the same payment holds the lock, an earlier one still needs manual settlement, or the checkout is gone, comes back as a message rather than an error page. The form shows what was collected and what has already been given back, refuses an amount above what is still refundable, and issues the refund through the refund service so the durable ledger, the original payment's tax allocation, and the over-refund protection all apply. Counting an in-flight refund against the remaining amount is deliberate: ignoring one would let an operator start a second refund for money already on its way back.
 
 **Commerce → Refunds** lists what came of them. A refund against a payment method that has no executable refund operation is recorded as **needing manual settlement** rather than silently dropped, and this screen is where an operator records the reference once they have moved the money by hand. Only a refund in that state can be closed this way; marking a failed gateway refund as done would tell the ledger the customer was paid when they were not.
 

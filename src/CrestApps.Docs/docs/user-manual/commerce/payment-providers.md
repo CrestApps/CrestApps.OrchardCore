@@ -50,14 +50,13 @@ When you click **Connect**, your site:
 
 ### Disconnect a Stripe account
 
-Click **Disconnect** under **Status** and confirm. Your site removes the webhook it created and **clears the keys** for that environment, so Stripe payments stop until you enter the keys again, save and click **Connect**. Disconnecting one environment leaves the other one as it is.
+Click **Disconnect** under **Status** and confirm. The confirmation warns that the keys are deleted. Your site removes the webhook it created and **clears the keys** for that environment, so Stripe payments stop until you enter the keys again, save and click **Connect**. Disconnecting one environment leaves the other one as it is.
 
 ### Stripe fields
 
 | Field | What it does |
 | --- | --- |
 | **Enable Production** | Ticked: the production (live) keys and account are used and real money is taken. Cleared: the test keys and account are used. While the test environment is in use, buyers see *Stripe is in test mode. No real payment will be taken.* on the payment step. |
-| **Checkout Mode** | **Payment Elements (on-site)** or **Hosted Checkout (redirect)**. The checkout on this site collects card details on your own page, so leave this at **Payment Elements (on-site)**. |
 | **Production Publishable Key** / **Test Publishable Key** | The public key the card form uses. It must start with `pk_live_` (production) or `pk_test_` (test). Without it, buyers who choose card see *Card payment is not fully configured* instead of the card form. |
 | **Production Secret Key** / **Test Secret Key** | The private key your site uses to talk to Stripe. It must start with `sk_live_` or `sk_test_`. It is stored encrypted and never shown again; once saved, the box reads *A secret key is stored. Provide a new value to replace it.* Leave it empty to keep the stored key. |
 | **Status** | Shows the connection and the **Connect** or **Disconnect** button for the environment you are looking at. |

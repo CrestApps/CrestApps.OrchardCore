@@ -2,13 +2,13 @@
 
 @model SubscriptionSettingsViewModel
 
-<h6>@T["Subscription Settings"]</h6>
+<h6>@T["Subscription settings"]</h6>
 
 <div class="ocat-wrapper" asp-validation-class-for="AllowGuestSignup">
     <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="AllowGuestSignup">
-            <label class="form-check-label" asp-for="AllowGuestSignup">@T["Allow Guest Signup"]</label>
+            <label class="form-check-label" asp-for="AllowGuestSignup">@T["Allow guest sign-up"]</label>
             <span class="hint dashed">@T["By default, users need to be logged in to sign up. Enabling this option allows individuals to sign up without having to register on the site."]</span>
         </div>
     </div>

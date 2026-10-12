@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -210,6 +211,13 @@ public sealed class TransactionController : Controller
         if (transaction.OutstandingAmount <= 0m)
         {
             await _notifier.InformationAsync(H["This transaction has already been paid."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId });
+        }
+
+        if (!TransactionStateMachine.CanRecordPayment(transaction))
+        {
+            await _notifier.InformationAsync(H["This transaction can no longer be paid."]);
 
             return RedirectToAction(nameof(Detail), new { itemId });
         }

@@ -1,11 +1,15 @@
+@using CrestApps.OrchardCore.Payments
 @using CrestApps.OrchardCore.Transactions.Core
+@using CrestApps.OrchardCore.Transactions.Core.Services
 @using CrestApps.OrchardCore.Transactions.Models
 @using OrchardCore.DisplayManagement.Html
 @model TransactionDetailViewModel
 
 @{
     var transaction = Model.Transaction;
-    var canPay = transaction.OutstandingAmount > 0m && transaction.Status != TransactionStatus.Canceled;
+
+    // Abandoned, refunded and canceled transactions can't be paid, whatever balance they still show.
+    var canPay = TransactionStateMachine.CanRecordPayment(transaction);
 }
 
 <zone Name="Title">
@@ -22,13 +26,19 @@
     <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-4">@T["Total"]</dt>
-            <dd class="col-sm-8">@transaction.Currency @transaction.TotalAmount.ToString("0.00")</dd>
+            <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)</dd>
 
             <dt class="col-sm-4">@T["Paid"]</dt>
-            <dd class="col-sm-8">@transaction.Currency @transaction.AmountPaid.ToString("0.00")</dd>
+            <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountPaid, transaction.Currency)</dd>
+
+            @if (transaction.AmountRefunded > 0m)
+            {
+                <dt class="col-sm-4">@T["Refunded"]</dt>
+                <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountRefunded, transaction.Currency)</dd>
+            }
 
             <dt class="col-sm-4">@T["Outstanding"]</dt>
-            <dd class="col-sm-8"><strong>@transaction.Currency @transaction.OutstandingAmount.ToString("0.00")</strong></dd>
+            <dd class="col-sm-8"><strong>@transaction.Currency @CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)</strong></dd>
 
             <dt class="col-sm-4">@T["Created"]</dt>
             <dd class="col-sm-8">@transaction.CreatedUtc.ToString("g")</dd>

@@ -1,4 +1,5 @@
 @using CrestApps.OrchardCore.Products.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.Extensions
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
 
 @model SubscriptionSignupViewModel
@@ -30,7 +31,7 @@
                             selected="@(price.PriceId == selected?.PriceId)"
                             data-custom="@price.AllowCustomAmount.ToString().ToLowerInvariant()"
                             data-quantity="@price.AllowQuantity.ToString().ToLowerInvariant()">
-                        @(string.IsNullOrWhiteSpace(price.Name) ? price.Amount.ToString("C") : price.Name + " — " + price.Amount.ToString("C"))
+                        @(string.IsNullOrWhiteSpace(price.Name) ? PriceFormatting.Format(price.Amount, price.Currency) : price.Name + " — " + PriceFormatting.Format(price.Amount, price.Currency))
                     </option>
                 }
             </select>

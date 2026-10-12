@@ -1,5 +1,6 @@
 @using CrestApps.OrchardCore.Checkout.Models
 @using CrestApps.OrchardCore.Checkout.ViewModels
+@using CrestApps.OrchardCore.Payments
 @using Microsoft.AspNetCore.Mvc.Localization
 @model CouponsIndexViewModel
 
@@ -90,7 +91,7 @@
                                     }
                                     else
                                     {
-                                        @($"{coupon.Currency} {coupon.Amount:0.00}")
+                                        @($"{coupon.Currency} {CurrencyScale.Format(coupon.Amount, coupon.Currency)}")
                                     }
                                 </span>
                                 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Applies to"]">

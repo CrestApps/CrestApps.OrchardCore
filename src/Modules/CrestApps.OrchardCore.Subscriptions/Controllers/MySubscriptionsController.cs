@@ -76,12 +76,14 @@ public sealed class MySubscriptionsController : Controller
     /// <param name="pagerParameters">The page to show.</param>
     /// <param name="pagerOptions">The site's pager options.</param>
     /// <param name="shapeFactory">The shape factory the pager is built with.</param>
+    /// <param name="displayText">The labels for stored statuses.</param>
     [Admin("my-subscriptions", "MySubscriptionsIndex")]
     public async Task<IActionResult> Index(
         SubscriptionStatus? status,
         PagerParameters pagerParameters,
         [FromServices] IOptions<PagerOptions> pagerOptions,
-        [FromServices] IShapeFactory shapeFactory)
+        [FromServices] IShapeFactory shapeFactory,
+        [FromServices] SubscriptionDisplayText displayText)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageOwnSubscriptions))
         {
@@ -109,7 +111,7 @@ public sealed class MySubscriptionsController : Controller
         }
 
         var statuses = new List<SelectListItem> { new(S["Any status"], string.Empty, !status.HasValue) };
-        statuses.AddRange(Enum.GetValues<SubscriptionStatus>().Select(value => new SelectListItem(value.ToString(), value.ToString(), status == value)));
+        statuses.AddRange(Enum.GetValues<SubscriptionStatus>().Select(value => new SelectListItem(displayText.StatusName(value), value.ToString(), status == value)));
 
         return View(new MySubscriptionsViewModel
         {

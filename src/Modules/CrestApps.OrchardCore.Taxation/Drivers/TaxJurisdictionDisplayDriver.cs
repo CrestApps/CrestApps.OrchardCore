@@ -56,9 +56,17 @@ internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdicti
             model.EffectiveFromUtc = jurisdiction.EffectiveFromUtc;
             model.EffectiveToUtc = jurisdiction.EffectiveToUtc;
 
-            model.Levels = Enum.GetValues<JurisdictionLevel>()
-                .Select(level => new SelectListItem(level.ToString(), level.ToString()))
-                .ToList();
+            model.Levels =
+            [
+                new SelectListItem(S["Country"], nameof(JurisdictionLevel.Country)),
+                new SelectListItem(S["State"], nameof(JurisdictionLevel.State)),
+                new SelectListItem(S["Province"], nameof(JurisdictionLevel.Province)),
+                new SelectListItem(S["Region"], nameof(JurisdictionLevel.Region)),
+                new SelectListItem(S["County"], nameof(JurisdictionLevel.County)),
+                new SelectListItem(S["City"], nameof(JurisdictionLevel.City)),
+                new SelectListItem(S["Special district"], nameof(JurisdictionLevel.Special)),
+                new SelectListItem(S["Other"], nameof(JurisdictionLevel.Other)),
+            ];
 
             var countries = await _countryService.GetCountriesAsync();
 

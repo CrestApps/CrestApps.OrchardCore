@@ -76,6 +76,7 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
+        services.AddScoped<SubscriptionDisplayText>();
 
         // The agreement lives in its own YesSql collection, which has to be declared here. Declaring only
         // the index leaves the collection's document table uncreated, and every read or write against it
