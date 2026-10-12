@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -85,7 +86,7 @@ public sealed class DefaultPriceResolver : IPriceResolver
 
         if (price is null)
         {
-            _logger.LogWarning("Refusing to price product '{ContentItemId}': it offers no price matching '{PriceId}'.", product.ContentItemId, context.PriceId ?? "(default)");
+            _logger.LogWarning("Refusing to price product '{ContentItemId}': it offers no price matching '{PriceId}'.", product.ContentItemId, context.PriceId?.SanitizeLogValue() ?? "(default)");
 
             return null;
         }
