@@ -41,6 +41,7 @@ People who only run reports that were shared with them need no permission: they 
 | Save drafts, publish, and go back to an earlier version | [Publish and versions](publish-and-versions.md) |
 | Prepare data once and reuse it in many reports | [Reusable views](views.md) |
 | Share a report, put it in the menu, run it and export it | [Share and run reports](share-and-run.md) |
+| Email a report on a schedule, send share links, or react when a report is run | [Automate with workflows](workflows.md) |
 | Fix a report that does not work as expected | [Troubleshooting](troubleshooting.md) |
 
 ## Who can do what

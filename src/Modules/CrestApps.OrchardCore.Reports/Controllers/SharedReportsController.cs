@@ -68,7 +68,9 @@ public sealed class SharedReportsController : Controller
             design.AllowExport,
             format => Url.RouteUrl("ReportsSharedViewExport", new { id = design.ItemId, format }),
             Url.RouteUrl("ReportsSharedView", new { id = design.ItemId }),
-            HttpContext.RequestAborted);
+            HttpContext.RequestAborted,
+            ReportEventSource.Shared,
+            User.Identity?.Name);
 
         model.IsPublic = true;
 
@@ -91,7 +93,7 @@ public sealed class SharedReportsController : Controller
             return NotFoundOrChallenge();
         }
 
-        return await ExportAsync(design, format);
+        return await ExportAsync(design, format, ReportEventSource.Shared);
     }
 
     /// <summary>
@@ -120,7 +122,9 @@ public sealed class SharedReportsController : Controller
             link.AllowExport,
             format => Url.RouteUrl("ReportsSharedLinkExport", new { token, format }),
             Url.RouteUrl("ReportsSharedLink", new { token }),
-            HttpContext.RequestAborted);
+            HttpContext.RequestAborted,
+            ReportEventSource.Link,
+            User.Identity?.Name);
 
         model.IsPublic = true;
         Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
@@ -155,7 +159,7 @@ public sealed class SharedReportsController : Controller
             _logger.LogInformation("Share link '{LinkId}' exported designed report '{ReportId}' as '{Format}'.", link.ItemId, design.ItemId, format?.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal));
         }
 
-        return await ExportAsync(design, format);
+        return await ExportAsync(design, format, ReportEventSource.Link);
     }
 
     private async Task<(ReportShareLink Link, ReportDesign Design, IActionResult Failure)> ResolveLinkAsync(string token)
@@ -193,9 +197,9 @@ public sealed class SharedReportsController : Controller
         return design;
     }
 
-    private async Task<IActionResult> ExportAsync(ReportDesign design, string format)
+    private async Task<IActionResult> ExportAsync(ReportDesign design, string format, ReportEventSource source)
     {
-        var file = await _presenter.ExportAsync(design, Request.Query, format, HttpContext.RequestAborted);
+        var file = await _presenter.ExportAsync(design, Request.Query, format, HttpContext.RequestAborted, source, User.Identity?.Name);
 
         return file is null ? NotFound() : File(file.Content, file.ContentType, file.FileName);
     }

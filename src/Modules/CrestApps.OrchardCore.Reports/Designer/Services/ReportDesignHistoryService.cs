@@ -27,6 +27,7 @@ public sealed class ReportDesignHistoryService
     private readonly ReportDesignHistoryStore _store;
     private readonly IDistributedLock _distributedLock;
     private readonly IReportDesignNotifier _notifier;
+    private readonly IEnumerable<IReportEventHandler> _eventHandlers;
     private readonly ReportDesignVersionOptions _options;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -38,6 +39,7 @@ public sealed class ReportDesignHistoryService
     /// <param name="store">The store of drafts and versions.</param>
     /// <param name="distributedLock">The lock that serializes changes to one report.</param>
     /// <param name="notifier">The notifier that tells the other editors.</param>
+    /// <param name="eventHandlers">The handlers told when a report is published, such as workflows.</param>
     /// <param name="options">The version retention options.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
@@ -46,6 +48,7 @@ public sealed class ReportDesignHistoryService
         ReportDesignHistoryStore store,
         IDistributedLock distributedLock,
         IReportDesignNotifier notifier,
+        IEnumerable<IReportEventHandler> eventHandlers,
         IOptions<ReportDesignVersionOptions> options,
         IClock clock,
         ILogger<ReportDesignHistoryService> logger)
@@ -54,6 +57,7 @@ public sealed class ReportDesignHistoryService
         _store = store;
         _distributedLock = distributedLock;
         _notifier = notifier;
+        _eventHandlers = eventHandlers;
         _options = options.Value;
         _clock = clock;
         _logger = logger;
@@ -321,6 +325,7 @@ public sealed class ReportDesignHistoryService
             Touch(draft, user);
             await _store.SaveDraftAsync(draft);
             await NotifyAsync(ReportDesignChangeKind.Published, draft, number, user);
+            await PublishedAsync(created.Design, number, user);
 
             return Result(ReportHistoryStatus.Saved, draft, number, created);
         }
@@ -371,6 +376,7 @@ public sealed class ReportDesignHistoryService
             await _store.SaveDraftAsync(draft);
             await _store.CommitAsync();
             await NotifyAsync(ReportDesignChangeKind.Published, draft, number, user);
+            await PublishedAsync(saved.Design, number, user);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -520,6 +526,17 @@ public sealed class ReportDesignHistoryService
         draft.ModifiedUtc = _clock.UtcNow;
         draft.ModifiedById = user.FindFirstValue(ClaimTypes.NameIdentifier);
         draft.ModifiedByName = user.Identity?.Name;
+    }
+
+    private Task PublishedAsync(ReportDesign design, int? versionNumber, ClaimsPrincipal user)
+    {
+        return _eventHandlers.InvokeAsync((handler, context) => handler.PublishedAsync(context), new ReportEventContext
+        {
+            Design = design,
+            UserName = user.Identity?.Name,
+            Source = ReportEventSource.Admin,
+            VersionNumber = versionNumber,
+        }, _logger);
     }
 
     private Task NotifyAsync(ReportDesignChangeKind kind, ReportDesignDraft draft, int? versionNumber, ClaimsPrincipal user)

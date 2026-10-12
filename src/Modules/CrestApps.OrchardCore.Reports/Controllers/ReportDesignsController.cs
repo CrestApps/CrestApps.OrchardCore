@@ -153,7 +153,9 @@ public sealed class ReportDesignsController : Controller
             canEdit || design.AllowExport,
             format => Url.RouteUrl("ReportDesignsExport", new { id = design.ItemId, format }),
             Url.RouteUrl("ReportDesignsRun", new { id = design.ItemId }),
-            HttpContext.RequestAborted);
+            HttpContext.RequestAborted,
+            ReportEventSource.Admin,
+            User.Identity?.Name);
 
         model.EditUrl = canEdit ? Url.RouteUrl("ReportDesignerEdit", new { id = design.ItemId }) : null;
 
@@ -186,7 +188,7 @@ public sealed class ReportDesignsController : Controller
             return Forbid();
         }
 
-        var file = await _presenter.ExportAsync(design, Request.Query, format, HttpContext.RequestAborted);
+        var file = await _presenter.ExportAsync(design, Request.Query, format, HttpContext.RequestAborted, ReportEventSource.Admin, User.Identity?.Name);
 
         return file is null ? NotFound() : File(file.Content, file.ContentType, file.FileName);
     }

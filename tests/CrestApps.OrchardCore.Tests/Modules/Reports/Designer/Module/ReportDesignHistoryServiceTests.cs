@@ -32,6 +32,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
 
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"report-history-{Guid.NewGuid():N}.db");
     private readonly List<ReportDesignChange> _changes = [];
+    private readonly List<ReportEventContext> _published = [];
     private IStore _store;
 
     public async ValueTask InitializeAsync()
@@ -180,6 +181,11 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         Assert.Equal(1, result.Revision);
         Assert.Equal("ada", (await designs.FindByIdAsync(result.Save.Id, TestContext.Current.CancellationToken)).OwnerId);
         Assert.Equal(1, Assert.Single(await history.ListVersionsAsync(result.Save.Id)).Number);
+
+        var published = Assert.Single(_published);
+        Assert.Equal(result.Save.Id, published.Design.ItemId);
+        Assert.Equal(1, published.VersionNumber);
+        Assert.Equal("Ada", published.UserName);
     }
 
     [Fact]
@@ -434,6 +440,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
             new ReportDesignHistoryStore(session),
             distributedLock.Object,
             notifier.Object,
+            [new RecordingEventHandler(_published)],
             Options.Create(new ReportDesignVersionOptions { MaxVersions = maxVersions }),
             clock.Object,
             NullLogger<ReportDesignHistoryService>.Instance);
@@ -470,5 +477,22 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         query.Columns = [Column("name", "c.Name")];
 
         return query;
+    }
+
+    private sealed class RecordingEventHandler : ReportEventHandlerBase
+    {
+        private readonly List<ReportEventContext> _published;
+
+        public RecordingEventHandler(List<ReportEventContext> published)
+        {
+            _published = published;
+        }
+
+        public override Task PublishedAsync(ReportEventContext context)
+        {
+            _published.Add(context);
+
+            return Task.CompletedTask;
+        }
     }
 }

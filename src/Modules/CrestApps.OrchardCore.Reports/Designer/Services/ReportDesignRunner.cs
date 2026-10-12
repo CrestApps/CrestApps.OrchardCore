@@ -132,6 +132,7 @@ public sealed class ReportDesignRunner
             result.Document = _documentBuilder.Build(design.DisplayText, visuals, queryResult);
             result.Columns = queryResult.Columns;
             result.RowCount = queryResult.Rows.Count;
+            result.Rows = queryResult.Rows;
 
             foreach (var filter in plan.Filters.Where(filter => filter.Definition.Exposed))
             {
@@ -213,6 +214,11 @@ public sealed class ReportRunResult
     /// Gets or sets the number of result rows.
     /// </summary>
     public int RowCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the rows of the result, in the order of <see cref="Columns"/>.
+    /// </summary>
+    public IReadOnlyList<object[]> Rows { get; set; } = [];
 
     /// <summary>
     /// Gets the problems that stopped the report from running.

@@ -34,6 +34,7 @@ How people use the builder is described in the User Manual, starting at [Report 
 | [Formula reference](formulas.md) | The formula language: syntax, operators, types, and every function. |
 | [Large data](large-data.md) | Row limits, date push-down, grouping in the source, join key narrowing, and scheduled views. |
 | [Drafts, versions and real time](drafts-versions-and-real-time.md) | Autosave, revisions and conflicts, publishing, versions, and SignalR presence. |
+| [Workflows and report events](workflows.md) | The workflow events and tasks, and `IReportEventHandler`. |
 | [Recipes and deployment](recipes-and-deployment.md) | The deployment step and the `ReportDesigns` recipe step. |
 
 ## Architecture

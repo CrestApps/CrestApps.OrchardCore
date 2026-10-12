@@ -1,0 +1,44 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model CreateReportShareLinkTaskViewModel
+
+<partial name="_ReportWorkflowTaskFields" model="Model" />
+
+<div class="ocat-wrapper" asp-validation-class-for="Note">
+    <label class="ocat-label" asp-for="Note">@T["What the link is for"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Note" />
+        <span asp-validation-for="Note"></span>
+        <span class="hint">@T["Shown on the report's Sharing tab, with Liquid."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ExpiresAfterDays">
+    <label class="ocat-label" asp-for="ExpiresAfterDays">@T["Expires after (days)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" class="form-control" asp-for="ExpiresAfterDays" />
+        <span asp-validation-for="ExpiresAfterDays"></span>
+        <span class="hint">@T["0 for a link that does not expire."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowExport" />
+            <label class="form-check-label" asp-for="AllowExport">@T["Allow export"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="RequireSignIn" />
+            <label class="form-check-label" asp-for="RequireSignIn">@T["Require sign-in"]</label>
+            <span class="hint dashed">@T["Only signed-in people can open the link."]</span>
+        </div>
+    </div>
+</div>
+
+<p class="text-muted small">@T["The output holds the link's Url, LinkId and ExpiresUtc; send it with an email task, such as {0}. The link opens the report with its owner's access and can be revoked on the report's Sharing tab. Set the site's base URL so links made without a request, such as on a timer, are complete.", "{{ Workflow.Output.ReportShareLink.Url }}"]</p>

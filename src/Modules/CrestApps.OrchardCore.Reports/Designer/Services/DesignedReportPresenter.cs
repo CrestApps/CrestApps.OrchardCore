@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
@@ -18,7 +19,9 @@ public sealed class DesignedReportPresenter
     private readonly ReportDesignRunner _runner;
     private readonly IReportExportManager _exportManager;
     private readonly ReportDisplayValueResolver _displayValueResolver;
+    private readonly IEnumerable<IReportEventHandler> _eventHandlers;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DesignedReportPresenter"/> class.
@@ -31,12 +34,16 @@ public sealed class DesignedReportPresenter
         ReportDesignRunner runner,
         IReportExportManager exportManager,
         ReportDisplayValueResolver displayValueResolver,
-        IClock clock)
+        IEnumerable<IReportEventHandler> eventHandlers,
+        IClock clock,
+        ILogger<DesignedReportPresenter> logger)
     {
         _runner = runner;
         _exportManager = exportManager;
         _displayValueResolver = displayValueResolver;
+        _eventHandlers = eventHandlers;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <summary>
@@ -55,7 +62,9 @@ public sealed class DesignedReportPresenter
         bool canExport,
         Func<string, string> exportUrl,
         string formAction,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ReportEventSource? source = null,
+        string userName = null)
     {
         ArgumentNullException.ThrowIfNull(design);
 
@@ -65,6 +74,18 @@ public sealed class DesignedReportPresenter
         if (run.Document is not null)
         {
             await _displayValueResolver.ResolveNonTableValuesAsync(run.Document);
+
+            if (source.HasValue)
+            {
+                await _eventHandlers.InvokeAsync((handler, context) => handler.RanAsync(context), new ReportEventContext
+                {
+                    Design = design,
+                    UserName = userName,
+                    Source = source.Value,
+                    RowCount = run.RowCount,
+                    FilterValues = filterValues,
+                }, _logger);
+            }
         }
 
         return new DesignedReportViewModel
@@ -89,18 +110,53 @@ public sealed class DesignedReportPresenter
         ReportDesign design,
         IQueryCollection query,
         string format,
+        CancellationToken cancellationToken,
+        ReportEventSource? source = null,
+        string userName = null)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+
+        var filterValues = ReportFilterValueBinder.Bind(query, design.Query?.Filters);
+        var file = await ExportAsync(design, filterValues, format, cancellationToken);
+
+        if (file is not null && source.HasValue)
+        {
+            await _eventHandlers.InvokeAsync((handler, context) => handler.ExportedAsync(context), new ReportEventContext
+            {
+                Design = design,
+                UserName = userName,
+                Source = source.Value,
+                Format = file.Format,
+                RowCount = file.RowCount,
+                FilterValues = filterValues,
+            }, _logger);
+        }
+
+        return file;
+    }
+
+    /// <summary>
+    /// Runs a report with the given filter values and exports it, without telling the event handlers: for services
+    /// and workflows that run reports on their own.
+    /// </summary>
+    /// <param name="design">The report.</param>
+    /// <param name="filterValues">The values of its filters, by filter id.</param>
+    /// <param name="format">The export format, such as <c>csv</c>; CSV when empty.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The file, or <see langword="null"/> when the format is unknown or the report cannot run.</returns>
+    public async Task<ReportExportFile> ExportAsync(
+        ReportDesign design,
+        IDictionary<string, IList<string>> filterValues,
+        string format,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(design);
 
-        var exportFormat = _exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
-
-        if (exportFormat is null)
+        if (_exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format) is null)
         {
             return null;
         }
 
-        var filterValues = ReportFilterValueBinder.Bind(query, design.Query?.Filters);
         var run = await _runner.RunAsync(design, filterValues, cancellationToken);
 
         if (run.Document is null)
@@ -110,10 +166,36 @@ public sealed class DesignedReportPresenter
 
         await _displayValueResolver.ResolveAsync(run.Document);
 
+        return Export(design, run, format);
+    }
+
+    /// <summary>
+    /// Exports a report that already ran, whose display values are resolved.
+    /// </summary>
+    /// <param name="design">The report.</param>
+    /// <param name="run">The result of its run.</param>
+    /// <param name="format">The export format, such as <c>csv</c>; CSV when empty.</param>
+    /// <returns>The file, or <see langword="null"/> when the format is unknown or the run has no document.</returns>
+    public ReportExportFile Export(ReportDesign design, ReportRunResult run, string format)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        ArgumentNullException.ThrowIfNull(run);
+
+        var exportFormat = _exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
+
+        if (exportFormat is null || run.Document is null)
+        {
+            return null;
+        }
+
         return new ReportExportFile(
             exportFormat.Serialize(run.Document),
             exportFormat.ContentType,
-            $"{FileName(design.DisplayText)}-{_clock.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.{exportFormat.FileExtension}");
+            $"{FileName(design.DisplayText)}-{_clock.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.{exportFormat.FileExtension}")
+        {
+            Format = exportFormat.Name,
+            RowCount = run.RowCount,
+        };
     }
 
     private static string FileName(string title)
@@ -149,4 +231,15 @@ public sealed class DesignedReportPresenter
 /// <param name="Content">The file content.</param>
 /// <param name="ContentType">The MIME content type.</param>
 /// <param name="FileName">The download file name.</param>
-public sealed record ReportExportFile(byte[] Content, string ContentType, string FileName);
+public sealed record ReportExportFile(byte[] Content, string ContentType, string FileName)
+{
+    /// <summary>
+    /// Gets the name of the export format, such as <c>csv</c>.
+    /// </summary>
+    public string Format { get; init; }
+
+    /// <summary>
+    /// Gets the number of rows the report returned.
+    /// </summary>
+    public int RowCount { get; init; }
+}
