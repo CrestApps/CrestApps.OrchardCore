@@ -496,6 +496,59 @@ public sealed class DefaultCheckoutEngineTests
             },
         };
 
+    /// <summary>
+    /// Paying off an existing balance with a promise to pay later would mark it paid with nothing collected, so
+    /// the engine refuses before the provider is even called.
+    /// </summary>
+    [Fact]
+    public async Task BeginPaymentAsync_WhenSettlingAnExistingBalance_RefusesAProviderThatDefersPayment()
+    {
+        // Arrange
+        var begun = false;
+        var provider = new RecordingProvider(ProviderKey)
+        {
+            OnBegin = () =>
+            {
+                begun = true;
+
+                return Task.CompletedTask;
+            },
+        };
+        provider.Capabilities.DefersPayment = true;
+
+        var (engine, sessionStore) = CreateEngine(new InMemoryPaymentAttemptStore(), provider);
+        var session = CreateSession(oneTimeAmount: 30m);
+        session.SettlesExistingBalance = true;
+        sessionStore.Seed(session);
+
+        // Act
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(outcome.Succeeded);
+        Assert.False(begun);
+    }
+
+    /// <summary>
+    /// The same provider remains fine for a new purchase.
+    /// </summary>
+    [Fact]
+    public async Task BeginPaymentAsync_ForANewPurchase_AcceptsAProviderThatDefersPayment()
+    {
+        // Arrange
+        var provider = new RecordingProvider(ProviderKey);
+        provider.Capabilities.DefersPayment = true;
+
+        var (engine, sessionStore) = CreateEngine(new InMemoryPaymentAttemptStore(), provider);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        // Act
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(outcome.Succeeded);
+    }
+
     private static CheckoutSession CreateSession(decimal oneTimeAmount, decimal recurringAmount = 0m)
     {
         var session = new CheckoutSession

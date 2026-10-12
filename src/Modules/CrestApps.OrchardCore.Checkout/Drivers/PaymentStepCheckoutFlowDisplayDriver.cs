@@ -57,7 +57,10 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
 
         // Only providers that can actually settle what this invoice owes are offered. Offering one that
         // cannot would let the customer select it and only discover the mismatch when payment is refused.
-        var eligible = CheckoutPaymentMethodSelector.GetEligible(_providers, obligations);
+        var eligible = CheckoutPaymentMethodSelector.GetEligible(
+            _providers,
+            obligations,
+            flow.Session is CheckoutSession { SettlesExistingBalance: true });
 
         var selected = CheckoutPaymentMethodSelector.ResolveDefault(eligible, settings.DefaultPaymentMethod);
 

@@ -100,12 +100,40 @@ public sealed class CheckoutPaymentMethodSelectorTests
     public void ResolveDefault_WithNoEligibleProviders_ReturnsNull()
         => Assert.Null(CheckoutPaymentMethodSelector.ResolveDefault([], "anything"));
 
+    /// <summary>
+    /// A promise to pay later collects nothing, so it can't pay off a balance that already exists.
+    /// </summary>
+    [Fact]
+    public void GetEligible_WhenSettlingAnExistingBalance_ExcludesAProviderThatDefersPayment()
+    {
+        var payLater = CreateProvider("pay-later", supportsOneTime: true, supportsRecurring: true, defersPayment: true);
+        var card = CreateProvider("card", supportsOneTime: true, supportsRecurring: true, supportsEmbedded: true);
+
+        var eligible = CheckoutPaymentMethodSelector.GetEligible([payLater, card], _oneTimeOnly, settlesExistingBalance: true);
+
+        Assert.Equal("card", Assert.Single(eligible).Key);
+    }
+
+    /// <summary>
+    /// For a new purchase, paying later is a legitimate choice.
+    /// </summary>
+    [Fact]
+    public void GetEligible_ForANewPurchase_KeepsAProviderThatDefersPayment()
+    {
+        var payLater = CreateProvider("pay-later", supportsOneTime: true, supportsRecurring: true, defersPayment: true);
+
+        var eligible = CheckoutPaymentMethodSelector.GetEligible([payLater], _oneTimeOnly);
+
+        Assert.Equal("pay-later", Assert.Single(eligible).Key);
+    }
+
     private static ICheckoutPaymentProvider CreateProvider(
         string key,
         bool supportsOneTime,
         bool supportsRecurring,
         bool supportsCombined = true,
-        bool supportsEmbedded = false)
+        bool supportsEmbedded = false,
+        bool defersPayment = false)
     {
         var provider = new Mock<ICheckoutPaymentProvider>();
         provider.SetupGet(p => p.Key).Returns(key);
@@ -116,6 +144,7 @@ public sealed class CheckoutPaymentMethodSelectorTests
             SupportsRecurringPayments = supportsRecurring,
             SupportsCombinedOneTimeAndRecurring = supportsCombined,
             SupportsEmbeddedElements = supportsEmbedded,
+            DefersPayment = defersPayment,
         });
 
         return provider.Object;

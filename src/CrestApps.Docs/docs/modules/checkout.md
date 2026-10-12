@@ -78,7 +78,7 @@ A gateway implements the first-class **`ICheckoutPaymentProvider`** contract:
 | `VerifyAsync` | Queries the provider's authoritative API and reports what really happened. This is the source of truth at completion. |
 | `CancelAsync` | Cancels or compensates a remote resource for an abandoned or rolled-back attempt. |
 
-Capabilities let the framework select a suitable provider and enforce constraints — for example, refusing to add a separate up-front fee to a provider-hosted page that cannot represent one.
+Capabilities let the framework select a suitable provider and enforce constraints — for example, refusing to add a separate up-front fee to a provider-hosted page that cannot represent one. A provider that records a promise to pay instead of collecting money sets `DefersPayment`. Such a provider is neither offered nor accepted on a checkout that pays off an existing balance (`CheckoutSession.SettlesExistingBalance`), because it would mark that balance paid with nothing collected. `CheckoutPaymentMethodSelector.GetEligible` applies the rule for both the payment step and the engine.
 
 ### Built-in payment providers
 

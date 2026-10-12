@@ -182,7 +182,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 return new PaymentBeginOutcome { Succeeded = true };
             }
 
-            if (!TryValidateCapabilities(provider, expectedObligations, out var capabilityError))
+            if (!TryValidateCapabilities(provider, expectedObligations, session.SettlesExistingBalance, out var capabilityError))
             {
                 return PaymentBeginOutcome.Failure(capabilityError);
             }
@@ -741,13 +741,21 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
     private static bool TryValidateCapabilities(
         ICheckoutPaymentProvider provider,
         IReadOnlyList<string> obligations,
+        bool settlesExistingBalance,
         out string error)
     {
-        if (CheckoutPaymentMethodSelector.GetEligible([provider], obligations).Length > 0)
+        if (CheckoutPaymentMethodSelector.GetEligible([provider], obligations, settlesExistingBalance).Length > 0)
         {
             error = null;
 
             return true;
+        }
+
+        if (settlesExistingBalance && provider.Capabilities.DefersPayment)
+        {
+            error = "This balance must be paid now, so the selected payment method can't be used.";
+
+            return false;
         }
 
         var hasOneTime = obligations.Contains(CheckoutObligations.OneTime);

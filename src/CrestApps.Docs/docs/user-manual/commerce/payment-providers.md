@@ -72,7 +72,7 @@ There is nothing to turn on. After a successful **Connect** on a public domain, 
 
 <AskYourAdmin />
 
-Once the **Pay Later** feature is on, **Pay Later** is offered on every checkout, with the note *Confirm now and pay later.* There is no separate on or off switch. When the buyer picks it, the payment step explains: *Your order will be confirmed now and the balance recorded as outstanding.* and *You will be able to pay it from your account, and we will send you a reminder before it is due.*
+Once the **Pay Later** feature is on, **Pay Later** is offered on every checkout that buys something new, with the note *Confirm now and pay later.* There is no separate on or off switch. It isn't offered when a customer pays a balance they already owe, from **My Transactions** or from the link in a reminder: that balance has to be paid now. When the buyer picks it, the payment step explains: *Your order will be confirmed now and the balance recorded as outstanding.* and *You will be able to pay it from your account, and we will send you a reminder before it is due.*
 
 When the buyer clicks **Pay now** with Pay Later selected:
 

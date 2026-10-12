@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
@@ -19,6 +20,7 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 
     private readonly ITransactionManager _transactionManager;
     private readonly IPaymentAttemptStore _paymentAttemptStore;
+    private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly ITransactionSettlementService _settlementService;
     private readonly ILogger _logger;
 
@@ -30,18 +32,21 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
     /// <param name="transactionManager">The transaction manager.</param>
     /// <param name="paymentAttemptStore">The durable payment-attempt ledger used to read confirmed amounts.</param>
     /// <param name="settlementService">The service that applies confirmed attempts to the transaction.</param>
+    /// <param name="providerResolver">Resolves the provider of each attempt, so a promise to pay later is never counted as money.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionSettlementCheckoutHandler(
         ITransactionManager transactionManager,
         IPaymentAttemptStore paymentAttemptStore,
         ITransactionSettlementService settlementService,
+        ICheckoutPaymentProviderResolver providerResolver,
         ILogger<TransactionSettlementCheckoutHandler> logger,
         IStringLocalizer<TransactionSettlementCheckoutHandler> stringLocalizer)
     {
         _transactionManager = transactionManager;
         _paymentAttemptStore = paymentAttemptStore;
         _settlementService = settlementService;
+        _providerResolver = providerResolver;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -83,6 +88,10 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
         {
             session.Currency = transaction.Currency;
         }
+
+        // The balance already exists, so it must be paid now: a provider that only records a promise to pay later
+        // can't settle it, and is neither offered nor accepted.
+        session.SettlesExistingBalance = true;
 
         session.Steps.Add(new CheckoutFlowStep
         {
@@ -134,7 +143,11 @@ public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
-        var attempts = await _paymentAttemptStore.GetBySessionAsync(session.SessionId);
+        // A promise to pay later collects nothing. Counting it would mark the balance paid with no money received,
+        // so only attempts from providers that collect money settle the transaction.
+        var attempts = (await _paymentAttemptStore.GetBySessionAsync(session.SessionId))
+            .Where(attempt => string.IsNullOrEmpty(attempt.ProviderKey) || _providerResolver.GetProvider(attempt.ProviderKey)?.Capabilities.DefersPayment != true)
+            .ToArray();
 
         if (!attempts.Any(attempt => attempt.State == PaymentAttemptState.Succeeded))
         {
