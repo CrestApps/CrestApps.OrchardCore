@@ -31,7 +31,7 @@ A **category** groups what you sell for tax purposes, for example *Electronics*,
 | --- | --- |
 | **Name** | The label you see in lists and drop-downs. Required. |
 | **Code** | The unique code rules and products use, for example *ELEC*. Required. Drop-downs show categories as *Name (Code)*. |
-| **Parent code** | The **Code** of a broader category, to organize categories in a hierarchy, for example *Television* under *Electronics*. Leave empty for a top-level category. |
+| **Parent code** | The **Code** of a broader category, to organize categories in a hierarchy, for example *Television* under *Electronics*. A rule for *Electronics* then also taxes televisions; a rule for *Television* doesn't tax other electronics. Leave empty for a top-level category. |
 | **Description** | Optional notes. |
 
 ## 2. Review tax types

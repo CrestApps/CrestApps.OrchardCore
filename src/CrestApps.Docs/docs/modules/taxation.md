@@ -49,7 +49,7 @@ Go to **Commerce → Taxation → Categories** and add a category for each kind 
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Code** — the value matched by tax rules and stored on taxable items (for example `Electronics`).
-- **Parent code** — an optional parent category code, forming a hierarchy.
+- **Parent code** — an optional parent category code, forming a hierarchy. A rule for a category also applies to every category under it: a rule for `Electronics` taxes an item classified as `Television` when `Television`'s parent is `Electronics`. A rule for `Television` never taxes an item classified only as `Electronics`.
 - **Description** — optional notes.
 
 Create the broad categories you match rules against, plus any finer classifications you want to assign to individual items.

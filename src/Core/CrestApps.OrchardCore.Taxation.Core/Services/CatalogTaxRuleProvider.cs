@@ -17,14 +17,17 @@ namespace CrestApps.OrchardCore.Taxation.Core.Services;
 public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
 {
     private readonly INamedCatalog<TaxRule> _store;
+    private readonly INamedCatalog<TaxCategory> _categories;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CatalogTaxRuleProvider"/> class.
     /// </summary>
     /// <param name="store">The tax rule store.</param>
-    public CatalogTaxRuleProvider(INamedCatalog<TaxRule> store)
+    /// <param name="categories">The tax categories, whose parents a rule for a broader category also covers.</param>
+    public CatalogTaxRuleProvider(INamedCatalog<TaxRule> store, INamedCatalog<TaxCategory> categories)
     {
         _store = store;
+        _categories = categories;
     }
 
     /// <inheritdoc />
@@ -34,12 +37,18 @@ public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
 
         var rules = await _store.GetAllAsync(cancellationToken);
 
-        var applicable = rules.Where(rule => IsApplicable(rule, query));
+        // A rule for a category also covers the categories under it: a rule for Electronics taxes an item
+        // classified as Television when Television's parent is Electronics.
+        var categoryLineage = rules.Any(rule => !string.IsNullOrEmpty(rule.CategoryCode))
+            ? await GetCategoryLineageAsync(query.CategoryCode, cancellationToken)
+            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var applicable = rules.Where(rule => IsApplicable(rule, query, categoryLineage));
 
         return TaxRuleOrdering.Order(applicable).ToArray();
     }
 
-    private static bool IsApplicable(TaxRule rule, TaxRuleQuery query)
+    private static bool IsApplicable(TaxRule rule, TaxRuleQuery query, HashSet<string> categoryLineage)
     {
         if (!rule.Enabled)
         {
@@ -67,7 +76,7 @@ public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
         }
 
         if (!string.IsNullOrEmpty(rule.CategoryCode) &&
-            !MatchesCategory(rule.CategoryCode, query))
+            !MatchesCategory(rule.CategoryCode, query, categoryLineage))
         {
             return false;
         }
@@ -95,9 +104,36 @@ public sealed class CatalogTaxRuleProvider : ITaxRuleProvider
         return true;
     }
 
-    private static bool MatchesCategory(string ruleCategory, TaxRuleQuery query)
+    private static bool MatchesCategory(string ruleCategory, TaxRuleQuery query, HashSet<string> categoryLineage)
     {
         return string.Equals(ruleCategory, query.CategoryCode, StringComparison.OrdinalIgnoreCase) ||
+            categoryLineage.Contains(ruleCategory) ||
             string.Equals(ruleCategory, query.ClassificationCode, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // The item's category and every category above it, by code. A loop in the parents ends the walk rather than
+    // spinning forever.
+    private async Task<HashSet<string>> GetCategoryLineageAsync(string categoryCode, CancellationToken cancellationToken)
+    {
+        var lineage = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (string.IsNullOrEmpty(categoryCode))
+        {
+            return lineage;
+        }
+
+        var parents = (await _categories.GetAllAsync(cancellationToken))
+            .Where(category => !string.IsNullOrEmpty(category.Code))
+            .GroupBy(category => category.Code, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().ParentCode, StringComparer.OrdinalIgnoreCase);
+
+        var code = categoryCode;
+
+        while (!string.IsNullOrEmpty(code) && lineage.Add(code))
+        {
+            code = parents.TryGetValue(code, out var parent) ? parent : null;
+        }
+
+        return lineage;
     }
 }
