@@ -85,7 +85,8 @@ public sealed class DefaultPriceResolver : IPriceResolver
 
         if (price is null)
         {
-            _logger.LogWarning("Refusing to price product '{ContentItemId}': it offers no price matching '{PriceId}'.", product.ContentItemId, context.PriceId ?? "(default)");
+            // The price id comes from the request, so line breaks are removed: they would let it forge log entries.
+            _logger.LogWarning("Refusing to price product '{ContentItemId}': it offers no price matching '{PriceId}'.", product.ContentItemId, context.PriceId?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? "(default)");
 
             return null;
         }
