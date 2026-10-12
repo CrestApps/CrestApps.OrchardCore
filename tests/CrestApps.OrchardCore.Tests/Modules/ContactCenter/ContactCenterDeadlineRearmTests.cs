@@ -6,6 +6,8 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -104,6 +106,75 @@ public sealed class ContactCenterDeadlineRearmTests
         // Assert
         Assert.True(activation.IsCompletedSuccessfully);
         await activation;
+    }
+
+    [Fact]
+    public void ScheduleStartupAssignment_SchedulesOnePass_OnceSoftPhonesHaveHadTimeToReconnect()
+    {
+        // Arrange
+        // Re-arming restores deadlines but offers nobody anything, so callers who waited through the restart sat
+        // until the sweep's next tick even with agents free.
+        var (services, scheduler, _, _) = CreateServices([], waiting: new Dictionary<string, string[]>());
+
+        // Act
+        ContactCenterDeadlineRearm.ScheduleStartupAssignment(services);
+
+        // Assert
+        scheduler.Verify(
+            value => value.Schedule(
+                ContactCenterDeadlineRearm.StartupAssignmentKey,
+                _now + ContactCenterDeadlineRearm.StartupAssignmentDelay,
+                It.IsAny<Func<IServiceProvider, CancellationToken, Task<DateTime?>>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task RunStartupAssignmentAsync_LeavesTheWorkToTheSweep_WhenTheSweepHoldsItsLock()
+    {
+        // Arrange
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((null, false));
+        var workManager = new Mock<IContactCenterFeatureWorkManager>();
+        var services = new ServiceCollection()
+            .AddSingleton(distributedLock.Object)
+            .AddSingleton(workManager.Object)
+            .BuildServiceProvider();
+
+        // Act
+        var next = await ContactCenterDeadlineRearm.RunStartupAssignmentAsync(services, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(next);
+        workManager.Verify(value => value.TryEnter(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RunStartupAssignmentAsync_MakesTheAssignmentPass_UnderTheSweepsLock()
+    {
+        // Arrange
+        var locker = new Mock<ILocker>();
+        var distributedLock = new Mock<IDistributedLock>();
+        distributedLock
+            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .ReturnsAsync((locker.Object, true));
+
+        // A quiescing feature ends the pass at its first step, which is enough to show the pass ran.
+        var workManager = new Mock<IContactCenterFeatureWorkManager>();
+        workManager.Setup(value => value.TryEnter(ContactCenterConstants.Feature.Queues)).Returns((IContactCenterFeatureWorkLease)null);
+        var services = new ServiceCollection()
+            .AddSingleton(distributedLock.Object)
+            .AddSingleton(workManager.Object)
+            .BuildServiceProvider();
+
+        // Act
+        var next = await ContactCenterDeadlineRearm.RunStartupAssignmentAsync(services, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(next);
+        workManager.Verify(value => value.TryEnter(ContactCenterConstants.Feature.Queues), Times.Once);
+        locker.Verify(value => value.DisposeAsync(), Times.Once);
     }
 
     private static ActivityReservation CreateReservation(string reservationId, DateTime expiresUtc)

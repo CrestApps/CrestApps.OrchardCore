@@ -1159,9 +1159,12 @@ See [Base-voice deployment acceptance](contact-center/production-support.md#base
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:FeatureLifecycle` |
-| **Controls** | How long a Contact Center feature waits for running work to finish when it is disabled |
+| **Controls** | How long Contact Center waits for running work to finish when a feature is disabled, or when the node shuts down |
 
-Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
+| Key | Default | Range | What it does |
+| --- | --- | --- | --- |
+| `DrainTimeoutSeconds` | `30` | `1` to `300` | How long disabling a feature waits for its running work to finish. |
+| `ShutdownDrainTimeoutSeconds` | `5` | `0` to `60` | How long a shutting-down node waits for routing work it already started. The wait holds up shutdown, so keep it short. `0` stops new routing work without waiting. |
 
 ```json
 {
@@ -1169,7 +1172,8 @@ Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
     "CrestApps": {
       "ContactCenter": {
         "FeatureLifecycle": {
-          "DrainTimeoutSeconds": 60
+          "DrainTimeoutSeconds": 60,
+          "ShutdownDrainTimeoutSeconds": 5
         }
       }
     }
@@ -1179,6 +1183,7 @@ Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
 
 ```text
 OrchardCore__CrestApps__ContactCenter__FeatureLifecycle__DrainTimeoutSeconds=60
+OrchardCore__CrestApps__ContactCenter__FeatureLifecycle__ShutdownDrainTimeoutSeconds=5
 ```
 
 See [Feature lifecycle contract](contact-center/production-support.md#feature-lifecycle-contract).
