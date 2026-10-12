@@ -1,0 +1,19 @@
+@model ShapeViewModel<TaxTable>
+
+<h5 class="mb-0">@Model.Value.Name</h5>
+<small class="text-muted">
+    <span class="d-block">@T["{0} row(s)", Model.Value.Rows?.Count ?? 0] · @T["Version {0}", Model.Value.Version]</span>
+    @if (Model.Value.EffectiveFromUtc.HasValue || Model.Value.EffectiveToUtc.HasValue)
+    {
+        <span class="d-block">
+            @if (Model.Value.EffectiveFromUtc.HasValue)
+            {
+                @T["From {0:yyyy-MM-dd}", Model.Value.EffectiveFromUtc.Value]
+            }
+            @if (Model.Value.EffectiveToUtc.HasValue)
+            {
+                @T["to {0:yyyy-MM-dd}", Model.Value.EffectiveToUtc.Value]
+            }
+        </span>
+    }
+</small>

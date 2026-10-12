@@ -1,0 +1,136 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Core
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.AspNetCore.Antiforgery
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.Html
+@using OrchardCore.DisplayManagement.ModelBinding
+
+@inject IDisplayManager<CheckoutFlowPaymentMethod> PaymentMethodDisplayManager
+@inject IUpdateModelAccessor UpdateModelAccessor
+@inject IAntiforgery Antiforgery
+
+@model InstallmentPlanPayViewModel
+
+@{
+    var plan = Model.Plan;
+    var downPayment = plan.DownPayment;
+    var savesCard = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge;
+    var antiforgery = Antiforgery.GetAndStoreTokens(Context);
+}
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsInstallmentPlansPay" title="@T["Take the down payment"]">
+        <breadcrumb-item id="SubscriptionsInstallmentPlans" action="Index" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@T["Installment Plans"]</breadcrumb-item>
+        <breadcrumb-item id="SubscriptionsInstallmentPlansDetail" action="Detail" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" route-itemId="@plan.ItemId" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@(new HtmlContentString(plan.Title ?? string.Empty))</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row">
+    <div class="col-lg-7">
+        <form id="checkout-form" method="post">
+            <div class="card mb-3">
+                <div class="card-header">@T["Card"]</div>
+                <div class="card-body">
+                    @if (Model.PaymentMethods.Count == 0)
+                    {
+                        <div class="alert alert-warning mb-0" role="alert">
+                            @T["No payment provider that can keep a card for later payments is enabled. Enable and configure one, such as Stripe, to take this down payment."]
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">
+                            @if (savesCard)
+                            {
+                                @T["Enter the customer's card. It is charged the down payment now and kept for the scheduled payments, so make sure the customer has agreed to that."]
+                            }
+                            else
+                            {
+                                @T["Enter the customer's card. It is charged the down payment only; the scheduled payments will be invoiced."]
+                            }
+                        </p>
+
+                        <div id="checkout-payment-error" class="alert alert-danger d-none" role="alert"></div>
+
+                        <div class="@(Model.PaymentMethods.Count == 1 ? "d-none" : "mb-3")">
+                            @foreach (var method in Model.PaymentMethods)
+                            {
+                                var inputId = $"payment-method-{method.Key}";
+
+                                <div class="form-check form-check-inline">
+                                    <input type="radio" class="form-check-input" name="checkout-payment-method" id="@inputId" value="@method.Key" checked="@(method == Model.PaymentMethods[0])" />
+                                    <label class="form-check-label" for="@inputId">@method.DisplayName</label>
+                                </div>
+                            }
+                        </div>
+
+                        @foreach (var method in Model.PaymentMethods)
+                        {
+                            var panel = await PaymentMethodDisplayManager.BuildEditorAsync(
+                                model: new CheckoutFlowPaymentMethod { Flow = Model.Flow, SavePaymentMethod = savesCard },
+                                updater: UpdateModelAccessor.ModelUpdater,
+                                isNew: false,
+                                method.Key);
+
+                            <div class="mb-3@(method == Model.PaymentMethods[0] ? string.Empty : " d-none")" data-checkout-payment-panel="@method.Key">
+                                @await DisplayAsync(panel)
+                            </div>
+                        }
+
+                        <button type="submit" class="btn btn-primary" id="checkout-submit">
+                            <span class="checkout-submit-label">@T["Charge {0} {1}", plan.Currency, CurrencyScale.Format(downPayment?.Amount ?? 0m, plan.Currency)]</span>
+                            <span class="checkout-submit-busy d-none">
+                                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                @T["Processing…"]
+                            </span>
+                        </button>
+                    }
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-header">@T["Plan"]</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5">@T["Customer"]</dt>
+                    <dd class="col-sm-7">@plan.CustomerName<br /><span class="text-muted small">@plan.CustomerEmail</span></dd>
+
+                    <dt class="col-sm-5">@T["Total"]</dt>
+                    <dd class="col-sm-7">@plan.Currency @CurrencyScale.Format(plan.TotalAmount, plan.Currency)</dd>
+
+                    <dt class="col-sm-5">@T["Down payment now"]</dt>
+                    <dd class="col-sm-7"><strong>@plan.Currency @CurrencyScale.Format(downPayment?.Amount ?? 0m, plan.Currency)</strong></dd>
+
+                    <dt class="col-sm-5">@T["Then"]</dt>
+                    <dd class="col-sm-7">@T["{0} payments, the first on {1:d}", plan.InstallmentCount, plan.FirstDueUtc]</dd>
+
+                    <dt class="col-sm-5">@T["Collected by"]</dt>
+                    <dd class="col-sm-7">@(savesCard ? T["Charging this card"] : T["Invoicing the customer"])</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.PaymentMethods.Count > 0)
+{
+    <script asp-name="checkout-payment" at="Foot"></script>
+    <script at="Foot" depends-on="checkout-payment">
+        checkoutPayment.initialize({
+            beginEndpoint: '@Url.Action("BeginPayment", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
+            statusEndpoint: '@Url.Action("PaymentStatus", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
+            confirmationUrl: '@Url.Action("Detail", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
+            cancelUrl: '@Url.Action("Pay", "InstallmentPlans", new { area = "CrestApps.OrchardCore.Subscriptions", itemId = plan.ItemId })',
+            requestHeaders: { 'RequestVerificationToken': '@antiforgery.RequestToken' },
+            genericErrorMessage: '@T["The card could not be charged. Please try again."]',
+            selectMethodMessage: '@T["Please choose a payment method."]',
+            stillProcessingMessage: '@T["The payment is still being confirmed. The plan starts as soon as it is; you can leave this page."]'
+        });
+    </script>
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Receipts</RootNamespace>
+    <Title>CrestApps OrchardCore Receipts Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provider-agnostic abstractions for the CrestApps OrchardCore Receipts module. Contains the
+      document model, request contract, settings, and service interface used to build printable
+      proof-of-purchase receipts that any module (subscriptions, e-commerce, and others) can reuse.
+    </Description>
+    <PackageTags>$(PackageTags) Receipts Commerce Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+</Project>

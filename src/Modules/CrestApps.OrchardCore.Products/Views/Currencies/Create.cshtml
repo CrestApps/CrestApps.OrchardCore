@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Core.Models
+@using CrestApps.OrchardCore.Products
+
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ProductsCurrenciesCreate" title="@T["New Currency"]">
+        <breadcrumb-item id="ProductsCurrencies" action="Index" controller="Currencies" area="CrestApps.OrchardCore.Products" permission="@ProductsConstants.Permissions.ManageCurrencies.Name">@T["Currencies"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" enctype="multipart/form-data" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions",""))</RootNamespace>
+    <Title>CrestApps OrchardCore Taxation Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Provider-agnostic abstractions for the CrestApps taxation framework.
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Taxation Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

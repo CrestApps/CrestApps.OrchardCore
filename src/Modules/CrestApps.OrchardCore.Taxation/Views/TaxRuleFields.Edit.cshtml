@@ -1,0 +1,142 @@
+@model TaxRuleViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The name is fixed after creation."]</span>
+        }
+        <span class="hint">@T["Used to identify this rule in the admin. It must be unique."]</span>
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" type="checkbox" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Priority" class="ocat-label">@T["Priority"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="Priority" type="number" class="form-control ocat-limited" />
+        <span class="hint">@T["Lower values are evaluated first."]</span>
+        <span asp-validation-for="Priority" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TaxType" class="ocat-label">@T["Tax type"]</label>
+    <div class="ocat-end">
+        <select asp-for="TaxType" asp-items="Model.TaxTypes" class="form-select"></select>
+        <span class="hint">@T["Labels the kind of tax this rule produces, such as sales tax or VAT. It is used to group and report taxes and does not change how the amount is calculated."]</span>
+        <span asp-validation-for="TaxType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TaxName" class="ocat-label">@T["Display name"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxName" class="form-control" />
+        <span class="hint">@T["The name shown to customers on invoices and receipts. When left empty the rule name is used."]</span>
+        <span asp-validation-for="TaxName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TaxCode" class="ocat-label">@T["Tax code"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxCode" class="form-control" />
+        <span asp-validation-for="TaxCode" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="JurisdictionId" class="ocat-label">@T["Jurisdiction"]</label>
+    <div class="ocat-end">
+        <select asp-for="JurisdictionId" asp-items="Model.Jurisdictions" class="form-select"></select>
+        <span class="hint">@T["The jurisdiction the rule belongs to."]</span>
+        <span asp-validation-for="JurisdictionId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CategoryCode" class="ocat-label">@T["Category"]</label>
+    <div class="ocat-end">
+        <select asp-for="CategoryCode" asp-items="Model.Categories" class="form-select"></select>
+        <span class="hint">@T["The tax category the rule applies to. Leave as Any category to match every category."]</span>
+        <span asp-validation-for="CategoryCode" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CustomerType" class="ocat-label">@T["Customer type"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <select asp-for="CustomerType" asp-items="Model.CustomerTypes" class="form-select ocat-limited"></select>
+        <span asp-validation-for="CustomerType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MinimumAmount" class="ocat-label">@T["Minimum amount"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="MinimumAmount" type="number" step="0.01" class="form-control ocat-limited" />
+        <span asp-validation-for="MinimumAmount" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaximumAmount" class="ocat-label">@T["Maximum amount"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="MaximumAmount" type="number" step="0.01" class="form-control ocat-limited" />
+        <span asp-validation-for="MaximumAmount" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludedInPrice" class="form-check-input" type="checkbox" />
+            <label asp-for="IncludedInPrice" class="form-check-label">@T["Tax is included in the item price"]</label>
+        </div>
+        <div class="form-check">
+            <input asp-for="IsCompound" class="form-check-input" type="checkbox" />
+            <label asp-for="IsCompound" class="form-check-label">@T["Tax is compound (calculated on top of other taxes)"]</label>
+        </div>
+        <div class="form-check">
+            <input asp-for="ReverseCharge" class="form-check-input" type="checkbox" />
+            <label asp-for="ReverseCharge" class="form-check-label">@T["Reverse charge (the customer accounts for the tax)"]</label>
+        </div>
+        <div class="form-check">
+            <input asp-for="AppliesToShipping" class="form-check-input" type="checkbox" />
+            <label asp-for="AppliesToShipping" class="form-check-label">@T["Applies to shipping charges"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveFromUtc" class="ocat-label">@T["Effective from"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="EffectiveFromUtc" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control ocat-limited" />
+        <span asp-validation-for="EffectiveFromUtc" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveToUtc" class="ocat-label">@T["Effective to"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="EffectiveToUtc" asp-format="{0:yyyy-MM-dd}" type="date" class="form-control ocat-limited" />
+        <span asp-validation-for="EffectiveToUtc" class="text-danger"></span>
+    </div>
+</div>

@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Payments
+
+@model ShapeViewModel<CheckoutInvoice>
+
+@{
+    var invoice = Model.Value;
+    var currency = invoice.Currency;
+
+    string Format(decimal amount) => $"{currency} {CurrencyScale.Format(amount, currency)}";
+}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h2 class="h6 mb-0">@T["Order summary"]</h2>
+    </div>
+    <ul class="list-group list-group-flush">
+        @foreach (var lineItem in invoice.LineItems ?? [])
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="me-3">
+                    <div>@lineItem.Description</div>
+                    @if (lineItem.Plan is not null)
+                    {
+                        <small class="text-body-secondary">
+                            @T["Every {0} {1}", lineItem.Plan.BillingDuration, lineItem.Plan.DurationType.ToString().ToLowerInvariant()]
+                        </small>
+                    }
+                </div>
+                <span class="text-nowrap">@Format(lineItem.GetLineTotal(currency))</span>
+            </li>
+        }
+    </ul>
+    <div class="card-body">
+        @* Tax is shown as its own line rather than folded into the total, so the customer can see exactly
+           what they are being charged and why. *@
+        @if (invoice.TaxAmount > 0m)
+        {
+            <div class="d-flex justify-content-between text-body-secondary">
+                <span>@T["Subtotal"]</span>
+                <span>@Format(invoice.DueNow)</span>
+            </div>
+
+            @foreach (var taxLine in invoice.TaxLines ?? [])
+            {
+                <div class="d-flex justify-content-between text-body-secondary small">
+                    <span>@(string.IsNullOrEmpty(taxLine.TaxName) ? T["Tax"].Value : taxLine.TaxName)</span>
+                    <span>@Format(taxLine.TaxAmount)</span>
+                </div>
+            }
+        }
+
+        <div class="d-flex justify-content-between fw-semibold border-top pt-2 mt-2">
+            <span>@T["Due now"]</span>
+            <span>@Format(invoice.GrandTotal)</span>
+        </div>
+    </div>
+</div>

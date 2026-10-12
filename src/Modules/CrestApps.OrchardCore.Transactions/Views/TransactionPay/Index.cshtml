@@ -1,0 +1,71 @@
+@using CrestApps.OrchardCore.Payments
+@model TransactionPayViewModel
+
+@{
+    var transaction = Model.Transaction;
+    var title = string.IsNullOrEmpty(transaction.Title) ? T["Your payment"].Value : transaction.Title;
+    var outstanding = $"{transaction.Currency} {CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)}";
+}
+
+<zone Name="Title">
+    <breadcrumb name="TransactionsPay" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(title))" />
+</zone>
+
+<style>
+    @@media print {
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="container my-4" style="max-width: 860px;">
+    <h1 class="h3 mb-3 no-print">@title</h1>
+
+    @if (transaction.OutstandingAmount <= 0m)
+    {
+        <div class="alert alert-success no-print" role="alert">
+            @T["This payment has been received. Thank you."]
+        </div>
+    }
+    else if (transaction.Status == TransactionStatus.Canceled)
+    {
+        <div class="alert alert-secondary no-print" role="alert">
+            @T["This payment was canceled, so there is nothing to pay."]
+        </div>
+    }
+    else
+    {
+        <div class="card mb-3 no-print">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div class="text-muted small">@T["Amount due"]</div>
+                    <div class="h4 mb-0">@outstanding</div>
+                    @if (transaction.DueUtc.HasValue)
+                    {
+                        <div class="text-muted small">@T["Due on {0:d}", transaction.DueUtc.Value]</div>
+                    }
+                </div>
+                @if (Model.CanPay)
+                {
+                    <form asp-action="Pay" asp-route-token="@Model.Token" method="post">
+                        <button type="submit" class="btn btn-primary btn-lg">@T["Pay {0}", outstanding]</button>
+                    </form>
+                }
+                else
+                {
+                    <div class="text-muted">@T["Online payment is not available right now. Please contact us to pay."]</div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.Invoice is not null)
+    {
+        <div class="mb-2 no-print text-end">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print();">@T["Print invoice"]</button>
+        </div>
+
+        <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model.Invoice" />
+    }
+</div>
