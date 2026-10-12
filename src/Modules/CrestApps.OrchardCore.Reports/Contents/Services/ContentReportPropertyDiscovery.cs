@@ -92,9 +92,10 @@ public sealed class ContentReportPropertyDiscovery
             parts.Add((typePart.Name, typePart.DisplayName(), typePart, fieldNames));
         }
 
-        // Parts stored by code without the type listing them, such as a part welded to the items of the type.
+        // Parts stored by code without the type listing them, such as a part welded to the items of the type. Keys
+        // starting with "@", such as "@WeldedPartSettings", are Orchard Core's own metadata, not parts.
         foreach (var name in items
-            .SelectMany(item => Root(item)?.Where(pair => pair.Value is JsonObject).Select(pair => pair.Key) ?? [])
+            .SelectMany(item => Root(item)?.Where(pair => pair.Value is JsonObject && !pair.Key.StartsWith('@')).Select(pair => pair.Key) ?? [])
             .Distinct(StringComparer.Ordinal)
             .Where(name => !parts.Any(part => string.Equals(part.Name, name, StringComparison.Ordinal))))
         {

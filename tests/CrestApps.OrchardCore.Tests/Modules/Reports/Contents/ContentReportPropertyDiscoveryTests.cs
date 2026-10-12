@@ -17,6 +17,7 @@ public sealed class ContentReportPropertyDiscoveryTests
         {
           "Customer": { "Balance": { "Value": 10 }, "Region": "West" },
           "TitlePart": { "Title": "Ada" },
+          "@WeldedPartSettings": { "LoyaltyPart": { "Position": "5" } },
           "AutoroutePart": { "Path": "ada", "SetHomepage": false },
           "LoyaltyPart": {
             "Stars": 4,
@@ -59,6 +60,7 @@ public sealed class ContentReportPropertyDiscoveryTests
             Assert.Equal(ReportDataType.Boolean, schema.FindField("AutoroutePart.SetHomepage").DataType);
 
             Assert.Null(schema.FindField("LoyaltyPart.ApiToken"));
+            Assert.DoesNotContain(schema.Fields, field => field.Name.StartsWith('@'));
             Assert.Null(schema.FindField("LoyaltyPart.History"));
             Assert.Null(schema.FindField("Customer.Balance.Value"));
             Assert.Single(schema.Fields, field => field.Name == "AutoroutePart.Path");
