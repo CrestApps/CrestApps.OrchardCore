@@ -36,15 +36,24 @@
             </dd>
 
             <dt class="col-sm-3">@T["Current period"]</dt>
-            <dd class="col-sm-9">@subscription.CurrentPeriodStartUtc.ToString("d") &ndash; @subscription.CurrentPeriodEndUtc.ToString("d")</dd>
+            <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: subscription.CurrentPeriodStartUtc, Format: "d")) &ndash; @await DisplayAsync(await New.DateTime(Utc: subscription.CurrentPeriodEndUtc, Format: "d"))</dd>
 
             <dt class="col-sm-3">@T["Renews"]</dt>
-            <dd class="col-sm-9">@(subscription.NextBillingUtc.HasValue ? subscription.NextBillingUtc.Value.ToString("g") : T["Never"].Value)</dd>
+            <dd class="col-sm-9">
+                @if (subscription.NextBillingUtc.HasValue)
+                {
+                    @await DisplayAsync(await New.DateTime(Utc: subscription.NextBillingUtc.Value, Format: "g"))
+                }
+                else
+                {
+                    @T["Never"]
+                }
+            </dd>
 
             @if (subscription.GraceEndsUtc.HasValue)
             {
                 <dt class="col-sm-3">@T["Grace ends"]</dt>
-                <dd class="col-sm-9">@subscription.GraceEndsUtc.Value.ToString("g")</dd>
+                <dd class="col-sm-9">@await DisplayAsync(await New.DateTime(Utc: subscription.GraceEndsUtc.Value, Format: "g"))</dd>
             }
 
             <dt class="col-sm-3">@T["Payment method"]</dt>
@@ -151,7 +160,7 @@
                 @foreach (var subscriptionEvent in subscription.Events.OrderByDescending(e => e.CreatedUtc))
                 {
                     <tr>
-                        <td class="text-nowrap">@subscriptionEvent.CreatedUtc.ToString("g")</td>
+                        <td class="text-nowrap">@await DisplayAsync(await New.DateTime(Utc: subscriptionEvent.CreatedUtc, Format: "g"))</td>
                         <td class="text-nowrap">@DisplayText.EventTypeName(subscriptionEvent.Type)</td>
                         <td>@subscriptionEvent.Message</td>
                     </tr>
