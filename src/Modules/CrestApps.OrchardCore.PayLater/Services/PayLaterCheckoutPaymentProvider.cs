@@ -50,6 +50,9 @@ public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider, 
         SupportsCombinedOneTimeAndRecurring = true,
         CollectsTaxDynamically = false,
         SupportsRefunds = false,
+
+        // A commitment to pay later collects nothing, so it cannot pay off a balance that already exists.
+        DefersPayment = true,
     };
 
     /// <inheritdoc/>

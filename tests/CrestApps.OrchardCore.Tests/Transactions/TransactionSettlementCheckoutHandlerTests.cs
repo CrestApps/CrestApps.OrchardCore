@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -8,7 +10,10 @@ using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
@@ -404,6 +409,49 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         Assert.Single(recorder.Contexts);
     }
 
+    [Fact]
+    public async Task ActivatingAsync_MarksTheCheckoutAsSettlingAnExistingBalance()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var session = new CheckoutSession
+        {
+            SessionId = "settlement-1",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+        };
+
+        // Act
+        await CreateHandler(new FakeTransactionStore(transaction)).ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        // Assert: so a promise to pay later is neither offered nor accepted for it.
+        Assert.True(session.SettlesExistingBalance);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_APromiseToPayLater_DoesNotSettleTheTransaction()
+    {
+        // Arrange: Pay Later reports its commitment as succeeded, at the expected amount, but collects nothing.
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            SessionId = "settlement-1",
+            ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 108m,
+        });
+
+        // Act
+        await CreateHandler(store, attempts).CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(CreateSettlementSession(transaction, "settlement-1"))));
+
+        // Assert
+        var stored = await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken);
+        Assert.NotEqual(TransactionStatus.Paid, stored.Status);
+        Assert.Equal(0m, stored.AmountPaid);
+    }
+
     private sealed class RecordingPaymentHandler : ITransactionPaymentHandler
     {
         public List<TransactionPaymentRecordedContext> Contexts { get; } = [];
@@ -442,7 +490,16 @@ public sealed class TransactionSettlementCheckoutHandlerTests
                 new TestClock(_now),
                 NullLogger<TransactionSettlementService>.Instance,
                 new PassThroughStringLocalizer<TransactionSettlementService>()),
+            new CheckoutPaymentProviderResolver([CreatePayLaterProvider()]),
             NullLogger<TransactionSettlementCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
+    }
+
+    private static PayLaterCheckoutPaymentProvider CreatePayLaterProvider()
+    {
+        var hostEnvironment = new Mock<IHostEnvironment>();
+        hostEnvironment.SetupGet(environment => environment.EnvironmentName).Returns("Development");
+
+        return new PayLaterCheckoutPaymentProvider(hostEnvironment.Object, Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
     }
 }

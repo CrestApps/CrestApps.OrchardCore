@@ -21,6 +21,14 @@ public sealed class CheckoutSession : Entity, ICheckoutFlowSession
     public long Id { get; set; }
 
     /// <summary>
+    /// Whether this checkout pays off a balance that already exists, such as an outstanding transaction, rather
+    /// than buying something new. Only a provider that collects money can complete it: a provider that
+    /// <see cref="Services.PaymentProviderCapabilities.DefersPayment"/> would mark the balance paid with nothing
+    /// collected.
+    /// </summary>
+    public bool SettlesExistingBalance { get; set; }
+
+    /// <summary>
     /// The unique identifier of the checkout session.
     /// </summary>
     public string SessionId { get; set; }

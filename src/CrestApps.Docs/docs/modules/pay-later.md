@@ -26,12 +26,18 @@ Pay Later records an offline commitment instead of moving money through a proces
 
 This makes Pay Later suitable for manual/deferred billing, invoicing, purchase orders, or trials that are confirmed without an immediate card charge.
 
+### Not for paying an existing balance
+
+Pay Later sets `PaymentProviderCapabilities.DefersPayment`: it records a promise to pay, and collects nothing. That is a fine way to buy something new, because the promise becomes a balance to collect. It can't pay off a balance that already exists, though. If it could, paying an outstanding transaction "later" would mark the transaction paid with no money received.
+
+So a checkout that settles an existing balance (`CheckoutSession.SettlesExistingBalance`, set by the Transactions module when a customer pays a transaction from **My Transactions** or a pay link) never offers Pay Later. The engine also refuses to begin a payment with it there. As a last guard, the settlement ignores any attempt from a provider that defers payment.
+
 On the checkout payment step Pay Later contributes its own panel explaining what the customer is agreeing to. It collects nothing, but it is still a display driver rather than a special case in the checkout page, which is what keeps that page provider-agnostic.
 
 ## Tracking outstanding balances
 
 :::note Applies to checkout purchases
-Balance tracking runs on the [Checkout](checkout) framework's completion pipeline, so it applies to any purchase made through the public checkout — including settling an existing balance. A **Pay Later subscription bought through the legacy [Subscriptions](subscriptions) signup flow does not yet create a transaction**, because that flow still records commitments through its own pipeline. A subscription bought through the public checkout does.
+Balance tracking runs on the [Checkout](checkout) framework's completion pipeline, so it applies to any purchase made through the public checkout. A **Pay Later subscription bought through the legacy [Subscriptions](subscriptions) signup flow does not yet create a transaction**, because that flow still records commitments through its own pipeline. A subscription bought through the public checkout does.
 :::
 
 Because Pay Later never moves money at a gateway, every succeeded Pay Later payment leaves a balance the customer still owes. Pay Later records that balance in the provider-agnostic [Transactions](transactions) ledger when the checkout completes, so an outstanding Pay Later commitment is a first-class, trackable obligation:

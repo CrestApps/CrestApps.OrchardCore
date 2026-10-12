@@ -52,4 +52,11 @@ public sealed class PaymentProviderCapabilities
     /// <see cref="ICheckoutSavedPaymentMethodProvider"/> and honors the <see cref="CheckoutPaymentDataKeys"/>.
     /// </summary>
     public bool SupportsSavedPaymentMethods { get; set; }
+
+    /// <summary>
+    /// Whether the provider records a promise to pay later instead of collecting money now, as Pay Later does.
+    /// Such a payment creates a new balance to collect; it cannot pay off a balance that already exists, so it is
+    /// neither offered nor accepted on a checkout that settles one (<see cref="CheckoutSession.SettlesExistingBalance"/>).
+    /// </summary>
+    public bool DefersPayment { get; set; }
 }

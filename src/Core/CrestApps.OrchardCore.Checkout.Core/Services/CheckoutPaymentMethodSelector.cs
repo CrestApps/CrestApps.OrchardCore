@@ -18,14 +18,21 @@ public static class CheckoutPaymentMethodSelector
     /// </summary>
     /// <param name="providers">The registered providers.</param>
     /// <param name="obligations">The obligations the invoice must settle.</param>
+    /// <param name="settlesExistingBalance">
+    /// Whether the checkout pays off a balance that already exists. A provider that only records a promise to pay
+    /// later can't do that, so it is left out.
+    /// </param>
     public static ICheckoutPaymentProvider[] GetEligible(
         IEnumerable<ICheckoutPaymentProvider> providers,
-        IReadOnlyList<string> obligations)
+        IReadOnlyList<string> obligations,
+        bool settlesExistingBalance = false)
     {
         ArgumentNullException.ThrowIfNull(providers);
         ArgumentNullException.ThrowIfNull(obligations);
 
-        return [.. providers.Where(provider => IsEligible(provider, obligations))];
+        return [.. providers.Where(provider =>
+            (!settlesExistingBalance || !provider.Capabilities.DefersPayment) &&
+            IsEligible(provider, obligations))];
     }
 
     /// <summary>
