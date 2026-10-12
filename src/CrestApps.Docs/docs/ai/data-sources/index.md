@@ -26,7 +26,7 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 - **Early (Preemptive) RAG** — Optionally pre-fetches relevant context before AI completion to reduce latency and improve response quality.
 - **Real-Time Sync** — Automatically queues incremental KB updates when source content changes or when provider indexes are updated through Orchard Core indexing.
 - **Background Sync** — CrestApps.OrchardCore defers incremental sync work until the current request completes, then hands it to an Orchard background job through the Orchard-specific indexing service adapter so the KB index stays aligned without blocking the UI. A nightly alignment task still repairs drift.
-- **OData Filtering** — Supports OData filter expressions translated to provider-specific queries for precise data retrieval.
+- **OData Filtering** — An AI profile, a chat interaction or a data source search tool instance can narrow retrieval with an OData filter, which is translated to the knowledge base provider's own query. See [Filtering retrieval](#filtering-retrieval).
 - **Deployment & Recipe Support** — Export and import data source configurations via Orchard Core deployment plans and recipes.
 
 ## Getting Started
@@ -79,9 +79,25 @@ Each data source can be configured with:
 - **Title Field** — Maps to the document title in search results.
 - **Content Field** — Maps to the main text content for chunking and embedding.
 - **Key Field** — Maps to the document reference ID for citations.
-- **Filters** — OData filter expressions for scoping search results.
 
 Provider-specific source types can add their own editor sections. The built-in external-source modules use the shared `CrestApps.Core` source descriptors plus Orchard display drivers and source handlers so custom modules can extend the same UI pattern with their own connection fields and runtime readers. For example, the Elasticsearch source now supports both self-managed and Elastic Cloud environments plus multiple authentication modes from the shared Core model.
+
+## Filtering retrieval
+
+The **Filter** field on the **Knowledge** tab of an AI profile, on the **Knowledge** panel of a chat interaction, and on a **Data source search** tool instance narrows the knowledge base search with an OData filter, for example `status eq 'active' and category eq 'docs'`. A profile and a chat interaction store it in `AIDataSourceRagMetadata.Filter`. The preemptive retrieval and the `search_data_sources` tool that the model calls both read it from the profile or the chat interaction, so both apply the same filter, strictness and retrieved document count.
+
+The filter is checked with `IODataValidator` when it is saved. The profile editor shows *"Invalid filter value. It must be a valid OData filter."* on the field. A chat interaction saves its settings through the chat interaction hub, which rejects the whole save with the same message and keeps the settings the interaction had.
+
+At search time, the filter is translated by the `IODataFilterTranslator` that is registered for the knowledge base index provider. When no translator is registered, the search runs without the filter and logs the warning *"No OData filter translator available for provider '…'. Filter will be ignored."*
+
+| Knowledge base index | Filter support |
+| --- | --- |
+| **AI Knowledge Base Index (Elasticsearch)** | Translated to an Elasticsearch query. See [Filters on an Elasticsearch knowledge base](elasticsearch.md#filters-on-an-elasticsearch-knowledge-base). |
+| **AI Knowledge Base Index (Azure AI Search)** | Not supported. The index declares no `filters` field, so no translator is registered and the filter is ignored with the warning above. |
+
+### Which fields a filter can use
+
+Each knowledge base chunk stores every field of its source document in a `filters` object. Write a field by its source name, for example `category eq 'docs'`: the translator adds the `filters.` prefix. A field that is already written as `filters.category` is not prefixed again. The typed knowledge columns `contentType`, `rootId`, `parentId` and `page` are not prefixed.
 
 ## Knowledge Source Behavior
 
@@ -91,7 +107,7 @@ When a data source (or uploaded documents) is attached to an AI profile or chat 
 
 When preemptive RAG is on, the system automatically searches the knowledge base **before** the model generates a response. The retrieved context is injected directly into the system prompt so the model can use it immediately.
 
-When preemptive RAG is off but the data source is still attached, the system injects instructions telling the model to **call search tools** (e.g., `search_data_source`, `search_documents`) before answering. This gives the model the ability to search on demand instead of receiving pre-fetched context.
+When preemptive RAG is off but the data source is still attached, the system injects instructions telling the model to **call search tools** (e.g., `search_data_sources`, `search_documents`) before answering. This gives the model the ability to search on demand instead of receiving pre-fetched context.
 
 ### IsInScope ("Limit Responses to Indexed Data")
 
@@ -197,7 +213,7 @@ For manual recovery or one-off reprocessing of a single mapping, use the **Sync 
 
 ### Deletion cleanup
 
-When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceVectorSearchService.DeleteByDataSourceIdAsync`, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. Cleanup is queued asynchronously so it does not block the admin UI.
+When a data source is deleted (via the admin UI or programmatically), all of its document chunks are automatically removed from the master knowledge base index. The system uses `IDataSourceContentManager.DeleteByDataSourceIdAsync` of the knowledge base index provider, which leverages provider-native capabilities (Elasticsearch `DeleteByQuery`, Azure AI Search filter+batch delete) for efficient bulk removal. Cleanup is queued asynchronously so it does not block the admin UI.
 
 When a content item is removed from a source index, the `DataSourceContentHandler` automatically removes its chunks from the KB index in real-time via a deferred task.
 
