@@ -48,6 +48,14 @@ To run a load again, or a load much like it, open its **Actions** menu and choos
 
 A load whose status is *Loaded* can be deleted by users with the **Delete loaded activity batches** permission. Click **Delete** on its row and confirm. Only the load and its report are removed. The activities it created are kept, with their assignments and schedules. To withdraw those activities, cancel or purge them under **Manage Activities**.
 
+To delete several loads at once, tick them in the list, open **Actions** and choose **Delete**. The same rules apply to each load:
+
+- A *New* load is deleted.
+- A *Loaded* load is deleted only if you have the **Delete loaded activity batches** permission.
+- A load that is still running is never deleted.
+
+A message tells you how many loads were deleted and how many were skipped.
+
 ## Dialer loads
 
 <video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer activity load with a dialer profile, a campaign and the number its calls are dialed from">

@@ -123,6 +123,18 @@ public sealed class ActivityBatchesControllerDeleteTests
         harness.Manager.Verify(manager => manager.DeleteAsync(It.IsAny<OmnichannelActivityBatch>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    // The bulk remove existed, but the list offered no bulk actions, so it could not be reached from the page.
+    [Fact]
+    public void BulkActions_OfferDelete()
+    {
+        var harness = CreateHarness(canDeleteLoaded: false);
+
+        var action = Assert.Single(harness.Controller.GetBulkActions());
+
+        Assert.Equal(nameof(CatalogEntryAction.Remove), action.Value);
+        Assert.Equal("Delete", action.Text);
+    }
+
     private static OmnichannelActivityBatch Batch(OmnichannelActivityBatchStatus status, string id = BatchId)
         => new()
         {
