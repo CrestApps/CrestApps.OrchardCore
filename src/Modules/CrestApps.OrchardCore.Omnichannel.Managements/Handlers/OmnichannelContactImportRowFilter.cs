@@ -429,7 +429,10 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
         {
             throw;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // A registry that does not answer surfaces as a cancellation from its HTTP client's timeout, not from the
+        // caller. It used to escape the filter, end the whole import run, and be logged as a database timeout, so the
+        // import stopped at the same row on every run. It is a screening that could not happen, like any other failure.
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(
                 ex,
