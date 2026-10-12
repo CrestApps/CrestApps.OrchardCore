@@ -81,6 +81,12 @@ The plan itself contributes the charges: the recurring price and, when configure
 
 The price comes from the plan through `IProductSnapshotResolver`, so a future pricing engine changes what is charged without changing the checkout. The invoice is built in the plan's own currency rather than a site-wide default, because an invoice built in one currency from prices set in another charges a number that belongs to a different currency. Amounts always come from the server-side invoice, never from anything the browser submitted.
 
+### A plan that can't be sold
+
+**Sign up** asks `SubscriptionPlanPricing` for the plan's price and recurrence before it starts a checkout. A plan the pricing seam can't price (typically no currency on the plan and no default currency on its content type), or whose price doesn't recur, gets a *This plan can't be bought right now* page instead, and a warning in the log names the plan and what to fix. Nothing is charged, and no account, agreement or site is created.
+
+`SubscriptionPlanCheckoutHandler` also refuses to complete a subscription checkout whose invoice bills nothing that recurs, for a plan changed after its checkout began. The engine then rolls back every completing handler's writes, so nothing is handed out for a purchase that wasn't paid.
+
 ### Buying without an account
 
 When the visitor is not signed in, the account step collects their details and the account is created **before** any money moves, then signed in once the purchase completes. If the checkout fails, that account is deleted again — after verifying the password matches, so only the account this checkout created is ever removed. Creating it after payment would leave a paying customer with no account whenever account creation failed; leaving it behind on a failure would let a visitor accumulate accounts by abandoning checkouts.

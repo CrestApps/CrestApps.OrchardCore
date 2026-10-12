@@ -210,6 +210,95 @@ public sealed class SubscriptionPlanCheckoutHandlerTests
         Assert.Empty(session.Steps);
     }
 
+    /// <summary>
+    /// A subscription checkout whose invoice bills nothing that recurs paid for nothing. Completing it would still
+    /// register the buyer and record a site to create, so it is refused, and the engine rolls those writes back.
+    /// </summary>
+    [Fact]
+    public async Task CompletingAsync_WhenNothingRecurs_RefusesTheCheckout()
+    {
+        // Arrange: only a one-time line, as when the plan itself could not be priced.
+        var session = CreateSession(selection: null);
+        session.Put(new CheckoutInvoice
+        {
+            Currency = "USD",
+            LineItems = [new CheckoutLineItem { ItemId = "fee", Description = "Setup fee", Quantity = 1, UnitPrice = 50m }],
+        });
+
+        // Act and assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateHandler().CompletingAsync(Completing(session)));
+    }
+
+    /// <summary>
+    /// The same goes for a subscription checkout with no invoice at all.
+    /// </summary>
+    [Fact]
+    public async Task CompletingAsync_WithoutAnInvoice_RefusesTheCheckout()
+    {
+        // Arrange
+        var session = CreateSession(selection: null);
+
+        // Act and assert
+        await Assert.ThrowsAsync<InvalidOperationException>(() => CreateHandler().CompletingAsync(Completing(session)));
+    }
+
+    /// <summary>
+    /// A checkout that bills the plan completes, a free trial included.
+    /// </summary>
+    [Fact]
+    public async Task CompletingAsync_WhenThePlanRecurs_LetsTheCheckoutComplete()
+    {
+        // Arrange
+        var session = CreateSession(selection: null);
+        session.Put(new CheckoutInvoice
+        {
+            Currency = "USD",
+            LineItems =
+            [
+                new CheckoutLineItem
+                {
+                    ItemId = "plan-1",
+                    Description = "Membership",
+                    Quantity = 1,
+                    UnitPrice = 20m,
+                    Plan = new RecurringPlan { BillingDuration = 1, DurationType = DurationType.Month, TrialDays = 14 },
+                },
+            ],
+        });
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => CreateHandler().CompletingAsync(Completing(session)));
+
+        // Assert
+        Assert.Null(exception);
+    }
+
+    /// <summary>
+    /// Other purchases are none of this handler's business.
+    /// </summary>
+    [Fact]
+    public async Task CompletingAsync_ForAnotherKindOfCheckout_DoesNothing()
+    {
+        // Arrange
+        var session = new CheckoutSession { SessionId = "session-2", ReferenceType = "Transaction", ReferenceId = "t-1" };
+
+        // Act
+        var exception = await Record.ExceptionAsync(() => CreateHandler().CompletingAsync(Completing(session)));
+
+        // Assert
+        Assert.Null(exception);
+    }
+
+    private static SubscriptionPlanCheckoutHandler CreateHandler()
+        => new(
+            Mock.Of<IContentManager>(),
+            Mock.Of<IPriceResolver>(),
+            NullLogger<SubscriptionPlanCheckoutHandler>.Instance,
+            new PassThroughStringLocalizer<SubscriptionPlanCheckoutHandler>());
+
+    private static CheckoutFlowCompletingContext Completing(CheckoutSession session)
+        => new(new CheckoutFlow(session));
+
     private static async Task Activate(
         CheckoutSession session,
         ProductPrice price,
