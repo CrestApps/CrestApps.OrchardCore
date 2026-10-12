@@ -11,7 +11,7 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
 /// <summary>
-/// Displays and updates subscription onboarding site settings for tenant domain configuration.
+/// Displays and updates the settings sold sites are created with: the database they are created on.
 /// </summary>
 public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDriver<SubscriptionOnboardingSettings>
 {
@@ -33,7 +33,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
         => SubscriptionSettingsDisplayDriver.GroupId;
 
     /// <summary>
-    /// Builds the subscription onboarding settings editor with domain mode options.
+    /// Builds the subscription onboarding settings editor.
     /// </summary>
     /// <param name="model">The site model that owns the settings.</param>
     /// <param name="settings">The subscription onboarding settings being edited.</param>
@@ -43,17 +43,6 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
     {
         return Initialize<SubscriptionOnboardingSettingsViewModel>("SubscriptionOnboardingSettings_Edit", model =>
         {
-            model.AllowCustomDomains = settings.AllowCustomDomains;
-            model.LocalDomainType = settings.LocalDomainType;
-            model.LocalDomainTemplate = settings.LocalDomainTemplate;
-            model.LocalDomainTypes =
-            [
-                new SelectListItem(S["None"], nameof(LocalDomainType.None)),
-                new SelectListItem(S["Generate a hidden local domain"], nameof(LocalDomainType.GeneratedHidden)),
-                new SelectListItem(S["Generate a visible local domain"], nameof(LocalDomainType.Generated)),
-                new SelectListItem(S["Set the tenant name as a prefix"], nameof(LocalDomainType.Prefix)),
-            ];
-
             model.DatabaseProvider = settings.DatabaseProvider;
             model.ConnectionString = settings.ConnectionString;
             model.Schema = settings.Schema;
@@ -63,7 +52,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
     }
 
     /// <summary>
-    /// Validates and updates subscription onboarding domain settings from the submitted editor values.
+    /// Validates and updates the subscription onboarding settings from the submitted editor values.
     /// </summary>
     /// <param name="site">The site model that owns the settings.</param>
     /// <param name="settings">The subscription onboarding settings being updated.</param>
@@ -74,65 +63,6 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
         var model = new SubscriptionOnboardingSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
-
-        // Neither domain option is required: the buyer enters the site's address while checking out, so the
-        // database settings can be saved without either. Only a template that is in use has to be valid.
-        if (model.LocalDomainType != LocalDomainType.None && model.LocalDomainType != LocalDomainType.Prefix)
-        {
-            var tenantNamePlaceholder = Guid.NewGuid().ToString("n");
-            var domainPlaceholder = Guid.NewGuid().ToString("n");
-
-            if (string.IsNullOrWhiteSpace(model.LocalDomainTemplate))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.LocalDomainTemplate), S["Domain template is required."]);
-            }
-            else if (!model.LocalDomainTemplate.Contains(SubscriptionOnboardingSettings.TenantKeyVariable))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.LocalDomainTemplate), S["Domain template must include the variable: {0}.", SubscriptionOnboardingSettings.TenantKeyVariable]);
-            }
-            else
-            {
-                var templates = model.LocalDomainTemplate
-                    .Replace(SubscriptionOnboardingSettings.TenantKeyVariable, tenantNamePlaceholder)
-                    .Replace(SubscriptionOnboardingSettings.CurrentHostVariable, domainPlaceholder)
-                    .ToLowerInvariant()
-                    .Split(",", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-                var isValid = templates.Length > 0;
-
-                var validatedHosts = new HashSet<string>();
-
-                foreach (var template in templates)
-                {
-                    if (!Uri.TryCreate(GetLink(template), UriKind.Absolute, out var validatedHost))
-                    {
-                        context.Updater.ModelState.AddModelError(Prefix, nameof(model.LocalDomainTemplate), S["Invalid template provided. The template must be a valid domain format."]);
-                        isValid = false;
-                        break;
-                    }
-                    else
-                    {
-                        var validatedValue = validatedHost.Host
-                            .Replace(tenantNamePlaceholder, SubscriptionOnboardingSettings.TenantKeyVariable)
-                            .Replace(domainPlaceholder, SubscriptionOnboardingSettings.CurrentHostVariable);
-
-                        validatedHosts.Add(validatedValue);
-                    }
-                }
-
-                if (isValid)
-                {
-                    settings.LocalDomainTemplate = string.Join(',', validatedHosts);
-                }
-                else
-                {
-                    settings.LocalDomainTemplate = model.LocalDomainTemplate;
-                }
-            }
-        }
-
-        settings.AllowCustomDomains = model.AllowCustomDomains;
-        settings.LocalDomainType = model.LocalDomainType;
 
         var match = Array.FindIndex(_providers, candidate =>
             string.Equals(candidate.Value, model.DatabaseProvider, StringComparison.OrdinalIgnoreCase));
@@ -162,14 +92,4 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
         ("Postgres", "PostgreSQL", true),
         ("MySql", "MySQL", true),
     ];
-
-    private static string GetLink(string domain)
-    {
-        if (!domain.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"http://{domain}";
-        }
-
-        return domain;
-    }
 }

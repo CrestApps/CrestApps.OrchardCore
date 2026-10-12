@@ -56,10 +56,6 @@ New sites are created on the database chosen on the **Tenant Onboarding** tab of
 | **Connection string** | Required for every provider except Sqlite. Each site gets its own table prefix, derived from its name. |
 | **Schema** | Optional. Leave blank to use the provider's default. |
 
-:::note[Saving the Tenant Onboarding tab]
-The tab also has domain options. It saves only when **Use custom domains** is ticked or **Local domains** is set to something other than **None**.
-:::
-
 ## My Sites (for customers)
 
 **My Sites** lists every site the customer bought, and opens the ones that are ready.
