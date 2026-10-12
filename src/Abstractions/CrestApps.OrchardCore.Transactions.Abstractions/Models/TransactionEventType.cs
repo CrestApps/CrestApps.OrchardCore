@@ -34,4 +34,9 @@ public enum TransactionEventType
     /// A free-form note was added by a manager.
     /// </summary>
     Note = 5,
+
+    /// <summary>
+    /// Money paid against the transaction was given back.
+    /// </summary>
+    Refunded = 6,
 }

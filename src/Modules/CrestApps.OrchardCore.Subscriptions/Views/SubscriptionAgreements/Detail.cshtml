@@ -1,11 +1,19 @@
+@using CrestApps.OrchardCore.Payments
 @using CrestApps.OrchardCore.Subscriptions.Core
 @using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.Services
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
 @using OrchardCore.DisplayManagement.Html
-@model Subscription
+@model SubscriptionAgreementViewModel
+@inject SubscriptionDisplayText DisplayText
+
+@{
+    var subscription = Model.Subscription;
+}
 
 <zone Name="Title">
-    <breadcrumb name="SubscriptionsAgreementsDetail" title="@(new HtmlContentString(Model.Title ?? string.Empty))">
-        <breadcrumb-item id="SubscriptionsAgreements" action="Index" controller="SubscriptionAgreements" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageSubscriptions.Name">@T["Subscriptions"]</breadcrumb-item>
+    <breadcrumb name="SubscriptionsAgreementsDetail" title="@(new HtmlContentString(subscription.Title ?? string.Empty))">
+        <breadcrumb-item id="SubscriptionsAgreements" action="Index" controller="SubscriptionAgreements" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageSubscriptions.Name">@T["Agreements"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -13,53 +21,59 @@
     <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">@T["Status"]</dt>
-            <dd class="col-sm-9"><partial name="_SubscriptionStatusBadge" model="Model.Status" /></dd>
+            <dd class="col-sm-9"><partial name="_SubscriptionStatusBadge" model="subscription.Status" /></dd>
 
             <dt class="col-sm-3">@T["Billed"]</dt>
-            <dd class="col-sm-9">@Model.Currency @Model.TotalAmount.ToString("0.00") @T["every"] @Model.BillingDuration @Model.DurationType</dd>
+            <dd class="col-sm-9">@subscription.Currency @CurrencyScale.Format(subscription.TotalAmount, subscription.Currency) @DisplayText.BillingInterval(subscription.BillingDuration, subscription.DurationType)</dd>
 
             <dt class="col-sm-3">@T["Cycles billed"]</dt>
             <dd class="col-sm-9">
-                @Model.CyclesBilled
-                @if (Model.BillingCycleLimit.HasValue)
+                @subscription.CyclesBilled
+                @if (subscription.BillingCycleLimit.HasValue)
                 {
-                    @T["of {0}", Model.BillingCycleLimit.Value]
+                    @T["of {0}", subscription.BillingCycleLimit.Value]
                 }
             </dd>
 
             <dt class="col-sm-3">@T["Current period"]</dt>
-            <dd class="col-sm-9">@Model.CurrentPeriodStartUtc.ToString("d") &ndash; @Model.CurrentPeriodEndUtc.ToString("d")</dd>
+            <dd class="col-sm-9">@subscription.CurrentPeriodStartUtc.ToString("d") &ndash; @subscription.CurrentPeriodEndUtc.ToString("d")</dd>
 
             <dt class="col-sm-3">@T["Renews"]</dt>
-            <dd class="col-sm-9">@(Model.NextBillingUtc.HasValue ? Model.NextBillingUtc.Value.ToString("g") : T["Never"].Value)</dd>
+            <dd class="col-sm-9">@(subscription.NextBillingUtc.HasValue ? subscription.NextBillingUtc.Value.ToString("g") : T["Never"].Value)</dd>
 
-            @if (Model.GraceEndsUtc.HasValue)
+            @if (subscription.GraceEndsUtc.HasValue)
             {
                 <dt class="col-sm-3">@T["Grace ends"]</dt>
-                <dd class="col-sm-9">@Model.GraceEndsUtc.Value.ToString("g")</dd>
+                <dd class="col-sm-9">@subscription.GraceEndsUtc.Value.ToString("g")</dd>
             }
 
             <dt class="col-sm-3">@T["Payment method"]</dt>
-            <dd class="col-sm-9">@Model.ProviderKey <span class="text-muted small">@Model.ProviderSubscriptionId</span></dd>
+            <dd class="col-sm-9">@(DisplayText.PaymentMethodName(subscription.ProviderKey) ?? T["None"].Value)</dd>
+
+            @if (!string.IsNullOrEmpty(subscription.ProviderSubscriptionId))
+            {
+                <dt class="col-sm-3">@T["Gateway reference"]</dt>
+                <dd class="col-sm-9"><span class="text-muted small">@subscription.ProviderSubscriptionId</span></dd>
+            }
 
             <dt class="col-sm-3">@T["Owner"]</dt>
-            <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.GuestContactEmail) ? Model.OwnerId : Model.GuestContactEmail)</dd>
+            <dd class="col-sm-9">@(Model.OwnerName ?? (string.IsNullOrEmpty(subscription.GuestContactEmail) ? T["Unknown"].Value : subscription.GuestContactEmail))</dd>
         </dl>
     </div>
 </div>
 
-@if (Model.Lines.Count > 0)
+@if (subscription.Lines.Count > 0)
 {
     <div class="card mb-3">
         <div class="card-header">@T["What is billed"]</div>
         <div class="card-body p-0">
             <table class="table mb-0 align-middle">
                 <tbody>
-                    @foreach (var line in Model.Lines)
+                    @foreach (var line in subscription.Lines)
                     {
                         <tr>
                             <td>@line.Description</td>
-                            <td class="text-end">@line.Quantity &times; @Model.Currency @line.UnitPrice.ToString("0.00")</td>
+                            <td class="text-end">@line.Quantity &times; @subscription.Currency @CurrencyScale.Format(line.UnitPrice, subscription.Currency)</td>
                         </tr>
                     }
                 </tbody>
@@ -71,9 +85,9 @@
 <div class="card mb-3">
     <div class="card-header">@T["Actions"]</div>
     <div class="card-body">
-        @if (Model.Status != SubscriptionStatus.Canceled && Model.Status != SubscriptionStatus.Expired)
+        @if (subscription.Status != SubscriptionStatus.Canceled && subscription.Status != SubscriptionStatus.Expired)
         {
-            <form asp-action="Cancel" asp-route-itemId="@Model.ItemId" method="post" class="row gx-2 align-items-center mb-3">
+            <form asp-action="Cancel" asp-route-itemId="@subscription.ItemId" method="post" class="row gx-2 align-items-center mb-3">
                 <div class="col">
                     <input type="text" name="reason" class="form-control" placeholder="@T["Reason"]" />
                 </div>
@@ -94,9 +108,9 @@
             </form>
         }
 
-        @if (Model.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing)
+        @if (subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing)
         {
-            <form asp-action="Pause" asp-route-itemId="@Model.ItemId" method="post" class="row gx-2 align-items-center">
+            <form asp-action="Pause" asp-route-itemId="@subscription.ItemId" method="post" class="row gx-2 align-items-center">
                 <div class="col">
                     <input type="text" name="reason" class="form-control" placeholder="@T["Reason"]" />
                 </div>
@@ -113,9 +127,9 @@
             </form>
         }
 
-        @if (Model.Status is SubscriptionStatus.Paused or SubscriptionStatus.PastDue)
+        @if (subscription.Status is SubscriptionStatus.Paused or SubscriptionStatus.PastDue)
         {
-            <form asp-action="Resume" asp-route-itemId="@Model.ItemId" method="post">
+            <form asp-action="Resume" asp-route-itemId="@subscription.ItemId" method="post">
                 <button type="submit" class="btn btn-primary"
                         data-url-af="RemoveUrl"
                         data-title="@T["Resume billing"]"
@@ -134,11 +148,11 @@
     <div class="card-body p-0">
         <table class="table mb-0 align-middle">
             <tbody>
-                @foreach (var subscriptionEvent in Model.Events.OrderByDescending(e => e.CreatedUtc))
+                @foreach (var subscriptionEvent in subscription.Events.OrderByDescending(e => e.CreatedUtc))
                 {
                     <tr>
                         <td class="text-nowrap">@subscriptionEvent.CreatedUtc.ToString("g")</td>
-                        <td class="text-nowrap">@subscriptionEvent.Type</td>
+                        <td class="text-nowrap">@DisplayText.EventTypeName(subscriptionEvent.Type)</td>
                         <td>@subscriptionEvent.Message</td>
                     </tr>
                 }

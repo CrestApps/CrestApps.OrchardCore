@@ -91,7 +91,7 @@ The price comes from the plan through `IProductSnapshotResolver`, so a future pr
 
 When the visitor is not signed in, the account step collects their details and the account is created **before** any money moves, then signed in once the purchase completes. If the checkout fails, that account is deleted again — after verifying the password matches, so only the account this checkout created is ever removed. Creating it after payment would leave a paying customer with no account whenever account creation failed; leaving it behind on a failure would let a visitor accumulate accounts by abandoning checkouts.
 
-Turn on **Allow Guest Signup** in the subscription settings to let somebody buy without creating an account at all.
+Turn on **Allow guest sign-up** in the subscription settings to let somebody buy without creating an account at all.
 
 ## Receipts
 
@@ -231,7 +231,7 @@ configuration: pick your own currency, price, and roles before selling anything.
 
 ## Free trials
 
-A recurring plan can start with a free trial. Set **Free Trial Days** on the plan and the gateway is told about it, so the gateway holds the schedule and starts billing when the trial ends.
+A recurring plan can start with a free trial. Set **Free trial days** on the plan and the gateway is told about it, so the gateway holds the schedule and starts billing when the trial ends.
 
 That is deliberate: if the site simply did not charge and promised itself to start billing later, a restart would break the promise. It is also different from delaying the start of the agreement. A trial establishes the agreement now, with a payment method attached, so a trial converts into a paying subscriber without asking them to come back and buy again.
 
@@ -268,7 +268,7 @@ under its tenant folder — so selling a site works before anything is configure
 PostgreSQL, or MySQL instead and every new site is created there, each with its own table prefix derived
 from its name, so the sites stay apart without anybody inventing a prefix per purchase.
 
-Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones, and can retry any of them once they have fixed the cause.
+Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones. A waiting or failed job can be retried once the cause is fixed. An abandoned job has already dropped the administrator password, so it can't be retried: the administrator creates the site by hand and closes the job with **Mark as created** (`TenantProvisioningAdminController.MarkCreated`). That sets it to `Succeeded`, optionally with the site's URL. `TenantProvisioningJobActions` holds the rules for both buttons, and the screen and the actions share them.
 
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
 
@@ -350,7 +350,7 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 dotnet add package CrestApps.OrchardCore.Subscriptions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings → Stripe**.
+Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings → Payments → Stripe**.
 
 ## Related modules
 

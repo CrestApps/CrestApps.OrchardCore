@@ -1,4 +1,6 @@
+@using CrestApps.OrchardCore.Payments
 @using CrestApps.OrchardCore.Transactions.Core
+@inject TransactionDisplayText DisplayText
 
 @model RefundRequestViewModel
 
@@ -17,16 +19,16 @@
     <div class="card-body">
         <dl class="row mb-0">
             <dt class="col-sm-3">@T["Method"]</dt>
-            <dd class="col-sm-9">@attempt.ProviderKey</dd>
+            <dd class="col-sm-9">@DisplayText.PaymentMethodName(attempt.ProviderKey)</dd>
 
             <dt class="col-sm-3">@T["Payment"]</dt>
             <dd class="col-sm-9"><span class="text-muted small">@attempt.TransactionId</span></dd>
 
             <dt class="col-sm-3">@T["Collected"]</dt>
-            <dd class="col-sm-9">@attempt.Currency @settled.ToString("0.00")</dd>
+            <dd class="col-sm-9">@attempt.Currency @CurrencyScale.Format(settled, attempt.Currency)</dd>
 
             <dt class="col-sm-3">@T["Already refunded"]</dt>
-            <dd class="col-sm-9">@attempt.Currency @Model.AlreadyRefunded.ToString("0.00")</dd>
+            <dd class="col-sm-9">@attempt.Currency @CurrencyScale.Format(Model.AlreadyRefunded, attempt.Currency)</dd>
         </dl>
     </div>
 </div>

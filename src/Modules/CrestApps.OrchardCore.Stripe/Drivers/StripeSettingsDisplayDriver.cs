@@ -83,7 +83,6 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         return Initialize<StripeSettingsViewModel>("StripeSettings_Edit", model =>
         {
             model.IsLive = settings.IsLive;
-            model.CheckoutMode = settings.CheckoutMode;
             model.LivePublishableKey = settings.LivePublishableKey;
             model.HasLivePrivateSecret = !string.IsNullOrEmpty(settings.LivePrivateSecret);
             model.HasLiveWebhookSecret = !string.IsNullOrEmpty(settings.LiveWebhookSecret);
@@ -116,14 +115,12 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         var protector = _dataProtectionProvider.CreateProtector(ProtectionPurpose);
 
-        // IsLive and CheckoutMode are projected into the runtime StripeOptions, so a change to either must
-        // reload the tenant even when no secret value changed.
-        var changed =
-            settings.IsLive != model.IsLive ||
-            settings.CheckoutMode != model.CheckoutMode;
+        // IsLive is projected into the runtime StripeOptions, so a change to it must reload the tenant even when
+        // no secret value changed. The checkout mode is no longer edited here: the payment step always collects
+        // the card on the site, so the stored value is left as it is.
+        var changed = settings.IsLive != model.IsLive;
 
         settings.IsLive = model.IsLive;
-        settings.CheckoutMode = model.CheckoutMode;
 
         changed |= UpdateEnvironment(settings, model, context, protector, isLive: true);
         changed |= UpdateEnvironment(settings, model, context, protector, isLive: false);

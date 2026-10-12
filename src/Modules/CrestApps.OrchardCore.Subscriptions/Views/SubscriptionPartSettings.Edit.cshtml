@@ -3,7 +3,7 @@
 @model SubscriptionPartSettings
 
 <div class="ocat-wrapper" asp-validation-class-for="ContentTypes">
-    <label asp-for="ContentTypes" class="ocat-label">@T["Content Types"]</label>
+    <label asp-for="ContentTypes" class="ocat-label">@T["Content types"]</label>
     <div class="ocat-end">
         @await Component.InvokeAsync("SelectContentTypes", new
             {

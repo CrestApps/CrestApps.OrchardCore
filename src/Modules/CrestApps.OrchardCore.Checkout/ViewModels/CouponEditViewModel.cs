@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.Checkout.ViewModels;
 
@@ -41,6 +43,13 @@ public sealed class CouponEditViewModel
     /// Gets or sets the currency a fixed amount is expressed in.
     /// </summary>
     public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currencies the site sells in, or <see langword="null"/> when the site keeps no list of
+    /// them, in which case the code is typed.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> Currencies { get; set; }
 
     /// <summary>
     /// Gets or sets what the coupon reduces.

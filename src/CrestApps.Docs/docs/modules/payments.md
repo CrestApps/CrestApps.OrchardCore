@@ -56,14 +56,14 @@ Every method takes a `CancellationToken`, which the Stripe webhook endpoint thre
   <track kind="captions" src="/img/docs/commerce-payment-setup.vtt" srcLang="en" label="English" default />
 </video>
 
-The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Providers*) implements the framework against Stripe. Configure it under **Settings → Stripe**.
+The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Providers*) implements the framework against Stripe. Configure it under **Settings → Payments → Stripe**.
 
 ### Connecting an account
 
 Configure the connection at the top of the settings page. Choose the environment with **Enable Production** (off = test), then connect that environment.
 
 1. Open your [Stripe API keys](https://dashboard.stripe.com/apikeys) (use the *Test mode* switch to pick test or live keys).
-2. Paste the **Secret Key** into the settings page. Add the **Publishable Key** too if you use the Payment Elements checkout; it is optional for Hosted Checkout. **Save** the settings: the **Connect** button appears once a secret key is saved, and is hidden again while you edit a key, so a key you typed is never lost to connecting.
+2. Paste the **Secret Key** and the **Publishable Key** into the settings page; the card form on the payment step needs the publishable key. **Save** the settings: the **Connect** button appears once a secret key is saved, and is hidden again while you edit a key, so a key you typed is never lost to connecting.
 3. Click **Connect**. The app verifies the saved key, resolves the account, and automatically creates a webhook endpoint pointing at `/stripe/webhook` with a fresh signing secret — no dashboard setup is required.
 
 Connecting also registers the site's domain with the account for wallet payments (see
@@ -78,7 +78,7 @@ If the site is not publicly reachable (for example on `localhost`), Stripe canno
 | Setting | Description |
 | --- | --- |
 | `IsLive` | Switches between the live and test key sets. |
-| `CheckoutMode` | The Stripe integration model to use (see below). |
+| `CheckoutMode` | Kept for compatibility. The settings page no longer edits it, and the payment step always collects the card on the site (see below). |
 | `LivePublishableKey` / `LivePrivateSecret` / `LiveWebhookSecret` | Live-mode credentials. |
 | `LiveAccountId` / `LiveWebhookId` | The resolved live account id and the id of the auto-provisioned live webhook endpoint. |
 | `TestPublishableKey` / `TestPrivateSecret` / `TestWebhookSecret` | Test-mode credentials. |
@@ -88,14 +88,9 @@ Secrets are stored as protected site settings. The active key set is projected i
 
 ### Checkout modes
 
-The `CheckoutMode` setting selects how card details are collected:
+The checkout's payment step collects card details on your own page using Stripe Elements, with Payment and Setup Intents confirmed in the browser. The amount collected always comes from the server-side checkout session, never from values the browser supplies.
 
-| Mode | Description |
-| --- | --- |
-| **Payment Elements (on-site)** | Collects payment on your own page using Stripe Elements with Payment/Setup Intents confirmed in the browser. This is the original integration. |
-| **Hosted Checkout (redirect)** | Redirects the customer to a Stripe-hosted Checkout page created from a Checkout Session. This is the integration Stripe currently recommends. |
-
-Both modes flow through the same server-side session so the collected amount is always derived from the server invoice, never from client-supplied values.
+`StripeOptions.CheckoutMode` and its **Hosted Checkout (redirect)** value remain for compatibility, but nothing in the checkout reads them, so the settings page no longer shows the choice.
 
 ### Webhooks
 
@@ -151,7 +146,7 @@ To exercise the webhook pipeline on your machine, forward Stripe events to your 
    ```
 
    `--skip-verify` is required when forwarding to an HTTPS address that uses the ASP.NET Core development certificate; alternatively, forward to the plain HTTP endpoint (`http://localhost:your-port/stripe/webhook`) and omit the flag.
-5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhook Signing Secret** field (under *Advanced*) on **Settings → Stripe**, with **Enable Production** left off, and **Save**.
+5. Copy the temporary signing secret the CLI prints (it starts with `whsec_`) into the **Test Webhook Signing Secret** field (under *Advanced*) on **Settings → Payments → Stripe**, with **Enable Production** left off, and **Save**.
 6. Trigger a sample event to confirm the pipeline end to end:
 
    ```sh
@@ -255,7 +250,7 @@ Payment providers are **tax-agnostic**. They receive the final amount already de
 dotnet add package CrestApps.OrchardCore.Stripe
 ```
 
-Then enable **Stripe** in the **Orchard Core Admin Dashboard** under **Tools → Features** and configure it under **Settings → Stripe**.
+Then enable **Stripe** in the **Orchard Core Admin Dashboard** under **Tools → Features** and configure it under **Settings → Payments → Stripe**.
 
 ## Related modules
 

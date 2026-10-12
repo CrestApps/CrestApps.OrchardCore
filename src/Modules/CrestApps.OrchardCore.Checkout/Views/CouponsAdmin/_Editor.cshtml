@@ -39,7 +39,16 @@
     </div>
     <div class="col-md-2 mb-3">
         <label asp-for="Currency" class="form-label">@T["Currency"]</label>
-        <input asp-for="Currency" class="form-control" maxlength="3" />
+        @if (Model.Currencies is { Count: > 0 })
+        {
+            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
+                <option value="">@T["Select a currency"]</option>
+            </select>
+        }
+        else
+        {
+            <input asp-for="Currency" class="form-control" maxlength="3" />
+        }
         <span asp-validation-for="Currency"></span>
     </div>
 </div>

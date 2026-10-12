@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -15,6 +17,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using OrchardCore.Users.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -37,6 +40,7 @@ public sealed class SubscriptionAgreementsController : Controller
     private readonly ISubscriptionLifecycleService _lifecycleService;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly SubscriptionDisplayText _displayText;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -48,6 +52,7 @@ public sealed class SubscriptionAgreementsController : Controller
     /// <param name="lifecycleService">The service that owns every subscription transition.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier used to surface outcomes.</param>
+    /// <param name="displayText">The labels for stored statuses.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SubscriptionAgreementsController(
@@ -55,6 +60,7 @@ public sealed class SubscriptionAgreementsController : Controller
         ISubscriptionLifecycleService lifecycleService,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        SubscriptionDisplayText displayText,
         IHtmlLocalizer<SubscriptionAgreementsController> htmlLocalizer,
         IStringLocalizer<SubscriptionAgreementsController> stringLocalizer)
     {
@@ -62,6 +68,7 @@ public sealed class SubscriptionAgreementsController : Controller
         _lifecycleService = lifecycleService;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _displayText = displayText;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -155,7 +162,8 @@ public sealed class SubscriptionAgreementsController : Controller
     /// Displays one agreement and its history.
     /// </summary>
     /// <param name="itemId">The subscription identifier.</param>
-    public async Task<IActionResult> Detail(string itemId)
+    /// <param name="userService">The user service the owner is found with.</param>
+    public async Task<IActionResult> Detail(string itemId, [FromServices] IUserService userService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
         {
@@ -169,7 +177,11 @@ public sealed class SubscriptionAgreementsController : Controller
             return NotFound();
         }
 
-        return View(subscription);
+        return View(new SubscriptionAgreementViewModel
+        {
+            Subscription = subscription,
+            OwnerName = await ResolveOwnerNameAsync(subscription.OwnerId, userService),
+        });
     }
 
     /// <summary>
@@ -270,12 +282,32 @@ public sealed class SubscriptionAgreementsController : Controller
         {
             items.Add(new SelectListItem
             {
-                Text = status.ToString(),
+                Text = _displayText.StatusName(status),
                 Value = status.ToString(),
                 Selected = selected == status,
             });
         }
 
         return items;
+    }
+
+    // The owner is stored by user identifier, which means nothing to the operator reading the page.
+    private async Task<string> ResolveOwnerNameAsync(string ownerId, IUserService userService)
+    {
+        if (string.IsNullOrEmpty(ownerId))
+        {
+            return null;
+        }
+
+        var user = await userService.GetUserByUniqueIdAsync(ownerId);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        return HttpContext.RequestServices.GetService<IDisplayNameProvider>() is { } displayNameProvider
+            ? await displayNameProvider.GetAsync(user)
+            : user.UserName;
     }
 }

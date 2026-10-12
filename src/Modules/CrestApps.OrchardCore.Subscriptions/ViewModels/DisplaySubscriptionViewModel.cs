@@ -13,6 +13,11 @@ public class DisplaySubscriptionViewModel
     public decimal Price { get; set; }
 
     /// <summary>
+    /// Gets or sets the ISO-4217 code of the currency <see cref="Price"/> is charged in.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
     /// Gets or sets the display text that describes the initial amount.
     /// </summary>
     public string InitialAmountDescription { get; set; }

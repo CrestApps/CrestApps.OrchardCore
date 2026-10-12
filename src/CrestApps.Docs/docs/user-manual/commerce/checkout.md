@@ -84,7 +84,7 @@ To remove a code, clear the box and click **Apply**. A code that is wrong shows 
 
 When someone signs up to a subscription without being signed in, the **Registration** step asks them to create an account. It starts with *Already registered?* and a **Click here to log in.** link that brings the buyer back to the checkout after signing in. A buyer who is already signed in never sees this step.
 
-If your site allows it (the **Allow Guest Signup** subscription setting, see [Subscriptions](subscriptions.md)), the step also offers **Subscribe as guest**, with the note *Subscribing as a guest does not include the ability to manage your subscription.* Ticking it hides the **Create an account** form.
+If your site allows it (the **Allow guest sign-up** subscription setting, see [Subscriptions](subscriptions.md)), the step also offers **Subscribe as guest**, with the note *Subscribing as a guest does not include the ability to manage your subscription.* Ticking it hides the **Create an account** form.
 
 Paying an outstanding balance through a payment link needs no account.
 

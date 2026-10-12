@@ -10,11 +10,11 @@
     @if (Model.InitialAmount.HasValue)
     {
         <div class="col-6">@Model.InitialAmountDescription</div>
-        <div class="col-6">@Model.InitialAmount.Value.ToString("C")</div>
+        <div class="col-6">@PriceFormatting.Format(Model.InitialAmount.Value, Model.Currency)</div>
     }
 
-    <div class="col-6">@T["Billing Amount"]</div>
-    <div class="col-6">@T.GetAmount(Model.DurationType, Model.BillingDuration, Model.Price)</div>
+    <div class="col-6">@T["Billing amount"]</div>
+    <div class="col-6">@T.GetAmount(Model.DurationType, Model.BillingDuration, Model.Price, Model.Currency)</div>
 
     @if (Model.BillingCycleLimit.HasValue)
     {

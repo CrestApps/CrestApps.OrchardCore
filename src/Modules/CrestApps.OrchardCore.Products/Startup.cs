@@ -41,6 +41,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPartSettingsDisplayDriver>();
         services.AddScoped<IProductCurrencyProvider, CurrencyCatalogService>();
+        services.AddScoped<CurrencyUsageService>();
         services.AddDisplayDriver<CurrencyEntry, CurrencyEntryDisplayDriver>();
         services.AddScoped<ICatalogEntryHandler<CurrencyEntry>, CurrencyEntryHandler>();
         services.AddPermissionProvider<CurrencyPermissionProvider>();

@@ -2,6 +2,7 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Products.Models;
+using CrestApps.OrchardCore.Products.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -286,8 +287,9 @@ public sealed class CurrenciesController : Controller
     /// <param name="id">The currency identifier.</param>
     [HttpPost]
     [ActionName("Delete")]
+    /// <param name="usageService">The service that finds the products priced in the currency.</param>
     [Admin("commerce/currencies/delete/{id}", "CommerceCurrenciesDelete")]
-    public async Task<ActionResult> DeletePost(string id)
+    public async Task<ActionResult> DeletePost(string id, [FromServices] CurrencyUsageService usageService)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ProductsConstants.Permissions.ManageCurrencies))
         {
@@ -299,6 +301,19 @@ public sealed class CurrenciesController : Controller
         if (model == null)
         {
             return NotFound();
+        }
+
+        var products = await usageService.GetProductsUsingAsync(model.Name);
+
+        if (products.Count > 0)
+        {
+            var named = string.Join(", ", products.Take(3));
+
+            await _notifier.ErrorAsync(products.Count > 3
+                ? H["The currency {0} can't be deleted while products are priced in it: {1} and {2} more. Change their prices to another currency first.", model.Name, named, products.Count - 3]
+                : H["The currency {0} can't be deleted while products are priced in it: {1}. Change their prices to another currency first.", model.Name, named]);
+
+            return RedirectToAction(nameof(Index));
         }
 
         if (await _manager.DeleteAsync(model))

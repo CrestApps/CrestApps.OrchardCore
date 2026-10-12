@@ -59,6 +59,12 @@ public sealed class PaymentsAdminIndexViewModel
     /// Gets or sets a value indicating whether the current user may issue refunds.
     /// </summary>
     public bool CanRefund { get; set; }
+
+    /// <summary>
+    /// Gets or sets the payments a refund can be started for. A promise to pay later collected nothing, so it has
+    /// nothing to give back.
+    /// </summary>
+    public ISet<string> RefundableAttemptIds { get; set; } = new HashSet<string>(StringComparer.Ordinal);
 }
 
 /// <summary>

@@ -2,11 +2,13 @@ using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
+using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -186,7 +188,11 @@ public sealed class CouponsAdminController : Controller
             return Forbid();
         }
 
-        return View(new CouponEditViewModel { IsEnabled = true });
+        var model = new CouponEditViewModel { IsEnabled = true };
+
+        await PopulateCurrenciesAsync(model);
+
+        return View(model);
     }
 
     /// <summary>
@@ -206,6 +212,8 @@ public sealed class CouponsAdminController : Controller
 
         if (!ModelState.IsValid)
         {
+            await PopulateCurrenciesAsync(model);
+
             return View(model);
         }
 
@@ -238,7 +246,7 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
-        return View(new CouponEditViewModel
+        var model = new CouponEditViewModel
         {
             ItemId = coupon.ItemId,
             Code = coupon.Code,
@@ -254,7 +262,11 @@ public sealed class CouponsAdminController : Controller
             MaxRedemptions = coupon.MaxRedemptions,
             MinimumAmount = coupon.MinimumAmount,
             RedemptionCount = coupon.RedemptionCount,
-        });
+        };
+
+        await PopulateCurrenciesAsync(model);
+
+        return View(model);
     }
 
     /// <summary>
@@ -284,6 +296,8 @@ public sealed class CouponsAdminController : Controller
         {
             model.ItemId = coupon.ItemId;
             model.RedemptionCount = coupon.RedemptionCount;
+
+            await PopulateCurrenciesAsync(model);
 
             return View(model);
         }
@@ -372,6 +386,42 @@ public sealed class CouponsAdminController : Controller
         {
             ModelState.AddModelError(nameof(model.MaxRedemptions), S["Leave the limit blank for unlimited, or enter a number greater than zero."]);
         }
+    }
+
+    // A typed code was easy to get wrong and a wrong one silently never matched a checkout, so the currencies the
+    // site sells in are offered as a list. The list comes from Products, which is optional; without it the code is
+    // still typed.
+    private async Task PopulateCurrenciesAsync(CouponEditViewModel model)
+    {
+        if (HttpContext.RequestServices.GetService<IProductCurrencyProvider>() is not { } currencyProvider)
+        {
+            return;
+        }
+
+        var currencies = await currencyProvider.GetCurrenciesAsync(HttpContext.RequestAborted);
+
+        if (currencies.Count == 0)
+        {
+            return;
+        }
+
+        var selected = model.Currency?.Trim().ToUpperInvariant();
+
+        var items = currencies
+            .Select(currency => new SelectListItem($"{currency.DisplayName} ({currency.CurrencyCode})", currency.CurrencyCode)
+            {
+                Selected = string.Equals(currency.CurrencyCode, selected, StringComparison.OrdinalIgnoreCase),
+            })
+            .OrderBy(item => item.Text, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        // A coupon saved before the currency was removed from the list keeps showing what it was set to.
+        if (!string.IsNullOrEmpty(selected) && !items.Any(item => item.Selected))
+        {
+            items.Add(new SelectListItem(selected, selected, selected: true));
+        }
+
+        model.Currencies = items;
     }
 
     private static void Apply(CouponEditViewModel model, Coupon coupon)

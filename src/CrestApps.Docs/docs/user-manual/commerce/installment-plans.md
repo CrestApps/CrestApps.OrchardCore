@@ -97,7 +97,7 @@ If the device you take the payment on has Apple Pay or Google Pay set up, those 
 If the bank asks for an extra check, the card form shows it. When the payment takes a moment to confirm, the page says *The payment is still being confirmed. The plan starts as soon as it is; you can leave this page.*
 
 :::tip[Taking the down payment later]
-A plan that is still **Waiting for down payment** shows **Take down payment** in the list and **Take the down payment** on its page, so you can come back to it. If the down payment can no longer be taken, the plan page says so: cancel the plan and create it again.
+A plan that is still **Waiting for down payment** shows **Take the down payment** in the list and on its page, so you can come back to it. If the down payment can no longer be taken, the plan page says so: cancel the plan and create it again.
 :::
 
 If the card used for the down payment cannot be kept for later payments, the plan's **History** says so and the scheduled payments are invoiced to the customer instead.

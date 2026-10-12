@@ -50,7 +50,6 @@
                     <th scope="col">@T["Maximum"]</th>
                     <th scope="col">@T["Rate"]</th>
                     <th scope="col">@T["Fixed amount"]</th>
-                    <th scope="col">@T["Base amount"]</th>
                     <th scope="col" class="text-end">@T["Actions"]</th>
                 </tr>
             </thead>
@@ -62,8 +61,11 @@
                         <td><input type="number" step="any" class="form-control" data-field="Minimum" name="@(fieldPrefix)Rows[@i].Minimum" value="@row.Minimum" /></td>
                         <td><input type="number" step="any" class="form-control" data-field="Maximum" name="@(fieldPrefix)Rows[@i].Maximum" value="@(row.Maximum?.ToString(System.Globalization.CultureInfo.InvariantCulture))" /></td>
                         <td><input type="number" step="any" class="form-control" data-field="Rate" name="@(fieldPrefix)Rows[@i].Rate" value="@row.Rate" /></td>
-                        <td><input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[@i].FixedAmount" value="@row.FixedAmount" /></td>
-                        <td><input type="number" step="any" class="form-control" data-field="BaseAmount" name="@(fieldPrefix)Rows[@i].BaseAmount" value="@row.BaseAmount" /></td>
+                        <td>
+                            <input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[@i].FixedAmount" value="@row.FixedAmount" />
+                            @* Not used by the built-in methods, so not shown; kept so a value a recipe set for a custom method survives a save. *@
+                            <input type="hidden" data-field="BaseAmount" name="@(fieldPrefix)Rows[@i].BaseAmount" value="@row.BaseAmount" />
+                        </td>
                         <td class="text-end"><button type="button" class="btn btn-danger btn-sm tax-table-remove-row" title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
                     </tr>
                 }
@@ -78,8 +80,10 @@
         <td><input type="number" step="any" class="form-control" data-field="Minimum" name="@(fieldPrefix)Rows[__i__].Minimum" value="0" /></td>
         <td><input type="number" step="any" class="form-control" data-field="Maximum" name="@(fieldPrefix)Rows[__i__].Maximum" value="" /></td>
         <td><input type="number" step="any" class="form-control" data-field="Rate" name="@(fieldPrefix)Rows[__i__].Rate" value="0" /></td>
-        <td><input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[__i__].FixedAmount" value="0" /></td>
-        <td><input type="number" step="any" class="form-control" data-field="BaseAmount" name="@(fieldPrefix)Rows[__i__].BaseAmount" value="0" /></td>
+        <td>
+            <input type="number" step="any" class="form-control" data-field="FixedAmount" name="@(fieldPrefix)Rows[__i__].FixedAmount" value="0" />
+            <input type="hidden" data-field="BaseAmount" name="@(fieldPrefix)Rows[__i__].BaseAmount" value="0" />
+        </td>
         <td class="text-end"><button type="button" class="btn btn-danger btn-sm tax-table-remove-row" title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
     </tr>
 </template>

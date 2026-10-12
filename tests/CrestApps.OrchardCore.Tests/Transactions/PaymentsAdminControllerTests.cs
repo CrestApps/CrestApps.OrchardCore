@@ -5,12 +5,15 @@ using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Transactions.Controllers;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
@@ -157,6 +160,91 @@ public sealed class PaymentsAdminControllerTests
         Assert.Equal("Customer changed their mind.", captured.Reason);
     }
 
+    /// <summary>
+    /// A promise to pay later collected nothing, so there is nothing to give back.
+    /// </summary>
+    [Fact]
+    public async Task Refund_ForAProviderThatDefersPayment_IsNotFound()
+    {
+        // Arrange
+        var attempt = CreateSettledAttempt();
+        attempt.ProviderKey = "pay-later";
+
+        var controller = CreateController(new InMemoryPaymentAttemptStore(attempt), new InMemoryPaymentRefundStore(), Mock.Of<ICheckoutRefundService>(), authorized: true, CreateProvider("pay-later", defersPayment: true));
+
+        // Act
+        var result = await controller.Refund("attempt-1");
+
+        // Assert
+        Assert.IsType<NotFoundResult>(result);
+    }
+
+    /// <summary>
+    /// The refund service refuses a refund it can't safely start by throwing. The operator gets a message, not an
+    /// error page.
+    /// </summary>
+    [Fact]
+    public async Task RefundPost_WhenTheServiceRefuses_RedirectsInsteadOfThrowing()
+    {
+        // Arrange
+        var refundService = new Mock<ICheckoutRefundService>();
+        refundService
+            .Setup(service => service.RequestRefundAsync(It.IsAny<RequestPaymentRefundContext>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Could not acquire a refund lock."));
+
+        var notifier = new Mock<INotifier>();
+        var controller = CreateController(new InMemoryPaymentAttemptStore(CreateSettledAttempt()), new InMemoryPaymentRefundStore(), refundService.Object, authorized: true, notifier: notifier.Object);
+
+        // Act
+        var result = await controller.RefundPost("attempt-1", new RefundRequestViewModel { Amount = 50m });
+
+        // Assert
+        Assert.IsType<RedirectToActionResult>(result);
+        notifier.Verify(n => n.AddAsync(NotifyType.Error, It.IsAny<LocalizedHtmlString>()), Times.Once);
+    }
+
+    /// <summary>
+    /// An earlier refund waiting to be settled by hand would make the service refuse; the operator is told why before
+    /// it is asked.
+    /// </summary>
+    [Fact]
+    public async Task RefundPost_WhileAnEarlierRefundNeedsManualSettlement_DoesNotCallTheRefundService()
+    {
+        // Arrange
+        var refundStore = new InMemoryPaymentRefundStore();
+
+        await refundStore.CreateAsync(new PaymentRefund
+        {
+            ItemId = "refund-1",
+            OriginalTransactionId = "pi_1",
+            Currency = "USD",
+            RefundGrossAmount = 10m,
+            Status = RefundStatus.PendingManualReview,
+        }, TestContext.Current.CancellationToken);
+
+        var refundService = new Mock<ICheckoutRefundService>();
+        var controller = CreateController(new InMemoryPaymentAttemptStore(CreateSettledAttempt()), refundStore, refundService.Object, authorized: true);
+
+        // Act
+        var result = await controller.RefundPost("attempt-1", new RefundRequestViewModel { Amount = 20m });
+
+        // Assert
+        Assert.IsType<RedirectToActionResult>(result);
+        refundService.Verify(
+            service => service.RequestRefundAsync(It.IsAny<RequestPaymentRefundContext>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static ICheckoutPaymentProvider CreateProvider(string key, bool defersPayment)
+    {
+        var provider = new Mock<ICheckoutPaymentProvider>();
+        provider.SetupGet(p => p.Key).Returns(key);
+        provider.SetupGet(p => p.DisplayName).Returns(key);
+        provider.SetupGet(p => p.Capabilities).Returns(new PaymentProviderCapabilities { DefersPayment = defersPayment });
+
+        return provider.Object;
+    }
+
     private static PaymentAttempt CreateSettledAttempt()
         => new()
         {
@@ -175,8 +263,12 @@ public sealed class PaymentsAdminControllerTests
         InMemoryPaymentAttemptStore attemptStore,
         InMemoryPaymentRefundStore refundStore,
         ICheckoutRefundService refundService,
-        bool authorized)
+        bool authorized,
+        ICheckoutPaymentProvider provider = null,
+        INotifier notifier = null)
     {
+        ICheckoutPaymentProvider[] providers = provider is null ? [] : [provider];
+
         var authorizationService = new Mock<IAuthorizationService>();
         authorizationService
             .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
@@ -189,9 +281,11 @@ public sealed class PaymentsAdminControllerTests
             attemptStore,
             refundStore,
             refundService,
-            [],
+            providers,
             authorizationService.Object,
-            Mock.Of<INotifier>(),
+            notifier ?? Mock.Of<INotifier>(),
+            new TransactionDisplayText(providers, Options.Create(new TransactionSourceOptions()), new PassThroughStringLocalizer<TransactionDisplayText>()),
+            NullLogger<PaymentsAdminController>.Instance,
             new PassThroughHtmlLocalizer<PaymentsAdminController>(),
             new PassThroughStringLocalizer<PaymentsAdminController>());
 

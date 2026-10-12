@@ -75,11 +75,9 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!model.AllowCustomDomains && model.LocalDomainType == LocalDomainType.None)
-        {
-            context.Updater.ModelState.AddModelError(string.Empty, S["At least one options for domains should be set."]);
-        }
-        else if (model.LocalDomainType != LocalDomainType.None && model.LocalDomainType != LocalDomainType.Prefix)
+        // Neither domain option is required: the buyer enters the site's address while checking out, so the
+        // database settings can be saved without either. Only a template that is in use has to be valid.
+        if (model.LocalDomainType != LocalDomainType.None && model.LocalDomainType != LocalDomainType.Prefix)
         {
             var tenantNamePlaceholder = Guid.NewGuid().ToString("n");
             var domainPlaceholder = Guid.NewGuid().ToString("n");

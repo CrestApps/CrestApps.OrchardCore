@@ -101,7 +101,7 @@
                         <div class="actions">
                             @if (plan.Status == InstallmentPlanStatus.Draft)
                             {
-                                <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take down payment"]</a>
+                                <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take the down payment"]</a>
                             }
                             <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-route-itemId="@plan.ItemId">@T["Manage"]</a>
                         </div>

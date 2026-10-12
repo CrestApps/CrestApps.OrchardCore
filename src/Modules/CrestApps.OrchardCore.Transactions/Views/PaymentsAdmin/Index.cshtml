@@ -3,6 +3,7 @@
 @using CrestApps.OrchardCore.Transactions
 @using Microsoft.AspNetCore.Mvc.Localization
 @model PaymentsAdminIndexViewModel
+@inject TransactionDisplayText DisplayText
 
 @{
     var pager = (dynamic)Model.Pager;
@@ -65,13 +66,13 @@
                                     </h5>
                                 </div>
                                 <div class="tags me-1">
-                                    <span class="badge @stateClass">@attempt.State</span>
+                                    <span class="badge @stateClass">@DisplayText.PaymentStateName(attempt.State)</span>
                                 </div>
                             </div>
                             <div class="metadata mt-1">
                                 <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Method"]">
                                     <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
-                                    @attempt.ProviderKey
+                                    @DisplayText.PaymentMethodName(attempt.ProviderKey)
                                 </span>
                                 <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Updated"]">
                                     <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Updated"]</span>
@@ -108,7 +109,7 @@
                             {
                                 <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-controller="Admin" asp-route-itemId="@attempt.ReferenceId">@T["Transaction"]</a>
                             }
-                            @if (Model.CanRefund && settled && !string.IsNullOrEmpty(attempt.TransactionId))
+                            @if (Model.CanRefund && Model.RefundableAttemptIds.Contains(attempt.ItemId))
                             {
                                 <a class="btn btn-warning btn-sm" asp-action="Refund" asp-route-itemId="@attempt.ItemId">@T["Refund"]</a>
                             }

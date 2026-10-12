@@ -62,7 +62,7 @@ The tab also has domain options. It saves only when **Use custom domains** is ti
 
 ## My Sites (for customers)
 
-**My Sites** opens the **My sites** page, where a customer sees every site they bought and opens the ones that are ready.
+**My Sites** lists every site the customer bought, and opens the ones that are ready.
 
 
 | Badge | What it means |
@@ -80,10 +80,10 @@ Each row also shows the **Site name** and when it was **Bought**. While a site i
 
 | Status | What it means |
 | --- | --- |
-| **Pending** | Paid for and waiting to be created. The site checks for waiting jobs every minute. |
-| **Running** | Being created right now. |
-| **Succeeded** | The site exists and the customer can sign in. |
-| **Failed** | The last attempt failed and another is scheduled, with a longer wait after each failure. |
+| **Waiting** | Paid for and waiting to be created. The site checks for waiting jobs every minute. |
+| **Being created** | Being created right now. |
+| **Created** | The site exists and the customer can sign in. |
+| **Retrying** | The last attempt failed and another is scheduled, with a longer wait after each failure. |
 | **Abandoned** | Creating the site failed 5 times, so it is no longer retried. The customer has paid and has no site, so a person needs to act. |
 
 Each row shows the site name, its status, the **Owner**, when it was **Bought**, the number of **Attempts**, and the last error in red when there is one.
@@ -93,17 +93,26 @@ Each row shows the site name, its status, the **Owner**, when it was **Bought**,
 
 ### Retry a site
 
-Use **Retry now** when a job is **Failed** and you have fixed the cause, so you do not have to wait for the next scheduled attempt.
+Use **Retry now** when a job is **Retrying** and you have fixed the cause, so you do not have to wait for the next scheduled attempt.
 
 1. Fix the cause shown in the error, for example the database for new sites.
-2. Click **Retry now** on the job. It is offered on every job that has not succeeded.
+2. Click **Retry now** on the job. It is offered on **Waiting** and **Retrying** jobs; not on a job that is **Being created** or **Created**, and not on an **Abandoned** one, which can't finish.
 3. In the confirmation, click **Retry now** to try creating the site immediately, or **Cancel**.
 
 The page then says *The site was created.* or *The site was not created. The job is queued for another attempt.* A retry starts a fresh count of attempts.
 
 :::warning[Abandoned jobs need a person]
-For safety, the administrator password the customer entered is discarded once a job is **Abandoned**. Retrying an abandoned job therefore cannot finish it: the page says *This job no longer holds an administrator password, so the site cannot be created automatically.* Create the site by hand, give the customer its administrator account, and refund or adjust the purchase if needed.
+For safety, the administrator password the customer entered is discarded once a job is **Abandoned**, so the site can no longer create it and **Retry now** isn't offered. Create the site by hand, give the customer its administrator account, then close the job as described below, or refund the purchase.
 :::
+
+### Close an abandoned job
+
+Once you have created an abandoned job's site by hand:
+
+1. Optionally, type the site's address in **Site URL (optional)** on the job's row. The customer gets an **Open** button for it on **My Sites**.
+2. Click **Mark as created**, then click **Mark as created** in the confirmation box.
+
+The job becomes **Created**, and the customer sees the site as **Ready**. Only an **Abandoned** job can be marked as created.
 
 ## When the subscription ends
 
@@ -112,6 +121,6 @@ A sold site runs for as long as its subscription is current, including the perio
 ## Tips and troubleshooting
 
 - **Site provisioning or My Sites is missing.** **Subscriptions - Sites** can only be enabled on the main site. Ask your administrator to enable it there.
-- **A job is Abandoned.** Read the last error and fix the cause so the next sale does not fail the same way. Then create this customer's site by hand from the site management screens, or refund the purchase from **Commerce > Payments** (see [Payments and refunds](payments-and-refunds.md)).
+- **A job is Abandoned.** Read the last error and fix the cause so the next sale does not fail the same way. Then create this customer's site by hand from the site management screens and [mark the job as created](#close-an-abandoned-job), or refund the purchase from **Commerce > Payments** (see [Payments and refunds](payments-and-refunds.md)).
 - **The customer says their site disappeared.** Check their subscription under **Subscriptions > Agreements**. A site whose subscription expired or was cancelled is disabled, not deleted.
 - **The Recipe list on the plan is empty.** Only setup recipes are offered. Ask your administrator which site templates are installed.
