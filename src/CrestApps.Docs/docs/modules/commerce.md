@@ -104,10 +104,9 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### The shared admin list UI
 
-The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. The Commerce feature provides two pieces that a module's list can reuse:
+The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. A module's list can reuse the Commerce feature's **`commerce-admin-list` script**: a `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
 
-- **The `commerce-admin-list` script.** A `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
-- **A page size selector that renders on every admin theme.** The feature adds the `Pager_PageSizeSelector__Properties` alternate, which reads the page sizes from the shape's properties. It works around an Orchard Core issue where the admin theme's selector template read an empty list, fixed upstream in [OrchardCMS/OrchardCore#20007](https://github.com/OrchardCMS/OrchardCore/pull/20007).
+The page size selector is Orchard Core's own `Pager_PageSizeSelector` shape. It appears when **Allow users to change the page size** is on in the pager settings.
 
 Build the pager with `new Pager(pagerParameters, pagerOptions.Value)` and carry `pageSize` through the filter post, so the selected page size survives a filter change.
 
