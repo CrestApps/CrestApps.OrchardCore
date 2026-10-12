@@ -145,6 +145,40 @@ public sealed class BackgroundWorkPacerTests
         Assert.Equal(1, await MeasureMostBatchesAtOnceAsync());
     }
 
+    [Fact]
+    public async Task RunBatchAsync_ReleasesTheGateWhenCancelledDuringABatchThatIgnoresIt()
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var hungBatch = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // The batch never looks at its token, like a call that hangs.
+        var run = BackgroundWorkPacer.RunBatchAsync(_ => hungBatch.Task, _noPause, cancellation.Token);
+
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+
+        try
+        {
+            // The gate is free at once: the next batch does not wait out the limit behind the hung one.
+            var started = Stopwatch.GetTimestamp();
+
+            await BackgroundWorkPacer.RunBatchAsync(
+                _ => Task.FromResult(true),
+                _noPause,
+                TimeSpan.FromSeconds(2),
+                TestContext.Current.CancellationToken);
+
+            Assert.True(Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(1));
+            Assert.Equal(1, await MeasureMostBatchesAtOnceAsync());
+        }
+        finally
+        {
+            hungBatch.SetResult(true);
+        }
+    }
+
     // Runs several short batches at once and reports the most that were inside a batch at the same moment.
     private static async Task<int> MeasureMostBatchesAtOnceAsync()
     {

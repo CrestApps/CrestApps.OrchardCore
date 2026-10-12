@@ -26,6 +26,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.FileStorage;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -62,6 +63,7 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IContentTransferEntryAdminListFilterParser _entriesAdminListFilterParser;
     private readonly ContentImportOptions _contentImportOptions;
     private readonly ITempDirectoryProvider _tempDirectoryProvider;
+    private readonly IDistributedLock _distributedLock;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -91,6 +93,7 @@ public sealed class AdminController : Controller, IUpdateModel
         IContentTransferEntryAdminListFilterParser entriesAdminListFilterParser,
         IOptions<ContentImportOptions> contentImportOptions,
         ITempDirectoryProvider tempDirectoryProvider,
+        IDistributedLock distributedLock,
         IClock clock)
     {
         _authorizationService = authorizationService;
@@ -117,6 +120,7 @@ public sealed class AdminController : Controller, IUpdateModel
         _entriesAdminListFilterParser = entriesAdminListFilterParser;
         _contentImportOptions = contentImportOptions.Value;
         _tempDirectoryProvider = tempDirectoryProvider;
+        _distributedLock = distributedLock;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _clock = clock;
@@ -700,6 +704,15 @@ public sealed class AdminController : Controller, IUpdateModel
             return Forbid();
         }
 
+        // Resuming an import that a run is still working on used to report success and do nothing, since the new run
+        // found the lock taken and gave up without a word. That included a run stuck on a row, which looked stalled.
+        if (entry.Status == ContentTransferEntryStatus.Processing && await IsImportRunningAsync(entry.EntryId))
+        {
+            await _notifier.InformationAsync(H["This import is already running. A run that stops responding on a row is stopped automatically after {0} minutes, and the import then continues from its last saved row.", (int)BackgroundTasks.ImportFilesBackgroundTask.RunLimits.RowTimeout.TotalMinutes]);
+
+            return RedirectTo(returnUrl);
+        }
+
         var isStalled = IsStalled(entry);
 
         if (!entry.Status.CanResumeImport() && !isStalled)
@@ -1082,6 +1095,23 @@ public sealed class AdminController : Controller, IUpdateModel
                 }
                 break;
         }
+    }
+
+    private async Task<bool> IsImportRunningAsync(string entryId)
+    {
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            BackgroundTasks.ImportFilesBackgroundTask.GetImportLockKey(entryId),
+            TimeSpan.FromMilliseconds(200),
+            TimeSpan.FromSeconds(5));
+
+        if (!locked)
+        {
+            return true;
+        }
+
+        await locker.DisposeAsync();
+
+        return false;
     }
 
     private bool IsStalled(ContentTransferEntry entry)

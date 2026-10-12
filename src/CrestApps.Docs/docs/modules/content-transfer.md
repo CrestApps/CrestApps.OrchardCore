@@ -71,10 +71,23 @@ Validation runs through `IContentManager.ValidateAsync()`. Failed rows are track
 Queued imports follow the same background-job pattern used by the local DNC list importer. The admin list updates the status inline before work starts or stops, so entries can move through **Pending**, **Processing**, **Paused**, **Deleting**, **Completed**, **Completed with errors**, and **Failed** states without briefly showing stale values. A **Processing** entry that has saved no progress for 10 minutes is treated as stalled, and **Resume import** continues paused, failed, pending, and stalled imports from the last saved batch. Deleting an entry removes the entry and its stored file in the background; it never deletes imported content items.
 
 Only one run works on an import at a time: each run holds a lock named after the entry, and a run that cannot
-take the lock leaves the import alone. The lock expires after 30 minutes and cannot be extended, so a run works
-on an import for at most 25 minutes, saves its progress after the batch in flight, and gives up the lock. The
-import then continues right away under a fresh lock from its saved row. Large imports finish the same way, in
-slices that each hold a valid lock.
+take the lock leaves the import alone. The lock expires after 30 minutes and cannot be extended, so a run reads
+rows for at most 15 minutes, saves its progress after the batch in flight, and gives up the lock. The import then
+continues right away under a fresh lock from its saved row. Large imports finish the same way, in slices that
+each hold a valid lock.
+
+A watchdog checks each run so that one row that never finishes cannot hold the import:
+
+- A row that takes longer than a minute is named in a warning in the log.
+- A row still running after 10 minutes, or a run past 28 minutes, is abandoned. Its lock is released, and the import
+  resumes from its last saved row on the next run of the background task.
+- A run that was abandoned cannot save progress if it wakes up later.
+- A row that stops two runs is skipped. It is recorded in the error file as a row that stopped responding, so it can
+  be fixed and imported again.
+
+Each run logs the row it starts from and where it stops. A run that finds the import's lock taken logs a warning
+once the import has gone 10 minutes without saving progress. **Resume import** on an import that a run is still
+working on says that the import is already running.
 
 Imports save drafts by default. When **Publish imported content** is checked, items are published after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports ignore that value entirely.
 

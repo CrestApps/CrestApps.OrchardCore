@@ -32,10 +32,31 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _importLockExpiration = TimeSpan.FromMinutes(30);
 
     /// <summary>
-    /// How long one run works on an import before it saves its progress and gives up the lock. It stays well
-    /// under the lock's expiration so the batch in flight finishes while the lock is still held.
+    /// How long one run works on an import before it saves its progress and gives up the lock. It leaves room under
+    /// <see cref="RunLimits"/> for the batch in flight, which may first wait for the shared pacing gate.
     /// </summary>
-    internal static readonly TimeSpan MaxRunDuration = _importLockExpiration - TimeSpan.FromMinutes(5);
+    internal static readonly TimeSpan MaxRunDuration = _importLockExpiration - TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// When the watchdog gives up on a run. A run past its time is stopped before its lock expires; a row that runs
+    /// for minutes is reported, and one that runs far longer than any import row should is treated as stuck.
+    /// </summary>
+    internal static readonly ImportRunLimits RunLimits = new(
+        RunTimeout: _importLockExpiration - TimeSpan.FromMinutes(2),
+        RowTimeout: TimeSpan.FromMinutes(10),
+        SlowRowThreshold: TimeSpan.FromMinutes(1),
+        CheckInterval: TimeSpan.FromSeconds(15));
+
+    /// <summary>
+    /// How many runs may get stuck on the same row before the row is skipped and recorded as an error. One stuck run
+    /// can be a passing outage; the same row stopping a second run is the row itself.
+    /// </summary>
+    internal const int MaxStalledRowAttempts = 2;
+
+    /// <summary>
+    /// How long an import may go without saving progress before a run that finds its lock taken reports it.
+    /// </summary>
+    private static readonly TimeSpan _stalledProgressThreshold = TimeSpan.FromMinutes(10);
 
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
         => ProcessEntriesAsync(serviceProvider, cancellationToken: cancellationToken);
@@ -44,6 +65,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var distributedLock = serviceProvider.GetRequiredService<IDistributedLock>();
+        var clock = serviceProvider.GetRequiredService<IClock>();
+        var logger = serviceProvider.GetRequiredService<ILogger<ImportFilesBackgroundTask>>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
                 (x.Status == ContentTransferEntryStatus.New
@@ -75,22 +98,141 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
                 if (!locked)
                 {
+                    LogLockTaken(logger, clock, entry);
+
                     break;
                 }
 
                 await using var acquiredLock = locker;
-                await using var scope = serviceProvider.CreateAsyncScope();
-                timeLimitReached = await ProcessEntryAsync(scope.ServiceProvider, entry.EntryId, cancellationToken);
+
+                var run = await ImportRunSupervisor.RunAsync(
+                    (monitor, token) => ProcessEntryInScopeAsync(serviceProvider, entry.EntryId, monitor, token),
+                    RunLimits,
+                    logger,
+                    entry.EntryId,
+                    cancellationToken);
+
+                if (run.Abandoned)
+                {
+                    if (run.StalledRowIndex > 0)
+                    {
+                        await RecordStalledRowAsync(serviceProvider, entry.EntryId, run.StalledRowIndex, logger, cancellationToken);
+                    }
+
+                    // The lock is released as this iteration ends. The next scheduled run resumes the import rather
+                    // than this one at once, which gives whatever held the row time to recover.
+                    break;
+                }
+
+                timeLimitReached = run.Result;
             }
         }
     }
+
+    private static async Task<bool> ProcessEntryInScopeAsync(IServiceProvider serviceProvider, string entryId, ImportRunMonitor monitor, CancellationToken cancellationToken)
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        return await ProcessEntryAsync(scope.ServiceProvider, entryId, monitor, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reports an import whose lock another run holds. Finding the lock taken is normal while a run works through a
+    /// large file; it is reported as a warning only once the import has gone a while without saving progress, which
+    /// used to be the only sign of a run stuck on a row, and nothing was logged at all.
+    /// </summary>
+    private static void LogLockTaken(ILogger logger, IClock clock, ContentTransferEntry entry)
+    {
+        var lastSavedUtc = entry.ProcessSaveUtc ?? entry.CreatedUtc;
+
+        if (clock.UtcNow - lastSavedUtc >= _stalledProgressThreshold)
+        {
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(
+                    "The import of entry '{EntryId}' has not saved progress since {LastSavedUtc:u}, and another run still holds its lock. That run is stopped once a row runs longer than {RowTimeout} or the run passes {RunTimeout}; the import then resumes from its last saved row.",
+                    entry.EntryId,
+                    lastSavedUtc,
+                    RunLimits.RowTimeout,
+                    RunLimits.RunTimeout);
+            }
+
+            return;
+        }
+
+        if (logger.IsEnabled(LogLevel.Debug))
+        {
+            logger.LogDebug("The import of entry '{EntryId}' is already being processed by another run.", entry.EntryId);
+        }
+    }
+
+    /// <summary>
+    /// Remembers the row an abandoned run was stuck on, so a row that stops run after run is skipped instead of holding
+    /// the import at the same place forever. The entry is saved with a concurrency check: if the abandoned run managed
+    /// to save a batch after all, its progress stands and the row is not recorded.
+    /// </summary>
+    private static async Task RecordStalledRowAsync(IServiceProvider serviceProvider, string entryId, int rowIndex, ILogger logger, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var session = scope.ServiceProvider.GetRequiredService<ISession>();
+            var entry = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x => x.EntryId == entryId).FirstOrDefaultAsync(cancellationToken);
+
+            if (entry == null || entry.Status.ShouldStopImport())
+            {
+                return;
+            }
+
+            var progressPart = entry.GetOrCreate<ImportFileProcessStatsPart>();
+            RecordStalledRow(progressPart, rowIndex);
+            entry.Put(progressPart);
+
+            await session.SaveAsync(entry, true, collection: null, cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(
+                    "Row {RowIndex} of the import of entry '{EntryId}' has now stopped {Attempts} of the {MaxAttempts} runs allowed before it is skipped.",
+                    rowIndex,
+                    entryId,
+                    progressPart.StalledRowAttempts,
+                    MaxStalledRowAttempts);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            if (logger.IsEnabled(LogLevel.Warning))
+            {
+                logger.LogWarning(ex, "Could not record that the import of entry '{EntryId}' stopped on row {RowIndex}.", entryId, rowIndex);
+            }
+        }
+    }
+
+    internal static void RecordStalledRow(ImportFileProcessStatsPart progressPart, int rowIndex)
+    {
+        if (progressPart.StalledRow == rowIndex)
+        {
+            progressPart.StalledRowAttempts++;
+
+            return;
+        }
+
+        progressPart.StalledRow = rowIndex;
+        progressPart.StalledRowAttempts = 1;
+    }
+
+    internal static bool ShouldSkipStalledRow(ImportFileProcessStatsPart progressPart, int rowIndex)
+        => progressPart.StalledRow == rowIndex
+            && progressPart.StalledRowAttempts >= MaxStalledRowAttempts;
 
     /// <summary>
     /// Imports rows of one entry until the file is done, the import stops, or the run reaches
     /// <see cref="MaxRunDuration"/>. Returns <see langword="true"/> only in the last case, when rows remain and the
     /// progress up to the last batch is saved.
     /// </summary>
-    private static async Task<bool> ProcessEntryAsync(IServiceProvider serviceProvider, string entryId, CancellationToken cancellationToken)
+    private static async Task<bool> ProcessEntryAsync(IServiceProvider serviceProvider, string entryId, ImportRunMonitor monitor, CancellationToken cancellationToken)
     {
         var session = serviceProvider.GetRequiredService<ISession>();
         var clock = serviceProvider.GetRequiredService<IClock>();
@@ -155,6 +297,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             progressPart.CurrentRow = 0;
             progressPart.TotalProcessed = 0;
             progressPart.ImportedCount = 0;
+            progressPart.StalledRow = 0;
+            progressPart.StalledRowAttempts = 0;
             progressPart.Errors.Clear();
             progressPart.ErrorMessages.Clear();
         }
@@ -163,6 +307,18 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
+
+        var startRow = progressPart.CurrentRow;
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "The import of entry '{EntryId}' ('{FileName}') is {Action} after row {StartRow}.",
+                entry.EntryId,
+                entry.UploadedFileName,
+                isResuming ? "resuming" : "starting",
+                startRow);
+        }
 
         ImportRunResult result;
 
@@ -206,11 +362,15 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 clock,
                 batchSize,
                 runDeadlineUtc,
+                monitor,
+                logger,
+                localizer,
                 cancellationToken);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
         {
-            // The host is stopping. The entry stays in Processing and the next run resumes it from its saved row.
+            // The host is stopping, or the watchdog gave up on this run and another may already have taken over. This
+            // run records nothing; the entry stays in Processing and the next run resumes it from its saved row.
             return false;
         }
         catch (Exception ex)
@@ -221,8 +381,36 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             return false;
         }
 
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return false;
+        }
+
         if (result != ImportRunResult.Completed)
         {
+            if (result == ImportRunResult.TimeLimitReached && logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "The import of entry '{EntryId}' saved its progress at row {CurrentRow} of {TotalRecords} after its run time and continues under a fresh lock. This run started after row {StartRow}; {ImportedCount} rows are imported and {ErrorCount} have errors so far.",
+                    entry.EntryId,
+                    progressPart.CurrentRow,
+                    progressPart.TotalRecords,
+                    startRow,
+                    progressPart.ImportedCount,
+                    progressPart.Errors.Count);
+            }
+            else if (result == ImportRunResult.Stopped && logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "The import of entry '{EntryId}' stopped at row {CurrentRow} of {TotalRecords} because it was paused or deleted. This run started after row {StartRow}; {ImportedCount} rows are imported and {ErrorCount} have errors so far.",
+                    entry.EntryId,
+                    progressPart.CurrentRow,
+                    progressPart.TotalRecords,
+                    startRow,
+                    progressPart.ImportedCount,
+                    progressPart.Errors.Count);
+            }
+
             return result == ImportRunResult.TimeLimitReached;
         }
 
@@ -234,8 +422,23 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             : ContentTransferEntryStatus.Completed;
         entry.Put(progressPart);
 
+        // An abandoned run must not mark the import complete over the run that replaced it.
+        cancellationToken.ThrowIfCancellationRequested();
+
         await session.SaveAsync(entry, false, collection: null, cancellationToken);
         await session.SaveChangesAsync(cancellationToken);
+
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "The import of entry '{EntryId}' finished with status {Status}: {TotalProcessed} of {TotalRecords} rows read, {ImportedCount} imported, {ErrorCount} with errors.",
+                entry.EntryId,
+                entry.Status,
+                progressPart.TotalProcessed,
+                progressPart.TotalRecords,
+                progressPart.ImportedCount,
+                progressPart.Errors.Count);
+        }
 
         return false;
     }
@@ -254,6 +457,9 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IClock clock,
         int batchSize,
         DateTime runDeadlineUtc,
+        ImportRunMonitor monitor,
+        ILogger logger,
+        IStringLocalizer localizer,
         CancellationToken cancellationToken)
     {
         using var reader = formatProvider.CreateReader(stream);
@@ -285,6 +491,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var rowIndex = 1;
         var hasFilters = activeRowFilters.Count > 0;
         var importInterrupted = false;
+        var firstRowOfRun = progressPart.CurrentRow;
 
         foreach (var rowValues in reader.ReadRows())
         {
@@ -303,7 +510,10 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             // Do Not Call match) never fill a batch, so a file of mostly skipped rows could otherwise run on with
             // no check and no saved progress. The rows read since the last batch, with the reasons recorded for
             // skipped ones, are saved before the run stops, so the next run continues from this row.
-            if (clock.UtcNow >= runDeadlineUtc)
+            // The deadline counts from the start of the run, and reading the file and preparing the filters come
+            // first. A run whose preparation took past the deadline used to stop before its first row, save nothing
+            // new, and start over the same way for ever; each run now reads at least one row before it stops.
+            if (clock.UtcNow >= runDeadlineUtc && progressPart.CurrentRow > firstRowOfRun)
             {
                 var progressSaved = await BackgroundWorkPacer.RunBatchAsync(
                     token => ProcessBatchAsync(
@@ -318,6 +528,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         progressPart,
                         session,
                         clock,
+                        monitor,
                         token),
                     pacingOptions,
                     cancellationToken);
@@ -329,6 +540,24 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             progressPart.TotalProcessed++;
             progressPart.CurrentRow = rowIndex;
+
+            // A row that stopped one run after another would otherwise hold the import at the same place forever.
+            if (ShouldSkipStalledRow(progressPart, rowIndex))
+            {
+                AddRowError(progressPart, rowIndex, localizer["Importing this row stopped responding {0} times, so it was skipped.", progressPart.StalledRowAttempts]);
+
+                if (logger.IsEnabled(LogLevel.Warning))
+                {
+                    logger.LogWarning(
+                        "Row {RowIndex} of the import of entry '{EntryId}' was skipped because importing it stopped responding {Attempts} times.",
+                        rowIndex,
+                        entry.EntryId,
+                        progressPart.StalledRowAttempts);
+                }
+
+                rowIndex++;
+                continue;
+            }
 
             var dataRow = dataTable.NewRow();
             var isEmpty = true;
@@ -360,14 +589,25 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         RowIndex = rowIndex,
                     };
 
-                    foreach (var filter in activeRowFilters)
+                    // A filter may call out of the application, such as a do-not-call registry, so the watchdog
+                    // watches this work as it watches the import of the row.
+                    monitor.BeginRow(rowIndex);
+
+                    try
                     {
-                        if (await filter.ShouldSkipRowAsync(filterContext))
+                        foreach (var filter in activeRowFilters)
                         {
-                            shouldSkip = true;
-                            filterSkipReason = filterContext.SkipReason;
-                            break;
+                            if (await filter.ShouldSkipRowAsync(filterContext))
+                            {
+                                shouldSkip = true;
+                                filterSkipReason = filterContext.SkipReason;
+                                break;
+                            }
                         }
+                    }
+                    finally
+                    {
+                        monitor.EndRow();
                     }
                 }
 
@@ -411,6 +651,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                         progressPart,
                         session,
                         clock,
+                        monitor,
                         token),
                     pacingOptions,
                     cancellationToken);
@@ -448,6 +689,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
                 progressPart,
                 session,
                 clock,
+                monitor,
                 cancellationToken);
 
             if (!lastBatchProcessed)
@@ -477,6 +719,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         ImportFileProcessStatsPart progressPart,
         ISession session,
         IClock clock,
+        ImportRunMonitor monitor,
         CancellationToken cancellationToken)
     {
         if (await ShouldStopImportAsync(serviceProvider, entry.EntryId, cancellationToken))
@@ -491,42 +734,64 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             foreach (var existingRow in existingRows)
             {
-                var isNew = false;
+                monitor.BeginRow(existingRow.Value.Key);
 
-                if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
+                try
                 {
-                    contentItem = await contentManager.NewAsync(entry.ContentType);
-                    isNew = true;
-                }
+                    var isNew = false;
 
-                await ProcessRowAsync(
-                    entry,
-                    contentItem,
-                    existingRow.Value.Key,
-                    existingRow.Value.Value,
-                    dataTable.Columns,
-                    contentTypeDefinition,
-                    contentManager,
-                    contentImportManager,
-                    progressPart,
-                    isNew);
+                    if (!existingContentItems.TryGetValue(existingRow.Key, out var contentItem))
+                    {
+                        contentItem = await contentManager.NewAsync(entry.ContentType);
+                        isNew = true;
+                    }
+
+                    await ProcessRowAsync(
+                        entry,
+                        contentItem,
+                        existingRow.Value.Key,
+                        existingRow.Value.Value,
+                        dataTable.Columns,
+                        contentTypeDefinition,
+                        contentManager,
+                        contentImportManager,
+                        progressPart,
+                        isNew);
+                }
+                finally
+                {
+                    monitor.EndRow();
+                }
             }
         }
 
         foreach (var record in newRecords)
         {
-            await ProcessRowAsync(
-                entry,
-                await contentManager.NewAsync(entry.ContentType),
-                record.Key,
-                record.Value,
-                dataTable.Columns,
-                contentTypeDefinition,
-                contentManager,
-                contentImportManager,
-                progressPart,
-                true);
+            monitor.BeginRow(record.Key);
+
+            try
+            {
+                await ProcessRowAsync(
+                    entry,
+                    await contentManager.NewAsync(entry.ContentType),
+                    record.Key,
+                    record.Value,
+                    dataTable.Columns,
+                    contentTypeDefinition,
+                    contentManager,
+                    contentImportManager,
+                    progressPart,
+                    true);
+            }
+            finally
+            {
+                monitor.EndRow();
+            }
         }
+
+        // The watchdog cancels a run it gave up on before it releases the lock, so a run that wakes up after another
+        // took over stops here, and its uncommitted batch is rolled back instead of saved over the newer progress.
+        cancellationToken.ThrowIfCancellationRequested();
 
         entry.ProcessSaveUtc = clock.UtcNow;
         entry.Put(progressPart);
@@ -676,7 +941,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             logger.LogWarning(
                 exception,
-                "The import of entry '{EntryId}' stopped because the database did not respond in time. It will resume from its last saved row on the next run.",
+                "The import of entry '{EntryId}' stopped because a call it made, to the database or to a service, did not respond in time. It will resume from its last saved row on the next run.",
                 entryId);
         }
         else if (!isTransient && logger.IsEnabled(LogLevel.Error))
@@ -698,7 +963,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (isTransient)
             {
-                entry.Error = localizer["The database did not respond in time. The import will resume automatically: {0}", exception.Message];
+                entry.Error = localizer["A call the import made did not respond in time. The import will resume automatically: {0}", exception.Message];
                 entry.ProcessSaveUtc = clock.UtcNow;
 
                 await session.SaveAsync(entry, false, collection: null, cancellationToken);

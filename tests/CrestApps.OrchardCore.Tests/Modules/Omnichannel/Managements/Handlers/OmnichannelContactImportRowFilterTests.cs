@@ -121,6 +121,49 @@ public sealed class OmnichannelContactImportRowFilterTests
     }
 
     [Fact]
+    public async Task ShouldSkipRowAsync_ShouldSkipRowsWhenARegistryTimesOut()
+    {
+        // Arrange
+        // An HTTP client timeout surfaces as a cancellation nobody asked for. It used to escape the filter, end
+        // the whole import run as a "database" timeout, and stop the import at the same row on every run.
+        var registry = new Mock<INationalDoNotCallRegistry>();
+        registry.SetupGet(x => x.Key).Returns("usa");
+        registry.SetupGet(x => x.DisplayName).Returns("USA");
+        registry.SetupGet(x => x.Description).Returns("USA registry");
+        registry.Setup(x => x.GetRegisteredNumbersAsync(
+                It.IsAny<IEnumerable<PhoneNumber>>(),
+                It.IsAny<NumberSearchContext>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TaskCanceledException(
+                "The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing.",
+                new TimeoutException("The operation was canceled.")));
+
+        var filter = CreateFilter([registry.Object]);
+        var entry = CreateEntry(new OmnichannelContactImportOptionsPart
+        {
+            IgnoreDuplicateByPhoneNumber = false,
+            IgnoreDoNotCallNumbers = true,
+            SelectedCountryCode = "US",
+            SelectedRegistryKeys = ["usa"],
+        });
+
+        Assert.True(await filter.InitializeAsync(new ContentImportRowFilterInitContext
+        {
+            ContentTypeDefinition = CreateContentTypeDefinition(),
+            Entry = entry,
+        }));
+
+        var rowContext = CreateRowContext(entry, 1, ("Cell Phone", "425-777-8888"));
+
+        // Act
+        var skipped = await filter.ShouldSkipRowAsync(rowContext);
+
+        // Assert
+        Assert.True(skipped);
+        Assert.Contains("could not be reached", rowContext.SkipReason);
+    }
+
+    [Fact]
     public async Task ShouldSkipRowAsync_ShouldSkipDoNotCallNumbers()
     {
         // Arrange
