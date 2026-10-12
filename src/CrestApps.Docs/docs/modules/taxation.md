@@ -49,7 +49,7 @@ Go to **Commerce → Taxation → Categories** and add a category for each kind 
 
 - **Name** — a human-readable label (the unique key, fixed after creation).
 - **Code** — the value matched by tax rules and stored on taxable items (for example `Electronics`).
-- **Parent code** — an optional parent category code, forming a hierarchy.
+- **Parent code** — an optional parent category code, forming a hierarchy. A rule for a category also applies to every category under it: a rule for `Electronics` taxes an item classified as `Television` when `Television`'s parent is `Electronics`. A rule for `Television` never taxes an item classified only as `Electronics`.
 - **Description** — optional notes.
 
 Create the broad categories you match rules against, plus any finer classifications you want to assign to individual items.
@@ -307,6 +307,10 @@ The engine ships with the following calculation methods, all registered by name 
 Set `TaxableItem.PriceIncludesTax` (or `TaxCalculationContext.DefaultPriceType`) to control whether the price already contains tax. For inclusive taxes the engine nets the base out of the gross price before applying each rule, so the total stays equal to the displayed price. Both inclusive **percentage** taxes and inclusive **fixed-amount** taxes (`FixedAmount`, `PerUnit`, `PerWeight`, `PerVolume`) are un-grossed: the engine subtracts the fixed portions and divides out the combined percentage rate, clamping the net base at zero. Table-driven inclusive taxes (`TaxTable`, `Progressive`, `Threshold`) cannot be un-grossed because their amount depends on the base itself; keep those rules tax-exclusive.
 
 ## Tax sourcing
+
+A rule with a `JurisdictionId` applies only when that jurisdiction is among the ones resolved for the item's address (`ITaxJurisdictionResolver`). With no address, or an address outside it, the rule does not apply; rules without a jurisdiction apply everywhere. So the address the checkout supplies decides which jurisdiction rules can apply.
+
+The built-in `DefaultCheckoutTaxProfileProvider` supplies no address, because the checkout collects none. To tax by jurisdiction at checkout, register an `ICheckoutTaxProfileProvider` that fills `CheckoutTaxProfile.Destination` (and `Origin` where it matters) from your own checkout data, such as an address step.
 
 Do not assume the shipping address is always the tax location. Sourcing is pluggable through `ITaxSourcingStrategy` (resolved by `ITaxSourcingStrategyProvider`), with these built-in strategies: `Origin`, `Destination`, `CustomerResidence`, `CustomerBusiness`, `ServiceLocation`, and `EventLocation`. The engine picks a strategy from the taxable item's `Kind` (for example digital goods use the destination, services and bookings use the service location, and events use the event location) and falls back through destination, item origin, context origin, and customer residence.
 

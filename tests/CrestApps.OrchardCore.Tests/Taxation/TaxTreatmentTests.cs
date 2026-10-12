@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
@@ -7,6 +8,9 @@ namespace CrestApps.OrchardCore.Tests.Taxation;
 
 public sealed class TaxTreatmentTests
 {
+    private static Address Germany()
+        => new() { Country = "DE", City = "Berlin", PostalCode = "10115" };
+
     private static TaxTestHarness CreateHarness()
         => new(new TestClock(TaxTestData.TransactionDate));
 
@@ -26,7 +30,8 @@ public sealed class TaxTreatmentTests
             ReverseCharge = true,
         });
 
-        var context = TaxTestData.Context(100m, customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2B });
+        // The buyer is in Germany, where the VAT rule applies.
+        var context = TaxTestData.Context(100m, destination: Germany(), customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2B });
         var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);
@@ -53,7 +58,8 @@ public sealed class TaxTreatmentTests
             ReverseCharge = true,
         });
 
-        var context = TaxTestData.Context(100m, customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2C });
+        // The buyer is in Germany, where the VAT rule applies.
+        var context = TaxTestData.Context(100m, destination: Germany(), customer: new CustomerTaxProfile { CustomerType = CustomerTaxType.B2C });
         var result = await harness.TaxService.CalculateAsync(context, TestContext.Current.CancellationToken);
 
         var line = Assert.Single(result.Lines);

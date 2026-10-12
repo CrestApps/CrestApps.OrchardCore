@@ -31,7 +31,7 @@ A **category** groups what you sell for tax purposes, for example *Electronics*,
 | --- | --- |
 | **Name** | The label you see in lists and drop-downs. Required. |
 | **Code** | The unique code rules and products use, for example *ELEC*. Required. Drop-downs show categories as *Name (Code)*. |
-| **Parent code** | The **Code** of a broader category, to organize categories in a hierarchy, for example *Television* under *Electronics*. Leave empty for a top-level category. |
+| **Parent code** | The **Code** of a broader category, to organize categories in a hierarchy, for example *Television* under *Electronics*. A rule for *Electronics* then also taxes televisions; a rule for *Television* doesn't tax other electronics. Leave empty for a top-level category. |
 | **Description** | Optional notes. |
 
 ## 2. Review tax types
@@ -119,7 +119,7 @@ A **rule** is one tax: what it applies to, and how it is worked out. Several rul
 The list shows each rule's tax type, method, rate or amount, and priority.
 
 :::caution[Jurisdictions at checkout]
-The checkout does not ask buyers for an address, so it cannot tell which jurisdiction a buyer is in. At checkout, every enabled rule that matches an item's category applies, whatever its **Jurisdiction**. Create rules only for the taxes you charge every buyer.
+A rule tied to a **Jurisdiction** only charges buyers whose address is in that jurisdiction. The checkout doesn't ask buyers for an address yet, so it can't tell where a buyer is: at checkout, only rules set to **Any jurisdiction** apply. To charge a tax on every sale, set its rule to **Any jurisdiction**. Your developer can give the checkout the buyer's address, and then rules for each jurisdiction apply to the buyers in it; see the [Taxation technical page](../../modules/taxation.md#tax-sourcing).
 :::
 
 ## 6. Classify your products
@@ -173,4 +173,4 @@ A product with no category of its own takes the category of its tagged term. A c
 3. **Rules:** add a **Percentage** rule *CA sales tax* with **Tax type** *SalesTax*, **Jurisdiction** *California*, **Category** **Any category**, **Rate** *0.075*. Add a second **Percentage** rule *CA tobacco tax* with **Tax type** *TobaccoTax*, **Category** *Tobacco (TOBACCO)*, **Rate** *0.3*.
 4. **Products:** classify televisions as *Electronics* and cigarettes as *Tobacco*.
 
-A television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary.
+For a buyer in California, a television is charged 7.5%. A pack of cigarettes matches both rules and is charged 7.5% plus 30%. Each tax shows as its own line in the buyer's order summary. A buyer outside California pays only the tobacco tax, which has no jurisdiction. The sales tax needs the buyer's address, which the checkout only knows when your developer supplies it.
