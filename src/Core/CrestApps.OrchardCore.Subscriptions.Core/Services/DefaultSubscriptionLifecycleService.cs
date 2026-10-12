@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -342,8 +343,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
         {
             // Another node is applying a transition to this very subscription. Returning what is stored is
             // safer than applying a second transition on top of a half-finished one.
-            // The identifier can come from a request, so line breaks are removed: they would let it forge log entries.
-            _logger.LogWarning("Could not acquire the lock for subscription '{SubscriptionId}'; the transition was skipped.", subscriptionId.Replace("\r", string.Empty).Replace("\n", string.Empty));
+            _logger.LogWarning("Could not acquire the lock for subscription '{SubscriptionId}'; the transition was skipped.", subscriptionId.SanitizeLogValue());
 
             return await _subscriptionManager.FindByIdAsync(subscriptionId, cancellationToken);
         }

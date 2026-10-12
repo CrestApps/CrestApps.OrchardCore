@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.Logging;
@@ -85,8 +86,7 @@ public sealed class DefaultPriceResolver : IPriceResolver
 
         if (price is null)
         {
-            // The price id comes from the request, so line breaks are removed: they would let it forge log entries.
-            _logger.LogWarning("Refusing to price product '{ContentItemId}': it offers no price matching '{PriceId}'.", product.ContentItemId, context.PriceId?.Replace("\r", string.Empty).Replace("\n", string.Empty) ?? "(default)");
+            _logger.LogWarning("Refusing to price product '{ContentItemId}': it offers no price matching '{PriceId}'.", product.ContentItemId, context.PriceId?.SanitizeLogValue() ?? "(default)");
 
             return null;
         }
