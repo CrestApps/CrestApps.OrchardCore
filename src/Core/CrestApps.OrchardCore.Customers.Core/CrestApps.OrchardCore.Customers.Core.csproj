@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Customers Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core services for reusable buyer identity: the default contact resolver that addresses an
+      authenticated user through the Orchard Core user service and a guest through the captured contact
+      snapshot. Consumed by Transactions today and by future Orders/Carts modules.
+    </Description>
+    <PackageTags>$(PackageTags) Customers Commerce Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Customers.Abstractions\CrestApps.OrchardCore.Customers.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

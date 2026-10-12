@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -143,10 +144,19 @@ public sealed class ActivityBatchesController : Controller
             });
         }
 
-        viewModel.Options.BulkActions = [];
+        viewModel.Options.BulkActions = GetBulkActions();
 
         return View(viewModel);
     }
+
+    // Everyone who reaches the list manages activity loads, which is enough to delete a load that has not run yet.
+    // Which of the selected loads are actually removed is decided per load by GetDeleteRefusalAsync, exactly as for a
+    // single delete: a load still running is never removed, and a finished one needs DeleteLoadedActivityBatches.
+    internal IList<SelectListItem> GetBulkActions()
+        =>
+        [
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
+        ];
 
     /// <summary>
     /// Performs the index filter post operation.

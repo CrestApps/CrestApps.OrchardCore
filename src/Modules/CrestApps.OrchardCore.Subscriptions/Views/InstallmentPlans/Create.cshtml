@@ -1,0 +1,291 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.Subscriptions.Core
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model CreateInstallmentPlanViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SubscriptionsInstallmentPlansCreate" title="@T["New installment plan"]">
+        <breadcrumb-item id="SubscriptionsInstallmentPlans" action="Index" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@T["Installment Plans"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Create" method="post" class="no-multisubmit" id="installment-plan-form">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Customer"]</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-existing" value="false" checked="@(!Model.NewCustomer)" />
+                    <label class="form-check-label" for="customer-existing">@T["Existing customer"]</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-new" value="true" checked="@Model.NewCustomer" />
+                    <label class="form-check-label" for="customer-new">@T["New customer"]</label>
+                </div>
+            </div>
+
+            <div id="customer-existing-fields" class="@(Model.NewCustomer ? "d-none" : string.Empty)">
+                @await Component.InvokeAsync("UserPicker", new
+                {
+                    name = Html.NameFor(m => m.CustomerUserId).ToString(),
+                    selectedValues = string.IsNullOrEmpty(Model.CustomerUserId) ? Array.Empty<string>() : new[] { Model.CustomerUserId },
+                    valueType = "userId",
+                    multiple = false,
+                    buttonText = T["Choose a customer"].Value,
+                    searchPlaceholder = T["Search customers"].Value,
+                    smallButton = false,
+                })
+                <span asp-validation-for="CustomerUserId" class="text-danger"></span>
+            </div>
+
+            <div id="customer-new-fields" class="row g-3 @(Model.NewCustomer ? string.Empty : "d-none")">
+                <div class="col-md-6">
+                    <label asp-for="NewCustomerName" class="form-label">@T["Name"]</label>
+                    <input asp-for="NewCustomerName" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="NewCustomerName" class="text-danger"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="NewCustomerEmail" class="form-label">@T["Email"]</label>
+                    <input asp-for="NewCustomerEmail" type="email" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="NewCustomerEmail" class="text-danger"></span>
+                </div>
+                <div class="col-12">
+                    <span class="hint">@T["An account is created for the customer with this email. It has no password yet: the customer sets one with \"Forgot password\" when they want to sign in to see or pay their payments."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Plan"]</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label asp-for="Title" class="form-label">@T["What the plan is for"]</label>
+                    <input asp-for="Title" class="form-control" />
+                    <span asp-validation-for="Title" class="text-danger"></span>
+                    <span class="hint">@T["Shown to the customer on every payment, reminder and receipt."]</span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+                    <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" data-installment-input></select>
+                    <span asp-validation-for="Currency" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="TotalAmount" class="form-label">@T["Total"]</label>
+                    <input asp-for="TotalAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
+                    <span asp-validation-for="TotalAmount" class="text-danger"></span>
+                    <span class="hint">@T["Everything the customer pays, the down payment included."]</span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="DownPaymentAmount" class="form-label">@T["Down payment today"]</label>
+                    <input asp-for="DownPaymentAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
+                    <span asp-validation-for="DownPaymentAmount" class="text-danger"></span>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="InstallmentCount" class="form-label">@T["Number of payments after it"]</label>
+                    <input asp-for="InstallmentCount" type="number" min="1" max="120" step="1" class="form-control" data-installment-input />
+                    <span asp-validation-for="InstallmentCount" class="text-danger"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label asp-for="Frequency" class="form-label">@T["Payments fall due"]</label>
+                    <select asp-for="Frequency" class="form-select" data-installment-input>
+                        <option value="@InstallmentFrequency.Weekly">@T["Every week"]</option>
+                        <option value="@InstallmentFrequency.BiWeekly">@T["Every two weeks"]</option>
+                        <option value="@InstallmentFrequency.Monthly">@T["Every month"]</option>
+                        <option value="@InstallmentFrequency.Quarterly">@T["Every three months"]</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label asp-for="FirstDueDate" class="form-label">@T["First payment due"]</label>
+                    <input asp-for="FirstDueDate" type="date" asp-format="{0:yyyy-MM-dd}" class="form-control" data-installment-input />
+                    <span asp-validation-for="FirstDueDate" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Collecting the payments"]</div>
+        <div class="card-body">
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-auto" value="@InstallmentCollectionMethod.AutoCharge" />
+                <label class="form-check-label" for="collection-auto">@T["Charge the card on each due date"]</label>
+                <span class="hint dashed">@T["The card used for the down payment is kept and charged automatically. The customer is told a few days before each charge. A declined card is retried, then left for the customer to pay."]</span>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" asp-for="CollectionMethod" id="collection-invoice" value="@InstallmentCollectionMethod.Invoice" />
+                <label class="form-check-label" for="collection-invoice">@T["Invoice the customer for each payment"]</label>
+                <span class="hint dashed">@T["The customer is reminded before each due date and pays from their transactions. The card is used for the down payment only."]</span>
+            </div>
+
+            <div class="mt-3">
+                <label asp-for="Notes" class="form-label">@T["Internal note"]</label>
+                <textarea asp-for="Notes" rows="2" class="form-control"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Schedule"]</div>
+        <div class="card-body">
+            <p id="installment-schedule-empty" class="text-muted mb-0">@T["Enter the total, the down payment and the number of payments to see the schedule."]</p>
+            <div id="installment-schedule" class="table-responsive d-none">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Payment"]</th>
+                            <th scope="col">@T["Due"]</th>
+                            <th scope="col" class="text-end">@T["Amount"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="installment-schedule-rows"></tbody>
+                    <tfoot>
+                        <tr>
+                            <th scope="row" colspan="2">@T["Total"]</th>
+                            <th class="text-end" id="installment-schedule-total"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">@T["Continue to the down payment"]</button>
+        <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script at="Foot">
+    (function () {
+        'use strict';
+
+        var decimalsByCurrency = @Html.Raw(JsonSerializer.Serialize(Model.CurrencyDecimals));
+        var labels = {
+            downPayment: @Html.Raw(JsonSerializer.Serialize(T["Down payment (today)"].Value)),
+            payment: @Html.Raw(JsonSerializer.Serialize(T["Payment {0}"].Value))
+        };
+
+        var form = document.getElementById('installment-plan-form');
+
+        function value(name) {
+            var element = form.querySelector('[name="' + name + '"]');
+
+            return element ? element.value : '';
+        }
+
+        function syncCustomer() {
+            var isNew = document.getElementById('customer-new').checked;
+
+            document.getElementById('customer-new-fields').classList.toggle('d-none', !isNew);
+            document.getElementById('customer-existing-fields').classList.toggle('d-none', isNew);
+        }
+
+        // Months are counted from the first due date, and a day past the end of a short month falls on its last
+        // day, the same as the server does.
+        function dueDate(first, frequency, index) {
+            var date = new Date(first.getTime());
+
+            if (frequency === 'Weekly') {
+                date.setUTCDate(date.getUTCDate() + (7 * index));
+
+                return date;
+            }
+
+            if (frequency === 'BiWeekly') {
+                date.setUTCDate(date.getUTCDate() + (14 * index));
+
+                return date;
+            }
+
+            var months = frequency === 'Quarterly' ? 3 * index : index;
+            var year = first.getUTCFullYear();
+            var month = first.getUTCMonth() + months;
+            var lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
+            return new Date(Date.UTC(year, month, Math.min(first.getUTCDate(), lastDay)));
+        }
+
+        function render() {
+            var currency = value('@Html.NameFor(m => m.Currency)');
+            var decimals = decimalsByCurrency[currency] !== undefined ? decimalsByCurrency[currency] : 2;
+            var factor = Math.pow(10, decimals);
+            var total = Math.round(parseFloat(value('@Html.NameFor(m => m.TotalAmount)')) * factor);
+            var downPayment = Math.round(parseFloat(value('@Html.NameFor(m => m.DownPaymentAmount)')) * factor);
+            var count = parseInt(value('@Html.NameFor(m => m.InstallmentCount)'), 10);
+            var firstValue = value('@Html.NameFor(m => m.FirstDueDate)');
+            var frequency = value('@Html.NameFor(m => m.Frequency)');
+
+            var table = document.getElementById('installment-schedule');
+            var empty = document.getElementById('installment-schedule-empty');
+            var rows = document.getElementById('installment-schedule-rows');
+
+            rows.textContent = '';
+
+            if (!(total > 0) || !(downPayment > 0) || downPayment >= total || !(count > 0) || count > 120 || !firstValue) {
+                table.classList.add('d-none');
+                empty.classList.remove('d-none');
+
+                return;
+            }
+
+            // Every payment is the same except the last, which takes the rounding so the schedule adds up to the
+            // total exactly, the same as the server.
+            var remaining = total - downPayment;
+            var regular = Math.floor(remaining / count);
+            var last = remaining - (regular * (count - 1));
+            var first = new Date(firstValue + 'T00:00:00Z');
+
+            function money(minor) {
+                return currency + ' ' + (minor / factor).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            }
+
+            function addRow(label, date, minor) {
+                var row = document.createElement('tr');
+                var labelCell = document.createElement('td');
+                var dateCell = document.createElement('td');
+                var amountCell = document.createElement('td');
+
+                labelCell.textContent = label;
+                dateCell.textContent = date.toLocaleDateString(undefined, { timeZone: 'UTC' });
+                amountCell.textContent = money(minor);
+                amountCell.className = 'text-end';
+
+                row.appendChild(labelCell);
+                row.appendChild(dateCell);
+                row.appendChild(amountCell);
+                rows.appendChild(row);
+            }
+
+            addRow(labels.downPayment, new Date(), downPayment);
+
+            for (var index = 0; index < count; index++) {
+                addRow(labels.payment.replace('{0}', String(index + 1)), dueDate(first, frequency, index), index === count - 1 ? last : regular);
+            }
+
+            document.getElementById('installment-schedule-total').textContent = money(total);
+
+            table.classList.remove('d-none');
+            empty.classList.add('d-none');
+        }
+
+        var inputs = form.querySelectorAll('[data-installment-input]');
+
+        for (var i = 0; i < inputs.length; i++) {
+            inputs[i].addEventListener('input', render);
+            inputs[i].addEventListener('change', render);
+        }
+
+        document.getElementById('customer-new').addEventListener('change', syncCustomer);
+        document.getElementById('customer-existing').addEventListener('change', syncCustomer);
+
+        syncCustomer();
+        render();
+    })();
+</script>

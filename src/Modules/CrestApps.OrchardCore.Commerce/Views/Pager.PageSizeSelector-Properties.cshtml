@@ -1,0 +1,31 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using OrchardCore.DisplayManagement
+@{
+    // Read from the shape's properties: Model.Items would bind to the shape's own child list, which is always empty.
+    // Orchard Core renames the argument to PageSizes (OrchardCMS/OrchardCore#20007); both names are read so the
+    // selector keeps working across that upgrade, after which this alternate can be removed.
+    var properties = ((IShape)Model).Properties;
+    var items = (properties.TryGetValue("PageSizes", out var pageSizes) ? pageSizes : properties.TryGetValue("Items", out var legacy) ? legacy : null) as IEnumerable<SelectListItem>;
+}
+@if (items is not null && items.Any())
+{
+    @* The pager sits in the middle with the selector at the right edge; on a narrow screen they stack. The wrapper
+       keeps its own height and spacing, because with a single page there are no links to give it any. *@
+    <style>
+        .pager-wrapper { margin-top: 1rem; }
+        .pager-wrapper > ul { margin-bottom: 0; }
+        @@media (min-width: 768px) {
+            .pager-wrapper { position: relative; justify-content: center !important; min-height: calc(1.5em + .5rem + 2px); }
+            .pager-wrapper > .pager-page-size { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+        }
+    </style>
+    <div class="pager-page-size d-flex align-items-center ms-auto">
+        <label class="col-form-label text-nowrap me-2">@T["Items per page"]</label>
+        <select class="form-select form-select-sm w-auto" aria-label="@T["Items per page"]" onchange="if (this.value) { window.location.href = this.value; }">
+            @foreach (var item in items)
+            {
+                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+            }
+        </select>
+    </div>
+}

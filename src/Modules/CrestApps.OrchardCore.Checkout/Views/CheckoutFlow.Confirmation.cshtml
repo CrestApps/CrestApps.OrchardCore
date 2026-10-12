@@ -1,0 +1,17 @@
+@* The confirmation frame. Features contribute what a completed checkout means (a receipt, a download link,
+   a provisioned site) into the Content zone through their own display drivers. *@
+
+@if (Model.Header != null)
+{
+    @await DisplayAsync(Model.Header)
+}
+
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}
+
+@if (Model.Footer != null)
+{
+    @await DisplayAsync(Model.Footer)
+}

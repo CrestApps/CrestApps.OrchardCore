@@ -1,0 +1,34 @@
+{
+  "name": "DefaultCurrencies",
+  "displayName": "Default currencies",
+  "description": "Seeds the default managed currencies for products and subscriptions.",
+  "variables": {
+    "OwnerId": "[js: parameters('AdminUserId')]",
+    "Author": "[js: parameters('AdminUsername')]"
+  },
+  "steps": [
+    {
+      "name": "Currencies",
+      "Currencies": [
+        {
+          "Name": "USD",
+          "DisplayName": "US Dollar",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "EUR",
+          "DisplayName": "Euro",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        },
+        {
+          "Name": "GBP",
+          "DisplayName": "Pound Sterling",
+          "OwnerId": "[js: variables('OwnerId')]",
+          "Author": "[js: variables('Author')]"
+        }
+      ]
+    }
+  ]
+}

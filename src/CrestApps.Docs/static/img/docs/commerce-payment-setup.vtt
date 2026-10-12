@@ -1,0 +1,20 @@
+WEBVTT
+
+00:00:03.177 --> 00:00:07.818
+Under Settings, Payments, Stripe, paste your Stripe keys and save them.
+
+00:00:07.818 --> 00:00:12.037
+Then click Connect, which links your Stripe account to the site.
+
+00:00:12.489 --> 00:00:16.705
+While Enable Production is cleared, Stripe runs in test mode:
+
+00:00:16.705 --> 00:00:21.109
+you can try every flow with test cards, and no real money moves.
+
+00:00:21.563 --> 00:00:25.744
+Under Commerce, Currencies, choose the currencies you sell in.
+
+00:00:25.744 --> 00:00:29.433
+Plans and products pick their currency from this list.
+

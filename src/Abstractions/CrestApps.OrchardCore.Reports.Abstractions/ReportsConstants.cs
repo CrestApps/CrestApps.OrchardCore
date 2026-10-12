@@ -107,6 +107,11 @@ public static class ReportsConstants
         public const string BillingUsage = "Billing & Usage";
 
         /// <summary>
+        /// The commerce report category.
+        /// </summary>
+        public const string Commerce = "Commerce";
+
+        /// <summary>
         /// The CRM and campaign report category.
         /// </summary>
         public const string CrmCampaigns = "CRM & Campaigns";
@@ -141,6 +146,7 @@ public static class ReportsConstants
                 AgentPerformance => 40,
                 WorkforcePayroll => 50,
                 BillingUsage => 60,
+                Commerce => 65,
                 CrmCampaigns => 70,
                 ComplianceAudit => 80,
                 Technical => 90,

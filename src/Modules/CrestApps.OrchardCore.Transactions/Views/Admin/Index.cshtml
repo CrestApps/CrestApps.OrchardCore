@@ -1,0 +1,123 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Transactions.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@model TransactionsAdminIndexViewModel
+
+@{
+    var pager = (dynamic)Model.Pager;
+    int totalItemCount = pager.TotalItemCount;
+
+    var sourceNames = Model.Options.Sources?
+        .Where(s => !string.IsNullOrEmpty(s.Value))
+        .ToDictionary(s => s.Value, s => s.Text, StringComparer.OrdinalIgnoreCase)
+        ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+}
+
+<zone Name="Title">
+    <breadcrumb name="Transactions" title="@T["Transactions"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="transactions-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="has-search">
+                <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by title"]" type="search" autocomplete="off" />
+            </div>
+        </div>
+    </div>
+</form>
+
+<ul class="list-group">
+    <li class="list-group-item text-bg-theme">
+        <div class="row gx-3 align-items-center">
+            <div class="col text-nowrap">
+                @T.Plural(Model.Transactions.Count, "1 transaction", "{0} transactions")
+                <span class="text-muted">@T.Plural(totalItemCount, " / {0} transaction in total", " / {0} transactions in total")</span>
+            </div>
+            <div class="col col-md-auto text-end">
+                <div class="btn-group filter">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" form="transactions-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+                    <select asp-for="Options.Source" asp-items="Model.Options.Sources" form="transactions-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by source"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Source"]"></select>
+                </div>
+            </div>
+        </div>
+    </li>
+    @if (Model.Transactions.Count > 0)
+    {
+        @foreach (var item in Model.Transactions)
+        {
+            var transaction = item.Transaction;
+            var isOpen = transaction.Status is not (TransactionStatus.Paid or TransactionStatus.Canceled or TransactionStatus.Refunded);
+            string Money(decimal amount) => $"{transaction.Currency} {CurrencyScale.Format(amount, transaction.Currency)}";
+
+            <li class="list-group-item">
+                <div class="row g-0">
+                    <div class="col-lg col-12 title d-flex align-items-center">
+                        <div class="summary">
+                            <div class="d-flex flex-column flex-md-row align-items-md-center">
+                                <div class="me-2">
+                                    <h5 class="mb-1 mb-md-0"><a asp-action="Detail" asp-route-itemId="@transaction.ItemId">@(string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title)</a></h5>
+                                </div>
+                                <div class="tags me-1">
+                                    <partial name="_TransactionStatusBadge" model="transaction.Status" />
+                                </div>
+                            </div>
+                            <div class="metadata mt-1">
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Owner"]">
+                                    <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Owner"]</span>
+                                    @(item.OwnerName ?? T["Unknown"].Value)
+                                </span>
+                                @if (!string.IsNullOrEmpty(transaction.Source))
+                                {
+                                    <span class="badge ta-badge bg-primary-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
+                                        <i class="fa-solid fa-tag text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Source"]</span>
+                                        @(sourceNames.TryGetValue(transaction.Source, out var sourceName) ? sourceName : transaction.Source)
+                                    </span>
+                                }
+                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Total"]">
+                                    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Total"]</span>
+                                    @Money(transaction.TotalAmount)
+                                </span>
+                                @if (isOpen && transaction.OutstandingAmount > 0m)
+                                {
+                                    <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Outstanding"]">
+                                        <i class="fa-solid fa-hourglass-half text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
+                                        @Money(transaction.OutstandingAmount)
+                                    </span>
+                                }
+                                @if (transaction.DueUtc.HasValue)
+                                {
+                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Due"]">
+                                        <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Due"]</span>
+                                        @transaction.DueUtc.Value.ToString("d")
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
+                        <div class="actions">
+                            <a class="btn btn-secondary btn-sm" asp-action="Detail" asp-route-itemId="@transaction.ItemId">@T["Manage"]</a>
+                        </div>
+                    </div>
+                </div>
+            </li>
+        }
+    }
+    else
+    {
+        <li class="list-group-item">
+            <div class="alert alert-info mb-0" role="alert">
+                @T["<strong>Nothing here!</strong> There are no transactions that match the current filter."]
+            </div>
+        </li>
+    }
+</ul>
+
+@await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

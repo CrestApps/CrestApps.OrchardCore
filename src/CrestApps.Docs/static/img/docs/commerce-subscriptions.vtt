@@ -1,0 +1,41 @@
+WEBVTT
+
+00:00:03.203 --> 00:00:06.767
+Visitors find your plans on the Service Plans page.
+
+00:00:06.767 --> 00:00:11.331
+Each plan shows its price, its billing period, and any setup fee or
+
+00:00:11.331 --> 00:00:13.833
+free trial, with a Sign up button.
+
+00:00:14.283 --> 00:00:17.310
+The checkout walks the buyer through its steps.
+
+00:00:17.310 --> 00:00:22.563
+Here they create an account, while the order summary shows the plan and its setup fee.
+
+00:00:32.568 --> 00:00:37.298
+On the payment step, they enter their card, and can apply a promotion code.
+
+00:00:40.830 --> 00:00:44.887
+Stripe confirms the payment, and the purchase is complete.
+
+00:00:44.887 --> 00:00:47.170
+The subscriber gets a receipt.
+
+00:00:48.754 --> 00:00:54.380
+Administrators find every subscriber under Subscriptions, Agreements, with its status.
+
+00:00:54.380 --> 00:00:58.904
+Each agreement shows the plan, its billing, and what happened to it.
+
+00:00:59.356 --> 00:01:04.571
+Under Actions, Cancel subscription stops the billing, right away or when the paid
+
+00:01:04.571 --> 00:01:07.928
+period ends, and Pause billing holds the payments.
+
+00:01:07.928 --> 00:01:10.206
+Both ask for confirmation first.
+
