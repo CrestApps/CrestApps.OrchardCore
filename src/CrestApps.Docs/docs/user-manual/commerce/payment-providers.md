@@ -15,6 +15,11 @@ A **payment provider** is how the money for a purchase is collected. Your site o
 
 Every provider that is turned on appears as a choice on the **Payment** step of the [checkout](checkout.md). When both are offered, the card option is selected first.
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-payment-setup.jpg" aria-label="Narrated video of connecting Stripe and choosing currencies">
+  <source src="/img/docs/commerce-payment-setup.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-payment-setup.vtt" srcLang="en" label="English" default />
+</video>
+
 ## Connect Stripe
 
 | | |

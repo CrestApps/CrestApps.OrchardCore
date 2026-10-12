@@ -1,0 +1,32 @@
+WEBVTT
+
+00:00:03.202 --> 00:00:09.069
+The list shows every plan with its customer, what was received, and the next payment.
+
+00:00:09.069 --> 00:00:13.452
+Search it, or filter it by status, such as Active or Past due.
+
+00:00:13.905 --> 00:00:16.693
+Each payment is charged on its due date.
+
+00:00:16.693 --> 00:00:20.997
+A declined card is tried again after a few days, and the customer
+
+00:00:20.997 --> 00:00:22.452
+is told each time.
+
+00:00:22.452 --> 00:00:26.695
+After the last try, the payment is left for the customer to pay.
+
+00:00:27.148 --> 00:00:32.647
+Charge now collects a payment early, or retries a declined card straight away.
+
+00:00:32.647 --> 00:00:35.528
+It always asks for confirmation first.
+
+00:00:35.979 --> 00:00:41.036
+Cancel the plan stops the payments not yet received, and tells the customer.
+
+00:00:41.036 --> 00:00:45.169
+Payments already received stay received, and can be refunded.
+

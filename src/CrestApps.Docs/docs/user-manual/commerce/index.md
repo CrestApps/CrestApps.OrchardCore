@@ -10,6 +10,13 @@ The commerce features let your site take money. You can sell subscriptions and w
 
 This section explains each feature in plain words. For installation, configuration files and the technical details, see the [Technical Manual commerce overview](../../modules/commerce.md).
 
+This video walks through the commerce features, from connecting Stripe to refunds:
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce.jpg" aria-label="Narrated video overview of the CrestApps Commerce modules">
+  <source src="/img/docs/commerce.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce.vtt" srcLang="en" label="English" default />
+</video>
+
 ## What each feature does
 
 | Feature | What it does for your business | Page |
@@ -34,7 +41,7 @@ This section explains each feature in plain words. For installation, configurati
 | **Subscriptions** | **Agreements**, **My Plans**, **Installment Plans**, **Site provisioning** and **My Sites**. |
 | **Settings** | **Payments > Stripe**, **Subscriptions**, and under **Commerce**: **Transactions** (reminders), **Receipts** and **Pay Later**. |
 
-You only see the menus your role allows, and only for the features your site has turned on.
+You only see the menus your role allows, and only for the features your site has turned on. Customers open **My Plans**, **My Sites** and **My Transactions** with their own account; they need no other admin access, and the rest of the admin stays closed to them.
 
 <AskYourAdmin />
 

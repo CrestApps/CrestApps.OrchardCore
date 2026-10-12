@@ -11,6 +11,13 @@ The commerce modules let an Orchard Core site take money: sell one-time purchase
 
 For the admin screens, see the User Manual's [Commerce](../user-manual/commerce/index.md) section.
 
+This video walks through the commerce modules, their screens, configuration and extension points:
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce.jpg" aria-label="Narrated video overview of the CrestApps Commerce modules">
+  <source src="/img/docs/commerce.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce.vtt" srcLang="en" label="English" default />
+</video>
+
 ## The modules
 
 | Module | Feature | What it owns | Page |
@@ -36,6 +43,17 @@ Every way of taking money goes through the same path, so there is one ledger to 
 5. **Handlers react.** Checkout handlers (`CheckoutHandlerBase`) let the seller finish the purchase, for example Subscriptions activates or renews an agreement and queues a site. When the payment settles a transaction, `ITransactionPaymentHandler` tells every interested module once per payment: Installment Plans moves its schedule, and Payment Receipts numbers and sends the receipt.
 
 Refunds follow the same pattern through the durable refund ledger, and `IPaymentRefundHandler` is raised once per refund, however it finished.
+
+## Take payments for your own module
+
+The payment modules aren't tied to subscriptions or installment plans. Any module can take a payment, and gets every payment provider, coupons, taxes, receipts, the durable ledger and refunds without writing payment code. There are two ways:
+
+| You want to | Use | How |
+| --- | --- | --- |
+| Sell something in a checkout the buyer goes through now | `ICheckoutEngine` and an `ICheckoutHandler` | Start a checkout with a `ReferenceType` and `ReferenceId` for what is being bought, and redirect to the `CheckoutStep` route. Your handler adds the billing items when the checkout starts, and finishes the purchase in `CompletedAsync` once the payment is confirmed. See [Extending checkout](checkout#extending-checkout). |
+| Bill a customer for an amount they pay later | A transaction | Create a transaction with your own source through `ITransactionManager`. The customer sees it in My Transactions, gets reminders and an invoice with a pay link, and pays it through the same checkout. React to the payment with `ITransactionPaymentHandler`. See [Registering a transaction source](transactions#registering-a-transaction-source). |
+
+Subscriptions and Installment Plans are built exactly this way, so they are working examples of both.
 
 ## The Commerce feature
 
@@ -92,6 +110,31 @@ The commerce lists (installment plans, subscriptions, transactions, payments, re
 - **A page size selector that renders on every admin theme.** The feature adds the `Pager_PageSizeSelector__Properties` alternate, which reads the page sizes from the shape's properties. It works around an Orchard Core issue where the admin theme's selector template read an empty list, fixed upstream in [OrchardCMS/OrchardCore#20007](https://github.com/OrchardCMS/OrchardCore/pull/20007).
 
 Build the pager with `new Pager(pagerParameters, pagerOptions.Value)` and carry `pageSize` through the filter post, so the selected page size survives a filter change.
+
+### Customer pages in the admin
+
+Some admin pages are for customers rather than staff: **My Plans**, **My Sites**, **My Transactions** and the printable invoices and receipts they link to. Customers who buy through the checkout have no admin access, so Orchard Core's admin filter would answer 403 on those pages.
+
+A controller (or action) marked with `[CustomerAdminPage]` (`CrestApps.OrchardCore.Commerce.CustomerAdminPageAttribute`, in `CrestApps.OrchardCore.Abstractions`) can be opened by any signed-in user. The Commerce feature's `CustomerAdminPageAuthorizationHandler` grants `AdminPermissions.AccessAdminPanel` for the request, but only while the endpoint carries the marker. The dashboard and every other admin page keep requiring the permission, and anonymous visitors are still sent to sign in.
+
+The marker opens the page, not the data. Every marked action must check the customer's own permission, such as `ViewOwnTransactions` or `ManageOwnSubscriptions`, and return only that customer's records:
+
+```csharp
+[Admin("my-subscriptions/{action}/{itemId?}", "MySubscriptions{action}")]
+[CustomerAdminPage]
+public sealed class MySubscriptionsController : Controller
+{
+    public async Task<IActionResult> Index()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageOwnSubscriptions))
+        {
+            return Forbid();
+        }
+
+        // Only the current user's subscriptions.
+    }
+}
+```
 
 ### The financial-document policy
 

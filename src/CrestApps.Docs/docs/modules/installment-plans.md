@@ -20,6 +20,11 @@ The feature owns no payment code. Every payment on a plan is an ordinary [transa
 
 For the admin screens, see the User Manual page [Installment Plans](../user-manual/commerce/installment-plans.md).
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-installment-plans.jpg" aria-label="Narrated video of setting up an installment plan and taking the down payment">
+  <source src="/img/docs/commerce-installment-plans.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-installment-plans.vtt" srcLang="en" label="English" default />
+</video>
+
 ## Requirements
 
 | Requirement | Why |
@@ -67,6 +72,11 @@ They are not read from `appsettings.json`.
 The permission is deliberately separate from the other subscription permissions, because whoever holds it can charge a customer's kept card with **Charge now**.
 
 ## How a plan runs
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-manage-plans.jpg" aria-label="Narrated video of managing installment plans: Charge now, Cancel the plan, and the list">
+  <source src="/img/docs/commerce-manage-plans.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-manage-plans.vtt" srcLang="en" label="English" default />
+</video>
 
 ### Creating a plan
 

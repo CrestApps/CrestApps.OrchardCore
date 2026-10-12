@@ -50,6 +50,11 @@ Each content item of that type becomes a purchasable plan, editable and securabl
 
 ## Buying a plan
 
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
+  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
+</video>
+
 ### Offering more than one price
 
 A plan sold one way needs no choice, and the plan card is a single **Sign up** button. Attach the
@@ -235,6 +240,11 @@ A subscription in a trial is `Trialing`, is treated as current, and grants every
 A delayed start (`SubscriptionDayDelay`) is handled the same way. To the money they are the same thing: a payment method is attached now and billing begins later.
 
 ## Selling sites
+
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-sites.jpg" aria-label="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning">
+  <source src="/img/docs/commerce-sites.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-sites.vtt" srcLang="en" label="English" default />
+</video>
 
 With **Subscriptions - Sites** enabled on the default tenant, a plan can sell a whole Orchard Core site. The customer names their site and its administrator during checkout, and gets a running site once they have paid.
 

@@ -78,10 +78,11 @@ The site-wide settings are under **Settings > Subscriptions**, with the **Manage
 | **Currency** | The default currency of your plans. |
 | **Default roles to assign for new subscribers** | Roles every new subscriber gets, whatever plan they buy. |
 
-This is what a visitor sees when they sign up to a plan on your site:
+This video shows a visitor signing up to a plan, then the Agreements screen:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a visitor signing up to a plan, creating an account and paying by card in the checkout">
-  <source src="/img/docs/um-subscription-signup.mp4" type="video/mp4" />
+<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
+  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
 </video>
 
 ## Manage subscriptions
@@ -125,9 +126,9 @@ Click a title or **Manage** to open a subscription.
 1. Open the subscription.
 2. In **Actions**, optionally enter a **Reason**.
 3. Leave **Keep access until the paid period ends** ticked to end the subscription when the period the subscriber already paid for ends, or untick it to end it now.
-4. Click **Cancel subscription**.
+4. Click **Cancel subscription**, then click **Cancel subscription** again in the confirmation box. Click **Keep it** to back out.
 
-The subscription is cancelled at once: there is no confirmation step, so check before you click. The message says either *The subscription will end when the paid period does.* or *The subscription was canceled.* Future billing stops, including at the payment provider, so the subscriber's card is not charged again.
+The message says either *The subscription will end when the paid period does.* or *The subscription was canceled.* Future billing stops, including at the payment provider, so the subscriber's card is not charged again.
 
 What the subscriber keeps:
 
@@ -137,8 +138,8 @@ What the subscriber keeps:
 
 ### Pause and resume billing
 
-- To suspend billing without ending the subscription, enter an optional **Reason** and click **Pause billing**. It is offered on **Active** and **Trial** subscriptions. The status becomes **Paused**.
-- To restart billing on a **Paused** or **Past due** subscription, click **Resume**. The status becomes **Active** again.
+- To suspend billing without ending the subscription, enter an optional **Reason**, click **Pause billing**, and confirm with **Pause billing**. It is offered on **Active** and **Trial** subscriptions. The status becomes **Paused**.
+- To restart billing on a **Paused** or **Past due** subscription, click **Resume** and confirm with **Resume**. The status becomes **Active** again.
 
 Each action is written to the subscription's **History**.
 
@@ -167,6 +168,7 @@ The status filter in the list header shows the status names in their short form,
 | **Feature** | Subscriptions |
 
 <AskYourAdmin />
+
 
 **My Plans** opens the **My subscriptions** page, where a subscriber sees every plan they subscribe to and cancels it themselves.
 

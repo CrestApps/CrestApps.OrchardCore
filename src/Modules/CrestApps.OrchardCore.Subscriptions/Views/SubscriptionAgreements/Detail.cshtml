@@ -82,7 +82,14 @@
                     <label class="form-check-label" for="atPeriodEnd">@T["Keep access until the paid period ends"]</label>
                 </div>
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-danger">@T["Cancel subscription"]</button>
+                    <button type="submit" class="btn btn-danger"
+                            data-url-af="RemoveUrl"
+                            data-title="@T["Cancel subscription"]"
+                            data-message="@T["Are you sure you want to cancel this subscription? With Keep access until the paid period ends ticked, it ends when the paid period does; otherwise it ends now. Billing stops either way."]"
+                            data-ok-text="@T["Cancel subscription"]"
+                            data-cancel-text="@T["Keep it"]">
+                        @T["Cancel subscription"]
+                    </button>
                 </div>
             </form>
         }
@@ -94,7 +101,14 @@
                     <input type="text" name="reason" class="form-control" placeholder="@T["Reason"]" />
                 </div>
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-secondary">@T["Pause billing"]</button>
+                    <button type="submit" class="btn btn-secondary"
+                            data-url-af="RemoveUrl"
+                            data-title="@T["Pause billing"]"
+                            data-message="@T["Are you sure you want to pause billing? No payments are taken until you resume it."]"
+                            data-ok-text="@T["Pause billing"]"
+                            data-cancel-text="@T["Keep billing"]">
+                        @T["Pause billing"]
+                    </button>
                 </div>
             </form>
         }
@@ -102,7 +116,14 @@
         @if (Model.Status is SubscriptionStatus.Paused or SubscriptionStatus.PastDue)
         {
             <form asp-action="Resume" asp-route-itemId="@Model.ItemId" method="post">
-                <button type="submit" class="btn btn-primary">@T["Resume"]</button>
+                <button type="submit" class="btn btn-primary"
+                        data-url-af="RemoveUrl"
+                        data-title="@T["Resume billing"]"
+                        data-message="@T["Are you sure you want to resume billing for this subscription?"]"
+                        data-ok-text="@T["Resume"]"
+                        data-cancel-text="@T["Not now"]">
+                    @T["Resume"]
+                </button>
             </form>
         }
     </div>

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -28,6 +29,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 /// immediately, because they bought that time.
 /// </remarks>
 [Admin("my-subscriptions/{action}/{itemId?}", "MySubscriptions{action}")]
+[CustomerAdminPage]
 public sealed class MySubscriptionsController : Controller
 {
     private readonly ISubscriptionManager _subscriptionManager;

@@ -1,0 +1,44 @@
+WEBVTT
+
+00:00:03.191 --> 00:00:07.571
+With Subscriptions Sites, a plan can sell a whole Orchard Core site.
+
+00:00:07.571 --> 00:00:11.951
+Its checkout adds a step where the buyer names the new site, chooses
+
+00:00:11.951 --> 00:00:14.851
+its address, and creates its administrator.
+
+00:00:15.701 --> 00:00:19.750
+Everything they can still fix is checked here, before they pay:
+
+00:00:19.750 --> 00:00:24.151
+a site name, an address or a domain that is already taken is refused.
+
+00:00:30.369 --> 00:00:34.019
+They pay by card, and the purchase is complete.
+
+00:00:37.822 --> 00:00:42.522
+The site is created right after, in the background, so a slow setup
+
+00:00:42.522 --> 00:00:44.132
+never loses a sale.
+
+00:00:45.734 --> 00:00:49.674
+Under My Sites, the customer sees their site being created.
+
+00:00:49.674 --> 00:00:53.916
+Once it is ready, Open takes them straight to it, already set up
+
+00:00:53.916 --> 00:00:55.674
+from the plan's recipe.
+
+00:00:57.267 --> 00:01:03.352
+Administrators follow every site under Subscriptions, Site provisioning, and can retry one that
+
+00:01:03.352 --> 00:01:05.641
+failed, once the cause is fixed.
+
+00:01:05.641 --> 00:01:09.437
+The site runs for as long as the subscription is current.
+
