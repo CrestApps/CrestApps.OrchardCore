@@ -160,6 +160,8 @@ public sealed class SqlProductSearchServiceTests : IAsyncLifetime
     [InlineData(ProductAttributeKeys.Price, true, "p5")]
     [InlineData(ProductAttributeKeys.Title, false, "p5")]
     [InlineData(Rating, true, "p5")]
+    [InlineData(Brand, false, "p4")]
+    [InlineData(Brand, true, "p6")]
     public async Task Sorts_OrderByColumnsAndAttributes(string attributeKey, bool descending, string first)
     {
         var result = await SearchAsync(query => query.Sort = new ProductListingSort { Key = "sort", AttributeKey = attributeKey, Descending = descending });

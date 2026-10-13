@@ -136,9 +136,9 @@ public sealed class ProductListingService
         {
             var kind = attribute.Kind switch
             {
-                ProductAttributeValueKind.Number => ProductFacetKind.Range,
+                ProductAttributeValueKind.Number or ProductAttributeValueKind.Date => ProductFacetKind.Range,
                 ProductAttributeValueKind.Boolean => ProductFacetKind.Toggle,
-                ProductAttributeValueKind.Date => (ProductFacetKind?)null,
+                ProductAttributeValueKind.RichText => (ProductFacetKind?)null,
                 _ => ProductFacetKind.Checkbox,
             };
 
@@ -208,13 +208,19 @@ public sealed class ProductListingService
             new() { Key = "name", Label = S["Name: A to Z"], AttributeKey = ProductAttributeKeys.Title },
         });
 
-        foreach (var attribute in attributes.Where(attribute =>
-            attribute.Settings.Sortable && attribute.Kind is ProductAttributeValueKind.Number or ProductAttributeValueKind.Date))
+        foreach (var attribute in attributes.Where(attribute => attribute.Settings.Sortable && IsSortable(attribute.Kind)))
         {
             var key = ToUrlKey(attribute.Key);
 
-            sorts.Add(new ProductListingSort { Key = key + "-asc", Label = S["{0}: low to high", attribute.Label], AttributeKey = attribute.Key });
-            sorts.Add(new ProductListingSort { Key = key + "-desc", Label = S["{0}: high to low", attribute.Label], AttributeKey = attribute.Key, Descending = true });
+            var (ascending, descending) = attribute.Kind switch
+            {
+                ProductAttributeValueKind.Date or ProductAttributeValueKind.Time => (S["{0}: earliest first", attribute.Label], S["{0}: latest first", attribute.Label]),
+                ProductAttributeValueKind.Text or ProductAttributeValueKind.Term => (S["{0}: A to Z", attribute.Label], S["{0}: Z to A", attribute.Label]),
+                _ => (S["{0}: low to high", attribute.Label], S["{0}: high to low", attribute.Label]),
+            };
+
+            sorts.Add(new ProductListingSort { Key = key + "-asc", Label = ascending, AttributeKey = attribute.Key });
+            sorts.Add(new ProductListingSort { Key = key + "-desc", Label = descending, AttributeKey = attribute.Key, Descending = true });
         }
 
         return sorts;
@@ -276,6 +282,13 @@ public sealed class ProductListingService
     /// The key of the sort by the order the merchant arranged products in.
     /// </summary>
     public const string RecommendedSortKey = "recommended";
+
+    /// <summary>
+    /// Whether a field of this kind can be sorted by: numbers, dates and times by value, text and terms by name.
+    /// </summary>
+    public static bool IsSortable(ProductAttributeValueKind kind)
+        => kind is ProductAttributeValueKind.Number or ProductAttributeValueKind.Date or ProductAttributeValueKind.Time
+            or ProductAttributeValueKind.Text or ProductAttributeValueKind.Term;
 
     /// <summary>
     /// The key of the sort that shows featured products first.
@@ -357,7 +370,12 @@ public sealed class ProductListingService
             .ToArray();
 
         // Without sorting, a sort in the address is ignored, and the default sort may be one the page does not offer.
-        var state = ProductListingState.Parse(request.Query, facets, part.ShowSorting ? sorts.Select(sort => sort.Key) : [], pageSizes);
+        var dateKeys = facets
+            .Where(facet => facet.Kind == ProductFacetKind.Range && attributes.Any(attribute => attribute.Key == facet.AttributeKey && attribute.Kind == ProductAttributeValueKind.Date))
+            .Select(facet => facet.Key)
+            .ToArray();
+
+        var state = ProductListingState.Parse(request.Query, facets, part.ShowSorting ? sorts.Select(sort => sort.Key) : [], pageSizes, dateKeys);
 
         await MapTermIdsToSlugsAsync(state, facets, attributes);
 
@@ -1114,6 +1132,7 @@ public sealed class ProductListingService
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
             IsPrice = facet.AttributeKey == ProductAttributeKeys.Price,
+            IsDate = facet.Kind == ProductFacetKind.Range && attribute?.Kind == ProductAttributeValueKind.Date,
             Currency = currency,
             CurrencySymbol = facet.AttributeKey == ProductAttributeKeys.Price ? ProductPriceFormatter.GetSymbol(currency) : null,
             ClearUrl = urlFor(state.ClearFacet(facet.Key)),
@@ -1138,7 +1157,9 @@ public sealed class ProductListingService
                 ? []
                 : facet.Ranges is { Count: > 0 }
                     ? facet.Ranges.Select(range => (range.Min, range.Max))
-                    : facetResult?.Min is { } low && facetResult.Max is { } high ? GetRangeBuckets(low, high) : [];
+                    : facetResult?.Min is { } low && facetResult.Max is { } high
+                        ? model.IsDate ? ProductDateNumbers.GetYearBuckets(low, high) : GetRangeBuckets(low, high)
+                        : [];
 
             foreach (var (min, max) in buckets)
             {
@@ -1281,6 +1302,24 @@ public sealed class ProductListingService
 
     private static string FormatRange(ProductFacetViewModel facet, decimal? low, decimal? high)
     {
+        if (facet.IsDate)
+        {
+            if (ProductDateNumbers.IsWholeYear(low, high, out var year))
+            {
+                return year.ToString(CultureInfo.CurrentCulture);
+            }
+
+            string FormatDate(decimal value) => ProductDateNumbers.ToDate(value)?.ToString("d", CultureInfo.CurrentCulture) ?? string.Empty;
+
+            return (low, high) switch
+            {
+                ({ } from, { } to) => $"{FormatDate(from)} – {FormatDate(to)}",
+                ({ } from, null) => $"{FormatDate(from)}+",
+                (null, { } to) => $"≤ {FormatDate(to)}",
+                _ => string.Empty,
+            };
+        }
+
         var format = string.IsNullOrWhiteSpace(facet.NumberFormat) ? "#,0.##" : facet.NumberFormat;
 
         string Format(decimal value) => facet.IsPrice

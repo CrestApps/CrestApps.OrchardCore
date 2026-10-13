@@ -52,6 +52,11 @@ public sealed class ProductListingState
 
     public Dictionary<string, (decimal? Min, decimal? Max)> Ranges { get; private set; } = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Gets the keys of the range filters over dates, whose bounds are written <c>2026-01-15</c> in the address.
+    /// </summary>
+    public HashSet<string> DateKeys { get; private set; } = new(StringComparer.Ordinal);
+
     public string Keyword { get; set; }
 
     public string Sort { get; set; }
@@ -69,9 +74,14 @@ public sealed class ProductListingState
     /// <param name="facets">The listing's facets.</param>
     /// <param name="sortKeys">The listing's sort keys.</param>
     /// <param name="pageSizes">The listing's page sizes.</param>
-    public static ProductListingState Parse(IQueryCollection query, IEnumerable<ProductListingFacet> facets, IEnumerable<string> sortKeys, IEnumerable<int> pageSizes)
+    public static ProductListingState Parse(IQueryCollection query, IEnumerable<ProductListingFacet> facets, IEnumerable<string> sortKeys, IEnumerable<int> pageSizes, IEnumerable<string> dateKeys = null)
     {
         var state = new ProductListingState();
+
+        foreach (var key in dateKeys ?? [])
+        {
+            state.DateKeys.Add(key);
+        }
 
         var keyword = query[KeywordKey].ToString().Trim();
         state.Keyword = keyword.Length > 200 ? keyword[..200] : keyword;
@@ -106,8 +116,9 @@ public sealed class ProductListingState
         {
             if (facet.Kind == ProductFacetKind.Range)
             {
-                var min = ParseNumber(query[facet.Key + MinSuffix]);
-                var max = ParseNumber(query[facet.Key + MaxSuffix]);
+                var isDate = state.DateKeys.Contains(facet.Key);
+                var min = isDate ? ProductDateNumbers.Parse(query[facet.Key + MinSuffix]) : ParseNumber(query[facet.Key + MinSuffix]);
+                var max = isDate ? ProductDateNumbers.Parse(query[facet.Key + MaxSuffix]) : ParseNumber(query[facet.Key + MaxSuffix]);
 
                 if (min.HasValue || max.HasValue)
                 {
@@ -153,6 +164,7 @@ public sealed class ProductListingState
         {
             Values = Values.ToDictionary(pair => pair.Key, pair => pair.Value.ToList(), StringComparer.Ordinal),
             Ranges = new Dictionary<string, (decimal? Min, decimal? Max)>(Ranges, StringComparer.Ordinal),
+            DateKeys = new HashSet<string>(DateKeys, StringComparer.Ordinal),
             Keyword = Keyword,
             Sort = Sort,
             View = View,
@@ -259,14 +271,16 @@ public sealed class ProductListingState
 
         foreach (var (key, range) in Ranges)
         {
+            var isDate = DateKeys.Contains(key);
+
             if (range.Min.HasValue)
             {
-                builder.Add(key + MinSuffix, range.Min.Value.ToString(CultureInfo.InvariantCulture));
+                builder.Add(key + MinSuffix, isDate ? ProductDateNumbers.ToIso(range.Min) : range.Min.Value.ToString(CultureInfo.InvariantCulture));
             }
 
             if (range.Max.HasValue)
             {
-                builder.Add(key + MaxSuffix, range.Max.Value.ToString(CultureInfo.InvariantCulture));
+                builder.Add(key + MaxSuffix, isDate ? ProductDateNumbers.ToIso(range.Max) : range.Max.Value.ToString(CultureInfo.InvariantCulture));
             }
         }
 

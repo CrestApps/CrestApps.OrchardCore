@@ -284,7 +284,12 @@ public sealed class SqlProductSearchService : IProductSearchService
             var number = SortValue(sql, nameof(ProductAttributeIndex.NumberValue));
             var date = SortValue(sql, nameof(ProductAttributeIndex.DateValue));
 
-            order.Append($"CASE WHEN {number} IS NULL AND {date} IS NULL THEN 1 ELSE 0 END, {number}{direction}, {date}{direction}");
+            // Text and terms sort by the name visitors see.
+            var text = $"(SELECT MIN(COALESCE(s.{sql.Column(nameof(ProductAttributeIndex.Label))}, s.{sql.Column(nameof(ProductAttributeIndex.TextValue))})) FROM {sql.Attributes} s " +
+                $"WHERE s.{sql.Column("DocumentId")} = p.{sql.Column("DocumentId")} " +
+                $"AND s.{sql.Column(nameof(ProductAttributeIndex.AttributeKey))} = @sortKey)";
+
+            order.Append($"CASE WHEN {number} IS NULL AND {date} IS NULL AND {text} IS NULL THEN 1 ELSE 0 END, {number}{direction}, {date}{direction}, {text}{direction}");
         }
 
         order.Append($", {tieBreak}");

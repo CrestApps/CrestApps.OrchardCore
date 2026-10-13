@@ -142,6 +142,10 @@ public sealed class ListingStartup : StartupBase
         services.AddScoped<IProductAttributeValueProvider, DateFieldAttributeValueProvider>();
         services.AddScoped<IProductAttributeValueProvider, ContentPickerFieldAttributeValueProvider>();
         services.AddScoped<IProductAttributeValueProvider, TaxonomyFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, TimeFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, LinkFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, RichTextFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, UserPickerFieldAttributeValueProvider>();
 
         services.AddScoped<ProductAttributeCatalog>();
         services.AddScoped<ProductSearchDocumentBuilder>();

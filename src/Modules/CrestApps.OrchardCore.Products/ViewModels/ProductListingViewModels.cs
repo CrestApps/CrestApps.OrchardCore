@@ -148,6 +148,11 @@ public class ProductFacetViewModel
 
     public bool IsPrice { get; set; }
 
+    /// <summary>
+    /// Whether a range filter is over dates. Its bounds are <see cref="ProductDateNumbers"/>.
+    /// </summary>
+    public bool IsDate { get; set; }
+
     public string Currency { get; set; }
 
     /// <summary>
