@@ -104,7 +104,7 @@ Each product can have its own page with its images, price, highlights and action
 
 Add the **Autoroute** part to the type as well, so each product has a readable address.
 
-Whether a product can be bought online, and how its price is shown (shown, *Call for price*, or hidden), are set on the type and on each product; see [Products and currencies](products-and-currencies.md). A product that can be bought shows its buy button, such as a subscription plan's **Sign up**.
+Whether a product can be bought online, and how its price is shown (shown, *Call for price*, or hidden), are set on the type and on each product; see [Products and currencies](products-and-currencies.md). A product that can be bought shows its buy button: a subscription plan's **Sign up**, or **Add to cart** when the Carts feature is on (see [Carts and orders](carts-and-orders.md)).
 
 ## What visitors see
 
