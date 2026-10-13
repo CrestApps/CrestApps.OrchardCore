@@ -66,14 +66,16 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
                 })
                 .ToList();
 
-            var attributes = await _attributeCatalog.GetAttributesAsync(selectedTypes);
+            // Every product type's filters and sorts are offered, grouped by type, and the editor shows the groups of
+            // the types that are ticked; ticking another type needs no save.
+            var attributes = await _attributeCatalog.GetAttributesAsync([]);
             var configured = part.Facets ?? [];
-            var candidates = await _listingService.GetFacetsAsync(new ProductListingPart { ContentTypes = selectedTypes, AutomaticFacets = true }, attributes);
+            var candidates = await _listingService.GetFacetsAsync(new ProductListingPart { AutomaticFacets = true }, attributes);
 
             model.AutomaticFacets = part.AutomaticFacets;
             model.Facets = BuildFacetRows(configured, candidates, attributes);
             model.AutomaticSorts = part.AutomaticSorts;
-            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes));
+            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes), attributes);
             model.DefaultSort = part.DefaultSort;
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
@@ -117,6 +119,13 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         part.ContentTypes = model.SelectedContentTypes?.Where(type => !string.IsNullOrEmpty(type)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
+
+        // A filter or sort on a field of a type that is not listed has nothing to work on.
+        var attributes = await _attributeCatalog.GetAttributesAsync([]);
+        bool Applies(string attributeKey)
+            => part.ContentTypes.Length == 0 ||
+               attributes.FirstOrDefault(attribute => attribute.Key == attributeKey) is not { } attribute ||
+               attribute.ContentTypes.Any(type => part.ContentTypes.Contains(type, StringComparer.Ordinal));
         part.AutomaticFacets = model.AutomaticFacets;
         part.AutomaticSorts = model.AutomaticSorts;
         part.DefaultSort = model.DefaultSort;
@@ -145,7 +154,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         part.DefaultPageSize = sizes.Contains(model.DefaultPageSize) ? model.DefaultPageSize : sizes.FirstOrDefault(24);
 
         var facets = (model.Facets ?? [])
-            .Where(row => row.Enabled && !string.IsNullOrWhiteSpace(row.AttributeKey))
+            .Where(row => row.Enabled && !string.IsNullOrWhiteSpace(row.AttributeKey) && Applies(row.AttributeKey))
             .OrderBy(row => row.Order)
             .Select(row => new ProductListingFacet
             {
@@ -179,7 +188,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         part.Facets = facets;
 
         part.Sorts = (model.Sorts ?? [])
-            .Where(row => row.Enabled && !string.IsNullOrWhiteSpace(row.AttributeKey))
+            .Where(row => row.Enabled && !string.IsNullOrWhiteSpace(row.AttributeKey) && Applies(row.AttributeKey))
             .OrderBy(row => row.Order)
             .Select(row => new ProductListingSort
             {
@@ -234,22 +243,26 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             Display = facet.Display,
             ShowRanges = facet.ShowRanges,
             Order = order,
+            ContentTypes = attribute?.ContentTypes.ToList() ?? [],
         };
     }
 
-    private static List<ProductListingSortRow> BuildSortRows(List<ProductListingSort> configured, IReadOnlyList<ProductListingSort> candidates)
+    private static List<ProductListingSortRow> BuildSortRows(List<ProductListingSort> configured, IReadOnlyList<ProductListingSort> candidates, IReadOnlyList<ProductAttributeDescriptor> attributes)
     {
         var rows = new List<ProductListingSortRow>();
         var order = 0;
 
+        List<string> TypesOf(string attributeKey)
+            => attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
+
         foreach (var sort in configured)
         {
-            rows.Add(new ProductListingSortRow { Enabled = true, Key = sort.Key, Label = sort.Label, AttributeKey = sort.AttributeKey, Descending = sort.Descending, Order = order++ });
+            rows.Add(new ProductListingSortRow { Enabled = true, Key = sort.Key, Label = sort.Label, AttributeKey = sort.AttributeKey, Descending = sort.Descending, Order = order++, ContentTypes = TypesOf(sort.AttributeKey) });
         }
 
         foreach (var candidate in candidates.Where(candidate => configured.All(sort => sort.Key != candidate.Key)))
         {
-            rows.Add(new ProductListingSortRow { Enabled = configured.Count == 0, Key = candidate.Key, Label = candidate.Label, AttributeKey = candidate.AttributeKey, Descending = candidate.Descending, Order = order++ });
+            rows.Add(new ProductListingSortRow { Enabled = configured.Count == 0, Key = candidate.Key, Label = candidate.Label, AttributeKey = candidate.AttributeKey, Descending = candidate.Descending, Order = order++, ContentTypes = TypesOf(candidate.AttributeKey) });
         }
 
         return rows;

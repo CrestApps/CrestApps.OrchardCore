@@ -26,6 +26,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentTypes.Editors;
+using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -59,6 +60,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICatalogEntryHandler<CurrencyEntry>, CurrencyEntryHandler>();
         services.AddPermissionProvider<CurrencyPermissionProvider>();
         services.AddNavigationProvider<CurrencyAdminMenu>();
+
+        // Products under Commerce: the content list narrowed to the product types, kept in a per-tenant cache.
+        services.AddSingleton<ProductContentTypes>();
+        services.AddSingleton<IContentDefinitionEventHandler>(serviceProvider => serviceProvider.GetRequiredService<ProductContentTypes>());
+        services.AddNavigationProvider<ProductsAdminMenu>();
 
         services.AddScoped<IProductSnapshotResolver, DefaultProductSnapshotResolver>();
         services.AddScoped<IPriceResolver, DefaultPriceResolver>();
@@ -134,6 +140,8 @@ public sealed class ListingStartup : StartupBase
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ProductListingResourceManagementOptionsConfiguration>();
 
         services.AddDataMigration<ProductListingMigrations>();
+
+        services.AddNavigationProvider<ProductListingsAdminMenu>();
 
         // Every listing and product page shape can be overridden in Liquid as well as Razor.
         services.Configure<TemplateOptions>(options =>

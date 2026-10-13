@@ -85,6 +85,13 @@ public class ProductListingFacetRow
     public bool ShowRanges { get; set; }
 
     public int Order { get; set; }
+
+    /// <summary>
+    /// The product types whose field the filter works on, or none for a filter every product has, such as the
+    /// price. Used to group the editor's rows; never posted.
+    /// </summary>
+    [BindNever]
+    public IList<string> ContentTypes { get; set; } = [];
 }
 
 public class ProductListingSortRow
@@ -100,4 +107,11 @@ public class ProductListingSortRow
     public bool Descending { get; set; }
 
     public int Order { get; set; }
+
+    /// <summary>
+    /// The product types whose field the sort works on, or none for a sort every product has, such as the price.
+    /// Used to group the editor's rows; never posted.
+    /// </summary>
+    [BindNever]
+    public IList<string> ContentTypes { get; set; } = [];
 }

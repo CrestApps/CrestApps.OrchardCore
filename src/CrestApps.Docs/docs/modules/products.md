@@ -228,11 +228,20 @@ Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are
 
 The price, the content type and whether a product can be bought online are always available as attributes.
 
+### Managing products and listings
+
+The **Commerce** admin menu has two lists:
+
+- **Products** lists every content item whose type carries the Product part, such as goods, listed items and subscription plans, with a filter by type. Its **New** button offers only product types.
+- **Product Listings** lists the listing pages. It appears when the Product Listing feature is enabled.
+
+Both are Orchard Core's content list narrowed to those types. The type names are kept in a per-tenant cache that is refreshed whenever a content type or its parts change.
+
 ### Adding a listing page
 
-Create a **Product Listing** content item. Its editor sets:
+Create a **Product Listing** content item, from **Commerce → Product Listings** or **Content → New**. Its editor sets:
 
-- the product types it lists (every product type when none is selected);
+- the product types it lists (every product type when none is selected). The filters and sorts below are grouped by type: what every product has (the price, the type, whether it can be bought online), then each type's own fields, then fields several types share. A type's groups show while the type is ticked, so a vehicle listing shows the vehicle's filters and not the property's;
 - the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a style (a list, buttons for short values such as sizes, or color swatches drawn from option names that are CSS colors), ready-made ranges such as *≤ $50* above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
 - the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
