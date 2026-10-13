@@ -40,15 +40,27 @@
             }
             else
             {
-                @for (var i = 0; i < Model.ContentTypes.Count; i++)
-                {
-                    var type = Model.ContentTypes[i];
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.SelectedContentTypes)" value="@type.Name" id="@Html.IdFor(m => m.SelectedContentTypes)-@i" checked="@type.Selected" data-product-type />
-                        <label class="form-check-label" for="@Html.IdFor(m => m.SelectedContentTypes)-@i">@type.DisplayName</label>
-                    </div>
-                }
-                <span class="hint">@T["The product types this page lists. Every product type is listed when none is selected. The filters and sorts below follow the types you pick."]</span>
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="@Html.NameFor(m => m.ListEveryType)" value="true" id="@Html.IdFor(m => m.ListEveryType)-every" checked="@Model.ListEveryType" data-product-every-type />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.ListEveryType)-every">@T["Every product type"]</label>
+                    <span class="hint dashed">@T["Product types added later are listed too."]</span>
+                </div>
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" name="@Html.NameFor(m => m.ListEveryType)" value="false" id="@Html.IdFor(m => m.ListEveryType)-some" checked="@(!Model.ListEveryType)" />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.ListEveryType)-some">@T["Only these product types"]</label>
+                </div>
+                <div class="ms-4 mt-1" data-product-type-list>
+                    @for (var i = 0; i < Model.ContentTypes.Count; i++)
+                    {
+                        var type = Model.ContentTypes[i];
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.SelectedContentTypes)" value="@type.Name" id="@Html.IdFor(m => m.SelectedContentTypes)-@i" checked="@type.Selected" data-product-type />
+                            <label class="form-check-label" for="@Html.IdFor(m => m.SelectedContentTypes)-@i">@type.DisplayName</label>
+                        </div>
+                    }
+                    <span asp-validation-for="SelectedContentTypes"></span>
+                </div>
+                <span class="hint">@T["The filters and sorts below follow the product types you pick."]</span>
             }
         </div>
     </div>
@@ -174,8 +186,17 @@
     <div class="ocat-wrapper">
         <label asp-for="DefaultSort" class="ocat-label">@T["Default sort"]</label>
         <div class="ocat-end">
-            <select asp-for="DefaultSort" asp-items="Model.SortOptions" class="form-select">
+            <select asp-for="DefaultSort" class="form-select" data-product-default-sort>
                 <option value="">@T["The first sort"]</option>
+                @foreach (var group in sortGroups)
+                {
+                    <optgroup label="@GroupLabel(group.Key)" data-product-types="@group.Key">
+                        @foreach (var (row, _) in group)
+                        {
+                            <option value="@row.Key" selected="@(string.Equals(row.Key, Model.DefaultSort, StringComparison.Ordinal))">@row.Label</option>
+                        }
+                    </optgroup>
+                }
             </select>
             <span class="hint">@T["The sort visitors see before they pick one."]</span>
         </div>
@@ -229,24 +250,55 @@
 </div>
 
 <script at="Foot">
-    // Shows the filter and sort groups of the product types that are ticked, and every group when none is.
+    // Shows the filters, sorts and default sort options of the product types the listing shows: every type, or
+    // only the ticked ones. What every product has (the price, the type) always shows.
     (function () {
         document.querySelectorAll('[data-product-listing-editor]').forEach(function (editor) {
+            var every = editor.querySelector('[data-product-every-type]');
             var boxes = editor.querySelectorAll('[data-product-type]');
+            var typeList = editor.querySelector('[data-product-type-list]');
+            var defaultSort = editor.querySelector('[data-product-default-sort]');
 
-            function update() {
-                var picked = Array.prototype.filter.call(boxes, function (box) { return box.checked; })
-                    .map(function (box) { return box.value; });
-
-                editor.querySelectorAll('tbody[data-product-types]').forEach(function (group) {
-                    var types = group.getAttribute('data-product-types');
-                    var visible = !types || picked.length === 0 || types.split(',').some(function (type) {
-                        return picked.indexOf(type) >= 0;
-                    });
-
-                    group.hidden = !visible;
+            function shows(types, picked) {
+                return !types || picked === null || types.split(',').some(function (type) {
+                    return picked.indexOf(type) >= 0;
                 });
             }
+
+            function update() {
+                var listEvery = !every || every.checked;
+                var picked = listEvery ? null : Array.prototype.filter.call(boxes, function (box) { return box.checked; })
+                    .map(function (box) { return box.value; });
+
+                if (typeList) {
+                    typeList.querySelectorAll('input').forEach(function (box) {
+                        box.disabled = listEvery;
+                    });
+                }
+
+                editor.querySelectorAll('tbody[data-product-types]').forEach(function (group) {
+                    group.hidden = !shows(group.getAttribute('data-product-types'), picked);
+                });
+
+                if (defaultSort) {
+                    defaultSort.querySelectorAll('optgroup[data-product-types]').forEach(function (group) {
+                        var visible = shows(group.getAttribute('data-product-types'), picked);
+
+                        group.hidden = !visible;
+                        group.disabled = !visible;
+                    });
+
+                    var selected = defaultSort.selectedOptions[0];
+
+                    if (selected && selected.parentElement && selected.parentElement.disabled) {
+                        defaultSort.value = '';
+                    }
+                }
+            }
+
+            editor.querySelectorAll('[name$="ListEveryType"]').forEach(function (radio) {
+                radio.addEventListener('change', update);
+            });
 
             boxes.forEach(function (box) {
                 box.addEventListener('change', update);

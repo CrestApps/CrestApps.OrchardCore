@@ -34,6 +34,12 @@ public static class ProductAttributeKeys
     public const string Published = "Product.Published";
 
     /// <summary>
+    /// A product's place in the order its merchant arranged, such as the position of a subscription plan. A
+    /// smaller number comes first; the "Recommended" sort uses it.
+    /// </summary>
+    public const string Position = "Product.Position";
+
+    /// <summary>
     /// Whether the key names a built-in attribute rather than a field.
     /// </summary>
     /// <param name="key">The attribute key.</param>

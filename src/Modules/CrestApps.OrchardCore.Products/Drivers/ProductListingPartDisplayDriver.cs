@@ -52,11 +52,15 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
 
     public override IDisplayResult Edit(ProductListingPart part, BuildPartEditorContext context)
     {
+        var postedOnlyTheseTypes = PostedOnlyTheseTypes();
+
         return Initialize<ProductListingPartViewModel>(GetEditorShapeType(context), async model =>
         {
             var productTypes = await _attributeCatalog.GetProductTypesAsync();
             var selectedTypes = part.ContentTypes ?? [];
 
+            // A save refused for picking "only these types" with none ticked shows that choice again, not "every type".
+            model.ListEveryType = selectedTypes.Length == 0 && !postedOnlyTheseTypes;
             model.ContentTypes = productTypes
                 .Select(type => new ProductListingTypeOption
                 {
@@ -75,7 +79,8 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.AutomaticFacets = part.AutomaticFacets;
             model.Facets = BuildFacetRows(configured, candidates, attributes);
             model.AutomaticSorts = part.AutomaticSorts;
-            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes), attributes);
+            var positioned = await _listingService.GetPositionedTypesAsync([]);
+            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes, positioned.Count > 0), attributes, positioned);
             model.DefaultSort = part.DefaultSort;
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
@@ -118,7 +123,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        part.ContentTypes = model.SelectedContentTypes?.Where(type => !string.IsNullOrEmpty(type)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
+        part.ContentTypes = model.ListEveryType
+            ? []
+            : model.SelectedContentTypes?.Where(type => !string.IsNullOrEmpty(type)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
+
+        if (!model.ListEveryType && part.ContentTypes.Length == 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedContentTypes), S["Pick at least one product type, or list every product type."]);
+        }
 
         // A filter or sort on a field of a type that is not listed has nothing to work on.
         var attributes = await _attributeCatalog.GetAttributesAsync([]);
@@ -202,6 +214,15 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         return Edit(part, context);
     }
 
+    private bool PostedOnlyTheseTypes()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        return request is not null &&
+            request.HasFormContentType &&
+            string.Equals(request.Form[$"{Prefix}.{nameof(ProductListingPartViewModel.ListEveryType)}"], "false", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static List<ProductListingFacetRow> BuildFacetRows(
         List<ProductListingFacet> configured,
         IReadOnlyList<ProductListingFacet> candidates,
@@ -247,13 +268,20 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         };
     }
 
-    private static List<ProductListingSortRow> BuildSortRows(List<ProductListingSort> configured, IReadOnlyList<ProductListingSort> candidates, IReadOnlyList<ProductAttributeDescriptor> attributes)
+    private static List<ProductListingSortRow> BuildSortRows(
+        List<ProductListingSort> configured,
+        IReadOnlyList<ProductListingSort> candidates,
+        IReadOnlyList<ProductAttributeDescriptor> attributes,
+        IReadOnlyList<string> positionedTypes)
     {
         var rows = new List<ProductListingSortRow>();
         var order = 0;
 
+        // The "Recommended" sort belongs with the types that carry a position.
         List<string> TypesOf(string attributeKey)
-            => attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
+            => attributeKey == ProductAttributeKeys.Position
+                ? positionedTypes.ToList()
+                : attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
 
         foreach (var sort in configured)
         {

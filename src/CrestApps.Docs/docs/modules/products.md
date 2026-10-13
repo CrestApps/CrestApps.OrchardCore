@@ -212,7 +212,7 @@ The **Product Listing** feature lists products on the front end. Visitors can fi
 
 ### Choosing what visitors can filter on
 
-Product attributes are ordinary content fields on the product type. Each field's settings gain a **Product listing** section:
+Product attributes are ordinary content fields on the product type. The settings of a field on a product type's part gain a **Product listing** section:
 
 | Setting | Effect |
 | --- | --- |
@@ -225,6 +225,8 @@ Product attributes are ordinary content fields on the product type. Each field's
 | **Number format** and **Unit** | For number fields: a .NET format string, such as `0` for a year, and a unit, such as `mi`. |
 
 Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are supported. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter. Terms appear in URLs by a readable slug made from their name, such as `?make=toyota&model=camry`, and a link that still uses a term's identifier keeps working.
+
+The section appears only for fields whose part is attached to a type with the Product part, so the fields of articles, pages and other content are left alone. A part used by several types qualifies when any of them is a product type.
 
 The price, the content type and whether a product can be bought online are always available as attributes.
 
@@ -241,7 +243,7 @@ Both are Orchard Core's content list narrowed to those types. The type names are
 
 Create a **Product Listing** content item, from **Commerce → Product Listings** or **Content → New**. Its editor sets:
 
-- the product types it lists (every product type when none is selected). The filters and sorts below are grouped by type: what every product has (the price, the type, whether it can be bought online), then each type's own fields, then fields several types share. A type's groups show while the type is ticked, so a vehicle listing shows the vehicle's filters and not the property's;
+- the product types it lists: **Every product type**, which also lists types added later, or **Only these product types** with at least one ticked. The filters, the sorts and the default sort's options are grouped by type: what every product has (the price, the type, whether it can be bought online), then each type's own fields, then fields several types share. Only the groups of the listed types show, and saving drops the filters and sorts of types that are not listed, so a vehicle listing shows the vehicle's filters and not the property's;
 - the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a style (a list, buttons for short values such as sizes, or color swatches drawn from option names that are CSS colors), ready-made ranges such as *≤ $50* above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
 - the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
@@ -325,7 +327,9 @@ return Initialize<MyActionViewModel>("MyAction", model => { /* ... */ })
     .Location("ProductAction", "Actions");
 ```
 
-A module can also add to a product's search record by implementing `IProductSearchDocumentContributor`, which Subscriptions uses to give a plan its billing period.
+A module can also add to a product's search record by implementing `IProductSearchDocumentContributor`, which Subscriptions uses to give a plan its billing period and its position.
+
+A product type can have a merchant-chosen order. A module that stores a position adds it to the search record as the `Product.Position` attribute and implements `IProductPositionProvider` to name the types that have one. A listing of such a type then offers a **Recommended** sort, which orders by the position and puts products without one last. Subscriptions does this with the plan's **Sort** value.
 
 The pages are styled by a small stylesheet whose colors and sizes come from custom properties, which fall back to Bootstrap's own: `--product-accent`, `--product-sale-color`, `--product-success-color`, `--product-border-color`, `--product-muted-color`, `--product-surface`, `--product-surface-alt` and `--product-radius`. Set them on `:root` or on `.product-listing` to restyle the pages without replacing any template.
 

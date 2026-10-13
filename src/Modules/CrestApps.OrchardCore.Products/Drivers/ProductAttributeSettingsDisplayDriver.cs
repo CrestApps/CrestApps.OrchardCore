@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Products.Core.Models;
+using OrchardCore.ContentManagement.Metadata;
 using CrestApps.OrchardCore.Products.ViewModels;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
@@ -8,22 +10,37 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Products.Drivers;
 
 /// <summary>
-/// Adds the "Product listing" settings to every field type a product attribute provider can read.
+/// Adds the "Product listing" settings to the fields of products: fields of a type a product attribute provider
+/// can read, on a part that is attached to at least one content type with the product part.
 /// </summary>
+/// <remarks>
+/// Fields belong to parts, and a part can be attached to several types, so the settings show when any of the
+/// part's types is a product. A field of any other part keeps whatever settings it has; saving it leaves them as
+/// they are.
+/// </remarks>
 public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefinitionDisplayDriver
 {
     private readonly IEnumerable<IProductAttributeValueProvider> _providers;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
 
-    public ProductAttributeSettingsDisplayDriver(IEnumerable<IProductAttributeValueProvider> providers)
+    public ProductAttributeSettingsDisplayDriver(
+        IEnumerable<IProductAttributeValueProvider> providers,
+        IContentDefinitionManager contentDefinitionManager)
     {
         _providers = providers;
+        _contentDefinitionManager = contentDefinitionManager;
     }
 
     public override bool CanHandleModel(ContentPartFieldDefinition model)
         => _providers.Any(provider => provider.CanHandle(model.FieldDefinition.Name));
 
-    public override IDisplayResult Edit(ContentPartFieldDefinition model, BuildEditorContext context)
+    public override async Task<IDisplayResult> EditAsync(ContentPartFieldDefinition model, BuildEditorContext context)
     {
+        if (!await IsProductFieldAsync(model))
+        {
+            return null;
+        }
+
         return Initialize<ProductAttributeSettingsViewModel>("ProductAttributeSettings_Edit", viewModel =>
         {
             var settings = model.GetSettings<ProductAttributeSettings>();
@@ -44,6 +61,11 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
 
     public override async Task<IDisplayResult> UpdateAsync(ContentPartFieldDefinition model, UpdatePartFieldEditorContext context)
     {
+        if (!await IsProductFieldAsync(model))
+        {
+            return null;
+        }
+
         var viewModel = new ProductAttributeSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
@@ -60,6 +82,20 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
             Suffix = viewModel.Suffix?.Trim(),
         });
 
-        return Edit(model, context);
+        return await EditAsync(model, context);
+    }
+
+    private async Task<bool> IsProductFieldAsync(ContentPartFieldDefinition model)
+    {
+        var partName = model.PartDefinition?.Name;
+
+        if (string.IsNullOrEmpty(partName))
+        {
+            return false;
+        }
+
+        return (await _contentDefinitionManager.ListTypeDefinitionsAsync()).Any(type =>
+            type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductPart)) &&
+            type.Parts.Any(part => part.PartDefinition.Name == partName));
     }
 }

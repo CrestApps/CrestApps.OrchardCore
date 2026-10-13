@@ -43,6 +43,7 @@ public sealed class ProductListingService
     private readonly Attributes.TaxonomyTermLookup _termLookup;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly IEnumerable<IProductPositionProvider> _positionProviders;
 
     // Several shapes of one page read the same listing or product, and they render in separate passes (the
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
@@ -70,6 +71,7 @@ public sealed class ProductListingService
         Attributes.TaxonomyTermLookup termLookup,
         IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
+        IEnumerable<IProductPositionProvider> positionProviders,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
         _attributeCatalog = attributeCatalog;
@@ -86,6 +88,7 @@ public sealed class ProductListingService
         _termLookup = termLookup;
         _contentItemDisplayManager = contentItemDisplayManager;
         _updateModelAccessor = updateModelAccessor;
+        _positionProviders = positionProviders;
         S = stringLocalizer;
     }
 
@@ -164,20 +167,30 @@ public sealed class ProductListingService
     /// <summary>
     /// The sorts a listing offers: its configured ones, or the standard ones plus every sortable attribute.
     /// </summary>
-    public IReadOnlyList<ProductListingSort> GetSorts(ProductListingPart part, IReadOnlyList<ProductAttributeDescriptor> attributes)
+    /// <param name="part">The listing.</param>
+    /// <param name="attributes">The attributes of the listed product types.</param>
+    /// <param name="offerRecommended">Whether some listed type carries a position, so the "Recommended" sort comes first.</param>
+    public IReadOnlyList<ProductListingSort> GetSorts(ProductListingPart part, IReadOnlyList<ProductAttributeDescriptor> attributes, bool offerRecommended = false)
     {
         if (!part.AutomaticSorts && part.Sorts is { Count: > 0 })
         {
             return part.Sorts.Where(sort => !string.IsNullOrEmpty(sort.Key)).ToArray();
         }
 
-        var sorts = new List<ProductListingSort>
+        var sorts = new List<ProductListingSort>();
+
+        if (offerRecommended)
+        {
+            sorts.Add(new ProductListingSort { Key = RecommendedSortKey, Label = S["Recommended"], AttributeKey = ProductAttributeKeys.Position });
+        }
+
+        sorts.AddRange(new List<ProductListingSort>
         {
             new() { Key = "newest", Label = S["Newest"], AttributeKey = ProductAttributeKeys.Published, Descending = true },
             new() { Key = "price-asc", Label = S["Price: low to high"], AttributeKey = ProductAttributeKeys.Price },
             new() { Key = "price-desc", Label = S["Price: high to low"], AttributeKey = ProductAttributeKeys.Price, Descending = true },
             new() { Key = "name", Label = S["Name: A to Z"], AttributeKey = ProductAttributeKeys.Title },
-        };
+        });
 
         foreach (var attribute in attributes.Where(attribute =>
             attribute.Settings.Sortable && attribute.Kind is ProductAttributeValueKind.Number or ProductAttributeValueKind.Date))
@@ -189,6 +202,26 @@ public sealed class ProductListingService
         }
 
         return sorts;
+    }
+
+    /// <summary>
+    /// The key of the sort by the order the merchant arranged products in.
+    /// </summary>
+    public const string RecommendedSortKey = "recommended";
+
+    /// <summary>
+    /// The product types, among the given ones, whose products carry a position (every product type when none
+    /// is given).
+    /// </summary>
+    public async Task<IReadOnlyList<string>> GetPositionedTypesAsync(IEnumerable<string> contentTypes)
+    {
+        var requested = contentTypes?.ToArray() ?? [];
+
+        return (await _attributeCatalog.GetProductTypesAsync())
+            .Where(type => requested.Length == 0 || requested.Contains(type.Name, StringComparer.Ordinal))
+            .Where(type => _positionProviders.Any(provider => provider.HasPositions(type)))
+            .Select(type => type.Name)
+            .ToArray();
     }
 
     /// <summary>
@@ -258,7 +291,7 @@ public sealed class ProductListingService
         var types = await GetContentTypesAsync(part, httpContext);
         var attributes = await _attributeCatalog.GetAttributesAsync(types);
         var facets = await GetFacetsAsync(part, attributes);
-        var sorts = GetSorts(part, attributes);
+        var sorts = GetSorts(part, attributes, (await GetPositionedTypesAsync(types)).Count > 0);
         var pageSizes = (part.PageSizes is { Length: > 0 } ? part.PageSizes : [12, 24, 48])
             .Where(size => size is > 0 and <= 200)
             .Distinct()

@@ -147,7 +147,7 @@
             "ContentTypes": [ "MembershipPlan" ],
             "AutomaticFacets": true,
             "AutomaticSorts": true,
-            "DefaultSort": "price-asc",
+            "DefaultSort": "recommended",
             "DefaultView": "Grid",
             "AllowViewSwitching": false,
             "PageSizes": [ 12 ],

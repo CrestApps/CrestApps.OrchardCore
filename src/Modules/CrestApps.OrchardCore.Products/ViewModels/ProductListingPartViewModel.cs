@@ -8,6 +8,11 @@ public class ProductListingPartViewModel
 {
     public string[] SelectedContentTypes { get; set; } = [];
 
+    /// <summary>
+    /// Whether the listing shows every product type, rather than only the ticked ones.
+    /// </summary>
+    public bool ListEveryType { get; set; }
+
     public bool AutomaticFacets { get; set; }
 
     public List<ProductListingFacetRow> Facets { get; set; } = [];

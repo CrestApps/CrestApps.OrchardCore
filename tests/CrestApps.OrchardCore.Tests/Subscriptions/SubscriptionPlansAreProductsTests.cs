@@ -87,6 +87,29 @@ public sealed class SubscriptionPlansAreProductsTests
         Assert.Null(document.BillingInterval);
     }
 
+    [Fact]
+    public async Task Contributor_GivesAPlanItsPosition_ForTheRecommendedSort()
+    {
+        var plan = new ContentItem { ContentType = "Plan", ContentItemId = "plan" };
+        plan.Apply(nameof(SubscriptionPart), new SubscriptionPart { DurationType = DurationType.Month, BillingDuration = 1, Sort = 3 });
+        var document = new ProductSearchDocument { Price = 29m };
+
+        await new SubscriptionProductSearchDocumentContributor().ContributeAsync(plan, document);
+
+        Assert.Contains(document.Attributes, value => value.Key == ProductAttributeKeys.Position && value.Number == 3);
+    }
+
+    [Fact]
+    public async Task Contributor_AddsNoPosition_WhenThePlanHasNoSortValue()
+    {
+        var plan = CreatePlan(DurationType.Month, 1);
+        var document = new ProductSearchDocument { Price = 29m };
+
+        await new SubscriptionProductSearchDocumentContributor().ContributeAsync(plan, document);
+
+        Assert.DoesNotContain(document.Attributes, value => value.Key == ProductAttributeKeys.Position);
+    }
+
     private static ContentTypeDefinitionRecord CreateTypeRecord(string stereotype)
         => new()
         {

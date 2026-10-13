@@ -44,7 +44,7 @@ Set a content type's stereotype to **Subscription** and it gets both **`Subscrip
 | `BillingCycleLimit` | Optional cap on how many cycles are billed before payments stop. |
 | `SubscriptionDayDelay` | Optional number of days to delay the start of the subscription. |
 | `TrialDays` | Optional free trial, in days, before the first cycle is billed. Not the same as a delayed start — see [Free trials](#free-trials). |
-| `Sort` | A position kept with the plan for themes and queries that order plans. The plans listing orders plans by its own sort, by price unless you choose another. |
+| `Sort` | The plan's position. A plans listing's **Recommended** sort orders plans by it, lowest first; plans without one come last. |
 
 Each content item of that type becomes a purchasable plan, editable and securable like any other Orchard Core content.
 
@@ -53,8 +53,8 @@ Each content item of that type becomes a purchasable plan, editable and securabl
 Plans are listed by the [Product Listing](products#product-listing) feature, like any other product. There is no built-in plans page. To publish one:
 
 1. Enable **Product Listing** under **Tools → Features**.
-2. Create a **Product Listing** content item (**Content → New → Product Listing**), give it a title and a permalink such as `plans`, and tick your plan content types under **Products**.
-3. Choose its sort (*Price: low to high* suits plans) and publish it.
+2. Create a **Product Listing** content item (**Commerce → Product Listings** or **Content → New → Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
+3. Choose its default sort and publish it. **Recommended** orders the plans by their `Sort` value; *Price: low to high* is the other common choice.
 
 Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button, or the price chooser when it offers [more than one price](#offering-more-than-one-price). To give each plan a page of its own with the same details, turn on **Show product details on the product page** in the type's Product part settings, and add an **Autoroute** part for a readable address.
 
