@@ -43,6 +43,8 @@ public sealed class SqlProductSearchServiceTests : IAsyncLifetime
                 .Column<string>(nameof(ProductSearchIndex.Sku), column => column.Nullable().WithLength(ProductSearchIndexProvider.MaxTextLength))
                 .Column<decimal?>(nameof(ProductSearchIndex.Price), column => column.Nullable())
                 .Column<bool>(nameof(ProductSearchIndex.IsPurchasable))
+                .Column<bool>(nameof(ProductSearchIndex.Featured), column => column.WithDefault(false))
+                .Column<int?>(nameof(ProductSearchIndex.Position), column => column.Nullable())
                 .Column<DateTime?>(nameof(ProductSearchIndex.PublishedUtc), column => column.Nullable()));
 
             await schema.CreateMapIndexTableAsync<ProductAttributeIndex>(table => table
@@ -209,6 +211,37 @@ public sealed class SqlProductSearchServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task FeaturedFirst_PutsFeaturedProductsFirst_ThenTheNewest()
+    {
+        await MerchandiseAsync(("p2", true, null), ("p5", true, null));
+
+        var result = await SearchAsync(query => query.Sort = new ProductListingSort { Key = "featured", AttributeKey = ProductAttributeKeys.Featured, Descending = true });
+
+        // Featured p5 and p2, newest first, then the rest newest first.
+        Assert.Equal(["p5", "p2", "p6", "p4", "p3", "p1"], result.ContentItemIds);
+    }
+
+    [Fact]
+    public async Task Recommended_OrdersByPosition_ThenFeatured_ThenTheNewest()
+    {
+        await MerchandiseAsync(("p3", false, 2), ("p1", false, 1), ("p4", true, null));
+
+        var result = await SearchAsync(query => query.Sort = new ProductListingSort { Key = "recommended", AttributeKey = ProductAttributeKeys.Position });
+
+        Assert.Equal(["p1", "p3", "p4", "p6", "p5", "p2"], result.ContentItemIds);
+    }
+
+    [Fact]
+    public async Task WithNoSort_FeaturedProductsComeFirst()
+    {
+        await MerchandiseAsync(("p1", true, null));
+
+        var result = await SearchAsync(query => query.Sort = null);
+
+        Assert.Equal("p1", result.ContentItemIds[0]);
+    }
+
+    [Fact]
     public async Task ACulture_ListsItsOwnProducts_AndThoseNotLocalized()
     {
         await using (var session = _store.CreateSession())
@@ -225,6 +258,23 @@ public sealed class SqlProductSearchServiceTests : IAsyncLifetime
         Assert.DoesNotContain("en", french.ContentItemIds);
         Assert.Contains("p1", french.ContentItemIds);
         Assert.Equal(8, everything.Total);
+    }
+
+    private async Task MerchandiseAsync(params (string Id, bool Featured, int? Position)[] products)
+    {
+        await using var session = _store.CreateSession();
+
+        foreach (var (id, featured, position) in products)
+        {
+            var document = await session.Query<ProductSearchDocument, ProductSearchIndex>(index => index.ContentItemId == id).FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+
+            document.Featured = featured;
+            document.Position = position;
+
+            await session.SaveAsync(document, cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task<ProductSearchResult> SearchAsync(Action<ProductSearchQuery> configure)

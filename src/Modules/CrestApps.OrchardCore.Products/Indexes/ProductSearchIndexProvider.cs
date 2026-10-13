@@ -27,6 +27,8 @@ public sealed class ProductSearchIndexProvider : IndexProvider<ProductSearchDocu
                 Sku = Truncate(document.Sku),
                 Price = document.Price,
                 IsPurchasable = document.IsPurchasable,
+                Featured = document.Featured,
+                Position = document.Position,
                 PublishedUtc = document.PublishedUtc,
             });
 

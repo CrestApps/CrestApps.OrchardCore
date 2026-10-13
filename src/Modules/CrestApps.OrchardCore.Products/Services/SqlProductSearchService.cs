@@ -250,12 +250,24 @@ public sealed class SqlProductSearchService : IProductSearchService
             ProductAttributeKeys.Price => $"p.{sql.Column(nameof(ProductSearchIndex.Price))}",
             ProductAttributeKeys.Title => $"p.{sql.Column(nameof(ProductSearchIndex.Title))}",
             ProductAttributeKeys.Published => $"p.{sql.Column(nameof(ProductSearchIndex.PublishedUtc))}",
+            ProductAttributeKeys.Position => $"p.{sql.Column(nameof(ProductSearchIndex.Position))}",
             _ => null,
         };
 
+        var featured = $"p.{sql.Column(nameof(ProductSearchIndex.Featured))}";
+        var published = $"p.{sql.Column(nameof(ProductSearchIndex.PublishedUtc))}";
+
+        // Ties, and a listing with no sort, go to featured products first, then the newest.
+        var tieBreak = $"{featured} DESC, {published} DESC, {documentId} DESC";
+
         if (sort is null || string.IsNullOrEmpty(sort.AttributeKey))
         {
-            return $"p.{sql.Column(nameof(ProductSearchIndex.PublishedUtc))} DESC, {documentId} DESC";
+            return tieBreak;
+        }
+
+        if (sort.AttributeKey == ProductAttributeKeys.Featured)
+        {
+            return sort.Descending ? tieBreak : $"{featured}, {published} DESC, {documentId} DESC";
         }
 
         var order = new StringBuilder();
@@ -275,7 +287,7 @@ public sealed class SqlProductSearchService : IProductSearchService
             order.Append($"CASE WHEN {number} IS NULL AND {date} IS NULL THEN 1 ELSE 0 END, {number}{direction}, {date}{direction}");
         }
 
-        order.Append($", {documentId} DESC");
+        order.Append($", {tieBreak}");
 
         return order.ToString();
     }

@@ -21,5 +21,9 @@ public sealed class ProductSearchIndex : MapIndex
 
     public bool IsPurchasable { get; set; }
 
+    public bool Featured { get; set; }
+
+    public int? Position { get; set; }
+
     public DateTime? PublishedUtc { get; set; }
 }

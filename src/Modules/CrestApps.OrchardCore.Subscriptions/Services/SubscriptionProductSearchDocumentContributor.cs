@@ -13,13 +13,13 @@ namespace CrestApps.OrchardCore.Subscriptions.Services;
 /// </summary>
 /// <remarks>
 /// <list type="bullet">
-/// <item>Its position is the plan's sort value, which the listing's "Recommended" sort orders by.</item>
+/// <item>A plan with no position on its product part keeps the order its stored plan sort gives it.</item>
 /// <item>A plan that sells through the product prices part already carries the interval of its default price;
 /// a plan priced on its product part takes its interval from the subscription part, so its card reads, for
 /// example, "$29 / month".</item>
 /// </list>
 /// </remarks>
-public sealed class SubscriptionProductSearchDocumentContributor : IProductSearchDocumentContributor, IProductPositionProvider
+public sealed class SubscriptionProductSearchDocumentContributor : IProductSearchDocumentContributor
 {
     public Task ContributeAsync(ContentItem contentItem, ProductSearchDocument document)
     {
@@ -28,15 +28,8 @@ public sealed class SubscriptionProductSearchDocumentContributor : IProductSearc
             return Task.CompletedTask;
         }
 
-        if (subscription.Sort.HasValue)
-        {
-            document.Attributes.Add(new ProductAttributeValue
-            {
-                Key = ProductAttributeKeys.Position,
-                Text = subscription.Sort.Value.ToString(CultureInfo.InvariantCulture),
-                Number = subscription.Sort.Value,
-            });
-        }
+        // A plan saved before products had a position keeps the order its plan sort gave it.
+        document.Position ??= subscription.Sort;
 
         if (!document.BillingInterval.HasValue && document.Price.HasValue)
         {
@@ -46,9 +39,6 @@ public sealed class SubscriptionProductSearchDocumentContributor : IProductSearc
 
         return Task.CompletedTask;
     }
-
-    public bool HasPositions(ContentTypeDefinition definition)
-        => definition?.Parts.Any(part => part.PartDefinition.Name == nameof(SubscriptionPart)) == true;
 
     public static BillingInterval ToInterval(DurationType durationType)
         => durationType switch

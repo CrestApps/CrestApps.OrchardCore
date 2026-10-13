@@ -66,3 +66,22 @@
         <span asp-validation-for="Sku"></span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Featured" />
+            <label class="form-check-label" asp-for="Featured">@T["Featured"]</label>
+            <span class="hint dashed">@T["Listings can show featured products first, and offer a Featured filter."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Position">
+    <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+    <div class="ocat-end">
+        <input type="number" step="1" asp-for="Position" class="form-control" />
+        <span class="hint">@T["Where the product appears when a listing sorts by Recommended: lower numbers come first, and products without a position come last."]</span>
+        <span asp-validation-for="Position"></span>
+    </div>
+</div>

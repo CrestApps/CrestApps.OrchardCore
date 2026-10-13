@@ -108,6 +108,22 @@ public sealed class ProductListingMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Adds the merchant's featured flag and position, which the "Featured first" and "Recommended" sorts order by.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .AddColumn<bool>(nameof(ProductSearchIndex.Featured), column => column.WithDefault(false))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .AddColumn<int?>(nameof(ProductSearchIndex.Position), column => column.Nullable())
+        );
+
+        return 3;
+    }
+
     // Mirrors the Autoroute module's settings by name, so the type can be defined without a reference to it.
     private sealed class AutoroutePartSettings
     {

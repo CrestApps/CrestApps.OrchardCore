@@ -85,8 +85,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.Facets = BuildFacetRows(configured, candidates, attributes);
             model.ShowSorting = part.ShowSorting;
             model.AutomaticSorts = part.AutomaticSorts;
-            var positioned = await _listingService.GetPositionedTypesAsync([]);
-            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes, positioned.Count > 0), attributes, positioned);
+            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes), attributes);
             model.DefaultSort = part.DefaultSort;
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
@@ -299,17 +298,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
     private static List<ProductListingSortRow> BuildSortRows(
         List<ProductListingSort> configured,
         IReadOnlyList<ProductListingSort> candidates,
-        IReadOnlyList<ProductAttributeDescriptor> attributes,
-        IReadOnlyList<string> positionedTypes)
+        IReadOnlyList<ProductAttributeDescriptor> attributes)
     {
         var rows = new List<ProductListingSortRow>();
         var order = 0;
 
-        // The "Recommended" sort belongs with the types that carry a position.
+        // Built-in sorts (price, position, featured) apply to every type.
         List<string> TypesOf(string attributeKey)
-            => attributeKey == ProductAttributeKeys.Position
-                ? positionedTypes.ToList()
-                : attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
+            => attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
 
         foreach (var sort in configured)
         {

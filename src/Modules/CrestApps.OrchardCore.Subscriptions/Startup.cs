@@ -66,7 +66,6 @@ public sealed class Startup : StartupBase
         // period and their position, for the "Recommended" sort. It is unused when the feature is off.
         services.AddScoped<SubscriptionProductSearchDocumentContributor>();
         services.AddScoped<IProductSearchDocumentContributor>(serviceProvider => serviceProvider.GetRequiredService<SubscriptionProductSearchDocumentContributor>());
-        services.AddScoped<IProductPositionProvider>(serviceProvider => serviceProvider.GetRequiredService<SubscriptionProductSearchDocumentContributor>());
 
         services.AddDataMigration<SubscriptionSummaryWidgetMigrations>()
             .AddContentPart<SubscriptionSummaryPart>()

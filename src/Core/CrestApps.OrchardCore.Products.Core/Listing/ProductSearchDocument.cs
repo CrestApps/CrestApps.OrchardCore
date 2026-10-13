@@ -85,6 +85,16 @@ public sealed class ProductSearchDocument
     public bool IsPurchasable { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the merchant features the product.
+    /// </summary>
+    public bool Featured { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's place in the order the merchant arranged, or <see langword="null"/> when it has none.
+    /// </summary>
+    public int? Position { get; set; }
+
+    /// <summary>
     /// Gets or sets when the product was first published.
     /// </summary>
     public DateTime? PublishedUtc { get; set; }

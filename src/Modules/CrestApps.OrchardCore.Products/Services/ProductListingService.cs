@@ -46,7 +46,6 @@ public sealed class ProductListingService
     private readonly Attributes.TaxonomyTermLookup _termLookup;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly IEnumerable<IProductPositionProvider> _positionProviders;
     private readonly ProductFacetStyleOptions _facetStyles;
 
     // Several shapes of one page read the same listing or product, and they render in separate passes (the
@@ -75,7 +74,6 @@ public sealed class ProductListingService
         Attributes.TaxonomyTermLookup termLookup,
         IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
-        IEnumerable<IProductPositionProvider> positionProviders,
         IOptions<ProductFacetStyleOptions> facetStyles,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
@@ -93,7 +91,6 @@ public sealed class ProductListingService
         _termLookup = termLookup;
         _contentItemDisplayManager = contentItemDisplayManager;
         _updateModelAccessor = updateModelAccessor;
-        _positionProviders = positionProviders;
         _facetStyles = facetStyles.Value;
         S = stringLocalizer;
     }
@@ -159,6 +156,15 @@ public sealed class ProductListingService
             });
         }
 
+        // Shown only when some product is featured: a toggle with nothing to match has no option.
+        facets.Add(new ProductListingFacet
+        {
+            Key = "featured",
+            AttributeKey = ProductAttributeKeys.Featured,
+            Label = S["Featured"],
+            Kind = ProductFacetKind.Toggle,
+        });
+
         facets.Add(new ProductListingFacet
         {
             Key = "price",
@@ -181,8 +187,7 @@ public sealed class ProductListingService
     /// </summary>
     /// <param name="part">The listing.</param>
     /// <param name="attributes">The attributes of the listed product types.</param>
-    /// <param name="offerRecommended">Whether some listed type carries a position, so the "Recommended" sort comes first.</param>
-    public IReadOnlyList<ProductListingSort> GetSorts(ProductListingPart part, IReadOnlyList<ProductAttributeDescriptor> attributes, bool offerRecommended = false)
+    public IReadOnlyList<ProductListingSort> GetSorts(ProductListingPart part, IReadOnlyList<ProductAttributeDescriptor> attributes)
     {
         if (!part.AutomaticSorts && part.Sorts is { Count: > 0 })
         {
@@ -191,10 +196,9 @@ public sealed class ProductListingService
 
         var sorts = new List<ProductListingSort>();
 
-        if (offerRecommended)
-        {
-            sorts.Add(new ProductListingSort { Key = RecommendedSortKey, Label = S["Recommended"], AttributeKey = ProductAttributeKeys.Position });
-        }
+        // The merchant's own order: their positions, then featured products, then the newest.
+        sorts.Add(new ProductListingSort { Key = RecommendedSortKey, Label = S["Recommended"], AttributeKey = ProductAttributeKeys.Position });
+        sorts.Add(new ProductListingSort { Key = FeaturedSortKey, Label = S["Featured first"], AttributeKey = ProductAttributeKeys.Featured, Descending = true });
 
         sorts.AddRange(new List<ProductListingSort>
         {
@@ -274,19 +278,9 @@ public sealed class ProductListingService
     public const string RecommendedSortKey = "recommended";
 
     /// <summary>
-    /// The product types, among the given ones, whose products carry a position (every product type when none
-    /// is given).
+    /// The key of the sort that shows featured products first.
     /// </summary>
-    public async Task<IReadOnlyList<string>> GetPositionedTypesAsync(IEnumerable<string> contentTypes)
-    {
-        var requested = contentTypes?.ToArray() ?? [];
-
-        return (await _attributeCatalog.GetProductTypesAsync())
-            .Where(type => requested.Length == 0 || requested.Contains(type.Name, StringComparer.Ordinal))
-            .Where(type => _positionProviders.Any(provider => provider.HasPositions(type)))
-            .Select(type => type.Name)
-            .ToArray();
-    }
+    public const string FeaturedSortKey = "featured";
 
     /// <summary>
     /// The product types a listing shows that the current visitor may view.
@@ -355,8 +349,7 @@ public sealed class ProductListingService
         var types = await GetContentTypesAsync(part, httpContext);
         var attributes = await _attributeCatalog.GetAttributesAsync(types);
         var facets = await GetFacetsAsync(part, attributes);
-        var offerRecommended = (await GetPositionedTypesAsync(types)).Count > 0;
-        var sorts = GetSorts(part, attributes, offerRecommended);
+        var sorts = GetSorts(part, attributes);
         var pageSizes = (part.PageSizes is { Length: > 0 } ? part.PageSizes : [12, 24, 48])
             .Where(size => size is > 0 and <= 200)
             .Distinct()
@@ -368,7 +361,7 @@ public sealed class ProductListingService
 
         await MapTermIdsToSlugsAsync(state, facets, attributes);
 
-        var defaultSort = GetDefaultSort(part, sorts, part.ShowSorting ? [] : GetSorts(new ProductListingPart(), attributes, offerRecommended));
+        var defaultSort = GetDefaultSort(part, sorts, part.ShowSorting ? [] : GetSorts(new ProductListingPart(), attributes));
         var sortOption = sorts.FirstOrDefault(sort => sort.Key == state.Sort) ?? defaultSort;
         var defaultPageSize = pageSizes.Contains(part.DefaultPageSize) ? part.DefaultPageSize : pageSizes.FirstOrDefault(24);
         var pageSize = state.PageSize ?? defaultPageSize;

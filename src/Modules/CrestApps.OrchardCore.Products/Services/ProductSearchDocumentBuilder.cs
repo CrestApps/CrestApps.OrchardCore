@@ -77,6 +77,8 @@ public sealed class ProductSearchDocumentBuilder
             BillingDuration = offered?.Kind == PriceKind.Recurring ? Math.Max(1, offered.BillingDuration ?? 1) : null,
             PriceDisplay = priceDisplay,
             IsPurchasable = isPurchasable,
+            Featured = product.Featured,
+            Position = product.Position,
             PublishedUtc = contentItem.PublishedUtc,
             CreatedUtc = contentItem.CreatedUtc,
         };
@@ -92,6 +94,12 @@ public sealed class ProductSearchDocumentBuilder
         {
             Key = ProductAttributeKeys.Purchasable,
             Text = isPurchasable ? "true" : "false",
+        });
+
+        document.Attributes.Add(new ProductAttributeValue
+        {
+            Key = ProductAttributeKeys.Featured,
+            Text = product.Featured ? "true" : "false",
         });
 
         if (shownPrice.HasValue)

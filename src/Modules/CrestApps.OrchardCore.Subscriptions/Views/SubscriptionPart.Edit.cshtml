@@ -56,12 +56,3 @@
         <span asp-validation-for="SubscriptionDayDelay"></span>
     </div>
 </div>
-
-<div class="ocat-wrapper" asp-validation-class-for="Sort">
-    <label asp-for="Sort" class="ocat-label">@T["Position"]</label>
-    <div class="ocat-end">
-        <input type="number" step="1" asp-for="Sort" class="form-control" />
-        <span class="hint">@T["Where the plan appears among your plans when a listing sorts them by Recommended: lower numbers come first, and plans without a position come last."]</span>
-        <span asp-validation-for="Sort"></span>
-    </div>
-</div>
