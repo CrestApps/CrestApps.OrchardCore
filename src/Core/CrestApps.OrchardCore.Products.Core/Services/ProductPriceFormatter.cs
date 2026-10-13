@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 
-namespace CrestApps.OrchardCore.Products.Services;
+namespace CrestApps.OrchardCore.Products.Core.Services;
 
 /// <summary>
 /// Formats a price for a storefront: the currency's own symbol and precision, the visitor's digit grouping,

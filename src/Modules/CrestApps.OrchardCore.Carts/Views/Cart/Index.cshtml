@@ -1,0 +1,15 @@
+@model IShape
+
+@{
+    RenderTitleSegments(T["Cart"]);
+}
+
+<div class="product-breadcrumb">
+    <breadcrumb name="Cart" title="@T["Cart"]" page-title="false">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</div>
+
+<h1 class="mt-2">@T["Cart"]</h1>
+
+@await DisplayAsync(Model)

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Indexes;
 using CrestApps.OrchardCore.Products.Services.Attributes;
 using CrestApps.OrchardCore.Products.ViewModels;
