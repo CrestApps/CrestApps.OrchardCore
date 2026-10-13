@@ -52,19 +52,49 @@ modules; SEO stays with Orchard Core's SEO module.
 
 ### V5. A tidier listing editor
 
-- Each filter and sort row shows its main settings; the rest open in a details row.
-- Rows reorder by dragging, with the order still posted as numbers.
-- Sections become collapsible cards with short summaries.
+- Each filter row shows use, field, label, kind and style; URL key, Shown after, Visible options, Term level,
+  Collapsed and Ranges open under *More settings*, with a one-line summary beside the field name.
+- Rows reorder by dragging their handle (Orchard Core's `Sortable` resource) or with the arrow keys on it, announced
+  to screen readers. Each row still posts its Order number: a move hands the group's own numbers out again, so rows
+  of other groups keep their place between them.
+- Filters and sorts fold to a *Choose filters (4 of 9 in use)* button, and open when the form comes back with an error.
+- The editor script is its own asset, `product-listing-editor.js`.
 
 ### V6. Search providers
 
-- `ProductSearchIndexer` raises an indexing pipeline (`IProductSearchIndexHandler`): the SQL index is one handler,
-  each provider module another, so one product change reaches every enabled index.
-- `CrestApps.OrchardCore.Products.Elasticsearch`, `.AzureAI` and `.Lucene`: each registers a *Product search* index
-  type with Orchard Core Indexing, writes its mapping, maps `ProductSearchDocument` to `DocumentIndex`, and implements
-  `IProductSearchService` with keyword relevance, filters, disjunctive filter counts (aggregations or facets), ranges,
-  sorts and paging.
-- A listing setting (or site setting) picks the index profile; without one the SQL search is used.
+- **One record, every index.** The database record (`ProductSearchDocument`) is built once. `ProductSearchIndexer`
+  raises `IProductSearchIndexHandler` after it writes or removes records, and after a full rebuild. While Orchard Core
+  Indexing is on, the Listing feature adds a handler that writes the same records to every index profile of the
+  `ProductSearch` type, through the provider's keyed `IDocumentIndexManager`. A new, reset or rebuilt index is filled
+  from the records (`IndexProfileHandlerBase.SynchronizedAsync`). When product types or attributes change, each
+  profile is saved again (so a provider that declares fields up front declares the new ones), rebuilt and filled.
+- **Shared fields.** `ProductSearchIndexFields` turns a record into fields every provider writes the same way. Fixed
+  fields: key, type, culture (`neutral` when not localized), title, title for sorting, SKU, keywords, price,
+  featured, position, published date, sequence. Per attribute, under a safe name such as `a_vehicle_year_1a2b3c4d`:
+  values (`_v`, for filters), facet tokens (`_f`, `level|value|label|order`, so counts come back with their labels),
+  numbers (`_n`, for ranges), smallest and largest number (`_sn`, `_nx`) and a sort text (`_st`). Values longer than
+  256 characters are searched but not filtered.
+- **Shared query plan.** `ProductSearchIndexQuery` turns a listing query into index-field filters and the same sort as
+  the database (ties to featured, then newest, then sequence; empty values last). `FiltersExcept(facetKey)` gives a
+  facet its counts without its own selection.
+- **Providers**, each an optional module with a keyed `IProductIndexSearchService`:
+  - `CrestApps.OrchardCore.Products.Elasticsearch`: explicit mapping plus dynamic templates by suffix; one request
+    with a post filter and a filter aggregation per facet; min/max aggregations for ranges.
+  - `CrestApps.OrchardCore.Products.Lucene`: no facet support in Orchard Core's Lucene, so counts come from a
+    collector over `FieldCache` term ordinals, one pass per facet; bounds from the smallest/largest number fields.
+  - `CrestApps.OrchardCore.Products.AzureAI`: fields declared from the attribute catalog; Orchard Core cannot
+    declare a list of numbers, so ranges and bounds read each attribute's smallest and largest number (exact for
+    single-number attributes); a `_has` companion per sortable field keeps empty values last; one request per facet
+    with a selection, top-1 requests for range bounds.
+- **Choosing an index.** Each listing picks *Search index* (the database by default). `ProductSearchRouter` answers
+  from the index, and from the database when the listing names none, the index or provider is gone, or the server
+  fails (logged as a warning).
+- **Keyword behavior differs on purpose**: indexes match the start of words and rank by relevance; the database
+  matches any part of a word.
+- Verified live: Lucene and Elasticsearch give the same products, order, counts and bounds as the database on 15
+  listing URLs (sorts, paging, multi-select, ranges, keyword); publish and unpublish reach the index; a deleted
+  Elasticsearch index falls back to the database; Orchard Core's Rebuild refills the index. Azure AI Search is covered
+  by unit tests of its filters, search text, order and schema only (no service available).
 
 ### V7. Variants
 
