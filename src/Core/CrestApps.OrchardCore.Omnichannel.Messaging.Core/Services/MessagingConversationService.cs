@@ -25,6 +25,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// </summary>
 public sealed class MessagingConversationService : IMessagingConversationService
 {
+    private const int MaxSentMessagesChecked = 20;
+
     private readonly IMessagingConversationStore _conversationStore;
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IContentManager _contentManager;
@@ -268,6 +270,41 @@ public sealed class MessagingConversationService : IMessagingConversationService
             Error = dispatch.Succeeded ? null : message.ErrorCode,
         };
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasSentToAsync(string channel, string contactAddress, CancellationToken cancellationToken = default)
+    {
+        var messagingChannel = _channelResolver.Get(channel);
+
+        if (messagingChannel is null || string.IsNullOrWhiteSpace(contactAddress))
+        {
+            return false;
+        }
+
+        contactAddress = messagingChannel.NormalizeAddress(contactAddress);
+
+        if (string.IsNullOrEmpty(contactAddress))
+        {
+            return false;
+        }
+
+        // Every message is in the omnichannel collection, including an automated conversation's texts that were never
+        // linked to a workspace thread, so they are read by address rather than through the contact's conversation.
+        // The delivery status is not indexed; a failed send is rare, so the latest few are enough to find one that
+        // got through.
+        var messages = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.Channel == messagingChannel.Name && index.CustomerAddress == contactAddress && !index.IsInbound,
+                collection: OmnichannelConstants.CollectionName)
+            .OrderByDescending(index => index.CreatedUtc)
+            .Take(MaxSentMessagesChecked)
+            .ListAsync(cancellationToken);
+
+        return messages.Any(message => !IsUndelivered(message.DeliveryStatus));
+    }
+
+    private static bool IsUndelivered(string deliveryStatus)
+        => string.Equals(deliveryStatus, nameof(MessageDeliveryStatus.Failed), StringComparison.Ordinal) ||
+            string.Equals(deliveryStatus, nameof(MessageDeliveryStatus.Undelivered), StringComparison.Ordinal);
 
     /// <inheritdoc/>
     public async Task<bool> ApplyDeliveryReceiptAsync(MessageDeliveryReceipt receipt, CancellationToken cancellationToken = default)

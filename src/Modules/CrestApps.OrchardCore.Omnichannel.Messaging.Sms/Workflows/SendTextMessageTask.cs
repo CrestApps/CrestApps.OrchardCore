@@ -16,7 +16,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Workflows;
 /// <summary>
 /// A workflow task that sends a text from a chosen number of the business, such as the number an agent texts from that
 /// the Find Agent Numbers task found. The text goes through the messaging workspace, so it is sent by the provider that
-/// owns the number and appears in the customer's conversation, where a reply lands too.
+/// owns the number and appears in the customer's conversation, where a reply lands too. It can be kept to a first
+/// text: with <see cref="OnlyIfNeverTexted"/> on, a customer who was ever texted before is skipped.
 /// </summary>
 public sealed class SendTextMessageTask : TaskActivity<SendTextMessageTask>
 {
@@ -95,9 +96,29 @@ public sealed class SendTextMessageTask : TaskActivity<SendTextMessageTask>
         set => SetProperty(value);
     }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether the text is sent only to a customer who was never texted before, by
+    /// anyone and from any of the business's numbers. A customer who was is skipped, ending in <c>Skipped</c>.
+    /// </summary>
+    public bool OnlyIfNeverTexted
+    {
+        get => GetProperty<bool>();
+        set => SetProperty(value);
+    }
+
     /// <inheritdoc/>
     public override IEnumerable<Outcome> GetPossibleOutcomes(WorkflowExecutionContext workflowContext, ActivityContext activityContext)
     {
+        if (OnlyIfNeverTexted)
+        {
+            return
+            [
+                new Outcome(S["Done"]),
+                new Outcome(S["Skipped"]),
+                new Outcome(S["Failed"]),
+            ];
+        }
+
         return
         [
             new Outcome(S["Done"]),
@@ -117,6 +138,16 @@ public sealed class SendTextMessageTask : TaskActivity<SendTextMessageTask>
             _logger.LogWarning("The Send Text Message task needs a From number, a To number and a message; one of them resolved empty.");
 
             return Outcome("Failed");
+        }
+
+        if (OnlyIfNeverTexted && await _conversationService.HasSentToAsync(OmnichannelConstants.Channels.Sms, to))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("The Send Text Message task skipped {To}, who was texted before.", to.SanitizeLogValue());
+            }
+
+            return Outcome("Skipped");
         }
 
         var agentId = await ResolveAgentIdAsync(await EvaluateAsync(UserName, workflowContext));

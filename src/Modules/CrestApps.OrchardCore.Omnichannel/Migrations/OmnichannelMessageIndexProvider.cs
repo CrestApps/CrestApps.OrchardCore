@@ -42,8 +42,9 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
         );
 
         await CreateProviderMessageIdIndexAsync();
+        await CreateCustomerIndexAsync();
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -85,6 +86,30 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
         await CreateProviderMessageIdIndexAsync();
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds an index on the channel, the customer's address and the direction, so asking whether a customer was ever
+    /// sent a message is one seek rather than a scan of every message the tenant has sent and received.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await CreateCustomerIndexAsync();
+
+        return 4;
+    }
+
+    private Task CreateCustomerIndexAsync()
+    {
+        return SchemaBuilder.AlterIndexTableAsync<OmnichannelMessageIndex>(table => table
+            .CreateIndex("IDX_OmnichannelMessageIndex_Customer",
+                "Channel",
+                "CustomerAddress",
+                "IsInbound",
+                "CreatedUtc"),
+                collection: OmnichannelConstants.CollectionName
+        );
     }
 
     private Task CreateProviderMessageIdIndexAsync()

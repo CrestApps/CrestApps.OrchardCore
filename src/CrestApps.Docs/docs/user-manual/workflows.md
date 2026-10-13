@@ -112,6 +112,8 @@ Every Power, Progressive or Preview call that rings out now sends the text. Use 
 
 The text is sent by the provider that owns the number and lands in the customer's conversation in the [messaging workspace](messaging.md), owned by the agent, so the customer's reply reaches them. Leave **Agent** empty to send a system text instead.
 
+To text a customer only once, however many calls they miss, check **Only text customers we have never texted**. A customer who was texted before, by anyone and from any of your numbers, is then skipped, and the task ends in **Skipped**. A text that failed or was not delivered does not count.
+
 ## Contact Center activities
 
 A task only appears in the **Add Task** list when the feature it needs is on. Every field marked as Liquid can take a value from the event, such as `{{ Workflow.Input.AggregateId }}` for an activity.
@@ -122,7 +124,7 @@ A task only appears in the **Add Task** list when the feature it needs is on. Ev
 | **Place Call or Send Message** | Activity | Done, Already Started, Failed | Contact Center |
 | **Set Agent Presence** | User, Status, Reason | Done, Failed | Contact Center Agents |
 | **Find Agent Numbers** | User name | Done, NotFound | Contact Center and Omnichannel Channel Endpoints |
-| **Send Text Message** | From, To, Message, Agent | Done, Failed | SMS Messaging Channel |
+| **Send Text Message** | From, To, Message, Agent, Only text customers we have never texted | Done, Skipped, Failed | SMS Messaging Channel |
 | **Enqueue Activity** | Activity, Queue, Priority | Done, Failed | Contact Center Work Distribution |
 | **Hand Off to Live Agent** | Activity, Queue, Reason, Summary | Connected, Waiting In Queue, Callback Scheduled, Failed | Contact Center Work Distribution |
 | **Schedule Callback** | Destination, Delay (minutes), Campaign, Queue, Contact | Done, Failed | Contact Center Outbound Dialer |
@@ -135,7 +137,7 @@ The [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#automate
 - **Place Call or Send Message** starts an automated activity right away instead of waiting for the next automatic pass. A Phone activity is dialed; an SMS activity is sent its opening message. It ends in **Already Started** when the activity was already started, so a workflow that fires twice never calls a customer twice.
 - **Set Agent Presence** puts an agent into a status such as a break, with an optional reason. The **Status** list offers *Offline*, *Available*, *Break*, *Requested break*, *Away*, *Do not disturb*, *Meeting*, *Training* and *After-hours unavailable*. It leaves out the reserved, busy and wrap-up states, because the platform sets those itself while an agent is offered or handling work.
 - **Find Agent Numbers** looks up the numbers an agent calls and texts from. See the example above.
-- **Send Text Message** sends a text from one of your SMS numbers. **Agent** is optional: name an agent so the customer's reply reaches them, or leave it empty for a system text.
+- **Send Text Message** sends a text from one of your SMS numbers. **Agent** is optional: name an agent so the customer's reply reaches them, or leave it empty for a system text. Check **Only text customers we have never texted** to skip a customer who was texted before; the task then ends in **Skipped**.
 - **Enqueue Activity** puts an activity on a queue for routing. **Priority** is optional; *Use queue default* keeps the queue's own priority. If the activity or the queue does not exist, the task ends in **Failed**.
 - **Hand Off to Live Agent** moves an automated (AI) conversation to people: a live call is put in a queue and offered to an agent, and a text conversation becomes a queue-owned conversation in the messaging workspace. Leave **Queue** empty to use the hand-off queue of the subject flow. **Reason** is shown to the agent who takes it, and **Summary** gives them the conversation so far. It ends in **Connected** (put straight through), **Waiting In Queue**, or **Callback Scheduled** (for example after hours), so you can handle each case differently. It does nothing to a call a person is already handling.
 - **Schedule Callback** schedules a callback to the **Destination** number. **Delay (minutes)** of 0 makes it due now. **Campaign**, **Queue** and **Contact** are optional.

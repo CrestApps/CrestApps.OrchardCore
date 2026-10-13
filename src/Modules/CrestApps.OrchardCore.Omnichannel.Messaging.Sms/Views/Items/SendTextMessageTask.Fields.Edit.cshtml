@@ -37,3 +37,14 @@
         <span class="hint">@T["Optional. A Liquid expression resolving the user name or identifier of the agent a new conversation belongs to, so the customer's reply reaches them. Leave it empty for a system text."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["First text only"]</span>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="OnlyIfNeverTexted" />
+            <label class="form-check-label" asp-for="OnlyIfNeverTexted">@T["Only text customers we have never texted"]</label>
+            <span class="hint dashed">@T["When checked, a customer who was texted before, by anyone and from any of your numbers, is not texted again and the task ends in Skipped."]</span>
+        </div>
+    </div>
+</div>

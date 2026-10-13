@@ -52,7 +52,7 @@ Each task exposes its identifier fields as Liquid expressions so they can bind t
 | **Place Call or Send Message** | `CrestApps.OrchardCore.ContactCenter` | Starts an automated omnichannel activity immediately, instead of waiting for the periodic automated-activities pass to pick it up. The activity's own channel selects the processor, so the same task places the outbound call for a Phone activity and sends the opening message for an SMS activity. |
 | **Hand Off to Live Agent** | `CrestApps.OrchardCore.ContactCenter.Queues` | Moves an **automated** conversation out of the AI lane and into the human lane: a live call is seated in a queue and offered to an agent, and a text conversation becomes a queue-owned thread in the messaging workspace. Optionally names the queue, a reason, and a summary; when no queue is named, the subject flow's configured handoff queue is used. |
 | **Find Agent Numbers** | `CrestApps.OrchardCore.ContactCenter` and `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Resolves the numbers an agent calls and texts from (the omnichannel address that lists the agent, or else the Contact Center default numbers) and writes them to `Workflow.Output.AgentPhoneNumber` and `Workflow.Output.AgentSmsNumber`. An empty user name returns the default numbers. Takes **NotFound** only when neither number exists. |
-| **Send Text Message** | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | Sends a text from one of the tenant's SMS numbers through the provider that owns it. The text goes through the messaging workspace (`IMessagingConversationService.SendDirectAsync`), so it appears in the customer's conversation. A new conversation it starts belongs to the agent named in **Agent**, so the reply reaches them; without one it is a system text. |
+| **Send Text Message** | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | Sends a text from one of the tenant's SMS numbers through the provider that owns it. The text goes through the messaging workspace (`IMessagingConversationService.SendDirectAsync`), so it appears in the customer's conversation. A new conversation it starts belongs to the agent named in **Agent**, so the reply reaches them; without one it is a system text. With **Only text customers we have never texted** checked, it first asks `IMessagingConversationService.HasSentToAsync` whether the number was ever sent a text that was not failed or undelivered, by anyone and from any of the tenant's numbers, and ends in **Skipped** without sending when it was. |
 
 ### Inputs and outcomes
 
@@ -68,13 +68,14 @@ Text inputs accept Liquid that resolves the identifier or value, so they can bin
 | **Place Call or Send Message** | **Activity** | Done, Already Started, Failed |
 | **Hand Off to Live Agent** | **Activity**, **Queue**, **Reason**, **Summary** (the last three optional) | Connected, Waiting In Queue, Callback Scheduled, Failed |
 | **Find Agent Numbers** | **User name** (optional) | Done, NotFound |
-| **Send Text Message** | **From**, **To**, **Message**, **Agent** (optional) | Done, Failed |
+| **Send Text Message** | **From**, **To**, **Message**, **Agent** (optional), **Only text customers we have never texted** (checkbox) | Done, Skipped (only with the checkbox), Failed |
 
 ### Outcomes beyond Done and Failed
 
-Two of the tasks above report more than a binary result, because the workflow that follows usually needs to say something different in each case:
+Three of the tasks above report more than a binary result, because the workflow that follows usually needs to say something different in each case:
 
 - **Place Call or Send Message** adds **Already Started**. The task only starts an activity that is still `NotStated` or `Scheduled`, mirroring the due-set filter the periodic pass uses. A workflow that fires twice - or that races that pass - takes this outcome instead of placing a second call to a customer who is already on the line.
+- **Send Text Message** adds **Skipped** when **Only text customers we have never texted** is checked and the customer was texted before, so a follow-up after every missed call opens one conversation instead of repeating itself.
 - **Hand Off to Live Agent** replaces *Done* with **Connected**, **Waiting In Queue**, and **Callback Scheduled**, so a caller who was put straight through, one who is holding, and one who was offered a callback after hours can each be handled differently.
 
 ### Handing off is not transferring

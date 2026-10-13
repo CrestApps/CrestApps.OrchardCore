@@ -37,6 +37,7 @@ public sealed class SendTextMessageTaskDisplayDriver : ActivityDisplayDriver<Sen
         model.To = activity.To;
         model.Body = activity.Body;
         model.UserName = activity.UserName;
+        model.OnlyIfNeverTexted = activity.OnlyIfNeverTexted;
     }
 
     /// <inheritdoc/>
@@ -58,6 +59,7 @@ public sealed class SendTextMessageTaskDisplayDriver : ActivityDisplayDriver<Sen
         activity.To = model.To?.Trim();
         activity.Body = model.Body;
         activity.UserName = model.UserName?.Trim();
+        activity.OnlyIfNeverTexted = model.OnlyIfNeverTexted;
 
         return Edit(activity, context);
     }

@@ -33,6 +33,17 @@ public interface IMessagingConversationService
     Task<MessagingSendResult> SendDirectAsync(string channel, string serviceAddress, string contactAddress, string body, string actingAgentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Determines whether a message was ever sent to a contact address on a channel, from any of our addresses and by
+    /// anyone: an agent, a broadcast, a workflow or an automated (AI) conversation. A message that failed or was not
+    /// delivered does not count, since the contact never received it.
+    /// </summary>
+    /// <param name="channel">The channel.</param>
+    /// <param name="contactAddress">The contact's address on the channel.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the contact was sent a message on the channel before.</returns>
+    Task<bool> HasSentToAsync(string channel, string contactAddress, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Applies a provider delivery receipt to the matching outbound message and notifies the workspace.
     /// </summary>
     /// <param name="receipt">The normalized delivery receipt.</param>

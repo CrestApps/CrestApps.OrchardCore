@@ -77,6 +77,90 @@ public sealed class SendTextMessageTaskTests
         Assert.Contains("Failed", result.Outcomes);
     }
 
+    [Fact]
+    public async Task SkipsWithoutSending_WhenOnlyIfNeverTexted_AndTheCustomerWasTextedBefore()
+    {
+        // Arrange
+        // A follow-up after an unanswered call is meant to open a conversation, not to repeat itself every time the
+        // customer misses a call.
+        var conversations = new Mock<IMessagingConversationService>();
+        conversations
+            .Setup(service => service.HasSentToAsync(OmnichannelConstants.Channels.Sms, "+15551112222", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var task = CreateTask(conversations.Object, from: "+15550000002", to: "+15551112222", body: "Hi, is Jane there?", userName: null);
+        task.OnlyIfNeverTexted = true;
+
+        // Act
+        var result = await task.ExecuteAsync(CreateWorkflowContext(), null!);
+
+        // Assert
+        Assert.Contains("Skipped", result.Outcomes);
+        conversations.Verify(
+            service => service.SendDirectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Sends_WhenOnlyIfNeverTexted_AndTheCustomerWasNeverTexted()
+    {
+        // Arrange
+        var conversations = new Mock<IMessagingConversationService>();
+        conversations
+            .Setup(service => service.HasSentToAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        conversations
+            .Setup(service => service.SendDirectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MessagingSendResult { Succeeded = true, Message = new OmnichannelMessage { Id = "message-1" } });
+        var task = CreateTask(conversations.Object, from: "+15550000002", to: "+15551112222", body: "Hi, is Jane there?", userName: null);
+        task.OnlyIfNeverTexted = true;
+
+        // Act
+        var result = await task.ExecuteAsync(CreateWorkflowContext(), null!);
+
+        // Assert
+        Assert.Contains("Done", result.Outcomes);
+        conversations.Verify(
+            service => service.SendDirectAsync(OmnichannelConstants.Channels.Sms, "+15550000002", "+15551112222", "Hi, is Jane there?", null, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task DoesNotLookUpEarlierTexts_WhenOnlyIfNeverTextedIsOff()
+    {
+        // Arrange
+        var conversations = new Mock<IMessagingConversationService>();
+        conversations
+            .Setup(service => service.SendDirectAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new MessagingSendResult { Succeeded = true, Message = new OmnichannelMessage { Id = "message-1" } });
+        var task = CreateTask(conversations.Object, from: "+15550000002", to: "+15551112222", body: "Hello", userName: null);
+
+        // Act
+        var result = await task.ExecuteAsync(CreateWorkflowContext(), null!);
+
+        // Assert
+        Assert.Contains("Done", result.Outcomes);
+        conversations.Verify(
+            service => service.HasSentToAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void OffersSkipped_OnlyWhenOnlyIfNeverTextedIsOn()
+    {
+        // Arrange
+        var task = CreateTask(Mock.Of<IMessagingConversationService>(), from: "+15550000002", to: "+15551112222", body: "Hello", userName: null);
+        var workflow = CreateWorkflowContext();
+
+        // Act
+        var withoutOption = task.GetPossibleOutcomes(workflow, null!).Select(outcome => outcome.Name).ToArray();
+        task.OnlyIfNeverTexted = true;
+        var withOption = task.GetPossibleOutcomes(workflow, null!).Select(outcome => outcome.Name).ToArray();
+
+        // Assert
+        Assert.Equal(["Done", "Failed"], withoutOption);
+        Assert.Equal(["Done", "Skipped", "Failed"], withOption);
+    }
+
     // Each field's expression is its value, so the test reads as the values the task resolved.
     private static SendTextMessageTask CreateTask(IMessagingConversationService conversations, string from, string to, string body, string userName)
     {

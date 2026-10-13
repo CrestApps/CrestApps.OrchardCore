@@ -24,4 +24,9 @@ public class SendTextMessageTaskViewModel
     /// Gets or sets the optional Liquid expression of the agent's user name.
     /// </summary>
     public string UserName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the text is sent only to a customer who was never texted before.
+    /// </summary>
+    public bool OnlyIfNeverTexted { get; set; }
 }
