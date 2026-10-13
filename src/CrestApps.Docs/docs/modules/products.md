@@ -239,6 +239,8 @@ Create a **Product Listing** content item. Its editor sets:
 
 The page is an ordinary content item, so it has its own URL, menu entry and permissions.
 
+A listing lists every kind of product the same way: goods sold online, items that are only listed, and [subscription plans](subscriptions#listing-your-plans), whose types carry the Product part automatically. A product with a recurring price shows its billing period, such as *$29 / month*.
+
 Filtering is done with an ordinary GET form, so a listing works without JavaScript, every state has a URL that can be bookmarked or shared, and the back button works. With JavaScript, filters apply as they change on wide screens and the results update in place. On small screens the filters open in a side panel.
 
 ```text
@@ -257,7 +259,7 @@ Turn on **Show product details on the product page** in the type's Product part 
 - the product's images beside its price, highlights and actions, with thumbnails when it has several images;
 - the specification table after the description.
 
-The images come from the type's first media field that has images. The actions show *Available to buy online* or an inquiry button; the inquiry button's label and link are set on the type, and `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table, and the media field shown as the gallery, are not shown a second time on the page.
+The images come from the type's first media field that has images. The actions show what modules offer to do with the product, such as the **Sign up** button of a subscription plan, or else *Available to buy online* or an inquiry button; the inquiry button's label and link are set on the type, and `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table, and the media field shown as the gallery, are not shown a second time on the page.
 
 ### Breadcrumbs
 
@@ -289,6 +291,7 @@ Every part of a listing page and a product page is a shape, so a theme overrides
 | `ProductSummary` | The images beside the price, highlights and actions | |
 | `ProductGallery` | The images | `ProductGallery-{ContentType}` |
 | `ProductActions` | What a visitor can do with the product | `ProductActions-{ContentType}` |
+| `Content` (display type `ProductAction`) | The actions modules add, on the product's card and page | `Content-{ContentType}.ProductAction` |
 | `ProductSpecifications` | The specification table | |
 
 The listing shapes' model has a `Listing` property with everything the page shows, and the product page shapes' model has a `Product` property. The view models are registered for Liquid, so a template such as this one, saved as `ProductCard` in **Design → Templates**, replaces every product card:
@@ -303,6 +306,17 @@ The listing shapes' model has a `Listing` property with everything the page show
   </div>
 </article>
 ```
+
+### Adding actions from your module
+
+A module adds an action to products, such as a subscribe form or an *Add to cart* button, through the product's `ProductAction` display: its part's display driver places a shape in the **Actions** zone of that display type, and the shape shows on the product's card and on its page.
+
+```csharp
+return Initialize<MyActionViewModel>("MyAction", model => { /* ... */ })
+    .Location("ProductAction", "Actions");
+```
+
+A module can also add to a product's search record by implementing `IProductSearchDocumentContributor`, which Subscriptions uses to give a plan its billing period.
 
 The pages are styled by a small stylesheet whose colors and sizes come from custom properties, which fall back to Bootstrap's own: `--product-accent`, `--product-sale-color`, `--product-success-color`, `--product-border-color`, `--product-muted-color`, `--product-surface`, `--product-surface-alt` and `--product-radius`. Set them on `:root` or on `.product-listing` to restyle the pages without replacing any template.
 

@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using OrchardCore.ContentManagement.Metadata.Records;
@@ -9,10 +10,11 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Subscriptions.Services;
 
 /// <summary>
-/// Automatically injects the <see cref="SubscriptionPart"/> into any content type whose stereotype is
-/// set to <see cref="SubscriptionConstants.Stereotype"/>. The part is marked as system-defined so it
-/// cannot be removed, which means an editor only needs to set the stereotype (and add their own product
-/// part) for the type to participate in subscriptions.
+/// Automatically injects the <see cref="SubscriptionPart"/> and the <see cref="ProductPart"/> into any content type
+/// whose stereotype is set to <see cref="SubscriptionConstants.Stereotype"/>. Both parts are marked as
+/// system-defined so they cannot be removed, which means an editor only needs to set the stereotype for the type to
+/// participate in subscriptions. Because every plan is a product, plans are listed, filtered and shown by the
+/// Product Listing feature like any other product.
 /// </summary>
 public sealed class SubscriptionPartContentTypeDefinitionHandler : IContentDefinitionHandler
 {
@@ -35,15 +37,21 @@ public sealed class SubscriptionPartContentTypeDefinitionHandler : IContentDefin
             return;
         }
 
-        if (context.Record.ContentTypePartDefinitionRecords.Any(x => x.Name.EqualsOrdinalIgnoreCase(nameof(SubscriptionPart))))
+        AddSystemPart(context.Record, nameof(ProductPart));
+        AddSystemPart(context.Record, nameof(SubscriptionPart));
+    }
+
+    private static void AddSystemPart(ContentTypeDefinitionRecord record, string partName)
+    {
+        if (record.ContentTypePartDefinitionRecords.Any(x => x.PartName.EqualsOrdinalIgnoreCase(partName)))
         {
             return;
         }
 
-        context.Record.ContentTypePartDefinitionRecords.Add(new ContentTypePartDefinitionRecord
+        record.ContentTypePartDefinitionRecords.Add(new ContentTypePartDefinitionRecord
         {
-            Name = nameof(SubscriptionPart),
-            PartName = nameof(SubscriptionPart),
+            Name = partName,
+            PartName = partName,
             Settings = new JsonObject
             {
                 [nameof(ContentSettings)] = JObject.FromObject(new ContentSettings

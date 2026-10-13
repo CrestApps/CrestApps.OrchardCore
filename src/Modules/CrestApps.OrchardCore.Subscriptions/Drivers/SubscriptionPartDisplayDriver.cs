@@ -72,6 +72,9 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
                 model.DefaultPrice = offered.FirstOrDefault(candidate => candidate.IsDefault) ?? offered.FirstOrDefault();
             })
             .Location("Summary", "Footer")
+
+            // The product listing shows a product's "ProductAction" display on its card and on its page.
+            .Location("ProductAction", "Actions")
         );
     }
 

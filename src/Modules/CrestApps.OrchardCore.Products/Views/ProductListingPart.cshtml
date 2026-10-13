@@ -21,22 +21,26 @@
 <div class="visually-hidden" aria-live="polite" data-product-listing-status="@id"></div>
 
 <div class="product-listing my-4" data-product-listing="@id" style="--product-image-aspect-ratio: @listing.ImageAspectRatio">
-    <form id="@listing.FormId" method="get" action="@listing.FormAction" data-product-listing-form>
-        @if (listing.AllowViewSwitching)
-        {
-            <input type="hidden" name="view" value="@(listing.View == ProductListingView.List ? "list" : "grid")" data-default="@(listing.DefaultView == ProductListingView.List ? "list" : "grid")" />
-        }
+    @*
+        The filter form holds only the filters. The toolbar's controls join it through their form attribute, and the
+        results stay outside it, so a product card can carry a form of its own, such as a subscribe form.
+    *@
+    <div class="row g-4">
+        <div class="col-lg-3">
+            <form id="@listing.FormId" method="get" action="@listing.FormAction" data-product-listing-form>
+                @if (listing.AllowViewSwitching)
+                {
+                    <input type="hidden" name="view" value="@(listing.View == ProductListingView.List ? "list" : "grid")" data-default="@(listing.DefaultView == ProductListingView.List ? "list" : "grid")" />
+                }
 
-        <div class="row g-4">
-            <div class="col-lg-3">
                 @await DisplayAsync(listing.FiltersShape)
-            </div>
-            <div class="col-lg-9">
-                @await DisplayAsync(listing.ToolbarShape)
-                @await DisplayAsync(listing.ActiveFiltersShape)
-                @await DisplayAsync(listing.ResultsShape)
-                @await DisplayAsync(listing.PagerShape)
-            </div>
+            </form>
         </div>
-    </form>
+        <div class="col-lg-9">
+            @await DisplayAsync(listing.ToolbarShape)
+            @await DisplayAsync(listing.ActiveFiltersShape)
+            @await DisplayAsync(listing.ResultsShape)
+            @await DisplayAsync(listing.PagerShape)
+        </div>
+    </div>
 </div>

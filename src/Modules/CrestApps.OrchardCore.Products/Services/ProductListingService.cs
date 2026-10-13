@@ -13,7 +13,9 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Contents;
+using OrchardCore.ContentManagement.Display;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Media;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -39,6 +41,8 @@ public sealed class ProductListingService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
     private readonly Attributes.TaxonomyTermLookup _termLookup;
+    private readonly IContentItemDisplayManager _contentItemDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     // Several shapes of one page read the same listing or product, and they render in separate passes (the
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
@@ -64,6 +68,8 @@ public sealed class ProductListingService
         IHttpContextAccessor httpContextAccessor,
         ProductSearchDocumentBuilder documentBuilder,
         Attributes.TaxonomyTermLookup termLookup,
+        IContentItemDisplayManager contentItemDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
         _attributeCatalog = attributeCatalog;
@@ -78,6 +84,8 @@ public sealed class ProductListingService
         _httpContextAccessor = httpContextAccessor;
         _documentBuilder = documentBuilder;
         _termLookup = termLookup;
+        _contentItemDisplayManager = contentItemDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         S = stringLocalizer;
     }
 
@@ -597,6 +605,7 @@ public sealed class ProductListingService
 
         model.GalleryShape = await _shapeFactory.CreateAsync<ProductDetailsShapeViewModel>("ProductGallery", section => section.Product = model);
         model.GalleryShape.Metadata.Alternates.Add($"ProductGallery__{SafeAlternate(contentItem.ContentType)}");
+        model.ProductActions = await BuildProductActionsAsync(contentItem);
         model.ActionsShape = await _shapeFactory.CreateAsync<ProductDetailsShapeViewModel>("ProductActions", section => section.Product = model);
         model.ActionsShape.Metadata.Alternates.Add($"ProductActions__{SafeAlternate(contentItem.ContentType)}");
 
@@ -750,6 +759,58 @@ public sealed class ProductListingService
         return fallback;
     }
 
+    /// <summary>
+    /// How often a price is charged: "/ month" for every month, "every 3 months" for a longer period.
+    /// </summary>
+    private string FormatPeriod(BillingInterval? interval, int? duration)
+    {
+        if (interval is null)
+        {
+            return null;
+        }
+
+        var count = Math.Max(1, duration ?? 1);
+
+        return (interval.Value, count) switch
+        {
+            (BillingInterval.Day, 1) => S["/ day"],
+            (BillingInterval.Week, 1) => S["/ week"],
+            (BillingInterval.Month, 1) => S["/ month"],
+            (BillingInterval.Year, 1) => S["/ year"],
+            (BillingInterval.Day, _) => S["every {0} days", count],
+            (BillingInterval.Week, _) => S["every {0} weeks", count],
+            (BillingInterval.Month, _) => S["every {0} months", count],
+            _ => S["every {0} years", count],
+        };
+    }
+
+    /// <summary>
+    /// What modules offer to do with a product: its <c>ProductAction</c> display. A module places a shape in its
+    /// Actions zone the Orchard way, for example <c>.Location("ProductAction", "Actions")</c>, and the shape shows on
+    /// the product's card and page. Subscriptions places its subscribe form there.
+    /// </summary>
+    public async Task<IShape> BuildProductActionsAsync(ContentItem contentItem)
+    {
+        var shape = await _contentItemDisplayManager.BuildDisplayAsync(contentItem, _updateModelAccessor.ModelUpdater, ProductActionDisplayType);
+
+        // A type with a stereotype renders as "{Stereotype}_ProductAction" (Subscription_ProductAction for a plan),
+        // which no theme defines. Every product's actions render through Content_ProductAction instead; a
+        // template for the stereotype still wins through the alternates the display manager added.
+        if (shape is not null && shape.Metadata.Type != ContentProductActionShapeType)
+        {
+            shape.Metadata.Type = ContentProductActionShapeType;
+        }
+
+        return shape;
+    }
+
+    private const string ContentProductActionShapeType = "Content_ProductAction";
+
+    /// <summary>
+    /// The display type a module places its product actions in.
+    /// </summary>
+    public const string ProductActionDisplayType = "ProductAction";
+
     private static string GetAspectRatio(ProductImageAspectRatio ratio)
         => ratio switch
         {
@@ -820,6 +881,7 @@ public sealed class ProductListingService
             }
 
             model.Price = ProductPriceFormatter.Format(document.Price.Value, document.Currency);
+            model.Period = FormatPeriod(document.BillingInterval, document.BillingDuration);
 
             if (document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
             {
@@ -895,6 +957,7 @@ public sealed class ProductListingService
                 : _linkGenerator.GetPathByRouteValues(_httpContextAccessor.HttpContext, routeName: null, metadata.DisplayRouteValues);
 
             var price = await BuildPriceShapeAsync(document, contentItem.ContentType);
+            var actions = await BuildProductActionsAsync(contentItem);
             var shape = await _shapeFactory.CreateAsync<ProductCardViewModel>("ProductCard", card =>
             {
                 card.ContentItem = contentItem;
@@ -909,6 +972,7 @@ public sealed class ProductListingService
                     : null;
                 card.IsPurchasable = document.IsPurchasable;
                 card.ShowAvailability = salesMode == ProductSalesMode.PerItem;
+                card.Actions = actions;
                 card.Chips = BuildSpecifications(document, attributes, settings => settings.ShowOnCard).Select(row => row.Value).ToList();
                 card.Specifications = BuildSpecifications(document, attributes, settings => settings.ShowInSpecifications);
             });

@@ -63,6 +63,17 @@ public sealed class ProductSearchDocument
     public ProductPriceDisplay PriceDisplay { get; set; }
 
     /// <summary>
+    /// Gets or sets how often the price is charged, for a product sold by subscription, or
+    /// <see langword="null"/> for a one-time price.
+    /// </summary>
+    public BillingInterval? BillingInterval { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many intervals one billing period spans, such as 3 for a price charged every 3 months.
+    /// </summary>
+    public int? BillingDuration { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the product can be bought online.
     /// </summary>
     public bool IsPurchasable { get; set; }

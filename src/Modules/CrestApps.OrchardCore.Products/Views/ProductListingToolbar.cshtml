@@ -41,7 +41,7 @@
     {
         <div class="d-flex align-items-center gap-2">
             <label for="@listing.FormId-sort" class="small text-muted text-nowrap mb-0">@T["Sort by"]</label>
-            <select class="form-select form-select-sm w-auto" id="@listing.FormId-sort" name="sort" data-default="@listing.DefaultSort">
+            <select class="form-select form-select-sm w-auto" id="@listing.FormId-sort" name="sort" form="@listing.FormId" data-default="@listing.DefaultSort">
                 @foreach (var sort in listing.Sorts)
                 {
                     <option value="@sort.Key" selected="@sort.Selected">@sort.Label</option>
@@ -53,7 +53,7 @@
     @if (listing.PageSizes.Count > 1)
     {
         <label for="@listing.FormId-size" class="visually-hidden">@T["Items per page"]</label>
-        <select class="form-select form-select-sm w-auto" id="@listing.FormId-size" name="page-size" data-default="@listing.DefaultPageSize">
+        <select class="form-select form-select-sm w-auto" id="@listing.FormId-size" name="page-size" form="@listing.FormId" data-default="@listing.DefaultPageSize">
             @foreach (var size in listing.PageSizes)
             {
                 <option value="@size" selected="@(size == listing.PageSize)">@T["{0} per page", size]</option>
@@ -62,7 +62,7 @@
     }
 
     <noscript>
-        <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Apply"]</button>
+        <button type="submit" class="btn btn-outline-secondary btn-sm" form="@listing.FormId">@T["Apply"]</button>
     </noscript>
 
     @if (listing.AllowViewSwitching)

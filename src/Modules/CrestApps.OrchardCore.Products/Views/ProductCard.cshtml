@@ -49,5 +49,8 @@
                 <span class="product-card-availability"><span class="fa-solid fa-circle-check" aria-hidden="true"></span> @T["Buy online"]</span>
             }
         </div>
+        <div class="product-card-actions">
+            @await DisplayAsync(Model.Actions)
+        </div>
     </div>
 </article>

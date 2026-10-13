@@ -3,22 +3,33 @@
 @model ProductDetailsShapeViewModel
 
 @*
-    What a visitor can do with the product. Purchasing modules extend this shape to add their buttons.
+    What a visitor can do with the product. Modules add their actions, such as a subscribe form, to the product's
+    ProductAction display, rendered here.
 *@
 
 @{
     var product = Model.Product;
+    var actions = await DisplayAsync(product.ProductActions);
+    using var writer = new System.IO.StringWriter();
+    actions?.WriteTo(writer, System.Text.Encodings.Web.HtmlEncoder.Default);
+    var rendered = writer.ToString();
+    var hasActions = !string.IsNullOrWhiteSpace(rendered);
 }
 
 <div class="product-actions" data-product-actions>
-    @if (product.IsPurchasable)
+    @if (hasActions)
+    {
+        @Html.Raw(rendered)
+    }
+    else if (product.IsPurchasable)
     {
         <p class="product-actions-availability text-success mb-0">
             <span class="fa-solid fa-circle-check" aria-hidden="true"></span>
             @T["Available to buy online"]
         </p>
     }
-    else
+
+    @if (!product.IsPurchasable)
     {
         @if (!string.IsNullOrEmpty(product.InquiryLabel) && !string.IsNullOrEmpty(product.InquiryUrl))
         {

@@ -244,6 +244,12 @@ public class ProductCardViewModel
     public IList<string> Chips { get; set; } = [];
 
     public IList<ProductSpecificationViewModel> Specifications { get; set; } = [];
+
+    /// <summary>
+    /// What modules offer to do with the product from its card, such as subscribing: the product's
+    /// <c>ProductAction</c> display.
+    /// </summary>
+    public IShape Actions { get; set; }
 }
 
 public class ProductPriceDisplayViewModel
@@ -257,6 +263,11 @@ public class ProductPriceDisplayViewModel
     public int? DiscountPercent { get; set; }
 
     public string OnRequestLabel { get; set; }
+
+    /// <summary>
+    /// How often the price is charged, such as "/ month", or <see langword="null"/> for a one-time price.
+    /// </summary>
+    public string Period { get; set; }
 }
 
 public class ProductSpecificationViewModel
@@ -325,6 +336,12 @@ public class ProductDetailsViewModel
     public IShape GalleryShape { get; set; }
 
     public IShape ActionsShape { get; set; }
+
+    /// <summary>
+    /// What modules offer to do with the product, such as subscribing: the product's <c>ProductAction</c>
+    /// display, shown inside <see cref="ActionsShape"/>.
+    /// </summary>
+    public IShape ProductActions { get; set; }
 }
 
 /// <summary>

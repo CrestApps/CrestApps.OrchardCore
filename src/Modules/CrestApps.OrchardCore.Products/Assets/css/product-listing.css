@@ -363,6 +363,26 @@
   padding-top: 0.25rem;
 }
 
+.product-listing .product-price-period,
+.product-summary .product-price-period {
+  color: var(--product-muted-color);
+  font-size: 0.875rem;
+}
+
+/* A card is one link through its title's stretched link; its actions sit above that link to stay clickable. */
+.product-listing .product-card-actions {
+  position: relative;
+  z-index: 2;
+}
+
+.product-listing .product-card-actions:empty {
+  display: none;
+}
+
+.product-listing .product-card-actions .product-action-list {
+  padding-top: 0.5rem;
+}
+
 .product-listing .product-card-availability {
   color: var(--product-success-color);
   font-size: 0.8125rem;
