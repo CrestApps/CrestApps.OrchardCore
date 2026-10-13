@@ -152,6 +152,26 @@ public class ProductFacetViewModel
     public int SelectedCount { get; set; }
 
     public string ClearUrl { get; set; }
+
+    public ProductFacetDisplay Display { get; set; }
+
+    /// <summary>
+    /// Ready-made ranges offered above a range filter's inputs, when the filter asks for them.
+    /// </summary>
+    public IList<ProductFacetRangeViewModel> Ranges { get; set; } = [];
+}
+
+public class ProductFacetRangeViewModel
+{
+    public string Label { get; set; }
+
+    public decimal? Min { get; set; }
+
+    public decimal? Max { get; set; }
+
+    public string Url { get; set; }
+
+    public bool Selected { get; set; }
 }
 
 public class ProductFacetOptionViewModel

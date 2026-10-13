@@ -48,10 +48,12 @@
                             <th scope="col">@T["Label"]</th>
                             <th scope="col">@T["URL key"]</th>
                             <th scope="col">@T["Kind"]</th>
+                            <th scope="col">@T["Style"]</th>
                             <th scope="col">@T["Term level"]</th>
                             <th scope="col">@T["Shown after"]</th>
                             <th scope="col">@T["Visible options"]</th>
                             <th scope="col">@T["Collapsed"]</th>
+                            <th scope="col">@T["Ranges"]</th>
                             <th scope="col">@T["Order"]</th>
                         </tr>
                     </thead>
@@ -67,6 +69,7 @@
                                 <td><input class="form-control form-control-sm" asp-for="Facets[i].Label" placeholder="@Model.Facets[i].AttributeLabel" /></td>
                                 <td><input class="form-control form-control-sm" asp-for="Facets[i].Key" /></td>
                                 <td><select class="form-select form-select-sm" asp-for="Facets[i].Kind" asp-items="Model.FacetKinds"></select></td>
+                                <td><select class="form-select form-select-sm" asp-for="Facets[i].Display" asp-items="Model.FacetDisplays" aria-label="@T["How the options are drawn"]"></select></td>
                                 <td>
                                     @if (Model.Facets[i].IsTerm)
                                     {
@@ -76,13 +79,14 @@
                                 <td><input class="form-control form-control-sm" asp-for="Facets[i].DependsOn" placeholder="@T["URL key"]" /></td>
                                 <td><input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].MaxVisible" /></td>
                                 <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].Collapsed" aria-label="@T["Start collapsed"]" /></td>
+                                <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].ShowRanges" aria-label="@T["Offer ready-made ranges"]" /></td>
                                 <td><input type="number" class="form-control form-control-sm" asp-for="Facets[i].Order" /></td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
-            <span class="hint">@T["Term level offers one level of a taxonomy, such as 1 for makes and 2 for models. Shown after hides a filter until the filter with that URL key has a selection."]</span>
+            <span class="hint">@T["Term level offers one level of a taxonomy, such as 1 for makes and 2 for models. Shown after hides a filter until the filter with that URL key has a selection. Style draws checkbox and radio options as a list, buttons (sizes) or color swatches (option names that are CSS colors). Ranges offers ready-made ranges, such as Up to $50, above a range filter."]</span>
         }
     </div>
 </div>

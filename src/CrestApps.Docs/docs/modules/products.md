@@ -224,7 +224,7 @@ Product attributes are ordinary content fields on the product type. Each field's
 | **Listing label** | The label visitors see. Defaults to the field's display name. |
 | **Number format** and **Unit** | For number fields: a .NET format string, such as `0` for a year, and a unit, such as `mi`. |
 
-Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are supported. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter.
+Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are supported. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter. Terms appear in URLs by a readable slug made from their name, such as `?make=toyota&model=camry`, and a link that still uses a term's identifier keeps working.
 
 The price, the content type and whether a product can be bought online are always available as attributes.
 
@@ -233,7 +233,7 @@ The price, the content type and whether a product can be bought online are alway
 Create a **Product Listing** content item. Its editor sets:
 
 - the product types it lists (every product type when none is selected);
-- the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), the number of options shown before *See more*, and whether it starts collapsed;
+- the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a style (a list, buttons for short values such as sizes, or color swatches drawn from option names that are CSS colors), ready-made ranges such as *≤ $50* above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
 - the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
 
@@ -242,7 +242,7 @@ The page is an ordinary content item, so it has its own URL, menu entry and perm
 Filtering is done with an ordinary GET form, so a listing works without JavaScript, every state has a URL that can be bookmarked or shared, and the back button works. With JavaScript, filters apply as they change on wide screens and the results update in place. On small screens the filters open in a side panel.
 
 ```text
-/vehicles?make=<term-id>&year_min=2016&price_max=20000&sort=price-asc&view=list&page=2&page-size=24
+/vehicles?make=toyota&model=camry&year_min=2016&price_max=20000&sort=price-asc&view=list&page=2&page-size=24
 ```
 
 Unknown keys are ignored, the number of values per filter is capped, and page sizes must be one of the configured sizes. `q`, `sort`, `view`, `page` and `page-size` belong to the listing itself, so a filter cannot use them as its URL key.
@@ -278,7 +278,7 @@ Every part of a listing page and a product page is a shape, so a theme overrides
 | `ProductListingBreadcrumb` | The listing's breadcrumb, in the page header | `ProductListingBreadcrumb-{ContentType}` |
 | `ProductListingFilters` | The filters sidebar, an off-canvas panel on small screens | `ProductListingFilters-{ContentType}` |
 | `ProductListingSearch` | The keyword search box | `ProductListingSearch-{ContentType}` |
-| `ProductFacet` | One filter | `ProductFacet-{Kind}` (`Checkbox`, `Radio`, `Range`, `Toggle`), `ProductFacet-{Key}` |
+| `ProductFacet` | One filter | `ProductFacet-{Kind}` (`Checkbox`, `Radio`, `Range`, `Toggle`), `ProductFacet-{Style}` (`Buttons`, `Swatches`), `ProductFacet-{Key}` |
 | `ProductListingToolbar` | The result count, sort, page size and layout switch | `ProductListingToolbar-{ContentType}` |
 | `ProductListingActiveFilters` | The picked filters, each removable | `ProductListingActiveFilters-{ContentType}` |
 | `ProductListingResults` | The products of the page | `ProductListingResults-Grid`, `ProductListingResults-List` |
@@ -308,7 +308,12 @@ The pages are styled by a small stylesheet whose colors and sizes come from cust
 
 ### The search index
 
-Each published product has one search record, with one row per attribute value, kept in the tenant database. Publishing, unpublishing, deleting or importing a product refreshes its record, and the whole index is rebuilt in the background when a product type or a field's listing settings change. No external search service is needed.
+Each published product has one search record, with one row per attribute value, kept in the tenant database. No external search service is needed.
+
+- Publishing, unpublishing, deleting or importing a product refreshes its record.
+- Publishing a taxonomy refreshes the products filed under it, so a renamed term shows its new name and slug.
+- The index is rebuilt in the background when a product type, a field's listing settings or a taxonomy's terms change. Records are replaced product by product, so a listing never shows empty during a rebuild.
+- Search results are kept in memory for a few minutes per tenant and per set of filters, and dropped as soon as a record changes. On a web farm another node can show a result up to five minutes old.
 
 ### Search engines
 
@@ -320,9 +325,10 @@ Search engine tags come from Orchard Core's [SEO](https://docs.orchardcore.net/e
 
 ### Samples
 
-Two recipes show the feature end to end:
+Three recipes show the feature end to end:
 
 - **Product listing: online store sample** creates a *Store Product* type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a **Shop** listing page at `/shop`. The category filter offers the top level of the category tree, and a *Type* filter offers the level below once a category is picked.
+- **Product listing: real estate sample** creates a *Property* type that is listed but never sold online, with a city and neighborhood taxonomy, type, bedrooms, bathrooms, living area, year built, features and status, 20 properties (some with the price on request and an inquiry button that schedules a viewing), and a **Homes for sale** listing page at `/homes`.
 - **Product listing: vehicle dealership sample** creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
 
 ## Recipes and schema

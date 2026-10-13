@@ -29,6 +29,17 @@
     <div class="collapse @(expanded ? "show" : null)" id="@id">
         <fieldset class="product-facet-body">
             <legend class="visually-hidden">@Model.Label</legend>
+            @if (Model.Ranges.Count > 0)
+            {
+                <ul class="product-facet-ranges">
+                    @foreach (var range in Model.Ranges)
+                    {
+                        <li>
+                            <a href="@range.Url" class="@(range.Selected ? "active" : null)" aria-current="@(range.Selected ? "true" : null)" data-product-listing-link>@range.Label</a>
+                        </li>
+                    }
+                </ul>
+            }
             <div class="product-facet-range">
                 <div class="input-group input-group-sm">
                     @if (!string.IsNullOrEmpty(prefix))

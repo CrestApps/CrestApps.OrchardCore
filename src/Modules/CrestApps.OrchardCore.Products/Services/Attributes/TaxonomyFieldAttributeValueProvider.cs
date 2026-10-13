@@ -7,6 +7,10 @@ namespace CrestApps.OrchardCore.Products.Services.Attributes;
 /// Reads a taxonomy field. Each selected term is stored with every one of its ancestors, so picking a parent
 /// term (a make, a department) matches the products filed under any of its children (its models, its aisles).
 /// </summary>
+/// <remarks>
+/// A term is stored by its slug, so listing URLs read <c>?make=toyota&amp;model=camry</c>. Renaming a term
+/// changes its slug; the products that use it are re-indexed when its taxonomy is published.
+/// </remarks>
 public sealed class TaxonomyFieldAttributeValueProvider : IProductAttributeValueProvider
 {
     private readonly TaxonomyTermLookup _terms;
@@ -36,7 +40,7 @@ public sealed class TaxonomyFieldAttributeValueProvider : IProductAttributeValue
                 values.TryAdd(term.ContentItemId, new ProductAttributeValue
                 {
                     Key = context.Key,
-                    Text = term.ContentItemId,
+                    Text = term.Slug ?? term.ContentItemId,
                     Label = term.DisplayText,
                     Level = term.Level,
                     Order = term.Order,

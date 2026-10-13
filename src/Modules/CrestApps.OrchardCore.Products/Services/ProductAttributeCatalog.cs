@@ -84,6 +84,9 @@ public sealed class ProductAttributeCatalog
                     Kind = field.Provider.GetValueKind(field.Field),
                     Settings = settings,
                     Order = attributes.Count,
+                    TaxonomyContentItemId = field.Field.FieldDefinition.Name == "TaxonomyField"
+                        ? Attributes.FieldValueReader.GetSettingString(field.Field, "TaxonomyFieldSettings", "TaxonomyContentItemId")
+                        : null,
                 };
 
                 descriptor.ContentTypes.Add(type.Name);
@@ -150,6 +153,11 @@ public sealed class ProductAttributeDescriptor
     public ProductAttributeSettings Settings { get; set; }
 
     public int Order { get; set; }
+
+    /// <summary>
+    /// The taxonomy a taxonomy field picks its terms from, or <see langword="null"/> for any other field.
+    /// </summary>
+    public string TaxonomyContentItemId { get; set; }
 
     public List<string> ContentTypes { get; } = [];
 }

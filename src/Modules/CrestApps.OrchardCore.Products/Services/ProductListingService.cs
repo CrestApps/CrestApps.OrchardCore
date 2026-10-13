@@ -38,6 +38,7 @@ public sealed class ProductListingService
     private readonly LinkGenerator _linkGenerator;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
+    private readonly Attributes.TaxonomyTermLookup _termLookup;
 
     // Several shapes of one page read the same listing or product, and they render in separate passes (the
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
@@ -62,6 +63,7 @@ public sealed class ProductListingService
         LinkGenerator linkGenerator,
         IHttpContextAccessor httpContextAccessor,
         ProductSearchDocumentBuilder documentBuilder,
+        Attributes.TaxonomyTermLookup termLookup,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
         _attributeCatalog = attributeCatalog;
@@ -75,6 +77,7 @@ public sealed class ProductListingService
         _linkGenerator = linkGenerator;
         _httpContextAccessor = httpContextAccessor;
         _documentBuilder = documentBuilder;
+        _termLookup = termLookup;
         S = stringLocalizer;
     }
 
@@ -256,6 +259,8 @@ public sealed class ProductListingService
 
         var state = ProductListingState.Parse(request.Query, facets, sorts.Select(sort => sort.Key), pageSizes);
 
+        await MapTermIdsToSlugsAsync(state, facets, attributes);
+
         var defaultSort = sorts.FirstOrDefault(sort => sort.Key == part.DefaultSort) ?? (sorts.Count > 0 ? sorts[0] : null);
         var sortOption = sorts.FirstOrDefault(sort => sort.Key == state.Sort) ?? defaultSort;
         var defaultPageSize = pageSizes.Contains(part.DefaultPageSize) ? part.DefaultPageSize : pageSizes.FirstOrDefault(24);
@@ -364,6 +369,12 @@ public sealed class ProductListingService
 
             var shape = await _shapeFactory.CreateAsync<ProductFacetViewModel>("ProductFacet", target => Copy(facetModel, target));
             shape.Metadata.Alternates.Add($"ProductFacet__{facet.Kind}");
+
+            if (facet.Display != ProductFacetDisplay.List && facet.Kind is ProductFacetKind.Checkbox or ProductFacetKind.Radio)
+            {
+                shape.Metadata.Alternates.Add($"ProductFacet__{facet.Display}");
+            }
+
             shape.Metadata.Alternates.Add($"ProductFacet__{SafeAlternate(facet.Key)}");
             model.Facets.Add(shape);
         }
@@ -463,6 +474,36 @@ public sealed class ProductListingService
         return facets
             .Where(facet => facet.AttributeKey == first.AttributeKey && facet.Level.HasValue && facet.Kind != ProductFacetKind.Range)
             .OrderBy(facet => facet.Level);
+    }
+
+    /// <summary>
+    /// Terms are filtered by slug. A link saved before slugs, or built by hand from a term's identifier, still
+    /// works: an identifier is swapped for its term's slug.
+    /// </summary>
+    private async Task MapTermIdsToSlugsAsync(ProductListingState state, IReadOnlyList<ProductListingFacet> facets, IReadOnlyList<ProductAttributeDescriptor> attributes)
+    {
+        foreach (var facet in facets)
+        {
+            if (!state.Values.TryGetValue(facet.Key, out var values))
+            {
+                continue;
+            }
+
+            var taxonomyId = attributes.FirstOrDefault(attribute => attribute.Key == facet.AttributeKey)?.TaxonomyContentItemId;
+
+            if (string.IsNullOrEmpty(taxonomyId) || await _termLookup.GetTermsAsync(taxonomyId) is not { } terms)
+            {
+                continue;
+            }
+
+            for (var i = 0; i < values.Count; i++)
+            {
+                if (terms.TryGetValue(values[i], out var term) && !string.IsNullOrEmpty(term.Slug))
+                {
+                    values[i] = term.Slug;
+                }
+            }
+        }
     }
 
     private async Task BuildSectionShapesAsync(ProductListingViewModel model)
@@ -900,6 +941,7 @@ public sealed class ProductListingService
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
             IsPrice = facet.AttributeKey == ProductAttributeKeys.Price,
+            Display = facet.Display,
             Currency = currency,
             CurrencySymbol = facet.AttributeKey == ProductAttributeKeys.Price ? ProductPriceFormatter.GetSymbol(currency) : null,
             ClearUrl = urlFor(state.ClearFacet(facet.Key)),
@@ -918,6 +960,24 @@ public sealed class ProductListingService
             model.AvailableMax = facetResult?.Max;
             model.NumberFormat = attribute?.Settings.NumberFormat;
             model.Suffix = attribute?.Settings.Suffix;
+
+            if (facet.ShowRanges && facetResult?.Min is { } low && facetResult.Max is { } high)
+            {
+                foreach (var (min, max) in GetRangeBuckets(low, high))
+                {
+                    var target = state.ClearFacet(facet.Key);
+                    target.Ranges[facet.Key] = (min, max);
+
+                    model.Ranges.Add(new ProductFacetRangeViewModel
+                    {
+                        Min = min,
+                        Max = max,
+                        Label = FormatRange(model, min, max),
+                        Url = urlFor(target),
+                        Selected = model.HasSelection && model.SelectedMin == min && model.SelectedMax == max,
+                    });
+                }
+            }
 
             // A range with nothing to range over (no product shows a price) is noise.
             return model.HasSelection || model.AvailableMin.HasValue ? model : null;
@@ -1041,6 +1101,9 @@ public sealed class ProductListingService
     }
 
     private static string FormatRange(ProductFacetViewModel facet)
+        => FormatRange(facet, facet.SelectedMin, facet.SelectedMax);
+
+    private static string FormatRange(ProductFacetViewModel facet, decimal? low, decimal? high)
     {
         var format = string.IsNullOrWhiteSpace(facet.NumberFormat) ? "#,0.##" : facet.NumberFormat;
 
@@ -1050,7 +1113,7 @@ public sealed class ProductListingService
                 ? value.ToString(format, CultureInfo.CurrentCulture)
                 : $"{value.ToString(format, CultureInfo.CurrentCulture)} {facet.Suffix}";
 
-        return (facet.SelectedMin, facet.SelectedMax) switch
+        return (low, high) switch
         {
             ({ } min, { } max) => $"{Format(min)} – {Format(max)}",
             ({ } min, null) => $"{Format(min)}+",
@@ -1081,7 +1144,76 @@ public sealed class ProductListingService
             DependsOn = facet.DependsOn,
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
+            Display = facet.Display,
+            ShowRanges = facet.ShowRanges,
         };
+    }
+
+    /// <summary>
+    /// Splits a range into about four ready-made ranges with round edges: 10.99 to 249 becomes up to 50, 50 to
+    /// 100, 100 to 150, 150 to 200 and 200 and up.
+    /// </summary>
+    /// <returns>Each range's lower and upper edge, either of which may be open.</returns>
+    public static IReadOnlyList<(decimal? Min, decimal? Max)> GetRangeBuckets(decimal min, decimal max, int count = 4)
+    {
+        if (max <= min || count < 2)
+        {
+            return [];
+        }
+
+        var step = GetNiceStep((max - min) / count);
+
+        if (step <= 0)
+        {
+            return [];
+        }
+
+        // A step rounded down can leave too many ranges to read at a glance; take the next round step instead.
+        while ((max - min) / step > count + 1.5m)
+        {
+            step = GetNiceStep(step * 1.01m, roundUp: true);
+        }
+
+        var edges = new List<decimal>();
+
+        for (var edge = (Math.Floor(min / step) + 1) * step; edge < max && edges.Count < 10; edge += step)
+        {
+            edges.Add(edge);
+        }
+
+        if (edges.Count == 0)
+        {
+            return [];
+        }
+
+        var buckets = new List<(decimal? Min, decimal? Max)> { (null, edges[0]) };
+
+        for (var i = 1; i < edges.Count; i++)
+        {
+            buckets.Add((edges[i - 1], edges[i]));
+        }
+
+        buckets.Add((edges[^1], null));
+
+        return buckets;
+    }
+
+    private static decimal GetNiceStep(decimal rough, bool roundUp = false)
+    {
+        if (rough <= 0)
+        {
+            return 0;
+        }
+
+        // The round step nearest the rough one (57.75 becomes 50, 2.25 becomes 2), or the next one up.
+        var candidates = new[] { 1m, 2m, 2.5m, 5m, 10m };
+        var magnitude = (decimal)Math.Pow(10, Math.Floor(Math.Log10((double)rough)));
+        var fraction = rough / magnitude;
+        var nice = roundUp
+            ? candidates.First(candidate => candidate >= fraction)
+            : candidates.MinBy(candidate => Math.Abs(candidate - fraction));
+
+        return nice * magnitude;
     }
 
     private static void Copy(ProductFacetViewModel source, ProductFacetViewModel target)
@@ -1103,6 +1235,8 @@ public sealed class ProductListingService
         target.CurrencySymbol = source.CurrencySymbol;
         target.HasSelection = source.HasSelection;
         target.SelectedCount = source.SelectedCount;
+        target.Display = source.Display;
+        target.Ranges = source.Ranges;
         target.ClearUrl = source.ClearUrl;
     }
 

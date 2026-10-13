@@ -408,6 +408,9 @@ no Checkout, Payments, Carts, Orders or provider project.
 
 ## 6. Delivery slices
 
+**Status (2026-10-12):** C0 to C5 are built, on the branch of PR #834. C6 is scheduled later, as planned. The
+docs video is still to record.
+
 Each slice is mergeable on its own and ends with a build (`-c Release -warnaserror`), its tests, docs and a
 browser pass in TheTheme.
 

@@ -46,4 +46,14 @@ public sealed class ProductListingFacet
     /// Gets or sets how many options are shown before a "See more" link. Every option is shown when it is 0.
     /// </summary>
     public int MaxVisible { get; set; } = 8;
+
+    /// <summary>
+    /// Gets or sets how the options of a checkbox or radio filter are drawn.
+    /// </summary>
+    public ProductFacetDisplay Display { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a range filter offers ready-made ranges, such as "Up to $50", above its inputs.
+    /// </summary>
+    public bool ShowRanges { get; set; }
 }

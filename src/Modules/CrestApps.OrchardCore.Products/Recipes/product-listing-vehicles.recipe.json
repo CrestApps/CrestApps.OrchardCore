@@ -3701,7 +3701,8 @@
                 "Key": "price",
                 "AttributeKey": "Product.Price",
                 "Label": "Price",
-                "Kind": "Range"
+                "Kind": "Range",
+                "ShowRanges": true
               },
               {
                 "Key": "mileage",
@@ -3746,13 +3747,16 @@
                 "AttributeKey": "ExteriorColor",
                 "Label": "Exterior color",
                 "Kind": "Checkbox",
-                "MaxVisible": 5
+                "Display": "Swatches",
+                "MaxVisible": 0
               },
               {
                 "Key": "interior",
                 "AttributeKey": "InteriorColor",
                 "Label": "Interior color",
                 "Kind": "Checkbox",
+                "Display": "Swatches",
+                "MaxVisible": 0,
                 "Collapsed": true
               },
               {

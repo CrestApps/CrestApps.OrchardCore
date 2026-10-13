@@ -41,6 +41,8 @@ public class ProductListingPartViewModel
 
     public List<SelectListItem> ImageAspectRatios { get; set; } = [];
 
+    public List<SelectListItem> FacetDisplays { get; set; } = [];
+
     [BindNever]
     public List<SelectListItem> FacetKinds { get; set; } = [];
 }
@@ -77,6 +79,10 @@ public class ProductListingFacetRow
     public bool Collapsed { get; set; }
 
     public int MaxVisible { get; set; }
+
+    public ProductFacetDisplay Display { get; set; }
+
+    public bool ShowRanges { get; set; }
 
     public int Order { get; set; }
 }

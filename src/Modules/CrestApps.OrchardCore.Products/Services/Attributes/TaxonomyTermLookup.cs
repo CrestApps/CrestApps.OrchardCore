@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using System.Text.Json.Nodes;
 using OrchardCore.ContentManagement;
 
@@ -70,11 +72,74 @@ public sealed class TaxonomyTermLookup
         {
             var order = 0;
             Flatten(roots, null, 1, terms, ref order);
+            AssignSlugs(terms);
         }
 
         _taxonomies[taxonomyContentItemId] = terms;
 
         return terms;
+    }
+
+    /// <summary>
+    /// Gives every term a readable slug for listing URLs, unique within its taxonomy: the slug of its name, or,
+    /// when two terms share a name (Accessories under Men and under Women), its parent's slug and its own.
+    /// </summary>
+    private static void AssignSlugs(Dictionary<string, TaxonomyTerm> terms)
+    {
+        var ordered = terms.Values.OrderBy(term => term.Order).ToArray();
+        var counts = ordered
+            .GroupBy(term => Slugify(term.DisplayText, term.ContentItemId), StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        var used = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var term in ordered)
+        {
+            var slug = Slugify(term.DisplayText, term.ContentItemId);
+
+            if (counts[slug] > 1 && term.ParentId is not null && terms.TryGetValue(term.ParentId, out var parent) && parent.Slug is not null)
+            {
+                slug = parent.Slug + "-" + slug;
+            }
+
+            var candidate = slug;
+
+            for (var suffix = 2; !used.Add(candidate); suffix++)
+            {
+                candidate = slug + "-" + suffix.ToString(CultureInfo.InvariantCulture);
+            }
+
+            terms[term.ContentItemId] = term with { Slug = candidate };
+        }
+    }
+
+    /// <summary>
+    /// Turns a term name into a URL slug: <c>Pickup Trucks</c> becomes <c>pickup-trucks</c> and
+    /// <c>Mercedes-Benz</c> becomes <c>mercedes-benz</c>. Accents are dropped.
+    /// </summary>
+    public static string Slugify(string text, string fallback)
+    {
+        var builder = new StringBuilder();
+
+        foreach (var character in (text ?? string.Empty).Normalize(NormalizationForm.FormD))
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(char.ToLowerInvariant(character));
+            }
+            else if (builder.Length > 0 && builder[^1] != '-')
+            {
+                builder.Append('-');
+            }
+        }
+
+        var slug = builder.ToString().Trim('-');
+
+        return slug.Length == 0 ? fallback : slug;
     }
 
     private static void Flatten(JsonArray items, string parentId, int level, Dictionary<string, TaxonomyTerm> terms, ref int order)
@@ -106,4 +171,10 @@ public sealed class TaxonomyTermLookup
 /// <param name="ParentId">The parent term, or <see langword="null"/> for a top-level term.</param>
 /// <param name="Level">The term's depth: 1 for a top-level term.</param>
 /// <param name="Order">The term's position in a depth-first walk of the taxonomy.</param>
-public sealed record TaxonomyTerm(string ContentItemId, string DisplayText, string ParentId, int Level, int Order);
+public sealed record TaxonomyTerm(string ContentItemId, string DisplayText, string ParentId, int Level, int Order)
+{
+    /// <summary>
+    /// The term's slug in listing URLs, unique within its taxonomy.
+    /// </summary>
+    public string Slug { get; init; }
+}

@@ -3055,21 +3055,24 @@
                 "Key": "price",
                 "AttributeKey": "Product.Price",
                 "Label": "Price",
-                "Kind": "Range"
+                "Kind": "Range",
+                "ShowRanges": true
               },
               {
                 "Key": "color",
                 "AttributeKey": "Color",
                 "Label": "Color",
                 "Kind": "Checkbox",
-                "MaxVisible": 5
+                "Display": "Swatches",
+                "MaxVisible": 0
               },
               {
                 "Key": "size",
                 "AttributeKey": "Sizes",
                 "Label": "Size",
                 "Kind": "Checkbox",
-                "MaxVisible": 6,
+                "Display": "Buttons",
+                "MaxVisible": 0,
                 "Collapsed": true
               },
               {

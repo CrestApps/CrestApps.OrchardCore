@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
@@ -23,22 +24,28 @@ public sealed class ProductSearchIndexer
     private const int BatchSize = 100;
 
     // Bump when the record's shape or the way it is built changes, so every tenant rebuilds once.
-    private const string BuildVersion = "1";
+    private const string BuildVersion = "2";
 
     private readonly ISession _session;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
     private readonly ProductAttributeCatalog _attributeCatalog;
+    private readonly Attributes.TaxonomyTermLookup _termLookup;
+    private readonly ISignal _signal;
     private readonly ILogger _logger;
 
     public ProductSearchIndexer(
         ISession session,
         ProductSearchDocumentBuilder documentBuilder,
         ProductAttributeCatalog attributeCatalog,
+        Attributes.TaxonomyTermLookup termLookup,
+        ISignal signal,
         ILogger<ProductSearchIndexer> logger)
     {
         _session = session;
         _documentBuilder = documentBuilder;
         _attributeCatalog = attributeCatalog;
+        _termLookup = termLookup;
+        _signal = signal;
         _logger = logger;
     }
 
@@ -58,6 +65,9 @@ public sealed class ProductSearchIndexer
         {
             await _session.SaveAsync(document);
         }
+
+        // Cached search results are dropped once the change is committed.
+        _signal.DeferredSignalToken(CachedProductSearchService.SignalKey);
     }
 
     /// <summary>
@@ -74,6 +84,8 @@ public sealed class ProductSearchIndexer
         {
             _session.Delete(document);
         }
+
+        _signal.DeferredSignalToken(CachedProductSearchService.SignalKey);
     }
 
     /// <summary>
@@ -96,12 +108,39 @@ public sealed class ProductSearchIndexer
             }
         }
 
+        // Records hold term names and slugs. Orchard's term editor saves a taxonomy that is not draftable without
+        // raising a content event, so a rename is caught here instead.
+        var taxonomyIds = (await _attributeCatalog.GetAttributesAsync([]))
+            .Select(attribute => attribute.TaxonomyContentItemId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal);
+
+        foreach (var taxonomyId in taxonomyIds)
+        {
+            builder.Append("|taxonomy:").Append(taxonomyId);
+
+            var terms = await _termLookup.GetTermsAsync(taxonomyId);
+
+            if (terms is null)
+            {
+                continue;
+            }
+
+            foreach (var term in terms.Values.OrderBy(term => term.Order))
+            {
+                builder.Append(';').Append(term.ContentItemId).Append('=').Append(term.DisplayText).Append('<').Append(term.ParentId);
+            }
+        }
+
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
     }
 
     /// <summary>
     /// Rebuilds every record. Each batch runs in its own shell scope, so it commits on its own and a large
-    /// catalog never holds one transaction or one identity map for the whole run.
+    /// catalog never holds one transaction or one identity map for the whole run. Records are replaced product by
+    /// product, and only the ones left over are removed at the end, so a listing never shows empty while the
+    /// rebuild runs.
     /// </summary>
     /// <param name="shellHost">The shell host.</param>
     /// <param name="shellSettings">The current tenant.</param>
@@ -109,33 +148,8 @@ public sealed class ProductSearchIndexer
     /// <returns>The number of products indexed.</returns>
     public static async Task<int> RebuildAsync(IShellHost shellHost, ShellSettings shellSettings, CancellationToken cancellationToken)
     {
-        // Remove the old records first, in batches, each in its own scope.
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var removed = 0;
-
-            await (await shellHost.GetScopeAsync(shellSettings)).UsingAsync(async scope =>
-            {
-                var session = scope.ServiceProvider.GetRequiredService<ISession>();
-                var documents = await session.Query<ProductSearchDocument, ProductSearchIndex>()
-                    .OrderBy(index => index.Id)
-                    .Take(BatchSize)
-                    .ListAsync(cancellationToken);
-
-                foreach (var document in documents)
-                {
-                    session.Delete(document);
-                    removed++;
-                }
-            });
-
-            if (removed < BatchSize)
-            {
-                break;
-            }
-        }
-
         var indexed = 0;
+        var current = new HashSet<string>(StringComparer.Ordinal);
         var lastId = 0L;
 
         while (!cancellationToken.IsCancellationRequested)
@@ -162,6 +176,18 @@ public sealed class ProductSearchIndexer
                     .Take(BatchSize)
                     .ListAsync(cancellationToken);
 
+                var ids = items.Select(item => item.ContentItemId).ToArray();
+                var existing = ids.Length == 0
+                    ? []
+                    : await session.Query<ProductSearchDocument, ProductSearchIndex>(index => index.ContentItemId.IsIn(ids)).ListAsync(cancellationToken);
+
+                foreach (var document in existing)
+                {
+                    session.Delete(document);
+                }
+
+                services.GetRequiredService<ISignal>().DeferredSignalToken(CachedProductSearchService.SignalKey);
+
                 foreach (var item in items)
                 {
                     batchCount++;
@@ -172,9 +198,50 @@ public sealed class ProductSearchIndexer
                     if (document is not null)
                     {
                         await session.SaveAsync(document, cancellationToken: cancellationToken);
+                        current.Add(item.ContentItemId);
                         indexed++;
                     }
                 }
+            });
+
+            if (batchCount < BatchSize)
+            {
+                break;
+            }
+        }
+
+        // Remove the records of products that are no longer published or no longer products. Each batch commits
+        // its removals, so the next batch skips only the records that were kept.
+        var kept = 0;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var batchCount = 0;
+
+            await (await shellHost.GetScopeAsync(shellSettings)).UsingAsync(async scope =>
+            {
+                var session = scope.ServiceProvider.GetRequiredService<ISession>();
+                var documents = await session.Query<ProductSearchDocument, ProductSearchIndex>()
+                    .OrderBy(index => index.Id)
+                    .Skip(kept)
+                    .Take(BatchSize)
+                    .ListAsync(cancellationToken);
+
+                foreach (var document in documents)
+                {
+                    batchCount++;
+
+                    if (current.Contains(document.ContentItemId))
+                    {
+                        kept++;
+                    }
+                    else
+                    {
+                        session.Delete(document);
+                    }
+                }
+
+                scope.ServiceProvider.GetRequiredService<ISignal>().DeferredSignalToken(CachedProductSearchService.SignalKey);
             });
 
             if (batchCount < BatchSize)

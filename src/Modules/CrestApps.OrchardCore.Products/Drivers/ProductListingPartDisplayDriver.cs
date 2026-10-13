@@ -78,6 +78,12 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
             model.ImageAspectRatio = part.ImageAspectRatio;
+            model.FacetDisplays =
+            [
+                new SelectListItem(S["List"], nameof(ProductFacetDisplay.List)),
+                new SelectListItem(S["Buttons"], nameof(ProductFacetDisplay.Buttons)),
+                new SelectListItem(S["Color swatches"], nameof(ProductFacetDisplay.Swatches)),
+            ];
             model.ImageAspectRatios =
             [
                 new SelectListItem(S["Landscape (4:3)"], nameof(ProductImageAspectRatio.Landscape)),
@@ -151,6 +157,8 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
                 DependsOn = string.IsNullOrWhiteSpace(row.DependsOn) ? null : ProductListingService.ToUrlKey(row.DependsOn),
                 Collapsed = row.Collapsed,
                 MaxVisible = Math.Max(0, row.MaxVisible),
+                Display = row.Display,
+                ShowRanges = row.ShowRanges,
             })
             .ToList();
 
@@ -223,6 +231,8 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             DependsOn = facet.DependsOn,
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
+            Display = facet.Display,
+            ShowRanges = facet.ShowRanges,
             Order = order,
         };
     }
