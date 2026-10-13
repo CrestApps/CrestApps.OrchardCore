@@ -103,14 +103,20 @@ A restart does not drop callers waiting in a queue. The carrier holds the call a
 - **Agent calls already connected.** The audio runs between the agent's browser and the carrier, not through the application. The soft phone reconnects by itself.
 - **Deadlines.** Ring windows, overflow hops, maximum wait and announcements are rebuilt from SQL when the tenant starts.
 
-**What the node does when it shuts down.** As soon as the host starts to stop, the node stops offering callers to agents, assigning queued work and placing outbound calls. It then waits up to `ShutdownDrainTimeoutSeconds` (default `5`) for that work to finish. Provider webhooks and provider commands keep working until the process exits, so a caller who hangs up is still recorded and a call an agent just accepted is still connected. The readiness probe reports the node as stopping at the same moment, so the load balancer stops sending it traffic.
+**What the node does when it shuts down.** As soon as the host starts to stop:
+
+- The node stops offering callers to agents, assigning queued work and placing outbound calls. It then waits up to `ShutdownDrainTimeoutSeconds` (default `5`) for that work to finish.
+- Each live AI voice call on the node is ended and handed on. A call that can reach a person is told it is being connected and is seated in its handoff queue, where it waits at the carrier like any other caller. A call with nobody to hand to hears a short apology and is ended. The node waits up to ten seconds for these handoffs.
+- The node stops sending new commands to the telephony provider. A command it could not send, such as connecting a call an agent accepted in those last seconds, is left to the provider-command recovery sweep to settle, on another node or on this one once it is back.
+- Provider webhooks are still received until the process exits, so a caller who hangs up is still recorded.
+- The readiness probe reports the node as stopping, so the load balancer stops sending it traffic.
 
 **What the node does when it starts.** It rebuilds the deadlines, then about ten seconds later makes one routing pass. The pass offers waiting callers to free agents, so callers are not left until the next once-a-minute sweep. The ten seconds give the agents' soft phones time to reconnect. A soft phone that reconnects also asks for waiting calls itself.
 
 **What a restart can still cost.**
 
 - **Calls that arrive while the node is down.** The carrier cannot deliver the incoming-call webhook. Set a **Webhook Failover URL** on the Telnyx Call Control application that points at another node or at the load balancer.
-- **Live AI voice calls.** The AI conversation runs inside the process. A process restart ends it, and the caller hears silence until they hang up. A tenant reload without a process restart usually does not end it.
+- **Live AI voice calls when the process is killed.** A graceful stop hands these calls on (see above). A crash, or a stop that gives the process less than the ten seconds it needs, ends the conversation without a handoff, and the caller hears silence until they hang up.
 - **A long outage.** Callers keep hearing hold music but are not routed, and some will hang up.
 
 **Prevention.**

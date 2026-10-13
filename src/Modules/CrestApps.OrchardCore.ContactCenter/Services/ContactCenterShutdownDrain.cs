@@ -17,9 +17,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// started here and not finished here. So routing stops being admitted at once, and the queue it leaves is picked up
 /// by the other nodes, or by this one when it is back, through the same sweeps that recover any restart.
 /// <para>
-/// Only the routing features are closed. Provider webhooks, provider commands and the agents' real-time connection
-/// keep working until the process goes, so a caller who hangs up is still recorded and a connect an agent has just
-/// accepted is still bridged.
+/// Only the routing features are closed. Provider webhooks and the agents' real-time connection keep working until
+/// the process goes, so a caller who hangs up is still recorded. Provider commands are already refused by the
+/// telephony command executor once the host is stopping; one that could not be sent, such as the connect for an
+/// offer accepted in these last seconds, is settled by the provider-command recovery sweep.
 /// </para>
 /// <para>
 /// A tenant singleton, so the registration on the host's stopping token is dropped with the shell when the tenant is
