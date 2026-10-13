@@ -112,12 +112,15 @@ public static class CheckoutTaxContextFactory
         return new TaxableItem
         {
             Id = lineItem.ItemId,
-            Kind = lineItem.Plan is null ? TaxableItemKind.Physical : TaxableItemKind.Service,
+
+            // A line that says what it is (a product's own type and tax codes) is taxed as that; the rest fall
+            // back to the checkout's defaults, which is how every line was taxed before lines could say.
+            Kind = lineItem.TaxableKind ?? (lineItem.Plan is null ? TaxableItemKind.Physical : TaxableItemKind.Service),
             Quantity = lineItem.Quantity,
             UnitPrice = (decimal)lineItem.UnitPrice,
             Currency = currency,
-            TaxCategoryCode = profile.DefaultTaxCategoryCode,
-            TaxClassificationCode = profile.DefaultTaxClassificationCode,
+            TaxCategoryCode = string.IsNullOrEmpty(lineItem.TaxCategoryCode) ? profile.DefaultTaxCategoryCode : lineItem.TaxCategoryCode,
+            TaxClassificationCode = string.IsNullOrEmpty(lineItem.TaxClassificationCode) ? profile.DefaultTaxClassificationCode : lineItem.TaxClassificationCode,
         };
     }
 }

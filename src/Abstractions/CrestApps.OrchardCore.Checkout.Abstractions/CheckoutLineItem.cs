@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Taxation.Models;
 
 namespace CrestApps.OrchardCore.Checkout;
 
@@ -42,6 +43,26 @@ public sealed class CheckoutLineItem
     /// was already decided elsewhere (see <see cref="BillingItem.ExcludeFromTax"/>).
     /// </summary>
     public bool ExcludeFromTax { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stock keeping unit of the product the line is for, when it is for one.
+    /// </summary>
+    public string Sku { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line's own tax category (see <see cref="BillingItem.TaxCategoryCode"/>).
+    /// </summary>
+    public string TaxCategoryCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the line's own tax classification (see <see cref="BillingItem.TaxClassificationCode"/>).
+    /// </summary>
+    public string TaxClassificationCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets what kind of thing the line is for tax purposes (see <see cref="BillingItem.TaxableKind"/>).
+    /// </summary>
+    public TaxableItemKind? TaxableKind { get; set; }
 
     /// <summary>
     /// Returns the line total rounded to the precision of the supplied currency. Rounding at the currency's
