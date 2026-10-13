@@ -52,7 +52,7 @@ You add the **Product** part to the content type that describes what you sell, f
 <AskYourAdmin />
 
 1. Open **Content > Content Definition > Content Types** and edit the content type, or create one.
-2. Click **Add Parts**, tick **Product**, and save. Tick **Product prices** as well if items should offer more than one way to buy them, such as monthly and yearly.
+2. Click **Add Parts**, tick **Product**, and save. Tick **Product prices** as well if items should offer more than one way to buy them, such as monthly and yearly, or **Product variants** if items come in versions such as sizes and colors.
 3. Back on the content type, click **Edit** next to the **Product** part to set its options (below), and save.
 
 ### Product part options
@@ -79,6 +79,8 @@ When you create or edit an item of the type, the **Product** part adds:
 | **SKU** | Optional. A stock-keeping unit that uniquely identifies the product in your own records. |
 | **Sell online** | Only when the type's sales mode is **Per item**. Untick it to list the item without selling it online. |
 | **Price display** | Only when the type lets each product choose. How this item's price is shown, or **Use the content type's setting**. |
+| **Featured** | Marks the product as featured. Listings can filter on it and offer a **Featured first** sort. |
+| **Position** | Optional. The product's place in a listing's **Recommended** sort: lower numbers come first, and products without a position come after those with one. |
 
 An item that cannot be bought online is never sold, whatever a visitor tries: no checkout can be started for it.
 
@@ -107,6 +109,33 @@ The **Product prices** part adds a **Prices** section to the item: the ways the 
 | **Offered from** / **Offered until** | Optional dates and times between which the price is offered. Outside them, buyers do not see it. |
 
 If the item cannot be saved, a message under the price says why, for example *A recurring price needs a billing interval.* or *Only one price can be the default.*
+
+### Sell a product in variants
+
+A product that comes in versions, such as a shirt in three sizes and two colors, is one item with **variants**: one per combination of its options, each with its own SKU, price and image. Buyers choose a variant before adding the product to their cart, and the cart and the order record the variant they chose.
+
+First, give the content type its options:
+
+1. Open **Content > Content Definition > Content Types**, edit the type, click **Add Parts**, and add **Product variants**.
+2. Click **Edit** next to the **Product variants** part.
+3. Under **Options**, enter one option per row, such as *Size* and *Color*. Tick **Filterable** for an option visitors can filter listings by. Save; saving offers empty rows for more options, and clearing a name removes that option.
+
+Then, on each product:
+
+1. Under **Variants**, enter the values of each option, separated by commas, such as *S, M, L*, and save. The product gets one variant per combination, such as *S / Red*.
+2. In the table that appears, fill in each variant you want to differ from the product:
+
+| Field | What it does |
+| --- | --- |
+| **Sold** | Untick it to stop selling a variant without losing it, for example while it is out of stock. |
+| **SKU** | The variant's own SKU. Leave it empty to use the product's. Each variant's SKU must be different. |
+| **Price** | The variant's own price. Leave it empty to sell it at the product's price. |
+| **Compare-at price** | A *was* price for the variant. |
+| **Image** | The path of the variant's image in your media library, such as *products/red-shirt.jpg*. |
+
+When you change the values later, a variant keeps its SKU and prices while its combination stays; combinations you remove are dropped.
+
+In listings, a product whose variants are priced differently shows **From** its lowest price, a filter on an option finds the product when any variant on sale has that value, and keyword search matches the variants' SKUs. On the product's card and page, **Add to cart** offers a **Choose** list of the variants on sale with their prices.
 
 :::tip[Taxes on products]
 To charge tax on a product, add the **Taxation** part to the same content type. See [Taxes](taxes.md).

@@ -44,7 +44,7 @@ Set a content type's stereotype to **Subscription** and it gets both **`Subscrip
 | `BillingCycleLimit` | Optional cap on how many cycles are billed before payments stop. |
 | `SubscriptionDayDelay` | Optional number of days to delay the start of the subscription. |
 | `TrialDays` | Optional free trial, in days, before the first cycle is billed. Not the same as a delayed start — see [Free trials](#free-trials). |
-| `Sort` | The plan's position, edited as **Position** on the plan. A plans listing's **Recommended** sort orders plans by it, lowest first; plans without one come last. |
+| `Sort` | A stored order for the plan. A plan whose **Product** part has no **Position** is placed by it in a listing's **Recommended** sort. |
 
 Each content item of that type becomes a purchasable plan, editable and securable like any other Orchard Core content.
 
@@ -54,7 +54,7 @@ Plans are listed by the [Product Listing](products#product-listing) feature, lik
 
 1. Enable **Product Listing** under **Tools → Features**.
 2. Create a **Product Listing** content item (**Commerce → Product Listings** or **Content → New → Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
-3. Choose its default sort. **Recommended** orders the plans by their `Sort` value; *Price: low to high* is the other common choice.
+3. Choose its default sort. **Recommended** orders the plans by the **Position** on their **Product** part (or their `Sort` value when they have none); *Price: low to high* is the other common choice.
 4. Plans rarely need filters, so untick **Show filters** and **Let visitors change the sort**, then publish it.
 
 Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button, or the price chooser when it offers [more than one price](#offering-more-than-one-price). To give each plan a page of its own with the same details, turn on **Show product details on the product page** in the type's Product part settings, and add an **Autoroute** part for a readable address.

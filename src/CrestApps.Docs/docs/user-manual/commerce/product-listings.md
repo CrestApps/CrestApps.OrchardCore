@@ -29,7 +29,7 @@ Filters come from the fields of your product types: a car's year and mileage, a 
 | Setting | What it does |
 | --- | --- |
 | **Filterable** | Visitors can filter listings by this field. |
-| **Sortable** | Visitors can sort listings by this field. Offered for numbers and dates. |
+| **Sortable** | Visitors can sort listings by this field: numbers, dates and times both ways, and text and taxonomy fields A to Z. |
 | **Searchable** | The listing's keyword search matches this field. |
 | **Show on product cards** | Shows the value as a short chip on the product's card, such as *2019 · 42,000 mi*. |
 | **Show in specifications** | Shows the value in the specification table of the list layout and the product page. |
@@ -38,9 +38,9 @@ Filters come from the fields of your product types: a car's year and mileage, a 
 | **Swatch colors** | Text and taxonomy fields: the color of each value when a filter shows them as color swatches, one per line, such as *Midnight = #191970* or *Sky = light blue*. A value you do not list uses its own name when that is a color, such as *Navy*. |
 | **Color field on terms** | Taxonomy fields: the name of a text field on the taxonomy's terms that holds each term's color, so you set a color once on its term. |
 
-The **Product listing** section appears only on fields of product types. Text, number, yes/no, date, content picker and taxonomy fields can take part. A taxonomy such as *Make and model* can give one filter per level, for example **Make** and then **Model**.
+The **Product listing** section appears only on fields of product types. Text, number, yes/no, date, date and time, time, link, content picker, user picker and taxonomy fields can take part, and HTML and Markdown fields can be searched. A taxonomy such as *Make and model* can give one filter per level, for example **Make** and then **Model**. A date field filters by a range of dates, with ready-made ranges by year.
 
-The price, the product's type and whether it can be bought online are always available to filter and sort by, without any field.
+The price, the product's type, whether it can be bought online and whether it is featured are always available to filter and sort by, without any field. A product type sold in variants can also filter on its options; see [Products and currencies](products-and-currencies.md#sell-a-product-in-variants).
 
 ## Create a listing page
 
@@ -58,27 +58,33 @@ Choose **Every product type**, which also lists types you add later, or **Only t
 
 Untick **Show filters** to list the products without any filters, for example a short list of plans. A listing with no filters and no keyword search has no filters panel, and its products take the full width.
 
-Leave **Offer a filter for every filterable field** ticked to offer one filter per filterable field. Untick it to offer only the filters you tick in the table, in the order you give them. Each row of the table is one filter:
+Leave **Offer a filter for every filterable field** ticked to offer one filter per filterable field. Untick it to offer only the filters you tick, in the order you give them. Click **Choose filters** to open the list; the button shows how many filters are in use. Each row is one filter:
 
-| Column | What it does |
+| Setting | What it does |
 | --- | --- |
-| **Use** | Offers the filter. |
+| **Use** (the tick box) | Offers the filter. |
 | **Label** | The filter's name on the page. Leave it empty to use the field's listing label. |
-| **URL key** | The short name of the filter in the page's address, such as *make* in *?make=toyota*. Each filter needs its own. |
 | **Kind** | What visitors pick: **Checkboxes** (several values), **Radio buttons** (one value), **Range** (a minimum and a maximum) or **Toggle** (yes only). |
 | **Style** | How the options are drawn: a **List** with counts, **Buttons** for short values such as sizes, or **Color swatches**. Only the styles that suit the kind are offered. |
-| **Term level** | Taxonomy fields: which level of the tree the filter offers, *1* for the top level such as makes, *2* for the next such as models. |
+
+The settings you change less often open with the **More settings** button at the end of the row. What you set there is summed up under the field's name, such as *?model= · after make · level 2*.
+
+| Setting | What it does |
+| --- | --- |
+| **URL key** | The short name of the filter in the page's address, such as *make* in *?make=toyota*. Each filter needs its own. |
 | **Shown after** | The URL key of another filter that must have a selection first, so **Model** appears once a **Make** is picked. |
 | **Visible options** | How many options show before a *See more* link. *0* shows them all. |
-| **Collapsed** | Starts the filter folded. |
-| **Ranges** | Range filters: offers ready-made ranges above the minimum and maximum boxes. Leave the box beside it empty for round ranges worked out from your products, such as *up to $50, $50 to $100, ... $200 and up*, or type your own, such as *-25, 25-75, 75+* for up to 25, 25 to 75, and 75 and up. Both ends are included, so *1-2, 3-4, 5+* suits bedrooms. |
-| **Order** | The filter's position. |
+| **Term level** | Taxonomy fields: which level of the tree the filter offers, *1* for the top level such as makes, *2* for the next such as models. |
+| **Start collapsed** | Starts the filter folded. |
+| **Offer ready-made ranges** | Range filters: offers ready-made ranges above the minimum and maximum boxes. Leave the box below it empty for round ranges worked out from your products, such as *up to $50, $50 to $100, ... $200 and up*, or type your own, such as *-25, 25-75, 75+* for up to 25, 25 to 75, and 75 and up. Both ends are included, so *1-2, 3-4, 5+* suits bedrooms. |
+
+To change the order, drag a row by its handle, or focus the handle and press the up and down arrow keys.
 
 ### Sorting
 
 Untick **Let visitors change the sort** to always show the products in the default sort's order.
 
-Leave **Offer the standard sorts and every sortable field** ticked to offer *Newest*, the price both ways, *Name* and each sortable field both ways. Untick it to offer only the sorts you tick. When the listing shows subscription plans, it also offers **Recommended**, which orders plans by their **Sort** value.
+Leave **Offer the standard sorts and every sortable field** ticked to offer **Recommended**, **Featured first**, *Newest*, the price both ways, *Name* and each sortable field. Untick it to offer only the sorts you tick, which you reorder by dragging like filters. **Recommended** orders products by the **Position** you give each product, with products without one after them, and **Featured first** shows products marked **Featured** first. Both are set on each product's **Product** part; see [Products and currencies](products-and-currencies.md). A subscription plan without a position keeps its **Sort** value.
 
 **Default sort** is the order visitors see before they pick one. When visitors cannot change the sort, it can be any sort, even one you did not tick.
 
@@ -90,7 +96,9 @@ Leave **Offer the standard sorts and every sortable field** ticked to offer *New
 | **Image shape** | The shape of the product images on the cards: landscape, square, portrait or wide. Images are cropped to fit. |
 | **Page sizes** | The numbers of products per page visitors can pick from, such as *12, 24, 48*. |
 | **Default page size** | The page size visitors see first. |
+| **Paging** | How visitors move through the products: **Numbered pages**, **A Load more button** that adds the next products below, or **Infinite scroll**, which adds them as the visitor scrolls down. Numbered page links stay underneath for search engines and for visitors without JavaScript. |
 | **Keyword search** | Adds a search box that matches titles, SKUs and searchable fields. |
+| **Search index** | Where the listing searches: **The database**, the default, or a product search index you created; see [Search with Elasticsearch, Lucene or Azure AI Search](#search-with-elasticsearch-lucene-or-azure-ai-search). Shown once such an index exists. |
 
 ## Lay out the product pages
 
@@ -115,6 +123,20 @@ Whether a product can be bought online, and how its price is shown (shown, *Call
 - A breadcrumb, such as *Home › Shop › Footwear › Boots* when a category is picked.
 
 Every combination of filters has its own address, so visitors can bookmark it, share it and use the Back button. Filters apply as soon as they change on wide screens.
+
+## Sites in several languages
+
+On a site with several languages, translate your products and listing pages with Orchard Core's localization as usual. A listing shows the products of the visitor's language, plus products that are not translated at all, and a product's page links back to the listing in its own language.
+
+## Search with Elasticsearch, Lucene or Azure AI Search
+
+Listings search your database by default, which suits most catalogs. A large catalog, or one where keyword search should rank the best matches first, can search a search server instead.
+
+1. Turn on one of **Product Search (Elasticsearch)**, **Product Search (Lucene)** or **Product Search (Azure AI Search)** under **Configuration > Features**. Elasticsearch and Azure AI Search need their connection set up first; Lucene keeps its index on your server and needs nothing else.
+2. Open **Search > Indexes**, click **Add** next to **Products (Elasticsearch)**, **Products (Lucene)** or **Products (Azure AI Search)**, enter a name, and save. The index fills with your products in the background.
+3. Edit a listing, pick the index under **Search index**, and publish.
+
+Visitors see the same filters, counts, sorts and pages as before. Keyword search matches the start of words, such as *fo* for *Ford*, and ranks the best matches first. Each change to a product reaches the index when it is published, and the index rebuilds itself when you change your product types or their fields. If the search server cannot be reached, the listing searches the database instead, so it keeps working.
 
 ## Search engines
 

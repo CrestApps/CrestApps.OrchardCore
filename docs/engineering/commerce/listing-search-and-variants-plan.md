@@ -1,7 +1,7 @@
 # Listing search, merchandising and variants plan
 
-Status: in progress on `claude/listing-search-variants`, stacked on carts and orders (#835), which is stacked on the
-product listing (#834).
+Status: V1 to V7 done on `claude/listing-search-variants` (carts and orders, #835, and the product listing, #834, are
+merged).
 
 ## Goal
 
@@ -106,6 +106,20 @@ modules; SEO stays with Orchard Core's SEO module.
   the product's price range is indexed for sorting and price filters.
 - Listing: cards show *from* the lowest variant price; the product page shows an option picker that updates the price,
   SKU and image. Add to cart sends the variant; cart lines and order lines carry the variant id and its options.
+
+As built:
+
+- Option names live on the type (`ProductVariantsPartSettings`, each with *Filterable*); each product enters values and
+  gets one variant per combination (`ProductVariants.Combine` keeps a combination's variant, SKU and prices).
+- The snapshot resolver sells a variant product only as an enabled variant (`VariantId`); the price resolver uses the
+  variant's price ahead of a price list. `CartLine.VariantId`, `OrderLine.VariantId` and `VariantTitle`.
+- `ProductVariantsSearchDocumentContributor` indexes option values (`Option.{Name}`) of enabled variants, variant SKUs
+  (searchable), one price row per variant price, and `MaxPrice` for *From* on cards. The catalog adds filterable
+  options as attributes.
+- The picker is one *Choose* list of the enabled variants with their prices (works without JavaScript, on cards and
+  pages). Per-option pickers that swap the image are a later refinement.
+- Verified live on the store sample: combinations generated, *From $25* card, option filter, variant SKU search,
+  separate cart lines per variant, and order lines with the variant's id, values, SKU and price.
 
 ## Out of scope
 
