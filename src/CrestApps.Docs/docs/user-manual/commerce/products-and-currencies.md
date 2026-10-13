@@ -61,6 +61,12 @@ You add the **Product** part to the content type that describes what you sell, f
 | --- | --- |
 | **Product Type** | What kind of thing this is: **Undefined**, **Good**, **Service** or **Digital**. |
 | **Default currency** | The currency used by items of this type that do not pick their own. Choose from your [managed currencies](#manage-currencies). Without a default and without a currency on the item, the item cannot be sold. |
+| **Sales mode** | Whether items of this type can be bought online: **Purchasable** (every item can, the default), **Listing only** (items are listed on your site but never sold online, such as homes) or **Per item** (each item has a **Sell online** box). A listed item is still shown, filtered and opened in [product listings](product-listings.md); it just cannot be checked out. |
+| **Price display** | How the price is shown to visitors: **Show the price**, **Show on request** (a label such as *Call for price* instead of the price) or **Hide the price**. |
+| **On-request label** | The text shown instead of the price when it is shown on request. |
+| **Let each product choose how its price is shown** | Adds a **Price display** choice to each item that overrides the setting above. |
+
+The same part's settings also lay out each product's own page and its inquiry button; see [Product listings](product-listings.md#lay-out-the-product-pages).
 
 ### Price an item
 
@@ -68,8 +74,13 @@ When you create or edit an item of the type, the **Product** part adds:
 
 | Field | What it does |
 | --- | --- |
-| **Price** | The selling price. Required, and it cannot be negative. Next to it, pick the currency, or leave **Use the default currency** to use the content type's default. |
+| **Price** | The selling price, which cannot be negative. Next to it, pick the currency, or leave **Use the default currency** to use the content type's default. It is required, except for an item that is not sold online and whose price is not shown. |
+| **Compare-at price** | Optional. A *was* or list price. When it is higher than the price, listings show it struck through with the saving. |
 | **SKU** | Optional. A stock-keeping unit that uniquely identifies the product in your own records. |
+| **Sell online** | Only when the type's sales mode is **Per item**. Untick it to list the item without selling it online. |
+| **Price display** | Only when the type lets each product choose. How this item's price is shown, or **Use the content type's setting**. |
+
+An item that cannot be bought online is never sold, whatever a visitor tries: no checkout can be started for it.
 
 ### Offer several prices
 

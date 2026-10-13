@@ -2,7 +2,10 @@
 sidebar_label: Products
 sidebar_position: 12
 title: Products
-description: Attach product pricing and type metadata to any Orchard Core content type.
+description: Attach product pricing and type metadata to any Orchard Core content type, and list products on the front end with filters, sorting, search and product pages.
+user_manual:
+  - user-manual/commerce/products-and-currencies
+  - user-manual/commerce/product-listings
 ---
 
 | | |
