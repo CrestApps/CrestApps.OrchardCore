@@ -55,6 +55,11 @@ public sealed class ProductListingPart : ContentPart
     public bool AllowViewSwitching { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the shape of product images on the listing's cards.
+    /// </summary>
+    public ProductImageAspectRatio ImageAspectRatio { get; set; }
+
+    /// <summary>
     /// Gets or sets the page sizes visitors can pick from.
     /// </summary>
     public int[] PageSizes { get; set; } = [12, 24, 48];

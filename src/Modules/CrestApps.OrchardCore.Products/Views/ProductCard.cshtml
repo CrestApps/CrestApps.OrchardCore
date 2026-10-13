@@ -2,39 +2,52 @@
 
 @model ProductCardViewModel
 
-<article class="card h-100 shadow-sm">
-    <a display-for="@Model.ContentItem" class="ratio ratio-4x3 d-block bg-light rounded-top overflow-hidden" tabindex="-1" aria-hidden="true">
+@*
+    A product in the grid. Alternates: ProductCard-{ContentType}; the list layout uses ProductCard-List and
+    ProductCard-List-{ContentType}. The whole card is one link, through the title's stretched link.
+*@
+
+<article class="product-card card h-100">
+    <div class="product-card-media">
         @if (!string.IsNullOrEmpty(Model.ImageUrl))
         {
-            <img src="@Model.ImageUrl" alt="" class="w-100 h-100 product-listing-cover" loading="lazy" />
+            <img src="@Model.ImageUrl" alt="" class="product-listing-cover" loading="lazy" />
         }
         else
         {
-            <span class="d-flex align-items-center justify-content-center text-muted">
-                <span class="fa-regular fa-image fa-2x" aria-hidden="true"></span>
-            </span>
+            <span class="product-card-placeholder" aria-hidden="true"><span class="fa-regular fa-image fa-2x"></span></span>
         }
-    </a>
-    <div class="card-body d-flex flex-column gap-2">
-        <h3 class="card-title h6 mb-0">
-            <a display-for="@Model.ContentItem" class="text-reset text-decoration-none">@Model.Title</a>
+        @if (Model.DiscountPercent > 0)
+        {
+            <span class="product-card-badge badge bg-danger">@T["−{0}%", Model.DiscountPercent]<span class="visually-hidden"> @T["off"]</span></span>
+        }
+    </div>
+    <div class="card-body product-card-body">
+        <h3 class="product-card-title">
+            @if (string.IsNullOrEmpty(Model.Url))
+            {
+                @Model.Title
+            }
+            else
+            {
+                <a href="@Model.Url" class="stretched-link">@Model.Title</a>
+            }
         </h3>
-        @await DisplayAsync(Model.Price)
         @if (Model.Chips.Count > 0)
         {
-            <ul class="list-unstyled d-flex flex-wrap gap-1 mb-0 small">
+            <ul class="product-card-attributes">
                 @foreach (var chip in Model.Chips)
                 {
-                    <li><span class="badge bg-light text-dark border fw-normal">@chip</span></li>
+                    <li>@chip</li>
                 }
             </ul>
         }
-    </div>
-    <div class="card-footer bg-transparent border-0 pt-0 pb-3 d-flex flex-column gap-2">
-        @if (Model.IsPurchasable)
-        {
-            <span class="small text-success"><span class="fa-solid fa-cart-shopping" aria-hidden="true"></span> @T["Available to buy online"]</span>
-        }
-        <a display-for="@Model.ContentItem" class="btn btn-primary w-100">@T["Details"]<span class="visually-hidden">: @Model.Title</span></a>
+        <div class="product-card-footer">
+            @await DisplayAsync(Model.Price)
+            @if (Model.ShowAvailability && Model.IsPurchasable)
+            {
+                <span class="product-card-availability"><span class="fa-solid fa-circle-check" aria-hidden="true"></span> @T["Buy online"]</span>
+            }
+        </div>
     </div>
 </article>

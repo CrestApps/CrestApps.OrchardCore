@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@{
+    var listing = Model.Listing;
+}
+
+@if (listing.PageLinks.Count > 0)
+{
+    <nav class="product-listing-pager mt-4" aria-label="@T["Pages"]">
+        <ul class="pagination flex-wrap justify-content-center">
+            <li class="page-item @(listing.PreviousPageUrl is null ? "disabled" : null)">
+                @if (listing.PreviousPageUrl is null)
+                {
+                    <span class="page-link"><span aria-hidden="true">&lsaquo;</span> @T["Previous"]</span>
+                }
+                else
+                {
+                    <a class="page-link" href="@listing.PreviousPageUrl" rel="prev" data-product-listing-link><span aria-hidden="true">&lsaquo;</span> @T["Previous"]</a>
+                }
+            </li>
+            @foreach (var link in listing.PageLinks)
+            {
+                if (link.Page is null)
+                {
+                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                }
+                else if (link.Current)
+                {
+                    <li class="page-item active" aria-current="page"><span class="page-link">@link.Page</span></li>
+                }
+                else
+                {
+                    <li class="page-item"><a class="page-link" href="@link.Url" data-product-listing-link>@link.Page</a></li>
+                }
+            }
+            <li class="page-item @(listing.NextPageUrl is null ? "disabled" : null)">
+                @if (listing.NextPageUrl is null)
+                {
+                    <span class="page-link">@T["Next"] <span aria-hidden="true">&rsaquo;</span></span>
+                }
+                else
+                {
+                    <a class="page-link" href="@listing.NextPageUrl" rel="next" data-product-listing-link>@T["Next"] <span aria-hidden="true">&rsaquo;</span></a>
+                }
+            </li>
+        </ul>
+    </nav>
+}

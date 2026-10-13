@@ -15,8 +15,10 @@ using CrestApps.OrchardCore.Products.Recipes;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.Services.Attributes;
 using CrestApps.OrchardCore.Products.Tasks;
+using CrestApps.OrchardCore.Products.ViewModels;
 using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Services;
+using Fluid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -131,6 +133,29 @@ public sealed class ListingStartup : StartupBase
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ProductListingResourceManagementOptionsConfiguration>();
 
         services.AddDataMigration<ProductListingMigrations>();
+
+        // Every listing and product page shape can be overridden in Liquid as well as Razor.
+        services.Configure<TemplateOptions>(options =>
+        {
+            options.MemberAccessStrategy.Register<ProductListingViewModel>();
+            options.MemberAccessStrategy.Register<ProductListingShapeViewModel>();
+            options.MemberAccessStrategy.Register<ProductFacetViewModel>();
+            options.MemberAccessStrategy.Register<ProductFacetOptionViewModel>();
+            options.MemberAccessStrategy.Register<ProductActiveFilterViewModel>();
+            options.MemberAccessStrategy.Register<ProductSortOptionViewModel>();
+            options.MemberAccessStrategy.Register<ProductPageLinkViewModel>();
+            options.MemberAccessStrategy.Register<ProductCardViewModel>();
+            options.MemberAccessStrategy.Register<ProductPriceDisplayViewModel>();
+            options.MemberAccessStrategy.Register<ProductSpecificationViewModel>();
+            options.MemberAccessStrategy.Register<ProductBreadcrumbViewModel>();
+            options.MemberAccessStrategy.Register<ProductBreadcrumbItemViewModel>();
+            options.MemberAccessStrategy.Register<ProductDetailsViewModel>();
+            options.MemberAccessStrategy.Register<ProductDetailsShapeViewModel>();
+            options.MemberAccessStrategy.Register<ProductImageViewModel>();
+            options.MemberAccessStrategy.Register<ProductSearchDocument>();
+            options.MemberAccessStrategy.Register<ProductAttributeValue>();
+            options.MemberAccessStrategy.Register<ProductListingPart>();
+        });
     }
 }
 

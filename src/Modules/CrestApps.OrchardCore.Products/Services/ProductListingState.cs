@@ -28,9 +28,24 @@ public sealed class ProductListingState
     public const string KeywordKey = "q";
     public const string SortKey = "sort";
     public const string ViewKey = "view";
-    public const string PageSizeKey = "size";
+    public const string PageSizeKey = "page-size";
     public const string PageKey = "page";
     public const string MinSuffix = "_min";
+
+    private static readonly HashSet<string> _reservedKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        KeywordKey,
+        SortKey,
+        ViewKey,
+        PageSizeKey,
+        PageKey,
+    };
+
+    /// <summary>
+    /// Whether a key is one of the listing's own parameters, which a filter cannot use.
+    /// </summary>
+    public static bool IsReservedKey(string key)
+        => !string.IsNullOrEmpty(key) && _reservedKeys.Contains(key);
     public const string MaxSuffix = "_max";
 
     public Dictionary<string, List<string>> Values { get; private set; } = new(StringComparer.Ordinal);

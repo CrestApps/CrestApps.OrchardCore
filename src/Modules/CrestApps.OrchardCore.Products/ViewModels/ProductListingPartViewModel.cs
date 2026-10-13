@@ -22,6 +22,8 @@ public class ProductListingPartViewModel
 
     public bool AllowViewSwitching { get; set; }
 
+    public ProductImageAspectRatio ImageAspectRatio { get; set; }
+
     public string PageSizes { get; set; }
 
     public int DefaultPageSize { get; set; }
@@ -36,6 +38,8 @@ public class ProductListingPartViewModel
 
     [BindNever]
     public List<SelectListItem> Views { get; set; } = [];
+
+    public List<SelectListItem> ImageAspectRatios { get; set; } = [];
 
     [BindNever]
     public List<SelectListItem> FacetKinds { get; set; } = [];

@@ -3069,7 +3069,8 @@
                 "AttributeKey": "Sizes",
                 "Label": "Size",
                 "Kind": "Checkbox",
-                "MaxVisible": 6
+                "MaxVisible": 6,
+                "Collapsed": true
               },
               {
                 "Key": "rating",
@@ -3090,6 +3091,7 @@
             "DefaultSort": "newest",
             "DefaultView": "Grid",
             "AllowViewSwitching": true,
+            "ImageAspectRatio": "Square",
             "PageSizes": [
               12,
               24,

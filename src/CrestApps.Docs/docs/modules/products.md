@@ -235,23 +235,76 @@ Create a **Product Listing** content item. Its editor sets:
 - the product types it lists (every product type when none is selected);
 - the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
-- the sorts, the default sort, the grid or list layout, the page sizes, and keyword search.
+- the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
 
 The page is an ordinary content item, so it has its own URL, menu entry and permissions.
 
 Filtering is done with an ordinary GET form, so a listing works without JavaScript, every state has a URL that can be bookmarked or shared, and the back button works. With JavaScript, filters apply as they change on wide screens and the results update in place. On small screens the filters open in a side panel.
 
 ```text
-/vehicles?make=<term-id>&year_min=2016&price_max=20000&sort=price-asc&view=list&page=2
+/vehicles?make=<term-id>&year_min=2016&price_max=20000&sort=price-asc&view=list&page=2&page-size=24
 ```
 
-Unknown keys are ignored, the number of values per filter is capped, and page sizes must be one of the configured sizes.
+Unknown keys are ignored, the number of values per filter is capped, and page sizes must be one of the configured sizes. `q`, `sort`, `view`, `page` and `page-size` belong to the listing itself, so a filter cannot use them as its URL key.
 
 The listing's markup uses Bootstrap 5 classes and works with themes on Bootstrap 5.0 and later.
 
 ### Product pages
 
-Turn on **Show product details on the product page** in the type's Product part settings to add a details block to each product's page: the price, the specification table, and either *Available to buy online* or an inquiry button. The inquiry button's label and link are set on the type; `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table are not shown a second time on the page.
+Turn on **Show product details on the product page** in the type's Product part settings to lay out each product's page:
+
+- a breadcrumb above the title;
+- the product's images beside its price, highlights and actions, with thumbnails when it has several images;
+- the specification table after the description.
+
+The images come from the type's first media field that has images. The actions show *Available to buy online* or an inquiry button; the inquiry button's label and link are set on the type, and `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table, and the media field shown as the gallery, are not shown a second time on the page.
+
+### Breadcrumbs
+
+Listing and product pages carry a breadcrumb built with Orchard Core's `<breadcrumb>` tag helper, so it renders through the `Breadcrumb` and `BreadcrumbItem` shapes and a theme restyles it with every other trail of the site.
+
+- A listing shows *Home › Shop*, followed by the categories picked in its tree filters: with *Footwear › Boots* picked, the trail is *Home › Shop › Footwear › Boots*.
+- A product shows *Home*, the listing that shows its type, and its place in that listing's category tree: *Home › Shop › Footwear › Boots › Chelsea Boot*.
+
+The trails are named `ProductListing` and `Product`, which gives their shape alternates, such as `BreadcrumbItem-Product-Title`.
+
+### Theming
+
+Every part of a listing page and a product page is a shape, so a theme overrides any part of it in Razor or in Liquid, without touching the rest:
+
+| Shape | Shows | Alternates |
+| --- | --- | --- |
+| `ProductListingPart` | The listing page, arranging the shapes below | The usual content part alternates |
+| `ProductListingBreadcrumb` | The listing's breadcrumb, in the page header | `ProductListingBreadcrumb-{ContentType}` |
+| `ProductListingFilters` | The filters sidebar, an off-canvas panel on small screens | `ProductListingFilters-{ContentType}` |
+| `ProductListingSearch` | The keyword search box | `ProductListingSearch-{ContentType}` |
+| `ProductFacet` | One filter | `ProductFacet-{Kind}` (`Checkbox`, `Radio`, `Range`, `Toggle`), `ProductFacet-{Key}` |
+| `ProductListingToolbar` | The result count, sort, page size and layout switch | `ProductListingToolbar-{ContentType}` |
+| `ProductListingActiveFilters` | The picked filters, each removable | `ProductListingActiveFilters-{ContentType}` |
+| `ProductListingResults` | The products of the page | `ProductListingResults-Grid`, `ProductListingResults-List` |
+| `ProductCard` | One product in the results | `ProductCard-{ContentType}`, `ProductCard-List`, `ProductCard-List-{ContentType}` |
+| `ProductPrice` | A price, with the compare-at price | |
+| `ProductListingPager` | The pager | `ProductListingPager-{ContentType}` |
+| `ProductBreadcrumb` | A product's breadcrumb, in the page header | |
+| `ProductSummary` | The images beside the price, highlights and actions | |
+| `ProductGallery` | The images | `ProductGallery-{ContentType}` |
+| `ProductActions` | What a visitor can do with the product | `ProductActions-{ContentType}` |
+| `ProductSpecifications` | The specification table | |
+
+The listing shapes' model has a `Listing` property with everything the page shows, and the product page shapes' model has a `Product` property. The view models are registered for Liquid, so a template such as this one, saved as `ProductCard` in **Design → Templates**, replaces every product card:
+
+```liquid
+<article class="product-card card h-100">
+  <div class="card-body">
+    <h3 class="h6"><a href="{{ Model.Url }}" class="stretched-link">{{ Model.Title }}</a></h3>
+    <p class="small text-muted">{{ Model.Chips | join: " · " }}</p>
+    {{ Model.Price | shape_render }}
+    {% if Model.DiscountPercent %}<span class="badge bg-danger">-{{ Model.DiscountPercent }}%</span>{% endif %}
+  </div>
+</article>
+```
+
+The pages are styled by a small stylesheet whose colors and sizes come from custom properties, which fall back to Bootstrap's own: `--product-accent`, `--product-sale-color`, `--product-success-color`, `--product-border-color`, `--product-muted-color`, `--product-surface`, `--product-surface-alt` and `--product-radius`. Set them on `:root` or on `.product-listing` to restyle the pages without replacing any template.
 
 ### The search index
 

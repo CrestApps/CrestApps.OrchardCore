@@ -28,7 +28,7 @@ public sealed class ProductListingStateTests
     [Fact]
     public void Parse_IgnoresWhatTheListingDoesNotDefine()
     {
-        var state = Parse(("color", "red"), ("sort", "random"), ("size", "1000"), ("page", "-4"));
+        var state = Parse(("color", "red"), ("sort", "random"), ("page-size", "1000"), ("page", "-4"));
 
         Assert.Empty(state.Values);
         Assert.Null(state.Sort);
@@ -93,6 +93,22 @@ public sealed class ProductListingStateTests
     }
 
     [Theory]
+    [InlineData("q")]
+    [InlineData("SORT")]
+    [InlineData("page")]
+    [InlineData("page-size")]
+    [InlineData("view")]
+    public void IsReservedKey_CoversTheListingsOwnParameters(string key)
+        => Assert.True(ProductListingState.IsReservedKey(key));
+
+    [Fact]
+    public void Size_IsAFilterKey_NotThePageSize()
+    {
+        // Clothing has sizes, so the page size has its own key and "size" stays free for a filter.
+        Assert.False(ProductListingState.IsReservedKey("size"));
+    }
+
+    [Theory]
     [InlineData("ExteriorColor", "exterior-color")]
     [InlineData("Year", "year")]
     [InlineData("Product.Price", "product-price")]
@@ -101,7 +117,7 @@ public sealed class ProductListingStateTests
 
     [Theory]
     [InlineData("", false)]
-    [InlineData("?page=2&sort=price-asc&size=24&view=list", false)]
+    [InlineData("?page=2&sort=price-asc&page-size=24&view=list", false)]
     [InlineData("?q=diesel", true)]
     [InlineData("?make=toyota", true)]
     [InlineData("?price_max=20000&page=2", true)]

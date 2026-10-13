@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.Products.Core.Listing
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@*
+    The products of the current page. ProductListingResults-Grid and ProductListingResults-List override one layout.
+*@
+
+@{
+    var listing = Model.Listing;
+}
+
+@if (listing.Products.Count == 0)
+{
+    <div class="product-listing-empty text-center border rounded py-5 px-3" role="status">
+        <span class="fa-solid fa-magnifying-glass fa-2x text-muted mb-3 d-block" aria-hidden="true"></span>
+        <p class="h5">@T["No products match"]</p>
+        <p class="text-muted mb-3">@T["Try removing a filter or searching for something else."]</p>
+        @if (listing.ActiveFilters.Count > 0)
+        {
+            <a href="@listing.ClearAllUrl" class="btn btn-outline-primary" data-product-listing-link>@T["Clear all filters"]</a>
+        }
+    </div>
+}
+else if (listing.View == ProductListingView.List)
+{
+    <div class="product-listing-results product-listing-results-list d-flex flex-column gap-3">
+        @foreach (var product in listing.Products)
+        {
+            @await DisplayAsync(product)
+        }
+    </div>
+}
+else
+{
+    <div class="product-listing-results product-listing-results-grid row row-cols-2 row-cols-md-3 row-cols-lg-2 row-cols-xl-3 g-2 g-sm-3">
+        @foreach (var product in listing.Products)
+        {
+            <div class="col">
+                @await DisplayAsync(product)
+            </div>
+        }
+    </div>
+}

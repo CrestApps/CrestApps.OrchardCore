@@ -39,13 +39,15 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             return null;
         }
 
-        return Initialize<ProductListingViewModel>(GetDisplayShapeType(context), async model =>
-        {
-            model.ContentItem = part.ContentItem;
-            model.Part = part;
-
-            await _listingService.BuildAsync(model, part, _httpContextAccessor.HttpContext);
-        }).Location("Detail", "Content:5");
+        // The trail sits in the page header, above the title, and the listing in the content. Both read the same
+        // listing, which the service builds once per request.
+        return Combine(
+            Initialize<ProductListingShapeViewModel>(GetDisplayShapeType(context), async model =>
+                model.Listing = await _listingService.GetListingAsync(part, _httpContextAccessor.HttpContext))
+                .Location("Detail", "Content:5"),
+            Initialize<ProductListingShapeViewModel>("ProductListingBreadcrumb", async model =>
+                model.Listing = await _listingService.GetListingAsync(part, _httpContextAccessor.HttpContext))
+                .Location("Detail", "Header:before"));
     }
 
     public override IDisplayResult Edit(ProductListingPart part, BuildPartEditorContext context)
@@ -75,6 +77,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.DefaultSort = part.DefaultSort;
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
+            model.ImageAspectRatio = part.ImageAspectRatio;
+            model.ImageAspectRatios =
+            [
+                new SelectListItem(S["Landscape (4:3)"], nameof(ProductImageAspectRatio.Landscape)),
+                new SelectListItem(S["Square (1:1)"], nameof(ProductImageAspectRatio.Square)),
+                new SelectListItem(S["Portrait (3:4)"], nameof(ProductImageAspectRatio.Portrait)),
+                new SelectListItem(S["Wide (16:9)"], nameof(ProductImageAspectRatio.Wide)),
+            ];
             model.PageSizes = string.Join(", ", part.PageSizes ?? []);
             model.DefaultPageSize = part.DefaultPageSize;
             model.EnableKeywordSearch = part.EnableKeywordSearch;
@@ -106,6 +116,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         part.DefaultSort = model.DefaultSort;
         part.DefaultView = model.DefaultView;
         part.AllowViewSwitching = model.AllowViewSwitching;
+        part.ImageAspectRatio = model.ImageAspectRatio;
         part.EnableKeywordSearch = model.EnableKeywordSearch;
 
         var sizes = (model.PageSizes ?? string.Empty)

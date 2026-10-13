@@ -289,7 +289,7 @@ Taxonomy term pages (`/categories/suvs`) can later render the same catalog shape
 ### 4.7 URL contract
 
 ```text
-/vehicles?q=diesel&make=<term-id>&make=<term-id>&year_min=2016&year_max=2020&price_max=20000&sort=price-asc&view=list&page=2&size=24
+/vehicles?q=diesel&make=<term-id>&make=<term-id>&year_min=2016&year_max=2020&price_max=20000&sort=price-asc&view=list&page=2&page-size=24
 ```
 
 - Facet keys are short slugs chosen in the listing editor (`make`, `year`), not internal ids.

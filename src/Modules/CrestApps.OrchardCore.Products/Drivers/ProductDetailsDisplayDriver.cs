@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
+using Microsoft.AspNetCore.Http;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -9,58 +10,44 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Products.Drivers;
 
 /// <summary>
-/// Shows the price, the specification table and the product actions on a product's own page.
+/// Lays out a product's own page: a breadcrumb above the title, the images beside the price and the actions,
+/// and the specification table after the description. Each is its own shape, so a theme can move, restyle or
+/// replace any of them.
 /// </summary>
 public sealed class ProductDetailsDisplayDriver : ContentPartDisplayDriver<ProductPart>
 {
-    private readonly ProductSearchDocumentBuilder _documentBuilder;
-    private readonly ProductAttributeCatalog _attributeCatalog;
     private readonly ProductListingService _listingService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public ProductDetailsDisplayDriver(
-        ProductSearchDocumentBuilder documentBuilder,
-        ProductAttributeCatalog attributeCatalog,
-        ProductListingService listingService)
+        ProductListingService listingService,
+        IHttpContextAccessor httpContextAccessor)
     {
-        _documentBuilder = documentBuilder;
-        _attributeCatalog = attributeCatalog;
         _listingService = listingService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public override IDisplayResult Display(ProductPart part, BuildPartDisplayContext context)
     {
-        if (context.DisplayType != "Detail" ||
-            !context.TypePartDefinition.GetSettings<ProductPageSettings>().ShowDetails)
+        if (context.DisplayType != "Detail")
         {
             return null;
         }
 
-        return Initialize<ProductDetailsViewModel>("ProductDetails", async model =>
+        var pageSettings = context.TypePartDefinition.GetSettings<ProductPageSettings>();
+
+        if (!pageSettings.ShowDetails)
         {
-            var contentItem = part.ContentItem;
-            var pageSettings = context.TypePartDefinition.GetSettings<ProductPageSettings>();
+            return null;
+        }
 
-            // Built from the version being shown, so a preview shows the draft's values.
-            var document = await _documentBuilder.BuildAsync(contentItem);
+        // Built from the version being shown, so a preview shows the draft's values.
+        async ValueTask LoadAsync(ProductDetailsShapeViewModel model)
+            => model.Product = await _listingService.GetProductAsync(part.ContentItem, pageSettings, _httpContextAccessor.HttpContext);
 
-            if (document is null)
-            {
-                return;
-            }
-
-            var attributes = await _attributeCatalog.GetAttributesAsync([contentItem.ContentType]);
-
-            model.ContentItem = contentItem;
-            model.Price = await _listingService.BuildPriceShapeAsync(document, contentItem.ContentType);
-            model.IsPurchasable = document.IsPurchasable;
-            model.Sku = document.Sku;
-            model.Specifications = _listingService.BuildSpecifications(document, attributes, settings => settings.ShowInSpecifications);
-            model.InquiryLabel = pageSettings.InquiryLabel;
-            model.InquiryUrl = string.IsNullOrWhiteSpace(pageSettings.InquiryUrl)
-                ? null
-                : pageSettings.InquiryUrl
-                    .Replace("{id}", Uri.EscapeDataString(contentItem.ContentItemId), StringComparison.OrdinalIgnoreCase)
-                    .Replace("{title}", Uri.EscapeDataString(contentItem.DisplayText ?? string.Empty), StringComparison.OrdinalIgnoreCase);
-        }).Location("Detail", "Content:2");
+        return Combine(
+            Initialize<ProductDetailsShapeViewModel>("ProductBreadcrumb", LoadAsync).Location("Detail", "Header:before"),
+            Initialize<ProductDetailsShapeViewModel>("ProductSummary", LoadAsync).Location("Detail", "Content:before"),
+            Initialize<ProductDetailsShapeViewModel>("ProductSpecifications", LoadAsync).Location("Detail", "Content:after"));
     }
 }

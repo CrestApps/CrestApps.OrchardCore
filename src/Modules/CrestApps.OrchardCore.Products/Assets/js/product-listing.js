@@ -66,9 +66,8 @@
       })
       .then(function (html) {
         var id = container.getAttribute('data-product-listing');
-        var next = new DOMParser()
-          .parseFromString(html, 'text/html')
-          .querySelector('[data-product-listing="' + id + '"]');
+        var page = new DOMParser().parseFromString(html, 'text/html');
+        var next = page.querySelector('[data-product-listing="' + id + '"]');
 
         if (!next) {
           window.location.assign(url);
@@ -77,6 +76,15 @@
 
         container.innerHTML = next.innerHTML;
         enhance(container);
+
+        // The breadcrumb follows the categories picked, and it sits outside the listing, in the page header.
+        var breadcrumbSelector = '[data-product-listing-breadcrumb="' + id + '"]';
+        var breadcrumb = document.querySelector(breadcrumbSelector);
+        var nextBreadcrumb = page.querySelector(breadcrumbSelector);
+
+        if (breadcrumb && nextBreadcrumb) {
+          breadcrumb.innerHTML = nextBreadcrumb.innerHTML;
+        }
 
         if (push) {
           window.history.pushState({ productListing: id }, '', url);

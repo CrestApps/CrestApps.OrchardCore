@@ -6,9 +6,12 @@ using CrestApps.OrchardCore.Products.Indexes;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Contents;
 using OrchardCore.DisplayManagement;
 using OrchardCore.Media;
@@ -32,6 +35,18 @@ public sealed class ProductListingService
     private readonly IShapeFactory _shapeFactory;
     private readonly IMediaFileStore _mediaFileStore;
     private readonly IAuthorizationService _authorizationService;
+    private readonly LinkGenerator _linkGenerator;
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ProductSearchDocumentBuilder _documentBuilder;
+
+    // Several shapes of one page read the same listing or product, and they render in separate passes (the
+    // breadcrumb sits in the page header, before the listing). Each is built once per request.
+    private readonly Dictionary<string, ProductListingViewModel> _listings = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, ProductDetailsViewModel> _products = new(StringComparer.Ordinal);
+    private IReadOnlyList<ContentItem> _listingItems;
+
+    // How many automatic filters start open.
+    private const int AutomaticOpenFacets = 5;
 
     internal readonly IStringLocalizer S;
 
@@ -44,6 +59,9 @@ public sealed class ProductListingService
         IShapeFactory shapeFactory,
         IMediaFileStore mediaFileStore,
         IAuthorizationService authorizationService,
+        LinkGenerator linkGenerator,
+        IHttpContextAccessor httpContextAccessor,
+        ProductSearchDocumentBuilder documentBuilder,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
         _attributeCatalog = attributeCatalog;
@@ -54,6 +72,9 @@ public sealed class ProductListingService
         _shapeFactory = shapeFactory;
         _mediaFileStore = mediaFileStore;
         _authorizationService = authorizationService;
+        _linkGenerator = linkGenerator;
+        _httpContextAccessor = httpContextAccessor;
+        _documentBuilder = documentBuilder;
         S = stringLocalizer;
     }
 
@@ -69,6 +90,10 @@ public sealed class ProductListingService
                 .Select(facet => Resolve(facet, attributes))
                 .ToArray();
         }
+
+        // Automatic keys come from field names, and a field named Page or Sort must not shadow the listing's own
+        // parameters.
+        string SafeKey(string key) => ProductListingState.IsReservedKey(key) ? key + "-filter" : key;
 
         var facets = new List<ProductListingFacet>();
         var types = await GetContentTypesAsync(part);
@@ -101,7 +126,7 @@ public sealed class ProductListingService
 
             facets.Add(new ProductListingFacet
             {
-                Key = ToUrlKey(attribute.Key),
+                Key = SafeKey(ToUrlKey(attribute.Key)),
                 AttributeKey = attribute.Key,
                 Label = attribute.Label,
                 Kind = kind.Value,
@@ -115,6 +140,12 @@ public sealed class ProductListingService
             Label = S["Price"],
             Kind = ProductFacetKind.Range,
         });
+
+        // A long column of open filters pushes the last ones out of sight; the first few stay open.
+        for (var i = AutomaticOpenFacets; i < facets.Count; i++)
+        {
+            facets[i].Collapsed = true;
+        }
 
         return facets;
     }
@@ -182,6 +213,32 @@ public sealed class ProductListingService
     }
 
     /// <summary>
+    /// Builds a listing page from the request, once per request, with a shape for each of its sections.
+    /// </summary>
+    public async Task<ProductListingViewModel> GetListingAsync(ProductListingPart part, HttpContext httpContext)
+    {
+        var key = part.ContentItem.ContentItemVersionId ?? part.ContentItem.ContentItemId ?? string.Empty;
+
+        if (_listings.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var model = new ProductListingViewModel
+        {
+            ContentItem = part.ContentItem,
+            Part = part,
+        };
+
+        await BuildAsync(model, part, httpContext);
+        await BuildSectionShapesAsync(model);
+
+        _listings[key] = model;
+
+        return model;
+    }
+
+    /// <summary>
     /// Fills the listing page model from the request.
     /// </summary>
     public async Task BuildAsync(ProductListingViewModel model, ProductListingPart part, HttpContext httpContext)
@@ -244,7 +301,9 @@ public sealed class ProductListingService
         var baseUrl = request.PathBase + request.Path;
         string UrlFor(ProductListingState target) => baseUrl + target.ToQueryString();
 
+        model.FormId = "product-listing-" + (part.ContentItem?.ContentItemId ?? "page");
         model.FormAction = baseUrl;
+        model.ImageAspectRatio = GetAspectRatio(part.ImageAspectRatio);
         model.EnableKeywordSearch = part.EnableKeywordSearch;
         model.Keyword = state.Keyword;
         model.Sort = sortOption?.Key;
@@ -264,6 +323,7 @@ public sealed class ProductListingService
         model.ClearAllUrl = UrlFor(state.ClearFilters());
 
         var currency = await GetListingCurrencyAsync(types);
+        var facetModels = new Dictionary<string, ProductFacetViewModel>(StringComparer.Ordinal);
 
         foreach (var facet in facets)
         {
@@ -273,6 +333,8 @@ public sealed class ProductListingService
             {
                 continue;
             }
+
+            facetModels[facet.Key] = facetModel;
 
             // A dependent filter (models under makes) waits for its parent to have a selection.
             if (!string.IsNullOrEmpty(facet.DependsOn) &&
@@ -319,9 +381,351 @@ public sealed class ProductListingService
             });
         }
 
-        await BuildProductsAsync(model, result.ContentItemIds, attributes, view);
+        await BuildProductsAsync(model, result.ContentItemIds, attributes, view, part.ImageAspectRatio);
         BuildPager(model, state, UrlFor);
+
+        model.Breadcrumb = BuildListingBreadcrumb(part.ContentItem, facets, facetModels, state, request.PathBase, baseUrl, UrlFor);
     }
+
+    /// <summary>
+    /// The trail of a listing page: the home page, then the categories picked in its tree filters. With
+    /// <em>Footwear › Boots</em> picked the trail is Home › Shop › Footwear › Boots.
+    /// </summary>
+    private ProductBreadcrumbViewModel BuildListingBreadcrumb(
+        ContentItem listing,
+        IReadOnlyList<ProductListingFacet> facets,
+        Dictionary<string, ProductFacetViewModel> facetModels,
+        ProductListingState state,
+        PathString pathBase,
+        string baseUrl,
+        Func<ProductListingState, string> urlFor)
+    {
+        var breadcrumb = new ProductBreadcrumbViewModel
+        {
+            Name = "ProductListing",
+            Title = listing?.DisplayText ?? string.Empty,
+        };
+
+        breadcrumb.Items.Add(new ProductBreadcrumbItemViewModel { Id = "Home", Label = S["Home"], Url = pathBase + "/" });
+
+        var chain = new List<ProductBreadcrumbItemViewModel>();
+        var trail = new ProductListingState();
+
+        foreach (var facet in GetTreeFacets(facets))
+        {
+            if (!state.Values.TryGetValue(facet.Key, out var values) ||
+                values.Count != 1 ||
+                !facetModels.TryGetValue(facet.Key, out var facetModel))
+            {
+                break;
+            }
+
+            var option = facetModel.Options.FirstOrDefault(candidate => candidate.Value == values[0]);
+
+            if (option is null)
+            {
+                break;
+            }
+
+            trail = trail.Toggle(facet.Key, values[0], singleValue: true);
+            chain.Add(new ProductBreadcrumbItemViewModel { Id = facet.Key, Label = option.Label, Url = urlFor(trail) });
+        }
+
+        if (chain.Count == 0)
+        {
+            return breadcrumb;
+        }
+
+        breadcrumb.Items.Add(new ProductBreadcrumbItemViewModel { Id = "Listing", Label = breadcrumb.Title, Url = baseUrl });
+
+        foreach (var item in chain.Take(chain.Count - 1))
+        {
+            breadcrumb.Items.Add(item);
+        }
+
+        breadcrumb.Title = chain[^1].Label;
+
+        return breadcrumb;
+    }
+
+    /// <summary>
+    /// The filters that offer the levels of one taxonomy, top level first, such as Make then Model.
+    /// </summary>
+    private static IEnumerable<ProductListingFacet> GetTreeFacets(IReadOnlyList<ProductListingFacet> facets)
+    {
+        var first = facets.FirstOrDefault(facet => facet.Level.HasValue && facet.Kind != ProductFacetKind.Range);
+
+        if (first is null)
+        {
+            return [];
+        }
+
+        return facets
+            .Where(facet => facet.AttributeKey == first.AttributeKey && facet.Level.HasValue && facet.Kind != ProductFacetKind.Range)
+            .OrderBy(facet => facet.Level);
+    }
+
+    private async Task BuildSectionShapesAsync(ProductListingViewModel model)
+    {
+        var type = SafeAlternate(model.ContentItem?.ContentType ?? string.Empty);
+
+        async Task<IShape> CreateAsync(string shapeType, params string[] alternates)
+        {
+            var shape = await _shapeFactory.CreateAsync<ProductListingShapeViewModel>(shapeType, section => section.Listing = model);
+
+            foreach (var alternate in alternates)
+            {
+                shape.Metadata.Alternates.Add(alternate);
+            }
+
+            if (!string.IsNullOrEmpty(type))
+            {
+                shape.Metadata.Alternates.Add($"{shapeType}__{type}");
+            }
+
+            return shape;
+        }
+
+        model.SearchShape = model.EnableKeywordSearch ? await CreateAsync("ProductListingSearch") : null;
+        model.FiltersShape = await CreateAsync("ProductListingFilters");
+        model.ToolbarShape = await CreateAsync("ProductListingToolbar");
+        model.ActiveFiltersShape = await CreateAsync("ProductListingActiveFilters");
+        model.ResultsShape = await CreateAsync("ProductListingResults", $"ProductListingResults__{model.View}");
+        model.PagerShape = await CreateAsync("ProductListingPager");
+    }
+
+    /// <summary>
+    /// Builds what a product's own page shows, once per request.
+    /// </summary>
+    public async Task<ProductDetailsViewModel> GetProductAsync(ContentItem contentItem, ProductPageSettings pageSettings, HttpContext httpContext)
+    {
+        var key = contentItem.ContentItemVersionId ?? contentItem.ContentItemId ?? string.Empty;
+
+        if (_products.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var model = new ProductDetailsViewModel
+        {
+            ContentItem = contentItem,
+            Title = contentItem.DisplayText,
+        };
+
+        _products[key] = model;
+
+        var document = await _documentBuilder.BuildAsync(contentItem);
+
+        if (document is null)
+        {
+            return model;
+        }
+
+        var attributes = await _attributeCatalog.GetAttributesAsync([contentItem.ContentType]);
+
+        model.Price = await BuildPriceShapeAsync(document, contentItem.ContentType);
+        model.IsPurchasable = document.IsPurchasable;
+        model.Sku = document.Sku;
+        model.Highlights = BuildSpecifications(document, attributes, attribute => attribute.ShowOnCard).Select(row => row.Value).ToList();
+        model.Specifications = BuildSpecifications(document, attributes, attribute => attribute.ShowInSpecifications);
+        model.InquiryLabel = pageSettings?.InquiryLabel;
+        model.InquiryUrl = string.IsNullOrWhiteSpace(pageSettings?.InquiryUrl)
+            ? null
+            : pageSettings.InquiryUrl
+                .Replace("{id}", Uri.EscapeDataString(contentItem.ContentItemId ?? string.Empty), StringComparison.OrdinalIgnoreCase)
+                .Replace("{title}", Uri.EscapeDataString(contentItem.DisplayText ?? string.Empty), StringComparison.OrdinalIgnoreCase);
+
+        var gallery = await GetGalleryFieldAsync(contentItem);
+
+        if (gallery is not null)
+        {
+            for (var i = 0; i < gallery.Value.Paths.Count; i++)
+            {
+                var path = gallery.Value.Paths[i];
+
+                model.Images.Add(new ProductImageViewModel
+                {
+                    Url = GetImageUrl(path, 1200, 0),
+                    ThumbnailUrl = GetImageUrl(path, 160, 160),
+                    Alt = i < gallery.Value.Texts.Count && !string.IsNullOrWhiteSpace(gallery.Value.Texts[i]) ? gallery.Value.Texts[i] : contentItem.DisplayText,
+                });
+            }
+        }
+
+        model.Breadcrumb = await BuildProductBreadcrumbAsync(contentItem, document, httpContext);
+
+        model.GalleryShape = await _shapeFactory.CreateAsync<ProductDetailsShapeViewModel>("ProductGallery", section => section.Product = model);
+        model.GalleryShape.Metadata.Alternates.Add($"ProductGallery__{SafeAlternate(contentItem.ContentType)}");
+        model.ActionsShape = await _shapeFactory.CreateAsync<ProductDetailsShapeViewModel>("ProductActions", section => section.Product = model);
+        model.ActionsShape.Metadata.Alternates.Add($"ProductActions__{SafeAlternate(contentItem.ContentType)}");
+
+        return model;
+    }
+
+    /// <summary>
+    /// The media field whose images a product's page and cards show: the first media field of the type that
+    /// has images.
+    /// </summary>
+    public async Task<(string PartName, string FieldName, IReadOnlyList<string> Paths, IReadOnlyList<string> Texts)?> GetGalleryFieldAsync(ContentItem contentItem)
+    {
+        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
+
+        if (definition is null)
+        {
+            return null;
+        }
+
+        // Content is a dynamic wrapper over the item's JSON; it converts to the JsonObject only through a cast.
+        var content = (System.Text.Json.Nodes.JsonObject)contentItem.Content;
+
+        foreach (var part in definition.Parts)
+        {
+            foreach (var field in part.PartDefinition.Fields.Where(field => field.FieldDefinition.Name == "MediaField"))
+            {
+                if (content[part.Name]?[field.Name] is not System.Text.Json.Nodes.JsonObject media)
+                {
+                    continue;
+                }
+
+                var paths = Attributes.FieldValueReader.GetStrings(media, "Paths").Where(path => !string.IsNullOrEmpty(path)).ToArray();
+
+                if (paths.Length > 0)
+                {
+                    return (part.Name, field.Name, paths, Attributes.FieldValueReader.GetStrings(media, "MediaTexts").ToArray());
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// The trail of a product's page: the home page, the listing that shows the product's type, and the
+    /// product's place in that listing's category tree.
+    /// </summary>
+    private async Task<ProductBreadcrumbViewModel> BuildProductBreadcrumbAsync(ContentItem contentItem, ProductSearchDocument document, HttpContext httpContext)
+    {
+        var pathBase = httpContext?.Request.PathBase ?? PathString.Empty;
+        var breadcrumb = new ProductBreadcrumbViewModel
+        {
+            Name = "Product",
+            Title = contentItem.DisplayText ?? string.Empty,
+        };
+
+        breadcrumb.Items.Add(new ProductBreadcrumbItemViewModel { Id = "Home", Label = S["Home"], Url = pathBase + "/" });
+
+        var listing = await FindListingAsync(contentItem.ContentType);
+
+        if (listing is null || httpContext is null)
+        {
+            return breadcrumb;
+        }
+
+        var metadata = await _contentManager.PopulateAspectAsync<ContentItemMetadata>(listing);
+        var listingUrl = metadata.DisplayRouteValues is null
+            ? null
+            : _linkGenerator.GetPathByRouteValues(httpContext, routeName: null, metadata.DisplayRouteValues);
+
+        if (string.IsNullOrEmpty(listingUrl))
+        {
+            return breadcrumb;
+        }
+
+        breadcrumb.Items.Add(new ProductBreadcrumbItemViewModel { Id = "Listing", Label = listing.DisplayText, Url = listingUrl });
+
+        if (!listing.TryGet<ProductListingPart>(out var part))
+        {
+            return breadcrumb;
+        }
+
+        var types = await GetContentTypesAsync(part);
+        var attributes = await _attributeCatalog.GetAttributesAsync(types);
+        var trail = new ProductListingState();
+
+        foreach (var facet in GetTreeFacets(await GetFacetsAsync(part, attributes)))
+        {
+            var value = document.Attributes.FirstOrDefault(candidate => candidate.Key == facet.AttributeKey && candidate.Level == facet.Level);
+
+            if (value is null || string.IsNullOrEmpty(value.Text))
+            {
+                break;
+            }
+
+            trail = trail.Toggle(facet.Key, value.Text, singleValue: true);
+            breadcrumb.Items.Add(new ProductBreadcrumbItemViewModel
+            {
+                Id = facet.Key,
+                Label = string.IsNullOrEmpty(value.Label) ? value.Text : value.Label,
+                Url = listingUrl + trail.ToQueryString(),
+            });
+        }
+
+        return breadcrumb;
+    }
+
+    /// <summary>
+    /// The listing page a product belongs to: the first one that names the product's type, or else the first
+    /// one that lists every type.
+    /// </summary>
+    private async Task<ContentItem> FindListingAsync(string contentType)
+    {
+        if (_listingItems is null)
+        {
+            var listingTypes = (await _contentDefinitionManager.ListTypeDefinitionsAsync())
+                .Where(type => type.Parts.Any(part => part.PartDefinition.Name == nameof(ProductListingPart)))
+                .Select(type => type.Name)
+                .ToArray();
+
+            _listingItems = listingTypes.Length == 0
+                ? []
+                : await _session.Query<ContentItem, ContentItemIndex>(index => index.Published && index.ContentType.IsIn(listingTypes))
+                    .OrderBy(index => index.CreatedUtc)
+                    .Take(50)
+                    .ListAsync();
+        }
+
+        ContentItem fallback = null;
+
+        foreach (var item in _listingItems)
+        {
+            if (!item.TryGet<ProductListingPart>(out var part))
+            {
+                continue;
+            }
+
+            if (part.ContentTypes is { Length: > 0 } listed)
+            {
+                if (listed.Contains(contentType, StringComparer.Ordinal))
+                {
+                    return item;
+                }
+            }
+            else
+            {
+                fallback ??= item;
+            }
+        }
+
+        return fallback;
+    }
+
+    private static string GetAspectRatio(ProductImageAspectRatio ratio)
+        => ratio switch
+        {
+            ProductImageAspectRatio.Square => "1 / 1",
+            ProductImageAspectRatio.Portrait => "3 / 4",
+            ProductImageAspectRatio.Wide => "16 / 9",
+            _ => "4 / 3",
+        };
+
+    private static (int Width, int Height) GetCardImageSize(ProductImageAspectRatio ratio)
+        => ratio switch
+        {
+            ProductImageAspectRatio.Square => (640, 640),
+            ProductImageAspectRatio.Portrait => (480, 640),
+            ProductImageAspectRatio.Wide => (640, 360),
+            _ => (640, 480),
+        };
 
     /// <summary>
     /// Builds the specification rows of a product from its attribute values.
@@ -388,6 +792,13 @@ public sealed class ProductListingService
     /// The public URL of a product image, resized for a card.
     /// </summary>
     public string GetImageUrl(string path)
+        => GetImageUrl(path, 640, 480);
+
+    /// <summary>
+    /// The public URL of a product image, resized and cropped to a size. A height of zero keeps the image's own
+    /// proportions.
+    /// </summary>
+    public string GetImageUrl(string path, int width, int height)
     {
         if (string.IsNullOrEmpty(path))
         {
@@ -396,13 +807,21 @@ public sealed class ProductListingService
 
         var url = _mediaFileStore.MapPathToPublicUrl(path);
 
-        return path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)
-            ? url
-            : url + "?width=640&height=480&rmode=crop";
+        if (path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+        {
+            return url;
+        }
+
+        return height > 0
+            ? $"{url}?width={width}&height={height}&rmode=crop"
+            : $"{url}?width={width}&rmode=max";
     }
 
-    private async Task BuildProductsAsync(ProductListingViewModel model, IReadOnlyList<string> ids, IReadOnlyList<ProductAttributeDescriptor> attributes, ProductListingView view)
+    private async Task BuildProductsAsync(ProductListingViewModel model, IReadOnlyList<string> ids, IReadOnlyList<ProductAttributeDescriptor> attributes, ProductListingView view, ProductImageAspectRatio ratio)
     {
+        var (imageWidth, imageHeight) = GetCardImageSize(ratio);
+        var salesModes = new Dictionary<string, ProductSalesMode>(StringComparer.Ordinal);
+
         if (ids.Count == 0)
         {
             return;
@@ -423,15 +842,32 @@ public sealed class ProductListingService
                 continue;
             }
 
+            if (!salesModes.TryGetValue(contentItem.ContentType, out var salesMode))
+            {
+                salesMode = ProductAttributeCatalog.GetProductSettings(await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType))?.SalesMode ?? ProductSalesMode.Purchasable;
+                salesModes[contentItem.ContentType] = salesMode;
+            }
+
+            var metadata = await _contentManager.PopulateAspectAsync<ContentItemMetadata>(contentItem);
+            var url = metadata.DisplayRouteValues is null || _httpContextAccessor.HttpContext is null
+                ? null
+                : _linkGenerator.GetPathByRouteValues(_httpContextAccessor.HttpContext, routeName: null, metadata.DisplayRouteValues);
+
             var price = await BuildPriceShapeAsync(document, contentItem.ContentType);
             var shape = await _shapeFactory.CreateAsync<ProductCardViewModel>("ProductCard", card =>
             {
                 card.ContentItem = contentItem;
                 card.Product = document;
                 card.Title = string.IsNullOrEmpty(contentItem.DisplayText) ? document.Title : contentItem.DisplayText;
-                card.ImageUrl = GetImageUrl(document.ImagePath);
+                card.Url = url;
+                card.ImageUrl = GetImageUrl(document.ImagePath, imageWidth, imageHeight);
+                card.ImageAspectRatio = model.ImageAspectRatio;
                 card.Price = price;
+                card.DiscountPercent = document.PriceDisplay == ProductPriceDisplay.Show && document.Price > 0 && document.CompareAtPrice > document.Price
+                    ? (int)Math.Round((1 - (document.Price.Value / document.CompareAtPrice.Value)) * 100, MidpointRounding.AwayFromZero)
+                    : null;
                 card.IsPurchasable = document.IsPurchasable;
+                card.ShowAvailability = salesMode == ProductSalesMode.PerItem;
                 card.Chips = BuildSpecifications(document, attributes, settings => settings.ShowOnCard).Select(row => row.Value).ToList();
                 card.Specifications = BuildSpecifications(document, attributes, settings => settings.ShowInSpecifications);
             });
@@ -465,6 +901,7 @@ public sealed class ProductListingService
             MaxVisible = facet.MaxVisible,
             IsPrice = facet.AttributeKey == ProductAttributeKeys.Price,
             Currency = currency,
+            CurrencySymbol = facet.AttributeKey == ProductAttributeKeys.Price ? ProductPriceFormatter.GetSymbol(currency) : null,
             ClearUrl = urlFor(state.ClearFacet(facet.Key)),
         };
 
@@ -515,6 +952,7 @@ public sealed class ProductListingService
         }
 
         model.HasSelection = selected.Count > 0;
+        model.SelectedCount = selected.Count;
 
         return model.Options.Count > 0 ? model : null;
     }
@@ -623,7 +1061,10 @@ public sealed class ProductListingService
 
     private static ProductListingFacet Resolve(ProductListingFacet facet, IReadOnlyList<ProductAttributeDescriptor> attributes)
     {
-        if (!string.IsNullOrWhiteSpace(facet.Label))
+        // The editor refuses a reserved key, but a recipe or a deployment does not go through the editor.
+        var key = ProductListingState.IsReservedKey(facet.Key) ? facet.Key + "-filter" : facet.Key;
+
+        if (!string.IsNullOrWhiteSpace(facet.Label) && key == facet.Key)
         {
             return facet;
         }
@@ -632,9 +1073,9 @@ public sealed class ProductListingService
 
         return new ProductListingFacet
         {
-            Key = facet.Key,
+            Key = key,
             AttributeKey = facet.AttributeKey,
-            Label = attribute?.Label ?? facet.AttributeKey,
+            Label = string.IsNullOrWhiteSpace(facet.Label) ? attribute?.Label ?? facet.AttributeKey : facet.Label,
             Kind = facet.Kind,
             Level = facet.Level,
             DependsOn = facet.DependsOn,
@@ -659,7 +1100,9 @@ public sealed class ProductListingService
         target.Suffix = source.Suffix;
         target.IsPrice = source.IsPrice;
         target.Currency = source.Currency;
+        target.CurrencySymbol = source.CurrencySymbol;
         target.HasSelection = source.HasSelection;
+        target.SelectedCount = source.SelectedCount;
         target.ClearUrl = source.ClearUrl;
     }
 

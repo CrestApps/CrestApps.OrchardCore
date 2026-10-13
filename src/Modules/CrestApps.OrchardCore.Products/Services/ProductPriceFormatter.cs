@@ -41,6 +41,15 @@ public static class ProductPriceFormatter
         return amount.ToString("C", format);
     }
 
+    /// <summary>
+    /// The symbol of a currency, such as <c>$</c>, or the current culture's when none is given.
+    /// </summary>
+    /// <param name="currency">The ISO-4217 currency code.</param>
+    public static string GetSymbol(string currency)
+        => string.IsNullOrEmpty(currency)
+            ? CultureInfo.CurrentCulture.NumberFormat.CurrencySymbol
+            : _currencies.GetOrAdd(currency, Describe).Symbol;
+
     private static (string Symbol, int Digits) Describe(string currency)
     {
         foreach (var culture in CultureInfo.GetCultures(CultureTypes.SpecificCultures))

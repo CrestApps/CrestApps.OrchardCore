@@ -9,8 +9,8 @@ using OrchardCore.DisplayManagement.Handlers;
 namespace CrestApps.OrchardCore.Products.Services;
 
 /// <summary>
-/// Hides a field's own display on a product page when the product details already show it in the
-/// specification table, so a year or a color is not shown twice.
+/// Hides a field's own display on a product page when the product details already show it, in the specification
+/// table or in the image gallery, so a year, a color or a photo is not shown twice.
 /// </summary>
 /// <remarks>
 /// It only acts on product types that show product details, and only on fields marked
@@ -43,6 +43,9 @@ public sealed class ProductDetailsPlacementProvider : IShapePlacementProvider
         }
 
         var hidden = new HashSet<string>(StringComparer.Ordinal);
+        var galleryFound = false;
+        // Content is a dynamic wrapper over the item's JSON; it converts to the JsonObject only through a cast.
+        var content = (System.Text.Json.Nodes.JsonObject)contentItem.Content;
 
         foreach (var part in definition.Parts)
         {
@@ -50,6 +53,15 @@ public sealed class ProductDetailsPlacementProvider : IShapePlacementProvider
             {
                 if (field.GetSettings<ProductAttributeSettings>().ShowInSpecifications)
                 {
+                    hidden.Add($"{part.Name}-{field.Name}");
+                }
+
+                // The first media field with images is the product's gallery, which the product summary shows.
+                if (!galleryFound &&
+                    field.FieldDefinition.Name == "MediaField" &&
+                    content?[part.Name]?[field.Name]?["Paths"] is System.Text.Json.Nodes.JsonArray { Count: > 0 })
+                {
+                    galleryFound = true;
                     hidden.Add($"{part.Name}-{field.Name}");
                 }
             }
