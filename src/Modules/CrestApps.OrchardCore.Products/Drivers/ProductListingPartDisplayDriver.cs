@@ -108,6 +108,13 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.PageSizes = string.Join(", ", part.PageSizes ?? []);
             model.DefaultPageSize = part.DefaultPageSize;
             model.EnableKeywordSearch = part.EnableKeywordSearch;
+            model.Paging = part.Paging;
+            model.PagingModes =
+            [
+                new SelectListItem(S["Numbered pages"], nameof(ProductListingPaging.Pages)),
+                new SelectListItem(S["A Load more button"], nameof(ProductListingPaging.LoadMore)),
+                new SelectListItem(S["Infinite scroll"], nameof(ProductListingPaging.InfiniteScroll)),
+            ];
             model.SortOptions = model.Sorts.Select(sort => new SelectListItem(sort.Label, sort.Key)).ToList();
             model.Views =
             [
@@ -154,6 +161,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         part.AllowViewSwitching = model.AllowViewSwitching;
         part.ImageAspectRatio = model.ImageAspectRatio;
         part.EnableKeywordSearch = model.EnableKeywordSearch;
+        part.Paging = model.Paging;
 
         var sizes = (model.PageSizes ?? string.Empty)
             .Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)

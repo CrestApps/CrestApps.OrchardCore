@@ -25,6 +25,11 @@ public class ProductListingViewModel
     public bool EnableKeywordSearch { get; set; }
 
     /// <summary>
+    /// How visitors move through the pages.
+    /// </summary>
+    public ProductListingPaging Paging { get; set; }
+
+    /// <summary>
     /// Whether the page has a filters panel: it offers filters or keyword search. Without one, the results take
     /// the full width.
     /// </summary>

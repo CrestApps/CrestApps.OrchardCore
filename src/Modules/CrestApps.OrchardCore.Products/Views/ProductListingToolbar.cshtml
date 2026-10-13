@@ -21,7 +21,7 @@
         </button>
     }
 
-    <div class="me-auto text-muted small" data-product-listing-summary>
+    <div class="me-auto text-muted small" data-product-listing-summary data-first="@listing.FirstItem" data-last="@listing.LastItem" data-total="@listing.Total" data-template="@T["{0}–{1} of {2} results"].Value">
         @if (listing.Total == 0)
         {
             @T["No results"]

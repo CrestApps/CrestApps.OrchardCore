@@ -235,6 +235,14 @@
     </div>
 
     <div class="ocat-wrapper">
+        <label asp-for="Paging" class="ocat-label">@T["Paging"]</label>
+        <div class="ocat-end">
+            <select asp-for="Paging" asp-items="Model.PagingModes" class="form-select"></select>
+            <span class="hint">@T["How visitors move through the pages. Load more and infinite scroll add the next page's products below the ones shown; numbered page links stay for visitors without JavaScript and for search engines."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
         <label asp-for="DefaultView" class="ocat-label">@T["Layout"]</label>
         <div class="ocat-end">
             <select asp-for="DefaultView" asp-items="Model.Views" class="form-select"></select>

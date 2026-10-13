@@ -39,6 +39,11 @@ public class ProductListingPartViewModel
 
     public bool EnableKeywordSearch { get; set; }
 
+    public ProductListingPaging Paging { get; set; }
+
+    [BindNever]
+    public List<SelectListItem> PagingModes { get; set; } = [];
+
     [BindNever]
     public List<ProductListingTypeOption> ContentTypes { get; set; } = [];
 

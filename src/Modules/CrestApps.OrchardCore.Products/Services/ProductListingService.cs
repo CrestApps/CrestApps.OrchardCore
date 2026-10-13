@@ -429,6 +429,7 @@ public sealed class ProductListingService
         model.FormAction = baseUrl;
         model.ImageAspectRatio = GetAspectRatio(part.ImageAspectRatio);
         model.EnableKeywordSearch = part.EnableKeywordSearch;
+        model.Paging = part.Paging;
         model.Keyword = state.Keyword;
         model.Sort = sortOption?.Key;
         model.DefaultSort = defaultSort?.Key;

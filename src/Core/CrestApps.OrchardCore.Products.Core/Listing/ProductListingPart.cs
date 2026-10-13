@@ -77,6 +77,11 @@ public sealed class ProductListingPart : ContentPart
     public int[] PageSizes { get; set; } = [12, 24, 48];
 
     /// <summary>
+    /// Gets or sets how visitors move through the pages: numbered pages, a "Load more" button, or infinite scroll.
+    /// </summary>
+    public ProductListingPaging Paging { get; set; }
+
+    /// <summary>
     /// Gets or sets the page size used when the visitor picks none.
     /// </summary>
     public int DefaultPageSize { get; set; } = 24;
