@@ -45,6 +45,11 @@ public class SubscriptionPartViewModel
     public int? TrialDays { get; set; }
 
     /// <summary>
+    /// Gets or sets the plan's position among the plans, used by a listing's "Recommended" sort.
+    /// </summary>
+    public int? Sort { get; set; }
+
+    /// <summary>
     /// Gets or sets the available billing duration units.
     /// </summary>
     [BindNever]

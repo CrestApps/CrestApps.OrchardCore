@@ -44,7 +44,7 @@ Set a content type's stereotype to **Subscription** and it gets both **`Subscrip
 | `BillingCycleLimit` | Optional cap on how many cycles are billed before payments stop. |
 | `SubscriptionDayDelay` | Optional number of days to delay the start of the subscription. |
 | `TrialDays` | Optional free trial, in days, before the first cycle is billed. Not the same as a delayed start — see [Free trials](#free-trials). |
-| `Sort` | The plan's position. A plans listing's **Recommended** sort orders plans by it, lowest first; plans without one come last. |
+| `Sort` | The plan's position, edited as **Position** on the plan. A plans listing's **Recommended** sort orders plans by it, lowest first; plans without one come last. |
 
 Each content item of that type becomes a purchasable plan, editable and securable like any other Orchard Core content.
 

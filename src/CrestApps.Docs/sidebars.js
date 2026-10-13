@@ -134,6 +134,7 @@ const sidebars = {
             items: [
                 'user-manual/commerce/payment-providers',
                 'user-manual/commerce/products-and-currencies',
+                'user-manual/commerce/product-listings',
                 'user-manual/commerce/taxes',
                 'user-manual/commerce/coupons',
                 'user-manual/commerce/carts-and-orders',
