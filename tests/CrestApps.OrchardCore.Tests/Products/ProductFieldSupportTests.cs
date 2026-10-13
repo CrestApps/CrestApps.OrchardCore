@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.Services.Attributes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata.Models;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Products;
@@ -87,6 +89,8 @@ public sealed class ProductFieldSupportTests
         var provider = new TimeFieldAttributeValueProvider();
         var context = new ProductAttributeValueContext
         {
+            ContentItem = new ContentItem(),
+            Field = Field("TimeField", "Starts"),
             Key = "Starts",
             Value = new JsonObject { ["Value"] = "09:30:00" },
             Settings = new ProductAttributeSettings(),
@@ -104,6 +108,8 @@ public sealed class ProductFieldSupportTests
         var provider = new LinkFieldAttributeValueProvider();
         var context = new ProductAttributeValueContext
         {
+            ContentItem = new ContentItem(),
+            Field = Field("LinkField", "Manual"),
             Key = "Manual",
             Value = new JsonObject { ["Url"] = "https://example.com/manual.pdf", ["Text"] = "Owner's manual" },
             Settings = new ProductAttributeSettings(),
@@ -114,6 +120,9 @@ public sealed class ProductFieldSupportTests
         Assert.Equal("Owner's manual", value.Label);
         Assert.Equal("https://example.com/manual.pdf", value.Url);
     }
+
+    private static ContentPartFieldDefinition Field(string fieldType, string name)
+        => new(new ContentFieldDefinition(fieldType), name, []);
 
     [Theory]
     [InlineData(ProductAttributeValueKind.Number, true)]

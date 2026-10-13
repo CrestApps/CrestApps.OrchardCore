@@ -43,7 +43,7 @@ public sealed partial class RichTextFieldAttributeValueProvider : IProductAttrib
     /// <summary>
     /// The words of HTML or Markdown, without tags, markup characters or repeated white space.
     /// </summary>
-    internal static string ToPlainText(string source)
+    public static string ToPlainText(string source)
     {
         if (string.IsNullOrWhiteSpace(source))
         {
