@@ -1,6 +1,6 @@
 # Carts and orders plan
 
-Status: in progress on `claude/commerce-carts-orders`, stacked on the product listing PR (#834).
+Status: K0 to K3 built on `claude/commerce-carts-orders`, stacked on the product listing PR (#834).
 
 ## Goal
 
@@ -74,7 +74,7 @@ Projects: `CrestApps.OrchardCore.Orders.Core` and the `CrestApps.OrchardCore.Ord
 
 - The Carts module places an `AddToCart` shape in the Actions zone of the product's `ProductAction` display
   when the product can be bought and has a one-time price, so it shows on listing cards and product pages.
-- The store sample recipe enables Carts and Orders.
+- The store sample recipe enables Carts. Orders also needs a payment provider, so a site enables it with one.
 - Docs: Carts and Orders pages, the Products page's actions section, and the changelog.
 
 ## Out of scope
