@@ -54,6 +54,25 @@
     <span class="hint">@T["The label visitors see. Leave it empty to use the field's display name."]</span>
 </div>
 
+@if (Model.CanHaveSwatches)
+{
+    <div class="mb-3" asp-validation-class-for="SwatchColors">
+        <label asp-for="SwatchColors" class="form-label">@T["Swatch colors"]</label>
+        <textarea asp-for="SwatchColors" class="form-control font-monospace" rows="4" placeholder="Midnight = #191970&#10;Sky = light blue"></textarea>
+        <span asp-validation-for="SwatchColors"></span>
+        <span class="hint">@T["The colors of this field's values when a filter draws them as color swatches, one per line: the value's name, =, then a hex color or a CSS color name. A value not listed uses its own name when that is a color."]</span>
+    </div>
+}
+
+@if (Model.IsTaxonomy)
+{
+    <div class="mb-3">
+        <label asp-for="TermColorField" class="form-label">@T["Color field on terms"]</label>
+        <input asp-for="TermColorField" class="form-control" placeholder="@T["Color"]" />
+        <span class="hint">@T["The name of a text field on this taxonomy's terms that holds each term's swatch color, so a color is set once on its term. Swatch colors above win over it."]</span>
+    </div>
+}
+
 @if (Model.IsNumber)
 {
     <div class="row">

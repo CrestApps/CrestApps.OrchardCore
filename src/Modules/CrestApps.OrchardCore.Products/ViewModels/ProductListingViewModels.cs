@@ -164,7 +164,10 @@ public class ProductFacetViewModel
 
     public string ClearUrl { get; set; }
 
-    public ProductFacetDisplay Display { get; set; }
+    /// <summary>
+    /// The name of the style the filter is drawn in, such as <c>Buttons</c> or <c>Swatches</c>. Empty for a list.
+    /// </summary>
+    public string Style { get; set; }
 
     /// <summary>
     /// Ready-made ranges offered above a range filter's inputs, when the filter asks for them.
@@ -196,6 +199,11 @@ public class ProductFacetOptionViewModel
     public bool Selected { get; set; }
 
     public string Url { get; set; }
+
+    /// <summary>
+    /// The option's swatch color, safe to use in a style attribute, or <see langword="null"/> when it has none.
+    /// </summary>
+    public string Color { get; set; }
 }
 
 public class ProductActiveFilterViewModel

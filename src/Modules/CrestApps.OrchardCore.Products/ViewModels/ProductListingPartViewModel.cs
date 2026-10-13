@@ -50,10 +50,26 @@ public class ProductListingPartViewModel
 
     public List<SelectListItem> ImageAspectRatios { get; set; } = [];
 
-    public List<SelectListItem> FacetDisplays { get; set; } = [];
+    [BindNever]
+    public List<ProductFacetStyleOption> FacetStyles { get; set; } = [];
 
     [BindNever]
     public List<SelectListItem> FacetKinds { get; set; } = [];
+}
+
+/// <summary>
+/// A filter style the editor offers, with the filter kinds it can draw.
+/// </summary>
+public class ProductFacetStyleOption
+{
+    public string Name { get; set; }
+
+    public string DisplayName { get; set; }
+
+    /// <summary>
+    /// The kinds the style can draw, comma separated, or empty for every kind.
+    /// </summary>
+    public string Kinds { get; set; }
 }
 
 public class ProductListingTypeOption
@@ -75,6 +91,11 @@ public class ProductListingFacetRow
 
     public bool IsTerm { get; set; }
 
+    /// <summary>
+    /// Whether the filter works on numbers, so it can be a range with ready-made ranges.
+    /// </summary>
+    public bool IsNumber { get; set; }
+
     public string Key { get; set; }
 
     public string Label { get; set; }
@@ -89,9 +110,14 @@ public class ProductListingFacetRow
 
     public int MaxVisible { get; set; }
 
-    public ProductFacetDisplay Display { get; set; }
+    public string Style { get; set; }
 
     public bool ShowRanges { get; set; }
+
+    /// <summary>
+    /// The ready-made ranges as typed, such as <c>-25, 25-75, 75+</c>. Round ranges are offered when empty.
+    /// </summary>
+    public string Ranges { get; set; }
 
     public int Order { get; set; }
 

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Services;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Products;
@@ -67,5 +68,5 @@ public sealed class ProductListingVisibilityTests
     }
 
     private static ProductListingService CreateService()
-        => new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, [], null);
+        => new(null, null, null, null, null, null, null, null, null, null, null, null, null, null, [], Options.Create(new ProductFacetStyleOptions()), null);
 }

@@ -500,7 +500,17 @@
                 "ProductAttributeSettings": {
                   "Filterable": true,
                   "ShowOnCard": true,
-                  "ShowInSpecifications": true
+                  "ShowInSpecifications": true,
+                  "SwatchColors": {
+                    "White": "#f4f4f1",
+                    "Silver": "#c4c7cc",
+                    "Grey": "#6d7075",
+                    "Black": "#17191c",
+                    "Blue": "#1f4e8c",
+                    "Red": "#b3131b",
+                    "Green": "#2e5b3c",
+                    "Beige": "#d6c6a5"
+                  }
                 },
                 "TextFieldPredefinedListEditorSettings": {
                   "Options": [
@@ -3747,7 +3757,7 @@
                 "AttributeKey": "ExteriorColor",
                 "Label": "Exterior color",
                 "Kind": "Checkbox",
-                "Display": "Swatches",
+                "Style": "Swatches",
                 "MaxVisible": 0
               },
               {
@@ -3755,7 +3765,7 @@
                 "AttributeKey": "InteriorColor",
                 "Label": "Interior color",
                 "Kind": "Checkbox",
-                "Display": "Swatches",
+                "Style": "Swatches",
                 "MaxVisible": 0,
                 "Collapsed": true
               },

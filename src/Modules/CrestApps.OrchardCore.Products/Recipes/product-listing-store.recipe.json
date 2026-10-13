@@ -3063,7 +3063,7 @@
                 "AttributeKey": "Color",
                 "Label": "Color",
                 "Kind": "Checkbox",
-                "Display": "Swatches",
+                "Style": "Swatches",
                 "MaxVisible": 0
               },
               {
@@ -3071,7 +3071,7 @@
                 "AttributeKey": "Sizes",
                 "Label": "Size",
                 "Kind": "Checkbox",
-                "Display": "Buttons",
+                "Style": "Buttons",
                 "MaxVisible": 0,
                 "Collapsed": true
               },

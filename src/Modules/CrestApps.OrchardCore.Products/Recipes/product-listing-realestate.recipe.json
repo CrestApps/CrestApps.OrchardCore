@@ -2270,7 +2270,7 @@
                 "AttributeKey": "PropertyType",
                 "Label": "Type",
                 "Kind": "Checkbox",
-                "Display": "Buttons",
+                "Style": "Buttons",
                 "MaxVisible": 0
               },
               {
@@ -2284,7 +2284,13 @@
                 "Key": "beds",
                 "AttributeKey": "Bedrooms",
                 "Label": "Bedrooms",
-                "Kind": "Range"
+                "Kind": "Range",
+                "ShowRanges": true,
+                "Ranges": [
+                  { "Min": 1, "Max": 2 },
+                  { "Min": 3, "Max": 4 },
+                  { "Min": 5 }
+                ]
               },
               {
                 "Key": "baths",

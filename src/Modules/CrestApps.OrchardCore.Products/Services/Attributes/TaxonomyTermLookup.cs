@@ -153,7 +153,10 @@ public sealed class TaxonomyTermLookup
                 continue;
             }
 
-            terms[id] = new TaxonomyTerm(id, item["DisplayText"]?.GetValue<string>() ?? id, parentId, level, order++);
+            terms[id] = new TaxonomyTerm(id, item["DisplayText"]?.GetValue<string>() ?? id, parentId, level, order++)
+            {
+                Content = item,
+            };
 
             if (item["Terms"] is JsonArray children)
             {
@@ -177,4 +180,9 @@ public sealed record TaxonomyTerm(string ContentItemId, string DisplayText, stri
     /// The term's slug in listing URLs, unique within its taxonomy.
     /// </summary>
     public string Slug { get; init; }
+
+    /// <summary>
+    /// The term's stored content item, with its parts and fields.
+    /// </summary>
+    public JsonObject Content { get; init; }
 }

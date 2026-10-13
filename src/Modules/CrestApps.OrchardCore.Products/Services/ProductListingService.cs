@@ -3,11 +3,13 @@ using System.Text;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Indexes;
+using CrestApps.OrchardCore.Products.Services.Attributes;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -44,6 +46,7 @@ public sealed class ProductListingService
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IEnumerable<IProductPositionProvider> _positionProviders;
+    private readonly ProductFacetStyleOptions _facetStyles;
 
     // Several shapes of one page read the same listing or product, and they render in separate passes (the
     // breadcrumb sits in the page header, before the listing). Each is built once per request.
@@ -72,6 +75,7 @@ public sealed class ProductListingService
         IContentItemDisplayManager contentItemDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IEnumerable<IProductPositionProvider> positionProviders,
+        IOptions<ProductFacetStyleOptions> facetStyles,
         IStringLocalizer<ProductListingService> stringLocalizer)
     {
         _attributeCatalog = attributeCatalog;
@@ -89,6 +93,7 @@ public sealed class ProductListingService
         _contentItemDisplayManager = contentItemDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _positionProviders = positionProviders;
+        _facetStyles = facetStyles.Value;
         S = stringLocalizer;
     }
 
@@ -208,6 +213,48 @@ public sealed class ProductListingService
         }
 
         return sorts;
+    }
+
+    /// <summary>
+    /// The style a filter is drawn in, or <see langword="null"/> for the default list: a style that is no longer
+    /// registered, or that cannot draw the filter's kind, falls back to the list.
+    /// </summary>
+    private ProductFacetStyle GetStyle(ProductListingFacet facet)
+        => _facetStyles.Find(facet.Style) is { } style && style.Supports(facet.Kind) && style.Name != ProductFacetStyles.List ? style : null;
+
+    /// <summary>
+    /// Gives each option its swatch color, from the field's swatch colors, the color field on its term, or its
+    /// own name. Any style can use it, not only swatches.
+    /// </summary>
+    private async Task SetOptionColorsAsync(ProductFacetViewModel facet, ProductAttributeDescriptor attribute)
+    {
+        if (facet.Kind is ProductFacetKind.Range or ProductFacetKind.Toggle)
+        {
+            return;
+        }
+
+        Dictionary<string, TaxonomyTerm> termsBySlug = null;
+
+        if (!string.IsNullOrWhiteSpace(attribute?.Settings.TermColorField) &&
+            await _termLookup.GetTermsAsync(attribute.TaxonomyContentItemId) is { } terms)
+        {
+            termsBySlug = new Dictionary<string, TaxonomyTerm>(StringComparer.Ordinal);
+
+            foreach (var term in terms.Values)
+            {
+                termsBySlug.TryAdd(term.Slug ?? term.ContentItemId, term);
+                termsBySlug.TryAdd(term.ContentItemId, term);
+            }
+        }
+
+        foreach (var option in facet.Options)
+        {
+            var termColor = termsBySlug is not null && option.Value is not null && termsBySlug.TryGetValue(option.Value, out var term)
+                ? ProductSwatchColors.ReadTermField(term.Content, attribute.Settings.TermColorField)
+                : null;
+
+            option.Color = ProductSwatchColors.Resolve(option.Value, option.Label, attribute?.Settings.SwatchColors, termColor);
+        }
     }
 
     /// <summary>
@@ -394,12 +441,16 @@ public sealed class ProductListingService
 
         foreach (var facet in facets)
         {
-            var facetModel = BuildFacet(facet, attributes.FirstOrDefault(attribute => attribute.Key == facet.AttributeKey), state, result, currency, UrlFor);
+            var attribute = attributes.FirstOrDefault(candidate => candidate.Key == facet.AttributeKey);
+            var facetModel = BuildFacet(facet, attribute, state, result, currency, UrlFor);
 
             if (facetModel is null)
             {
                 continue;
             }
+
+            facetModel.Style = GetStyle(facet)?.Name;
+            await SetOptionColorsAsync(facetModel, attribute);
 
             facetModels[facet.Key] = facetModel;
 
@@ -432,9 +483,9 @@ public sealed class ProductListingService
             var shape = await _shapeFactory.CreateAsync<ProductFacetViewModel>("ProductFacet", target => Copy(facetModel, target));
             shape.Metadata.Alternates.Add($"ProductFacet__{facet.Kind}");
 
-            if (facet.Display != ProductFacetDisplay.List && facet.Kind is ProductFacetKind.Checkbox or ProductFacetKind.Radio)
+            if (!string.IsNullOrEmpty(facetModel.Style))
             {
-                shape.Metadata.Alternates.Add($"ProductFacet__{facet.Display}");
+                shape.Metadata.Alternates.Add($"ProductFacet__{SafeAlternate(facetModel.Style)}");
             }
 
             shape.Metadata.Alternates.Add($"ProductFacet__{SafeAlternate(facet.Key)}");
@@ -1061,7 +1112,6 @@ public sealed class ProductListingService
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
             IsPrice = facet.AttributeKey == ProductAttributeKeys.Price,
-            Display = facet.Display,
             Currency = currency,
             CurrencySymbol = facet.AttributeKey == ProductAttributeKeys.Price ? ProductPriceFormatter.GetSymbol(currency) : null,
             ClearUrl = urlFor(state.ClearFacet(facet.Key)),
@@ -1081,22 +1131,26 @@ public sealed class ProductListingService
             model.NumberFormat = attribute?.Settings.NumberFormat;
             model.Suffix = attribute?.Settings.Suffix;
 
-            if (facet.ShowRanges && facetResult?.Min is { } low && facetResult.Max is { } high)
-            {
-                foreach (var (min, max) in GetRangeBuckets(low, high))
-                {
-                    var target = state.ClearFacet(facet.Key);
-                    target.Ranges[facet.Key] = (min, max);
+            // The merchant's own ranges, or round ones worked out from the products' values.
+            IEnumerable<(decimal? Min, decimal? Max)> buckets = !facet.ShowRanges
+                ? []
+                : facet.Ranges is { Count: > 0 }
+                    ? facet.Ranges.Select(range => (range.Min, range.Max))
+                    : facetResult?.Min is { } low && facetResult.Max is { } high ? GetRangeBuckets(low, high) : [];
 
-                    model.Ranges.Add(new ProductFacetRangeViewModel
-                    {
-                        Min = min,
-                        Max = max,
-                        Label = FormatRange(model, min, max),
-                        Url = urlFor(target),
-                        Selected = model.HasSelection && model.SelectedMin == min && model.SelectedMax == max,
-                    });
-                }
+            foreach (var (min, max) in buckets)
+            {
+                var target = state.ClearFacet(facet.Key);
+                target.Ranges[facet.Key] = (min, max);
+
+                model.Ranges.Add(new ProductFacetRangeViewModel
+                {
+                    Min = min,
+                    Max = max,
+                    Label = FormatRange(model, min, max),
+                    Url = urlFor(target),
+                    Selected = model.HasSelection && model.SelectedMin == min && model.SelectedMax == max,
+                });
             }
 
             // A range with nothing to range over (no product shows a price) is noise.
@@ -1264,8 +1318,9 @@ public sealed class ProductListingService
             DependsOn = facet.DependsOn,
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
-            Display = facet.Display,
+            Style = facet.Style,
             ShowRanges = facet.ShowRanges,
+            Ranges = facet.Ranges ?? [],
         };
     }
 
@@ -1355,7 +1410,7 @@ public sealed class ProductListingService
         target.CurrencySymbol = source.CurrencySymbol;
         target.HasSelection = source.HasSelection;
         target.SelectedCount = source.SelectedCount;
-        target.Display = source.Display;
+        target.Style = source.Style;
         target.Ranges = source.Ranges;
         target.ClearUrl = source.ClearUrl;
     }

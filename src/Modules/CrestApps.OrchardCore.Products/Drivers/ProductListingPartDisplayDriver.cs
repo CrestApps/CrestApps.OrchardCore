@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -17,6 +18,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
     private readonly ProductListingService _listingService;
     private readonly ProductAttributeCatalog _attributeCatalog;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ProductFacetStyleOptions _facetStyles;
 
     internal readonly IStringLocalizer S;
 
@@ -24,11 +26,13 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         ProductListingService listingService,
         ProductAttributeCatalog attributeCatalog,
         IHttpContextAccessor httpContextAccessor,
+        IOptions<ProductFacetStyleOptions> facetStyles,
         IStringLocalizer<ProductListingPartDisplayDriver> stringLocalizer)
     {
         _listingService = listingService;
         _attributeCatalog = attributeCatalog;
         _httpContextAccessor = httpContextAccessor;
+        _facetStyles = facetStyles.Value;
         S = stringLocalizer;
     }
 
@@ -87,12 +91,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
             model.ImageAspectRatio = part.ImageAspectRatio;
-            model.FacetDisplays =
-            [
-                new SelectListItem(S["List"], nameof(ProductFacetDisplay.List)),
-                new SelectListItem(S["Buttons"], nameof(ProductFacetDisplay.Buttons)),
-                new SelectListItem(S["Color swatches"], nameof(ProductFacetDisplay.Swatches)),
-            ];
+            model.FacetStyles = _facetStyles.Styles
+                .Select(style => new ProductFacetStyleOption
+                {
+                    Name = style.Name,
+                    DisplayName = style.DisplayName,
+                    Kinds = string.Join(',', style.Kinds.Order()),
+                })
+                .ToList();
             model.ImageAspectRatios =
             [
                 new SelectListItem(S["Landscape (4:3)"], nameof(ProductImageAspectRatio.Landscape)),
@@ -182,8 +188,9 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
                 DependsOn = string.IsNullOrWhiteSpace(row.DependsOn) ? null : ProductListingService.ToUrlKey(row.DependsOn),
                 Collapsed = row.Collapsed,
                 MaxVisible = Math.Max(0, row.MaxVisible),
-                Display = row.Display,
+                Style = _facetStyles.Find(row.Style) is { } style && style.Supports(row.Kind) && style.Name != ProductFacetStyles.List ? style.Name : null,
                 ShowRanges = row.ShowRanges,
+                Ranges = ReadRanges(row, context),
             })
             .ToList();
 
@@ -216,6 +223,21 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             .ToList();
 
         return Edit(part, context);
+    }
+
+    private List<ProductFacetRange> ReadRanges(ProductListingFacetRow row, UpdatePartEditorContext context)
+    {
+        if (row.Kind != ProductFacetKind.Range || string.IsNullOrWhiteSpace(row.Ranges))
+        {
+            return [];
+        }
+
+        if (!ProductRangeBrackets.TryParse(row.Ranges, out var ranges, out var invalid))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(ProductListingPartViewModel.Facets), S["The range '{0}' of the filter '{1}' could not be read. Write ranges like -25, 25-75, 75+.", invalid, row.Label ?? row.AttributeLabel ?? row.AttributeKey]);
+        }
+
+        return ranges;
     }
 
     private bool PostedOnlyTheseTypes()
@@ -258,6 +280,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             AttributeKey = facet.AttributeKey,
             AttributeLabel = attribute?.Label ?? facet.Label ?? facet.AttributeKey,
             IsTerm = attribute?.Kind == ProductAttributeValueKind.Term,
+            IsNumber = attribute?.Kind == ProductAttributeValueKind.Number || facet.AttributeKey == ProductAttributeKeys.Price,
             Key = facet.Key,
             Label = facet.Label,
             Kind = facet.Kind,
@@ -265,8 +288,9 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             DependsOn = facet.DependsOn,
             Collapsed = facet.Collapsed,
             MaxVisible = facet.MaxVisible,
-            Display = facet.Display,
+            Style = facet.Style,
             ShowRanges = facet.ShowRanges,
+            Ranges = ProductRangeBrackets.Format(facet.Ranges),
             Order = order,
             ContentTypes = attribute?.ContentTypes.ToList() ?? [],
         };

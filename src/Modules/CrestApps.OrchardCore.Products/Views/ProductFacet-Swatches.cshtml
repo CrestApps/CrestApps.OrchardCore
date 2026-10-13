@@ -4,18 +4,15 @@
 @model ProductFacetViewModel
 
 @*
-    A filter drawn as color swatches. An option's name is used as its color when it is a CSS color name or a hex
-    value (Black, Navy, Light Blue, #1e90ff). Override ProductFacet-{Key} to map other names to colors.
+    A filter drawn as color swatches. Each option's color comes from the field's Swatch colors, then the color field
+    on its term, then its own name when that is a CSS color name or a hex value (Black, Navy, Light Blue, #1e90ff).
+    An option with no color shows an empty swatch.
 *@
 
 @{
     var id = $"facet-{Model.Key}";
     var expanded = !Model.Collapsed || Model.HasSelection;
     var inputType = Model.Kind == ProductFacetKind.Radio ? "radio" : "checkbox";
-
-    // Only letters, digits and # can reach the style attribute.
-    static string ToCssColor(string label)
-        => new string((label ?? string.Empty).Where(character => char.IsAsciiLetterOrDigit(character) || character == '#').ToArray()).ToLowerInvariant();
 }
 
 <section class="product-facet" data-facet="@Model.Key">
@@ -43,7 +40,7 @@
                     <div class="product-facet-swatch">
                         <input type="@inputType" class="product-facet-swatch-input" name="@Model.Key" value="@option.Value" id="@optionId" checked="@option.Selected" />
                         <label for="@optionId" title="@T["{0} ({1})", option.Label, option.Count]">
-                            <span class="product-facet-swatch-color" style="--product-swatch-color: @ToCssColor(option.Label)" aria-hidden="true"></span>
+                            <span class="product-facet-swatch-color" style="@(option.Color is null ? null : $"--product-swatch-color: {option.Color}")" aria-hidden="true"></span>
                             <span class="product-facet-swatch-label">@option.Label</span>
                         </label>
                     </div>

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.OrchardCore.Products.Core.Listing;
 
 /// <summary>
@@ -48,12 +50,31 @@ public sealed class ProductListingFacet
     public int MaxVisible { get; set; } = 8;
 
     /// <summary>
-    /// Gets or sets how the options of a checkbox or radio filter are drawn.
+    /// Gets or sets the name of the style the filter is drawn in: one of <see cref="ProductFacetStyles"/> or a
+    /// style another module registered in <see cref="ProductFacetStyleOptions"/>. A list is drawn when it is empty.
     /// </summary>
-    public ProductFacetDisplay Display { get; set; }
+    public string Style { get; set; }
 
     /// <summary>
     /// Gets or sets whether a range filter offers ready-made ranges, such as "Up to $50", above its inputs.
     /// </summary>
     public bool ShowRanges { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ready-made ranges a range filter offers. Round ranges are worked out from the products'
+    /// values when it is empty.
+    /// </summary>
+    public List<ProductFacetRange> Ranges { get; set; } = [];
+
+    /// <summary>
+    /// Reads the style of a filter saved while styles were a fixed list, under the name <c>Display</c>.
+    /// </summary>
+    [JsonInclude]
+    [JsonPropertyName("Display")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    internal string LegacyDisplay
+    {
+        get => null;
+        set => Style ??= value;
+    }
 }

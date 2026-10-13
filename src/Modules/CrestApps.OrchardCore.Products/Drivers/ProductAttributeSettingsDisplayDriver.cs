@@ -6,6 +6,9 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using Microsoft.Extensions.Localization;
+using OrchardCore.Mvc.ModelBinding;
+using CrestApps.OrchardCore.Products.Services;
 
 namespace CrestApps.OrchardCore.Products.Drivers;
 
@@ -23,12 +26,16 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
     private readonly IEnumerable<IProductAttributeValueProvider> _providers;
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
+    internal readonly IStringLocalizer S;
+
     public ProductAttributeSettingsDisplayDriver(
         IEnumerable<IProductAttributeValueProvider> providers,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer<ProductAttributeSettingsDisplayDriver> stringLocalizer)
     {
         _providers = providers;
         _contentDefinitionManager = contentDefinitionManager;
+        S = stringLocalizer;
     }
 
     public override bool CanHandleModel(ContentPartFieldDefinition model)
@@ -54,8 +61,12 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
             viewModel.Label = settings.Label;
             viewModel.NumberFormat = settings.NumberFormat;
             viewModel.Suffix = settings.Suffix;
+            viewModel.SwatchColors = ProductSwatchColors.Format(settings.SwatchColors);
+            viewModel.TermColorField = settings.TermColorField;
             viewModel.CanSort = kind is ProductAttributeValueKind.Number or ProductAttributeValueKind.Date;
             viewModel.IsNumber = kind == ProductAttributeValueKind.Number;
+            viewModel.CanHaveSwatches = kind is ProductAttributeValueKind.Text or ProductAttributeValueKind.Term;
+            viewModel.IsTaxonomy = kind == ProductAttributeValueKind.Term && model.FieldDefinition.Name == "TaxonomyField";
         }).Location("Content:20");
     }
 
@@ -70,6 +81,13 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
 
         await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
 
+        var swatchColors = ProductSwatchColors.Parse(viewModel.SwatchColors, out var invalid);
+
+        if (invalid.Count > 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(viewModel.SwatchColors), S["These swatch colors could not be read: {0}. Write one per line, like Midnight = #191970 or Sky = light blue.", string.Join(", ", invalid)]);
+        }
+
         context.Builder.WithSettings(new ProductAttributeSettings
         {
             Filterable = viewModel.Filterable,
@@ -80,6 +98,8 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
             Label = viewModel.Label?.Trim(),
             NumberFormat = viewModel.NumberFormat?.Trim(),
             Suffix = viewModel.Suffix?.Trim(),
+            SwatchColors = swatchColors,
+            TermColorField = string.IsNullOrWhiteSpace(viewModel.TermColorField) ? null : viewModel.TermColorField.Trim(),
         });
 
         return await EditAsync(model, context);

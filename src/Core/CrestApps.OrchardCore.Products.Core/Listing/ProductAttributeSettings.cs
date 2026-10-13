@@ -53,6 +53,19 @@ public sealed class ProductAttributeSettings
     public string Suffix { get; set; }
 
     /// <summary>
+    /// Gets or sets the colors of the field's values when a filter draws them as swatches, keyed by value name,
+    /// such as <c>Midnight</c> to <c>#191970</c>. A value with no color here uses its own name when that is a
+    /// CSS color.
+    /// </summary>
+    public Dictionary<string, string> SwatchColors { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Gets or sets, for a taxonomy field, the name of a text field on the terms that holds each term's swatch
+    /// color, so a color is set once on its term.
+    /// </summary>
+    public string TermColorField { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the field takes part in the listing at all.
     /// </summary>
     public bool IsUsed => Filterable || Sortable || Searchable || ShowOnCard || ShowInSpecifications;

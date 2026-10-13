@@ -20,6 +20,19 @@ public class ProductAttributeSettingsViewModel
 
     public string Suffix { get; set; }
 
+    /// <summary>
+    /// The swatch colors as "Name = color" lines.
+    /// </summary>
+    public string SwatchColors { get; set; }
+
+    public string TermColorField { get; set; }
+
+    [BindNever]
+    public bool CanHaveSwatches { get; set; }
+
+    [BindNever]
+    public bool IsTaxonomy { get; set; }
+
     [BindNever]
     public bool CanSort { get; set; }
 

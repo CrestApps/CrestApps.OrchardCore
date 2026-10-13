@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Taxation;
 using CrestApps.OrchardCore.Taxation.Services;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.BackgroundTasks;
@@ -105,9 +106,35 @@ public sealed class TaxationStartup : StartupBase
 [Feature(ProductConstants.Feature.Listing)]
 public sealed class ListingStartup : StartupBase
 {
+    private readonly IStringLocalizer S;
+
+    public ListingStartup(IStringLocalizer<ListingStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<TaxonomyTermLookup>();
+
+        // The styles a filter can be drawn in. Another module adds its own the same way, with a
+        // ProductFacet-{Style} template.
+        services.Configure<ProductFacetStyleOptions>(options =>
+        {
+            options.AddStyle(ProductFacetStyles.List, style => style.DisplayName = S["List"]);
+            options.AddStyle(ProductFacetStyles.Buttons, style =>
+            {
+                style.DisplayName = S["Buttons"];
+                style.Kinds.Add(ProductFacetKind.Checkbox);
+                style.Kinds.Add(ProductFacetKind.Radio);
+            });
+            options.AddStyle(ProductFacetStyles.Swatches, style =>
+            {
+                style.DisplayName = S["Color swatches"];
+                style.Kinds.Add(ProductFacetKind.Checkbox);
+                style.Kinds.Add(ProductFacetKind.Radio);
+            });
+        });
         services.AddScoped<IProductAttributeValueProvider, TextFieldAttributeValueProvider>();
         services.AddScoped<IProductAttributeValueProvider, MultiTextFieldAttributeValueProvider>();
         services.AddScoped<IProductAttributeValueProvider, NumericFieldAttributeValueProvider>();

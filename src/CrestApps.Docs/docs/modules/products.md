@@ -223,6 +223,8 @@ Product attributes are ordinary content fields on the product type. The settings
 | **Show in specifications** | Shown in the specification table of list rows and the product page. |
 | **Listing label** | The label visitors see. Defaults to the field's display name. |
 | **Number format** and **Unit** | For number fields: a .NET format string, such as `0` for a year, and a unit, such as `mi`. |
+| **Swatch colors** | For text and taxonomy fields: the color of each value when a filter draws them as color swatches, one per line, such as `Midnight = #191970` or `Sky = light blue`. |
+| **Color field on terms** | For taxonomy fields: the name of a text field on the terms that holds each term's color, so a color is set once on its term. |
 
 Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are supported. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter. Terms appear in URLs by a readable slug made from their name, such as `?make=toyota&model=camry`, and a link that still uses a term's identifier keeps working.
 
@@ -245,12 +247,35 @@ Create a **Product Listing** content item, from **Commerce → Product Listings*
 
 - the product types it lists: **Every product type**, which also lists types added later, or **Only these product types** with at least one ticked. The filters, the sorts and the default sort's options are grouped by type: what every product has (the price, the type, whether it can be bought online), then each type's own fields, then fields several types share. Only the groups of the listed types show, and saving drops the filters and sorts of types that are not listed, so a vehicle listing shows the vehicle's filters and not the property's;
 - **Show filters**: turn it off to list the products without filters, for example a short list of plans. A listing without filters and without keyword search has no filters panel, and its results take the full width;
-- the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a style (a list, buttons for short values such as sizes, or color swatches drawn from option names that are CSS colors), ready-made ranges such as *≤ $50* above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
+- the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a [style](#filter-styles), [ready-made ranges](#ranges) above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
 - **Let visitors change the sort**: turn it off to always show the products in the default sort's order. The default sort can then be any sort, even one not offered;
 - the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
 
 The page is an ordinary content item, so it has its own URL, menu entry and permissions.
+
+#### Filter styles
+
+A filter's **kind** decides what it matches: several values, one value, a minimum and maximum, or *yes*. Its **style** decides how it is drawn. The editor offers only the styles that suit the kind:
+
+| Style | Kinds | Draws |
+| --- | --- | --- |
+| **List** | All | Options with their counts. The default. |
+| **Buttons** | Checkboxes, Radio buttons | A row of buttons, which suits short values such as sizes. |
+| **Color swatches** | Checkboxes, Radio buttons | A row of colored circles with their names. |
+
+A swatch's color comes, in order, from the field's **Swatch colors**, then the **Color field on terms**, then the option's own name when that is a hex color or a CSS color name, such as *Navy* or *Light Blue*. An option with none of these shows an empty circle.
+
+Modules can add styles; see [Adding a filter style](#adding-a-filter-style).
+
+#### Ranges
+
+A range filter offers a minimum and a maximum box, within the lowest and highest values of the matching products. Tick **Ranges** to also offer ready-made ranges above the boxes:
+
+- leave the box beside it empty for round ranges worked out from the products, such as *up to $50, $50 to $100, $100 to $150, $150 to $200, $200 and up*;
+- or type your own, separated by commas: `-25` for up to 25, `25-75` for 25 to 75, and `75+` for 75 and up. Ends are included, so `1-2, 3-4, 5+` suits bedrooms. Write numbers without thousands separators, with a dot for decimals.
+
+Range filters work on number fields and the price.
 
 A listing lists every kind of product the same way: goods sold online, items that are only listed, and [subscription plans](subscriptions#listing-your-plans), whose types carry the Product part automatically. A product with a recurring price shows its billing period, such as *$29 / month*.
 
@@ -293,7 +318,7 @@ Every part of a listing page and a product page is a shape, so a theme overrides
 | `ProductListingBreadcrumb` | The listing's breadcrumb, in the page header | `ProductListingBreadcrumb-{ContentType}` |
 | `ProductListingFilters` | The filters sidebar, an off-canvas panel on small screens | `ProductListingFilters-{ContentType}` |
 | `ProductListingSearch` | The keyword search box | `ProductListingSearch-{ContentType}` |
-| `ProductFacet` | One filter | `ProductFacet-{Kind}` (`Checkbox`, `Radio`, `Range`, `Toggle`), `ProductFacet-{Style}` (`Buttons`, `Swatches`), `ProductFacet-{Key}` |
+| `ProductFacet` | One filter | `ProductFacet-{Kind}` (`Checkbox`, `Radio`, `Range`, `Toggle`), `ProductFacet-{Style}` (`Buttons`, `Swatches`, or a style a module adds), `ProductFacet-{Key}` |
 | `ProductListingToolbar` | The result count, sort, page size and layout switch | `ProductListingToolbar-{ContentType}` |
 | `ProductListingActiveFilters` | The picked filters, each removable | `ProductListingActiveFilters-{ContentType}` |
 | `ProductListingResults` | The products of the page | `ProductListingResults-Grid`, `ProductListingResults-List` |
@@ -319,6 +344,37 @@ The listing shapes' model has a `Listing` property with everything the page show
   </div>
 </article>
 ```
+
+### Adding a filter style
+
+A module adds a style by registering it in `ProductFacetStyleOptions`, with the filter kinds it can draw, and providing a `ProductFacet-{Style}` template. The listing editor then offers it for those kinds, and a filter drawn in it gets the `ProductFacet__{Style}` alternate:
+
+```csharp
+public sealed class Startup : StartupBase
+{
+    private readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<ProductFacetStyleOptions>(options =>
+            options.AddStyle("Stars", style =>
+            {
+                style.DisplayName = S["Star rating"];
+                style.Kinds.Add(ProductFacetKind.Checkbox);
+                style.Kinds.Add(ProductFacetKind.Radio);
+            }));
+    }
+}
+```
+
+The template, `ProductFacet-Stars.cshtml` or a Liquid template named `ProductFacet-Stars`, receives a `ProductFacetViewModel` with the filter's options, their counts, their URLs, whether each is selected, and each option's swatch `Color`. A style with no kinds can draw every kind. A filter whose style is no longer registered, for example after its module is disabled, is drawn as a list.
+
+The kinds are fixed, because each one is a different way of searching. A new way of drawing a filter is a style.
 
 ### Adding actions from your module
 
