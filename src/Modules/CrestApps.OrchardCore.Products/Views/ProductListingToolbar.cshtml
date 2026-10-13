@@ -9,14 +9,17 @@
 }
 
 <div class="product-listing-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
-    <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#@listing.FormId-filters" aria-controls="@listing.FormId-filters">
-        <span class="fa-solid fa-sliders" aria-hidden="true"></span>
-        @T["Filters"]
-        @if (activeCount > 0)
-        {
-            <span class="badge rounded-pill bg-primary">@activeCount</span>
-        }
-    </button>
+    @if (listing.ShowFilters)
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#@listing.FormId-filters" aria-controls="@listing.FormId-filters">
+            <span class="fa-solid fa-sliders" aria-hidden="true"></span>
+            @T["Filters"]
+            @if (activeCount > 0)
+            {
+                <span class="badge rounded-pill bg-primary">@activeCount</span>
+            }
+        </button>
+    }
 
     <div class="me-auto text-muted small" data-product-listing-summary>
         @if (listing.Total == 0)

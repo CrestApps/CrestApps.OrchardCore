@@ -24,6 +24,17 @@ public class ProductListingViewModel
 
     public bool EnableKeywordSearch { get; set; }
 
+    /// <summary>
+    /// Whether the page has a filters panel: it offers filters or keyword search. Without one, the results take
+    /// the full width.
+    /// </summary>
+    public bool ShowFilters { get; set; }
+
+    /// <summary>
+    /// Whether visitors can change the sort.
+    /// </summary>
+    public bool ShowSorting { get; set; }
+
     public string Keyword { get; set; }
 
     public IList<IShape> Facets { get; set; } = [];

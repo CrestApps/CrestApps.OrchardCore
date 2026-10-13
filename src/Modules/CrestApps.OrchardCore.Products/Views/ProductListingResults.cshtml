@@ -15,8 +15,15 @@
 {
     <div class="product-listing-empty text-center border rounded py-5 px-3" role="status">
         <span class="fa-solid fa-magnifying-glass fa-2x text-muted mb-3 d-block" aria-hidden="true"></span>
-        <p class="h5">@T["No products match"]</p>
-        <p class="text-muted mb-3">@T["Try removing a filter or searching for something else."]</p>
+        @if (listing.ShowFilters)
+        {
+            <p class="h5">@T["No products match"]</p>
+            <p class="text-muted mb-3">@T["Try removing a filter or searching for something else."]</p>
+        }
+        else
+        {
+            <p class="h5 mb-0">@T["There are no products to show yet."]</p>
+        }
         @if (listing.ActiveFilters.Count > 0)
         {
             <a href="@listing.ClearAllUrl" class="btn btn-outline-primary" data-product-listing-link>@T["Clear all filters"]</a>
@@ -34,7 +41,8 @@ else if (listing.View == ProductListingView.List)
 }
 else
 {
-    <div class="product-listing-results product-listing-results-grid row row-cols-2 row-cols-md-3 row-cols-lg-2 row-cols-xl-3 g-2 g-sm-3">
+    @* Beside the filters panel the results are narrower, so they fit fewer cards per row. *@
+    <div class="product-listing-results product-listing-results-grid row row-cols-2 row-cols-md-3 @(listing.ShowFilters ? "row-cols-lg-2 row-cols-xl-3" : "row-cols-lg-4") g-2 g-sm-3">
         @foreach (var product in listing.Products)
         {
             <div class="col">

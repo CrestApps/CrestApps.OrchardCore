@@ -18,6 +18,12 @@ public sealed class ProductListingPart : ContentPart
     public string[] ContentTypes { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets whether visitors can filter the products. When off, the page lists its products without
+    /// filters and ignores filters in the address.
+    /// </summary>
+    public bool ShowFilters { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets whether the page offers a filter for every filterable attribute of its content types, in
     /// field order, instead of the configured <see cref="Facets"/>.
     /// </summary>
@@ -27,6 +33,12 @@ public sealed class ProductListingPart : ContentPart
     /// Gets or sets the filters offered, in the order they are shown.
     /// </summary>
     public List<ProductListingFacet> Facets { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether visitors can change the sort. When off, the products are always in the order of the
+    /// <see cref="DefaultSort"/>.
+    /// </summary>
+    public bool ShowSorting { get; set; } = true;
 
     /// <summary>
     /// Gets or sets whether the page offers the standard sorts plus every sortable attribute, instead of the

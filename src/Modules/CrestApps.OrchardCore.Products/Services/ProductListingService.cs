@@ -93,10 +93,16 @@ public sealed class ProductListingService
     }
 
     /// <summary>
-    /// The filters a listing offers: its configured ones, or one per filterable attribute when it is automatic.
+    /// The filters a listing offers: none when its filters are hidden, its configured ones, or one per filterable
+    /// attribute when it is automatic.
     /// </summary>
     public async Task<IReadOnlyList<ProductListingFacet>> GetFacetsAsync(ProductListingPart part, IReadOnlyList<ProductAttributeDescriptor> attributes)
     {
+        if (!part.ShowFilters)
+        {
+            return [];
+        }
+
         if (!part.AutomaticFacets)
         {
             return (part.Facets ?? [])
@@ -205,6 +211,16 @@ public sealed class ProductListingService
     }
 
     /// <summary>
+    /// The sort applied when the visitor picks none: the listing's default sort, or its first sort. A listing that
+    /// does not let visitors sort can default to a sort it does not offer, so <paramref name="fallback"/> is searched
+    /// too.
+    /// </summary>
+    public static ProductListingSort GetDefaultSort(ProductListingPart part, IReadOnlyList<ProductListingSort> offered, IReadOnlyList<ProductListingSort> fallback)
+        => offered.FirstOrDefault(sort => sort.Key == part.DefaultSort)
+            ?? fallback.FirstOrDefault(sort => sort.Key == part.DefaultSort)
+            ?? (offered.Count > 0 ? offered[0] : null);
+
+    /// <summary>
     /// The key of the sort by the order the merchant arranged products in.
     /// </summary>
     public const string RecommendedSortKey = "recommended";
@@ -291,18 +307,20 @@ public sealed class ProductListingService
         var types = await GetContentTypesAsync(part, httpContext);
         var attributes = await _attributeCatalog.GetAttributesAsync(types);
         var facets = await GetFacetsAsync(part, attributes);
-        var sorts = GetSorts(part, attributes, (await GetPositionedTypesAsync(types)).Count > 0);
+        var offerRecommended = (await GetPositionedTypesAsync(types)).Count > 0;
+        var sorts = GetSorts(part, attributes, offerRecommended);
         var pageSizes = (part.PageSizes is { Length: > 0 } ? part.PageSizes : [12, 24, 48])
             .Where(size => size is > 0 and <= 200)
             .Distinct()
             .Order()
             .ToArray();
 
-        var state = ProductListingState.Parse(request.Query, facets, sorts.Select(sort => sort.Key), pageSizes);
+        // Without sorting, a sort in the address is ignored, and the default sort may be one the page does not offer.
+        var state = ProductListingState.Parse(request.Query, facets, part.ShowSorting ? sorts.Select(sort => sort.Key) : [], pageSizes);
 
         await MapTermIdsToSlugsAsync(state, facets, attributes);
 
-        var defaultSort = sorts.FirstOrDefault(sort => sort.Key == part.DefaultSort) ?? (sorts.Count > 0 ? sorts[0] : null);
+        var defaultSort = GetDefaultSort(part, sorts, part.ShowSorting ? [] : GetSorts(new ProductListingPart(), attributes, offerRecommended));
         var sortOption = sorts.FirstOrDefault(sort => sort.Key == state.Sort) ?? defaultSort;
         var defaultPageSize = pageSizes.Contains(part.DefaultPageSize) ? part.DefaultPageSize : pageSizes.FirstOrDefault(24);
         var pageSize = state.PageSize ?? defaultPageSize;
@@ -354,7 +372,10 @@ public sealed class ProductListingService
         model.Keyword = state.Keyword;
         model.Sort = sortOption?.Key;
         model.DefaultSort = defaultSort?.Key;
-        model.Sorts = sorts.Select(sort => new ProductSortOptionViewModel { Key = sort.Key, Label = sort.Label, Selected = sort == sortOption }).ToList();
+        model.ShowSorting = part.ShowSorting;
+        model.Sorts = part.ShowSorting
+            ? sorts.Select(sort => new ProductSortOptionViewModel { Key = sort.Key, Label = sort.Label, Selected = sort == sortOption }).ToList()
+            : [];
         model.View = view;
         model.DefaultView = part.DefaultView;
         model.AllowViewSwitching = part.AllowViewSwitching;
@@ -432,6 +453,8 @@ public sealed class ProductListingService
                 RemoveUrl = UrlFor(withoutKeyword),
             });
         }
+
+        model.ShowFilters = model.Facets.Count > 0 || model.EnableKeywordSearch;
 
         await BuildProductsAsync(model, result.ContentItemIds, attributes, view, part.ImageAspectRatio);
         BuildPager(model, state, UrlFor);

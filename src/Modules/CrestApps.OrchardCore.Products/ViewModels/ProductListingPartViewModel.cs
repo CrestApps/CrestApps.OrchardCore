@@ -13,9 +13,13 @@ public class ProductListingPartViewModel
     /// </summary>
     public bool ListEveryType { get; set; }
 
+    public bool ShowFilters { get; set; }
+
     public bool AutomaticFacets { get; set; }
 
     public List<ProductListingFacetRow> Facets { get; set; } = [];
+
+    public bool ShowSorting { get; set; }
 
     public bool AutomaticSorts { get; set; }
 

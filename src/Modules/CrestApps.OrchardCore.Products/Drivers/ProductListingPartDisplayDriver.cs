@@ -76,8 +76,10 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             var configured = part.Facets ?? [];
             var candidates = await _listingService.GetFacetsAsync(new ProductListingPart { AutomaticFacets = true }, attributes);
 
+            model.ShowFilters = part.ShowFilters;
             model.AutomaticFacets = part.AutomaticFacets;
             model.Facets = BuildFacetRows(configured, candidates, attributes);
+            model.ShowSorting = part.ShowSorting;
             model.AutomaticSorts = part.AutomaticSorts;
             var positioned = await _listingService.GetPositionedTypesAsync([]);
             model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes, positioned.Count > 0), attributes, positioned);
@@ -138,7 +140,9 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             => part.ContentTypes.Length == 0 ||
                attributes.FirstOrDefault(attribute => attribute.Key == attributeKey) is not { } attribute ||
                attribute.ContentTypes.Any(type => part.ContentTypes.Contains(type, StringComparer.Ordinal));
+        part.ShowFilters = model.ShowFilters;
         part.AutomaticFacets = model.AutomaticFacets;
+        part.ShowSorting = model.ShowSorting;
         part.AutomaticSorts = model.AutomaticSorts;
         part.DefaultSort = model.DefaultSort;
         part.DefaultView = model.DefaultView;

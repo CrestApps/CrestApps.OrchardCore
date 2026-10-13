@@ -244,8 +244,10 @@ Both are Orchard Core's content list narrowed to those types. The type names are
 Create a **Product Listing** content item, from **Commerce → Product Listings** or **Content → New**. Its editor sets:
 
 - the product types it lists: **Every product type**, which also lists types added later, or **Only these product types** with at least one ticked. The filters, the sorts and the default sort's options are grouped by type: what every product has (the price, the type, whether it can be bought online), then each type's own fields, then fields several types share. Only the groups of the listed types show, and saving drops the filters and sorts of types that are not listed, so a vehicle listing shows the vehicle's filters and not the property's;
+- **Show filters**: turn it off to list the products without filters, for example a short list of plans. A listing without filters and without keyword search has no filters panel, and its results take the full width;
 - the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a style (a list, buttons for short values such as sizes, or color swatches drawn from option names that are CSS colors), ready-made ranges such as *≤ $50* above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
+- **Let visitors change the sort**: turn it off to always show the products in the default sort's order. The default sort can then be any sort, even one not offered;
 - the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
 
 The page is an ordinary content item, so it has its own URL, menu entry and permissions.

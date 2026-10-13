@@ -69,72 +69,80 @@
         <label class="ocat-label">@T["Filters"]</label>
         <div class="ocat-end">
             <div class="form-check mb-2">
-                <input type="checkbox" class="form-check-input" asp-for="AutomaticFacets" />
-                <label class="form-check-label" asp-for="AutomaticFacets">@T["Offer a filter for every filterable field"]</label>
-                <span class="hint dashed">@T["When unchecked, only the filters ticked below are offered, in their order."]</span>
+                <input type="checkbox" class="form-check-input" asp-for="ShowFilters" data-product-section-toggle="filters" />
+                <label class="form-check-label" asp-for="ShowFilters">@T["Show filters"]</label>
+                <span class="hint dashed">@T["When unchecked, the page lists its products without filters, for example a short list of plans."]</span>
             </div>
 
-            @if (Model.Facets.Count == 0)
-            {
-                <p class="hint">@T["No field of these product types is marked as filterable yet. Mark fields as Filterable in the content type's field settings."]</p>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle">
-                        <thead>
-                            <tr>
-                                <th scope="col">@T["Use"]</th>
-                                <th scope="col">@T["Field"]</th>
-                                <th scope="col">@T["Label"]</th>
-                                <th scope="col">@T["URL key"]</th>
-                                <th scope="col">@T["Kind"]</th>
-                                <th scope="col">@T["Style"]</th>
-                                <th scope="col">@T["Term level"]</th>
-                                <th scope="col">@T["Shown after"]</th>
-                                <th scope="col">@T["Visible options"]</th>
-                                <th scope="col">@T["Collapsed"]</th>
-                                <th scope="col">@T["Ranges"]</th>
-                                <th scope="col">@T["Order"]</th>
-                            </tr>
-                        </thead>
-                        @foreach (var group in facetGroups)
-                        {
-                            <tbody data-product-types="@group.Key">
-                                <tr class="table-light">
-                                    <th scope="rowgroup" colspan="12" class="small text-uppercase">@GroupLabel(group.Key)</th>
-                                </tr>
-                                @foreach (var (row, i) in group)
-                                {
-                                    <tr>
-                                        <td>
-                                            <input type="checkbox" class="form-check-input" asp-for="Facets[i].Enabled" aria-label="@T["Use this filter"]" />
-                                            <input type="hidden" asp-for="Facets[i].AttributeKey" />
-                                        </td>
-                                        <td>@row.AttributeLabel</td>
-                                        <td><input class="form-control form-control-sm" asp-for="Facets[i].Label" placeholder="@row.AttributeLabel" /></td>
-                                        <td><input class="form-control form-control-sm" asp-for="Facets[i].Key" /></td>
-                                        <td><select class="form-select form-select-sm" asp-for="Facets[i].Kind" asp-items="Model.FacetKinds"></select></td>
-                                        <td><select class="form-select form-select-sm" asp-for="Facets[i].Display" asp-items="Model.FacetDisplays" aria-label="@T["How the options are drawn"]"></select></td>
-                                        <td>
-                                            @if (row.IsTerm)
-                                            {
-                                                <input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].Level" placeholder="@T["All"]" />
-                                            }
-                                        </td>
-                                        <td><input class="form-control form-control-sm" asp-for="Facets[i].DependsOn" placeholder="@T["URL key"]" /></td>
-                                        <td><input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].MaxVisible" /></td>
-                                        <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].Collapsed" aria-label="@T["Start collapsed"]" /></td>
-                                        <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].ShowRanges" aria-label="@T["Offer ready-made ranges"]" /></td>
-                                        <td><input type="number" class="form-control form-control-sm" asp-for="Facets[i].Order" /></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        }
-                    </table>
+            <div data-product-section="filters">
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" asp-for="AutomaticFacets" />
+                    <label class="form-check-label" asp-for="AutomaticFacets">@T["Offer a filter for every filterable field"]</label>
+                    <span class="hint dashed">@T["When unchecked, only the filters ticked below are offered, in their order."]</span>
                 </div>
-                <span class="hint">@T["Term level offers one level of a taxonomy, such as 1 for makes and 2 for models. Shown after hides a filter until the filter with that URL key has a selection. Style draws checkbox and radio options as a list, buttons (sizes) or color swatches (option names that are CSS colors). Ranges offers ready-made ranges, such as Up to $50, above a range filter."]</span>
-            }
+
+                @if (Model.Facets.Count == 0)
+                {
+                    <p class="hint">@T["No field of these product types is marked as filterable yet. Mark fields as Filterable in the content type's field settings."]</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th scope="col">@T["Use"]</th>
+                                    <th scope="col">@T["Field"]</th>
+                                    <th scope="col">@T["Label"]</th>
+                                    <th scope="col">@T["URL key"]</th>
+                                    <th scope="col">@T["Kind"]</th>
+                                    <th scope="col">@T["Style"]</th>
+                                    <th scope="col">@T["Term level"]</th>
+                                    <th scope="col">@T["Shown after"]</th>
+                                    <th scope="col">@T["Visible options"]</th>
+                                    <th scope="col">@T["Collapsed"]</th>
+                                    <th scope="col">@T["Ranges"]</th>
+                                    <th scope="col">@T["Order"]</th>
+                                </tr>
+                            </thead>
+                            @foreach (var group in facetGroups)
+                            {
+                                <tbody data-product-types="@group.Key">
+                                    <tr class="table-light">
+                                        <th scope="rowgroup" colspan="12" class="small text-uppercase">@GroupLabel(group.Key)</th>
+                                    </tr>
+                                    @foreach (var (row, i) in group)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input" asp-for="Facets[i].Enabled" aria-label="@T["Use this filter"]" />
+                                                <input type="hidden" asp-for="Facets[i].AttributeKey" />
+                                            </td>
+                                            <td>@row.AttributeLabel</td>
+                                            <td><input class="form-control form-control-sm" asp-for="Facets[i].Label" placeholder="@row.AttributeLabel" /></td>
+                                            <td><input class="form-control form-control-sm" asp-for="Facets[i].Key" /></td>
+                                            <td><select class="form-select form-select-sm" asp-for="Facets[i].Kind" asp-items="Model.FacetKinds"></select></td>
+                                            <td><select class="form-select form-select-sm" asp-for="Facets[i].Display" asp-items="Model.FacetDisplays" aria-label="@T["How the options are drawn"]"></select></td>
+                                            <td>
+                                                @if (row.IsTerm)
+                                                {
+                                                    <input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].Level" placeholder="@T["All"]" />
+                                                }
+                                            </td>
+                                            <td><input class="form-control form-control-sm" asp-for="Facets[i].DependsOn" placeholder="@T["URL key"]" /></td>
+                                            <td><input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].MaxVisible" /></td>
+                                            <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].Collapsed" aria-label="@T["Start collapsed"]" /></td>
+                                            <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].ShowRanges" aria-label="@T["Offer ready-made ranges"]" /></td>
+                                            <td><input type="number" class="form-control form-control-sm" asp-for="Facets[i].Order" /></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            }
+                        </table>
+                    </div>
+                    <span class="hint">@T["Term level offers one level of a taxonomy, such as 1 for makes and 2 for models. Shown after hides a filter until the filter with that URL key has a selection. Style draws checkbox and radio options as a list, buttons (sizes) or color swatches (option names that are CSS colors). Ranges offers ready-made ranges, such as Up to $50, above a range filter."]</span>
+                }
+            </div>
         </div>
     </div>
 
@@ -142,43 +150,51 @@
         <label class="ocat-label">@T["Sorting"]</label>
         <div class="ocat-end">
             <div class="form-check mb-2">
-                <input type="checkbox" class="form-check-input" asp-for="AutomaticSorts" />
-                <label class="form-check-label" asp-for="AutomaticSorts">@T["Offer the standard sorts and every sortable field"]</label>
-                <span class="hint dashed">@T["When unchecked, only the sorts ticked below are offered, in their order."]</span>
+                <input type="checkbox" class="form-check-input" asp-for="ShowSorting" data-product-section-toggle="sorts" />
+                <label class="form-check-label" asp-for="ShowSorting">@T["Let visitors change the sort"]</label>
+                <span class="hint dashed">@T["When unchecked, the products are always shown in the default sort's order."]</span>
             </div>
 
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead>
-                        <tr>
-                            <th scope="col">@T["Use"]</th>
-                            <th scope="col">@T["Label"]</th>
-                            <th scope="col">@T["URL key"]</th>
-                            <th scope="col">@T["Order"]</th>
-                        </tr>
-                    </thead>
-                    @foreach (var group in sortGroups)
-                    {
-                        <tbody data-product-types="@group.Key">
-                            <tr class="table-light">
-                                <th scope="rowgroup" colspan="4" class="small text-uppercase">@GroupLabel(group.Key)</th>
+            <div data-product-section="sorts">
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" asp-for="AutomaticSorts" />
+                    <label class="form-check-label" asp-for="AutomaticSorts">@T["Offer the standard sorts and every sortable field"]</label>
+                    <span class="hint dashed">@T["When unchecked, only the sorts ticked below are offered, in their order."]</span>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th scope="col">@T["Use"]</th>
+                                <th scope="col">@T["Label"]</th>
+                                <th scope="col">@T["URL key"]</th>
+                                <th scope="col">@T["Order"]</th>
                             </tr>
-                            @foreach (var (row, i) in group)
-                            {
-                                <tr>
-                                    <td>
-                                        <input type="checkbox" class="form-check-input" asp-for="Sorts[i].Enabled" aria-label="@T["Use this sort"]" />
-                                        <input type="hidden" asp-for="Sorts[i].AttributeKey" />
-                                        <input type="hidden" asp-for="Sorts[i].Descending" />
-                                    </td>
-                                    <td><input class="form-control form-control-sm" asp-for="Sorts[i].Label" /></td>
-                                    <td><input class="form-control form-control-sm" asp-for="Sorts[i].Key" /></td>
-                                    <td><input type="number" class="form-control form-control-sm" asp-for="Sorts[i].Order" /></td>
+                        </thead>
+                        @foreach (var group in sortGroups)
+                        {
+                            <tbody data-product-types="@group.Key">
+                                <tr class="table-light">
+                                    <th scope="rowgroup" colspan="4" class="small text-uppercase">@GroupLabel(group.Key)</th>
                                 </tr>
-                            }
-                        </tbody>
-                    }
-                </table>
+                                @foreach (var (row, i) in group)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="checkbox" class="form-check-input" asp-for="Sorts[i].Enabled" aria-label="@T["Use this sort"]" />
+                                            <input type="hidden" asp-for="Sorts[i].AttributeKey" />
+                                            <input type="hidden" asp-for="Sorts[i].Descending" />
+                                        </td>
+                                        <td><input class="form-control form-control-sm" asp-for="Sorts[i].Label" /></td>
+                                        <td><input class="form-control form-control-sm" asp-for="Sorts[i].Key" /></td>
+                                        <td><input type="number" class="form-control form-control-sm" asp-for="Sorts[i].Order" /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        }
+                    </table>
+            </div>
             </div>
         </div>
     </div>
@@ -295,6 +311,20 @@
                     }
                 }
             }
+
+            // A section's settings show while the page offers it.
+            editor.querySelectorAll('[data-product-section-toggle]').forEach(function (toggle) {
+                var section = editor.querySelector('[data-product-section="' + toggle.getAttribute('data-product-section-toggle') + '"]');
+
+                function sync() {
+                    if (section) {
+                        section.hidden = !toggle.checked;
+                    }
+                }
+
+                toggle.addEventListener('change', sync);
+                sync();
+            });
 
             editor.querySelectorAll('[name$="ListEveryType"]').forEach(function (radio) {
                 radio.addEventListener('change', update);
