@@ -300,10 +300,11 @@ Taxonomy term pages (`/categories/suvs`) can later render the same catalog shape
   slugs (D6) are a follow-up.
 - Unknown keys are ignored. Values per facet are capped at 50. Page size must be one of the configured
   sizes, and page numbers are bounded.
-- **SEO.** The unfiltered listing is canonical. Pages with more than one facet selected get
-  `noindex,follow`, so crawlers do not explode the combinations, which is the same policy the large
-  marketplaces use. Detail pages use the item's Autoroute URL (not `/Contents/ContentItems/{id}`). The
-  canonical and `noindex` tags are still to do (slice C5).
+- **SEO.** Uses Orchard Core's SEO module (`OrchardCore.Seo`) rather than tags of our own. The SEO part on
+  the Product Listing type sets the canonical URL to the listing itself for every state. A content handler,
+  active only when the SEO feature is enabled, contributes `noindex, follow` to the `SeoAspect` when the
+  address carries a filter or a keyword. Paging, sorting, page size and layout stay indexable. Detail pages
+  use the item's Autoroute URL and its own SEO part.
 
 ### 4.8 Front-end rendering (Bootstrap 5.3, TheTheme-ready)
 
@@ -417,7 +418,7 @@ browser pass in TheTheme.
 | **C2 Listing page** | 4.6–4.8: `ProductListingPart` and editor, Product Listing type, URL contract, shapes, grid and list views, filters sidebar and offcanvas, toolbar, chips, pager (no JavaScript yet) | The vehicle recipe catalog filters, sorts and pages correctly in TheTheme on desktop and at phone width with JavaScript turned off. |
 | **C3 Taxonomy facets** | Hierarchical and level-based facets, dependent facets, term labels and slugs, re-index on term change, swatches, range buckets | Make → Model and category drill-down work. Renaming a term updates the listing after the rebuild. |
 | **C4 Detail page** | 4.9: `ProductPart` display, `ProductPrice`, `ProductSpecifications`, carousel alternate, `ProductActions` zone with an inquiry button, breadcrumb | A vehicle and a property have complete detail pages. A listing-only item shows no buy action. |
-| **C5 Enhancement and polish** | Vanilla JavaScript partial swap, `pushState`, `aria-live`; caching; canonical and `noindex`; real estate and apparel recipes; docs pages and a docs video | Lighthouse accessibility ≥ 95 on the listing page; filtering without a full reload; docs build passes. |
+| **C5 Enhancement and polish** | Vanilla JavaScript partial swap, `pushState`, `aria-live`; caching; SEO through `OrchardCore.Seo` (done); real estate recipe (vehicle and store samples done); docs pages and a docs video | Lighthouse accessibility ≥ 95 on the listing page; filtering without a full reload; docs build passes. |
 | **C6 Later** | Elasticsearch provider; JSON search API for headless use; compact table view; term landing pages; saved searches and "notify me of new listings"; compare; recently viewed; map view (needs a location field); inquiry → CRM lead | Scheduled after Carts or on demand. |
 
 After C5, the roadmap continues: Customers (Phase 1), the rest of catalog completion (variants, which add

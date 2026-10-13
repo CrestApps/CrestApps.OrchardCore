@@ -257,9 +257,20 @@ Turn on **Show product details on the product page** in the type's Product part 
 
 Each published product has one search record, with one row per attribute value, kept in the tenant database. Publishing, unpublishing, deleting or importing a product refreshes its record, and the whole index is rebuilt in the background when a product type or a field's listing settings change. No external search service is needed.
 
-### Sample
+### Search engines
 
-The **Product listing: vehicle dealership sample** recipe creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
+Search engine tags come from Orchard Core's [SEO](https://docs.orchardcore.net/en/latest/reference/modules/Seo/) module. Enable it and attach the **SEO** part to the **Product Listing** type and to your product types:
+
+- The listing's SEO part sets its title, description and social tags, and its canonical URL points every filtered, sorted or paged state of the listing at the listing's own URL.
+- When the address carries a filter or a keyword, the listing asks for `noindex, follow`, so crawlers follow its links to the products without indexing every combination of filters. The page number, sort, page size and layout do not count as filters.
+- Each product's SEO part sets its own description and social tags.
+
+### Samples
+
+Two recipes show the feature end to end:
+
+- **Product listing: online store sample** creates a *Store Product* type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a **Shop** listing page at `/shop`. The category filter offers the top level of the category tree, and a *Type* filter offers the level below once a category is picked.
+- **Product listing: vehicle dealership sample** creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
 
 ## Recipes and schema
 

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Products.Handlers;
 using CrestApps.OrchardCore.Products.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -97,6 +98,21 @@ public sealed class ProductListingStateTests
     [InlineData("Product.Price", "product-price")]
     public void ToUrlKey_MakesShortReadableKeys(string attributeKey, string expected)
         => Assert.Equal(expected, ProductListingService.ToUrlKey(attributeKey));
+
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("?page=2&sort=price-asc&size=24&view=list", false)]
+    [InlineData("?q=diesel", true)]
+    [InlineData("?make=toyota", true)]
+    [InlineData("?price_max=20000&page=2", true)]
+    [InlineData("?make=", false)]
+    public void IsFiltered_IgnoresPagingSortingAndLayout(string queryString, bool expected)
+    {
+        // Filtered pages ask search engines not to index them; paging, sorting and layout keep the page indexable.
+        var query = new QueryCollection(Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(queryString));
+
+        Assert.Equal(expected, ProductListingSeoHandler.IsFiltered(query));
+    }
 
     private static ProductListingState Parse(params (string Key, StringValues Value)[] values)
         => ProductListingState.Parse(

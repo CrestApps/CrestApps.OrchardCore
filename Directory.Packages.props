@@ -48,6 +48,7 @@
     <PackageVersion Include="OrchardCore.ContentTypes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Contents.TagHelpers" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
@@ -90,6 +91,7 @@
     <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Seo" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.SignalR" Version="$(OrchardCoreVersion)" />

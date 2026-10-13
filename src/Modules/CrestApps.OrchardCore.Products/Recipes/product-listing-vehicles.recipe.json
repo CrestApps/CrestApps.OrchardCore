@@ -28,6 +28,7 @@
         "OrchardCore.Taxonomies",
         "OrchardCore.Media",
         "OrchardCore.Placements",
+        "OrchardCore.Seo",
         "CrestApps.OrchardCore.Products",
         "CrestApps.OrchardCore.Products.Listing"
       ]
@@ -245,6 +246,29 @@
                 "ContentTypePartSettings": {
                   "Position": "4",
                   "DisplayName": "Description"
+                }
+              }
+            },
+            {
+              "PartName": "SeoMetaPart",
+              "Name": "SeoMetaPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "5"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "Name": "ProductListing",
+          "ContentTypePartDefinitionRecords": [
+            {
+              "PartName": "SeoMetaPart",
+              "Name": "SeoMetaPart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "10"
                 }
               }
             }

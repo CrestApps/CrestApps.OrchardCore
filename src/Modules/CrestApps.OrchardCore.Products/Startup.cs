@@ -133,3 +133,13 @@ public sealed class ListingStartup : StartupBase
         services.AddDataMigration<ProductListingMigrations>();
     }
 }
+
+[Feature(ProductConstants.Feature.Listing)]
+[RequireFeatures("OrchardCore.Seo")]
+public sealed class ListingSeoStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IContentHandler, ProductListingSeoHandler>();
+    }
+}
