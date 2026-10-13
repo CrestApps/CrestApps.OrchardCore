@@ -554,7 +554,7 @@
   }
 }
 
-/* The filters panel: an off-canvas panel on small screens, a sticky sidebar on large ones. */
+/* The filters panel: an off-canvas panel on small screens, a sidebar that flows with the page on large ones. */
 
 @media (max-width: 991.98px) {
   .product-listing .product-listing-filters {
@@ -603,12 +603,9 @@
 @media (min-width: 992px) {
   /* Older Bootstrap leaves an inline visibility on the panel after it was closed on a small screen. */
   .product-listing .product-listing-filters {
-    position: sticky;
-    top: 1rem;
+    position: static;
     z-index: auto;
     width: auto;
-    max-height: calc(100vh - 2rem);
-    overflow-y: auto;
     background-color: transparent;
     border: 0;
     visibility: visible !important;
