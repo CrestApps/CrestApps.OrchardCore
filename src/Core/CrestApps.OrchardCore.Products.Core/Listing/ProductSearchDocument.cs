@@ -59,6 +59,12 @@ public sealed class ProductSearchDocument
     public decimal? CompareAtPrice { get; set; }
 
     /// <summary>
+    /// Gets or sets the highest price of a product whose variants are priced differently, so a card can show
+    /// "From" the lowest. <see langword="null"/> when every price is the same.
+    /// </summary>
+    public decimal? MaxPrice { get; set; }
+
+    /// <summary>
     /// Gets or sets the currency the prices are expressed in.
     /// </summary>
     public string Currency { get; set; }

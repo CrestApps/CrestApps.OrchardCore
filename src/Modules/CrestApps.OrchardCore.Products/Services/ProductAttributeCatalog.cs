@@ -93,10 +93,57 @@ public sealed class ProductAttributeCatalog
                 byKey[descriptor.Key] = descriptor;
                 attributes.Add(descriptor);
             }
+
+            // A type sold in variants filters on its options as if they were fields.
+            foreach (var option in GetVariantOptions(type))
+            {
+                var key = ProductVariants.AttributeKey(option.Name);
+
+                if (!includeUnused && !option.Filterable)
+                {
+                    continue;
+                }
+
+                if (byKey.TryGetValue(key, out var existing))
+                {
+                    existing.ContentTypes.Add(type.Name);
+
+                    continue;
+                }
+
+                var descriptor = new ProductAttributeDescriptor
+                {
+                    Key = key,
+                    Label = option.Name,
+                    FieldType = VariantOptionFieldType,
+                    Kind = ProductAttributeValueKind.Text,
+                    Settings = new ProductAttributeSettings { Filterable = option.Filterable, Label = option.Name },
+                    Order = attributes.Count,
+                };
+
+                descriptor.ContentTypes.Add(type.Name);
+                byKey[key] = descriptor;
+                attributes.Add(descriptor);
+            }
         }
 
         return attributes;
     }
+
+    /// <summary>
+    /// The field type of an attribute made from a variant option.
+    /// </summary>
+    public const string VariantOptionFieldType = "ProductVariantOption";
+
+    /// <summary>
+    /// The options of a type sold in variants, from its Product variants part settings.
+    /// </summary>
+    public static IEnumerable<ProductVariantOptionSettings> GetVariantOptions(ContentTypeDefinition type)
+        => type?.Parts
+            .FirstOrDefault(part => part.PartDefinition.Name == nameof(ProductVariantsPart))?
+            .GetSettings<ProductVariantsPartSettings>()?
+            .Options?
+            .Where(option => !string.IsNullOrWhiteSpace(option?.Name)) ?? [];
 
     /// <summary>
     /// Gets the fields of a content type that a provider can read, with the part they belong to.

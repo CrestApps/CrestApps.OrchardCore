@@ -26,7 +26,7 @@ public sealed class ProductSearchIndexer
     private const int BatchSize = 100;
 
     // Bump when the record's shape or the way it is built changes, so every tenant rebuilds once.
-    private const string BuildVersion = "7";
+    private const string BuildVersion = "8";
 
     private readonly ISession _session;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
@@ -115,6 +115,7 @@ public sealed class ProductSearchIndexer
         {
             builder.Append('|').Append(type.Name).Append(':').Append(type.DisplayName);
             builder.Append(JsonSerializer.Serialize(ProductAttributeCatalog.GetProductSettings(type)));
+            builder.Append(JsonSerializer.Serialize(ProductAttributeCatalog.GetVariantOptions(type)));
 
             foreach (var field in _attributeCatalog.GetFields(type))
             {

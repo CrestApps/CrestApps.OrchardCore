@@ -38,4 +38,10 @@ public sealed class SellableProduct : ISellableProduct
 
     /// <inheritdoc/>
     public string ExternalTaxCode { get; init; }
+
+    /// <inheritdoc/>
+    public string VariantId { get; init; }
+
+    /// <inheritdoc/>
+    public string VariantTitle { get; init; }
 }

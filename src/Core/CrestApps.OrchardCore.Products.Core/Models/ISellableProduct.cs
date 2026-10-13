@@ -63,4 +63,14 @@ public interface ISellableProduct
     /// Gets the external tax code resolved for the product, when the Taxation feature provides one.
     /// </summary>
     string ExternalTaxCode { get; }
+
+    /// <summary>
+    /// Gets the variant the buyer chose, or <see langword="null"/> for a product without variants.
+    /// </summary>
+    string VariantId => null;
+
+    /// <summary>
+    /// Gets the chosen variant's values, such as "Red / M".
+    /// </summary>
+    string VariantTitle => null;
 }

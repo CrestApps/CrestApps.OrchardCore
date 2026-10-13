@@ -58,7 +58,11 @@ public sealed class Startup : StartupBase
         services.AddContentPart<ProductPricePart>()
             .UseDisplayDriver<ProductPricePartDisplayDriver>();
 
+        services.AddContentPart<ProductVariantsPart>()
+            .UseDisplayDriver<ProductVariantsPartDisplayDriver>();
+
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPartSettingsDisplayDriver>();
+        services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductVariantsPartSettingsDisplayDriver>();
         services.AddScoped<IProductCurrencyProvider, CurrencyCatalogService>();
         services.AddScoped<CurrencyUsageService>();
         services.AddDisplayDriver<CurrencyEntry, CurrencyEntryDisplayDriver>();
@@ -158,6 +162,7 @@ public sealed class ListingStartup : StartupBase
         services.AddScoped<ProductSearchRouter>();
         services.AddScoped<IProductSearchService, CachedProductSearchService>();
         services.AddScoped<ProductListingService>();
+        services.AddScoped<IProductSearchDocumentContributor, ProductVariantsSearchDocumentContributor>();
 
         services.AddIndexProvider<ProductSearchIndexProvider>();
         services.AddScoped<IContentHandler, ProductSearchContentHandler>();

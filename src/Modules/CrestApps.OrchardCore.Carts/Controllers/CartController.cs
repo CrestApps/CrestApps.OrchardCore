@@ -48,8 +48,8 @@ public sealed class CartController : Controller
     [HttpPost("cart/add", Name = CartConstants.RouteNames.Add)]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(CartConstants.RateLimitGroup)]
-    public async Task<IActionResult> Add(string contentItemId, string priceId, int quantity = 1, string returnUrl = null)
-        => await RespondAsync(await _cartService.AddAsync(contentItemId, priceId, quantity, HttpContext.RequestAborted), returnUrl);
+    public async Task<IActionResult> Add(string contentItemId, string priceId, string variantId = null, int quantity = 1, string returnUrl = null)
+        => await RespondAsync(await _cartService.AddAsync(contentItemId, priceId, variantId, quantity, HttpContext.RequestAborted), returnUrl);
 
     [HttpPost("cart/update", Name = CartConstants.RouteNames.Update)]
     [ValidateAntiForgeryToken]

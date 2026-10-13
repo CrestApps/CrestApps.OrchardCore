@@ -289,6 +289,11 @@ public class ProductPriceDisplayViewModel
 
     public string CompareAtPrice { get; set; }
 
+    /// <summary>
+    /// Whether the price is the lowest of several, shown as "From $10".
+    /// </summary>
+    public bool IsFrom { get; set; }
+
     public int? DiscountPercent { get; set; }
 
     public string OnRequestLabel { get; set; }

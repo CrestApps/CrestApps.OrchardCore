@@ -1012,6 +1012,9 @@ public sealed class ProductListingService
             model.Price = ProductPriceFormatter.Format(document.Price.Value, document.Currency);
             model.Period = FormatPeriod(document.BillingInterval, document.BillingDuration);
 
+            // Variants priced differently start at the lowest.
+            model.IsFrom = document.MaxPrice > document.Price;
+
             if (document.CompareAtPrice > document.Price && document.CompareAtPrice > 0)
             {
                 model.CompareAtPrice = ProductPriceFormatter.Format(document.CompareAtPrice.Value, document.Currency);

@@ -76,6 +76,11 @@ public sealed class CartLine
     public string PriceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the variant bought, for a product sold in variants.
+    /// </summary>
+    public string VariantId { get; set; }
+
+    /// <summary>
     /// Gets or sets how many are wanted.
     /// </summary>
     public int Quantity { get; set; }
