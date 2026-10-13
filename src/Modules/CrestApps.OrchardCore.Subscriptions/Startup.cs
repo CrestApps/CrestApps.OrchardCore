@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -57,9 +58,15 @@ public sealed class Startup : StartupBase
             .AddContentPart<SubscriptionPart>()
             .UseDisplayDriver<SubscriptionPartDisplayDriver>();
 
-        // Automatically inject the SubscriptionPart into any content type that uses the Subscription
-        // stereotype, so administrators only need to set the stereotype.
+        // Automatically inject the SubscriptionPart and the ProductPart into any content type that uses the
+        // Subscription stereotype, so administrators only need to set the stereotype.
         services.AddScoped<IContentDefinitionHandler, SubscriptionPartContentTypeDefinitionHandler>();
+
+        // Plans are listed by the Product Listing feature like any other product; this gives them their billing
+        // period and their position, for the "Recommended" sort. It is unused when the feature is off.
+        services.AddScoped<SubscriptionProductSearchDocumentContributor>();
+        services.AddScoped<IProductSearchDocumentContributor>(serviceProvider => serviceProvider.GetRequiredService<SubscriptionProductSearchDocumentContributor>());
+        services.AddScoped<IProductPositionProvider>(serviceProvider => serviceProvider.GetRequiredService<SubscriptionProductSearchDocumentContributor>());
 
         services.AddDataMigration<SubscriptionSummaryWidgetMigrations>()
             .AddContentPart<SubscriptionSummaryPart>()

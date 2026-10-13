@@ -10,9 +10,10 @@ namespace CrestApps.OrchardCore.Products.Core.Models;
 public sealed class ProductPart : ContentPart
 {
     /// <summary>
-    /// Gets or sets the product price.
+    /// Gets or sets the product price. It is empty for a listed product whose price is not shown, such as a
+    /// property sold by inquiry. A product without a price cannot be bought.
     /// </summary>
-    public decimal Price { get; set; }
+    public decimal? Price { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO-4217 currency code the <see cref="Price"/> is expressed in. The product owns
@@ -27,4 +28,22 @@ public sealed class ProductPart : ContentPart
     /// fulfillment. Optional; a future catalog can require it per content type.
     /// </summary>
     public string Sku { get; set; }
+
+    /// <summary>
+    /// Gets or sets the "was" or list price shown struck through next to the price, from which the discount
+    /// badge is worked out. It is shown only when it is higher than the price.
+    /// </summary>
+    public decimal? CompareAtPrice { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this product can be bought online. It is honored only when the content type's
+    /// <see cref="ProductPartSettings.SalesMode"/> is <see cref="ProductSalesMode.PerItem"/>.
+    /// </summary>
+    public bool IsPurchasable { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how this product's price is shown, overriding the content type's
+    /// <see cref="ProductPartSettings.PriceDisplay"/>. It is honored only when the content type allows it.
+    /// </summary>
+    public ProductPriceDisplay? PriceDisplay { get; set; }
 }

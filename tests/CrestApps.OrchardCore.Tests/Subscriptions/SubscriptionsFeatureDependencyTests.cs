@@ -19,7 +19,7 @@ public class SubscriptionsFeatureDependencyTests
         // but a subscription content type still carries a TitlePart, Orchard produces a generic
         // ContentPart fallback shape whose model is a ZoneHolding. Because of the "Subscription"
         // stereotype, that fallback matches the "Subscription_Summary__TitlePart" alternate and is
-        // routed into the strongly-typed template, throwing at render time on the ServicePlans page.
+        // routed into the strongly-typed template, throwing at render time wherever a plan's summary is shown.
         // Declaring OrchardCore.Title as a hard dependency guarantees the real TitlePart driver runs.
         var featureAttribute = GetSubscriptionsAreaFeature();
 

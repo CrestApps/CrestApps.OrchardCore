@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/product-listing.js"
+    ],
+    "output": "wwwroot/Scripts/product-listing.js"
+  },
+  {
+    "inputs": [
+      "Assets/css/product-listing.css"
+    ],
+    "output": "wwwroot/Styles/product-listing.css"
+  }
+]

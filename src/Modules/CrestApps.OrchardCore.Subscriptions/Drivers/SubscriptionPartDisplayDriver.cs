@@ -72,6 +72,9 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
                 model.DefaultPrice = offered.FirstOrDefault(candidate => candidate.IsDefault) ?? offered.FirstOrDefault();
             })
             .Location("Summary", "Footer")
+
+            // The product listing shows a product's "ProductAction" display on its card and on its page.
+            .Location("ProductAction", "Actions")
         );
     }
 
@@ -105,6 +108,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             model.BillingCycleLimit = part.BillingCycleLimit;
             model.SubscriptionDayDelay = part.SubscriptionDayDelay;
             model.TrialDays = part.TrialDays;
+            model.Sort = part.Sort;
             model.DurationTypes =
             [
                 new SelectListItem(S["Year"], nameof(DurationType.Year)),
@@ -164,6 +168,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
         part.BillingCycleLimit = model.BillingCycleLimit;
         part.SubscriptionDayDelay = model.SubscriptionDayDelay;
         part.TrialDays = model.TrialDays;
+        part.Sort = model.Sort;
 
         return Edit(part, context);
     }

@@ -1,0 +1,141 @@
+---
+sidebar_label: Product listings
+title: Product listings
+description: Publish pages that list your products with filters, sorting, search and product pages, for products you sell online and products you only list, such as homes or cars.
+technical_manual:
+  - modules/products
+---
+
+A **product listing** is a page of your site that lists products: a shop, a page of homes for sale, a dealership's stock, or your subscription plans. Visitors filter, sort, search and page through the products, switch between a grid and a list, and open a product's own page. A listing works the same for products sold online and for products that are only listed, whose visitors call or send an inquiry instead.
+
+| | |
+| --- | --- |
+| **Menu** | Commerce > Product Listings for the listing pages, and Commerce > Products for the products themselves |
+| **Permission** | The content permissions of the types involved: listing, creating, editing and publishing **Product Listing** items, and your product types' items |
+| **Feature** | Product Listing (it turns on Products). Turn on SEO as well to control how listings appear in search engines. |
+
+<AskYourAdmin />
+
+Setting up a listing takes three steps: decide which of your products' fields visitors can filter and sort by, create the listing page, and lay out each product's own page.
+
+## Decide what visitors can filter on
+
+Filters come from the fields of your product types: a car's year and mileage, a home's bedrooms, a shirt's color and size. You choose which fields take part in the field's own settings.
+
+1. Open **Content > Content Definition > Content Types** and edit a product type, that is, a type with the **Product** part.
+2. Click **Edit** next to a field.
+3. In the **Product listing** section, tick what the field is for, and save.
+
+| Setting | What it does |
+| --- | --- |
+| **Filterable** | Visitors can filter listings by this field. |
+| **Sortable** | Visitors can sort listings by this field. Offered for numbers and dates. |
+| **Searchable** | The listing's keyword search matches this field. |
+| **Show on product cards** | Shows the value as a short chip on the product's card, such as *2019 · 42,000 mi*. |
+| **Show in specifications** | Shows the value in the specification table of the list layout and the product page. |
+| **Listing label** | The label visitors see. Leave it empty to use the field's name. |
+| **Number format** and **Unit** | Numbers only: how the number is written, such as *0* for a year, and a unit shown after it, such as *mi* or *sq ft*. |
+| **Swatch colors** | Text and taxonomy fields: the color of each value when a filter shows them as color swatches, one per line, such as *Midnight = #191970* or *Sky = light blue*. A value you do not list uses its own name when that is a color, such as *Navy*. |
+| **Color field on terms** | Taxonomy fields: the name of a text field on the taxonomy's terms that holds each term's color, so you set a color once on its term. |
+
+The **Product listing** section appears only on fields of product types. Text, number, yes/no, date, content picker and taxonomy fields can take part. A taxonomy such as *Make and model* can give one filter per level, for example **Make** and then **Model**.
+
+The price, the product's type and whether it can be bought online are always available to filter and sort by, without any field.
+
+## Create a listing page
+
+1. Open **Commerce > Product Listings** and click **New**.
+2. Enter a **Title**, and a **Permalink** such as *shop* or *homes* for the page's address.
+3. Fill in the listing settings below, and click **Publish**.
+
+The page is an ordinary content item, so you can add it to a menu and give it permissions like any other page.
+
+### Products
+
+Choose **Every product type**, which also lists types you add later, or **Only these product types** and tick at least one. The filters and sorts further down are grouped by product type, and only the groups of the types you list are shown.
+
+### Filters
+
+Untick **Show filters** to list the products without any filters, for example a short list of plans. A listing with no filters and no keyword search has no filters panel, and its products take the full width.
+
+Leave **Offer a filter for every filterable field** ticked to offer one filter per filterable field. Untick it to offer only the filters you tick in the table, in the order you give them. Each row of the table is one filter:
+
+| Column | What it does |
+| --- | --- |
+| **Use** | Offers the filter. |
+| **Label** | The filter's name on the page. Leave it empty to use the field's listing label. |
+| **URL key** | The short name of the filter in the page's address, such as *make* in *?make=toyota*. Each filter needs its own. |
+| **Kind** | What visitors pick: **Checkboxes** (several values), **Radio buttons** (one value), **Range** (a minimum and a maximum) or **Toggle** (yes only). |
+| **Style** | How the options are drawn: a **List** with counts, **Buttons** for short values such as sizes, or **Color swatches**. Only the styles that suit the kind are offered. |
+| **Term level** | Taxonomy fields: which level of the tree the filter offers, *1* for the top level such as makes, *2* for the next such as models. |
+| **Shown after** | The URL key of another filter that must have a selection first, so **Model** appears once a **Make** is picked. |
+| **Visible options** | How many options show before a *See more* link. *0* shows them all. |
+| **Collapsed** | Starts the filter folded. |
+| **Ranges** | Range filters: offers ready-made ranges above the minimum and maximum boxes. Leave the box beside it empty for round ranges worked out from your products, such as *up to $50, $50 to $100, ... $200 and up*, or type your own, such as *-25, 25-75, 75+* for up to 25, 25 to 75, and 75 and up. Both ends are included, so *1-2, 3-4, 5+* suits bedrooms. |
+| **Order** | The filter's position. |
+
+### Sorting
+
+Untick **Let visitors change the sort** to always show the products in the default sort's order.
+
+Leave **Offer the standard sorts and every sortable field** ticked to offer *Newest*, the price both ways, *Name* and each sortable field both ways. Untick it to offer only the sorts you tick. When the listing shows subscription plans, it also offers **Recommended**, which orders plans by their **Sort** value.
+
+**Default sort** is the order visitors see before they pick one. When visitors cannot change the sort, it can be any sort, even one you did not tick.
+
+### Layout and paging
+
+| Setting | What it does |
+| --- | --- |
+| **Layout** | Whether products open as a grid of cards or a list of rows, and **Let visitors switch between grid and list**. |
+| **Image shape** | The shape of the product images on the cards: landscape, square, portrait or wide. Images are cropped to fit. |
+| **Page sizes** | The numbers of products per page visitors can pick from, such as *12, 24, 48*. |
+| **Default page size** | The page size visitors see first. |
+| **Keyword search** | Adds a search box that matches titles, SKUs and searchable fields. |
+
+## Lay out the product pages
+
+Each product can have its own page with its images, price, highlights and actions, and its specification table.
+
+1. Open **Content > Content Definition > Content Types** and edit the product type.
+2. Click **Edit** next to the **Product** part.
+3. Tick **Show product details on the product page**.
+4. For products that cannot be bought online, fill in **Inquiry button**, such as *Schedule a viewing*, and **Inquiry link**, where the button leads. In the link, `{id}` and `{title}` are replaced with the product's identifier and title.
+5. Save.
+
+Add the **Autoroute** part to the type as well, so each product has a readable address.
+
+Whether a product can be bought online, and how its price is shown (shown, *Call for price*, or hidden), are set on the type and on each product; see [Products and currencies](products-and-currencies.md). A product that can be bought shows its buy button, such as a subscription plan's **Sign up**.
+
+## What visitors see
+
+- The filters, in a side panel on wide screens and behind a **Filters** button on phones. Each filter shows how many products match each option, and folds open and closed.
+- The picked filters as chips above the results, each with a button to remove it, and **Clear all**.
+- The number of results, the sort, the page size and the grid or list switch.
+- Product cards with the image, the title, the chips, the price (with the *was* price struck through when there is a saving) and the product's actions.
+- A breadcrumb, such as *Home › Shop › Footwear › Boots* when a category is picked.
+
+Every combination of filters has its own address, so visitors can bookmark it, share it and use the Back button. Filters apply as soon as they change on wide screens.
+
+## Search engines
+
+With the SEO feature on, add the **SEO** part to the **Product Listing** type and to your product types, then fill it in on each listing and product. Filtered and searched pages of a listing point search engines at the listing's own address and ask not to be indexed, so search results show your listing once rather than every combination of filters.
+
+## Find your products and listings
+
+**Commerce > Products** lists every product of every product type, including subscription plans, with a filter by type; its **New** button offers only product types. **Commerce > Product Listings** lists your listing pages.
+
+## Try a sample
+
+Three recipes under **Configuration > Recipes** set up a complete example you can explore and adapt:
+
+| Recipe | Creates |
+| --- | --- |
+| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, and a **Shop** page at */shop* |
+| **Product listing: real estate sample** | 20 homes that are listed but not sold online, some with the price on request and a *Schedule a viewing* button, and a **Homes for sale** page at */homes* |
+| **Product listing: vehicle dealership sample** | 28 vehicles, some sold online and the rest listed, filtered by make, model, year, mileage and more, and a **Vehicles** page at */vehicles* |
+
+Run a sample on a test site first: each one adds content types, taxonomies and content items.
+
+:::note[Your site needs a theme]
+Listing pages are styled by your site's theme, which must be built on Bootstrap 5, as **TheTheme** and **The Blog Theme** are. A site set up with the **Blank** recipe has no front-end theme, so its listings show unstyled. Choose one under **Design > Themes** with **Make Current**.
+:::

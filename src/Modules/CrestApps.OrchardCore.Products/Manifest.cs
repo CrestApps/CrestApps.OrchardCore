@@ -20,3 +20,17 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = ProductConstants.Feature.Listing,
+    Name = "Product Listing",
+    Description = "Lists products on the front end with filters, sorting, grid and list views, and product pages. Products can be listed without being sold online.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.ModuleId,
+        "OrchardCore.Contents",
+        "OrchardCore.Title",
+        "OrchardCore.Autoroute",
+    ]
+)]

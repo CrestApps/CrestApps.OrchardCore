@@ -29,7 +29,7 @@ const BROWSER_GLOBALS = [
     'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'requestAnimationFrame', 'cancelAnimationFrame',
     'queueMicrotask',
     'fetch', 'Headers', 'Request', 'Response', 'AbortController', 'XMLHttpRequest', 'WebSocket', 'BroadcastChannel',
-    'URL', 'URLSearchParams', 'FormData', 'Blob', 'File', 'FileReader', 'DataTransfer', 'Image',
+    'URL', 'URLSearchParams', 'FormData', 'Blob', 'File', 'FileReader', 'DataTransfer', 'Image', 'DOMParser',
     'Event', 'CustomEvent', 'EventTarget', 'CSS',
     'Node', 'Element', 'HTMLElement', 'HTMLFormElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLAudioElement',
     'MutationObserver', 'ResizeObserver', 'IntersectionObserver',

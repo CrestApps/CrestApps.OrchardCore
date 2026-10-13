@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Products.Core.Models
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductPriceDisplayViewModel
+
+@if (Model.Display == ProductPriceDisplay.Show && !string.IsNullOrEmpty(Model.Price))
+{
+    <div class="product-price">
+        <span class="product-price-amount">@Model.Price</span>
+        @if (!string.IsNullOrEmpty(Model.Period))
+        {
+            <span class="product-price-period">@Model.Period</span>
+        }
+        @if (!string.IsNullOrEmpty(Model.CompareAtPrice))
+        {
+            <span class="product-price-compare"><span class="visually-hidden">@T["Was"] </span>@Model.CompareAtPrice</span>
+        }
+    </div>
+}
+else if (Model.Display == ProductPriceDisplay.OnRequest)
+{
+    <div class="product-price product-price-on-request">@Model.OnRequestLabel</div>
+}

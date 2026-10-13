@@ -51,6 +51,23 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
             return null;
         }
 
+        var settings = await GetPartSettingsAsync(contentItem);
+
+        // A listed product is shown but never sold. Every checkout path resolves its snapshot here, so refusing
+        // it here is what stops a crafted request from buying something the merchant only lists.
+        if (!productPart.CanBePurchased(settings))
+        {
+            return null;
+        }
+
+        // A product with no price of its own can still be sold at the prices it lists; with neither, there is
+        // nothing to charge.
+        if (!productPart.Price.HasValue &&
+            !(contentItem.TryGet<ProductPricePart>(out var pricing) && pricing.Prices is { Count: > 0 }))
+        {
+            return null;
+        }
+
         JsonNode taxationPart = contentItem.Content?["TaxationPart"];
 
         return new SellableProduct
@@ -60,35 +77,27 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
             ContentType = contentItem.ContentType,
             Sku = productPart.Sku,
             Title = contentItem.DisplayText,
-            UnitPrice = productPart.Price,
-            Currency = await ResolveCurrencyAsync(contentItem, productPart),
-            ProductType = await ResolveTypeAsync(contentItem),
+            UnitPrice = productPart.Price ?? 0m,
+            Currency = ResolveCurrency(productPart, settings),
+            ProductType = settings?.Type ?? ProductType.Undefined,
             TaxCategoryCode = taxationPart?["TaxCategoryCode"]?.GetValue<string>(),
             TaxClassificationCode = taxationPart?["TaxClassificationCode"]?.GetValue<string>(),
             ExternalTaxCode = taxationPart?["ExternalTaxCode"]?.GetValue<string>(),
         };
     }
 
-    private async ValueTask<string> ResolveCurrencyAsync(ContentItem contentItem, ProductPart productPart)
+    private static string ResolveCurrency(ProductPart productPart, ProductPartSettings settings)
     {
         if (!string.IsNullOrEmpty(productPart.Currency))
         {
             return productPart.Currency.Trim().ToUpperInvariant();
         }
 
-        var settings = await GetPartSettingsAsync(contentItem);
         var defaultCurrency = settings?.DefaultCurrency;
 
         return string.IsNullOrEmpty(defaultCurrency)
             ? null
             : defaultCurrency.Trim().ToUpperInvariant();
-    }
-
-    private async ValueTask<ProductType> ResolveTypeAsync(ContentItem contentItem)
-    {
-        var settings = await GetPartSettingsAsync(contentItem);
-
-        return settings?.Type ?? ProductType.Undefined;
     }
 
     private async ValueTask<ProductPartSettings> GetPartSettingsAsync(ContentItem contentItem)

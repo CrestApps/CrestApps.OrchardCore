@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductCardViewModel
+
+@*
+    A product in the grid. Alternates: ProductCard-{ContentType}; the list layout uses ProductCard-List and
+    ProductCard-List-{ContentType}. The whole card is one link, through the title's stretched link.
+*@
+
+<article class="product-card card h-100">
+    <div class="product-card-media">
+        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+        {
+            <img src="@Model.ImageUrl" alt="" class="product-listing-cover" loading="lazy" />
+        }
+        else
+        {
+            <span class="product-card-placeholder" aria-hidden="true"><span class="fa-regular fa-image fa-2x"></span></span>
+        }
+        @if (Model.DiscountPercent > 0)
+        {
+            <span class="product-card-badge badge bg-danger">@T["−{0}%", Model.DiscountPercent]<span class="visually-hidden"> @T["off"]</span></span>
+        }
+    </div>
+    <div class="card-body product-card-body">
+        <h3 class="product-card-title">
+            @if (string.IsNullOrEmpty(Model.Url))
+            {
+                @Model.Title
+            }
+            else
+            {
+                <a href="@Model.Url" class="stretched-link">@Model.Title</a>
+            }
+        </h3>
+        @if (Model.Chips.Count > 0)
+        {
+            <ul class="product-card-attributes">
+                @foreach (var chip in Model.Chips)
+                {
+                    <li>@chip</li>
+                }
+            </ul>
+        }
+        <div class="product-card-footer">
+            @await DisplayAsync(Model.Price)
+            @if (Model.ShowAvailability && Model.IsPurchasable)
+            {
+                <span class="product-card-availability"><span class="fa-solid fa-circle-check" aria-hidden="true"></span> @T["Buy online"]</span>
+            }
+        </div>
+        <div class="product-card-actions">
+            @await DisplayAsync(Model.Actions)
+        </div>
+    </div>
+</article>

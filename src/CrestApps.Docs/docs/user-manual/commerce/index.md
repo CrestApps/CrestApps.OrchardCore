@@ -22,7 +22,8 @@ This video walks through the commerce features, from connecting Stripe to refund
 | Feature | What it does for your business | Page |
 | --- | --- | --- |
 | **Payment providers** | Connect the site to Stripe to take cards, Apple Pay and Google Pay, or let customers pay later offline. | [Payment providers](payment-providers.md) |
-| **Products and currencies** | Put a price on what you sell, and choose the currencies you sell in. | [Products and currencies](products-and-currencies.md) |
+| **Products and currencies** | Put a price on what you sell, choose the currencies you sell in, and decide whether products are sold online or only listed. | [Products and currencies](products-and-currencies.md) |
+| **Product listings** | Publish pages that list your products with filters, sorting, search and a page for each product, for a shop, homes, cars or your plans. | [Product listings](product-listings.md) |
 | **Taxes** | Charge the right tax for what you sell and where your customers are. | [Taxes](taxes.md) |
 | **Coupons** | Give customers a discount code to enter at checkout. | [Coupons](coupons.md) |
 | **Checkout** | The pages a buyer goes through to pay, with or without an account. | [Checkout](checkout.md) |

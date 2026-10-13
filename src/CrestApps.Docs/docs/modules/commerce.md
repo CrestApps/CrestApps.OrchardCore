@@ -23,7 +23,7 @@ This video walks through the commerce modules, their screens, configuration and 
 | Module | Feature | What it owns | Page |
 | --- | --- | --- | --- |
 | Commerce | Commerce | The **Commerce** admin menu, the shared admin list UI, and the default financial-document policy. Enabled by dependency only. | This page |
-| Products | Products | The `ProductPart`, prices, and the managed **Currencies** catalog. | [Products](products) |
+| Products | Products, Product Listing | The `ProductPart`, prices, the managed **Currencies** catalog, whether products are sold online or only listed, and front-end listing pages with filters, sorting and product pages. | [Products](products) |
 | Checkout | Checkout | The checkout engine: sessions, steps, the durable payment and refund ledgers, coupons, and the public checkout. | [Checkout](checkout) |
 | Stripe | Stripe | The Stripe payment provider: cards, saved cards, Apple Pay and Google Pay, Connect, webhooks. | [Payments](payments) |
 | Pay Later | Pay Later | An offline "pay later" payment option that records the balance as a transaction. | [Pay Later](pay-later) |

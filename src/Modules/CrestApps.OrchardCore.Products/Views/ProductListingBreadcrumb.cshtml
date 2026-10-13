@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@using OrchardCore.DisplayManagement.Html
+
+@model ProductListingShapeViewModel
+
+@{
+    var breadcrumb = Model.Listing?.Breadcrumb;
+}
+
+@if (breadcrumb is not null)
+{
+    <div class="product-breadcrumb" data-product-listing-breadcrumb="@Model.Listing.ContentItem?.ContentItemId">
+        <breadcrumb name="@breadcrumb.Name" title="@(new HtmlContentString(breadcrumb.Title ?? string.Empty))" page-title="false">
+            @foreach (var item in breadcrumb.Items)
+            {
+                <breadcrumb-item id="@item.Id" url="@item.Url">@item.Label</breadcrumb-item>
+            }
+        </breadcrumb>
+    </div>
+}

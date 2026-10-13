@@ -9,6 +9,10 @@ public sealed class ProductsModuleBoundaryTests
     [Theory]
     [InlineData("CrestApps.OrchardCore.Payments")]
     [InlineData("CrestApps.OrchardCore.Checkout")]
+    [InlineData("CrestApps.OrchardCore.Stripe")]
+    [InlineData("CrestApps.OrchardCore.PayLater")]
+    [InlineData("CrestApps.OrchardCore.Subscriptions")]
+    [InlineData("CrestApps.OrchardCore.Transactions")]
     public void ProductsCore_DoesNotDependOnPaymentOrCheckout(string forbiddenPrefix)
     {
         // The catalog domain must stay reusable independently of any purchasing pipeline. Payment and
@@ -20,8 +24,14 @@ public sealed class ProductsModuleBoundaryTests
     [Theory]
     [InlineData("CrestApps.OrchardCore.Payments")]
     [InlineData("CrestApps.OrchardCore.Checkout")]
+    [InlineData("CrestApps.OrchardCore.Stripe")]
+    [InlineData("CrestApps.OrchardCore.PayLater")]
+    [InlineData("CrestApps.OrchardCore.Subscriptions")]
+    [InlineData("CrestApps.OrchardCore.Transactions")]
     public void ProductsModule_DoesNotDependOnPaymentOrCheckout(string forbiddenPrefix)
     {
+        // Products lists and the purchasing modules extend it. A site that only lists products (real estate, a
+        // car lot) enables Products without any of them, so the module must never reach back into them.
         AssertNoReferenceTo(typeof(ProductTaxableItemProvider).Assembly, forbiddenPrefix);
     }
 

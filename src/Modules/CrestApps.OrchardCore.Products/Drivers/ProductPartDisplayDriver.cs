@@ -28,12 +28,27 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
     {
         return Initialize<ProductPartViewModel>(GetEditorShapeType(context), async model =>
         {
+            var settings = context.TypePartDefinition.GetSettings<ProductPartSettings>();
+
             model.Price = context.IsNew ? null : part.Price;
+            model.CompareAtPrice = part.CompareAtPrice;
             model.Currency = string.IsNullOrEmpty(part.Currency)
-                ? context.TypePartDefinition.GetSettings<ProductPartSettings>().DefaultCurrency
+                ? settings.DefaultCurrency
                 : part.Currency;
             model.Sku = part.Sku;
+            model.IsPurchasable = part.IsPurchasable;
+            model.PriceDisplay = part.PriceDisplay;
+            model.ShowPurchasable = settings.SalesMode == ProductSalesMode.PerItem;
+            model.ShowPriceDisplay = settings.AllowPriceDisplayOverride;
+            model.PriceRequired = part.RequiresPrice(settings);
             model.Currencies = await BuildCurrencyOptionsAsync(model.Currency);
+            model.PriceDisplays =
+            [
+                new SelectListItem(S["Use the content type's setting"], string.Empty),
+                new SelectListItem(S["Show the price"], nameof(ProductPriceDisplay.Show)),
+                new SelectListItem(S["Show on request"], nameof(ProductPriceDisplay.OnRequest)),
+                new SelectListItem(S["Hide the price"], nameof(ProductPriceDisplay.Hidden)),
+            ];
         });
     }
 
@@ -43,7 +58,21 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (!model.Price.HasValue)
+        var settings = context.TypePartDefinition.GetSettings<ProductPartSettings>();
+
+        if (settings.SalesMode == ProductSalesMode.PerItem)
+        {
+            part.IsPurchasable = model.IsPurchasable;
+        }
+
+        if (settings.AllowPriceDisplayOverride)
+        {
+            part.PriceDisplay = model.PriceDisplay;
+        }
+
+        // A price is needed only when the product can be bought or its price is shown. A house listed by
+        // inquiry has none, and inventing a zero would show "$0" the moment the type's display changes.
+        if (!model.Price.HasValue && part.RequiresPrice(settings))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price is required"]);
         }
@@ -52,10 +81,13 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price cannot be negative number."]);
         }
 
-        if (model.Price.HasValue)
+        if (model.CompareAtPrice < 0)
         {
-            part.Price = model.Price.Value;
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CompareAtPrice), S["The compare-at price cannot be a negative number."]);
         }
+
+        part.Price = model.Price;
+        part.CompareAtPrice = model.CompareAtPrice;
 
         var normalizedCurrency = NormalizeCurrencyCode(model.Currency);
 
