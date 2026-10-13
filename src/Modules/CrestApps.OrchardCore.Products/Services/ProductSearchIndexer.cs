@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Search;
 using CrestApps.OrchardCore.Products.Indexes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ using OrchardCore.ContentManagement.Records;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Services;
 
@@ -31,6 +33,7 @@ public sealed class ProductSearchIndexer
     private readonly ProductAttributeCatalog _attributeCatalog;
     private readonly Attributes.TaxonomyTermLookup _termLookup;
     private readonly ISignal _signal;
+    private readonly IEnumerable<IProductSearchIndexHandler> _handlers;
     private readonly ILogger _logger;
 
     public ProductSearchIndexer(
@@ -39,6 +42,7 @@ public sealed class ProductSearchIndexer
         ProductAttributeCatalog attributeCatalog,
         Attributes.TaxonomyTermLookup termLookup,
         ISignal signal,
+        IEnumerable<IProductSearchIndexHandler> handlers,
         ILogger<ProductSearchIndexer> logger)
     {
         _session = session;
@@ -46,6 +50,7 @@ public sealed class ProductSearchIndexer
         _attributeCatalog = attributeCatalog;
         _termLookup = termLookup;
         _signal = signal;
+        _handlers = handlers;
         _logger = logger;
     }
 
@@ -59,15 +64,19 @@ public sealed class ProductSearchIndexer
 
         var document = await _documentBuilder.BuildAsync(contentItem);
 
-        await RemoveAsync(contentItem.ContentItemId);
+        await DeleteRecordsAsync(contentItem.ContentItemId);
 
-        if (document is not null)
+        if (document is null)
         {
-            await _session.SaveAsync(document);
+            await _handlers.InvokeAsync((handler, ids) => handler.RemovedAsync(ids), (IReadOnlyCollection<string>)[contentItem.ContentItemId], _logger);
+
+            return;
         }
 
-        // Cached search results are dropped once the change is committed.
-        _signal.DeferredSignalToken(CachedProductSearchService.SignalKey);
+        await _session.SaveAsync(document);
+
+        // Search servers get the same record. A failing one is logged; the database record still serves listings.
+        await _handlers.InvokeAsync((handler, documents) => handler.IndexedAsync(documents), (IReadOnlyCollection<ProductSearchDocument>)[document], _logger);
     }
 
     /// <summary>
@@ -75,6 +84,12 @@ public sealed class ProductSearchIndexer
     /// </summary>
     /// <param name="contentItemId">The product's content item identifier.</param>
     public async Task RemoveAsync(string contentItemId)
+    {
+        await DeleteRecordsAsync(contentItemId);
+        await _handlers.InvokeAsync((handler, ids) => handler.RemovedAsync(ids), (IReadOnlyCollection<string>)[contentItemId], _logger);
+    }
+
+    private async Task DeleteRecordsAsync(string contentItemId)
     {
         var existing = await _session
             .Query<ProductSearchDocument, ProductSearchIndex>(index => index.ContentItemId == contentItemId)
@@ -248,6 +263,18 @@ public sealed class ProductSearchIndexer
             {
                 break;
             }
+        }
+
+        if (!cancellationToken.IsCancellationRequested)
+        {
+            // The records are committed, so search servers are written again from them.
+            await (await shellHost.GetScopeAsync(shellSettings)).UsingAsync(async scope =>
+            {
+                var handlers = scope.ServiceProvider.GetServices<IProductSearchIndexHandler>();
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<ProductSearchIndexer>>();
+
+                await handlers.InvokeAsync((handler, token) => handler.RebuiltAsync(token), cancellationToken, logger);
+            });
         }
 
         return indexed;
