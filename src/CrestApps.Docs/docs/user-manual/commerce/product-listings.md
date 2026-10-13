@@ -135,3 +135,7 @@ Three recipes under **Configuration > Recipes** set up a complete example you ca
 | **Product listing: vehicle dealership sample** | 28 vehicles, some sold online and the rest listed, filtered by make, model, year, mileage and more, and a **Vehicles** page at */vehicles* |
 
 Run a sample on a test site first: each one adds content types, taxonomies and content items.
+
+:::note[Your site needs a theme]
+Listing pages are styled by your site's theme, which must be built on Bootstrap 5, as **TheTheme** and **The Blog Theme** are. A site set up with the **Blank** recipe has no front-end theme, so its listings show unstyled. Choose one under **Design > Themes** with **Make Current**.
+:::
