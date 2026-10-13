@@ -1,0 +1,63 @@
+@using CrestApps.OrchardCore.Products.Core.Listing
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductFacetViewModel
+
+@{
+    var id = $"facet-{Model.Key}";
+    var visible = Model.MaxVisible > 0 ? Model.MaxVisible : int.MaxValue;
+    var options = Model.Options;
+    var extraSelected = options.Skip(visible).Any(option => option.Selected);
+    var expanded = !Model.Collapsed || Model.HasSelection;
+    var inputType = Model.Kind == ProductFacetKind.Radio ? "radio" : "checkbox";
+}
+
+<div class="border-bottom py-3">
+    <h3 class="h6 mb-0">
+        <button class="btn btn-link text-reset text-decoration-none fw-semibold p-0 w-100 d-flex justify-content-between align-items-center @(expanded ? null : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id" aria-expanded="@(expanded ? "true" : "false")" aria-controls="@id">
+            @Model.Label
+            <span class="fa-solid fa-chevron-down small" aria-hidden="true"></span>
+        </button>
+    </h3>
+    <div class="collapse @(expanded ? "show" : null)" id="@id">
+        <fieldset class="pt-2">
+            <legend class="visually-hidden">@Model.Label</legend>
+            @if (Model.Kind == ProductFacetKind.Radio)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="@Model.Key" value="" id="@id-any" checked="@(!Model.HasSelection)" />
+                    <label class="form-check-label" for="@id-any">@T["Any"]</label>
+                </div>
+            }
+            @for (var i = 0; i < options.Count; i++)
+            {
+                var option = options[i];
+                var optionId = $"{id}-{i}";
+
+                if (i == visible)
+                {
+                    @Html.Raw($"<div class=\"collapse{(extraSelected ? " show" : string.Empty)}\" id=\"{id}-more\">")
+                }
+
+                <div class="form-check">
+                    <input class="form-check-input" type="@inputType" name="@Model.Key" value="@option.Value" id="@optionId" checked="@option.Selected" />
+                    <label class="form-check-label d-flex justify-content-between gap-2" for="@optionId">
+                        <span>@option.Label</span>
+                        <span class="text-muted small">@option.Count</span>
+                    </label>
+                </div>
+            }
+            @if (options.Count > visible)
+            {
+                @Html.Raw("</div>")
+                <button type="button" class="btn btn-link btn-sm px-0 @(extraSelected ? null : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@id-more" aria-expanded="@(extraSelected ? "true" : "false")" aria-controls="@id-more">
+                    @T["See more ({0})", options.Count - visible]
+                </button>
+            }
+        </fieldset>
+        @if (Model.HasSelection)
+        {
+            <a href="@Model.ClearUrl" class="small" data-product-listing-link>@T["Clear"]</a>
+        }
+    </div>
+</div>

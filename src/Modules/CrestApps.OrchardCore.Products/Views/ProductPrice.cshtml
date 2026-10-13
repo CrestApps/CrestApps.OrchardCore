@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Products.Core.Models
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductPriceDisplayViewModel
+
+@if (Model.Display == ProductPriceDisplay.Show && !string.IsNullOrEmpty(Model.Price))
+{
+    <div class="d-flex flex-wrap align-items-baseline gap-2">
+        <span class="fs-5 fw-semibold">@Model.Price</span>
+        @if (!string.IsNullOrEmpty(Model.CompareAtPrice))
+        {
+            <span class="small text-muted text-decoration-line-through"><span class="visually-hidden">@T["Was"] </span>@Model.CompareAtPrice</span>
+            @if (Model.DiscountPercent > 0)
+            {
+                <span class="badge bg-danger">@T["{0}% off", Model.DiscountPercent]</span>
+            }
+        }
+    </div>
+}
+else if (Model.Display == ProductPriceDisplay.OnRequest)
+{
+    <div class="fw-semibold text-muted">@Model.OnRequestLabel</div>
+}

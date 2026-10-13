@@ -1,0 +1,170 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingPartViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Products"]</label>
+    <div class="ocat-end">
+        @if (Model.ContentTypes.Count == 0)
+        {
+            <div class="alert alert-warning mb-0">@T["No content type has a Product part yet. Attach the Product part to a content type to list it here."]</div>
+        }
+        else
+        {
+            @for (var i = 0; i < Model.ContentTypes.Count; i++)
+            {
+                var type = Model.ContentTypes[i];
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="@Html.NameFor(m => m.SelectedContentTypes)" value="@type.Name" id="@Html.IdFor(m => m.SelectedContentTypes)-@i" checked="@type.Selected" />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.SelectedContentTypes)-@i">@type.DisplayName</label>
+                </div>
+            }
+            <span class="hint">@T["The product types this page lists. Every product type is listed when none is selected. Save to refresh the filters below."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Filters"]</label>
+    <div class="ocat-end">
+        <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" asp-for="AutomaticFacets" />
+            <label class="form-check-label" asp-for="AutomaticFacets">@T["Offer a filter for every filterable field"]</label>
+            <span class="hint dashed">@T["When unchecked, only the filters ticked below are offered, in their order."]</span>
+        </div>
+
+        @if (Model.Facets.Count == 0)
+        {
+            <p class="hint">@T["No field of these product types is marked as filterable yet. Mark fields as Filterable in the content type's field settings."]</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Use"]</th>
+                            <th scope="col">@T["Field"]</th>
+                            <th scope="col">@T["Label"]</th>
+                            <th scope="col">@T["URL key"]</th>
+                            <th scope="col">@T["Kind"]</th>
+                            <th scope="col">@T["Term level"]</th>
+                            <th scope="col">@T["Shown after"]</th>
+                            <th scope="col">@T["Visible options"]</th>
+                            <th scope="col">@T["Collapsed"]</th>
+                            <th scope="col">@T["Order"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Facets.Count; i++)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="checkbox" class="form-check-input" asp-for="Facets[i].Enabled" aria-label="@T["Use this filter"]" />
+                                    <input type="hidden" asp-for="Facets[i].AttributeKey" />
+                                </td>
+                                <td>@Model.Facets[i].AttributeLabel</td>
+                                <td><input class="form-control form-control-sm" asp-for="Facets[i].Label" placeholder="@Model.Facets[i].AttributeLabel" /></td>
+                                <td><input class="form-control form-control-sm" asp-for="Facets[i].Key" /></td>
+                                <td><select class="form-select form-select-sm" asp-for="Facets[i].Kind" asp-items="Model.FacetKinds"></select></td>
+                                <td>
+                                    @if (Model.Facets[i].IsTerm)
+                                    {
+                                        <input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].Level" placeholder="@T["All"]" />
+                                    }
+                                </td>
+                                <td><input class="form-control form-control-sm" asp-for="Facets[i].DependsOn" placeholder="@T["URL key"]" /></td>
+                                <td><input type="number" min="0" class="form-control form-control-sm" asp-for="Facets[i].MaxVisible" /></td>
+                                <td><input type="checkbox" class="form-check-input" asp-for="Facets[i].Collapsed" aria-label="@T["Start collapsed"]" /></td>
+                                <td><input type="number" class="form-control form-control-sm" asp-for="Facets[i].Order" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <span class="hint">@T["Term level offers one level of a taxonomy, such as 1 for makes and 2 for models. Shown after hides a filter until the filter with that URL key has a selection."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Sorting"]</label>
+    <div class="ocat-end">
+        <div class="form-check mb-2">
+            <input type="checkbox" class="form-check-input" asp-for="AutomaticSorts" />
+            <label class="form-check-label" asp-for="AutomaticSorts">@T["Offer the standard sorts and every sortable field"]</label>
+            <span class="hint dashed">@T["When unchecked, only the sorts ticked below are offered, in their order."]</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Use"]</th>
+                        <th scope="col">@T["Label"]</th>
+                        <th scope="col">@T["URL key"]</th>
+                        <th scope="col">@T["Order"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Sorts.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input" asp-for="Sorts[i].Enabled" aria-label="@T["Use this sort"]" />
+                                <input type="hidden" asp-for="Sorts[i].AttributeKey" />
+                                <input type="hidden" asp-for="Sorts[i].Descending" />
+                            </td>
+                            <td><input class="form-control form-control-sm" asp-for="Sorts[i].Label" /></td>
+                            <td><input class="form-control form-control-sm" asp-for="Sorts[i].Key" /></td>
+                            <td><input type="number" class="form-control form-control-sm" asp-for="Sorts[i].Order" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <label asp-for="DefaultSort" class="form-label">@T["Default sort"]</label>
+        <select asp-for="DefaultSort" asp-items="Model.SortOptions" class="form-select">
+            <option value="">@T["The first sort"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultView" class="ocat-label">@T["Layout"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultView" asp-items="Model.Views" class="form-select"></select>
+        <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" asp-for="AllowViewSwitching" />
+            <label class="form-check-label" asp-for="AllowViewSwitching">@T["Let visitors switch between grid and list"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PageSizes">
+    <label asp-for="PageSizes" class="ocat-label">@T["Page sizes"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-md-8">
+                <input asp-for="PageSizes" class="form-control" placeholder="12, 24, 48" />
+                <span class="hint">@T["The page sizes visitors can pick from, separated by commas."]</span>
+                <span asp-validation-for="PageSizes"></span>
+            </div>
+            <div class="col-md-4">
+                <input type="number" min="1" max="200" asp-for="DefaultPageSize" class="form-control" aria-label="@T["Default page size"]" />
+                <span class="hint">@T["Default page size"]</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableKeywordSearch" />
+            <label class="form-check-label" asp-for="EnableKeywordSearch">@T["Keyword search"]</label>
+            <span class="hint dashed">@T["Adds a search box that matches titles, SKUs and searchable fields."]</span>
+        </div>
+    </div>
+</div>

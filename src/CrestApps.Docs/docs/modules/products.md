@@ -27,9 +27,12 @@ Because the part is a normal Orchard Core content part, products participate in 
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `Price` | `decimal` | The price of the item, expressed in the product's own `Currency`. |
+| `Price` | `decimal?` | The price of the item, expressed in the product's own `Currency`. It is required when the product can be bought or its price is shown, and optional otherwise. |
 | `Currency` | `string` | The ISO-4217 currency code the price is sold in (for example `USD`). When empty, the content type's `ProductPartSettings.DefaultCurrency` applies. A product owns its currency; prices are never converted between currencies. |
 | `Sku` | `string` | An optional stock-keeping unit that uniquely identifies the product for carts, orders, and fulfilment. |
+| `CompareAtPrice` | `decimal?` | An optional "was" or list price. When it is higher than `Price`, it is shown struck through with the saving. |
+| `IsPurchasable` | `bool` | Whether this item can be bought online. Only used when the type's sales mode is *Per item*. |
+| `PriceDisplay` | `ProductPriceDisplay?` | How this item's price is shown. Only used when the type allows a per-item price display. |
 
 The part's behavior is configured per content type through **`ProductPartSettings`**:
 
@@ -37,6 +40,10 @@ The part's behavior is configured per content type through **`ProductPartSetting
 | --- | --- | --- |
 | `Type` | `ProductType` | Classifies the product. One of `Undefined`, `Good`, `Service`, or `Digital`. |
 | `DefaultCurrency` | `string` | The ISO-4217 currency code applied to products of this type when an item does not set its own `Currency`. |
+| `SalesMode` | `ProductSalesMode` | Whether products of this type can be bought online: `Purchasable` (the default), `ListingOnly`, or `PerItem`. |
+| `PriceDisplay` | `ProductPriceDisplay` | How prices are shown to visitors: `Show` (the default), `OnRequest`, or `Hidden`. |
+| `OnRequestLabel` | `string` | The text shown in place of the price when the price display is `OnRequest`, such as *Call for price*. |
+| `AllowPriceDisplayOverride` | `bool` | Lets each product choose its own price display. |
 
 ## Attaching the Product part
 
@@ -80,6 +87,20 @@ The `ProductType` enum lets the editor and downstream modules reason about what 
 | `Digital` | A digital good or download. |
 
 When the [Taxation](taxation) feature is enabled, the product type maps to a taxable-item kind so the taxation engine can classify what is being sold: `Good` → *Physical*, `Service` → *Service*, `Digital` → *Digital*, and `Undefined` falls back to *Physical*.
+
+## Listed or for sale
+
+Not every product is sold online. A car dealer lists its whole stock but takes payment for only some of it, and a real estate site lists homes it never sells through a checkout. The **sales mode** on the type's Product part settings decides this:
+
+| Sales mode | Effect |
+| --- | --- |
+| `Purchasable` | Every product of the type can be bought online. This is the default, so existing product types keep selling. |
+| `ListingOnly` | Products are shown and browsed but never sold online. |
+| `PerItem` | Each product has a **Sell online** switch. |
+
+The rule is enforced on the server, not only in the editor: `IProductSnapshotResolver` returns no snapshot for a product that cannot be bought, so no checkout path can sell it, whatever a request contains.
+
+The **price display** decides what visitors see in place of the price. `OnRequest` shows a label such as *Call for price*, and `Hidden` shows nothing. A listed product whose price is not shown does not need a price at all.
 
 ## Managed currencies
 
@@ -179,6 +200,67 @@ created from a price still names it.
 :::
 
 
+## Product listing
+
+| | |
+| --- | --- |
+| **Feature Name** | Product Listing |
+| **Feature ID** | `CrestApps.OrchardCore.Products.Listing` |
+| **Category** | Content Management |
+
+The **Product Listing** feature lists products on the front end. Visitors can filter, sort, search and page through them, switch between a grid and a list, and open a product page with its price and specifications. It works for products that are sold online and for products that are only listed.
+
+### Choosing what visitors can filter on
+
+Product attributes are ordinary content fields on the product type. Each field's settings gain a **Product listing** section:
+
+| Setting | Effect |
+| --- | --- |
+| **Filterable** | Visitors can filter listings by the field. |
+| **Sortable** | Visitors can sort listings by the field. Offered for numbers, dates and single values. |
+| **Searchable** | Keyword search matches the field's value. |
+| **Show on product cards** | Shown as a short chip on the product's card. |
+| **Show in specifications** | Shown in the specification table of list rows and the product page. |
+| **Listing label** | The label visitors see. Defaults to the field's display name. |
+| **Number format** and **Unit** | For number fields: a .NET format string, such as `0` for a year, and a unit, such as `mi`. |
+
+Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are supported. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter.
+
+The price, the content type and whether a product can be bought online are always available as attributes.
+
+### Adding a listing page
+
+Create a **Product Listing** content item. Its editor sets:
+
+- the product types it lists (every product type when none is selected);
+- the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), the number of options shown before *See more*, and whether it starts collapsed;
+- *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
+- the sorts, the default sort, the grid or list layout, the page sizes, and keyword search.
+
+The page is an ordinary content item, so it has its own URL, menu entry and permissions.
+
+Filtering is done with an ordinary GET form, so a listing works without JavaScript, every state has a URL that can be bookmarked or shared, and the back button works. With JavaScript, filters apply as they change on wide screens and the results update in place. On small screens the filters open in a side panel.
+
+```text
+/vehicles?make=<term-id>&year_min=2016&price_max=20000&sort=price-asc&view=list&page=2
+```
+
+Unknown keys are ignored, the number of values per filter is capped, and page sizes must be one of the configured sizes.
+
+The listing's markup uses Bootstrap 5 classes and works with themes on Bootstrap 5.0 and later.
+
+### Product pages
+
+Turn on **Show product details on the product page** in the type's Product part settings to add a details block to each product's page: the price, the specification table, and either *Available to buy online* or an inquiry button. The inquiry button's label and link are set on the type; `{id}` and `{title}` in the link are replaced with the product's identifier and title. Fields shown in the specification table are not shown a second time on the page.
+
+### The search index
+
+Each published product has one search record, with one row per attribute value, kept in the tenant database. Publishing, unpublishing, deleting or importing a product refreshes its record, and the whole index is rebuilt in the background when a product type or a field's listing settings change. No external search service is needed.
+
+### Sample
+
+The **Product listing: vehicle dealership sample** recipe creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
+
 ## Recipes and schema
 
 The **Product** part is defined and imported through Orchard Core's built-in `ContentDefinition` recipe step, and product content items through the built-in `Content` step.
@@ -193,7 +275,7 @@ When the same feature is enabled, JSON Schema is also contributed for the manage
 dotnet add package CrestApps.OrchardCore.Products
 ```
 
-Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools → Features**.
+Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools → Features**. Enable **Product Listing** too to list products on the front end.
 
 ## Related modules
 

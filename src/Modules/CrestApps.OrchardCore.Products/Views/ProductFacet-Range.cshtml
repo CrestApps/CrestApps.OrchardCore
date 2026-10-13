@@ -1,0 +1,43 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductFacetViewModel
+
+@{
+    var id = $"facet-{Model.Key}";
+    var expanded = !Model.Collapsed || Model.HasSelection;
+    string Invariant(decimal? value) => value?.ToString("0.##", CultureInfo.InvariantCulture);
+    var format = string.IsNullOrWhiteSpace(Model.NumberFormat) ? "#,0.##" : Model.NumberFormat;
+    string Display(decimal? value) => value?.ToString(format, CultureInfo.CurrentCulture);
+}
+
+<div class="border-bottom py-3">
+    <h3 class="h6 mb-0">
+        <button class="btn btn-link text-reset text-decoration-none fw-semibold p-0 w-100 d-flex justify-content-between align-items-center @(expanded ? null : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id" aria-expanded="@(expanded ? "true" : "false")" aria-controls="@id">
+            @Model.Label
+            <span class="fa-solid fa-chevron-down small" aria-hidden="true"></span>
+        </button>
+    </h3>
+    <div class="collapse @(expanded ? "show" : null)" id="@id">
+        <fieldset class="pt-2">
+            <legend class="visually-hidden">@Model.Label</legend>
+            <div class="row g-2 align-items-center">
+                <div class="col">
+                    <label for="@id-min" class="form-label small text-muted mb-1">@T["Min"]</label>
+                    <input type="number" class="form-control form-control-sm" id="@id-min" name="@(Model.Key)_min" value="@Invariant(Model.SelectedMin)" placeholder="@Display(Model.AvailableMin)" step="any" inputmode="decimal" />
+                </div>
+                <div class="col">
+                    <label for="@id-max" class="form-label small text-muted mb-1">@T["Max"]</label>
+                    <input type="number" class="form-control form-control-sm" id="@id-max" name="@(Model.Key)_max" value="@Invariant(Model.SelectedMax)" placeholder="@Display(Model.AvailableMax)" step="any" inputmode="decimal" />
+                </div>
+                <div class="col-auto align-self-end">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Go"]</button>
+                </div>
+            </div>
+        </fieldset>
+        @if (Model.HasSelection)
+        {
+            <a href="@Model.ClearUrl" class="small d-inline-block mt-2" data-product-listing-link>@T["Clear"]</a>
+        }
+    </div>
+</div>

@@ -1,0 +1,78 @@
+/*
+ * The product listing uses Bootstrap's markup and utilities. Two things it needs arrived after Bootstrap 5.0:
+ * the responsive off-canvas that holds the filters on small screens (5.2) and image cropping (5.3). Themes that
+ * still ship an older Bootstrap get them from here. On a current Bootstrap these rules match its own. Every rule
+ * is scoped under the listing so it wins over a theme stylesheet that loads after it.
+ */
+
+.product-listing .product-listing-cover {
+  object-fit: cover;
+}
+
+@media (max-width: 991.98px) {
+  .product-listing .product-listing-filters {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1045;
+    display: flex;
+    flex-direction: column;
+    width: 400px;
+    max-width: 100%;
+    color: var(--bs-body-color, #212529);
+    background-color: var(--bs-body-bg, #fff);
+    background-clip: padding-box;
+    border-right: 1px solid rgba(0, 0, 0, 0.175);
+    outline: 0;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .product-listing .product-listing-filters.showing,
+  .product-listing .product-listing-filters.show:not(.hiding) {
+    transform: none;
+  }
+
+  .product-listing .product-listing-filters.showing,
+  .product-listing .product-listing-filters.hiding,
+  .product-listing .product-listing-filters.show {
+    visibility: visible;
+  }
+
+  .product-listing .product-listing-filters .offcanvas-body {
+    flex-grow: 1;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 991.98px) and (prefers-reduced-motion: reduce) {
+  .product-listing .product-listing-filters {
+    transition: none;
+  }
+}
+
+@media (min-width: 992px) {
+  /* Older Bootstrap leaves an inline visibility on the panel after it was closed on a small screen. */
+  .product-listing .product-listing-filters {
+    position: static;
+    z-index: auto;
+    width: auto;
+    background-color: transparent;
+    border: 0;
+    visibility: visible !important;
+    transform: none;
+  }
+
+  .product-listing .product-listing-filters .offcanvas-header {
+    display: none;
+  }
+
+  .product-listing .product-listing-filters .offcanvas-body {
+    display: block;
+    flex-grow: 0;
+    padding: 0;
+    overflow-y: visible;
+  }
+}

@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductFacetViewModel
+
+@{
+    var option = Model.Options.FirstOrDefault();
+    var id = $"facet-{Model.Key}";
+}
+
+@if (option is not null)
+{
+    <div class="border-bottom py-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" name="@Model.Key" value="true" id="@id" checked="@option.Selected" />
+            <label class="form-check-label d-flex justify-content-between gap-2" for="@id">
+                <span class="fw-semibold">@Model.Label</span>
+                <span class="text-muted small">@option.Count</span>
+            </label>
+        </div>
+    </div>
+}

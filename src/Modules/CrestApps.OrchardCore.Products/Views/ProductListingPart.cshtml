@@ -1,0 +1,216 @@
+@using CrestApps.OrchardCore.Products.Core.Listing
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingViewModel
+
+@{
+    var id = Model.ContentItem.ContentItemId;
+    var formId = $"product-listing-{id}";
+    var filtersId = $"{formId}-filters";
+    var activeCount = Model.ActiveFilters.Count;
+}
+
+<style asp-name="font-awesome"></style>
+<style asp-name="product-listing"></style>
+<script asp-name="product-listing" at="Foot"></script>
+
+<div class="visually-hidden" aria-live="polite" data-product-listing-status="@id"></div>
+
+<div class="product-listing my-4" data-product-listing="@id">
+    <form id="@formId" method="get" action="@Model.FormAction" data-product-listing-form>
+        @if (Model.AllowViewSwitching)
+        {
+            <input type="hidden" name="view" value="@(Model.View == ProductListingView.List ? "list" : "grid")" data-default="@(Model.DefaultView == ProductListingView.List ? "list" : "grid")" />
+        }
+
+        <div class="row g-4">
+            <aside class="col-lg-3">
+                <div class="product-listing-filters offcanvas-lg offcanvas-start" tabindex="-1" id="@filtersId" aria-labelledby="@filtersId-title">
+                    <div class="offcanvas-header border-bottom">
+                        <h2 class="offcanvas-title h5" id="@filtersId-title">@T["Filters"]</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#@filtersId" aria-label="@T["Close"]"></button>
+                    </div>
+                    <div class="offcanvas-body d-block">
+                        <h2 class="h5 d-none d-lg-block mb-3">@T["Filter by"]</h2>
+
+                        @if (Model.EnableKeywordSearch)
+                        {
+                            <div class="mb-3">
+                                <label for="@formId-q" class="visually-hidden">@T["Search"]</label>
+                                <div class="input-group">
+                                    <input type="search" class="form-control" id="@formId-q" name="q" value="@Model.Keyword" placeholder="@T["Search"]" maxlength="200" />
+                                    <button type="submit" class="btn btn-outline-secondary">
+                                        <span class="fa-solid fa-magnifying-glass" aria-hidden="true"></span>
+                                        <span class="visually-hidden">@T["Search"]</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        @foreach (var facet in Model.Facets)
+                        {
+                            @await DisplayAsync(facet)
+                        }
+
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary" data-product-listing-apply>@T["Show results"]</button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="col-lg-9">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                    <button type="button" class="btn btn-outline-secondary d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#@filtersId" aria-controls="@filtersId">
+                        <span class="fa-solid fa-sliders" aria-hidden="true"></span>
+                        @T["Filters"]
+                        @if (activeCount > 0)
+                        {
+                            <span class="badge bg-primary">@activeCount</span>
+                        }
+                    </button>
+
+                    <div class="me-auto text-muted" data-product-listing-summary>
+                        @if (Model.Total == 0)
+                        {
+                            @T["No results"]
+                        }
+                        else
+                        {
+                            @T["Showing {0}–{1} of {2} results", Model.FirstItem, Model.LastItem, Model.Total]
+                        }
+                    </div>
+
+                    @if (Model.Sorts.Count > 1)
+                    {
+                        <label for="@formId-sort" class="visually-hidden">@T["Sort by"]</label>
+                        <select class="form-select w-auto" id="@formId-sort" name="sort" data-default="@Model.DefaultSort">
+                            @foreach (var sort in Model.Sorts)
+                            {
+                                <option value="@sort.Key" selected="@sort.Selected">@T["Sort: {0}", sort.Label]</option>
+                            }
+                        </select>
+                    }
+
+                    @if (Model.PageSizes.Count > 1)
+                    {
+                        <label for="@formId-size" class="visually-hidden">@T["Items per page"]</label>
+                        <select class="form-select w-auto" id="@formId-size" name="size" data-default="@Model.DefaultPageSize">
+                            @foreach (var size in Model.PageSizes)
+                            {
+                                <option value="@size" selected="@(size == Model.PageSize)">@T["{0} per page", size]</option>
+                            }
+                        </select>
+                    }
+
+                    <noscript>
+                        <button type="submit" class="btn btn-outline-secondary">@T["Apply"]</button>
+                    </noscript>
+
+                    @if (Model.AllowViewSwitching)
+                    {
+                        <div class="btn-group" role="group" aria-label="@T["Layout"]">
+                            <a href="@Model.GridUrl" class="btn btn-outline-secondary @(Model.View == ProductListingView.Grid ? "active" : null)" aria-current="@(Model.View == ProductListingView.Grid ? "true" : null)" data-product-listing-link>
+                                <span class="fa-solid fa-table-cells-large" aria-hidden="true"></span>
+                                <span class="visually-hidden">@T["Grid"]</span>
+                            </a>
+                            <a href="@Model.ListUrl" class="btn btn-outline-secondary @(Model.View == ProductListingView.List ? "active" : null)" aria-current="@(Model.View == ProductListingView.List ? "true" : null)" data-product-listing-link>
+                                <span class="fa-solid fa-list" aria-hidden="true"></span>
+                                <span class="visually-hidden">@T["List"]</span>
+                            </a>
+                        </div>
+                    }
+                </div>
+
+                @if (activeCount > 0)
+                {
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        @foreach (var filter in Model.ActiveFilters)
+                        {
+                            <a href="@filter.RemoveUrl" class="btn btn-sm btn-outline-secondary rounded-pill" data-product-listing-link>
+                                @filter.Label
+                                <span aria-hidden="true">&times;</span>
+                                <span class="visually-hidden">@T["Remove this filter"]</span>
+                            </a>
+                        }
+                        <a href="@Model.ClearAllUrl" class="btn btn-sm btn-link" data-product-listing-link>@T["Clear all"]</a>
+                    </div>
+                }
+
+                @if (Model.Products.Count == 0)
+                {
+                    <div class="alert alert-info" role="status">
+                        @T["No products match these filters."]
+                        @if (activeCount > 0)
+                        {
+                            <a href="@Model.ClearAllUrl" class="alert-link" data-product-listing-link>@T["Clear all filters"]</a>
+                        }
+                    </div>
+                }
+                else if (Model.View == ProductListingView.List)
+                {
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var product in Model.Products)
+                        {
+                            @await DisplayAsync(product)
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
+                        @foreach (var product in Model.Products)
+                        {
+                            <div class="col">
+                                @await DisplayAsync(product)
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (Model.PageLinks.Count > 0)
+                {
+                    <nav class="mt-4" aria-label="@T["Pages"]">
+                        <ul class="pagination flex-wrap justify-content-center">
+                            <li class="page-item @(Model.PreviousPageUrl is null ? "disabled" : null)">
+                                @if (Model.PreviousPageUrl is null)
+                                {
+                                    <span class="page-link">@T["Previous"]</span>
+                                }
+                                else
+                                {
+                                    <a class="page-link" href="@Model.PreviousPageUrl" rel="prev" data-product-listing-link>@T["Previous"]</a>
+                                }
+                            </li>
+                            @foreach (var link in Model.PageLinks)
+                            {
+                                if (link.Page is null)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                else if (link.Current)
+                                {
+                                    <li class="page-item active" aria-current="page"><span class="page-link">@link.Page</span></li>
+                                }
+                                else
+                                {
+                                    <li class="page-item"><a class="page-link" href="@link.Url" data-product-listing-link>@link.Page</a></li>
+                                }
+                            }
+                            <li class="page-item @(Model.NextPageUrl is null ? "disabled" : null)">
+                                @if (Model.NextPageUrl is null)
+                                {
+                                    <span class="page-link">@T["Next"]</span>
+                                }
+                                else
+                                {
+                                    <a class="page-link" href="@Model.NextPageUrl" rel="next" data-product-listing-link>@T["Next"]</a>
+                                }
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
+        </div>
+    </form>
+</div>
