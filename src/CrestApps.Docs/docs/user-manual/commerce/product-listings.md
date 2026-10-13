@@ -99,7 +99,7 @@ Each product can have its own page with its images, price, highlights and action
 1. Open **Content > Content Definition > Content Types** and edit the product type.
 2. Click **Edit** next to the **Product** part.
 3. Tick **Show product details on the product page**.
-4. For products that cannot be bought online, fill in **Inquiry button**, such as *Schedule a viewing*, and **Inquiry link**, where the button leads. In the link, *{id}* and *{title}* are replaced with the product's identifier and title.
+4. For products that cannot be bought online, fill in **Inquiry button**, such as *Schedule a viewing*, and **Inquiry link**, where the button leads. In the link, `{id}` and `{title}` are replaced with the product's identifier and title.
 5. Save.
 
 Add the **Autoroute** part to the type as well, so each product has a readable address.
