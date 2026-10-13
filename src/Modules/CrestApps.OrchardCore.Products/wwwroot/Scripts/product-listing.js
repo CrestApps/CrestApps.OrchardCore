@@ -73,6 +73,7 @@
         return;
       }
       container.innerHTML = next.innerHTML;
+      container.removeAttribute('data-product-listing-appended');
       enhance(container);
 
       // The breadcrumb follows the categories picked, and it sits outside the listing, in the page header.
@@ -135,6 +136,7 @@
       });
       replaceWith(container, next, '[data-product-listing-more]');
       replaceWith(container, next, '[data-product-listing-pages]');
+      container.setAttribute('data-product-listing-appended', '');
       updateSummary(container, next);
 
       // The address names the last page shown, so a reload or a shared link starts from it.
@@ -202,15 +204,18 @@
     container.querySelectorAll('[data-product-listing-apply]').forEach(function (button) {
       button.classList.add('d-lg-none');
     });
+
+    // With "Load more" or infinite scroll the page links give way to the button, but they stay when a later page
+    // was opened directly (a reload, a shared link), so the visitor can still go back to the first page.
+    var pages = container.querySelector('[data-product-listing-pages="replaceable"]');
+    if (pages && (container.hasAttribute('data-product-listing-appended') || pages.getAttribute('data-page') === '1')) {
+      pages.classList.add('d-none');
+    }
     var more = container.querySelector('[data-product-listing-more]');
     if (!more) {
       return;
     }
     more.classList.remove('d-none');
-    var pages = container.querySelector('[data-product-listing-pages]');
-    if (pages) {
-      pages.classList.add('d-none');
-    }
     if (more.getAttribute('data-product-listing-more') === 'infinite' && observer) {
       observer.observe(more);
     }

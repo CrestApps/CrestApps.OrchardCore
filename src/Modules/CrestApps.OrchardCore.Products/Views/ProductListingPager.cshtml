@@ -20,7 +20,7 @@
 
 @if (listing.PageLinks.Count > 0)
 {
-    <nav class="product-listing-pager mt-4" aria-label="@T["Pages"]" data-product-listing-pages="@(listing.Paging == CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.Pages ? null : "replaceable")">
+    <nav class="product-listing-pager mt-4" aria-label="@T["Pages"]" data-product-listing-pages="@(listing.Paging == CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.Pages ? null : "replaceable")" data-page="@listing.Page">
         <ul class="pagination flex-wrap justify-content-center">
             <li class="page-item @(listing.PreviousPageUrl is null ? "disabled" : null)">
                 @if (listing.PreviousPageUrl is null)
