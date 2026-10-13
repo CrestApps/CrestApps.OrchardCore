@@ -164,6 +164,15 @@ public sealed class SqlProductSearchService : IProductSearchService
             conditions.Add($"p.{sql.Column(nameof(ProductSearchIndex.ContentType))} IN @contentTypes");
         }
 
+        // A localized product shows in its own culture; a product that is not localized shows in every culture.
+        if (!string.IsNullOrEmpty(query.Culture))
+        {
+            var culture = sql.Column(nameof(ProductSearchIndex.Culture));
+
+            parameters.Add("culture", query.Culture);
+            conditions.Add($"(p.{culture} = @culture OR p.{culture} IS NULL OR p.{culture} = '')");
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
             // LOWER on both sides, because LIKE is case-insensitive on SQLite and SQL Server but not on PostgreSQL.

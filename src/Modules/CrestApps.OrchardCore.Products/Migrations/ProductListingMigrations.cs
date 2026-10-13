@@ -92,6 +92,22 @@ public sealed class ProductListingMigrations : DataMigration
         return 1;
     }
 
+    /// <summary>
+    /// Adds the culture of localized products, so a listing shows the products of its own culture.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .AddColumn<string>(nameof(ProductSearchIndex.Culture), column => column.Nullable().WithLength(32))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .CreateIndex("IDX_ProductSearchIndex_Culture", "DocumentId", nameof(ProductSearchIndex.Culture))
+        );
+
+        return 2;
+    }
+
     // Mirrors the Autoroute module's settings by name, so the type can be defined without a reference to it.
     private sealed class AutoroutePartSettings
     {

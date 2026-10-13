@@ -33,6 +33,12 @@ public sealed class ProductSearchDocument
     public string ContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the culture of a localized product, such as <c>fr-FR</c>, or <see langword="null"/> for a product
+    /// that is not localized and shows in every culture.
+    /// </summary>
+    public string Culture { get; set; }
+
+    /// <summary>
     /// Gets or sets the product's title.
     /// </summary>
     public string Title { get; set; }

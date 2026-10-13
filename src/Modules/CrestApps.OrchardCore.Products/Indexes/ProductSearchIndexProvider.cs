@@ -22,6 +22,7 @@ public sealed class ProductSearchIndexProvider : IndexProvider<ProductSearchDocu
             {
                 ContentItemId = document.ContentItemId,
                 ContentType = document.ContentType,
+                Culture = document.Culture,
                 Title = Truncate(document.Title),
                 Sku = Truncate(document.Sku),
                 Price = document.Price,

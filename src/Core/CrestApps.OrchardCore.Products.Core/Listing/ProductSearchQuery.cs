@@ -28,6 +28,12 @@ public sealed class ProductSearchQuery
     public string Keyword { get; set; }
 
     /// <summary>
+    /// Gets or sets the culture to list: products localized in it, and products that are not localized. Every product
+    /// is listed when it is empty.
+    /// </summary>
+    public string Culture { get; set; }
+
+    /// <summary>
     /// Gets or sets the sort, or <see langword="null"/> for newest first.
     /// </summary>
     public ProductListingSort Sort { get; set; }

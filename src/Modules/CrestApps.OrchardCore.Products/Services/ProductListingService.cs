@@ -377,6 +377,7 @@ public sealed class ProductListingService
         var query = new ProductSearchQuery
         {
             ContentTypes = types.ToList(),
+            Culture = CultureInfo.CurrentUICulture.Name,
             Keyword = part.EnableKeywordSearch ? state.Keyword : null,
             Sort = sortOption,
             Skip = (state.Page - 1) * pageSize,
@@ -772,7 +773,7 @@ public sealed class ProductListingService
 
         breadcrumb.Items.Add(new ProductBreadcrumbItemViewModel { Id = "Home", Label = S["Home"], Url = pathBase + "/" });
 
-        var listing = await FindListingAsync(contentItem.ContentType);
+        var listing = await FindListingAsync(contentItem.ContentType, ProductSearchDocumentBuilder.GetCulture(contentItem) ?? CultureInfo.CurrentUICulture.Name);
 
         if (listing is null || httpContext is null)
         {
@@ -823,9 +824,10 @@ public sealed class ProductListingService
 
     /// <summary>
     /// The listing page a product belongs to: the first one that names the product's type, or else the first
-    /// one that lists every type.
+    /// one that lists every type. On a multilingual site a listing in the product's culture comes before one that is
+    /// not localized, and a listing in another culture is never chosen.
     /// </summary>
-    private async Task<ContentItem> FindListingAsync(string contentType)
+    private async Task<ContentItem> FindListingAsync(string contentType, string culture)
     {
         if (_listingItems is null)
         {
@@ -844,7 +846,13 @@ public sealed class ProductListingService
 
         ContentItem fallback = null;
 
-        foreach (var item in _listingItems)
+        var candidates = _listingItems
+            .Select(item => (Item: item, Culture: ProductSearchDocumentBuilder.GetCulture(item)))
+            .Where(candidate => candidate.Culture is null || string.Equals(candidate.Culture, culture, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(candidate => candidate.Culture is null ? 1 : 0)
+            .Select(candidate => candidate.Item);
+
+        foreach (var item in candidates)
         {
             if (!item.TryGet<ProductListingPart>(out var part))
             {

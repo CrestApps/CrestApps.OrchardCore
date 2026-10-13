@@ -11,6 +11,8 @@ public sealed class ProductSearchIndex : MapIndex
 
     public string ContentType { get; set; }
 
+    public string Culture { get; set; }
+
     public string Title { get; set; }
 
     public string Sku { get; set; }

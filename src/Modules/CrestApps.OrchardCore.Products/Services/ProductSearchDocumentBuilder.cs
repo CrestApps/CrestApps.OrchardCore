@@ -67,6 +67,7 @@ public sealed class ProductSearchDocumentBuilder
             ContentItemId = contentItem.ContentItemId,
             ContentItemVersionId = contentItem.ContentItemVersionId,
             ContentType = contentItem.ContentType,
+            Culture = GetCulture(contentItem),
             Title = contentItem.DisplayText,
             Sku = product.Sku,
             Price = shownPrice,
@@ -145,5 +146,16 @@ public sealed class ProductSearchDocumentBuilder
         }
 
         return document;
+    }
+
+    /// <summary>
+    /// The culture of a localized product, read from its stored localization part so the Products module needs no
+    /// reference to the Content Localization module.
+    /// </summary>
+    internal static string GetCulture(ContentItem contentItem)
+    {
+        var culture = ((JsonObject)contentItem.Content)["LocalizationPart"]?["Culture"];
+
+        return culture is JsonValue value && value.TryGetValue<string>(out var name) && !string.IsNullOrWhiteSpace(name) ? name : null;
     }
 }
