@@ -1,0 +1,17 @@
+@model CartLinkViewModel
+
+@*
+    The cart link in the Navigation zone of front-end pages. Override this shape to restyle it, or with an empty
+    template to hide it.
+*@
+
+<li class="nav-item">
+    <a class="nav-link product-cart-link" href="@Model.Url">
+        <span class="fa-solid fa-cart-shopping" aria-hidden="true"></span>
+        <span>@T["Cart"]</span>
+        @if (Model.ItemCount > 0)
+        {
+            <span class="badge rounded-pill bg-primary">@Model.ItemCount<span class="visually-hidden"> @T.Plural(Model.ItemCount, "item", "items")</span></span>
+        }
+    </a>
+</li>

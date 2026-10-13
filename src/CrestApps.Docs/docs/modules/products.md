@@ -381,7 +381,7 @@ The kinds are fixed, because each one is a different way of searching. A new way
 
 ### Adding actions from your module
 
-A module adds an action to products, such as a subscribe form or an *Add to cart* button, through the product's `ProductAction` display: its part's display driver places a shape in the **Actions** zone of that display type, and the shape shows on the product's card and on its page.
+A module adds an action to products, such as a subscribe form or the [Carts](carts-and-orders) feature's *Add to cart* button, through the product's `ProductAction` display: its part's display driver places a shape in the **Actions** zone of that display type, and the shape shows on the product's card and on its page.
 
 ```csharp
 return Initialize<MyActionViewModel>("MyAction", model => { /* ... */ })
@@ -415,7 +415,7 @@ Search engine tags come from Orchard Core's [SEO](https://docs.orchardcore.net/e
 
 Three recipes show the feature end to end. They need a front-end theme on Bootstrap 5, such as TheTheme; a site set up with the Blank recipe has none, so set one first.
 
-- **Product listing: online store sample** creates a *Store Product* type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a **Shop** listing page at `/shop`. The category filter offers the top level of the category tree, and a *Type* filter offers the level below once a category is picked.
+- **Product listing: online store sample** creates a *Store Product* type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a **Shop** listing page at `/shop`. It enables [Carts](carts-and-orders), so every product has *Add to cart*. The category filter offers the top level of the category tree, and a *Type* filter offers the level below once a category is picked.
 - **Product listing: real estate sample** creates a *Property* type that is listed but never sold online, with a city and neighborhood taxonomy, type, bedrooms, bathrooms, living area, year built, features and status, 20 properties (some with the price on request and an inquiry button that schedules a viewing), and a **Homes for sale** listing page at `/homes`.
 - **Product listing: vehicle dealership sample** creates a *Vehicle* product type with make and model, body style, year, mileage, fuel, drivetrain and color attributes, 28 vehicles (some for sale online, the rest listed only), and a **Vehicles** listing page at `/vehicles`.
 

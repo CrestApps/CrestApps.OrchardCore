@@ -41,12 +41,14 @@
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Carts.Core/CrestApps.OrchardCore.Carts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContentTransfer.Core/CrestApps.OrchardCore.ContentTransfer.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Customers.Core/CrestApps.OrchardCore.Customers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Orders.Core/CrestApps.OrchardCore.Orders.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Payments.Core/CrestApps.OrchardCore.Payments.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.PhoneNumbers.Core/CrestApps.OrchardCore.PhoneNumbers.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Products.Core/CrestApps.OrchardCore.Products.Core.csproj" />
@@ -125,8 +127,10 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.OpenAI/CrestApps.OrchardCore.OpenAI.csproj" />
   </Folder>
   <Folder Name="/src/Modules/Commerce/">
+    <Project Path="src/Modules/CrestApps.OrchardCore.Carts/CrestApps.OrchardCore.Carts.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Checkout/CrestApps.OrchardCore.Checkout.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Commerce/CrestApps.OrchardCore.Commerce.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Orders/CrestApps.OrchardCore.Orders.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.PayLater/CrestApps.OrchardCore.PayLater.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Products/CrestApps.OrchardCore.Products.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Receipts/CrestApps.OrchardCore.Receipts.csproj" />

@@ -111,6 +111,29 @@ public sealed class GuestSessionTokenManager
     /// </summary>
     /// <param name="scope">The cookie scope.</param>
     /// <param name="sessionId">The session to forget.</param>
+    /// <summary>
+    /// Gets the hash of the token this browser holds for a session, or <see langword="null"/> when it holds
+    /// none. It finds a record that belongs to the browser without knowing the record's identifier first, such
+    /// as a visitor's cart.
+    /// </summary>
+    /// <param name="scope">The cookie and protection the tokens are kept in.</param>
+    /// <param name="sessionId">The key the token was issued under.</param>
+    public string GetHash(GuestSessionTokenScope scope, string sessionId)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext is null || string.IsNullOrEmpty(sessionId))
+        {
+            return null;
+        }
+
+        return ReadTokens(scope, httpContext).TryGetValue(sessionId, out var token) && !string.IsNullOrEmpty(token)
+            ? Hash(token)
+            : null;
+    }
+
     public void Revoke(GuestSessionTokenScope scope, string sessionId)
     {
         ArgumentNullException.ThrowIfNull(scope);

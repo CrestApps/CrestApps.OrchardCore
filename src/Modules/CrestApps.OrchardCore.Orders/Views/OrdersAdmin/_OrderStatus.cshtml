@@ -1,0 +1,17 @@
+@model OrderStatus
+
+@switch (Model)
+{
+    case OrderStatus.Paid:
+        <span class="badge text-bg-success">@T["Paid"]</span>
+        break;
+    case OrderStatus.AwaitingPayment:
+        <span class="badge text-bg-warning">@T["Awaiting payment"]</span>
+        break;
+    case OrderStatus.Canceled:
+        <span class="badge text-bg-secondary">@T["Canceled"]</span>
+        break;
+    default:
+        <span class="badge text-bg-light">@T["Draft"]</span>
+        break;
+}

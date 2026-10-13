@@ -49,6 +49,8 @@ The reference triple is intentionally generic so any consumer can drive a checko
 
 The order owns the reverse link by storing its checkout session id, and `ICheckoutSessionStore.GetByReferenceAsync(referenceType, referenceId, referenceVersionId)` resolves the most recent session for a reference when only the order is known. Payment attempts and refunds remain owned by Checkout and correlate through the session and provider transaction references. Because payment stays authoritative in the durable attempt ledger, **an order must never be marked paid from a session status alone**.
 
+The [Orders](carts-and-orders) feature is the consumer of this reference: it checks a cart out as an order and marks the order paid in its `CompletingAsync` handler. Its billing items carry a quantity and the product's tax details; see [Checkout line details](carts-and-orders#checkout-line-details).
+
 ### Checkout flow and steps
 
 A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle is `Activating` → `Activated` when the checkout is created, then `Initializing` → `Initialized` → `Loading` → `Loaded` every time it is loaded again, and finally `Completing` → `Completed`, with `Failed` on error.
