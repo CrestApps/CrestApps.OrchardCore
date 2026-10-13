@@ -90,4 +90,10 @@ public sealed class ProductListingPart : ContentPart
     /// Gets or sets whether visitors can search the listing by keyword.
     /// </summary>
     public bool EnableKeywordSearch { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the name of the product search index (an Orchard Core index profile) the listing searches.
+    /// The database search is used when it is empty, or when the index cannot be reached.
+    /// </summary>
+    public string IndexProfileName { get; set; }
 }

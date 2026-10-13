@@ -100,12 +100,12 @@ public sealed class ProductSearchIndexFieldsTests
     }
 
     [Fact]
-    public void Definitions_DeclareFiveFieldsPerAttribute_AndOneKey()
+    public void Definitions_DeclareSixFieldsPerAttribute_IncludingTheBuiltInOnes_AndOneKey()
     {
         var definitions = ProductSearchIndexFields.GetDefinitions(["Vehicle.Make", "Vehicle.Make", "Vehicle.Year"]);
 
         Assert.Single(definitions, definition => definition.IsKey);
-        Assert.Equal(12 + 10, definitions.Count);
+        Assert.Equal(12 + (6 * 6), definitions.Count);
         Assert.Contains(definitions, definition => definition.Name == ProductSearchIndexFields.Facets("Vehicle.Year") && definition.IsFacetable && definition.IsCollection);
     }
 }

@@ -389,6 +389,7 @@ public sealed class ProductListingService
         {
             ContentTypes = types.ToList(),
             Culture = CultureInfo.CurrentUICulture.Name,
+            IndexProfileName = part.IndexProfileName,
             Keyword = part.EnableKeywordSearch ? state.Keyword : null,
             Sort = sortOption,
             Skip = (state.Page - 1) * pageSize,

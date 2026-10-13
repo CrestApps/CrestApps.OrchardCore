@@ -41,6 +41,11 @@ public class ProductListingPartViewModel
 
     public ProductListingPaging Paging { get; set; }
 
+    public string IndexProfileName { get; set; }
+
+    [BindNever]
+    public List<SelectListItem> IndexProfiles { get; set; } = [];
+
     [BindNever]
     public List<SelectListItem> PagingModes { get; set; } = [];
 

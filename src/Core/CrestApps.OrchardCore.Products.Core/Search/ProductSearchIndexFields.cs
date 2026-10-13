@@ -78,6 +78,8 @@ public static class ProductSearchIndexFields
 
     public const string SortNumberSuffix = "_sn";
 
+    public const string MaxNumberSuffix = "_nx";
+
     public const string SortTextSuffix = "_st";
 
     /// <summary>
@@ -141,6 +143,13 @@ public static class ProductSearchIndexFields
 
     public static string SortText(string attributeKey)
         => Attribute(attributeKey) + SortTextSuffix;
+
+    /// <summary>
+    /// An attribute's largest number. With <see cref="SortNumber"/>, the smallest, it gives a provider that cannot
+    /// hold a list of numbers its ranges and bounds.
+    /// </summary>
+    public static string MaxNumber(string attributeKey)
+        => Attribute(attributeKey) + MaxNumberSuffix;
 
     /// <summary>
     /// The facet token of a value: its level, value, label and order.
@@ -296,6 +305,7 @@ public static class ProductSearchIndexFields
             {
                 fields.Add(new ProductIndexField(Numbers(key), ProductIndexFieldKind.Number, numbers.Distinct().Cast<object>().ToArray()));
                 fields.Add(ProductIndexField.Number(SortNumber(key), numbers.Min()));
+                fields.Add(ProductIndexField.Number(MaxNumber(key), numbers.Max()));
             }
         }
 
@@ -307,6 +317,10 @@ public static class ProductSearchIndexFields
     /// <summary>
     /// The fields an index needs for the given attribute keys, for a provider that declares every field up front.
     /// </summary>
+    /// <remarks>
+    /// Includes the built-in attributes every product has (the price, the type, whether it is featured or can be
+    /// bought), whether or not they are passed.
+    /// </remarks>
     public static IReadOnlyList<ProductIndexFieldDefinition> GetDefinitions(IEnumerable<string> attributeKeys)
     {
         var definitions = new List<ProductIndexFieldDefinition>
@@ -325,12 +339,15 @@ public static class ProductSearchIndexFields
             new(Sequence, ProductIndexFieldKind.Number) { IsSortable = true },
         };
 
-        foreach (var key in (attributeKeys ?? []).Where(key => !string.IsNullOrEmpty(key)).Distinct(StringComparer.Ordinal))
+        string[] builtIn = [ProductAttributeKeys.Price, ProductAttributeKeys.ContentType, ProductAttributeKeys.Purchasable, ProductAttributeKeys.Featured];
+
+        foreach (var key in builtIn.Concat(attributeKeys ?? []).Where(key => !string.IsNullOrEmpty(key)).Distinct(StringComparer.Ordinal))
         {
             definitions.Add(new(Values(key), ProductIndexFieldKind.Keyword) { IsCollection = true });
             definitions.Add(new(Facets(key), ProductIndexFieldKind.Keyword) { IsCollection = true, IsFacetable = true });
             definitions.Add(new(Numbers(key), ProductIndexFieldKind.Number) { IsCollection = true, IsFacetable = true });
             definitions.Add(new(SortNumber(key), ProductIndexFieldKind.Number) { IsSortable = true });
+            definitions.Add(new(MaxNumber(key), ProductIndexFieldKind.Number) { IsSortable = true });
             definitions.Add(new(SortText(key), ProductIndexFieldKind.Keyword) { IsSortable = true });
         }
 

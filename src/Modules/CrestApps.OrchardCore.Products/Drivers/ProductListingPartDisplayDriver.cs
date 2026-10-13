@@ -1,14 +1,17 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Products.Core.Search;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Products.Drivers;
@@ -19,6 +22,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
     private readonly ProductAttributeCatalog _attributeCatalog;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ProductFacetStyleOptions _facetStyles;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -27,12 +31,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         ProductAttributeCatalog attributeCatalog,
         IHttpContextAccessor httpContextAccessor,
         IOptions<ProductFacetStyleOptions> facetStyles,
+        IServiceProvider serviceProvider,
         IStringLocalizer<ProductListingPartDisplayDriver> stringLocalizer)
     {
         _listingService = listingService;
         _attributeCatalog = attributeCatalog;
         _httpContextAccessor = httpContextAccessor;
         _facetStyles = facetStyles.Value;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -109,6 +115,10 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.DefaultPageSize = part.DefaultPageSize;
             model.EnableKeywordSearch = part.EnableKeywordSearch;
             model.Paging = part.Paging;
+            model.IndexProfileName = part.IndexProfileName;
+            model.IndexProfiles = (await GetIndexProfileNamesAsync())
+                .Select(name => new SelectListItem(name, name))
+                .ToList();
             model.PagingModes =
             [
                 new SelectListItem(S["Numbered pages"], nameof(ProductListingPaging.Pages)),
@@ -162,6 +172,15 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         part.ImageAspectRatio = model.ImageAspectRatio;
         part.EnableKeywordSearch = model.EnableKeywordSearch;
         part.Paging = model.Paging;
+
+        var indexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName) ? null : model.IndexProfileName.Trim();
+
+        if (indexProfileName is not null && !(await GetIndexProfileNamesAsync()).Contains(indexProfileName, StringComparer.Ordinal))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The search index '{0}' is not a product search index.", indexProfileName]);
+        }
+
+        part.IndexProfileName = indexProfileName;
 
         var sizes = (model.PageSizes ?? string.Empty)
             .Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)
@@ -230,6 +249,22 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             .ToList();
 
         return Edit(part, context);
+    }
+
+    // The product search indexes, while Orchard Core Indexing is enabled.
+    private async Task<IReadOnlyList<string>> GetIndexProfileNamesAsync()
+    {
+        var store = _serviceProvider.GetService<IIndexProfileStore>();
+
+        if (store is null)
+        {
+            return [];
+        }
+
+        return (await store.GetByTypeAsync(ProductSearchIndexFields.IndexingTaskType))
+            .Select(profile => profile.Name)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private List<ProductFacetRange> ReadRanges(ProductListingFacetRow row, UpdatePartEditorContext context)

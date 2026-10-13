@@ -397,6 +397,28 @@
         </div>
     </div>
 
+    @if (Model.IndexProfiles.Count > 0 || !string.IsNullOrEmpty(Model.IndexProfileName))
+    {
+        <div class="ocat-wrapper" asp-validation-class-for="IndexProfileName">
+            <label asp-for="IndexProfileName" class="ocat-label">@T["Search index"]</label>
+            <div class="ocat-end">
+                <select asp-for="IndexProfileName" class="form-select">
+                    <option value="">@T["The database"]</option>
+                    @foreach (var profile in Model.IndexProfiles)
+                    {
+                        <option value="@profile.Value" selected="@(profile.Value == Model.IndexProfileName)">@profile.Text</option>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.IndexProfileName) && Model.IndexProfiles.All(profile => profile.Value != Model.IndexProfileName))
+                    {
+                        <option value="@Model.IndexProfileName" selected>@T["{0} (not found)", Model.IndexProfileName]</option>
+                    }
+                </select>
+                <span class="hint">@T["Where the listing searches. A product search index held by Elasticsearch, Lucene or Azure AI Search ranks keyword matches and stays fast with many products; create one under Search, Indexes. The database answers while the index cannot be reached."]</span>
+                <span asp-validation-for="IndexProfileName"></span>
+            </div>
+        </div>
+    }
+
     <div class="ocat-wrapper">
         <div class="ocat-end">
             <div class="form-check">

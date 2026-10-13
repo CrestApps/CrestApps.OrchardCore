@@ -34,6 +34,11 @@ public sealed class ProductSearchQuery
     public string Culture { get; set; }
 
     /// <summary>
+    /// Gets or sets the product search index to search, or <see langword="null"/> for the database search.
+    /// </summary>
+    public string IndexProfileName { get; set; }
+
+    /// <summary>
     /// Gets or sets the sort, or <see langword="null"/> for newest first.
     /// </summary>
     public ProductListingSort Sort { get; set; }

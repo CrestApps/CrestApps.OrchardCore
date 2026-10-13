@@ -91,6 +91,7 @@
     <PackageVersion Include="OrchardCore.Search.Elasticsearch.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Lucene.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Seo" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
