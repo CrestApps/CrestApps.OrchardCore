@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// A tenant singleton, so the registration on the host's stopping token goes with the shell when the tenant is
 /// reloaded. Activation makes the registration.
 /// </remarks>
-public sealed class AIVoiceCallShutdown : ModularTenantEvents, IAIVoiceCallShutdown, IDisposable
+internal sealed class AIVoiceCallShutdown : ModularTenantEvents, IAIVoiceCallShutdown, IDisposable
 {
     /// <summary>
     /// How long the host is held up while the live calls are handed on.

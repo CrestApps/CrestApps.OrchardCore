@@ -284,8 +284,10 @@ namespace CrestApps.OrchardCore.ContactCenter
     public sealed class ContactCenterFeatureLifecycleOptions
     {
         public const int DefaultDrainTimeoutSeconds = 30;
+        public const int DefaultShutdownDrainTimeoutSeconds = 5;
         public ContactCenterFeatureLifecycleOptions() { }
         public int DrainTimeoutSeconds { get; set; }
+        public int ShutdownDrainTimeoutSeconds { get; set; }
     }
     public enum ContactCenterHandlerReplaySafety
     {
