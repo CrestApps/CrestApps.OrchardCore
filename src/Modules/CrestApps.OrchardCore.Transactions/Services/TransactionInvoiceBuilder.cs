@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Receipts;
 using CrestApps.OrchardCore.Receipts.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
 
@@ -29,6 +30,7 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
 {
     private readonly IReceiptService _receiptService;
     private readonly ICustomerContactResolver _contactResolver;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
@@ -37,14 +39,17 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
     /// </summary>
     /// <param name="receiptService">The receipt service that applies the site's branding.</param>
     /// <param name="contactResolver">The resolver for whom the invoice is addressed to.</param>
+    /// <param name="localClock">The clock that turns the stored UTC time into the site's time zone.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionInvoiceBuilder(
         IReceiptService receiptService,
         ICustomerContactResolver contactResolver,
+        ILocalClock localClock,
         IStringLocalizer<TransactionInvoiceBuilder> stringLocalizer)
     {
         _receiptService = receiptService;
         _contactResolver = contactResolver;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -86,7 +91,8 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
             BilledToEmail = contact?.Email,
             Reference = string.IsNullOrEmpty(transaction.InvoiceNumber) ? transaction.ItemId : transaction.InvoiceNumber,
             SourceLabel = S["Invoice"].Value,
-            IssuedAt = transaction.CreatedUtc,
+            // The document prints its date as is, so it is given in the site's time zone, not in UTC.
+            IssuedAt = await DocumentDates.ToSiteTimeAsync(_localClock, transaction.CreatedUtc),
             Currency = currency,
             LineItems =
             [
