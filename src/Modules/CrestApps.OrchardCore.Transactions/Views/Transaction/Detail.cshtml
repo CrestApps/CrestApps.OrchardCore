@@ -41,7 +41,7 @@
             <dd class="col-sm-8"><strong>@transaction.Currency @CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)</strong></dd>
 
             <dt class="col-sm-4">@T["Created"]</dt>
-            <dd class="col-sm-8">@transaction.CreatedUtc.ToString("g")</dd>
+            <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.CreatedUtc, Format: "g"))</dd>
 
             @if (transaction.DueUtc.HasValue)
             {
@@ -98,7 +98,7 @@
                                 <a class="ms-1 small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
                             }
                         </span>
-                        <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
+                        <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: evt.CreatedUtc, Format: "g"))</span>
                     </div>
                 </li>
             }

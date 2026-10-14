@@ -1,8 +1,10 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Models;
@@ -25,8 +27,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 public sealed class TransferToAgentTask : TaskActivity<TransferToAgentTask>
 {
     private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IOmnichannelActivityStore _activityStore;
+    private readonly IOmnichannelChannelEndpointManager _channelEndpointManager;
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -35,20 +40,29 @@ public sealed class TransferToAgentTask : TaskActivity<TransferToAgentTask>
     /// Initializes a new instance of the <see cref="TransferToAgentTask"/> class.
     /// </summary>
     /// <param name="activityManager">The activity manager used to resolve the CRM activity.</param>
+    /// <param name="activityStore">The activity store used to conclude an activity a person took over.</param>
+    /// <param name="channelEndpointManager">The address manager used to resolve the address the activity runs on.</param>
     /// <param name="handoffServices">The registered per-channel handoff implementations.</param>
     /// <param name="expressionEvaluator">The workflow expression evaluator used to resolve Liquid fields.</param>
+    /// <param name="clock">The clock used to stamp the conclusion.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this task.</param>
     public TransferToAgentTask(
         IOmnichannelActivityManager activityManager,
+        IOmnichannelActivityStore activityStore,
+        IOmnichannelChannelEndpointManager channelEndpointManager,
         IEnumerable<IOmnichannelHandoffService> handoffServices,
         IWorkflowExpressionEvaluator expressionEvaluator,
+        IClock clock,
         ILogger<TransferToAgentTask> logger,
         IStringLocalizer<TransferToAgentTask> stringLocalizer)
     {
         _activityManager = activityManager;
+        _activityStore = activityStore;
+        _channelEndpointManager = channelEndpointManager;
         _handoffServices = handoffServices;
         _expressionEvaluator = expressionEvaluator;
+        _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -166,6 +180,10 @@ public sealed class TransferToAgentTask : TaskActivity<TransferToAgentTask>
                     ? "A workflow transferred this conversation to a live agent."
                     : reason,
                 Summary = summary,
+
+                // A text conversation's human thread is keyed by the business's address and the customer's, so the
+                // messaging handoff refuses a request without both. The activity records the address it runs on.
+                ServiceAddress = await GetServiceAddressAsync(activity),
                 ContactAddress = activity.PreferredDestination,
 
                 // Carried across so the answering agent can open the transcript the customer already worked
@@ -178,6 +196,11 @@ public sealed class TransferToAgentTask : TaskActivity<TransferToAgentTask>
                 _logger.LogWarning("The Transfer to Agent task did not complete for activity '{ActivityItemId}': {Reason}", activityItemId.SanitizeLogValue(), result.Message);
 
                 return WorkflowOutcomeResults.From("Failed");
+            }
+
+            if (!string.IsNullOrEmpty(result.ConversationId))
+            {
+                await ConcludeAsHandedOffAsync(activity);
             }
 
             return result.Disposition switch
@@ -193,5 +216,43 @@ public sealed class TransferToAgentTask : TaskActivity<TransferToAgentTask>
 
             return WorkflowOutcomeResults.From("Failed");
         }
+    }
+
+    private async Task<string> GetServiceAddressAsync(OmnichannelActivity activity)
+    {
+        if (string.IsNullOrEmpty(activity.ChannelEndpointId))
+        {
+            return null;
+        }
+
+        var endpoint = await _channelEndpointManager.FindByIdAsync(activity.ChannelEndpointId);
+
+        return string.IsNullOrWhiteSpace(endpoint?.Value) ? null : endpoint.Value;
+    }
+
+    // A messaging handoff opened a human thread that now owns the conversation. The automated activity is concluded as
+    // handed off, as the SMS agent concludes its own escalations, so the automated agent stops answering the customer
+    // alongside the person.
+    private async Task ConcludeAsHandedOffAsync(OmnichannelActivity activity)
+    {
+        if (activity.Status == ActivityStatus.Completed)
+        {
+            return;
+        }
+
+        activity.Status = ActivityStatus.Completed;
+        activity.CompletedUtc = _clock.UtcNow;
+        activity.TerminalReasonCode = OmnichannelConstants.TerminalReasons.HandedOffToAgent;
+        activity.AiEscalated = true;
+        activity.CompletedById = activity.AssignedToId;
+        activity.CompletedByUsername = activity.AssignedToUsername;
+        ActivityDispositionActors.Stamp(activity, ActivityDispositionActor.System);
+
+        if (string.IsNullOrWhiteSpace(activity.Notes))
+        {
+            activity.Notes = "A workflow handed the automated conversation off to a live agent.";
+        }
+
+        await _activityStore.UpdateAsync(activity);
     }
 }

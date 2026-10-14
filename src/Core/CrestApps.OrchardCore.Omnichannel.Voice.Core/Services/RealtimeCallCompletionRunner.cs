@@ -22,6 +22,7 @@ public sealed class RealtimeCallCompletionRunner : IRealtimeCallCompletionRunner
 {
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;
+    private readonly IAIVoiceCallShutdown _callShutdown;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -29,14 +30,17 @@ public sealed class RealtimeCallCompletionRunner : IRealtimeCallCompletionRunner
     /// </summary>
     /// <param name="shellHost">The shell host, used to open a scope that outlives the request.</param>
     /// <param name="shellSettings">The tenant the call belongs to.</param>
+    /// <param name="callShutdown">What a node that is shutting down waits on before it goes.</param>
     /// <param name="logger">The logger.</param>
     public RealtimeCallCompletionRunner(
         IShellHost shellHost,
         ShellSettings shellSettings,
+        IAIVoiceCallShutdown callShutdown,
         ILogger<RealtimeCallCompletionRunner> logger)
     {
         _shellHost = shellHost;
         _shellSettings = shellSettings;
+        _callShutdown = callShutdown;
         _logger = logger;
     }
 
@@ -67,7 +71,9 @@ public sealed class RealtimeCallCompletionRunner : IRealtimeCallCompletionRunner
         // un-awaited scope runs inline, commit included, until something truly asynchronous yields. A commit made
         // there while the request's own session still holds the write lock waits out the busy timeout against
         // its own request, stalling the whole tenant (see AIVoiceSessionTracker.RecordAsync).
-        _ = Task.Run(() => FinishInOwnScopeAsync(scope, completion));
+        //
+        // Tracked, though, so a node that is shutting down waits for the caller to be handed on before it goes.
+        _callShutdown.TrackHandOn(Task.Run(() => FinishInOwnScopeAsync(scope, completion)));
     }
 
     private async Task FinishInOwnScopeAsync(ShellScope scope, RealtimeCallCompletion completion)
