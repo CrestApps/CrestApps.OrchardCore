@@ -1,4 +1,4 @@
-flatpickrCulture = function () {
+window.flatpickrCulture = function () {
     var machineDateFormat = "Y-m-d";
     var machineDateTimeFormat = "Y-m-d\\TH:i";
 

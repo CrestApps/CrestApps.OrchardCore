@@ -68,8 +68,8 @@ jobs:
       with:
         # The JavaScript unit tests run on Vitest, which needs a currently supported Node.
         # The Node major decides the npm major, and npm 10 and npm 11 disagree about which optional peers the
-        # lockfile must satisfy. Match the Node developers run, so a lockfile written locally installs here.
-        node-version: "24"
+        # lockfile must satisfy. .node-version pins the Node developers run, so a lockfile written locally installs here.
+        node-version-file: ".node-version"
     - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |

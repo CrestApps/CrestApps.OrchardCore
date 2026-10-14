@@ -1,14 +1,18 @@
 [
   {
-    "inputs": [
+    "action": "vite",
+    "name": "telephony-client.js",
+    "source": [
       "Assets/js/shared/call-timer.js",
       "Assets/js/soft-phone/format.js",
       "Assets/js/telephony-client.js"
     ],
-    "output": "wwwroot/scripts/telephony-client.js"
+    "dest": "wwwroot/scripts/telephony-client.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "soft-phone.js",
+    "source": [
       "Assets/js/soft-phone/format.js",
       "Assets/js/soft-phone/quality.js",
       "Assets/js/soft-phone/level-probe.js",
@@ -60,19 +64,18 @@
       "Assets/js/soft-phone/voicemail-delete.js",
       "Assets/js/soft-phone.js"
     ],
-    "output": "wwwroot/scripts/soft-phone.js"
+    "dest": "wwwroot/scripts/soft-phone.js"
   },
   {
-    "inputs": [
-      "Assets/js/phone-field-dialer.js"
-    ],
-    "output": "wwwroot/scripts/phone-field-dialer.js"
+    "action": "vite",
+    "name": "phone-field-dialer.js",
+    "source": "Assets/js/phone-field-dialer.js",
+    "dest": "wwwroot/scripts/phone-field-dialer.js"
   },
   {
-    "generateSourceMaps": false,
-    "inputs": [
-      "Assets/scss/soft-phone.scss"
-    ],
-    "output": "wwwroot/styles/soft-phone.css"
+    "action": "vite",
+    "name": "soft-phone.css",
+    "source": "Assets/scss/soft-phone.scss",
+    "dest": "wwwroot/styles/soft-phone.css"
   }
 ]

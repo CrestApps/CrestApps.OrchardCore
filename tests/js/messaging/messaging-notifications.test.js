@@ -62,16 +62,16 @@ describe('notificationKey', () => {
 // Every admin page but the workspace carries this bundle, so a helper missing from it leaves those pages silent.
 describe('the messaging notifications bundle', () => {
     const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets.json', 'utf8'));
-    const group = assets.find(candidate => candidate.output === 'wwwroot/scripts/messaging-notifications.js');
+    const group = assets.find(candidate => candidate.dest === 'wwwroot/scripts/messaging-notifications.js');
 
     it('carries the state and badge helpers ahead of the notifications script', () => {
         expect(group).toBeDefined();
 
-        const script = group.inputs.indexOf('Assets/js/messaging-notifications.js');
+        const script = group.source.indexOf('Assets/js/messaging-notifications.js');
 
-        expect(group.inputs.indexOf('Assets/js/shared/messaging-state.js')).toBeGreaterThan(-1);
-        expect(group.inputs.indexOf('Assets/js/shared/messaging-state.js')).toBeLessThan(script);
-        expect(group.inputs.indexOf('Assets/js/shared/messaging-attention-badge.js')).toBeGreaterThan(-1);
-        expect(group.inputs.indexOf('Assets/js/shared/messaging-attention-badge.js')).toBeLessThan(script);
+        expect(group.source.indexOf('Assets/js/shared/messaging-state.js')).toBeGreaterThan(-1);
+        expect(group.source.indexOf('Assets/js/shared/messaging-state.js')).toBeLessThan(script);
+        expect(group.source.indexOf('Assets/js/shared/messaging-attention-badge.js')).toBeGreaterThan(-1);
+        expect(group.source.indexOf('Assets/js/shared/messaging-attention-badge.js')).toBeLessThan(script);
     });
 });

@@ -6,7 +6,7 @@
  * control to the selected provider's own handler, and then polls the server until it reports the checkout
  * settled. Providers register a handler here instead of this file knowing anything about them.
  */
-var checkoutPayment = (function () {
+window.checkoutPayment = (function () {
     'use strict';
 
     var handlers = {};

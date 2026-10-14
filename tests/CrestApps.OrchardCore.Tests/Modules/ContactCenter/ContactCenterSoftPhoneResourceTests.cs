@@ -25,10 +25,11 @@ public sealed class ContactCenterSoftPhoneResourceTests
             "Views",
             "Items",
             "ContactCenterSoftPhoneWork.View.cshtml"));
+        // The source, not the built bundle: the build reformats the code, so its text is not what was written.
         var script = File.ReadAllText(Path.Combine(
             moduleRoot,
-            "wwwroot",
-            "scripts",
+            "Assets",
+            "js",
             "contact-center-soft-phone.js"));
 
         // Act

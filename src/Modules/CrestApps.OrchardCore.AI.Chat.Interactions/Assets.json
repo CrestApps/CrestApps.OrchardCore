@@ -1,23 +1,15 @@
 [
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.js"
-    ],
-    "output": "wwwroot/scripts/chat-interaction.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.min.js"
-    ],
-    "output": "wwwroot/scripts/chat-interaction.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "chat-interaction",
+    "source": [
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.min.js",
       "node_modules/@crestapps/ai-chat-ui/dist/chat-interaction.min.js.map"
     ],
-    "output": "wwwroot/scripts/chat-interaction.min.js.map"
+    "dest": "wwwroot/scripts/",
+    "tags": [
+      "vendor"
+    ]
   }
 ]

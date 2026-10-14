@@ -1,14 +1,14 @@
 [
   {
-    "inputs": [
-      "Assets/js/international-telephone-editor.js"
-    ],
-    "output": "wwwroot/scripts/international-telephone-editor.js"
+    "action": "vite",
+    "name": "international-telephone-editor.js",
+    "source": "Assets/js/international-telephone-editor.js",
+    "dest": "wwwroot/scripts/international-telephone-editor.js"
   },
   {
-    "inputs": [
-      "Assets/css/international-telephone-editor.css"
-    ],
-    "output": "wwwroot/styles/international-telephone-editor.css"
+    "action": "vite",
+    "name": "international-telephone-editor.css",
+    "source": "Assets/css/international-telephone-editor.css",
+    "dest": "wwwroot/styles/international-telephone-editor.css"
   }
 ]

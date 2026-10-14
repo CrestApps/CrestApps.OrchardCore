@@ -90,7 +90,7 @@ public sealed partial class SoftPhoneHarnessTests : SoftPhoneBrowserTest
 
         // Assert
         Assert.NotEmpty(exports);
-        Assert.True(missing.Count == 0, $"The served {bundleOutput} is missing helper exports; run `npx gulp build`:{Environment.NewLine}{string.Join(Environment.NewLine, missing)}");
+        Assert.True(missing.Count == 0, $"The served {bundleOutput} is missing helper exports; run `npm run build`:{Environment.NewLine}{string.Join(Environment.NewLine, missing)}");
     }
 
     [Fact]

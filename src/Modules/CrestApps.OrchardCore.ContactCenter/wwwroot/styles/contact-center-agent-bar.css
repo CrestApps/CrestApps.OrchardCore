@@ -1,18 +1,18 @@
 @charset "UTF-8";
 /*
- * Contact Center persistent docked agent bar.
- *
- * A slim, always-on strip pinned to the bottom of the admin content column. It is the CRM-side surface the call
- * router reaches while the soft phone runs elsewhere: a read-only presence chip on the left, the live work context
- * in the middle (idle / ringing offer / active call / wrap-up link), and connection status on the right. Presence
- * and disposition are intentionally NOT editable here — the soft phone owns status, and dispositioning happens on
- * the activity screen — so the bar stays compact.
- *
- * The bar is fixed to the viewport bottom and horizontally centered. It starts collapsed to a small tab that is
- * always on screen; the admin content column (`.ta-content`) reserves that tab's height at its bottom so the tab
- * never covers page content. Expanding the bar grows it upward, overlaying the content above the tab — that
- * overlay is deliberate and only happens while the agent has it open.
- */
+* Contact Center persistent docked agent bar.
+*
+* A slim, always-on strip pinned to the bottom of the admin content column. It is the CRM-side surface the call
+* router reaches while the soft phone runs elsewhere: a read-only presence chip on the left, the live work context
+* in the middle (idle / ringing offer / active call / wrap-up link), and connection status on the right. Presence
+* and disposition are intentionally NOT editable here — the soft phone owns status, and dispositioning happens on
+* the activity screen — so the bar stays compact.
+*
+* The bar is fixed to the viewport bottom and horizontally centered. It starts collapsed to a small tab that is
+* always on screen; the admin content column (`.ta-content`) reserves that tab's height at its bottom so the tab
+* never covers page content. Expanding the bar grows it upward, overlaying the content above the tab — that
+* overlay is deliberate and only happens while the agent has it open.
+*/
 .cc-agent-bar {
   position: fixed;
   left: 50%;
@@ -310,4 +310,4 @@ body .ta-content {
   .cc-bar__presence-label {
     max-width: 6rem;
   }
-}
+}/*$vite$:1*/

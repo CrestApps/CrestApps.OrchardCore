@@ -1,8 +1,8 @@
 [
   {
-    "inputs": [
-      "Assets/scripts/content-transfer-import.js"
-    ],
-    "output": "wwwroot/scripts/content-transfer-import.js"
+    "action": "vite",
+    "name": "content-transfer-import.js",
+    "source": "Assets/scripts/content-transfer-import.js",
+    "dest": "wwwroot/scripts/content-transfer-import.js"
   }
 ]

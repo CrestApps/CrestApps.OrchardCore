@@ -93,11 +93,11 @@ describe('emptyStateHtml', () => {
 });
 
 describe('the agent workspace', () => {
-    const group = assets.find(candidate => candidate.output === 'wwwroot/scripts/agent-workspace.js');
+    const group = assets.find(candidate => candidate.dest === 'wwwroot/scripts/agent-workspace.js');
 
     it('bundles the panel helper ahead of the workspace script', () => {
-        expect(group.inputs).toContain('Assets/js/shared/workspace-panels.js');
-        expect(group.inputs.indexOf('Assets/js/shared/workspace-panels.js')).toBeLessThan(group.inputs.indexOf('Assets/js/agent-workspace.js'));
+        expect(group.source).toContain('Assets/js/shared/workspace-panels.js');
+        expect(group.source.indexOf('Assets/js/shared/workspace-panels.js')).toBeLessThan(group.source.indexOf('Assets/js/agent-workspace.js'));
     });
 
     it('gates the active card with a change gate rather than a null-seeded signature', () => {

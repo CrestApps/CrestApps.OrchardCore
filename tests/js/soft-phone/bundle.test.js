@@ -3,18 +3,19 @@ import { describe, expect, it } from 'vitest';
 
 const moduleDirectory = 'src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone';
 const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.Telephony/Assets.json', 'utf8'));
-const softPhoneGroup = assets.find(group => group.output === 'wwwroot/scripts/soft-phone.js');
+const softPhoneGroup = assets.find(group => group.dest === 'wwwroot/scripts/soft-phone.js');
 
-// The bundle is a concatenation, not a module graph: the helper files have to be listed, and listed first, or
-// they are simply not in the browser and every call through them is `undefined` — a soft phone that loads,
-// renders, and then fails on the first number it formats. Nothing else would catch that until an agent did.
+// The bundle runs its listed sources in order, and the sources do not import one another: the helper files have to be
+// listed, and listed first, or they are simply not in the browser and every call through them is `undefined` — a soft
+// phone that loads, renders, and then fails on the first number it formats. Nothing else would catch that until an
+// agent did.
 describe('the soft phone asset group', () => {
     it('is still declared', () => {
         expect(softPhoneGroup).toBeDefined();
     });
 
     it('includes every helper module', () => {
-        const listed = softPhoneGroup.inputs;
+        const listed = softPhoneGroup.source;
 
         readdirSync(moduleDirectory)
             .filter(file => file.endsWith('.js'))
@@ -22,7 +23,7 @@ describe('the soft phone asset group', () => {
     });
 
     it('concatenates the helpers ahead of the script that uses them', () => {
-        const inputs = softPhoneGroup.inputs;
+        const inputs = softPhoneGroup.source;
         const mainIndex = inputs.indexOf('Assets/js/soft-phone.js');
 
         expect(mainIndex).toBe(inputs.length - 1);
@@ -30,13 +31,13 @@ describe('the soft phone asset group', () => {
 });
 
 describe('the telephony client asset group', () => {
-    const clientGroup = assets.find(group => group.output === 'wwwroot/scripts/telephony-client.js');
+    const clientGroup = assets.find(group => group.dest === 'wwwroot/scripts/telephony-client.js');
 
     it('carries the phone formatter, so every surface shows a number the same way', () => {
         // The agent workspace renders call history through this bundle and has no soft phone on the page. Without
         // the formatter here it silently fell back to raw digits — +17024445506 where a person expects
         // (702) 444-5506 — with nothing failing to say so.
-        const inputs = clientGroup.inputs;
+        const inputs = clientGroup.source;
 
         expect(inputs).toContain('Assets/js/soft-phone/format.js');
         expect(inputs.indexOf('Assets/js/soft-phone/format.js')).toBeLessThan(inputs.indexOf('Assets/js/telephony-client.js'));
@@ -45,7 +46,7 @@ describe('the telephony client asset group', () => {
     it('concatenates the shared call timer ahead of the client that re-exports it', () => {
         // Every surface that shows a call duration reads it off this client. If the timer is not in the bundle
         // ahead of it, the export is undefined and every call on screen shows a blank timer.
-        const inputs = clientGroup.inputs;
+        const inputs = clientGroup.source;
 
         expect(inputs.indexOf('Assets/js/shared/call-timer.js')).toBeLessThan(inputs.indexOf('Assets/js/telephony-client.js'));
     });

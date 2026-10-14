@@ -1,84 +1,94 @@
 [
   {
-    "inputs": [
-      "Assets/js/contact-center-realtime.js"
-    ],
-    "output": "wwwroot/scripts/contact-center-realtime.js"
+    "action": "vite",
+    "name": "contact-center-realtime.js",
+    "source": "Assets/js/contact-center-realtime.js",
+    "dest": "wwwroot/scripts/contact-center-realtime.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "agent-workspace.js",
+    "source": [
       "Assets/js/shared/agent-presence.js",
       "Assets/js/shared/coalesced-refresh.js",
       "Assets/js/shared/offer-actions.js",
       "Assets/js/shared/workspace-panels.js",
       "Assets/js/agent-workspace.js"
     ],
-    "output": "wwwroot/scripts/agent-workspace.js"
+    "dest": "wwwroot/scripts/agent-workspace.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "supervisor-dashboard.js",
+    "source": [
       "Assets/js/shared/supervisor-actions.js",
       "Assets/js/shared/agent-board-filters.js",
       "Assets/js/supervisor-interventions.js",
       "Assets/js/supervisor-dashboard.js"
     ],
-    "output": "wwwroot/scripts/supervisor-dashboard.js"
+    "dest": "wwwroot/scripts/supervisor-dashboard.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "contact-center-supervisor-phone.js",
+    "source": [
       "Assets/js/shared/supervisor-actions.js",
       "Assets/js/contact-center-supervisor-phone.js"
     ],
-    "output": "wwwroot/scripts/contact-center-supervisor-phone.js"
+    "dest": "wwwroot/scripts/contact-center-supervisor-phone.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "contact-center-soft-phone.js",
+    "source": [
       "Assets/js/shared/agent-presence.js",
       "Assets/js/shared/supervisor-actions.js",
       "Assets/js/contact-center-soft-phone.js"
     ],
-    "output": "wwwroot/scripts/contact-center-soft-phone.js"
+    "dest": "wwwroot/scripts/contact-center-soft-phone.js"
   },
   {
-    "inputs": [
-      "Assets/js/contact-center-external-transfer-settings.js"
-    ],
-    "output": "wwwroot/scripts/contact-center-external-transfer-settings.js"
+    "action": "vite",
+    "name": "contact-center-external-transfer-settings.js",
+    "source": "Assets/js/contact-center-external-transfer-settings.js",
+    "dest": "wwwroot/scripts/contact-center-external-transfer-settings.js"
   },
   {
-    "inputs": [
-      "Assets/js/contact-center-call-recording.js"
-    ],
-    "output": "wwwroot/scripts/contact-center-call-recording.js"
+    "action": "vite",
+    "name": "contact-center-call-recording.js",
+    "source": "Assets/js/contact-center-call-recording.js",
+    "dest": "wwwroot/scripts/contact-center-call-recording.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "ivr-menu-editor.js",
+    "source": [
       "Assets/js/ivr-menu/ivr-flow-model.js",
       "Assets/js/ivr-menu/ivr-menu-editor.js"
     ],
-    "output": "wwwroot/scripts/ivr-menu-editor.js"
+    "dest": "wwwroot/scripts/ivr-menu-editor.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "contact-center-agent-bar.js",
+    "source": [
       "Assets/js/shared/agent-presence.js",
       "Assets/js/shared/coalesced-refresh.js",
       "Assets/js/shared/offer-actions.js",
       "Assets/js/contact-center-agent-bar.js"
     ],
-    "output": "wwwroot/scripts/contact-center-agent-bar.js"
+    "dest": "wwwroot/scripts/contact-center-agent-bar.js"
   },
   {
-    "generateSourceMaps": false,
-    "inputs": [
-      "Assets/scss/contact-center-workspace.scss"
-    ],
-    "output": "wwwroot/styles/contact-center-workspace.css"
+    "action": "vite",
+    "name": "contact-center-workspace.css",
+    "source": "Assets/scss/contact-center-workspace.scss",
+    "dest": "wwwroot/styles/contact-center-workspace.css"
   },
   {
-    "generateSourceMaps": false,
-    "inputs": [
-      "Assets/scss/contact-center-agent-bar.scss"
-    ],
-    "output": "wwwroot/styles/contact-center-agent-bar.css"
+    "action": "vite",
+    "name": "contact-center-agent-bar.css",
+    "source": "Assets/scss/contact-center-agent-bar.scss",
+    "dest": "wwwroot/styles/contact-center-agent-bar.css"
   }
 ]
