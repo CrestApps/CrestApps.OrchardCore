@@ -53,8 +53,20 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             return null;
         }
 
+        // A product sold in variants is bought as one of those on sale.
+        List<ProductVariant> variants = contentItem.TryGet<ProductVariantsPart>(out var variantsPart) && variantsPart.HasVariants
+            ? variantsPart.GetAvailable().ToList()
+            : [];
+
+        if (variantsPart?.HasVariants == true && variants.Count == 0)
+        {
+            return null;
+        }
+
         // Only what can be bought online: the resolver refuses a listed-only product and one with no price.
-        if (await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem)) is null)
+        var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { VariantId = variants.FirstOrDefault()?.VariantId });
+
+        if (product is null)
         {
             return null;
         }
@@ -85,6 +97,21 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
             model.ContentItemId = contentItem.ContentItemId;
             model.Prices = prices;
             model.DefaultPriceId = defaultPrice?.PriceId;
+
+            var optionNames = variantsPart?.Options?.Select(option => option.Name).ToArray();
+            var productPrice = contentItem.TryGet<ProductPart>(out var productPart) ? productPart.Price : null;
+
+            model.Variants = variants
+                .Select(variant => new AddToCartVariantViewModel
+                {
+                    VariantId = variant.VariantId,
+                    Title = variant.GetTitle(optionNames),
+                    Sku = string.IsNullOrEmpty(variant.Sku) ? productPart?.Sku : variant.Sku,
+                    Price = (variant.Price ?? productPrice) is { } amount && !string.IsNullOrEmpty(product.Currency)
+                        ? ProductPriceFormatter.Format(amount, product.Currency)
+                        : null,
+                })
+                .ToList();
             model.MaxQuantity = defaultPrice is null
                 ? _options.MaxQuantity
                 : defaultPrice.AllowQuantity ? Math.Min(defaultPrice.MaximumQuantity ?? _options.MaxQuantity, _options.MaxQuantity) : 1;

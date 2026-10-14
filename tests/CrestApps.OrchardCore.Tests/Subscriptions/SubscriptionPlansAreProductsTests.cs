@@ -96,7 +96,19 @@ public sealed class SubscriptionPlansAreProductsTests
 
         await new SubscriptionProductSearchDocumentContributor().ContributeAsync(plan, document);
 
-        Assert.Contains(document.Attributes, value => value.Key == ProductAttributeKeys.Position && value.Number == 3);
+        Assert.Equal(3, document.Position);
+    }
+
+    [Fact]
+    public async Task Contributor_KeepsAPositionSetOnTheProductPart()
+    {
+        var plan = new ContentItem { ContentType = "Plan", ContentItemId = "plan" };
+        plan.Apply(nameof(SubscriptionPart), new SubscriptionPart { DurationType = DurationType.Month, BillingDuration = 1, Sort = 3 });
+        var document = new ProductSearchDocument { Price = 29m, Position = 1 };
+
+        await new SubscriptionProductSearchDocumentContributor().ContributeAsync(plan, document);
+
+        Assert.Equal(1, document.Position);
     }
 
     [Fact]
@@ -107,7 +119,7 @@ public sealed class SubscriptionPlansAreProductsTests
 
         await new SubscriptionProductSearchDocumentContributor().ContributeAsync(plan, document);
 
-        Assert.DoesNotContain(document.Attributes, value => value.Key == ProductAttributeKeys.Position);
+        Assert.Null(document.Position);
     }
 
     private static ContentTypeDefinitionRecord CreateTypeRecord(string stereotype)

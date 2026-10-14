@@ -102,6 +102,16 @@ public sealed class OrderLine
 
     public string PriceName { get; set; }
 
+    /// <summary>
+    /// Gets or sets the variant bought, for a product sold in variants.
+    /// </summary>
+    public string VariantId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the variant's values when it was bought, such as "Red / M".
+    /// </summary>
+    public string VariantTitle { get; set; }
+
     public int Quantity { get; set; }
 
     public decimal UnitPrice { get; set; }

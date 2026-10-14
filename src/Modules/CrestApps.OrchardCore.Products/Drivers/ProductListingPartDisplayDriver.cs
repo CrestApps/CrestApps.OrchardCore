@@ -1,14 +1,17 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Products.Core.Search;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Products.Drivers;
@@ -19,6 +22,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
     private readonly ProductAttributeCatalog _attributeCatalog;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ProductFacetStyleOptions _facetStyles;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -27,12 +31,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         ProductAttributeCatalog attributeCatalog,
         IHttpContextAccessor httpContextAccessor,
         IOptions<ProductFacetStyleOptions> facetStyles,
+        IServiceProvider serviceProvider,
         IStringLocalizer<ProductListingPartDisplayDriver> stringLocalizer)
     {
         _listingService = listingService;
         _attributeCatalog = attributeCatalog;
         _httpContextAccessor = httpContextAccessor;
         _facetStyles = facetStyles.Value;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -85,8 +91,7 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.Facets = BuildFacetRows(configured, candidates, attributes);
             model.ShowSorting = part.ShowSorting;
             model.AutomaticSorts = part.AutomaticSorts;
-            var positioned = await _listingService.GetPositionedTypesAsync([]);
-            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes, positioned.Count > 0), attributes, positioned);
+            model.Sorts = BuildSortRows(part.Sorts ?? [], _listingService.GetSorts(new ProductListingPart { AutomaticSorts = true }, attributes), attributes);
             model.DefaultSort = part.DefaultSort;
             model.DefaultView = part.DefaultView;
             model.AllowViewSwitching = part.AllowViewSwitching;
@@ -109,6 +114,17 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             model.PageSizes = string.Join(", ", part.PageSizes ?? []);
             model.DefaultPageSize = part.DefaultPageSize;
             model.EnableKeywordSearch = part.EnableKeywordSearch;
+            model.Paging = part.Paging;
+            model.IndexProfileName = part.IndexProfileName;
+            model.IndexProfiles = (await GetIndexProfileNamesAsync())
+                .Select(name => new SelectListItem(name, name))
+                .ToList();
+            model.PagingModes =
+            [
+                new SelectListItem(S["Numbered pages"], nameof(ProductListingPaging.Pages)),
+                new SelectListItem(S["A Load more button"], nameof(ProductListingPaging.LoadMore)),
+                new SelectListItem(S["Infinite scroll"], nameof(ProductListingPaging.InfiniteScroll)),
+            ];
             model.SortOptions = model.Sorts.Select(sort => new SelectListItem(sort.Label, sort.Key)).ToList();
             model.Views =
             [
@@ -155,6 +171,16 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
         part.AllowViewSwitching = model.AllowViewSwitching;
         part.ImageAspectRatio = model.ImageAspectRatio;
         part.EnableKeywordSearch = model.EnableKeywordSearch;
+        part.Paging = model.Paging;
+
+        var indexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName) ? null : model.IndexProfileName.Trim();
+
+        if (indexProfileName is not null && !(await GetIndexProfileNamesAsync()).Contains(indexProfileName, StringComparer.Ordinal))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexProfileName), S["The search index '{0}' is not a product search index.", indexProfileName]);
+        }
+
+        part.IndexProfileName = indexProfileName;
 
         var sizes = (model.PageSizes ?? string.Empty)
             .Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries)
@@ -223,6 +249,22 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
             .ToList();
 
         return Edit(part, context);
+    }
+
+    // The product search indexes, while Orchard Core Indexing is enabled.
+    private async Task<IReadOnlyList<string>> GetIndexProfileNamesAsync()
+    {
+        var store = _serviceProvider.GetService<IIndexProfileStore>();
+
+        if (store is null)
+        {
+            return [];
+        }
+
+        return (await store.GetByTypeAsync(ProductSearchIndexFields.IndexingTaskType))
+            .Select(profile => profile.Name)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private List<ProductFacetRange> ReadRanges(ProductListingFacetRow row, UpdatePartEditorContext context)
@@ -299,17 +341,14 @@ public sealed class ProductListingPartDisplayDriver : ContentPartDisplayDriver<P
     private static List<ProductListingSortRow> BuildSortRows(
         List<ProductListingSort> configured,
         IReadOnlyList<ProductListingSort> candidates,
-        IReadOnlyList<ProductAttributeDescriptor> attributes,
-        IReadOnlyList<string> positionedTypes)
+        IReadOnlyList<ProductAttributeDescriptor> attributes)
     {
         var rows = new List<ProductListingSortRow>();
         var order = 0;
 
-        // The "Recommended" sort belongs with the types that carry a position.
+        // Built-in sorts (price, position, featured) apply to every type.
         List<string> TypesOf(string attributeKey)
-            => attributeKey == ProductAttributeKeys.Position
-                ? positionedTypes.ToList()
-                : attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
+            => attributes.FirstOrDefault(attribute => attribute.Key == attributeKey)?.ContentTypes.ToList() ?? [];
 
         foreach (var sort in configured)
         {

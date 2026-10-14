@@ -25,6 +25,11 @@ public class ProductListingViewModel
     public bool EnableKeywordSearch { get; set; }
 
     /// <summary>
+    /// How visitors move through the pages.
+    /// </summary>
+    public ProductListingPaging Paging { get; set; }
+
+    /// <summary>
     /// Whether the page has a filters panel: it offers filters or keyword search. Without one, the results take
     /// the full width.
     /// </summary>
@@ -147,6 +152,11 @@ public class ProductFacetViewModel
     public string Suffix { get; set; }
 
     public bool IsPrice { get; set; }
+
+    /// <summary>
+    /// Whether a range filter is over dates. Its bounds are <see cref="ProductDateNumbers"/>.
+    /// </summary>
+    public bool IsDate { get; set; }
 
     public string Currency { get; set; }
 
@@ -278,6 +288,11 @@ public class ProductPriceDisplayViewModel
     public string Price { get; set; }
 
     public string CompareAtPrice { get; set; }
+
+    /// <summary>
+    /// Whether the price is the lowest of several, shown as "From $10".
+    /// </summary>
+    public bool IsFrom { get; set; }
 
     public int? DiscountPercent { get; set; }
 

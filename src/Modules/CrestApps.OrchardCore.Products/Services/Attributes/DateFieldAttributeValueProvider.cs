@@ -31,6 +31,9 @@ public sealed class DateFieldAttributeValueProvider : IProductAttributeValueProv
                 Key = context.Key,
                 Text = date.Value.ToString("O", CultureInfo.InvariantCulture),
                 Date = date.Value,
+
+                // As a number too, so date filters reuse the number ranges.
+                Number = ProductDateNumbers.ToNumber(date.Value),
             },
         ];
 

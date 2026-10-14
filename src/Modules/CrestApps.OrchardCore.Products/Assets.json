@@ -7,6 +7,12 @@
   },
   {
     "inputs": [
+      "Assets/js/product-listing-editor.js"
+    ],
+    "output": "wwwroot/Scripts/product-listing-editor.js"
+  },
+  {
+    "inputs": [
       "Assets/css/product-listing.css"
     ],
     "output": "wwwroot/Styles/product-listing.css"

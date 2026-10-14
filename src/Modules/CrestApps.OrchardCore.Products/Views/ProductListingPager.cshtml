@@ -6,9 +6,21 @@
     var listing = Model.Listing;
 }
 
+@*
+    Numbered pages in every mode, so the listing works without JavaScript and crawlers reach every page. With
+    "Load more" or infinite scroll, the script hides them and shows the button, which adds the next page's products.
+*@
+
+@if (listing.Paging != CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.Pages && listing.NextPageUrl is not null)
+{
+    <div class="product-listing-more text-center mt-4 d-none" data-product-listing-more="@(listing.Paging == CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.InfiniteScroll ? "infinite" : "button")">
+        <a class="btn btn-outline-primary" href="@listing.NextPageUrl" rel="next" data-product-listing-next>@T["Load more"]</a>
+    </div>
+}
+
 @if (listing.PageLinks.Count > 0)
 {
-    <nav class="product-listing-pager mt-4" aria-label="@T["Pages"]">
+    <nav class="product-listing-pager mt-4" aria-label="@T["Pages"]" data-product-listing-pages="@(listing.Paging == CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.Pages ? null : "replaceable")" data-page="@listing.Page">
         <ul class="pagination flex-wrap justify-content-center">
             <li class="page-item @(listing.PreviousPageUrl is null ? "disabled" : null)">
                 @if (listing.PreviousPageUrl is null)

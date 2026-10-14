@@ -135,9 +135,30 @@ internal sealed class MessagingMigrations : DataMigration
         // which deadlocks SQLite.
         ShellScope.AddDeferredTask(scope => LegacySmsPortalImport.ImportAsync(scope.ServiceProvider));
 
+        await SchemaBuilder.AlterIndexTableAsync<MessageTemplateIndex>(table => table
+            .CreateIndex(
+                "IDX_MessageTemplateIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingBroadcastIndex>(table => table
+            .CreateIndex(
+                "IDX_MessagingBroadcastIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
+            .CreateIndex(
+                "IDX_MessagingConversationIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
         await CreateOutboxIndexAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -145,7 +166,7 @@ internal sealed class MessagingMigrations : DataMigration
     /// outbound message.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
+    public async Task<int> UpdateFrom2Async()
     {
         await CreateOutboxIndexAsync();
 
@@ -154,7 +175,7 @@ internal sealed class MessagingMigrations : DataMigration
         // reads and writes documents, so it runs after this step commits (a second connection mid-step deadlocks SQLite).
         ShellScope.AddDeferredTask(scope => MessagingOutboxBackfill.RunAsync(scope.ServiceProvider));
 
-        return 2;
+        return 3;
     }
 
     private async Task CreateOutboxIndexAsync()
@@ -195,5 +216,36 @@ internal sealed class MessagingMigrations : DataMigration
                 "Could not create the unique index '{IndexName}' on the messaging conversation table. Merge duplicate conversations that share a channel, service address and contact address, then re-run the migration.",
                 MessagingStorage.ConversationAddressesUniqueIndexName);
         }
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<MessageTemplateIndex>(table => table
+            .CreateIndex(
+                "IDX_MessageTemplateIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingBroadcastIndex>(table => table
+            .CreateIndex(
+                "IDX_MessagingBroadcastIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
+            .CreateIndex(
+                "IDX_MessagingConversationIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        return 2;
     }
 }

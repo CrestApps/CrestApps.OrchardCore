@@ -164,6 +164,15 @@ public sealed class SqlProductSearchService : IProductSearchService
             conditions.Add($"p.{sql.Column(nameof(ProductSearchIndex.ContentType))} IN @contentTypes");
         }
 
+        // A localized product shows in its own culture; a product that is not localized shows in every culture.
+        if (!string.IsNullOrEmpty(query.Culture))
+        {
+            var culture = sql.Column(nameof(ProductSearchIndex.Culture));
+
+            parameters.Add("culture", query.Culture);
+            conditions.Add($"(p.{culture} = @culture OR p.{culture} IS NULL OR p.{culture} = '')");
+        }
+
         if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
             // LOWER on both sides, because LIKE is case-insensitive on SQLite and SQL Server but not on PostgreSQL.
@@ -241,12 +250,24 @@ public sealed class SqlProductSearchService : IProductSearchService
             ProductAttributeKeys.Price => $"p.{sql.Column(nameof(ProductSearchIndex.Price))}",
             ProductAttributeKeys.Title => $"p.{sql.Column(nameof(ProductSearchIndex.Title))}",
             ProductAttributeKeys.Published => $"p.{sql.Column(nameof(ProductSearchIndex.PublishedUtc))}",
+            ProductAttributeKeys.Position => $"p.{sql.Column(nameof(ProductSearchIndex.Position))}",
             _ => null,
         };
 
+        var featured = $"p.{sql.Column(nameof(ProductSearchIndex.Featured))}";
+        var published = $"p.{sql.Column(nameof(ProductSearchIndex.PublishedUtc))}";
+
+        // Ties, and a listing with no sort, go to featured products first, then the newest.
+        var tieBreak = $"{featured} DESC, {published} DESC, {documentId} DESC";
+
         if (sort is null || string.IsNullOrEmpty(sort.AttributeKey))
         {
-            return $"p.{sql.Column(nameof(ProductSearchIndex.PublishedUtc))} DESC, {documentId} DESC";
+            return tieBreak;
+        }
+
+        if (sort.AttributeKey == ProductAttributeKeys.Featured)
+        {
+            return sort.Descending ? tieBreak : $"{featured}, {published} DESC, {documentId} DESC";
         }
 
         var order = new StringBuilder();
@@ -263,10 +284,15 @@ public sealed class SqlProductSearchService : IProductSearchService
             var number = SortValue(sql, nameof(ProductAttributeIndex.NumberValue));
             var date = SortValue(sql, nameof(ProductAttributeIndex.DateValue));
 
-            order.Append($"CASE WHEN {number} IS NULL AND {date} IS NULL THEN 1 ELSE 0 END, {number}{direction}, {date}{direction}");
+            // Text and terms sort by the name visitors see.
+            var text = $"(SELECT MIN(COALESCE(s.{sql.Column(nameof(ProductAttributeIndex.Label))}, s.{sql.Column(nameof(ProductAttributeIndex.TextValue))})) FROM {sql.Attributes} s " +
+                $"WHERE s.{sql.Column("DocumentId")} = p.{sql.Column("DocumentId")} " +
+                $"AND s.{sql.Column(nameof(ProductAttributeIndex.AttributeKey))} = @sortKey)";
+
+            order.Append($"CASE WHEN {number} IS NULL AND {date} IS NULL AND {text} IS NULL THEN 1 ELSE 0 END, {number}{direction}, {date}{direction}, {text}{direction}");
         }
 
-        order.Append($", {documentId} DESC");
+        order.Append($", {tieBreak}");
 
         return order.ToString();
     }

@@ -11,6 +11,8 @@ public sealed class ProductSearchIndex : MapIndex
 
     public string ContentType { get; set; }
 
+    public string Culture { get; set; }
+
     public string Title { get; set; }
 
     public string Sku { get; set; }
@@ -18,6 +20,10 @@ public sealed class ProductSearchIndex : MapIndex
     public decimal? Price { get; set; }
 
     public bool IsPurchasable { get; set; }
+
+    public bool Featured { get; set; }
+
+    public int? Position { get; set; }
 
     public DateTime? PublishedUtc { get; set; }
 }
