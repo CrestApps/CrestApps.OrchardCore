@@ -22,7 +22,7 @@
 else if (images.Count == 1)
 {
     <div class="product-gallery">
-        <img src="@images[0].Url" alt="@images[0].Alt" class="product-gallery-image" />
+        <img src="@images[0].Url" alt="@images[0].Alt" class="product-gallery-image" data-media-path="@images[0].Path" />
     </div>
 }
 else
@@ -33,7 +33,7 @@ else
                 @for (var i = 0; i < images.Count; i++)
                 {
                     <div class="carousel-item @(i == 0 ? "active" : null)">
-                        <img src="@images[i].Url" alt="@images[i].Alt" class="product-gallery-image d-block" loading="@(i == 0 ? "eager" : "lazy")" />
+                        <img src="@images[i].Url" alt="@images[i].Alt" class="product-gallery-image d-block" loading="@(i == 0 ? "eager" : "lazy")" data-media-path="@images[i].Path" />
                     </div>
                 }
             </div>
@@ -49,7 +49,7 @@ else
         <div class="product-gallery-thumbnails">
             @for (var i = 0; i < images.Count; i++)
             {
-                <button type="button" data-bs-target="#@id" data-bs-slide-to="@i" class="@(i == 0 ? "active" : null)" aria-current="@(i == 0 ? "true" : null)" aria-label="@T["Image {0}", i + 1]">
+                <button type="button" data-bs-target="#@id" data-bs-slide-to="@i" data-media-path="@images[i].Path" class="@(i == 0 ? "active" : null)" aria-current="@(i == 0 ? "true" : null)" aria-label="@T["Image {0}", i + 1]">
                     <img src="@images[i].ThumbnailUrl" alt="" loading="lazy" />
                 </button>
             }

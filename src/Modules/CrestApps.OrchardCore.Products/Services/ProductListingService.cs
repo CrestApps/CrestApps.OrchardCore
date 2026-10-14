@@ -710,15 +710,16 @@ public sealed class ProductListingService
 
         if (gallery is not null)
         {
-            for (var i = 0; i < gallery.Value.Paths.Count; i++)
+            for (var i = 0; i < gallery.Paths.Count; i++)
             {
-                var path = gallery.Value.Paths[i];
+                var path = gallery.Paths[i];
 
                 model.Images.Add(new ProductImageViewModel
                 {
+                    Path = path,
                     Url = GetImageUrl(path, 1200, 0),
                     ThumbnailUrl = GetImageUrl(path, 160, 160),
-                    Alt = i < gallery.Value.Texts.Count && !string.IsNullOrWhiteSpace(gallery.Value.Texts[i]) ? gallery.Value.Texts[i] : contentItem.DisplayText,
+                    Alt = i < gallery.Texts.Count && !string.IsNullOrWhiteSpace(gallery.Texts[i]) ? gallery.Texts[i] : contentItem.DisplayText,
                 });
             }
         }
@@ -738,38 +739,8 @@ public sealed class ProductListingService
     /// The media field whose images a product's page and cards show: the first media field of the type that
     /// has images.
     /// </summary>
-    public async Task<(string PartName, string FieldName, IReadOnlyList<string> Paths, IReadOnlyList<string> Texts)?> GetGalleryFieldAsync(ContentItem contentItem)
-    {
-        var definition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType);
-
-        if (definition is null)
-        {
-            return null;
-        }
-
-        // Content is a dynamic wrapper over the item's JSON; it converts to the JsonObject only through a cast.
-        var content = (System.Text.Json.Nodes.JsonObject)contentItem.Content;
-
-        foreach (var part in definition.Parts)
-        {
-            foreach (var field in part.PartDefinition.Fields.Where(field => field.FieldDefinition.Name == "MediaField"))
-            {
-                if (content[part.Name]?[field.Name] is not System.Text.Json.Nodes.JsonObject media)
-                {
-                    continue;
-                }
-
-                var paths = Attributes.FieldValueReader.GetStrings(media, "Paths").Where(path => !string.IsNullOrEmpty(path)).ToArray();
-
-                if (paths.Length > 0)
-                {
-                    return (part.Name, field.Name, paths, Attributes.FieldValueReader.GetStrings(media, "MediaTexts").ToArray());
-                }
-            }
-        }
-
-        return null;
-    }
+    public async Task<ProductGalleryField> GetGalleryFieldAsync(ContentItem contentItem)
+        => ProductGalleryReader.Find(await _contentDefinitionManager.GetTypeDefinitionAsync(contentItem.ContentType), contentItem);
 
     /// <summary>
     /// The trail of a product's page: the home page, the listing that shows the product's type, and the

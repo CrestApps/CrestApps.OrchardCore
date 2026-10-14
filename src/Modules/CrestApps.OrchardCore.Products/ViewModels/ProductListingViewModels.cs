@@ -388,6 +388,11 @@ public class ProductDetailsShapeViewModel
 
 public class ProductImageViewModel
 {
+    /// <summary>
+    /// The image's path in the media library, which a variant names to show it.
+    /// </summary>
+    public string Path { get; set; }
+
     public string Url { get; set; }
 
     public string ThumbnailUrl { get; set; }

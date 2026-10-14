@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -58,6 +59,9 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
                 model.ProductSku = product.Sku;
                 model.ProductPrice = product.Price;
             }
+
+            // A variant shows one of the product's own photos, so its page can switch to it.
+            model.Images = ProductGalleryReader.Find(context.TypePartDefinition?.ContentTypeDefinition, part.ContentItem)?.Paths.ToList() ?? [];
         });
     }
 
