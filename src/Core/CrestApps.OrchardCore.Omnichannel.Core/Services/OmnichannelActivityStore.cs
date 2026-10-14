@@ -21,6 +21,10 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
 
     private const string ActivityAlias = "a";
 
+    // SQL Server refuses a command with more than 2,100 parameters, and every identifier in an IN list is one. Bulk
+    // actions can match tens of thousands of activities, so identifiers are loaded a batch at a time.
+    private const int QueryBatchSize = 500;
+
     private readonly IEnumerable<IListOmnichannelActivityFilterHandler> _handlers;
     private readonly IEnumerable<IBulkManageActivityFilterHandler> _bulkManageHandlers;
     private readonly IStore _store;
@@ -148,11 +152,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
             new CommandDefinition(context.SqlBuilder.ToSqlString(), context.Parameters, cancellationToken: cancellationToken)))
             .ToArray();
 
-        var entries = documentIds.Length > 0
-            ? (await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
-                index => index.DocumentId.IsIn(documentIds), collection: OmnichannelConstants.CollectionName)
-                .ListAsync(cancellationToken)).ToArray()
-            : [];
+        var entries = await GetByDocumentIdsAsync(documentIds, cancellationToken);
 
         return new PageResult<OmnichannelActivity>()
         {
@@ -171,15 +171,20 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
             return [];
         }
 
-        // Resolving every identifier in one query rather than one query per identifier: the callers of this
+        // Resolving the identifiers a batch at a time rather than one query per identifier: the callers of this
         // method hold a page of rows that each name an activity, so a lookup per row makes the cost of showing
         // the page grow with the size of the page.
-        var activities = await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
-            index => index.ItemId.IsIn(itemIds),
-            collection: OmnichannelConstants.CollectionName)
-            .ListAsync(cancellationToken);
+        var activities = new List<OmnichannelActivity>(itemIds.Count);
 
-        return [.. activities];
+        foreach (var itemIdBatch in itemIds.Chunk(QueryBatchSize))
+        {
+            activities.AddRange(await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                index => index.ItemId.IsIn(itemIdBatch),
+                collection: OmnichannelConstants.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return activities;
     }
 
     /// <inheritdoc/>
@@ -201,16 +206,27 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
             new CommandDefinition(context.SqlBuilder.ToSqlString(), context.Parameters, cancellationToken: cancellationToken)))
             .ToArray();
 
+        return await GetByDocumentIdsAsync(documentIds, cancellationToken);
+    }
+
+    private async Task<OmnichannelActivity[]> GetByDocumentIdsAsync(long[] documentIds, CancellationToken cancellationToken)
+    {
         if (documentIds.Length == 0)
         {
             return [];
         }
 
-        var activities = await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
-            index => index.DocumentId.IsIn(documentIds), collection: OmnichannelConstants.CollectionName)
-            .ListAsync(cancellationToken);
+        var activities = new List<OmnichannelActivity>(documentIds.Length);
 
-        return activities.ToArray();
+        foreach (var documentIdBatch in documentIds.Chunk(QueryBatchSize))
+        {
+            activities.AddRange(await Session.Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                index => index.DocumentId.IsIn(documentIdBatch),
+                collection: OmnichannelConstants.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return [.. activities];
     }
 
     private async Task<BulkManageActivityFilterContext> BuildBulkManageableContextAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken)
