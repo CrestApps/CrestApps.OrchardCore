@@ -9,13 +9,19 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
 /// <summary>
-/// Runs one pacing cycle for each enabled dialer profile so power and progressive campaigns dial automatically.
+/// The backstop of dialer pacing: once a minute, asks for every campaign queue with waiting work to be paced.
 /// <para>
-/// Each run is bounded by a wall-clock budget enforced both by a between-profile deadline check and a hard
+/// Campaigns are paced as things happen -- an agent becomes available or signs in, an offer is released, a call that
+/// did not reach an agent ends, records are loaded -- by <see cref="IDialerPacingScheduler"/> and, for over-dialing
+/// Predictive campaigns, <see cref="IPredictivePacingScheduler"/>. Both pace a queue on a scope of its own under the
+/// queue's pacing lock. This task re-arms them every minute, so a queue whose event was lost, or that was last paced on
+/// a node that stopped, is still paced.
+/// </para>
+/// <para>
+/// Each run is bounded by a wall-clock budget enforced both by a between-queue deadline check and a hard
 /// <see cref="System.Threading.CancellationTokenSource.CancelAfter(int)"/> that cancels in-flight work, and that
-/// budget is kept safely below the distributed-lock expiration so a slow run can never outlive its lock and let a
-/// second node begin an overlapping pacing cycle. Profiles that do not fit in the budget are simply paced on the
-/// following tick.
+/// budget is kept safely below the distributed-lock expiration so a slow run can never outlive its lock. Queues that do
+/// not fit in the budget are simply requested on the following tick.
 /// </para>
 /// </summary>
 [BackgroundTask(
@@ -51,7 +57,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         }
 
         var dialerManager = serviceProvider.GetRequiredService<IDialerProfileManager>();
-        var dialerService = serviceProvider.GetRequiredService<IDialerService>();
+        var dialerPacingScheduler = serviceProvider.GetRequiredService<IDialerPacingScheduler>();
         var queueItemStore = serviceProvider.GetRequiredService<IQueueItemStore>();
         var clock = serviceProvider.GetRequiredService<IClock>();
         var pacingScheduler = serviceProvider.GetService<IPredictivePacingScheduler>();
@@ -156,9 +162,9 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                     continue;
                 }
 
-                // An over-dialing queue is paced by its own requests, each on a scope of its own, so a cycle that loses a
-                // race with another node cannot spend the session this run shares with every other queue. This run is
-                // the backstop that re-arms it every minute.
+                // Every queue is paced by its own requests, each on a scope of its own under the queue's pacing lock, so a
+                // cycle that loses a race with an event-driven cycle or another node cannot spend the session this run
+                // shares with every other queue. This run is the backstop that re-arms them every minute.
                 if (pacingScheduler is not null &&
                     profile.Mode == DialerMode.Predictive &&
                     profile.PredictivePacingModel == PredictivePacingModel.OverDial)
@@ -168,7 +174,10 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                     continue;
                 }
 
-                await dialerService.RunCycleAsync(profile, queueId, runToken);
+                if (DialerPacingScheduler.IsPacedHere(profile))
+                {
+                    dialerPacingScheduler.Request(queueId);
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {

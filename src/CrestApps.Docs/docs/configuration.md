@@ -1321,6 +1321,48 @@ OrchardCore__CrestApps__ContactCenter__Compliance__ManualDialing__RespectDoNotCa
 See [Outbound compliance gate](contact-center/agents-queues-dialer.md#outbound-compliance-gate) and
 [Manual soft-phone screening](contact-center/agents-queues-dialer.md#manual-soft-phone-screening).
 
+### Dialer pacing
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:ContactCenter:DialerPacing` |
+| **Feature** | Contact Center Paced Dialing |
+| **Controls** | How soon a Power, Progressive or reserved-per-call Predictive campaign is paced after an agent frees up or work arrives |
+
+Every value is validated on start, and an invalid one stops the tenant.
+
+| Key | Default | Rule |
+| --- | --- | --- |
+| `Debounce` | `00:00:00.300` | Greater than zero. |
+| `LockExpiration` | `00:00:30` | Greater than zero. |
+| `LockRetryDelay` | `00:00:01` | Greater than zero and shorter than `LockExpiration`. |
+
+`Debounce` is how long a pacing request waits for others before the campaign is paced, so a burst of agent and call
+changes paces it once. `LockExpiration` bounds the per-campaign pacing lock should a node stop while holding it, and
+`LockRetryDelay` is how soon a campaign is paced again when its lock was held by another run. These change only when a
+campaign is paced; how many calls each cycle places stays with the dialer profile. The minute dialer pacing task stays
+on as the backstop.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "DialerPacing": {
+          "Debounce": "00:00:00.500"
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__ContactCenter__DialerPacing__Debounce=00:00:00.500
+```
+
+See [Pacing cadence](contact-center/agents-queues-dialer.md#pacing-cadence).
+
 ### Predictive dialing
 
 | | |
