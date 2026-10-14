@@ -1,23 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js';
-
-const {
+import {
+    createAutoAnswerArm,
+    shouldAutoAnswerInboundLeg,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
+import {
     STANDBY_GRACE_MS,
     STANDBY_LEG_MEMORY_MS,
     createPredictiveStandby,
     isStandbyEligible,
-    setPredictiveStandby,
     isStandingBy,
-    readStandbyLegTag,
     noteStandbyLeg,
-    wasStandbyLegSeen,
+    readStandbyLegTag,
+    setPredictiveStandby,
     shouldStandbyAnswerLeg,
-    createAutoAnswerArm,
-    shouldAutoAnswerInboundLeg,
-} = globalThis.CrestAppsSoftPhone;
+    wasStandbyLegSeen,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js';
 
 const NOW = 1_000_000;
 

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-route.js';
-
-const { voicemailRoute, VOICEMAIL_ROUTES } = globalThis.CrestAppsSoftPhone;
+import {
+    VOICEMAIL_ROUTES,
+    voicemailRoute,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-route.js';
 
 // Bug: sending a ringing Contact Center offer to voicemail ran two paths at once. The soft phone declined the offer
 // (which the Contact Center turned into voicemail) AND asked the telephony hub to send the same call to voicemail, so

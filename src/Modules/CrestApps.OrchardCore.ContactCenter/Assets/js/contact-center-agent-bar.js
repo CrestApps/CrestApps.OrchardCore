@@ -10,6 +10,10 @@
  * It reuses the agent workspace state endpoint and the shared offer/presence/complete endpoints, and depends on
  * the "contact-center-realtime" helper (which itself pulls in "telephony-client" for escapeHtml/formatDuration).
  */
+import { coalesceRefresh } from './shared/coalesced-refresh.js';
+import { presenceLabel } from './shared/agent-presence.js';
+import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
+
 (function (window, document) {
     'use strict';
 
@@ -177,7 +181,9 @@
         var state = null;
         var serverOffsetMs = 0;
         var activeSignature = null;
-        var connectionStatusKey = null;
+        // The real-time connection's last status, drawn again by every render: each one replaces the bar's markup, and
+        // the label used to come back empty after the first.
+        var connectionStatus = null;
         var lastPoppedActivityId = null;
         var lastOfferReservationId = null;
 
@@ -314,7 +320,7 @@
         }
 
         // One state fetch at a time: a burst of hub events folds into it (see shared/coalesced-refresh.js).
-        var refresh = window.CrestAppsContactCenter.coalesceRefresh(function () {
+        var refresh = coalesceRefresh(function () {
             if (!config.stateUrl) {
                 return Promise.resolve();
             }
@@ -388,12 +394,9 @@
         // Read the same way on every agent screen (see shared/agent-presence.js): a state's own name, a break by its
         // reason, and never a reason kept for a break that has not started yet.
         function presenceText() {
-            var presence = window.CrestAppsContactCenter;
             var current = (state && state.presence) || {};
 
-            return presence
-                ? presence.presenceLabel(current, config.presenceLabels)
-                : (current.reason || presenceStatus());
+            return presenceLabel(current, config.presenceLabels);
         }
 
         // What a live test reads to follow the bar's call card: every push that says the agent's call moved, and every
@@ -585,7 +588,7 @@
             var collapseTitle = label('collapseBar', 'Hide the Contact Center bar');
 
             return '<div class="cc-bar__tail">' +
-                '<span class="cc-bar__conn" data-cc-connection role="status" aria-live="polite"></span>' +
+                '<span class="' + connectionStatusClass() + '" data-cc-connection role="status" aria-live="polite">' + escapeHtml(connectionStatusText()) + '</span>' +
                 (config.workspaceUrl ? '<a class="cc-bar__workspace" href="' + escapeHtml(config.workspaceUrl) + '" title="' + escapeHtml(label('openWorkspace', 'Open full workspace')) + '"><i class="fa-solid fa-headset" aria-hidden="true"></i></a>' : '') +
                 '<button type="button" class="cc-bar__collapse" data-cc-collapse title="' + escapeHtml(collapseTitle) + '" aria-label="' + escapeHtml(collapseTitle) + '"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>' +
             '</div>';
@@ -628,7 +631,6 @@
 
             // "Answering..." (or "Dialing...") with a spinner from the first click, every offer button disabled, and an
             // error on the offer if the accept fails or never answers (shared/offer-actions.js).
-            var offerActions = window.CrestAppsContactCenter;
             var offer = inner.querySelector('[data-cc-offer]');
             var offerState = { preview: !!(state && state.offer && state.offer.kind === 'PreviewDial') };
             var offerLabels = {
@@ -637,9 +639,9 @@
             };
 
             showOfferError(null);
-            offerActions.showOfferAccepting(offer, { pending: true, preview: offerState.preview }, offerLabels);
+            showOfferAccepting(offer, { pending: true, preview: offerState.preview }, offerLabels);
 
-            offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
+            withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
                 .then(function (response) {
                     return refresh().then(function () {
                         if (response && response.ok === false) {
@@ -653,7 +655,7 @@
                         : label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
                 })
                 .finally(function () {
-                    offerActions.showOfferAccepting(inner.querySelector('[data-cc-offer]'), { pending: false, preview: offerState.preview }, offerLabels);
+                    showOfferAccepting(inner.querySelector('[data-cc-offer]'), { pending: false, preview: offerState.preview }, offerLabels);
                 });
         }
 
@@ -698,16 +700,22 @@
         }
 
         function setConnectionStatus(key, fallback, modifier) {
+            connectionStatus = { key: key, fallback: fallback, modifier: modifier };
+
             var el = inner ? inner.querySelector('[data-cc-connection]') : null;
 
-            if (!el) {
-                connectionStatusKey = key;
-                return;
+            if (el) {
+                el.textContent = label(key, fallback);
+                el.className = connectionStatusClass();
             }
+        }
 
-            connectionStatusKey = key;
-            el.textContent = label(key, fallback);
-            el.className = 'cc-bar__conn' + (modifier ? ' ' + modifier : '');
+        function connectionStatusClass() {
+            return 'cc-bar__conn' + (connectionStatus && connectionStatus.modifier ? ' ' + connectionStatus.modifier : '');
+        }
+
+        function connectionStatusText() {
+            return connectionStatus ? label(connectionStatus.key, connectionStatus.fallback) : '';
         }
 
         function tick() {

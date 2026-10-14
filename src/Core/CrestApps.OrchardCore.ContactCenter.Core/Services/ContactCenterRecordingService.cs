@@ -152,6 +152,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
                     InteractionId = interaction.ItemId,
                     ProviderCallId = interaction.ProviderInteractionId,
                     State = state,
+                    PreviousState = previousState,
                 }, commandCancellationToken));
         }
         catch (TelephonyCommandNotAdmittedException)

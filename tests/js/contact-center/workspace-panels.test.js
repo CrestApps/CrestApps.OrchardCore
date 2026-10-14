@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js';
+import {
+    NO_ACTIVE_INTERACTION,
+    activeInteractionSignature,
+    createChangeGate,
+    emptyStateHtml,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js';
 
-const { activeInteractionSignature, createChangeGate, emptyStateHtml, NO_ACTIVE_INTERACTION } = globalThis.CrestAppsContactCenter;
-
-const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Assets.json', 'utf8'));
 const workspaceSource = readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/agent-workspace.js', 'utf8');
 
 // Bug: the workspace's "Active interaction" card opened blank. It redrew only when the interaction's signature
@@ -93,13 +95,6 @@ describe('emptyStateHtml', () => {
 });
 
 describe('the agent workspace', () => {
-    const group = assets.find(candidate => candidate.dest === 'wwwroot/scripts/agent-workspace.js');
-
-    it('bundles the panel helper ahead of the workspace script', () => {
-        expect(group.source).toContain('Assets/js/shared/workspace-panels.js');
-        expect(group.source.indexOf('Assets/js/shared/workspace-panels.js')).toBeLessThan(group.source.indexOf('Assets/js/agent-workspace.js'));
-    });
-
     it('gates the active card with a change gate rather than a null-seeded signature', () => {
         expect(workspaceSource).toContain('createChangeGate()');
         expect(workspaceSource).not.toMatch(/var activeSignature = null/);

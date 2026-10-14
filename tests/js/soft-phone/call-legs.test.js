@@ -1,18 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js';
-
-const {
-    createCallLegs,
-    notePlatformLeg,
-    noteBrowserLeg,
-    forgetLeg,
-    planPlatformReport,
-    platformLegFor,
-    legAfterEnd,
+import {
     allLegs,
     canConferenceCall,
-} = globalThis.CrestAppsSoftPhone;
+    createCallLegs,
+    forgetLeg,
+    legAfterEnd,
+    noteBrowserLeg,
+    notePlatformLeg,
+    planPlatformReport,
+    platformLegFor,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js';
 
 const predialedLeg = { name: 'pre-dialed agent leg' };
 const browserCall = { name: 'call placed from the keypad' };

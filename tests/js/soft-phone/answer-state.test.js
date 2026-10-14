@@ -1,15 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/answer-state.js';
-
-const {
-    answerButtonView,
-    withTimeout,
+import {
     ANSWER_REGISTRATION_TIMEOUT_MS,
-    rememberSettledOffer,
-    isOfferSettled,
+    OFFER_CLICK_GUARD_MS,
     SETTLED_OFFER_TTL_MS,
-} = globalThis.CrestAppsSoftPhone;
+    answerButtonView,
+    isOfferActionPending,
+    isOfferSettled,
+    offerActionClick,
+    rememberSettledOffer,
+    withTimeout,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/answer-state.js';
 
 // Bug: the first click on Answer changed nothing the agent could see for several seconds, so they clicked again and
 // again. From the first click the button reads "Answering..." with a spinner and every offer button is disabled.
@@ -105,7 +106,6 @@ describe('settled offers', () => {
 // Live: Ignore stayed clickable while its decline was in flight, and the second click of a double-click declined the
 // next reservation, offered the moment the first was declined.
 describe('offerActionClick', () => {
-    const { offerActionClick, isOfferActionPending, OFFER_CLICK_GUARD_MS } = globalThis.CrestAppsSoftPhone;
     const pending = { reservationId: 'res-a', at: 1000 };
 
     it('acts on the first click', () => {

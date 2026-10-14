@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/incoming-card.js';
-
-const { incomingCardActionLabels } = globalThis.CrestAppsSoftPhone;
+import {
+    incomingCardActionLabels,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/incoming-card.js';
 
 const strings = { answerAndOpen: 'Answer & open', open: 'Open' };
 

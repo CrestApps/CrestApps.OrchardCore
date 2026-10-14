@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-labels.js';
-
-const { friendlyCallLabel, createCallPartyMemory, carryCallParty } = globalThis.CrestAppsSoftPhone;
+import {
+    carryCallParty,
+    createCallPartyMemory,
+    friendlyCallLabel,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-labels.js';
 
 // Live: a conference row read "v3:UyLVvJ3o7qQklQFQnZpvgJylmV…" -- the provider's id for the agent's own leg -- where the
 // dialed number belonged, and the phone sometimes showed the conference's id for a moment.

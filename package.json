@@ -18,12 +18,17 @@
     "dry-run": "node .scripts/assets/cli.mjs dry-run",
     "test": "vitest run",
     "test:watch": "vitest",
-    "cleanup": "node .scripts/cleanup.js"
+    "cleanup": "node .scripts/cleanup.js",
+    "lint": "eslint .",
+    "check": "tsc -p tsconfig.json"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.7",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
     "glob": "^13.0.6",
+    "globals": "^17.13.0",
     "sass": "^1.102.0",
+    "typescript": "^6.0.3",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"
   },

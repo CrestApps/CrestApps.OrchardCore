@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
-
-const { presenceLabel, pendingPresenceLabel, breakChoiceLabel, isOwnPresence, isOwnOfferNotification, normalizePresenceStatus } = globalThis.CrestAppsContactCenter;
+import {
+    breakChoiceLabel,
+    isOwnOfferNotification,
+    isOwnPresence,
+    normalizePresenceStatus,
+    pendingPresenceLabel,
+    presenceLabel,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
 
 // Live: a colleague's extension call was answered by itself, silently, ~20 s after this user's phone heard that
 // ANOTHER agent had accepted a Contact Center offer. The server sends "offer revoked" to the agent, to the offer's queue

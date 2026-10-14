@@ -33,6 +33,10 @@ jobs:
         cache: npm
     - name: Install packages
       run: npm ci
+    - name: Lint assets
+      run: npm run lint
+    - name: Type-check assets
+      run: npm run check
     - name: Rebuild assets
       run: npm run rebuild
     - name: Normalize line endings (gitattributes)

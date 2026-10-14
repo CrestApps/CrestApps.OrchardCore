@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js';
-
-const { attributeSelectorValue } = globalThis.CrestAppsContactCenter;
+import {
+    attributeSelectorValue,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js';
 
 // Without CSS.escape the dashboard quotes an agent id into an attribute selector itself, so a backslash or quote in the
 // id must not end the string early or change what the selector matches.

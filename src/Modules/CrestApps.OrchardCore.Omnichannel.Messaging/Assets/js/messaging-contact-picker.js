@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Live contact search for the messaging composers (new conversation and broadcast).
  *

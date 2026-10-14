@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/consult-state.js';
-
-const { consultView, consultEndedMessage, CONSULT_POLL_INTERVAL_MS } = globalThis.CrestAppsSoftPhone;
+import {
+    CONSULT_POLL_INTERVAL_MS,
+    consultEndedMessage,
+    consultView,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/consult-state.js';
 
 const strings = {
     consultRinging: 'Calling {0}...',

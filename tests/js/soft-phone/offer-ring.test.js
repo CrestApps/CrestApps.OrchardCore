@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-ring.js';
-
-const { shouldRingForOffer, readOfferHandledMessage } = globalThis.CrestAppsSoftPhone;
+import {
+    readOfferHandledMessage,
+    shouldRingForOffer,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-ring.js';
 
 // Regression: answering an offer waits on the server to accept it before the call connects, and the agent heard the
 // ringtone carry on through that whole round trip after clicking Answer.

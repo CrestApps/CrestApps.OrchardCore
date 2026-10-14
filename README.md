@@ -2,7 +2,31 @@
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/MikeAlhayek)
 
-`CrestApps.OrchardCore` is a collection of modules and extensions that expand the capabilities of the Orchard Core framework and accelerate the development of modern, enterprise-ready applications.
+![CrestApps: enterprise-grade modules for Orchard Core, covering AI, omnichannel engagement, contact center, CRM, commerce, reporting, and more](.github/images/readme-hero.webp)
+
+`CrestApps.OrchardCore` is a suite of modules and extensions that extends the Orchard Core framework with production-ready capabilities for building modern, enterprise applications. Each module targets a problem that real organizations face at scale, such as AI orchestration, omnichannel customer engagement, contact center operations, commerce, and multi-tenant administration, and solves it with the reliability, security, and extensibility that enterprise software demands.
+
+At CrestApps, our focus is building enterprise-level solutions on top of Orchard Core. We follow industry standards and proven engineering practices so teams can adopt our modules with confidence, compose only what they need, and ship complex systems faster than they could build them from scratch.
+
+## Why CrestApps
+
+- **Enterprise-ready by design:** multi-tenancy, granular permissions, auditing, and concurrency-safe data access are built in, not bolted on.
+- **Built on open standards:** interoperable protocols and formats, including the Model Context Protocol (MCP), Agent-to-Agent (A2A), SIP and WebRTC, OpenXML, and REST and webhook integrations.
+- **Modular and composable:** every capability is an Orchard Core feature that can be enabled per tenant and extended through well-defined abstractions.
+- **Vendor-flexible:** pluggable providers for AI models, vector stores, telephony carriers, payment gateways, and cloud storage, so you avoid lock-in.
+- **Production-proven quality:** automated unit, integration, and end-to-end tests, public API baselines, and continuous integration on every change.
+
+## What We Build
+
+| Solution Area | Capabilities |
+| --- | --- |
+| **Artificial Intelligence** | AI chat and agents, retrieval-augmented generation over documents, data sources, and web crawlers, long-term memory, prompt management, MCP and A2A, with OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more |
+| **Omnichannel Engagement** | Unified messaging across SMS and voice, with AI-assisted conversations, automated follow-ups, and business hours |
+| **CRM** | Contacts, leads, accounts, and opportunities with pipeline stages, imports, and activity tracking tied to every conversation |
+| **Contact Center** | Queues and routing, outbound dialer, soft phone, supervision, call recording, dispositions, and reporting, with Telnyx, Asterisk, and Azure telephony providers |
+| **Commerce** | Products, carts, checkout, orders, subscriptions, installment plans, taxation, receipts, and Stripe payments |
+| **Reporting** | Operational and business reports with filtering and OpenXML (Excel) export |
+| **Platform and Administration** | Tenant hierarchy, users and roles, content access control, content import and export, recipes, wizards, and time zones |
 
 ## Documentation
 

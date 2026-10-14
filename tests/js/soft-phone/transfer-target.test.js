@@ -1,20 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
-
-const {
-    transferModes,
-    transferModeValue,
+import {
+    filterTransferTargets,
     isNumberLike,
     isSameLine,
-    filterTransferTargets,
-    resolveTransferTarget,
-    pickTypedMatch,
     ownExtensionRefusal,
-    transferRefusalMessage,
+    pickTypedMatch,
+    resolveTransferTarget,
+    toInternationalNumber,
     transferBlockedReason,
-    toInternationalNumber
-} = globalThis.CrestAppsSoftPhone;
+    transferModeValue,
+    transferModes,
+    transferRefusalMessage,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
 
 const TRANSFER = 1 << 5;
 const ATTENDED_TRANSFER = 1 << 11;
