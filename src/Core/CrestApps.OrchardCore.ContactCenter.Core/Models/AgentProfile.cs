@@ -101,9 +101,12 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public DateTime? LastAssignedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets the UTC time the agent last became idle: available with no work in hand. It is set when
-    /// presence becomes Available with no live reservation, and again when work completes while still Available;
-    /// it is cleared when a reservation is accepted.
+    /// Gets or sets the UTC time the agent last became idle: available with no work in hand. Every state transition
+    /// keeps it current. It starts when the agent becomes Available, is held while an offer rings or a call is up, and
+    /// is cleared by any other state (wrap-up, a break, offline). Returning to Available from an offer or a call
+    /// starts it again, sending the agent to the back of the longest-idle line, unless the work never reached them
+    /// (the caller hung up while it rang, the dial was suppressed, nobody answered before the agent was joined): then
+    /// the held time is kept and the agent keeps their place.
     /// </summary>
     /// <remarks>
     /// Longest-idle routing used <see cref="PresenceChangedUtc"/>, which moves on every presence transition

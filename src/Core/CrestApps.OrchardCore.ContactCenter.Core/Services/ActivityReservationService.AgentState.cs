@@ -35,6 +35,11 @@ public sealed partial class ActivityReservationService
             ReservationId = reservation.ItemId,
             InteractionId = interactionId,
             ChangedUtc = now,
+
+            // An offer withdrawn because its caller went away, or a dial routing took back before placing it, never
+            // reached the agent, so they keep their place in the longest-idle line. One they declined or let ring out
+            // did reach them: they go to the back, behind colleagues who have been waiting while it rang.
+            KeepsIdlePlace = releaseReason is AgentReleaseReasons.Canceled or AgentReleaseReasons.Compensated,
         }, cancellationToken);
     }
 
