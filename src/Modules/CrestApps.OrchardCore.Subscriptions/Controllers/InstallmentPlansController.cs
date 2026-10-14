@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -455,7 +456,8 @@ public sealed class InstallmentPlansController : Controller
         {
             Plan = plan,
             Transactions = transactions,
-            ShowReceipts = await IsFeatureEnabledAsync(TransactionsConstants.Features.Receipts),
+            // Printable receipts come with the Receipts module, whether or not receipts are also sent.
+            ShowReceipts = await IsFeatureEnabledAsync(ReceiptsConstants.Feature.Area),
             UtcNow = _clock.UtcNow,
         });
     }

@@ -108,7 +108,7 @@ Turn on **Allow guest sign-up** in the subscription settings to let somebody buy
 
 ## Receipts
 
-Receipts come from the **Payment Receipts** feature of the [Transactions](transactions#payment-receipts) module, which sends one for every payment applied to a ledger transaction: an installment plan's payments, a Pay Later balance, or anything settled online or recorded by hand. A plan bought by card at the checkout is recorded on the payment ledger rather than as a transaction, and is not receipted by that feature.
+Receipts come from the **Send Payment Receipts** feature of the [Transactions](transactions#payment-receipts) module, which sends one for every payment applied to a ledger transaction: an installment plan's payments, a Pay Later balance, or anything settled online or recorded by hand. A plan bought by card at the checkout is recorded on the payment ledger rather than as a transaction, and is not receipted by that feature.
 
 ## Admin management
 

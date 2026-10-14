@@ -35,9 +35,9 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Name = "Payment Receipts",
+    Name = "Send Payment Receipts",
     Id = TransactionsConstants.Features.Receipts,
-    Description = "Sends the customer a receipt after every payment applied to a transaction, however it was paid, and lets the customer and administrators print it.",
+    Description = "Sends the customer a numbered receipt after every payment applied to a transaction, however it was paid, and a notice after every refund. Printable receipts and invoices are available whenever Transactions and Receipts are both enabled.",
     Category = "Commerce",
     Dependencies =
     [

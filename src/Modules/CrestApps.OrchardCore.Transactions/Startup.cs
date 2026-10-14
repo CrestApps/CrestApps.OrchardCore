@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Drivers;
 using CrestApps.OrchardCore.Transactions.Migrations;
@@ -80,7 +81,23 @@ public sealed class NotificationStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the receipts sent after every payment applied to a transaction, and the printable receipt page.
+/// Registers the printable receipt of every payment and the printable invoice of a transaction, whenever the
+/// Receipts module is enabled too. They only show what the ledger already holds, so they need no opt-in.
+/// </summary>
+[RequireFeatures(ReceiptsConstants.Feature.Area)]
+public sealed class ReceiptPagesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
+        services.AddScoped<ITransactionInvoiceBuilder, TransactionInvoiceBuilder>();
+    }
+}
+
+/// <summary>
+/// Sends the customer a numbered receipt after every payment applied to a transaction, and a notice after every
+/// refund. It messages customers, so it is a feature of its own that a site turns on deliberately.
 /// </summary>
 [Feature(TransactionsConstants.Features.Receipts)]
 public sealed class ReceiptsStartup : StartupBase
@@ -88,8 +105,6 @@ public sealed class ReceiptsStartup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<ITransactionReceiptBuilder, TransactionReceiptBuilder>();
-        services.AddScoped<ITransactionInvoiceBuilder, TransactionInvoiceBuilder>();
         services.AddScoped<PaymentReceiptTransactionPaymentHandler>();
         services.AddScoped<ITransactionPaymentHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());
         services.AddScoped<IPaymentRefundHandler>(sp => sp.GetRequiredService<PaymentReceiptTransactionPaymentHandler>());

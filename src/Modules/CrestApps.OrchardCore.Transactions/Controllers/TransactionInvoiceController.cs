@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
 
@@ -19,11 +20,9 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// </summary>
 [Admin("transaction-invoices/{itemId}", "TransactionInvoice")]
 [CustomerAdminPage]
-[Feature(TransactionsConstants.Features.Receipts)]
 public sealed class TransactionInvoiceController : Controller
 {
     private readonly ITransactionManager _transactionManager;
-    private readonly ITransactionInvoiceBuilder _invoiceBuilder;
     private readonly ITransactionPayLinkService _payLinks;
     private readonly IAuthorizationService _authorizationService;
 
@@ -31,17 +30,14 @@ public sealed class TransactionInvoiceController : Controller
     /// Initializes a new instance of the <see cref="TransactionInvoiceController"/> class.
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
-    /// <param name="invoiceBuilder">The invoice builder.</param>
     /// <param name="payLinks">The service that creates signed pay links.</param>
     /// <param name="authorizationService">The authorization service.</param>
     public TransactionInvoiceController(
         ITransactionManager transactionManager,
-        ITransactionInvoiceBuilder invoiceBuilder,
         ITransactionPayLinkService payLinks,
         IAuthorizationService authorizationService)
     {
         _transactionManager = transactionManager;
-        _invoiceBuilder = invoiceBuilder;
         _payLinks = payLinks;
         _authorizationService = authorizationService;
     }
@@ -52,7 +48,9 @@ public sealed class TransactionInvoiceController : Controller
     /// <param name="itemId">The transaction identifier.</param>
     public async Task<IActionResult> Index(string itemId)
     {
-        if (string.IsNullOrEmpty(itemId))
+        // The invoice is laid out by the Receipts module, so without it there is no invoice to show.
+        if (string.IsNullOrEmpty(itemId) ||
+            HttpContext.RequestServices.GetService<ITransactionInvoiceBuilder>() is not { } invoiceBuilder)
         {
             return NotFound();
         }
@@ -78,7 +76,7 @@ public sealed class TransactionInvoiceController : Controller
         return View(new TransactionInvoiceViewModel
         {
             Transaction = transaction,
-            Invoice = await _invoiceBuilder.BuildAsync(transaction, HttpContext.RequestAborted),
+            Invoice = await invoiceBuilder.BuildAsync(transaction, HttpContext.RequestAborted),
             IsAdministrator = canManage,
             PayUrl = canManage && payable ? await _payLinks.CreatePayUrlAsync(transaction, HttpContext.RequestAborted) : null,
         });
