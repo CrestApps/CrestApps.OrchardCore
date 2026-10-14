@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -105,12 +106,11 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom3Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
-            .CreateIndex(
-                "IDX_CallRecordingIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallRecordingIndex>(
+            SchemaBuilder,
+            "IDX_CallRecordingIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 4;
     }

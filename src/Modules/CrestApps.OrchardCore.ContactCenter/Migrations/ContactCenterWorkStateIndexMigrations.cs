@@ -1,9 +1,10 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -97,12 +98,11 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
-            .CreateIndex(
-                "IDX_ContactCenterWorkStateIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContactCenterWorkStateIndex>(
+            SchemaBuilder,
+            "IDX_ContactCenterWorkStateIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 3;
     }

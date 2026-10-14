@@ -1,10 +1,11 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -122,12 +123,11 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom4Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
-            .CreateIndex(
-                "IDX_OmnichannelActivityBatchIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: OmnichannelConstants.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityBatchIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityBatchIndex_ItemId",
+            OmnichannelConstants.CollectionName,
+            "ItemId", "DocumentId");
 
         return 5;
     }

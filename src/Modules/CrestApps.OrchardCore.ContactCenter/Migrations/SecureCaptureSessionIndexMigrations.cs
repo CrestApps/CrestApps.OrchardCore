@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -70,12 +71,11 @@ internal sealed class SecureCaptureSessionIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<SecureCaptureSessionIndex>(table => table
-            .CreateIndex(
-                "IDX_SecureCaptureSessionIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<SecureCaptureSessionIndex>(
+            SchemaBuilder,
+            "IDX_SecureCaptureSessionIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 2;
     }

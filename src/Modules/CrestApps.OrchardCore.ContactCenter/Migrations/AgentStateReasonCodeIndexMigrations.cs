@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
-using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;
+using OrchardCore.Recipes;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
@@ -60,12 +61,11 @@ internal sealed class AgentStateReasonCodeIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AgentStateReasonCodeIndex>(table => table
-            .CreateIndex(
-                "IDX_AgentStateReasonCodeIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<AgentStateReasonCodeIndex>(
+            SchemaBuilder,
+            "IDX_AgentStateReasonCodeIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 2;
     }
