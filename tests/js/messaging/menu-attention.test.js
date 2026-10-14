@@ -1,24 +1,22 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js';
-
-const messaging = globalThis.CrestAppsMessaging;
+import { isThreadInView } from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
+import { flagMenuGroups } from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js';
 
 // Live, an open workspace in a background tab read every new message before anyone saw it, so the menu count stayed
 // at zero. The poll now reads the thread only when it is in front of the agent.
 describe('isThreadInView', () => {
     it('is in view when the page shows and the agent is at the bottom of the thread', () => {
-        expect(messaging.isThreadInView(false, true)).toBe(true);
+        expect(isThreadInView(false, true)).toBe(true);
     });
 
     it('is not in view from a background tab', () => {
-        expect(messaging.isThreadInView(true, true)).toBe(false);
+        expect(isThreadInView(true, true)).toBe(false);
     });
 
     it('is not in view while the agent is scrolled up reading history', () => {
-        expect(messaging.isThreadInView(false, false)).toBe(false);
+        expect(isThreadInView(false, false)).toBe(false);
     });
 });
 
@@ -142,7 +140,7 @@ function inlineVoicemailFlagger() {
 }
 
 const flaggers = {
-    'the messaging script': root => messaging.flagMenuGroups(root),
+    'the messaging script': root => flagMenuGroups(root),
     'the shared voicemail template': inlineVoicemailFlagger(),
 };
 

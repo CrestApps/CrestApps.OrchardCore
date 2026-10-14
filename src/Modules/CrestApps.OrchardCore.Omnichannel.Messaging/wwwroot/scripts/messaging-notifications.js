@@ -3,225 +3,140 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js
-	(function(root) {
-		"use strict";
-		var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
-		function maxTicks(values) {
-			var max = 0n;
-			(values || []).forEach(function(raw) {
-				if (!raw) return;
-				try {
-					var ticks = BigInt(raw);
-					if (ticks > max) max = ticks;
-				} catch (e) {}
+	function sameOriginUrl(value, baseUrl) {
+		if (!value) return null;
+		try {
+			var base = new URL(String(baseUrl));
+			var url = new URL(String(value), base);
+			if ((url.protocol === "http:" || url.protocol === "https:") && url.origin === base.origin) return url.pathname + url.search + url.hash;
+		} catch (e) {}
+		return null;
+	}
+	function classifyAssignment(notification, view) {
+		if (!notification || !notification.isTransfer) return "refresh";
+		var agentId = view && view.agentId;
+		if (agentId && notification.transferredByAgentId === agentId) return "refresh";
+		if (agentId && notification.assignedAgentId === agentId) return "to-me";
+		if (view && view.conversationId && notification.conversationId === view.conversationId) return "away";
+		if (!notification.assignedAgentId && notification.ownerQueueId) return "to-queue";
+		return "refresh";
+	}
+	function formatText(template, values) {
+		var args = values || [];
+		return String(template || "").replace(/\{(\d+)\}/g, function(match, index) {
+			var value = args[Number(index)];
+			return value === void 0 || value === null ? "" : String(value);
+		});
+	}
+	function assignmentToastTitle(kind, notification, texts) {
+		var text = texts || {};
+		var by = notification && notification.transferredByName || text.someone;
+		switch (kind) {
+			case "to-me": return formatText(text.toYou, [by]);
+			case "to-queue": return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
+			case "away": return formatText(text.away, [notification && notification.transferredToName || text.someone]);
+			default: return null;
+		}
+	}
+	function createRecentNotifications(windowMs, now) {
+		var seen = {};
+		var clock = now || function() {
+			return Date.now();
+		};
+		return { isNew: function(key) {
+			var at = clock();
+			Object.keys(seen).forEach(function(existing) {
+				if (at - seen[existing] >= windowMs) delete seen[existing];
 			});
-			return max.toString();
-		}
-		function classifyInbound(notification, view) {
-			if (!notification) return "elsewhere";
-			var openConversationId = view && view.conversationId;
-			var openCustomerKey = view && view.customerKey;
-			if (openConversationId && notification.conversationId === openConversationId) return "thread";
-			if (openCustomerKey && notification.customerKey === openCustomerKey && notification.channel) return "tab";
-			return "elsewhere";
-		}
-		function tabBadgeCount(notification) {
-			var count = notification && Number(notification.unreadCount);
-			return count > 0 ? Math.floor(count) : 1;
-		}
-		function rowMatchesFilter(filterValue, term) {
-			var terms = (term || "").toLowerCase().split(/\s+/).filter(function(part) {
-				return part.length > 0;
-			});
-			if (terms.length === 0) return true;
-			var value = (filterValue || "").toLowerCase();
-			return terms.every(function(part) {
-				return value.indexOf(part) >= 0;
-			});
-		}
-		function selectNewBubbles(existing, incoming) {
-			var seenIds = {};
-			var seenTicks = {};
-			(existing || []).forEach(function(bubble) {
-				if (bubble.id) seenIds[bubble.id] = true;
-				if (bubble.ticks) seenTicks[bubble.ticks] = true;
-			});
-			return (incoming || []).filter(function(bubble) {
-				if (bubble.id && seenIds[bubble.id] || !bubble.id && bubble.ticks && seenTicks[bubble.ticks]) return false;
-				if (bubble.id) seenIds[bubble.id] = true;
-				if (bubble.ticks) seenTicks[bubble.ticks] = true;
-				return true;
-			});
-		}
-		function unseenInboundCount(bubbles, seen) {
-			if (seen) return 0;
-			return (bubbles || []).filter(function(bubble) {
-				return bubble && bubble.inbound;
-			}).length;
-		}
-		function isThreadInView(pageHidden, pinnedToBottom) {
-			return !pageHidden && !!pinnedToBottom;
-		}
-		function sameOriginUrl(value, baseUrl) {
-			if (!value) return null;
-			try {
-				var base = new URL(String(baseUrl));
-				var url = new URL(String(value), base);
-				if ((url.protocol === "http:" || url.protocol === "https:") && url.origin === base.origin) return url.pathname + url.search + url.hash;
-			} catch (e) {}
-			return null;
-		}
-		function classifyAssignment(notification, view) {
-			if (!notification || !notification.isTransfer) return "refresh";
-			var agentId = view && view.agentId;
-			if (agentId && notification.transferredByAgentId === agentId) return "refresh";
-			if (agentId && notification.assignedAgentId === agentId) return "to-me";
-			if (view && view.conversationId && notification.conversationId === view.conversationId) return "away";
-			if (!notification.assignedAgentId && notification.ownerQueueId) return "to-queue";
-			return "refresh";
-		}
-		function formatText(template, values) {
-			var args = values || [];
-			return String(template || "").replace(/\{(\d+)\}/g, function(match, index) {
-				var value = args[Number(index)];
-				return value === void 0 || value === null ? "" : String(value);
-			});
-		}
-		function assignmentToastTitle(kind, notification, texts) {
-			var text = texts || {};
-			var by = notification && notification.transferredByName || text.someone;
-			switch (kind) {
-				case "to-me": return formatText(text.toYou, [by]);
-				case "to-queue": return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
-				case "away": return formatText(text.away, [notification && notification.transferredToName || text.someone]);
-				default: return null;
-			}
-		}
-		function transferTargetInputName(targetType) {
-			return targetType === "Queue" ? "targetQueueId" : "targetAgentId";
-		}
-		function createRecentNotifications(windowMs, now) {
-			var seen = {};
-			var clock = now || function() {
-				return Date.now();
-			};
-			return { isNew: function(key) {
-				var at = clock();
-				Object.keys(seen).forEach(function(existing) {
-					if (at - seen[existing] >= windowMs) delete seen[existing];
-				});
-				if (Object.prototype.hasOwnProperty.call(seen, key)) return false;
-				seen[key] = at;
-				return true;
-			} };
-		}
-		function notificationKey(kind, notification) {
-			return String(kind) + ":" + (notification && notification.conversationId || "");
-		}
-		messaging.classifyAssignment = classifyAssignment;
-		messaging.assignmentToastTitle = assignmentToastTitle;
-		messaging.createRecentNotifications = createRecentNotifications;
-		messaging.notificationKey = notificationKey;
-		messaging.formatText = formatText;
-		messaging.transferTargetInputName = transferTargetInputName;
-		messaging.unseenInboundCount = unseenInboundCount;
-		messaging.isThreadInView = isThreadInView;
-		messaging.sameOriginUrl = sameOriginUrl;
-		messaging.maxTicks = maxTicks;
-		messaging.classifyInbound = classifyInbound;
-		messaging.tabBadgeCount = tabBadgeCount;
-		messaging.rowMatchesFilter = rowMatchesFilter;
-		messaging.selectNewBubbles = selectNewBubbles;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+			if (Object.prototype.hasOwnProperty.call(seen, key)) return false;
+			seen[key] = at;
+			return true;
+		} };
+	}
+	function notificationKey(kind, notification) {
+		return String(kind) + ":" + (notification && notification.conversationId || "");
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js
-	(function(root) {
-		"use strict";
-		var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
-		var settleDelayMs = 1500;
-		var periodicRefreshMs = 6e4;
-		function flagMenuGroups(root) {
-			(root || document).querySelectorAll("[data-admin-menu-attention]").forEach(function(badge) {
-				var item = badge.closest("li");
-				var group = item && item.parentElement ? item.parentElement.closest("li") : null;
-				while (group) {
-					var header = Array.prototype.find.call(group.querySelectorAll(".item-label"), function(label) {
-						return label.closest("li") === group;
-					});
-					var icon = header ? header.querySelector(":scope > .icon") : null;
-					if (icon) icon.classList.toggle("text-danger", !!group.querySelector("[data-admin-menu-attention]:not(.d-none)"));
-					group = group.parentElement ? group.parentElement.closest("li") : null;
-				}
-			});
-		}
-		function show(count) {
-			var value = Math.floor(Number(count) || 0);
-			document.querySelectorAll("[data-messaging-attention-badge]").forEach(function(badge) {
-				badge.textContent = value > 99 ? "99+" : value > 0 ? String(value) : "";
-				badge.classList.toggle("d-none", value <= 0);
-			});
-			flagMenuGroups(document);
-		}
-		function createAttentionBadge(url) {
-			var timer = null;
-			var inFlight = false;
-			var queued = false;
-			function refresh() {
-				if (!url || !document.querySelector("[data-messaging-attention-badge]")) return;
-				if (inFlight) {
-					queued = true;
-					return;
-				}
-				inFlight = true;
-				fetch(url, {
-					headers: { "X-Requested-With": "XMLHttpRequest" },
-					credentials: "same-origin",
-					cache: "no-store"
-				}).then(function(response) {
-					return response.ok ? response.json() : null;
-				}).then(function(data) {
-					if (data && typeof data.count === "number") show(data.count);
-				}).catch(function() {}).finally(function() {
-					inFlight = false;
-					if (queued) {
-						queued = false;
-						refresh();
-					}
+	var settleDelayMs = 1500;
+	var periodicRefreshMs = 6e4;
+	function flagMenuGroups(root) {
+		(root || document).querySelectorAll("[data-admin-menu-attention]").forEach(function(badge) {
+			var item = badge.closest("li");
+			var group = item && item.parentElement ? item.parentElement.closest("li") : null;
+			while (group) {
+				var header = Array.prototype.find.call(group.querySelectorAll(".item-label"), function(label) {
+					return label.closest("li") === group;
 				});
+				var icon = header ? header.querySelector(":scope > .icon") : null;
+				if (icon) icon.classList.toggle("text-danger", !!group.querySelector("[data-admin-menu-attention]:not(.d-none)"));
+				group = group.parentElement ? group.parentElement.closest("li") : null;
 			}
-			function schedule() {
-				if (timer !== null) clearTimeout(timer);
-				timer = setTimeout(function() {
-					timer = null;
+		});
+	}
+	function show(count) {
+		var value = Math.floor(Number(count) || 0);
+		document.querySelectorAll("[data-messaging-attention-badge]").forEach(function(badge) {
+			badge.textContent = value > 99 ? "99+" : value > 0 ? String(value) : "";
+			badge.classList.toggle("d-none", value <= 0);
+		});
+		flagMenuGroups(document);
+	}
+	function createAttentionBadge(url) {
+		var timer = null;
+		var inFlight = false;
+		var queued = false;
+		function refresh() {
+			if (!url || !document.querySelector("[data-messaging-attention-badge]")) return;
+			if (inFlight) {
+				queued = true;
+				return;
+			}
+			inFlight = true;
+			fetch(url, {
+				headers: { "X-Requested-With": "XMLHttpRequest" },
+				credentials: "same-origin",
+				cache: "no-store"
+			}).then(function(response) {
+				return response.ok ? response.json() : null;
+			}).then(function(data) {
+				if (data && typeof data.count === "number") show(data.count);
+			}).catch(function() {}).finally(function() {
+				inFlight = false;
+				if (queued) {
+					queued = false;
 					refresh();
-				}, settleDelayMs);
-			}
-			function start() {
-				refresh();
-				setInterval(function() {
-					if (!document.hidden) refresh();
-				}, periodicRefreshMs);
-				document.addEventListener("visibilitychange", function() {
-					if (!document.hidden) refresh();
-				});
-			}
-			return {
-				start,
-				refresh,
-				schedule
-			};
+				}
+			});
 		}
-		messaging.createAttentionBadge = createAttentionBadge;
-		messaging.flagMenuGroups = flagMenuGroups;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		function schedule() {
+			if (timer !== null) clearTimeout(timer);
+			timer = setTimeout(function() {
+				timer = null;
+				refresh();
+			}, settleDelayMs);
+		}
+		function start() {
+			refresh();
+			setInterval(function() {
+				if (!document.hidden) refresh();
+			}, periodicRefreshMs);
+			document.addEventListener("visibilitychange", function() {
+				if (!document.hidden) refresh();
+			});
+		}
+		return {
+			start,
+			refresh,
+			schedule
+		};
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-notifications.js
 	(function(root) {
 		"use strict";
-		var messaging = root.CrestAppsMessaging;
 		var host = document.querySelector("[data-messaging-notifications]");
-		if (!messaging || !host) return;
+		if (!host) return;
 		var view = {
 			agentId: host.getAttribute("data-agent-id") || null,
 			conversationId: null
@@ -239,11 +154,11 @@
 			toYourQueue: host.getAttribute("data-transferred-to-your-queue-text")
 		};
 		var toastDelayMs = 8e3;
-		var recent = messaging.createRecentNotifications(5e3);
-		var badge = messaging.createAttentionBadge(host.getAttribute("data-attention-url"));
+		var recent = createRecentNotifications(5e3);
+		var badge = createAttentionBadge(host.getAttribute("data-attention-url"));
 		function conversationHref(conversationId) {
 			if (!conversationId || !conversationUrlTemplate) return null;
-			return messaging.sameOriginUrl(conversationUrlTemplate.replace("__ID__", encodeURIComponent(conversationId)), root.location.href);
+			return sameOriginUrl(conversationUrlTemplate.replace("__ID__", encodeURIComponent(conversationId)), root.location.href);
 		}
 		function showToast(title, body, href) {
 			var container = document.querySelector("[data-messaging-toast-container]");
@@ -312,14 +227,14 @@
 		}
 		function onInbound(notification) {
 			badge.schedule();
-			if (!notification || !recent.isNew(messaging.notificationKey("inbound", notification))) return;
-			showToast(notification.contactAddress ? messaging.formatText(newMessageFromText, [notification.contactAddress]) : newMessageText, notification.preview || "", conversationHref(notification.conversationId));
+			if (!notification || !recent.isNew(notificationKey("inbound", notification))) return;
+			showToast(notification.contactAddress ? formatText(newMessageFromText, [notification.contactAddress]) : newMessageText, notification.preview || "", conversationHref(notification.conversationId));
 		}
 		function onAssigned(notification) {
 			badge.schedule();
-			var kind = messaging.classifyAssignment(notification, view);
-			if (kind !== "to-me" && kind !== "to-queue" || !recent.isNew(messaging.notificationKey(kind, notification))) return;
-			showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), "", conversationHref(notification.conversationId));
+			var kind = classifyAssignment(notification, view);
+			if (kind !== "to-me" && kind !== "to-queue" || !recent.isNew(notificationKey(kind, notification))) return;
+			showToast(assignmentToastTitle(kind, notification, transferTexts), "", conversationHref(notification.conversationId));
 		}
 		badge.start();
 		if (!root.signalR || !hubUrl) return;

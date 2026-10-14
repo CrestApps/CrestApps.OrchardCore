@@ -2,22 +2,13 @@
   {
     "action": "vite",
     "name": "messaging-workspace.js",
-    "source": [
-      "Assets/js/shared/messaging-state.js",
-      "Assets/js/shared/messaging-attention-badge.js",
-      "Assets/js/shared/messaging-attachments.js",
-      "Assets/js/messaging-workspace.js"
-    ],
+    "source": "Assets/js/messaging-workspace.js",
     "dest": "wwwroot/scripts/messaging-workspace.js"
   },
   {
     "action": "vite",
     "name": "messaging-notifications.js",
-    "source": [
-      "Assets/js/shared/messaging-state.js",
-      "Assets/js/shared/messaging-attention-badge.js",
-      "Assets/js/messaging-notifications.js"
-    ],
+    "source": "Assets/js/messaging-notifications.js",
     "dest": "wwwroot/scripts/messaging-notifications.js"
   },
   {

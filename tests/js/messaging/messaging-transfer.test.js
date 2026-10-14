@@ -1,9 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
-
-const { assignmentToastTitle, classifyAssignment, formatText, transferTargetInputName } = globalThis.CrestAppsMessaging;
+import {
+    assignmentToastTitle,
+    classifyAssignment,
+    formatText,
+    transferTargetInputName,
+} from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
 
 // A transfer reaches the recipient, the queue whose pool it went to, and whoever held it before. Each of them is told
 // something different, and the person who made the transfer is told nothing: they already know.
@@ -107,7 +110,7 @@ describe('assignmentToastTitle', () => {
         'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-notifications.js',
         'src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-workspace.js',
     ])('is what %s titles its transfer toasts with', path => {
-        expect(readFileSync(path, 'utf8')).toContain('messaging.assignmentToastTitle(kind, notification, transferTexts)');
+        expect(readFileSync(path, 'utf8')).toContain('assignmentToastTitle(kind, notification, transferTexts)');
     });
 });
 

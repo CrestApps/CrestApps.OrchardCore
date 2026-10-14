@@ -5,13 +5,38 @@
  * for the same customer on another channel badges that channel's tab; any message reorders the customer list. A light
  * poll backs the connection up, and the connection doubles as the agent's presence heartbeat.
  */
+import {
+    assignmentToastTitle,
+    classifyAssignment,
+    classifyInbound,
+    createRecentNotifications,
+    isThreadInView,
+    maxTicks,
+    notificationKey,
+    rowMatchesFilter,
+    sameOriginUrl,
+    selectNewBubbles,
+    tabBadgeCount,
+    transferTargetInputName,
+    unseenInboundCount,
+} from './shared/messaging-state.js';
+import { createAttentionBadge } from './shared/messaging-attention-badge.js';
+import {
+    findAttachmentFormat,
+    fitDimensions,
+    needsShrinking,
+    perFileBudget,
+    planAttachments,
+    shrinkSteps,
+    totalAttachmentSize,
+} from './shared/messaging-attachments.js';
+
 (function (root) {
     'use strict';
 
-    var messaging = root.CrestAppsMessaging;
     var workspace = document.querySelector('[data-messaging-workspace]');
 
-    if (!messaging || !workspace) {
+    if (!workspace) {
         return;
     }
 
@@ -39,10 +64,10 @@
 
     // The same event can reach the page through two of the agent's groups (a transfer goes to the recipient and to the
     // queue they serve); it is announced once. The list and the thread still catch up on every copy.
-    var recent = messaging.createRecentNotifications(5000);
+    var recent = createRecentNotifications(5000);
 
     // The count on the Messaging menu item, which this page carries like every admin page.
-    var attentionBadge = messaging.createAttentionBadge(workspace.getAttribute('data-attention-url'));
+    var attentionBadge = createAttentionBadge(workspace.getAttribute('data-attention-url'));
 
     var list = workspace.querySelector('[data-inbox-list]');
     var search = workspace.querySelector('[data-inbox-search]');
@@ -64,7 +89,7 @@
         var visible = 0;
 
         rows.forEach(function (row) {
-            var match = messaging.rowMatchesFilter(row.getAttribute('data-filter-value') + ' ' + row.textContent, term);
+            var match = rowMatchesFilter(row.getAttribute('data-filter-value') + ' ' + row.textContent, term);
 
             row.classList.toggle('d-none', !match);
 
@@ -78,7 +103,7 @@
             var favoritesVisible = 0;
 
             favorites.querySelectorAll('[data-favorite-key]').forEach(function (favorite) {
-                var match = messaging.rowMatchesFilter(favorite.getAttribute('data-filter-value') + ' ' + favorite.textContent, term);
+                var match = rowMatchesFilter(favorite.getAttribute('data-filter-value') + ' ' + favorite.textContent, term);
 
                 favorite.classList.toggle('d-none', !match);
 
@@ -223,11 +248,11 @@
 
         pulling = true;
 
-        var after = messaging.maxTicks(bubblesOnScreen().map(function (bubble) { return bubble.ticks; }));
+        var after = maxTicks(bubblesOnScreen().map(function (bubble) { return bubble.ticks; }));
 
         // Only a thread in front of the agent is read by the poll. One in a background tab, or scrolled up, keeps its
         // new messages unread until the agent is back at the bottom of it.
-        var seen = messaging.isThreadInView(document.hidden, isPinnedToBottom());
+        var seen = isThreadInView(document.hidden, isPinnedToBottom());
         var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + after + '&seen=' + seen;
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
@@ -239,7 +264,7 @@
                 holder.innerHTML = html;
 
                 var incomingNodes = Array.prototype.slice.call(holder.querySelectorAll('.messaging-message'));
-                var fresh = messaging.selectNewBubbles(bubblesOnScreen(), incomingNodes.map(function (node) {
+                var fresh = selectNewBubbles(bubblesOnScreen(), incomingNodes.map(function (node) {
                     return {
                         id: node.getAttribute('data-message-id'),
                         ticks: node.getAttribute('data-created-ticks'),
@@ -260,7 +285,7 @@
 
                 if (pinned) { scrollToBottom(); }
 
-                var added = messaging.unseenInboundCount(fresh, seen);
+                var added = unseenInboundCount(fresh, seen);
 
                 if (added > 0) {
                     setActiveTabBadge(unseen + added);
@@ -421,10 +446,10 @@
         if (!fileInput) { return; }
 
         var maxCount = parseInt(composerText('data-max-media-count'), 10) || 0;
-        var plan = messaging.planAttachments(pending.length, files, maxCount, attachmentFormats);
+        var plan = planAttachments(pending.length, files, maxCount, attachmentFormats);
 
         plan.accepted.forEach(function (file) {
-            var format = messaging.findAttachmentFormat(file, attachmentFormats);
+            var format = findAttachmentFormat(file, attachmentFormats);
 
             pending.push({ file: file, format: format, url: format && format.isImage ? URL.createObjectURL(file) : null });
         });
@@ -454,7 +479,7 @@
     }
 
     function toJpeg(image, step) {
-        var size = messaging.fitDimensions(image.naturalWidth, image.naturalHeight, step.maxEdge);
+        var size = fitDimensions(image.naturalWidth, image.naturalHeight, step.maxEdge);
         var canvas = document.createElement('canvas');
 
         canvas.width = size.width;
@@ -477,12 +502,12 @@
     function fit(item, budget, shrinkImages) {
         var file = item.file;
 
-        if (!messaging.needsShrinking(file, budget, item.format, shrinkImages)) {
+        if (!needsShrinking(file, budget, item.format, shrinkImages)) {
             return Promise.resolve(file);
         }
 
         return loadImage(file).then(function (image) {
-            var steps = messaging.shrinkSteps();
+            var steps = shrinkSteps();
 
             function attempt(index) {
                 if (index >= steps.length) { return null; }
@@ -589,7 +614,7 @@
 
             var maxBytes = parseInt(composerText('data-max-media-bytes'), 10) || 0;
             var shrinkImages = composerText('data-shrink-images') === 'true';
-            var budget = messaging.perFileBudget(maxBytes, pending.length);
+            var budget = perFileBudget(maxBytes, pending.length);
 
             Promise.all(pending.map(function (item) {
                 return fit(item, budget, shrinkImages).catch(function () { return null; }).then(function (fitted) {
@@ -597,7 +622,7 @@
                 });
             })).then(function (results) {
                 var failed = results.filter(function (result) { return !result.fitted; });
-                var total = messaging.totalAttachmentSize(results.map(function (result) { return result.fitted; }));
+                var total = totalAttachmentSize(results.map(function (result) { return result.fitted; }));
 
                 if (failed.length > 0 || (maxBytes > 0 && total > maxBytes)) {
                     // Name the file that did not fit, or else the largest one.
@@ -693,7 +718,7 @@
         transferForm.addEventListener('submit', function (event) {
             // The picker posts its selection under the field's name: a select today, hidden inputs before it was built
             // on bootstrap-select. Looking only for a hidden input refused every transfer once the picker changed.
-            var inputName = messaging.transferTargetInputName(transferType());
+            var inputName = transferTargetInputName(transferType());
             var chosen = transferForm.querySelector('[name="' + inputName + '"]');
 
             if (!chosen || !chosen.value) {
@@ -736,7 +761,7 @@
         // textContent (not innerHTML) so message content can never inject markup.
         bodyElement.textContent = body || '';
 
-        var safeHref = messaging.sameOriginUrl(href, root.location.href);
+        var safeHref = sameOriginUrl(href, root.location.href);
 
         if (safeHref) {
             var link = document.createElement('a');
@@ -763,17 +788,17 @@
     // ---- Real time ---------------------------------------------------------------------------------------------
 
     function onInbound(notification) {
-        switch (messaging.classifyInbound(notification, view)) {
+        switch (classifyInbound(notification, view)) {
             case 'thread':
                 pullThread();
                 break;
 
             case 'tab':
-                badgeTab(notification.channel, messaging.tabBadgeCount(notification));
+                badgeTab(notification.channel, tabBadgeCount(notification));
                 break;
 
             default:
-                if (recent.isNew(messaging.notificationKey('inbound', notification))) {
+                if (recent.isNew(notificationKey('inbound', notification))) {
                     showToast(
                         notification && notification.contactAddress ? newMessageText + ' — ' + notification.contactAddress : newMessageText,
                         notification ? notification.preview : '',
@@ -796,17 +821,17 @@
 
     // A conversation changed hands: the list always catches up, and a transfer also says who moved it where.
     function onAssigned(notification) {
-        var kind = messaging.classifyAssignment(notification, view);
-        var announce = kind !== 'refresh' && recent.isNew(messaging.notificationKey(kind, notification));
+        var kind = classifyAssignment(notification, view);
+        var announce = kind !== 'refresh' && recent.isNew(notificationKey(kind, notification));
 
         switch (announce ? kind : 'refresh') {
             case 'to-me':
             case 'to-queue':
-                showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
+                showToast(assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
                 break;
 
             case 'away':
-                showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), '', null);
+                showToast(assignmentToastTitle(kind, notification, transferTexts), '', null);
                 break;
         }
 
