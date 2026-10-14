@@ -2,7 +2,7 @@
 
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/MikeAlhayek)
 
-**Enterprise-grade modules for Orchard Core, built to solve hard business problems.**
+![CrestApps: enterprise-grade modules for Orchard Core, covering AI, omnichannel engagement, contact center, CRM, commerce, reporting, and more](.github/images/readme-hero.webp)
 
 `CrestApps.OrchardCore` is a suite of modules and extensions that extends the Orchard Core framework with production-ready capabilities for building modern, enterprise applications. Each module targets a problem that real organizations face at scale, such as AI orchestration, omnichannel customer engagement, contact center operations, commerce, and multi-tenant administration, and solves it with the reliability, security, and extensibility that enterprise software demands.
 
@@ -22,9 +22,11 @@ At CrestApps, our focus is building enterprise-level solutions on top of Orchard
 | --- | --- |
 | **Artificial Intelligence** | AI chat and agents, retrieval-augmented generation over documents, data sources, and web crawlers, long-term memory, prompt management, MCP and A2A, with OpenAI, Azure OpenAI, Azure AI Inference, Ollama, and more |
 | **Omnichannel Engagement** | Unified messaging across SMS and voice, with AI-assisted conversations, automated follow-ups, and business hours |
+| **CRM** | Contacts, leads, accounts, and opportunities with pipeline stages, imports, and activity tracking tied to every conversation |
 | **Contact Center** | Queues and routing, outbound dialer, soft phone, supervision, call recording, dispositions, and reporting, with Telnyx, Asterisk, and Azure telephony providers |
 | **Commerce** | Products, carts, checkout, orders, subscriptions, installment plans, taxation, receipts, and Stripe payments |
-| **Platform and Administration** | Tenant hierarchy, users and roles, content access control, content import and export, reports, recipes, wizards, and time zones |
+| **Reporting** | Operational and business reports with filtering and OpenXML (Excel) export |
+| **Platform and Administration** | Tenant hierarchy, users and roles, content access control, content import and export, recipes, wizards, and time zones |
 
 ## Documentation
 
