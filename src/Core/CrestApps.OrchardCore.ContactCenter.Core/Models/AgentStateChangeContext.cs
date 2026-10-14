@@ -63,4 +63,12 @@ public sealed class AgentStateChangeContext
     /// an agent on a break switches to a break with a different reason.
     /// </summary>
     public bool RecordWhenUnchanged { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether an agent returning to Available keeps their place in the longest-idle
+    /// line, because the offer or dial that took them out of it never reached them: the caller hung up while it rang,
+    /// the dial was suppressed, or nobody answered before the agent was joined. Without it, an agent coming back from
+    /// a reservation or a call starts a fresh idle clock and goes to the back of the line.
+    /// </summary>
+    public bool KeepsIdlePlace { get; set; }
 }

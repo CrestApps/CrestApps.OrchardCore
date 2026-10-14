@@ -248,6 +248,10 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
                     InteractionId = interaction.ItemId,
                     ReservationId = releasedReservationId,
                     ChangedUtc = endedUtc,
+
+                    // The call ended before it reached the agent -- it rang out, was busy, a machine answered, or the
+                    // customer hung up while the agent was being joined -- so the agent keeps their place in line.
+                    KeepsIdlePlace = true,
                 }, cancellationToken);
 
                 await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);

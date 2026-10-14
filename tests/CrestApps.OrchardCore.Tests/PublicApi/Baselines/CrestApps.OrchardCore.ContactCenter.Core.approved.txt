@@ -809,6 +809,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string AgentSessionId { get; set; }
         public System.DateTime? ChangedUtc { get; set; }
         public string InteractionId { get; set; }
+        public bool KeepsIdlePlace { get; set; }
         public string ReasonCodeId { get; set; }
         public string ReasonName { get; set; }
         public bool RecordWhenUnchanged { get; set; }

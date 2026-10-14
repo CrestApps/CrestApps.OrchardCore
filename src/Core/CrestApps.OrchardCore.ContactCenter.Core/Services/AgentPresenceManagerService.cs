@@ -131,8 +131,6 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             AgentSessionId = await FindAgentSessionIdAsync(userId, cancellationToken),
         }, cancellationToken);
 
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
-
         await SaveAsync(profile, cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, actor, change, cancellationToken);
@@ -304,8 +302,6 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             ChangedUtc = context?.ChangedUtc,
         }, cancellationToken);
 
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
-
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentSignedOut, profile, previousStatus, actor, change, cancellationToken);
@@ -391,8 +387,6 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             AgentSessionId = context?.AgentSessionId,
             ChangedUtc = context?.ChangedUtc,
         }, cancellationToken);
-
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
@@ -509,8 +503,6 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
             AgentSessionId = context?.AgentSessionId ?? await FindAgentSessionIdAsync(userId, cancellationToken),
             RecordWhenUnchanged = !deferred && reasonChanged,
         }, cancellationToken);
-
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);

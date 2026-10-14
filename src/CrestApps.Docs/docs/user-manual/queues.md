@@ -59,7 +59,7 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 | Field | What it does |
 | --- | --- |
 | **Default priority** | Lowest, Low, **Normal**, High or Highest. Higher-priority items are offered first. |
-| **Routing strategy** | How the next agent is chosen: **Longest idle** (the agent who has been available the longest, the default), **Round robin** (the agent who least recently got work), or **Least busy** (the agent with the fewest active interactions). |
+| **Routing strategy** | How the next agent is chosen: **Longest idle** (the agent who has been available the longest, the default), **Round robin** (the agent who least recently got work), or **Least busy** (the agent with the fewest active interactions). With longest idle, an agent who finishes a call goes to the back of the line. An agent whose offer or dialed call never reached them (the caller hung up, or nobody answered the dial) keeps their place. An agent who declines an offer or lets it ring out goes to the back. Campaigns always pick agents by longest idle. |
 | **Prefer the last assigned agent (sticky)** | When a returning customer's previous agent is available and eligible, offer them the work first. |
 | **Reservation timeout (seconds)** | How long an offer rings for one agent before the unanswered-offer action applies. Default 30. |
 | **Unanswered offer action** | **Requeue** (offer it to the next agent, the default), **Send to voicemail**, or **Reject call** (end the call). |
