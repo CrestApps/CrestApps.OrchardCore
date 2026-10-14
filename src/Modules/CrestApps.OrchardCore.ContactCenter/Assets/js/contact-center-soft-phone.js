@@ -2,6 +2,16 @@
  * Keeps the Contact Center soft-phone tab and inbound-offer recovery on the real-time hub so queue
  * sign-in/sign-out do not reload the page and a reconnect restores only the still-valid offer.
  */
+import {
+    breakChoiceLabel,
+    isOwnOfferNotification,
+    isOwnPresence,
+    normalizePresenceStatus,
+    pendingPresenceLabel,
+    presenceLabel,
+} from './shared/agent-presence.js';
+import { supervisorMessageHtml } from './shared/supervisor-actions.js';
+
 (function (window, document) {
     'use strict';
 
@@ -11,7 +21,6 @@
     var CAMPAIGN_QUEUE_PREFIX = '__campaign-queue__';
 
     // How the agent's presence reads (see shared/agent-presence.js, concatenated ahead of this file).
-    var presence = window.CrestAppsContactCenter || {};
 
     // The user this page belongs to, from the hub snapshot. A supervisor's connection also receives every other
     // agent's presence changes, and only this agent's own may relabel the header.
@@ -141,15 +150,15 @@
         var labels = readPresenceLabels(container);
         var text = container.querySelector('[data-contact-center-presence-text]');
         var pending = container.querySelector('[data-contact-center-pending-presence]');
-        var pendingText = presence.pendingPresenceLabel ? presence.pendingPresenceLabel(current, labels) : '';
+        var pendingText = pendingPresenceLabel ? pendingPresenceLabel(current, labels) : '';
 
         if (text) {
-            text.textContent = presence.presenceLabel ? presence.presenceLabel(current, labels) : current.status;
+            text.textContent = presenceLabel ? presenceLabel(current, labels) : current.status;
         }
 
         // The break choice starts a break now, or only requests one while the agent's work holds them.
-        if (presence.breakChoiceLabel) {
-            var breakChoice = presence.breakChoiceLabel(current, labels);
+        if (breakChoiceLabel) {
+            var breakChoice = breakChoiceLabel(current, labels);
 
             Array.prototype.forEach.call(container.querySelectorAll('[data-contact-center-break-choice]'), function (element) {
                 element.textContent = breakChoice;
@@ -287,8 +296,8 @@
         var snapshot = root.__contactCenterMembershipSnapshot || {};
 
         if (presenceStatus !== undefined && presenceStatus !== null && presenceStatus !== '') {
-            root.__contactCenterPresenceStatus = presence.normalizePresenceStatus
-                ? presence.normalizePresenceStatus(presenceStatus)
+            root.__contactCenterPresenceStatus = normalizePresenceStatus
+                ? normalizePresenceStatus(presenceStatus)
                 : presenceStatus;
         }
 
@@ -639,11 +648,11 @@
     }
 
     function showSupervisorMessage(root, notification) {
-        if (!notification || typeof presence.supervisorMessageHtml !== 'function') {
+        if (!notification || typeof supervisorMessageHtml !== 'function') {
             return;
         }
 
-        var html = presence.supervisorMessageHtml(notification, {
+        var html = supervisorMessageHtml(notification, {
             messageFrom: root.getAttribute('data-contact-center-message-from'),
             messageFromSupervisor: root.getAttribute('data-contact-center-message-from-supervisor'),
             dismiss: root.getAttribute('data-contact-center-message-dismiss')
@@ -712,7 +721,7 @@
             // Available after the activity is dispositioned) on the soft phone in real time, not just when the
             // agent changes their own status.
             client.connection.on('PresenceChanged', function (notification) {
-                if (!notification || (presence.isOwnPresence && !presence.isOwnPresence(notification, ownUserId))) {
+                if (!notification || (isOwnPresence && !isOwnPresence(notification, ownUserId))) {
                     return;
                 }
 
@@ -737,7 +746,7 @@
                 // Another agent's offer, sent here for the queue's or a supervisor's view: nothing on this phone is about
                 // it. Acting on it armed this phone to answer the accepted offer's leg, and the next call to reach it --
                 // that agent calling this one's extension -- was answered by itself.
-                if (presence.isOwnOfferNotification && !presence.isOwnOfferNotification(notification, ownUserId)) {
+                if (isOwnOfferNotification && !isOwnOfferNotification(notification, ownUserId)) {
                     return;
                 }
 
