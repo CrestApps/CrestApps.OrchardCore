@@ -59,6 +59,34 @@ public sealed class OmnichannelWithoutContactCenterActivationTests
         Assert.IsType<BusinessHoursGate>(gate);
     }
 
+    [Fact]
+    public async Task WithBusinessHoursAlone_CalendarsAreRead_FromTheContactCenterCollection()
+    {
+        // Arrange
+        // Calendars live in the Contact Center storage collection, which only the base feature registered. Pulled in
+        // without it (Omnichannel Activities depends on it alone), the calendar list answered 500: the collection's
+        // document table did not exist.
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(Profile(
+            "business-hours-alone",
+            OmnichannelConstants.Features.Crm,
+            ContactCenterConstants.Feature.BusinessHours));
+
+        // Act
+        var (contactCenterEnabled, calendars) = await host.ExecuteInTenantScopeAsync(tenant, async services =>
+        {
+            var enabled = await services.GetRequiredService<IShellFeaturesManager>().GetEnabledFeaturesAsync();
+
+            return (
+                enabled.Any(feature => feature.Id == ContactCenterConstants.Feature.Area),
+                await services.GetRequiredService<IBusinessHoursCalendarStore>().GetEnabledAsync());
+        });
+
+        // Assert
+        Assert.False(contactCenterEnabled);
+        Assert.Empty(calendars);
+    }
+
     private static ContactCenterTenantProfile Profile(string id, params string[] features)
         => new()
         {
