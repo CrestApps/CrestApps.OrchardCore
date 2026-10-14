@@ -48,7 +48,16 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
     private const int MaxRunDurationMilliseconds = 90_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => RunAsync(serviceProvider, cancellationToken);
+
+    /// <summary>
+    /// Makes one reservation-and-assignment pass. The scheduled sweep runs it once a minute; the tenant also runs it
+    /// once shortly after it starts, so the callers left waiting by a restart are not left for the next tick.
+    /// </summary>
+    /// <param name="serviceProvider">The service provider of the scope the pass runs in.</param>
+    /// <param name="cancellationToken">The token that stops the pass.</param>
+    internal static async Task RunAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Queues);

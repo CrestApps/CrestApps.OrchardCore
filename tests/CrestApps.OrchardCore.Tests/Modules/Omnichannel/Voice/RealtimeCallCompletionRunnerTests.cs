@@ -33,6 +33,7 @@ public sealed class RealtimeCallCompletionRunnerTests
                 throw new InvalidOperationException("SQLite Error 5: 'database is locked'.");
             })),
             new ShellSettings { Name = "Default" },
+            new FakeAIVoiceCallShutdown(),
             logger);
 
         // Act

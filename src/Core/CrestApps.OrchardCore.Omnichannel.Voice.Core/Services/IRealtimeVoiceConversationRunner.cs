@@ -166,6 +166,21 @@ public sealed class RealtimeVoiceConversationContext
     public bool SessionLost { get; set; }
 
     /// <summary>
+    /// Gets or sets the token that fires when this node begins to shut down.
+    /// </summary>
+    /// <remarks>
+    /// The conversation runs in this process, so it cannot outlive it. When the token fires the session is ended
+    /// and reported lost, which hands the caller on the way a lost session always does, rather than leaving them
+    /// on a line that falls silent when the process exits.
+    /// </remarks>
+    public CancellationToken NodeStopping { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the session was ended because this node is shutting down.
+    /// </summary>
+    public bool EndedByShutdown { get; set; }
+
+    /// <summary>
     /// Gets or sets what the session measures from its audio for the usage report: started once the live session
     /// is holding the call, and stopped when it ends.
     /// </summary>

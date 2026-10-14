@@ -1373,6 +1373,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 Realtime,
                 SilenceWatchdog,
                 SessionTracker,
+                CallShutdown,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
                 Clock,
@@ -1392,6 +1393,11 @@ public sealed partial class VoiceAgentConversationLoopTests
         public FakeVoiceAgentMediaProvider Media { get; } = new();
 
         public RecordingRealtimeRunner Realtime { get; } = new();
+
+        /// <summary>
+        /// What a node that is shutting down waits on, so a test can see whether the call was held and stop the node.
+        /// </summary>
+        public FakeAIVoiceCallShutdown CallShutdown { get; } = new();
 
         /// <summary>
         /// What the loop measured and handed over to be written as the call's usage summary.
