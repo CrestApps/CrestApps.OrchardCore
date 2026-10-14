@@ -4,595 +4,530 @@
 */
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-flow-model.js
-	(function(root) {
-		"use strict";
-		var ivr = root.CrestAppsIvrMenu = root.CrestAppsIvrMenu || {};
-		var ACTION_KINDS = [
-			"RouteToQueue",
-			"RouteToAgent",
-			"SubMenu",
-			"Voicemail",
-			"ExternalTransfer",
-			"Repeat"
-		];
-		var ENUM_ORDER = [
-			"RouteToQueue",
-			"RouteToAgent",
-			"Voicemail",
-			"ExternalTransfer",
-			"Repeat",
-			"SubMenu"
-		];
-		var TELEPHONE_KEYS = [
-			"1",
-			"2",
-			"3",
-			"4",
-			"5",
-			"6",
-			"7",
-			"8",
-			"9",
-			"*",
-			"0",
-			"#"
-		];
-		var TARGET_TYPES = {
-			RouteToQueue: "queue",
-			RouteToAgent: "agent",
-			SubMenu: "menu",
-			ExternalTransfer: "external"
+	var ACTION_KINDS = [
+		"RouteToQueue",
+		"RouteToAgent",
+		"SubMenu",
+		"Voicemail",
+		"ExternalTransfer",
+		"Repeat"
+	];
+	var ENUM_ORDER = [
+		"RouteToQueue",
+		"RouteToAgent",
+		"Voicemail",
+		"ExternalTransfer",
+		"Repeat",
+		"SubMenu"
+	];
+	var TELEPHONE_KEYS = [
+		"1",
+		"2",
+		"3",
+		"4",
+		"5",
+		"6",
+		"7",
+		"8",
+		"9",
+		"*",
+		"0",
+		"#"
+	];
+	var TARGET_TYPES = {
+		RouteToQueue: "queue",
+		RouteToAgent: "agent",
+		SubMenu: "menu",
+		ExternalTransfer: "external"
+	};
+	var GO_TO_MENU = "GoToMenu";
+	function isObject(value) {
+		return value !== null && typeof value === "object" && !Array.isArray(value);
+	}
+	function read(source, name) {
+		if (!isObject(source)) return;
+		if (Object.prototype.hasOwnProperty.call(source, name)) return source[name];
+		var lower = name.toLowerCase();
+		var keys = Object.keys(source);
+		for (var index = 0; index < keys.length; index++) if (keys[index].toLowerCase() === lower) return source[keys[index]];
+	}
+	function text(value) {
+		return value === null || value === void 0 ? "" : String(value);
+	}
+	function trimmedOrNull(value) {
+		var trimmed = text(value).trim();
+		return trimmed ? trimmed : null;
+	}
+	function promptOrNull(value) {
+		var raw = text(value);
+		return raw.trim() ? raw : null;
+	}
+	function isKnownKind(kind) {
+		return ACTION_KINDS.indexOf(kind) !== -1;
+	}
+	function targetTypeOf(kind) {
+		return TARGET_TYPES[kind] || null;
+	}
+	function normalizeKind(value) {
+		if (value === null || value === void 0 || value === "") return ENUM_ORDER[0];
+		var raw = String(value).trim();
+		if (/^\d+$/.test(raw)) return ENUM_ORDER[Number(raw)] || raw;
+		for (var index = 0; index < ACTION_KINDS.length; index++) if (ACTION_KINDS[index].toLowerCase() === raw.toLowerCase()) return ACTION_KINDS[index];
+		return raw;
+	}
+	function createAction(kind) {
+		return {
+			kind: kind || ACTION_KINDS[0],
+			targetId: ""
 		};
-		var DEFAULT_MAX_RETRIES = 3;
-		var GO_TO_MENU = "GoToMenu";
-		function isObject(value) {
-			return value !== null && typeof value === "object" && !Array.isArray(value);
-		}
-		function read(source, name) {
-			if (!isObject(source)) return;
-			if (Object.prototype.hasOwnProperty.call(source, name)) return source[name];
-			var lower = name.toLowerCase();
-			var keys = Object.keys(source);
-			for (var index = 0; index < keys.length; index++) if (keys[index].toLowerCase() === lower) return source[keys[index]];
-		}
-		function text(value) {
-			return value === null || value === void 0 ? "" : String(value);
-		}
-		function trimmedOrNull(value) {
-			var trimmed = text(value).trim();
-			return trimmed ? trimmed : null;
-		}
-		function promptOrNull(value) {
-			var raw = text(value);
-			return raw.trim() ? raw : null;
-		}
-		function isKnownKind(kind) {
-			return ACTION_KINDS.indexOf(kind) !== -1;
-		}
-		function targetTypeOf(kind) {
-			return TARGET_TYPES[kind] || null;
-		}
-		function needsTarget(kind) {
-			return targetTypeOf(kind) !== null;
-		}
-		function normalizeKind(value) {
-			if (value === null || value === void 0 || value === "") return ENUM_ORDER[0];
-			var raw = String(value).trim();
-			if (/^\d+$/.test(raw)) return ENUM_ORDER[Number(raw)] || raw;
-			for (var index = 0; index < ACTION_KINDS.length; index++) if (ACTION_KINDS[index].toLowerCase() === raw.toLowerCase()) return ACTION_KINDS[index];
-			return raw;
-		}
-		function createAction(kind) {
-			return {
-				kind: kind || ACTION_KINDS[0],
-				targetId: ""
-			};
-		}
-		function createOption(digit) {
-			return {
-				digit: digit || "",
-				action: createAction()
-			};
-		}
-		function createNode(nodeId) {
-			return {
-				nodeId: nodeId || "",
-				prompt: "",
-				promptMediaId: "",
-				options: []
-			};
-		}
-		function createModel() {
-			return {
-				rootNodeId: "",
-				maxRetries: DEFAULT_MAX_RETRIES,
-				fallback: null,
-				nodes: []
-			};
-		}
-		function readAction(source) {
-			if (!isObject(source)) return null;
-			return {
-				kind: normalizeKind(read(source, "Kind")),
-				targetId: text(read(source, "TargetId"))
-			};
-		}
-		function readOption(source) {
-			return {
-				digit: text(read(source, "Digit")),
-				action: readAction(read(source, "Action"))
-			};
-		}
-		function readNode(source) {
-			var options = read(source, "Options");
-			return {
-				nodeId: text(read(source, "NodeId")),
-				prompt: text(read(source, "Prompt")),
-				promptMediaId: text(read(source, "PromptMediaId")),
-				options: Array.isArray(options) ? options.filter(isObject).map(readOption) : []
-			};
-		}
-		function fromFlow(flow) {
-			var model = createModel();
-			if (!isObject(flow)) return model;
-			var retries = read(flow, "MaxRetries");
-			var nodes = read(flow, "Nodes");
-			model.rootNodeId = text(read(flow, "RootNodeId"));
-			model.maxRetries = retries === null || retries === void 0 || retries === "" ? DEFAULT_MAX_RETRIES : Number(retries);
-			model.fallback = readAction(read(flow, "FallbackAction"));
-			model.nodes = Array.isArray(nodes) ? nodes.filter(isObject).map(readNode) : [];
-			return model;
-		}
-		function writeAction(action) {
-			if (!action || !action.kind) return null;
-			return {
-				Kind: action.kind,
-				TargetId: trimmedOrNull(action.targetId)
-			};
-		}
-		function toFlow(model) {
-			if (!model || !Array.isArray(model.nodes) || model.nodes.length === 0) return null;
-			var retries = Number(model.maxRetries);
-			return {
-				RootNodeId: trimmedOrNull(model.rootNodeId),
-				MaxRetries: isFinite(retries) && model.maxRetries !== "" && model.maxRetries !== null ? Math.trunc(retries) : 0,
-				FallbackAction: writeAction(model.fallback),
-				Nodes: model.nodes.map(function(node) {
-					return {
-						NodeId: trimmedOrNull(node.nodeId),
-						Prompt: promptOrNull(node.prompt),
-						PromptMediaId: trimmedOrNull(node.promptMediaId),
-						Options: (node.options || []).map(function(option) {
-							return {
-								Digit: trimmedOrNull(option.digit),
-								Action: writeAction(option.action)
-							};
-						})
-					};
-				})
-			};
-		}
-		function toJson(model) {
-			var flow = toFlow(model);
-			return flow ? JSON.stringify(flow, null, 2) : "";
-		}
-		function parseJson(value) {
-			var raw = text(value).trim();
-			if (!raw) return {
-				ok: true,
-				model: createModel()
-			};
-			var parsed;
-			try {
-				parsed = JSON.parse(raw);
-			} catch (error) {
+	}
+	function createOption(digit) {
+		return {
+			digit: digit || "",
+			action: createAction()
+		};
+	}
+	function createNode(nodeId) {
+		return {
+			nodeId: nodeId || "",
+			prompt: "",
+			promptMediaId: "",
+			options: []
+		};
+	}
+	function createModel() {
+		return {
+			rootNodeId: "",
+			maxRetries: 3,
+			fallback: null,
+			nodes: []
+		};
+	}
+	function readAction(source) {
+		if (!isObject(source)) return null;
+		return {
+			kind: normalizeKind(read(source, "Kind")),
+			targetId: text(read(source, "TargetId"))
+		};
+	}
+	function readOption(source) {
+		return {
+			digit: text(read(source, "Digit")),
+			action: readAction(read(source, "Action"))
+		};
+	}
+	function readNode(source) {
+		var options = read(source, "Options");
+		return {
+			nodeId: text(read(source, "NodeId")),
+			prompt: text(read(source, "Prompt")),
+			promptMediaId: text(read(source, "PromptMediaId")),
+			options: Array.isArray(options) ? options.filter(isObject).map(readOption) : []
+		};
+	}
+	function fromFlow(flow) {
+		var model = createModel();
+		if (!isObject(flow)) return model;
+		var retries = read(flow, "MaxRetries");
+		var nodes = read(flow, "Nodes");
+		model.rootNodeId = text(read(flow, "RootNodeId"));
+		model.maxRetries = retries === null || retries === void 0 || retries === "" ? 3 : Number(retries);
+		model.fallback = readAction(read(flow, "FallbackAction"));
+		model.nodes = Array.isArray(nodes) ? nodes.filter(isObject).map(readNode) : [];
+		return model;
+	}
+	function writeAction(action) {
+		if (!action || !action.kind) return null;
+		return {
+			Kind: action.kind,
+			TargetId: trimmedOrNull(action.targetId)
+		};
+	}
+	function toFlow(model) {
+		if (!model || !Array.isArray(model.nodes) || model.nodes.length === 0) return null;
+		var retries = Number(model.maxRetries);
+		return {
+			RootNodeId: trimmedOrNull(model.rootNodeId),
+			MaxRetries: isFinite(retries) && model.maxRetries !== "" && model.maxRetries !== null ? Math.trunc(retries) : 0,
+			FallbackAction: writeAction(model.fallback),
+			Nodes: model.nodes.map(function(node) {
 				return {
-					ok: false,
-					error: error && error.message ? error.message : String(error)
+					NodeId: trimmedOrNull(node.nodeId),
+					Prompt: promptOrNull(node.prompt),
+					PromptMediaId: trimmedOrNull(node.promptMediaId),
+					Options: (node.options || []).map(function(option) {
+						return {
+							Digit: trimmedOrNull(option.digit),
+							Action: writeAction(option.action)
+						};
+					})
 				};
-			}
-			if (!isObject(parsed)) return {
+			})
+		};
+	}
+	function toJson(model) {
+		var flow = toFlow(model);
+		return flow ? JSON.stringify(flow, null, 2) : "";
+	}
+	function parseJson(value) {
+		var raw = text(value).trim();
+		if (!raw) return {
+			ok: true,
+			model: createModel()
+		};
+		var parsed;
+		try {
+			parsed = JSON.parse(raw);
+		} catch (error) {
+			return {
 				ok: false,
-				error: "notAnObject"
-			};
-			return {
-				ok: true,
-				model: fromFlow(parsed)
+				error: error && error.message ? error.message : String(error)
 			};
 		}
-		function forEachAction(model, callback) {
-			(model.nodes || []).forEach(function(node, nodeIndex) {
-				(node.options || []).forEach(function(option, optionIndex) {
-					callback(option.action, {
-						node: nodeIndex,
-						option: optionIndex
-					}, option);
-				});
+		if (!isObject(parsed)) return {
+			ok: false,
+			error: "notAnObject"
+		};
+		return {
+			ok: true,
+			model: fromFlow(parsed)
+		};
+	}
+	function forEachAction(model, callback) {
+		(model.nodes || []).forEach(function(node, nodeIndex) {
+			(node.options || []).forEach(function(option, optionIndex) {
+				callback(option.action, {
+					node: nodeIndex,
+					option: optionIndex
+				}, option);
 			});
-			if (model.fallback) callback(model.fallback, { fallback: true }, null);
+		});
+		if (model.fallback) callback(model.fallback, { fallback: true }, null);
+	}
+	function reachableNodeIds(model) {
+		var byId = {};
+		var reached = {};
+		(model.nodes || []).forEach(function(node) {
+			var id = text(node.nodeId).trim();
+			if (id && !byId[id]) byId[id] = node;
+		});
+		function visit(id) {
+			if (!id || reached[id] || !byId[id]) return;
+			reached[id] = true;
+			(byId[id].options || []).forEach(function(option) {
+				if (option.action && option.action.kind === "SubMenu") visit(text(option.action.targetId).trim());
+			});
+			if (model.fallback && model.fallback.kind === "SubMenu") visit(text(model.fallback.targetId).trim());
 		}
-		function reachableNodeIds(model) {
-			var byId = {};
-			var reached = {};
-			(model.nodes || []).forEach(function(node) {
-				var id = text(node.nodeId).trim();
-				if (id && !byId[id]) byId[id] = node;
+		visit(text(model.rootNodeId).trim());
+		return Object.keys(reached);
+	}
+	function issue(code, severity, path, params) {
+		return {
+			code,
+			severity,
+			path: path || {},
+			params: params || {}
+		};
+	}
+	function catalogHas(catalog, type, id) {
+		var list = catalog && catalog[type];
+		if (!Array.isArray(list)) return true;
+		return list.some(function(entry) {
+			return entry && String(entry.value) === id;
+		});
+	}
+	function validate(model, catalog) {
+		var issues = [];
+		if (!model || !Array.isArray(model.nodes) || model.nodes.length === 0) return issues;
+		var retries = Number(model.maxRetries);
+		if (model.maxRetries === "" || model.maxRetries === null || !isFinite(retries) || Math.trunc(retries) < 1) issues.push(issue("maxRetriesInvalid", "error", { field: "maxRetries" }));
+		var ids = {};
+		model.nodes.forEach(function(node, nodeIndex) {
+			var id = text(node.nodeId).trim();
+			if (!id) issues.push(issue("nodeIdMissing", "error", {
+				node: nodeIndex,
+				field: "nodeId"
+			}));
+			else if (ids[id]) issues.push(issue("nodeIdDuplicate", "error", {
+				node: nodeIndex,
+				field: "nodeId"
+			}, { nodeId: id }));
+			else ids[id] = true;
+		});
+		var rootId = text(model.rootNodeId).trim();
+		if (!rootId) issues.push(issue("rootMissing", "error", { field: "rootNodeId" }));
+		else if (!ids[rootId]) issues.push(issue("rootNotFound", "error", { field: "rootNodeId" }, { nodeId: rootId }));
+		model.nodes.forEach(function(node, nodeIndex) {
+			var nodeId = text(node.nodeId).trim();
+			if (!text(node.prompt).trim() && !text(node.promptMediaId).trim()) issues.push(issue("promptMissing", "error", {
+				node: nodeIndex,
+				field: "prompt"
+			}, { nodeId }));
+			if (!node.options || node.options.length === 0) issues.push(issue("noOptions", "error", {
+				node: nodeIndex,
+				field: "options"
+			}, { nodeId }));
+			var digits = {};
+			(node.options || []).forEach(function(option, optionIndex) {
+				var digit = text(option.digit).trim();
+				var path = {
+					node: nodeIndex,
+					option: optionIndex,
+					field: "digit"
+				};
+				if (!digit) issues.push(issue("digitMissing", "error", path, { nodeId }));
+				else if (TELEPHONE_KEYS.indexOf(digit) === -1) issues.push(issue("digitInvalid", "error", path, {
+					nodeId,
+					digit
+				}));
+				else if (digits[digit]) issues.push(issue("digitDuplicate", "error", path, {
+					nodeId,
+					digit
+				}));
+				else digits[digit] = true;
+				if (!option.action) issues.push(issue("actionMissing", "error", {
+					node: nodeIndex,
+					option: optionIndex,
+					field: "kind"
+				}, {
+					nodeId,
+					digit
+				}));
 			});
-			function visit(id) {
-				if (!id || reached[id] || !byId[id]) return;
-				reached[id] = true;
-				(byId[id].options || []).forEach(function(option) {
-					if (option.action && option.action.kind === "SubMenu") visit(text(option.action.targetId).trim());
-				});
-				if (model.fallback && model.fallback.kind === "SubMenu") visit(text(model.fallback.targetId).trim());
+		});
+		forEachAction(model, function(action, path, option) {
+			if (!action) return;
+			var params = {
+				nodeId: path.fallback ? "" : text(model.nodes[path.node].nodeId).trim(),
+				digit: option ? text(option.digit).trim() : ""
+			};
+			if (!isKnownKind(action.kind)) {
+				issues.push(issue("kindUnknown", "error", withField(path, "kind"), withParam(params, "kind", action.kind)));
+				return;
 			}
-			visit(text(model.rootNodeId).trim());
-			return Object.keys(reached);
-		}
-		function issue(code, severity, path, params) {
-			return {
-				code,
-				severity,
-				path: path || {},
-				params: params || {}
-			};
-		}
-		function catalogHas(catalog, type, id) {
-			var list = catalog && catalog[type];
-			if (!Array.isArray(list)) return true;
-			return list.some(function(entry) {
-				return entry && String(entry.value) === id;
-			});
-		}
-		function validate(model, catalog) {
-			var issues = [];
-			if (!model || !Array.isArray(model.nodes) || model.nodes.length === 0) return issues;
-			var retries = Number(model.maxRetries);
-			if (model.maxRetries === "" || model.maxRetries === null || !isFinite(retries) || Math.trunc(retries) < 1) issues.push(issue("maxRetriesInvalid", "error", { field: "maxRetries" }));
-			var ids = {};
+			var type = targetTypeOf(action.kind);
+			var targetId = text(action.targetId).trim();
+			if (!type) return;
+			if (!targetId) issues.push(issue("targetMissing", "error", withField(path, "target"), withParam(params, "kind", action.kind)));
+			else if (type === "menu") {
+				if (!ids[targetId]) issues.push(issue("subMenuNotFound", "error", withField(path, "target"), withParam(params, "targetId", targetId)));
+			} else if (!catalogHas(catalog, type, targetId)) issues.push(issue("targetUnknown", "warning", withField(path, "target"), withParam(withParam(params, "targetId", targetId), "kind", action.kind)));
+		});
+		if (rootId && ids[rootId]) {
+			var reached = reachableNodeIds(model);
 			model.nodes.forEach(function(node, nodeIndex) {
 				var id = text(node.nodeId).trim();
-				if (!id) issues.push(issue("nodeIdMissing", "error", {
-					node: nodeIndex,
-					field: "nodeId"
-				}));
-				else if (ids[id]) issues.push(issue("nodeIdDuplicate", "error", {
+				if (id && reached.indexOf(id) === -1) issues.push(issue("unreachable", "warning", {
 					node: nodeIndex,
 					field: "nodeId"
 				}, { nodeId: id }));
-				else ids[id] = true;
 			});
-			var rootId = text(model.rootNodeId).trim();
-			if (!rootId) issues.push(issue("rootMissing", "error", { field: "rootNodeId" }));
-			else if (!ids[rootId]) issues.push(issue("rootNotFound", "error", { field: "rootNodeId" }, { nodeId: rootId }));
-			model.nodes.forEach(function(node, nodeIndex) {
-				var nodeId = text(node.nodeId).trim();
-				if (!text(node.prompt).trim() && !text(node.promptMediaId).trim()) issues.push(issue("promptMissing", "error", {
-					node: nodeIndex,
-					field: "prompt"
-				}, { nodeId }));
-				if (!node.options || node.options.length === 0) issues.push(issue("noOptions", "error", {
-					node: nodeIndex,
-					field: "options"
-				}, { nodeId }));
-				var digits = {};
-				(node.options || []).forEach(function(option, optionIndex) {
-					var digit = text(option.digit).trim();
-					var path = {
-						node: nodeIndex,
-						option: optionIndex,
-						field: "digit"
-					};
-					if (!digit) issues.push(issue("digitMissing", "error", path, { nodeId }));
-					else if (TELEPHONE_KEYS.indexOf(digit) === -1) issues.push(issue("digitInvalid", "error", path, {
-						nodeId,
-						digit
-					}));
-					else if (digits[digit]) issues.push(issue("digitDuplicate", "error", path, {
-						nodeId,
-						digit
-					}));
-					else digits[digit] = true;
-					if (!option.action) issues.push(issue("actionMissing", "error", {
-						node: nodeIndex,
-						option: optionIndex,
-						field: "kind"
-					}, {
-						nodeId,
-						digit
-					}));
-				});
-			});
-			forEachAction(model, function(action, path, option) {
-				if (!action) return;
-				var params = {
-					nodeId: path.fallback ? "" : text(model.nodes[path.node].nodeId).trim(),
-					digit: option ? text(option.digit).trim() : ""
-				};
-				if (!isKnownKind(action.kind)) {
-					issues.push(issue("kindUnknown", "error", withField(path, "kind"), withParam(params, "kind", action.kind)));
-					return;
-				}
-				var type = targetTypeOf(action.kind);
+		}
+		return issues;
+	}
+	function copyOf(source) {
+		var copy = {};
+		Object.keys(source).forEach(function(name) {
+			copy[name] = source[name];
+		});
+		return copy;
+	}
+	function withField(path, field) {
+		var copy = copyOf(path);
+		copy.field = field;
+		return copy;
+	}
+	function withParam(params, key, value) {
+		var copy = copyOf(params);
+		copy[key] = value;
+		return copy;
+	}
+	function suggestNodeId(model) {
+		var used = {};
+		(model.nodes || []).forEach(function(node) {
+			used[text(node.nodeId).trim()] = true;
+		});
+		if (!used.main) return "main";
+		var number = (model.nodes || []).length + 1;
+		while (used["menu-" + number]) number++;
+		return "menu-" + number;
+	}
+	function availableDigits(node, optionIndex) {
+		var taken = {};
+		(node.options || []).forEach(function(option, index) {
+			if (index !== optionIndex) taken[text(option.digit).trim()] = true;
+		});
+		return TELEPHONE_KEYS.filter(function(key) {
+			return !taken[key];
+		});
+	}
+	function nextFreeDigit(node) {
+		return availableDigits(node, -1)[0] || "";
+	}
+	function addNode(model, nodeId) {
+		var node = createNode(nodeId || suggestNodeId(model));
+		node.options.push(createOption("1"));
+		model.nodes.push(node);
+		if (!text(model.rootNodeId).trim()) model.rootNodeId = node.nodeId;
+		return node;
+	}
+	function addOption(node) {
+		var digit = nextFreeDigit(node);
+		if (!digit) return null;
+		var option = createOption(digit);
+		node.options.push(option);
+		return option;
+	}
+	function renameNode(model, nodeIndex, newId) {
+		var node = model.nodes[nodeIndex];
+		var target = text(newId).trim();
+		if (!node || !target) return false;
+		if (model.nodes.some(function(other, index) {
+			return index !== nodeIndex && text(other.nodeId).trim() === target;
+		})) return false;
+		var oldId = text(node.nodeId).trim();
+		node.nodeId = target;
+		if (!oldId || oldId === target) return true;
+		if (text(model.rootNodeId).trim() === oldId) model.rootNodeId = target;
+		forEachAction(model, function(action) {
+			if (action && action.kind === "SubMenu" && text(action.targetId).trim() === oldId) action.targetId = target;
+		});
+		return true;
+	}
+	function editorKindOf(action, ownsMenu) {
+		if (!action || !action.kind) return "";
+		return action.kind === "SubMenu" && !ownsMenu ? GO_TO_MENU : action.kind;
+	}
+	function actionForEditorKind(kind) {
+		return kind === "GoToMenu" ? {
+			kind: "SubMenu",
+			targetId: ""
+		} : createAction(kind);
+	}
+	function setActionKind(action, kind) {
+		if (action.kind !== kind) {
+			action.kind = kind;
+			action.targetId = "";
+		}
+		return action;
+	}
+	function buildMenuTree(model) {
+		var nodes = model && model.nodes || [];
+		var indexById = {};
+		var homes = {};
+		var paths = {};
+		var placed = {};
+		var unused = [];
+		nodes.forEach(function(node, index) {
+			var id = text(node.nodeId).trim();
+			if (id && !Object.prototype.hasOwnProperty.call(indexById, id)) indexById[id] = index;
+		});
+		var rootId = text(model && model.rootNodeId).trim();
+		var rootIndex = Object.prototype.hasOwnProperty.call(indexById, rootId) ? indexById[rootId] : nodes.length ? 0 : void 0;
+		function walk(index, path) {
+			placed[index] = true;
+			if (path) paths[index] = path;
+			(nodes[index].options || []).forEach(function(option, optionIndex) {
+				var action = option && option.action;
+				if (!action || action.kind !== "SubMenu") return;
 				var targetId = text(action.targetId).trim();
-				if (!type) return;
-				if (!targetId) issues.push(issue("targetMissing", "error", withField(path, "target"), withParam(params, "kind", action.kind)));
-				else if (type === "menu") {
-					if (!ids[targetId]) issues.push(issue("subMenuNotFound", "error", withField(path, "target"), withParam(params, "targetId", targetId)));
-				} else if (!catalogHas(catalog, type, targetId)) issues.push(issue("targetUnknown", "warning", withField(path, "target"), withParam(withParam(params, "targetId", targetId), "kind", action.kind)));
+				if (!Object.prototype.hasOwnProperty.call(indexById, targetId)) return;
+				var child = indexById[targetId];
+				if (placed[child]) return;
+				homes[index + ":" + optionIndex] = child;
+				walk(child, path ? path.concat([text(option.digit).trim() || "?"]) : null);
 			});
-			if (rootId && ids[rootId]) {
-				var reached = reachableNodeIds(model);
-				model.nodes.forEach(function(node, nodeIndex) {
-					var id = text(node.nodeId).trim();
-					if (id && reached.indexOf(id) === -1) issues.push(issue("unreachable", "warning", {
-						node: nodeIndex,
-						field: "nodeId"
-					}, { nodeId: id }));
-				});
+		}
+		if (rootIndex !== void 0) walk(rootIndex, []);
+		nodes.forEach(function(node, index) {
+			if (!placed[index]) {
+				unused.push(index);
+				walk(index, null);
 			}
-			return issues;
-		}
-		function copyOf(source) {
-			var copy = {};
-			Object.keys(source).forEach(function(name) {
-				copy[name] = source[name];
-			});
-			return copy;
-		}
-		function withField(path, field) {
-			var copy = copyOf(path);
-			copy.field = field;
-			return copy;
-		}
-		function withParam(params, key, value) {
-			var copy = copyOf(params);
-			copy[key] = value;
-			return copy;
-		}
-		function hasErrors(issues) {
-			return (issues || []).some(function(entry) {
-				return entry.severity === "error";
-			});
-		}
-		function suggestNodeId(model) {
-			var used = {};
-			(model.nodes || []).forEach(function(node) {
-				used[text(node.nodeId).trim()] = true;
-			});
-			if (!used.main) return "main";
-			var number = (model.nodes || []).length + 1;
-			while (used["menu-" + number]) number++;
-			return "menu-" + number;
-		}
-		function availableDigits(node, optionIndex) {
-			var taken = {};
-			(node.options || []).forEach(function(option, index) {
-				if (index !== optionIndex) taken[text(option.digit).trim()] = true;
-			});
-			return TELEPHONE_KEYS.filter(function(key) {
-				return !taken[key];
-			});
-		}
-		function nextFreeDigit(node) {
-			return availableDigits(node, -1)[0] || "";
-		}
-		function addNode(model, nodeId) {
-			var node = createNode(nodeId || suggestNodeId(model));
-			node.options.push(createOption("1"));
-			model.nodes.push(node);
-			if (!text(model.rootNodeId).trim()) model.rootNodeId = node.nodeId;
-			return node;
-		}
-		function addOption(node) {
-			var digit = nextFreeDigit(node);
-			if (!digit) return null;
-			var option = createOption(digit);
-			node.options.push(option);
-			return option;
-		}
-		function countReferences(model, nodeId) {
-			var id = text(nodeId).trim();
-			var count = 0;
-			if (!id) return 0;
-			forEachAction(model, function(action) {
-				if (action && action.kind === "SubMenu" && text(action.targetId).trim() === id) count++;
-			});
-			return count;
-		}
-		function renameNode(model, nodeIndex, newId) {
-			var node = model.nodes[nodeIndex];
-			var target = text(newId).trim();
-			if (!node || !target) return false;
-			if (model.nodes.some(function(other, index) {
-				return index !== nodeIndex && text(other.nodeId).trim() === target;
-			})) return false;
-			var oldId = text(node.nodeId).trim();
-			node.nodeId = target;
-			if (!oldId || oldId === target) return true;
-			if (text(model.rootNodeId).trim() === oldId) model.rootNodeId = target;
-			forEachAction(model, function(action) {
-				if (action && action.kind === "SubMenu" && text(action.targetId).trim() === oldId) action.targetId = target;
-			});
-			return true;
-		}
-		function removeNode(model, nodeIndex) {
-			var node = model.nodes[nodeIndex];
-			if (!node) return;
-			model.nodes.splice(nodeIndex, 1);
-			if (text(model.rootNodeId).trim() === text(node.nodeId).trim()) model.rootNodeId = model.nodes.length ? model.nodes[0].nodeId : "";
-		}
-		function editorKindOf(action, ownsMenu) {
-			if (!action || !action.kind) return "";
-			return action.kind === "SubMenu" && !ownsMenu ? GO_TO_MENU : action.kind;
-		}
-		function actionForEditorKind(kind) {
-			return kind === GO_TO_MENU ? {
-				kind: "SubMenu",
-				targetId: ""
-			} : createAction(kind);
-		}
-		function setActionKind(action, kind) {
-			if (action.kind !== kind) {
-				action.kind = kind;
-				action.targetId = "";
+		});
+		return {
+			rootIndex,
+			paths,
+			unused,
+			childOf: function(nodeIndex, optionIndex) {
+				return homes[nodeIndex + ":" + optionIndex];
+			},
+			indexOf: function(nodeId) {
+				var id = text(nodeId).trim();
+				return Object.prototype.hasOwnProperty.call(indexById, id) ? indexById[id] : void 0;
 			}
-			return action;
-		}
-		function buildMenuTree(model) {
-			var nodes = model && model.nodes || [];
-			var indexById = {};
-			var homes = {};
-			var paths = {};
-			var placed = {};
-			var unused = [];
-			nodes.forEach(function(node, index) {
-				var id = text(node.nodeId).trim();
-				if (id && !Object.prototype.hasOwnProperty.call(indexById, id)) indexById[id] = index;
+		};
+	}
+	function addSubMenu(model, nodeIndex, optionIndex) {
+		var option = model.nodes[nodeIndex] && model.nodes[nodeIndex].options[optionIndex];
+		if (!option) return null;
+		var node = addNode(model);
+		option.action = {
+			kind: "SubMenu",
+			targetId: node.nodeId
+		};
+		return node;
+	}
+	function removeSubMenu(model, nodeIndex) {
+		var tree = buildMenuTree(model);
+		if (!model.nodes[nodeIndex] || nodeIndex === tree.rootIndex) return;
+		var doomed = {};
+		(function collect(index) {
+			doomed[index] = true;
+			(model.nodes[index].options || []).forEach(function(option, optionIndex) {
+				var child = tree.childOf(index, optionIndex);
+				if (child !== void 0 && !doomed[child]) collect(child);
 			});
-			var rootId = text(model && model.rootNodeId).trim();
-			var rootIndex = Object.prototype.hasOwnProperty.call(indexById, rootId) ? indexById[rootId] : nodes.length ? 0 : void 0;
-			function walk(index, path) {
-				placed[index] = true;
-				if (path) paths[index] = path;
-				(nodes[index].options || []).forEach(function(option, optionIndex) {
-					var action = option && option.action;
-					if (!action || action.kind !== "SubMenu") return;
-					var targetId = text(action.targetId).trim();
-					if (!Object.prototype.hasOwnProperty.call(indexById, targetId)) return;
-					var child = indexById[targetId];
-					if (placed[child]) return;
-					homes[index + ":" + optionIndex] = child;
-					walk(child, path ? path.concat([text(option.digit).trim() || "?"]) : null);
-				});
-			}
-			if (rootIndex !== void 0) walk(rootIndex, []);
-			nodes.forEach(function(node, index) {
-				if (!placed[index]) {
-					unused.push(index);
-					walk(index, null);
-				}
+		})(nodeIndex);
+		var removedIds = {};
+		Object.keys(doomed).forEach(function(index) {
+			removedIds[text(model.nodes[index].nodeId).trim()] = true;
+		});
+		model.nodes = model.nodes.filter(function(node, index) {
+			return !doomed[index];
+		});
+		model.nodes.forEach(function(node) {
+			(node.options || []).forEach(function(option) {
+				if (option.action && option.action.kind === "SubMenu" && removedIds[text(option.action.targetId).trim()]) option.action = null;
 			});
-			return {
-				rootIndex,
-				paths,
-				unused,
-				childOf: function(nodeIndex, optionIndex) {
-					return homes[nodeIndex + ":" + optionIndex];
-				},
-				indexOf: function(nodeId) {
-					var id = text(nodeId).trim();
-					return Object.prototype.hasOwnProperty.call(indexById, id) ? indexById[id] : void 0;
-				}
-			};
+		});
+		if (model.fallback && model.fallback.kind === "SubMenu" && removedIds[text(model.fallback.targetId).trim()]) model.fallback = null;
+	}
+	function checkJsonForEditor(value, catalog) {
+		var parsed = parseJson(value);
+		if (!parsed.ok) return {
+			ok: false,
+			parseError: parsed.error,
+			model: null,
+			errors: [],
+			warnings: []
+		};
+		var issues = validate(parsed.model, catalog || {});
+		var errors = issues.filter(function(entry) {
+			return entry.severity === "error";
+		});
+		return {
+			ok: errors.length === 0,
+			parseError: null,
+			model: parsed.model,
+			errors,
+			warnings: issues.filter(function(entry) {
+				return entry.severity !== "error";
+			})
+		};
+	}
+	function formatJson(value) {
+		try {
+			return JSON.stringify(JSON.parse(text(value)), null, 2);
+		} catch (error) {
+			return value;
 		}
-		function addSubMenu(model, nodeIndex, optionIndex) {
-			var option = model.nodes[nodeIndex] && model.nodes[nodeIndex].options[optionIndex];
-			if (!option) return null;
-			var node = addNode(model);
-			option.action = {
-				kind: "SubMenu",
-				targetId: node.nodeId
-			};
-			return node;
-		}
-		function removeSubMenu(model, nodeIndex) {
-			var tree = buildMenuTree(model);
-			if (!model.nodes[nodeIndex] || nodeIndex === tree.rootIndex) return;
-			var doomed = {};
-			(function collect(index) {
-				doomed[index] = true;
-				(model.nodes[index].options || []).forEach(function(option, optionIndex) {
-					var child = tree.childOf(index, optionIndex);
-					if (child !== void 0 && !doomed[child]) collect(child);
-				});
-			})(nodeIndex);
-			var removedIds = {};
-			Object.keys(doomed).forEach(function(index) {
-				removedIds[text(model.nodes[index].nodeId).trim()] = true;
-			});
-			model.nodes = model.nodes.filter(function(node, index) {
-				return !doomed[index];
-			});
-			model.nodes.forEach(function(node) {
-				(node.options || []).forEach(function(option) {
-					if (option.action && option.action.kind === "SubMenu" && removedIds[text(option.action.targetId).trim()]) option.action = null;
-				});
-			});
-			if (model.fallback && model.fallback.kind === "SubMenu" && removedIds[text(model.fallback.targetId).trim()]) model.fallback = null;
-		}
-		function checkJsonForEditor(value, catalog) {
-			var parsed = parseJson(value);
-			if (!parsed.ok) return {
-				ok: false,
-				parseError: parsed.error,
-				model: null,
-				errors: [],
-				warnings: []
-			};
-			var issues = validate(parsed.model, catalog || {});
-			var errors = issues.filter(function(entry) {
-				return entry.severity === "error";
-			});
-			return {
-				ok: errors.length === 0,
-				parseError: null,
-				model: parsed.model,
-				errors,
-				warnings: issues.filter(function(entry) {
-					return entry.severity !== "error";
-				})
-			};
-		}
-		function formatJson(value) {
-			try {
-				return JSON.stringify(JSON.parse(text(value)), null, 2);
-			} catch (error) {
-				return value;
-			}
-		}
-		ivr.ACTION_KINDS = ACTION_KINDS;
-		ivr.GO_TO_MENU = GO_TO_MENU;
-		ivr.editorKindOf = editorKindOf;
-		ivr.actionForEditorKind = actionForEditorKind;
-		ivr.ENUM_ORDER = ENUM_ORDER;
-		ivr.TELEPHONE_KEYS = TELEPHONE_KEYS;
-		ivr.DEFAULT_MAX_RETRIES = DEFAULT_MAX_RETRIES;
-		ivr.isKnownKind = isKnownKind;
-		ivr.targetTypeOf = targetTypeOf;
-		ivr.needsTarget = needsTarget;
-		ivr.normalizeKind = normalizeKind;
-		ivr.createModel = createModel;
-		ivr.createNode = createNode;
-		ivr.createOption = createOption;
-		ivr.createAction = createAction;
-		ivr.fromFlow = fromFlow;
-		ivr.toFlow = toFlow;
-		ivr.toJson = toJson;
-		ivr.parseJson = parseJson;
-		ivr.validate = validate;
-		ivr.hasErrors = hasErrors;
-		ivr.reachableNodeIds = reachableNodeIds;
-		ivr.suggestNodeId = suggestNodeId;
-		ivr.availableDigits = availableDigits;
-		ivr.nextFreeDigit = nextFreeDigit;
-		ivr.addNode = addNode;
-		ivr.addOption = addOption;
-		ivr.countReferences = countReferences;
-		ivr.renameNode = renameNode;
-		ivr.removeNode = removeNode;
-		ivr.setActionKind = setActionKind;
-		ivr.buildMenuTree = buildMenuTree;
-		ivr.addSubMenu = addSubMenu;
-		ivr.removeSubMenu = removeSubMenu;
-		ivr.checkJsonForEditor = checkJsonForEditor;
-		ivr.formatJson = formatJson;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-menu-editor.js
 	(function(window, document) {
 		"use strict";
-		var ivr = window.CrestAppsIvrMenu;
 		var NEW_MENU = "__new__";
 		function h(tag, attributes, children) {
 			var element = document.createElement(tag);
@@ -639,8 +574,8 @@
 			var jsonTools = root.querySelector("[data-ivr-json-tools]");
 			var jsonActions = root.querySelector("[data-ivr-json-actions]");
 			var jsonStatus = root.querySelector("[data-ivr-json-status]");
-			var model = ivr.createModel();
-			var tree = ivr.buildMenuTree(model);
+			var model = createModel();
+			var tree = buildMenuTree(model);
 			var transientIssues = {};
 			var idPrefix = "ivr" + Math.random().toString(36).slice(2, 8);
 			if (!textarea || !visual || !jsonPanel || !toggle) return;
@@ -660,7 +595,7 @@
 				message.hidden = !text;
 			}
 			function sync() {
-				textarea.value = ivr.toJson(model);
+				textarea.value = toJson(model);
 			}
 			function parseField(field) {
 				var parts = String(field || "").split(":");
@@ -719,7 +654,7 @@
 				}[entry.code] || entry.code, params);
 			}
 			function applyIssues() {
-				var issues = ivr.validate(model, catalog);
+				var issues = validate(model, catalog);
 				Object.keys(transientIssues).forEach(function(scope) {
 					issues.push(transientIssues[scope]);
 				});
@@ -805,10 +740,10 @@
 			}
 			function targetControl(field, action, id, ownChild) {
 				var kind = action ? action.kind : "";
-				var type = action ? ivr.targetTypeOf(kind) : null;
+				var type = action ? targetTypeOf(kind) : null;
 				var value = action ? String(action.targetId || "").trim() : "";
 				if (!action) return h("div", { className: "form-text" });
-				if (!ivr.isKnownKind(kind)) return h("input", {
+				if (!isKnownKind(kind)) return h("input", {
 					className: "form-control",
 					"data-ivr-field": field,
 					"data-ivr-text": "target",
@@ -864,11 +799,11 @@
 					value: "",
 					text: emptyLabel
 				}];
-				ivr.ACTION_KINDS.forEach(function(kind) {
+				ACTION_KINDS.forEach(function(kind) {
 					if (kind === "SubMenu" && !forKey) {
 						options.push({
 							value: kind,
-							text: kindLabel(ivr.GO_TO_MENU)
+							text: kindLabel(GO_TO_MENU)
 						});
 						return;
 					}
@@ -877,11 +812,11 @@
 						text: kindLabel(kind)
 					});
 					if (kind === "SubMenu") options.push({
-						value: ivr.GO_TO_MENU,
-						text: kindLabel(ivr.GO_TO_MENU)
+						value: GO_TO_MENU,
+						text: kindLabel(GO_TO_MENU)
 					});
 				});
-				if (current && current !== ivr.GO_TO_MENU && !ivr.isKnownKind(current)) options.push({
+				if (current && current !== "GoToMenu" && !isKnownKind(current)) options.push({
 					value: current,
 					text: t("unknownKind", "Unknown: {id}", { id: current })
 				});
@@ -945,14 +880,14 @@
 				var targetId = idPrefix + "-t-" + nodeIndex + "-" + optionIndex;
 				var digit = String(option.digit || "").trim();
 				var ownChild = tree.childOf(nodeIndex, optionIndex);
-				var editorKind = ivr.editorKindOf(option.action, ownChild !== void 0);
-				var digits = ivr.availableDigits(node, optionIndex).map(function(key) {
+				var editorKind = editorKindOf(option.action, ownChild !== void 0);
+				var digits = availableDigits(node, optionIndex).map(function(key) {
 					return {
 						value: key,
 						text: key
 					};
 				});
-				if (digit && ivr.TELEPHONE_KEYS.indexOf(digit) === -1) digits.push({
+				if (digit && TELEPHONE_KEYS.indexOf(digit) === -1) digits.push({
 					value: digit,
 					text: digit
 				});
@@ -1009,7 +944,7 @@
 			function renderNode(node, nodeIndex) {
 				var promptId = idPrefix + "-p-" + nodeIndex;
 				var mediaId = idPrefix + "-m-" + nodeIndex;
-				var canAddKey = ivr.availableDigits(node, -1).length > 0;
+				var canAddKey = availableDigits(node, -1).length > 0;
 				var isUnused = tree.unused.indexOf(nodeIndex) >= 0;
 				return h("div", {
 					className: "card mb-3",
@@ -1153,7 +1088,7 @@
 			function render(focusField) {
 				var focus = focusField ? { field: focusField } : captureFocus();
 				var children = [];
-				tree = ivr.buildMenuTree(model);
+				tree = buildMenuTree(model);
 				if (model.nodes.length === 0) children.push(renderEmpty());
 				else {
 					children.push(h("div", {
@@ -1216,7 +1151,7 @@
 				if (control.getAttribute("data-ivr-text")) return;
 				if (location.scope === "node" && location.name === "nodeId") {
 					delete transientIssues["node:" + location.node];
-					if (!ivr.renameNode(model, location.node, control.value)) {
+					if (!renameNode(model, location.node, control.value)) {
 						control.value = model.nodes[location.node].nodeId;
 						transientIssues["node:" + location.node] = {
 							code: "renameRefused",
@@ -1231,13 +1166,13 @@
 					render(field);
 					return;
 				}
-				if (location.scope === "option" && location.name === "kind" && control.value === ivr.GO_TO_MENU) {
-					setActionAt(location, ivr.actionForEditorKind(ivr.GO_TO_MENU));
+				if (location.scope === "option" && location.name === "kind" && control.value === "GoToMenu") {
+					setActionAt(location, actionForEditorKind(GO_TO_MENU));
 					render("option:" + location.node + ":" + location.option + ":target");
 					return;
 				}
 				if (location.scope === "option" && (location.name === "kind" && control.value === "SubMenu" || location.name === "target" && control.value === NEW_MENU)) {
-					ivr.addSubMenu(model, location.node, location.option);
+					addSubMenu(model, location.node, location.option);
 					render("node:" + (model.nodes.length - 1) + ":prompt");
 					return;
 				}
@@ -1247,8 +1182,8 @@
 				else if (location.name === "kind") {
 					var current = actionAt(location);
 					if (!control.value) setActionAt(location, null);
-					else if (current) ivr.setActionKind(current, control.value);
-					else setActionAt(location, ivr.createAction(control.value));
+					else if (current) setActionKind(current, control.value);
+					else setActionAt(location, createAction(control.value));
 				} else if (location.name === "target") {
 					var action = actionAt(location);
 					if (action) action.targetId = control.value;
@@ -1262,17 +1197,17 @@
 				var nodeIndex = Number(button.getAttribute("data-ivr-node"));
 				switch (command) {
 					case "build":
-						model = ivr.createModel();
-						ivr.addNode(model);
+						model = createModel();
+						addNode(model);
 						render("node:0:prompt");
 						break;
 					case "remove-menu":
 						transientIssues = {};
-						ivr.removeSubMenu(model, nodeIndex);
+						removeSubMenu(model, nodeIndex);
 						render();
 						break;
 					case "add-option":
-						if (ivr.addOption(model.nodes[nodeIndex])) render("option:" + nodeIndex + ":" + (model.nodes[nodeIndex].options.length - 1) + ":kind");
+						if (addOption(model.nodes[nodeIndex])) render("option:" + nodeIndex + ":" + (model.nodes[nodeIndex].options.length - 1) + ":kind");
 						break;
 					case "remove-option":
 						model.nodes[nodeIndex].options.splice(Number(button.getAttribute("data-ivr-option-index")), 1);
@@ -1280,7 +1215,7 @@
 						break;
 					case "clear":
 						transientIssues = {};
-						model = ivr.createModel();
+						model = createModel();
 						render();
 				}
 			}
@@ -1302,14 +1237,14 @@
 				else render();
 			}
 			function applyJson() {
-				var result = ivr.checkJsonForEditor(textarea.value, catalog);
+				var result = checkJsonForEditor(textarea.value, catalog);
 				if (result.parseError) {
 					showJsonStatus([h("div", { className: "text-danger" }, [icon("fa-solid fa-circle-exclamation me-1"), t("jsonInvalid", "The JSON cannot be shown in the visual editor until it is fixed or cleared: {error}", { error: result.parseError === "notAnObject" ? t("jsonNotAnObject", "the menu must be a JSON object.") : result.parseError })])]);
 					textarea.focus();
 					return;
 				}
 				if (!result.ok) {
-					var checkedTree = ivr.buildMenuTree(result.model);
+					var checkedTree = buildMenuTree(result.model);
 					showJsonStatus([h("div", {
 						className: "text-danger fw-semibold",
 						text: t("jsonHasErrors", "The JSON is valid, but the menu has problems to fix before it can be applied:")
@@ -1350,7 +1285,7 @@
 				else failed();
 			}
 			function formatJsonField() {
-				textarea.value = ivr.formatJson(textarea.value);
+				textarea.value = formatJson(textarea.value);
 				showJsonStatus(null);
 			}
 			visual.addEventListener("input", onInput);
@@ -1368,7 +1303,7 @@
 				else if (button.hasAttribute("data-ivr-json-copy")) copyJson();
 				else formatJsonField();
 			});
-			var initial = ivr.parseJson(textarea.value);
+			var initial = parseJson(textarea.value);
 			if (initial.ok) {
 				model = initial.model;
 				toggle.hidden = false;

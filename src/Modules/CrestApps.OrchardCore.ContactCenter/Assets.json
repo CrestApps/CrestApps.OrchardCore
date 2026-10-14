@@ -8,43 +8,25 @@
   {
     "action": "vite",
     "name": "agent-workspace.js",
-    "source": [
-      "Assets/js/shared/agent-presence.js",
-      "Assets/js/shared/coalesced-refresh.js",
-      "Assets/js/shared/offer-actions.js",
-      "Assets/js/shared/workspace-panels.js",
-      "Assets/js/agent-workspace.js"
-    ],
+    "source": "Assets/js/agent-workspace.js",
     "dest": "wwwroot/scripts/agent-workspace.js"
   },
   {
     "action": "vite",
     "name": "supervisor-dashboard.js",
-    "source": [
-      "Assets/js/shared/supervisor-actions.js",
-      "Assets/js/shared/agent-board-filters.js",
-      "Assets/js/supervisor-interventions.js",
-      "Assets/js/supervisor-dashboard.js"
-    ],
+    "source": "Assets/js/supervisor-dashboard.js",
     "dest": "wwwroot/scripts/supervisor-dashboard.js"
   },
   {
     "action": "vite",
     "name": "contact-center-supervisor-phone.js",
-    "source": [
-      "Assets/js/shared/supervisor-actions.js",
-      "Assets/js/contact-center-supervisor-phone.js"
-    ],
+    "source": "Assets/js/contact-center-supervisor-phone.js",
     "dest": "wwwroot/scripts/contact-center-supervisor-phone.js"
   },
   {
     "action": "vite",
     "name": "contact-center-soft-phone.js",
-    "source": [
-      "Assets/js/shared/agent-presence.js",
-      "Assets/js/shared/supervisor-actions.js",
-      "Assets/js/contact-center-soft-phone.js"
-    ],
+    "source": "Assets/js/contact-center-soft-phone.js",
     "dest": "wwwroot/scripts/contact-center-soft-phone.js"
   },
   {
@@ -62,21 +44,13 @@
   {
     "action": "vite",
     "name": "ivr-menu-editor.js",
-    "source": [
-      "Assets/js/ivr-menu/ivr-flow-model.js",
-      "Assets/js/ivr-menu/ivr-menu-editor.js"
-    ],
+    "source": "Assets/js/ivr-menu/ivr-menu-editor.js",
     "dest": "wwwroot/scripts/ivr-menu-editor.js"
   },
   {
     "action": "vite",
     "name": "contact-center-agent-bar.js",
-    "source": [
-      "Assets/js/shared/agent-presence.js",
-      "Assets/js/shared/coalesced-refresh.js",
-      "Assets/js/shared/offer-actions.js",
-      "Assets/js/contact-center-agent-bar.js"
-    ],
+    "source": "Assets/js/contact-center-agent-bar.js",
     "dest": "wwwroot/scripts/contact-center-agent-bar.js"
   },
   {
