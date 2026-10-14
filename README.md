@@ -1,5 +1,7 @@
 # Orchard Core Modules by CrestApps
 
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/MikeAlhayek)
+
 `CrestApps.OrchardCore` is a collection of modules and extensions that expand the capabilities of the Orchard Core framework and accelerate the development of modern, enterprise-ready applications.
 
 ## Documentation
@@ -79,6 +81,12 @@ dotnet test .\tests\CrestApps.OrchardCore.Tests\CrestApps.OrchardCore.Tests.cspr
 
 - https://cloudsmith.io/~crestapps/repos/crestapps-orchardcore
 - https://nuget.cloudsmith.io/crestapps/crestapps-orchardcore/v3/index.json
+
+## ❤️ Sponsor
+
+This project is free and open source, built and maintained alongside full-time work. If it saves you time or powers something you ship, please consider [sponsoring on GitHub](https://github.com/sponsors/MikeAlhayek). Sponsorship funds new features, faster fixes, documentation and long-term maintenance, and companies using it in production are especially encouraged to sponsor.
+
+[![Sponsor on GitHub](https://img.shields.io/badge/Sponsor_on_GitHub-%E2%9D%A4-db61a2?logo=githubsponsors&logoColor=white&style=for-the-badge)](https://github.com/sponsors/MikeAlhayek)
 
 ## License
 
