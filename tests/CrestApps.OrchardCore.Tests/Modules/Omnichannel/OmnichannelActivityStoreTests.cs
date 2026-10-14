@@ -1,3 +1,4 @@
+using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -19,6 +20,9 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 public sealed class OmnichannelActivityStoreTests
 {
     private static readonly DateTime _now = new(2026, 7, 16, 20, 0, 0, DateTimeKind.Utc);
+
+    // SQL Server refuses any command that carries more than 2,100 parameters.
+    private const int SqlServerParameterLimit = 2100;
 
     [Fact]
     public async Task ListBulkManageableAsync_ReturnsOnlyEditableInventory()
@@ -80,6 +84,55 @@ public sealed class OmnichannelActivityStoreTests
             // a .Column<string> declaration.
             Assert.Equal("integer", rawStatus.StorageClass);
             Assert.Equal((int)ActivityStatus.NotStated, rawStatus.Value);
+            Assert.Equal(
+                expectedItemIds.OrderBy(itemId => itemId, StringComparer.Ordinal),
+                activities.Select(activity => activity.ItemId).OrderBy(itemId => itemId, StringComparer.Ordinal));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task GetBulkManageableAsync_WhenMoreActivitiesMatchThanOneCommandMayBind_ReturnsEveryActivityOnce()
+    {
+        // Arrange
+        // "Apply to all matching" on the manage screen loads every matching activity. Loading them through one
+        // DocumentId IN (...) list binds a parameter per activity, and SQL Server refuses the command once that
+        // passes 2,100, so purging a large inventory failed before anything was purged. SQLite accepts far more
+        // parameters than that, so the store's connections are held to SQL Server's limit once seeding is done.
+        var databasePath = DatabasePath("bulk-manage-large");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var connectionFactory = new ParameterLimitedConnectionFactory(connectionString);
+        var store = await CreateStoreAsync(connectionString, connectionFactory);
+        const int activityCount = SqlServerParameterLimit + 400;
+
+        try
+        {
+            var expectedItemIds = new List<string>(activityCount);
+
+            await using (var seedSession = store.CreateSession())
+            {
+                for (var i = 0; i < activityCount; i++)
+                {
+                    expectedItemIds.Add(await SaveActivityAsync(seedSession, ActivityStatus.NotStated));
+                }
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            connectionFactory.ParameterLimit = SqlServerParameterLimit;
+
+            await using var querySession = store.CreateSession();
+            var activityStore = CreateActivityStore(querySession, store, connectionString);
+
+            // Act
+            var activities = await activityStore.GetBulkManageableAsync(
+                new BulkManageActivityFilter(),
+                TestContext.Current.CancellationToken);
+
+            // Assert
             Assert.Equal(
                 expectedItemIds.OrderBy(itemId => itemId, StringComparer.Ordinal),
                 activities.Select(activity => activity.ItemId).OrderBy(itemId => itemId, StringComparer.Ordinal));
@@ -176,9 +229,17 @@ public sealed class OmnichannelActivityStoreTests
             new SqliteDbConnectionAccessor(connectionString));
     }
 
-    private static async Task<IStore> CreateStoreAsync(string connectionString)
+    private static async Task<IStore> CreateStoreAsync(string connectionString, IConnectionFactory connectionFactory = null)
     {
-        var store = StoreFactory.Create(configuration => configuration.UseSqLite(connectionString));
+        var store = StoreFactory.Create(configuration =>
+        {
+            configuration.UseSqLite(connectionString);
+
+            if (connectionFactory is not null)
+            {
+                configuration.ConnectionFactory = connectionFactory;
+            }
+        });
         store.RegisterIndexes([new OmnichannelActivityIndexProvider()]);
         await store.InitializeAsync(TestContext.Current.CancellationToken);
         await store.InitializeCollectionAsync(
@@ -305,6 +366,42 @@ public sealed class OmnichannelActivityStoreTests
         public DbConnection CreateConnection()
         {
             return new SqliteConnection(_connectionString);
+        }
+    }
+
+    /// <summary>
+    /// Opens SQLite connections that refuse a command binding more than <see cref="ParameterLimit"/> parameters,
+    /// the way SQL Server refuses one past 2,100.
+    /// </summary>
+    private sealed class ParameterLimitedConnectionFactory : IConnectionFactory
+    {
+        private readonly string _connectionString;
+
+        public ParameterLimitedConnectionFactory(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public int? ParameterLimit { get; set; }
+
+        public Type DbConnectionType => typeof(SqliteConnection);
+
+        public DbConnection CreateConnection()
+        {
+            var connection = new SqliteConnection(_connectionString);
+            connection.StateChange += OnStateChange;
+
+            return connection;
+        }
+
+        private void OnStateChange(object sender, StateChangeEventArgs e)
+        {
+            if (e.CurrentState != ConnectionState.Open || sender is not SqliteConnection connection || ParameterLimit is not int limit)
+            {
+                return;
+            }
+
+            SQLitePCL.raw.sqlite3_limit(connection.Handle, SQLitePCL.raw.SQLITE_LIMIT_VARIABLE_NUMBER, limit);
         }
     }
 }
