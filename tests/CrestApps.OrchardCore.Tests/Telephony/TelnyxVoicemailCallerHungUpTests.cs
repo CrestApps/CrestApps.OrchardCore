@@ -30,7 +30,7 @@ public sealed class TelnyxVoicemailCallerHungUpTests
         var handler = new RecordingHttpMessageHandler()
             .AlwaysRespondWith(HttpStatusCode.UnprocessableEntity, AlreadyEndedBody);
         var logger = new RecordingLogger<TelnyxVoicemailRecordingStarter>();
-        var starter = new TelnyxVoicemailRecordingStarter(CreateApiClient(handler), CreateOptionsMonitor(), logger);
+        var starter = new TelnyxVoicemailRecordingStarter(CreateApiClient(handler), CreateOptionsMonitor(), [], logger);
 
         // Act
         var started = await starter.StartAsync("ctrl-1", "interaction-1", "user-1", TestContext.Current.CancellationToken);
@@ -48,7 +48,7 @@ public sealed class TelnyxVoicemailCallerHungUpTests
         var handler = new RecordingHttpMessageHandler()
             .AlwaysRespondWith(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90015","title":"Invalid call control ID"}]}""");
         var logger = new RecordingLogger<TelnyxVoicemailRecordingStarter>();
-        var starter = new TelnyxVoicemailRecordingStarter(CreateApiClient(handler), CreateOptionsMonitor(), logger);
+        var starter = new TelnyxVoicemailRecordingStarter(CreateApiClient(handler), CreateOptionsMonitor(), [], logger);
 
         // Act
         var started = await starter.StartAsync("ctrl-1", "interaction-1", "user-1", TestContext.Current.CancellationToken);
