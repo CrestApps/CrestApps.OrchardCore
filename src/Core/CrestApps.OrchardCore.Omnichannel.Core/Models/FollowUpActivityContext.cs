@@ -28,6 +28,13 @@ public sealed class FollowUpActivityContext
     public bool HasNamedOwner { get; set; }
 
     /// <summary>
+    /// Gets or sets the most attempts the action creating the follow-up allows, such as a "Try again" action's maximum.
+    /// When set it is the limit, in place of any limit the work's carrier has of its own; <see langword="null"/> leaves
+    /// the carrier's limit, such as the dialer profile's, in force.
+    /// </summary>
+    public int? MaxAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a handler refused the follow-up, so it is not created.
     /// </summary>
     public bool Cancel { get; set; }

@@ -15,7 +15,7 @@
     <label asp-for="MaxAttempt" class="ocat-label">@T["Maximum attempts"]</label>
     <div class="ocat-end">
         <input asp-for="MaxAttempt" class="form-control" type="number" min="1" />
-        <span class="hint">@T["The maximum number of retry attempts allowed. Leave empty for unlimited retries."]</span>
+        <span class="hint">@T["The most attempts for the contact, counting the first and every retry. For dialer campaign work this replaces the dialer profile's Max attempts. Leave it empty for no limit of the subject's own: dialer work then stops at the dialer profile's Max attempts, and other work is retried without a limit."]</span>
     </div>
 </div>
 

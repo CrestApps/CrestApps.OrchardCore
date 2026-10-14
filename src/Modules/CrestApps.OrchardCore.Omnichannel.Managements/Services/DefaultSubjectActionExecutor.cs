@@ -144,6 +144,10 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         nextAttempt.UrgencyLevel = metadata.UrgencyLevel ?? activity.UrgencyLevel;
         nextAttempt.ScheduledUtc = await ResolveScheduleDateAsync(action, context, metadata.DefaultScheduleHours);
 
+        // A maximum named on the action is the subject's own limit for this contact, and it stands in for any limit the
+        // work's carrier has: a dialer campaign record may be tried as often as the subject says.
+        nextAttempt.MaxAttempts = metadata.MaxAttempt;
+
         if (!await TryAssignOwnerAsync(
             nextAttempt,
             action,
@@ -163,6 +167,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             FollowUpActivity = nextAttempt,
             CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
             HasNamedOwner = SubjectActionOwnerAssignmentTypeResolver.Resolve(metadata.AssignmentType, metadata.NormalizedUserName) != SubjectActionOwnerAssignmentType.SameOwner,
+            MaxAttempts = metadata.MaxAttempt,
         };
 
         foreach (var handler in _followUpHandlers)

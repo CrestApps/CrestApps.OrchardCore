@@ -37,6 +37,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
         public static string GetActivitySource(CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }
         public static bool IsDialerSource(string source) { }
     }
+    public static class DialerAttemptLimit
+    {
+        public static int Resolve(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile) { }
+    }
     [System.Obsolete("Use IDialDestinationPolicy from CrestApps.OrchardCore.Telephony.Services. This ty" +
         "pe is kept for one release and will be removed.")]
     public static class ExternalDestinationPolicy
@@ -1798,7 +1802,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static bool MarkLiveAnswered(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.DateTime answeredUtc) { }
         public static void MarkOverDialed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static void SetOutcome(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string outcome) { }
-        public static void StampDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, int attemptNumber) { }
+        public static void StampDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, int attemptNumber, int? maxAttempts = default) { }
         public static bool WasAnsweredByMachine(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
     }
     public sealed class DialerCallTimingRow
@@ -1874,6 +1878,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool SafeHarborEnabled { get; set; }
         public string SafeHarborMessage { get; set; }
         public double TargetAbandonmentRatePercent { get; set; }
+    }
+    public sealed class DialerRetryRecord
+    {
+        public DialerRetryRecord() { }
+        public int AttemptNumber { get; set; }
+        public string CreatedBy { get; set; }
+        public System.DateTime DueUtc { get; set; }
+        public string NextActivityItemId { get; set; }
     }
     public sealed class DialerRetryScheduleResult
     {
@@ -4290,8 +4302,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class DialerRetryScheduler : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerRetryScheduler
     {
         public const string CreatedBy = "Workflow";
+        public const string CreatedByDialer = "Dialer";
         public DialerRetryScheduler(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IFollowUpActivityHandler> followUpHandlers, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerRetryScheduler> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleResult> ScheduleUnhandledOutcomeRetryAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerService
     {
@@ -4977,6 +4991,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IDialerRetryScheduler
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DialerRetryScheduleResult> ScheduleUnhandledOutcomeRetryAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerService
     {

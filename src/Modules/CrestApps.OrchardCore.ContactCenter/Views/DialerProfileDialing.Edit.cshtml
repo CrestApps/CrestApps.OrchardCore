@@ -63,7 +63,7 @@
     <div class="ocat-end">
         <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
         <span asp-validation-for="MaxAttempts" class="text-danger"></span>
-        <span class="hint">@T["The maximum number of times an unanswered activity is dialed before it is given up."]</span>
+        <span class="hint">@T["The fallback limit on how many times a contact is dialed, counting the first call and every follow-up. It applies when the subject flow sets no maximum of its own: when the subject has no disposition rule for how a call ended (for example No answer), the dialer dispositions the call and dials the contact again after the retry delay, up to this many attempts; and when a Try again action leaves its Maximum attempts empty, this caps it. A Try again action that sets a Maximum attempts uses that number instead."]</span>
     </div>
 </div>
 

@@ -132,14 +132,15 @@ public static class DialerCallMetadata
     /// <param name="interaction">The interaction of the call.</param>
     /// <param name="profile">The dialer profile placing the call.</param>
     /// <param name="attemptNumber">The attempt number of the call, counted from one.</param>
-    public static void StampDial(Interaction interaction, DialerProfile profile, int attemptNumber)
+    /// <param name="maxAttempts">The most attempts allowed for the record, or <see langword="null"/> for the profile's.</param>
+    public static void StampDial(Interaction interaction, DialerProfile profile, int attemptNumber, int? maxAttempts = null)
     {
         ArgumentNullException.ThrowIfNull(interaction);
         ArgumentNullException.ThrowIfNull(profile);
 
         interaction.TechnicalMetadata[DialerProfileIdKey] = profile.ItemId;
         interaction.TechnicalMetadata[AttemptNumberKey] = attemptNumber.ToString(CultureInfo.InvariantCulture);
-        interaction.TechnicalMetadata[MaxAttemptsKey] = profile.MaxAttempts.ToString(CultureInfo.InvariantCulture);
+        interaction.TechnicalMetadata[MaxAttemptsKey] = (maxAttempts ?? profile.MaxAttempts).ToString(CultureInfo.InvariantCulture);
     }
 
     /// <summary>

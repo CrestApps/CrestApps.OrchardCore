@@ -71,7 +71,7 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
             return ActivityDispositionResult.Success(activity);
         }
 
-        var disposition = await ResolveDispositionAsync(activity.SubjectContentType, request, cancellationToken);
+        (var disposition, var handledBySubjectFlow) = await ResolveDispositionAsync(activity.SubjectContentType, request, cancellationToken);
 
         if (disposition is null)
         {
@@ -86,7 +86,7 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
             activity.TerminalReasonCode = request.TerminalReasonCode;
         }
 
-        return await _dispositionService.ApplyAsync(new ActivityDispositionRequest
+        var result = await _dispositionService.ApplyAsync(new ActivityDispositionRequest
         {
             Activity = activity,
             DispositionId = disposition?.ItemId,
@@ -94,9 +94,15 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
             DispositionedBy = request.DispositionedBy,
             Notes = request.Notes,
         }, cancellationToken);
+
+        result.HandledBySubjectFlow = handledBySubjectFlow;
+
+        return result;
     }
 
-    private async Task<OmnichannelDisposition> ResolveDispositionAsync(
+    // The disposition for the outcome, and whether the subject's flow is wired to it, so the flow's actions decide what
+    // happens next rather than whoever asked for the outcome.
+    private async Task<(OmnichannelDisposition Disposition, bool HandledBySubjectFlow)> ResolveDispositionAsync(
         string subjectContentType,
         ActivityOutcomeCompletionRequest request,
         CancellationToken cancellationToken)
@@ -105,15 +111,21 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
         var actions = await _actionCatalog.GetAllAsync(cancellationToken);
         var fallback = request.FallbackOutcome == request.Outcome ? DispositionOutcome.None : request.FallbackOutcome;
 
-        var disposition = DispositionOutcomes.Find(dispositions, actions, subjectContentType, request.Outcome, includeUnwired: false)
+        var wired = DispositionOutcomes.Find(dispositions, actions, subjectContentType, request.Outcome, includeUnwired: false)
             ?? DispositionOutcomes.Find(dispositions, actions, subjectContentType, fallback, includeUnwired: false)
-            ?? (request.PreferRetriedDisposition ? FindRetriedDisposition(dispositions, actions, subjectContentType) : null)
-            ?? DispositionOutcomes.Find(dispositions, actions, subjectContentType, request.Outcome, includeUnwired: true)
+            ?? (request.PreferRetriedDisposition ? FindRetriedDisposition(dispositions, actions, subjectContentType) : null);
+
+        if (wired is not null)
+        {
+            return (wired, true);
+        }
+
+        var disposition = DispositionOutcomes.Find(dispositions, actions, subjectContentType, request.Outcome, includeUnwired: true)
             ?? DispositionOutcomes.Find(dispositions, actions, subjectContentType, fallback, includeUnwired: true);
 
         if (disposition is not null || !_defaults.TryGetValue(request.Outcome, out var defaults))
         {
-            return disposition;
+            return (disposition, false);
         }
 
         // A disposition already named for the outcome, made by hand before outcomes existed, is taken as meaning what
@@ -136,7 +148,7 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
                 }
             }
 
-            return named;
+            return (named, false);
         }
 
         var created = await _dispositionManager.NewAsync(new JsonObject
@@ -157,7 +169,7 @@ internal sealed class ActivityOutcomeCompleter : IActivityOutcomeCompleter
                 request.Outcome);
         }
 
-        return created;
+        return (created, false);
     }
 
     // The disposition the subject's "Try again" action is wired to, or null when it has none.

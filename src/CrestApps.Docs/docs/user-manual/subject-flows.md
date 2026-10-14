@@ -78,7 +78,7 @@ Extra fields on **Try Again** and **New Activity**:
 | Field | What it does |
 | --- | --- |
 | **Target subject type** | New Activity only: the subject of the new activity. Empty means the same subject. |
-| **Maximum attempts** | Try Again only: how many tries in total. Empty means no limit. |
+| **Maximum attempts** | Try Again only: how many tries in total. For dialer campaign work it replaces the dialer profile's **Max attempts**. Empty means no limit of the subject's own: dialer work then stops at the profile's **Max attempts**, and other work has no limit. |
 | **Urgency level** | The follow-up's urgency, from **Very low** to **Very high**. **Use original activity's urgency level** keeps the original. |
 | **Assignment type** | **Same owner** gives the follow-up to the user who completes the current activity. **Specific owner** gives it to the user you pick. |
 | **Assign to user** | The owner when **Specific owner** is chosen. Required then. |
