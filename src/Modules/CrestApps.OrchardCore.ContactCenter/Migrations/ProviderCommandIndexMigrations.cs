@@ -1,10 +1,11 @@
 using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -116,12 +117,11 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<ProviderCommandIndex>(table => table
-            .CreateIndex(
-                "IDX_ProviderCommandIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<ProviderCommandIndex>(
+            SchemaBuilder,
+            "IDX_ProviderCommandIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 3;
     }

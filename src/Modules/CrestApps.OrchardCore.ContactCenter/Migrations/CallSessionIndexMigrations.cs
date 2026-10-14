@@ -505,12 +505,11 @@ internal sealed class CallSessionIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom5Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<CallSessionIndex>(table => table
-            .CreateIndex(
-                "IDX_CallSessionIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
+            SchemaBuilder,
+            "IDX_CallSessionIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 6;
     }
