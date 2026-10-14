@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Migrations
 /// </remarks>
 public sealed class OmnichannelActivityBatchIndexMigrationsTests
 {
-    private const int FinalVersion = 4;
+    private const int FinalVersion = 5;
 
     private static readonly TimeSpan _runLimit = TimeSpan.FromSeconds(10);
 

@@ -43,6 +43,30 @@ internal sealed class AgentStateReasonCodeIndexMigrations : DataMigration
 
         await _recipeMigrator.ExecuteAsync($"agent-state-reason-codes{RecipesConstants.RecipeExtension}", this);
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<AgentStateReasonCodeIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentStateReasonCodeIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AgentStateReasonCodeIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentStateReasonCodeIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 2;
     }
 }

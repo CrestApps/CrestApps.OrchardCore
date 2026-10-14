@@ -109,7 +109,15 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 7;
+        // This SQL index is for locating an activity by its own identifier.
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivityIndex_ItemId",
+        "ItemId",
+        "DocumentId"),
+        collection: OmnichannelConstants.CollectionName
+        );
+
+        return 8;
     }
 
     /// <summary>
@@ -313,5 +321,21 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 7;
+    }
+
+    /// <summary>
+    /// Adds the index an activity is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned every activity.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivityIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
+
+        return 8;
     }
 }
