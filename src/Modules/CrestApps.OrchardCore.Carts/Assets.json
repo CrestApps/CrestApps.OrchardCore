@@ -1,8 +1,8 @@
 [
   {
-    "inputs": [
-      "Assets/js/variant-picker.js"
-    ],
-    "output": "wwwroot/Scripts/variant-picker.js"
+    "action": "vite",
+    "name": "variant-picker.js",
+    "source": "Assets/js/variant-picker.js",
+    "dest": "wwwroot/Scripts/variant-picker.js"
   }
 ]
