@@ -30,6 +30,28 @@ internal sealed class TelephonyExtensionIndexMigrations : DataMigration
             .CreateIndex("IDX_TelephonyExtensionIndex_UserId", "UserId", "DocumentId")
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyExtensionIndex>(table => table
+            .CreateIndex(
+                "IDX_TelephonyExtensionIndex_ItemId",
+                "ItemId",
+                "DocumentId"));
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyExtensionIndex>(table => table
+            .CreateIndex(
+                "IDX_TelephonyExtensionIndex_ItemId",
+                "ItemId",
+                "DocumentId"));
+
+        return 2;
     }
 }

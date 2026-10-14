@@ -59,7 +59,14 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
                 "DocumentId"),
             collection: ContactCenterStorage.CollectionName);
 
-        return 3;
+        await SchemaBuilder.AlterIndexTableAsync<AgentSessionIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentSessionIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 4;
     }
     /// <summary>
     /// Adds the covering index the retention purge scans. Without it every terminating batch of the drain loop
@@ -112,5 +119,22 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
             "UserId");
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<AgentSessionIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentSessionIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 4;
     }
 }

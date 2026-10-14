@@ -317,4 +317,22 @@ internal sealed class QueueItemIndexMigrations : DataMigration
 
         return 5;
     }
+
+    /// <summary>
+    /// Adds the index a queue item is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and so does the load of each queue's head item on every agent sync, yet no
+    /// existing index leads with it.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .CreateIndex(
+                "IDX_QueueItemIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 6;
+    }
 }
