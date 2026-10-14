@@ -136,6 +136,16 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 var bridged = _options.IsConfigured &&
                     await BridgeAsync(callControlId: callEvent.CallControlId, otherCallControlId: state.PeerCallControlId, cancellationToken, parkAfterUnbridge: true);
 
+                // Logged either way, so a call with no audio tells a bridge that never ran from one that carried nothing.
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Contact Center agent leg '{AgentCallControlId}' answered; bridge to caller leg '{PeerCallControlId}' {BridgeOutcome}.",
+                        callEvent.CallControlId.SanitizeLogValue(),
+                        state.PeerCallControlId.SanitizeLogValue(),
+                        bridged ? "succeeded" : "failed");
+                }
+
                 if (bridged)
                 {
                     // The caller has been listening to the queue while the agent was reached. Now that they are
@@ -168,9 +178,9 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 // the endpoint, a rejection by the platform's own routing policy, and a busy endpoint all arrive
                 // as a refusal but mean different things and are fixed in different places. Logged for every
                 // terminal agent leg, not only the ones treated as a connect failure, so a cause this code does
-                // not yet recognize is still named rather than silently ignored.
+                // not yet recognize is still named rather than silently ignored (SIP 200 from the callee: answered).
                 _logger.LogWarning(
-                    "A Contact Center agent leg ended without answering. HangupCause={HangupCause}, SipHangupCause={SipHangupCause}, HangupSource={HangupSource}, To={ToAddress}, PeerCallControlId={PeerCallControlId}, TreatedAsConnectFailure={TreatedAsConnectFailure}.",
+                    "A Contact Center agent leg ended. HangupCause={HangupCause}, SipHangupCause={SipHangupCause}, HangupSource={HangupSource}, To={ToAddress}, PeerCallControlId={PeerCallControlId}, TreatedAsConnectFailure={TreatedAsConnectFailure}.",
                     callEvent.HangupCause.SanitizeLogValue(),
                     callEvent.SipHangupCause.SanitizeLogValue(),
                     callEvent.HangupSource.SanitizeLogValue(),
