@@ -44,7 +44,8 @@ public sealed partial class TelnyxContactCenterVoiceProvider
         {
             return request.State switch
             {
-                RecordingState.Recording => await StartOrResumeRecordingAsync(callControlId, request.InteractionId, cancellationToken),
+                RecordingState.Recording when request.PreviousState == RecordingState.Paused => await ResumeRecordingAsync(callControlId, request.InteractionId, cancellationToken),
+                RecordingState.Recording => await StartRecordingAsync(callControlId, cancellationToken),
                 RecordingState.Paused => await PostRecordingActionAsync(callControlId, "record_pause", body: null, cancellationToken),
                 RecordingState.Stopped or RecordingState.None => await PostRecordingActionAsync(callControlId, "record_stop", body: null, cancellationToken),
                 _ => Failure("recording_state_unsupported", "The requested recording state is not supported."),
@@ -74,15 +75,12 @@ public sealed partial class TelnyxContactCenterVoiceProvider
         }
     }
 
-    private async Task<ContactCenterVoiceProviderResult> StartOrResumeRecordingAsync(
+    private async Task<ContactCenterVoiceProviderResult> ResumeRecordingAsync(
         string callControlId,
         string interactionId,
         CancellationToken cancellationToken)
     {
-        // A "record" request is either the first start of a recording or a resume of one that was paused. Resuming
-        // continues the SAME recording file, so it is attempted first: only when there is no paused recording to
-        // resume is a fresh recording started. Trying resume first (rather than start first) guarantees a resume
-        // never accidentally starts a second, parallel recording of the same call.
+        // Resuming continues the same recording file, so a paused call is resumed rather than given a second recording.
         var resumeResult = await PostRecordingActionAsync(callControlId, "record_resume", body: null, cancellationToken, logFailure: false);
 
         if (resumeResult.Succeeded)
@@ -90,14 +88,20 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             return resumeResult;
         }
 
-        // A resume miss is expected on the initial start (there is nothing to resume yet), so it is not an
-        // error; fall through to start a new recording.
-        if (_logger.IsEnabled(LogLevel.Debug))
-        {
-            _logger.LogDebug(
-                "Telnyx had no paused recording to resume for interaction {InteractionId}; starting a new recording.",
-                interactionId.SanitizeLogValue());
-        }
+        // Telnyx no longer holds the paused recording, so the call is recorded afresh rather than left unrecorded.
+        _logger.LogWarning(
+            "Telnyx had no paused recording to resume for interaction {InteractionId}; starting a new recording.",
+            interactionId.SanitizeLogValue());
+
+        return await StartRecordingAsync(callControlId, cancellationToken);
+    }
+
+    private Task<ContactCenterVoiceProviderResult> StartRecordingAsync(
+        string callControlId,
+        CancellationToken cancellationToken)
+    {
+        // The start is never probed with a resume first: Telnyx answers record_resume with 200 on a call that has no
+        // recording at all, so a start that tried resume first took that answer as success and never recorded anything.
 
         // No client_state: Telnyx would stamp it on every later event of the customer's leg, replacing the state the
         // leg carries. The call.recording.saved webhook names the leg, which is the interaction's provider call, so the
@@ -108,7 +112,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             ["channels"] = TelnyxConstants.Recording.CallChannels,
         };
 
-        return await PostRecordingActionAsync(callControlId, "record_start", startBody, cancellationToken);
+        return PostRecordingActionAsync(callControlId, "record_start", startBody, cancellationToken);
     }
 
     private async Task<ContactCenterVoiceProviderResult> PostRecordingActionAsync(
