@@ -181,6 +181,10 @@ public sealed partial class ProviderVoiceEventService
             return;
         }
 
+        // The agent's leg is tagged with the reservation the agent accepted when the call was placed, so their phone
+        // answers it as the leg of that call and shows it as that call. Matched only by a short arm set at the accept,
+        // a customer who took longer to answer than the arm lasted had the leg ring as an unsolicited call: a second
+        // line, answered by hand, with no customer on it.
         var commandId = await AnsweredCallBridge.RegisterAsync(
             _providerCommandStateService,
             _callSessionManager,
@@ -189,7 +193,7 @@ public sealed partial class ProviderVoiceEventService
             session.AgentId,
             agent.UserId,
             reservationId: null,
-            standbyReservationId: null,
+            standbyReservationId: DialerCallMetadata.GetReservationId(interaction),
             agentLegTimeoutSeconds: 0,
             cancellationToken);
 

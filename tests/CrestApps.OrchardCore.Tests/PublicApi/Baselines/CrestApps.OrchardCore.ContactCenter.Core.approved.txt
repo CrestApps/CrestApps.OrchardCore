@@ -813,6 +813,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string AgentSessionId { get; set; }
         public System.DateTime? ChangedUtc { get; set; }
         public string InteractionId { get; set; }
+        public bool KeepsIdlePlace { get; set; }
         public string ReasonCodeId { get; set; }
         public string ReasonName { get; set; }
         public bool RecordWhenUnchanged { get; set; }
@@ -1782,6 +1783,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public const string OutcomeKey = "dialer_attempt_outcome";
         public const string OverDialPacingModel = "overdial";
         public const string PacingModelKey = "dialer_pacing_model";
+        public const string ReservationIdKey = "dialer_reservation_id";
         public static string GetAbandonedReason(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static System.DateTime? GetAgentClaimedUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static System.DateTime? GetAgentJoinedUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
@@ -1790,6 +1792,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static System.DateTime? GetLiveAnsweredUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static int? GetMaxAttempts(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static string GetOutcome(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static string GetReservationId(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool HasAgentJoined(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsAbandoned(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsAgentClaimed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
@@ -1803,6 +1806,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static void MarkOverDialed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static void SetOutcome(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string outcome) { }
         public static void StampDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, int attemptNumber, int? maxAttempts = default) { }
+        public static void StampReservation(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string reservationId) { }
         public static bool WasAnsweredByMachine(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
     }
     public sealed class DialerCallTimingRow

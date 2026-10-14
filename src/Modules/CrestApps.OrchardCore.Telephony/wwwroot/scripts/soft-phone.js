@@ -1717,7 +1717,8 @@
 			armed: false,
 			until: 0,
 			userId: "",
-			legs: {}
+			legs: {},
+			accepted: {}
 		};
 	}
 	function setPredictiveStandby(standby, armed, userId, now, graceMs) {
@@ -1762,6 +1763,31 @@
 	function wasStandbyLegSeen(standby, reservationId, now) {
 		if (!standby || !reservationId || typeof standby.legs[reservationId] !== "number") return false;
 		return now - standby.legs[reservationId] <= STANDBY_LEG_MEMORY_MS;
+	}
+	function forgetOldAcceptedReservations(standby, now) {
+		Object.keys(standby.accepted).forEach(function(id) {
+			if (now - standby.accepted[id].at > 6e5) delete standby.accepted[id];
+		});
+	}
+	function noteAcceptedReservation(standby, reservationId, userId, now) {
+		if (!standby || !reservationId || !userId) return;
+		if (!standby.accepted) standby.accepted = {};
+		forgetOldAcceptedReservations(standby, now);
+		standby.accepted[reservationId] = {
+			at: now,
+			userId: String(userId)
+		};
+	}
+	function shouldAnswerAcceptedReservationLeg(standby, leg, now) {
+		if (!standby || !standby.accepted || !leg) return "";
+		if (leg.transferLeg || typeof isDestinationLeg === "function" && isDestinationLeg(leg)) return "";
+		var tag = readStandbyLegTag(leg);
+		if (!tag.reservationId || !tag.agentUserId) return "";
+		forgetOldAcceptedReservations(standby, now);
+		var accepted = standby.accepted[tag.reservationId];
+		if (!accepted || accepted.userId !== tag.agentUserId) return "";
+		delete standby.accepted[tag.reservationId];
+		return tag.reservationId;
 	}
 	function shouldStandbyAnswerLeg(standby, leg, now, context) {
 		if (!leg || !isStandingBy(standby, now)) return "";
@@ -7949,7 +7975,9 @@
 					reportDiagnostic("info", "auto-answer-arm-refused", "An accept of an offer this phone was never offered did not arm it to answer the next leg.", reservationId || "");
 					return;
 				}
-				armAutoAnswer(inboundAutoAnswer, offerKey(reservationId), Date.now());
+				var now = Date.now();
+				armAutoAnswer(inboundAutoAnswer, offerKey(reservationId), now);
+				if (typeof noteAcceptedReservation === "function") noteAcceptedReservation(predictiveStandby, reservationId, ownUserId || predictiveStandby && predictiveStandby.userId || "", now);
 			}
 			function consumeInboundAutoAnswer(options) {
 				var leg = options || {};
@@ -7962,10 +7990,25 @@
 						reportDiagnostic("info", "standby-leg-answered", "Answered at once the leg of a call this agent was claimed for while standing by for a campaign.", standbyReservationId);
 						return true;
 					}
+					var acceptedReservationId = typeof shouldAnswerAcceptedReservationLeg === "function" ? shouldAnswerAcceptedReservationLeg(predictiveStandby, leg, now) : "";
+					if (acceptedReservationId) {
+						noteStandbyLeg(predictiveStandby, acceptedReservationId, now);
+						disarmAutoAnswer(inboundAutoAnswer, offerKey(acceptedReservationId));
+						reportDiagnostic("info", "accepted-leg-answered", "Answered at once the leg of a call placed under a reservation this agent accepted.", acceptedReservationId);
+						return true;
+					}
 					var tag = readStandbyLegTag(leg);
 					if (tag.reservationId) noteStandbyLeg(predictiveStandby, tag.reservationId, now);
 				}
-				return shouldAutoAnswerInboundLeg(inboundAutoAnswer, now, leg);
+				var armKey = inboundAutoAnswer ? inboundAutoAnswer.key : "";
+				var armLapsedMs = armKey && now >= inboundAutoAnswer.until ? now - inboundAutoAnswer.until : 0;
+				if (shouldAutoAnswerInboundLeg(inboundAutoAnswer, now, leg)) return true;
+				if (!leg.transferLeg && !isDestinationLeg(leg)) {
+					var legTag = readStandbyLegTag(leg);
+					var why = armKey ? armLapsedMs > 0 ? "arm for " + armKey + " lapsed " + armLapsedMs + " ms before the leg" : "arm for " + armKey + " was live" : "no arm";
+					reportDiagnostic(legTag.reservationId ? "warning" : "info", "inbound-leg-unsolicited", "An inbound leg rang as an unsolicited call (" + why + ").", legTag.reservationId ? "reservation=" + legTag.reservationId + " user=" + legTag.agentUserId : "");
+				}
+				return false;
 			}
 			function setPredictiveStandby(armed, userId) {
 				if (!predictiveStandby || typeof setPredictiveStandbyFor !== "function") return false;

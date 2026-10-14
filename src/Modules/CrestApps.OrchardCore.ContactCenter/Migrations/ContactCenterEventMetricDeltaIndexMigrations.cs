@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -68,12 +69,11 @@ internal sealed class ContactCenterEventMetricDeltaIndexMigrations : DataMigrati
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterEventMetricDeltaIndex>(table => table
-            .CreateIndex(
-                "IDX_ContactCenterEventMetricDeltaIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContactCenterEventMetricDeltaIndex>(
+            SchemaBuilder,
+            "IDX_ContactCenterEventMetricDeltaIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 2;
     }

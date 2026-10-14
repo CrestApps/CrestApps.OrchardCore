@@ -97,13 +97,16 @@ import {
     createAutoAnswerArm,
     disarmAutoAnswer,
     disarmOtherOffers,
+    isDestinationLeg,
     shouldAutoAnswerInboundLeg,
 } from './soft-phone/auto-answer.js';
 import {
     createPredictiveStandby,
+    noteAcceptedReservation,
     noteStandbyLeg,
     readStandbyLegTag,
     setPredictiveStandby,
+    shouldAnswerAcceptedReservationLeg,
     shouldStandbyAnswerLeg,
     wasStandbyLegSeen,
 } from './soft-phone/predictive-standby.js';
@@ -6573,7 +6576,15 @@ import {
                 return;
             }
 
-            armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
+            var now = Date.now();
+
+            armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), now);
+
+            // The arm lasts seconds, and the leg of a call placed for this agent rings only once the customer answers.
+            // That leg is tagged with the reservation, which is remembered so it is answered whenever it comes.
+            if (typeof noteAcceptedReservation === 'function') {
+                noteAcceptedReservation(predictiveStandby, reservationId, ownUserId || (predictiveStandby && predictiveStandby.userId) || '', now);
+            }
         }
 
         // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. Only an arm
@@ -6600,6 +6611,21 @@ import {
                     return true;
                 }
 
+                // The leg of a call placed for this agent under a reservation the phone heard accepted for its user:
+                // answered whenever it comes, however long the customer took to pick up.
+                var acceptedReservationId = typeof shouldAnswerAcceptedReservationLeg === 'function'
+                    ? shouldAnswerAcceptedReservationLeg(predictiveStandby, leg, now)
+                    : '';
+
+                if (acceptedReservationId) {
+                    noteStandbyLeg(predictiveStandby, acceptedReservationId, now);
+                    disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(acceptedReservationId));
+                    reportDiagnostic('info', 'accepted-leg-answered',
+                        'Answered at once the leg of a call placed under a reservation this agent accepted.', acceptedReservationId);
+
+                    return true;
+                }
+
                 // A claim's leg the standby did not take (the phone was busy, or not standing by) still reached this
                 // phone: remember it, so the push about the claim does not arm the phone for a leg that never comes.
                 var tag = readStandbyLegTag(leg);
@@ -6609,7 +6635,29 @@ import {
                 }
             }
 
-            return shouldAutoAnswerInboundLeg(inboundAutoAnswer, now, leg);
+            // What the arm was before this leg spends it, for the diagnostic below.
+            var armKey = inboundAutoAnswer ? inboundAutoAnswer.key : '';
+            var armLapsedMs = armKey && now >= inboundAutoAnswer.until ? now - inboundAutoAnswer.until : 0;
+
+            if (shouldAutoAnswerInboundLeg(inboundAutoAnswer, now, leg)) {
+                return true;
+            }
+
+            // A leg that will ring as a call of its own. A colleague's call or a call handed over is expected to; any
+            // other leg -- above all one tagged for a reservation -- is the platform's leg of a call this phone did not
+            // know to expect, rung as a second line with nobody on it. Say why, so it can be traced.
+            if (!leg.transferLeg && !isDestinationLeg(leg)) {
+                var legTag = readStandbyLegTag(leg);
+                var why = armKey
+                    ? (armLapsedMs > 0 ? 'arm for ' + armKey + ' lapsed ' + armLapsedMs + ' ms before the leg' : 'arm for ' + armKey + ' was live')
+                    : 'no arm';
+
+                reportDiagnostic(legTag.reservationId ? 'warning' : 'info', 'inbound-leg-unsolicited',
+                    'An inbound leg rang as an unsolicited call (' + why + ').',
+                    legTag.reservationId ? 'reservation=' + legTag.reservationId + ' user=' + legTag.agentUserId : '');
+            }
+
+            return false;
         }
 
         // The Contact Center layer says whether the agent stands by for an over-dialing campaign (Available and signed in
