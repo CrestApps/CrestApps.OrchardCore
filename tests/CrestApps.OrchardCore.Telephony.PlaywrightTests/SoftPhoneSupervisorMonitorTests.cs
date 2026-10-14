@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 using Microsoft.Playwright;
 
@@ -120,23 +121,25 @@ public sealed class SoftPhoneSupervisorMonitorTests : SoftPhoneBrowserTest
     }
 
     [Fact]
-    public async Task AfterATakeover_TheBannerOffersHangUp_AndNoModeSwitcher()
+    public async Task AfterATakeover_TheCallIsThePhonesOwn_AndTheBannerGoes()
     {
         // Arrange
         var page = await OpenSupervisorPhoneAsync();
         await RequestAsync(page, "tok-1", "Ann Agent");
         await page.EvaluateAsync("() => window.fakeTelnyx.ringMonitorLeg('sv-1', 'tok-1')");
         await page.WaitForFunctionAsync("() => window.fakeTelnyx.byLeg('sv-1').state === 'active'");
+        await EmitAsync(page, "Connected", "Monitor");
 
         // Act
-        await EmitAsync(page, "TookOver", "Barge");
+        await TakeOverAsync(page, "sv-1");
 
-        // Assert
-        await page.Locator("[data-cc-monitor-title]", new PageLocatorOptions { HasText = "took over" }).WaitForAsync();
-        Assert.Equal(0, await page.Locator("[data-cc-monitor-mode]").CountAsync());
+        // Assert - listed with the phone's calls, still up, and no banner: it is muted, held and hung up like any other.
+        await page.WaitForFunctionAsync("() => window.telephonySoftPhone.getInstance().getActiveCalls().some(call => call.callId === 'sv-1')");
+        await page.Locator("[data-cc-monitor-banner]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
+        Assert.Equal("active", await page.EvaluateAsync<string>("() => window.fakeTelnyx.byLeg('sv-1').state"));
         await CaptureAsync(page, "supervisor-phone-took-over");
 
-        await page.ClickAsync("[data-cc-monitor-stop]");
+        await page.ClickAsync("[data-telephony-hangup]");
         await page.WaitForFunctionAsync("() => window.fakeTelnyx.byLeg('sv-1').state === 'destroy'");
         Assert.False(await page.EvaluateAsync<bool>("() => window.fakeCcHub.invocations.some(call => call.method === 'StopMonitoring')"));
     }
@@ -165,7 +168,7 @@ public sealed class SoftPhoneSupervisorMonitorTests : SoftPhoneBrowserTest
         Assert.True(await SendsAsync(page, "sv-1", expected: true), "Nobody hears a supervisor who joined the call.");
 
         await EmitAsync(page, "ModeChanged", "Monitor");
-        await EmitAsync(page, "TookOver", "Barge");
+        await TakeOverAsync(page, "sv-1");
         Assert.True(await SendsAsync(page, "sv-1", expected: true), "Nobody hears a supervisor who took the call over.");
     }
 
@@ -228,6 +231,24 @@ public sealed class SoftPhoneSupervisorMonitorTests : SoftPhoneBrowserTest
         => await page.EvaluateAsync(
             "([state, mode]) => window.fakeCcHub.emit('SupervisorEngagementChanged', { state: state, interactionId: 'int-1', supervisorUserId: 'sup-1', mode: mode })",
             new[] { state, mode });
+
+    // What the server does when the supervisor takes the call over (ContactCenterPhoneCallSupervisionService.TakeOverAsync):
+    // the call on their leg is recorded as theirs first, and only then is their phone told, which makes the leg a call of
+    // its own. Told without the record, the phone's next look at its calls finds the leg unaccounted for and hangs it up.
+    private async Task TakeOverAsync(IPage page, string leg)
+    {
+        Server.Provider.TrackCall(new TelephonyCall
+        {
+            CallId = leg,
+            From = "+17025550101",
+            Direction = CallDirection.Inbound,
+            State = CallState.Connected,
+            ProviderName = "InMemory",
+            StartedUtc = DateTimeOffset.UtcNow,
+        });
+
+        await EmitAsync(page, "TookOver", "Barge");
+    }
 
     private static Task<int> AnswersAsync(IPage page, string leg)
         => page.EvaluateAsync<int>("leg => (window.fakeTelnyx.byLeg(leg) || { answers: -1 }).answers", leg);
