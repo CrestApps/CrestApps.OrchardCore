@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Modules;
 using OrchardCore.Workflows.Models;
 using OrchardCore.Workflows.Services;
 
@@ -160,6 +161,83 @@ public sealed class OmnichannelWorkflowTaskTests
     }
 
     [Fact]
+    public async Task TransferringAText_PassesTheAddressTheConversationRunsOn()
+    {
+        // Arrange
+        // The text workspace keys a human thread by the business's address and the customer's, and refuses a handoff
+        // without both. The activity records the address it runs on.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Channel = "SMS",
+            ChannelEndpointId = "address-1",
+            PreferredDestination = "+15550000000",
+        };
+        var handoff = CreateHandoff("SMS", OmnichannelHandoffResult.Success(conversationId: "conversation-1"));
+        OmnichannelHandoffRequest captured = null;
+        handoff.Setup(x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<OmnichannelHandoffRequest, CancellationToken>((request, _) => captured = request)
+            .ReturnsAsync(OmnichannelHandoffResult.Success(conversationId: "conversation-1"));
+
+        var task = CreateTransferTask(activity, [handoff.Object], new OmnichannelChannelEndpoint { ItemId = "address-1", Value = "+15551110000" });
+
+        // Act
+        await task.ExecuteAsync(null!, null!);
+
+        // Assert
+        Assert.NotNull(captured);
+        Assert.Equal("+15551110000", captured.ServiceAddress);
+        Assert.Equal("+15550000000", captured.ContactAddress);
+    }
+
+    [Fact]
+    public async Task ATextAPersonTookOver_ConcludesTheAutomatedActivity()
+    {
+        // Arrange
+        // Left open, the automated agent would keep answering the customer alongside the person who now owns the
+        // thread. The SMS agent concludes its own escalations the same way.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Channel = "SMS",
+            Status = ActivityStatus.AwaitingCustomerAnswer,
+        };
+        var store = new Mock<IOmnichannelActivityStore>();
+        var task = CreateTransferTask(activity, [CreateHandoff("SMS", OmnichannelHandoffResult.Success(conversationId: "conversation-1")).Object], store: store);
+
+        // Act
+        await task.ExecuteAsync(null!, null!);
+
+        // Assert
+        Assert.Equal(ActivityStatus.Completed, activity.Status);
+        Assert.Equal(OmnichannelConstants.TerminalReasons.HandedOffToAgent, activity.TerminalReasonCode);
+        Assert.True(activity.AiEscalated);
+        store.Verify(x => x.UpdateAsync(activity), Times.Once);
+    }
+
+    [Fact]
+    public async Task ACallPutThrough_LeavesTheActivityToTheCall()
+    {
+        // Arrange
+        // A call handoff seats the live call with an agent; the call itself carries on, so nothing is concluded here.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Channel = "Phone",
+            Status = ActivityStatus.AwaitingCustomerAnswer,
+        };
+        var store = new Mock<IOmnichannelActivityStore>();
+        var task = CreateTransferTask(activity, [CreateHandoff("Phone", OmnichannelHandoffResult.Success()).Object], store: store);
+
+        // Act
+        await task.ExecuteAsync(null!, null!);
+
+        // Assert
+        Assert.Equal(ActivityStatus.AwaitingCustomerAnswer, activity.Status);
+        store.Verify(x => x.UpdateAsync(It.IsAny<OmnichannelActivity>()), Times.Never);
+    }
+
+    [Fact]
     public async Task ACallerLeftWaiting_IsReportedSeparatelyFromOneWhoWasConnected()
     {
         // Arrange
@@ -299,15 +377,28 @@ public sealed class OmnichannelWorkflowTaskTests
         };
     }
 
-    private static TransferToAgentTask CreateTransferTask(OmnichannelActivity activity, IEnumerable<IOmnichannelHandoffService> handoffServices)
+    private static TransferToAgentTask CreateTransferTask(
+        OmnichannelActivity activity,
+        IEnumerable<IOmnichannelHandoffService> handoffServices,
+        OmnichannelChannelEndpoint endpoint = null,
+        Mock<IOmnichannelActivityStore> store = null)
     {
         var manager = new Mock<IOmnichannelActivityManager>();
         manager.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync(activity);
 
+        var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
+        endpointManager.Setup(x => x.FindByIdAsync(It.IsAny<string>())).ReturnsAsync(endpoint);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(x => x.UtcNow).Returns(new DateTime(2026, 10, 14, 9, 0, 0, DateTimeKind.Utc));
+
         return new TransferToAgentTask(
             manager.Object,
+            (store ?? new Mock<IOmnichannelActivityStore>()).Object,
+            endpointManager.Object,
             handoffServices,
             CreateEchoEvaluator().Object,
+            clock.Object,
             NullLogger<TransferToAgentTask>.Instance,
             new PassThroughStringLocalizer<TransferToAgentTask>())
         {
