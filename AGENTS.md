@@ -633,6 +633,10 @@ npm run watch
 
 # List the selected groups and the files each one writes, without building
 npm run dry-run -- -t vendor
+
+# Lint every module's scripts (ESLint), and type-check the ones marked // @ts-check (TypeScript, no output)
+npm run lint
+npm run check
 ```
 
 ### Supported Asset Types
@@ -650,7 +654,7 @@ npm run dry-run -- -t vendor
 - Always run `npm run rebuild` after modifying frontend code
 - Commit compiled assets (wwwroot) along with source files
 - Use `npm run watch` during active development
-- Check for TypeScript/JavaScript errors before committing
+- Run `npm run lint` and `npm run check` before committing; CI fails on any error
 - Follow existing patterns for module-specific assets
 
 ## Pull Request Guidelines

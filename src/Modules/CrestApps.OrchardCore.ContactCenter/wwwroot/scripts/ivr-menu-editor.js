@@ -617,7 +617,7 @@
 			});
 		}
 		function init(root) {
-			var config = {};
+			var config;
 			try {
 				config = JSON.parse(root.getAttribute("data-config") || "{}");
 			} catch (error) {
@@ -1007,7 +1007,6 @@
 				]);
 			}
 			function renderNode(node, nodeIndex) {
-				String(node.nodeId || "").trim();
 				var promptId = idPrefix + "-p-" + nodeIndex;
 				var mediaId = idPrefix + "-m-" + nodeIndex;
 				var canAddKey = ivr.availableDigits(node, -1).length > 0;

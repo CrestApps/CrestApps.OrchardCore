@@ -3394,7 +3394,7 @@
 		}
 		function isPersonName(value, number) {
 			var candidate = text(value);
-			return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().\-]+$/.test(candidate);
+			return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().-]+$/.test(candidate);
 		}
 		function describeExtension(strings, name, number, fallbackName) {
 			var extension = text(number);
@@ -3474,7 +3474,7 @@
 		}
 		function isNumberLike(value) {
 			var text = value == null ? "" : String(value).trim();
-			return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
+			return !!text && /^[+\d\s().-]+$/.test(text) && /\d/.test(text);
 		}
 		var SERVICE_ENTRY_FIELDS = [
 			"kind",
@@ -5165,13 +5165,10 @@
 		"use strict";
 		var softPhoneModules = (typeof globalThis !== "undefined" ? globalThis : window).CrestAppsSoftPhone || {};
 		var normalizeDialNumber = softPhoneModules.normalizeDialNumber;
-		softPhoneModules.formatNanpNumber;
-		softPhoneModules.formatInternationalNumber;
 		var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
 		var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
 		var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
 		var QUALITY_SILENT_MIC_SAMPLES = softPhoneModules.QUALITY_SILENT_MIC_SAMPLES;
-		softPhoneModules.LEVEL_UNKNOWN;
 		var LEVEL_SILENT = softPhoneModules.LEVEL_SILENT;
 		var estimateMos = softPhoneModules.estimateMos;
 		var isCaptureSilent = softPhoneModules.isCaptureSilent;
@@ -5202,7 +5199,6 @@
 		var clampAutoLevelGainDb = softPhoneModules.clampAutoLevelGainDb;
 		var RAW_CAPTURE_SILENT_LEVEL = softPhoneModules.RAW_CAPTURE_SILENT_LEVEL;
 		var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
-		softPhoneModules.describePlayoutDelay;
 		var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
 		var concealmentPercent = softPhoneModules.concealmentPercent;
 		var clampSignalingRegion = softPhoneModules.clampSignalingRegion;
@@ -5298,7 +5294,6 @@
 		var offerActionClick = softPhoneModules.offerActionClick;
 		var isOfferActionPending = softPhoneModules.isOfferActionPending;
 		var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
-		softPhoneModules.withTimeout;
 		var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
 		var isOfferSettled = softPhoneModules.isOfferSettled;
 		var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
@@ -5385,8 +5380,6 @@
 		var releaseRemoteElement = softPhoneModules.releaseRemoteElement;
 		var releaseAllRemoteElements = softPhoneModules.releaseAllRemoteElements;
 		var resolveDialTarget = softPhoneModules.resolveDialTarget;
-		softPhoneModules.shouldOfferDial;
-		softPhoneModules.shouldShowCallNumber;
 		var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
 		var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
 		var HOST_BRIDGE_PROTOCOL = softPhoneModules.HOST_BRIDGE_PROTOCOL;
@@ -7576,7 +7569,7 @@
 			}
 			function captureDeviceKey(stream) {
 				var track = stream && typeof stream.getAudioTracks === "function" ? stream.getAudioTracks()[0] : null;
-				var settings = null;
+				var settings;
 				try {
 					settings = track && typeof track.getSettings === "function" ? track.getSettings() : null;
 				} catch (error) {
@@ -9849,12 +9842,10 @@
 				var stateName = currentCall ? normalizeState(currentCall.state) : "Idle";
 				var active = isActive(stateName);
 				var liveMedia = stateName === "Connected" || stateName === "OnHold";
-				getActiveCalls();
 				var canDial = !active || stateName === "OnHold";
 				var selectedConferenceCallIds = Object.keys(conferenceSelections).filter(function(callId) {
 					return !!activeCalls[callId];
 				});
-				metadataBoolean(currentCall, "isConference");
 				var transferBusy = transferPanel.isBusy();
 				if (transferPanel.isOpen() && !liveMedia && !transferBusy) transferPanel.close();
 				var transferOpen = transferPanel.isOpen();

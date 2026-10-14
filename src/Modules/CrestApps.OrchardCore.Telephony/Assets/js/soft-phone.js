@@ -18,14 +18,11 @@
     var softPhoneModules = (typeof globalThis !== 'undefined' ? globalThis : window).CrestAppsSoftPhone || {};
 
     var normalizeDialNumber = softPhoneModules.normalizeDialNumber;
-    var formatNanpNumber = softPhoneModules.formatNanpNumber;
-    var formatInternationalNumber = softPhoneModules.formatInternationalNumber;
     var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
 
     var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
     var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
     var QUALITY_SILENT_MIC_SAMPLES = softPhoneModules.QUALITY_SILENT_MIC_SAMPLES;
-    var LEVEL_UNKNOWN = softPhoneModules.LEVEL_UNKNOWN;
     var LEVEL_SILENT = softPhoneModules.LEVEL_SILENT;
     var estimateMos = softPhoneModules.estimateMos;
     var isCaptureSilent = softPhoneModules.isCaptureSilent;
@@ -56,7 +53,6 @@
     var clampAutoLevelGainDb = softPhoneModules.clampAutoLevelGainDb;
     var RAW_CAPTURE_SILENT_LEVEL = softPhoneModules.RAW_CAPTURE_SILENT_LEVEL;
     var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
-    var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
     var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
     var concealmentPercent = softPhoneModules.concealmentPercent;
     var clampSignalingRegion = softPhoneModules.clampSignalingRegion;
@@ -163,7 +159,6 @@
     var offerActionClick = softPhoneModules.offerActionClick;
     var isOfferActionPending = softPhoneModules.isOfferActionPending;
     var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
-    var withTimeout = softPhoneModules.withTimeout;
     var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
     var isOfferSettled = softPhoneModules.isOfferSettled;
     var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
@@ -255,8 +250,6 @@
     var releaseAllRemoteElements = softPhoneModules.releaseAllRemoteElements;
 
     var resolveDialTarget = softPhoneModules.resolveDialTarget;
-    var shouldOfferDial = softPhoneModules.shouldOfferDial;
-    var shouldShowCallNumber = softPhoneModules.shouldShowCallNumber;
     var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
     var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
 
@@ -4236,7 +4229,7 @@
         // Which microphone a capture is on, as the key the learned auto-level gain is kept under.
         function captureDeviceKey(stream) {
             var track = stream && typeof stream.getAudioTracks === 'function' ? stream.getAudioTracks()[0] : null;
-            var settings = null;
+            var settings;
 
             try {
                 settings = track && typeof track.getSettings === 'function' ? track.getSettings() : null;
@@ -8350,13 +8343,10 @@
             var active = isActive(stateName);
             var connected = stateName === 'Connected';
             var liveMedia = connected || stateName === 'OnHold';
-            var calls = getActiveCalls();
             var canDial = !active || stateName === 'OnHold';
             var selectedConferenceCallIds = Object.keys(conferenceSelections).filter(function (callId) {
                 return !!activeCalls[callId];
             });
-            var currentIsConference = metadataBoolean(currentCall, 'isConference');
-
             // A transfer being asked for, or a consult under way, keeps the panel up while its consult call connects.
             var transferBusy = transferPanel.isBusy();
 
@@ -10746,16 +10736,6 @@
                 loadVoicemails();
                 refreshVoicemailBadge();
             });
-        }
-
-        function markAllVoicemailsRead() {
-            if (!connection) {
-                return;
-            }
-
-            connection.invoke('MarkAllVoicemailsRead').then(function (remaining) {
-                updateVoicemailBadge(remaining);
-            }).catch(function () { });
         }
 
         function markVoicemailRead(callId, itemElement) {

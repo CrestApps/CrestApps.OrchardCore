@@ -403,7 +403,7 @@
 
                         return null;
                     })
-                    .catch(function (error) {
+                    .catch(function () {
                         var statusInput = form.querySelector('input[name="status"]');
 
                         if (!statusInput) {
@@ -725,7 +725,7 @@
                 syncPredictiveStandby(root, notification.status);
             });
 
-            client.connection.on('OfferReceived', function (notification) {
+            client.connection.on('OfferReceived', function () {
                 // The soft phone never navigates on an offer. It runs chromeless in its own window (the /softphone
                 // page and the browser extension), so screen-popping the assigned record here would redirect the
                 // phone away from the live call. Record pop-on-offer is owned exclusively by the docked agent bar,

@@ -589,7 +589,7 @@
 						updateMembershipUi(root, snapshot);
 						if (snapshot && snapshot.presenceStatus === "Available") return recoverSoftPhoneState(root, api, client);
 						return null;
-					}).catch(function(error) {
+					}).catch(function() {
 						var statusInput = form.querySelector("input[name=\"status\"]");
 						if (!statusInput) {
 							statusInput = document.createElement("input");
@@ -776,7 +776,7 @@
 					});
 					syncPredictiveStandby(root, notification.status);
 				});
-				client.connection.on("OfferReceived", function(notification) {
+				client.connection.on("OfferReceived", function() {
 					recoverSoftPhoneState(root, api, client);
 				});
 				client.connection.on("OfferRevoked", function(notification) {

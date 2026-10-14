@@ -94,7 +94,7 @@
     function isPersonName(value, number) {
         var candidate = text(value);
 
-        return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().\-]+$/.test(candidate);
+        return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().-]+$/.test(candidate);
     }
 
     // "Jane Doe · ext 2", or the bare extension when nobody is known to be behind it.

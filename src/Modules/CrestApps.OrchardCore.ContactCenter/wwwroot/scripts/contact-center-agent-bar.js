@@ -300,6 +300,7 @@
 			var state = null;
 			var serverOffsetMs = 0;
 			var activeSignature = null;
+			var connectionStatus = null;
 			var lastPoppedActivityId = null;
 			var lastOfferReservationId = null;
 			var inner = root.querySelector("[data-cc-agent-bar-inner]");
@@ -497,7 +498,7 @@
 			}
 			function renderTail() {
 				var collapseTitle = label("collapseBar", "Hide the Contact Center bar");
-				return "<div class=\"cc-bar__tail\"><span class=\"cc-bar__conn\" data-cc-connection role=\"status\" aria-live=\"polite\"></span>" + (config.workspaceUrl ? "<a class=\"cc-bar__workspace\" href=\"" + escapeHtml(config.workspaceUrl) + "\" title=\"" + escapeHtml(label("openWorkspace", "Open full workspace")) + "\"><i class=\"fa-solid fa-headset\" aria-hidden=\"true\"></i></a>" : "") + "<button type=\"button\" class=\"cc-bar__collapse\" data-cc-collapse title=\"" + escapeHtml(collapseTitle) + "\" aria-label=\"" + escapeHtml(collapseTitle) + "\"><i class=\"fa-solid fa-chevron-down\" aria-hidden=\"true\"></i></button></div>";
+				return "<div class=\"cc-bar__tail\"><span class=\"" + connectionStatusClass() + "\" data-cc-connection role=\"status\" aria-live=\"polite\">" + escapeHtml(connectionStatusText()) + "</span>" + (config.workspaceUrl ? "<a class=\"cc-bar__workspace\" href=\"" + escapeHtml(config.workspaceUrl) + "\" title=\"" + escapeHtml(label("openWorkspace", "Open full workspace")) + "\"><i class=\"fa-solid fa-headset\" aria-hidden=\"true\"></i></a>" : "") + "<button type=\"button\" class=\"cc-bar__collapse\" data-cc-collapse title=\"" + escapeHtml(collapseTitle) + "\" aria-label=\"" + escapeHtml(collapseTitle) + "\"><i class=\"fa-solid fa-chevron-down\" aria-hidden=\"true\"></i></button></div>";
 			}
 			function isEnded(active) {
 				return active.status === "Ended" || active.status === "Failed";
@@ -580,10 +581,22 @@
 				});
 			}
 			function setConnectionStatus(key, fallback, modifier) {
+				connectionStatus = {
+					key,
+					fallback,
+					modifier
+				};
 				var el = inner ? inner.querySelector("[data-cc-connection]") : null;
-				if (!el) return;
-				el.textContent = label(key, fallback);
-				el.className = "cc-bar__conn" + (modifier ? " " + modifier : "");
+				if (el) {
+					el.textContent = label(key, fallback);
+					el.className = connectionStatusClass();
+				}
+			}
+			function connectionStatusClass() {
+				return "cc-bar__conn" + (connectionStatus && connectionStatus.modifier ? " " + connectionStatus.modifier : "");
+			}
+			function connectionStatusText() {
+				return connectionStatus ? label(connectionStatus.key, connectionStatus.fallback) : "";
 			}
 			function tick() {
 				if (!state || !inner) return;

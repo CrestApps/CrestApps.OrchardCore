@@ -24,12 +24,14 @@ window.flatpickrCulture = function () {
 
         // Convert C# date tokens to flatpickr tokens.
         // Use placeholders (\x01, \x02) to prevent cascade replacements.
+        /* eslint-disable no-control-regex -- the control characters are the placeholders. */
         return p
             .replace(/yyyy/g, "Y").replace(/yy/g, "y")
             .replace(/MMMM/g, "F").replace(/MMM/g, "M")
             .replace(/MM/g, "\x01").replace(/M/g, "n").replace(/\x01/g, "m")
             .replace(/dddd/g, "l").replace(/ddd/g, "D")
             .replace(/dd/g, "\x02").replace(/d/g, "j").replace(/\x02/g, "d");
+        /* eslint-enable no-control-regex */
     }
 
     function timePatternToFlatpickr(pattern) {

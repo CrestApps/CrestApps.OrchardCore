@@ -177,7 +177,9 @@
         var state = null;
         var serverOffsetMs = 0;
         var activeSignature = null;
-        var connectionStatusKey = null;
+        // The real-time connection's last status, drawn again by every render: each one replaces the bar's markup, and
+        // the label used to come back empty after the first.
+        var connectionStatus = null;
         var lastPoppedActivityId = null;
         var lastOfferReservationId = null;
 
@@ -585,7 +587,7 @@
             var collapseTitle = label('collapseBar', 'Hide the Contact Center bar');
 
             return '<div class="cc-bar__tail">' +
-                '<span class="cc-bar__conn" data-cc-connection role="status" aria-live="polite"></span>' +
+                '<span class="' + connectionStatusClass() + '" data-cc-connection role="status" aria-live="polite">' + escapeHtml(connectionStatusText()) + '</span>' +
                 (config.workspaceUrl ? '<a class="cc-bar__workspace" href="' + escapeHtml(config.workspaceUrl) + '" title="' + escapeHtml(label('openWorkspace', 'Open full workspace')) + '"><i class="fa-solid fa-headset" aria-hidden="true"></i></a>' : '') +
                 '<button type="button" class="cc-bar__collapse" data-cc-collapse title="' + escapeHtml(collapseTitle) + '" aria-label="' + escapeHtml(collapseTitle) + '"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>' +
             '</div>';
@@ -698,16 +700,22 @@
         }
 
         function setConnectionStatus(key, fallback, modifier) {
+            connectionStatus = { key: key, fallback: fallback, modifier: modifier };
+
             var el = inner ? inner.querySelector('[data-cc-connection]') : null;
 
-            if (!el) {
-                connectionStatusKey = key;
-                return;
+            if (el) {
+                el.textContent = label(key, fallback);
+                el.className = connectionStatusClass();
             }
+        }
 
-            connectionStatusKey = key;
-            el.textContent = label(key, fallback);
-            el.className = 'cc-bar__conn' + (modifier ? ' ' + modifier : '');
+        function connectionStatusClass() {
+            return 'cc-bar__conn' + (connectionStatus && connectionStatus.modifier ? ' ' + connectionStatus.modifier : '');
+        }
+
+        function connectionStatusText() {
+            return connectionStatus ? label(connectionStatus.key, connectionStatus.fallback) : '';
         }
 
         function tick() {

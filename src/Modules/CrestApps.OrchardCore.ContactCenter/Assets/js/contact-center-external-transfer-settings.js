@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Contact Center external transfer settings editor.
  *

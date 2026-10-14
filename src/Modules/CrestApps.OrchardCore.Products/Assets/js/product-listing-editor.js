@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * The product listing editor.
  *

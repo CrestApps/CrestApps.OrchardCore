@@ -15,7 +15,7 @@ export function getAssetGroups() {
 
     for (const manifestPath of globSync(manifestGlob, { cwd: repoRoot, posix: true }).sort()) {
         const absoluteManifestPath = toPosix(path.join(repoRoot, manifestPath));
-        const manifest = JSON.parse(fs.readFileSync(absoluteManifestPath, "utf8").replace(/^﻿/, ""));
+        const manifest = JSON.parse(fs.readFileSync(absoluteManifestPath, "utf8").replace(/^\uFEFF/, ""));
 
         if (!Array.isArray(manifest)) {
             throw new Error(`${manifestPath} must contain an array of asset groups.`);

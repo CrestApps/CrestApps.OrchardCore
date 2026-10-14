@@ -68,7 +68,7 @@
     function isNumberLike(value) {
         var text = value == null ? '' : String(value).trim();
 
-        return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
+        return !!text && /^[+\d\s().-]+$/.test(text) && /\d/.test(text);
     }
 
     // The fields a transfer service's entries carry beyond a provider entry's, kept as they are.
