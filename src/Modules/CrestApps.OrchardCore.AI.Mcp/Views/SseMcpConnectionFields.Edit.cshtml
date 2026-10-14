@@ -199,10 +199,11 @@
     });
 </script>
 
+<style asp-name="monaco"></style>
 <script at="Foot" asp-name="monaco"></script>
 <script at="Foot" asp-name="transport-options-editor" depends-on="monaco">
     document.addEventListener('DOMContentLoaded', function () {
-        require(['vs/editor/editor.main'], function () {
+        window.__orchardCoreMonacoReady.then(function (monaco) {
             var html = document.documentElement;
             const mutationObserver = new MutationObserver(setTheme);
             mutationObserver.observe(html, { attributes: true });
