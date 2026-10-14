@@ -1,25 +1,23 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/browser-calls.js';
-
-const {
+import {
+    BROWSER_CALL_HEARTBEAT_INTERVAL_MS,
     createCallNotifiers,
-    trackCall,
-    isCallTracked,
-    trackedCallIds,
     deliverCallState,
-    findVanishedCalls,
     endAllCalls,
-    planShownBrowserCalls,
-    readCallJournal,
-    journalCallStarted,
+    findVanishedCalls,
+    isCallTracked,
     journalCallConnected,
     journalCallEnded,
     journalCallSettled,
-    planOwedCallEnds,
+    journalCallStarted,
     planCallHeartbeat,
-    BROWSER_CALL_HEARTBEAT_INTERVAL_MS,
-} = globalThis.CrestAppsSoftPhone;
+    planOwedCallEnds,
+    planShownBrowserCalls,
+    readCallJournal,
+    trackCall,
+    trackedCallIds,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/browser-calls.js';
 
 const isTerminal = state => state === 'hangup' || state === 'destroy' || state === 'purge';
 

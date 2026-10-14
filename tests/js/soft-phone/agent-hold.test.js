@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-hold.js';
-
-const {
-    rememberAgentHold,
+import {
+    holdCommandRoute,
     isAgentHeld,
     pruneAgentHolds,
     reconcileAgentHold,
+    rememberAgentHold,
     resolveReportedState,
-    holdCommandRoute,
-} = globalThis.CrestAppsSoftPhone;
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-hold.js';
 
 // With browser audio the hold happens in the browser and the provider never hears of it, so every later report from
 // the server says the call is connected. Taking those reports at their word took callers off hold a few seconds after

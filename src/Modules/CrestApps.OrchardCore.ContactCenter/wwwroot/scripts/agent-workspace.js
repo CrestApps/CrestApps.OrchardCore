@@ -416,17 +416,16 @@
 				refs.active.innerHTML = "<div class=\"cc-active\"><div class=\"cc-active__headline\"><span class=\"cc-active__dir\"><i class=\"fa-solid " + (inbound ? "fa-arrow-down-left" : "fa-arrow-up-right") + "\"></i></span><div><div class=\"cc-active__customer\">" + escapeHtml(active.customerLabel || active.customerAddress || label("unknownCaller", "Unknown caller")) + "</div><div class=\"cc-active__sub\">" + escapeHtml(inbound ? label("inbound", "Inbound") : label("outbound", "Outbound")) + (active.queueName ? " &middot; " + escapeHtml(active.queueName) : "") + (active.customerAddress ? " &middot; " + escapeHtml(active.customerAddress) : "") + "</div></div></div>" + (recordingBadge ? "<div class=\"cc-active__recording\">" + recordingBadge + "</div>" : "") + disclosureBlock + "<div class=\"cc-active__stats\"><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("status", "Status")) + "</div><div class=\"cc-stat__value\">" + escapeHtml(active.status) + "</div></div><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("talkTime", "Talk time")) + "</div><div class=\"cc-stat__value\" data-cc-talk-time aria-hidden=\"true\">0:00</div></div></div><div class=\"cc-active__actions\">" + (active.contactUrl ? "<a class=\"btn btn-sm btn-outline-secondary\" href=\"" + escapeHtml(active.contactUrl) + "\" target=\"_blank\" rel=\"noopener\"><i class=\"fa-solid fa-up-right-from-square\"></i> " + escapeHtml(label("openContact", "Open customer record")) + "</a>" : "") + secureButton + secureCaptureButton + (active.completeUrl ? "<a class=\"btn btn-sm btn-primary\" href=\"" + escapeHtml(active.completeUrl) + "\"><i class=\"fa-solid fa-check\"></i> " + escapeHtml(label("completeWork", "Complete activity")) + "</a>" : "") + "</div></div>";
 			}
 			function formatCustomer(value) {
-				var shared = window.CrestAppsSoftPhone;
-				if (shared && typeof shared.formatPhoneNumber === "function") return shared.formatPhoneNumber(value) || value;
+				var format = window.telephonyClient && window.telephonyClient.formatPhoneNumber;
+				if (typeof format === "function") return format(value) || value;
 				return value;
 			}
 			function formatTalkTime(entry) {
-				var shared = window.CrestAppsTelephonyShared;
-				if (!entry || !shared || typeof shared.formatDuration !== "function") return "";
+				if (!entry || typeof formatDuration !== "function") return "";
 				var answered = parseUtc(entry.answeredUtc);
 				var ended = parseUtc(entry.endedUtc);
 				if (!answered || !ended || ended <= answered) return "";
-				return shared.formatDuration(Math.round((ended - answered) / 1e3));
+				return formatDuration(Math.round((ended - answered) / 1e3));
 			}
 			function renderHistory() {
 				if (!refs.history || !state) return;

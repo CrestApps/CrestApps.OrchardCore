@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/extension-names.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-search.js';
-
-const {
+import {
     createExtensionDirectory,
     storeExtensionEntries,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/extension-names.js';
+import {
+    buildKeypadExtensionResultsHtml,
     keypadExtensionMatches,
     resolveKeypadExtension,
-    buildKeypadExtensionResultsHtml
-} = globalThis.CrestAppsSoftPhone;
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-search.js';
 
 const escapeHtml = value => String(value == null ? '' : value)
     .replace(/&/g, '&amp;')

@@ -7,7 +7,7 @@
  * instead -- who is being monitored, a Listen / Whisper / Barge switcher that changes the mode on the same leg, and
  * Stop. After a takeover the call is the supervisor's, and Stop becomes Hang up.
  *
- * Concatenated after shared/supervisor-actions.js, which decides how the banner reads.
+ * How the banner reads is decided by shared/supervisor-actions.js, which it imports.
  */
 import {
     MONITOR_MODES,

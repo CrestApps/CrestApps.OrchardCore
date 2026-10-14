@@ -1,16 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/bridged-transfer.js';
-
-const {
-    readTransferLegTag,
-    providerTransferRequest,
+import {
+    consultCommandResult,
     consultFromCall,
     consultRequest,
-    consultCommandResult,
-    shouldHoldBeforeTransfer
-} = globalThis.CrestAppsSoftPhone;
+    providerTransferRequest,
+    readTransferLegTag,
+    shouldHoldBeforeTransfer,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/bridged-transfer.js';
 
 const encode = value => Buffer.from(JSON.stringify(value)).toString('base64');
 

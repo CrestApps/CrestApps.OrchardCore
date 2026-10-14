@@ -646,7 +646,7 @@ npm run check
 
 ### Asset Build Process
 1. Source files are in module `Assets/` directory
-2. Each `vite` group lists its sources in order; the build imports them in that order, so a helper must be listed before the script that uses it
+2. Each `vite` group's `source` is its main script; helpers are ES modules the script `import`s, and the build follows the imports. Never attach helpers to a `window` namespace; a bundle offers other bundles only a deliberate page API such as `window.telephonyClient`
 3. Each group writes its readable `dest` file and a `.min` sibling, the pair the resource manifest's `SetUrl` points at
 4. Every built file is written with LF line endings, and only when its contents changed
 

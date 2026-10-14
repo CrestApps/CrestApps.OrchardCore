@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Why the browser would not give the soft phone a microphone.
  *
@@ -12,108 +13,99 @@
  * is a secure context, whether the permissions policy allows the microphone, how many inputs are present), names the
  * cause from those facts, and reports all of them, so the agent is told the real reason and support can see it too.
  *
- * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
- * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Part of the soft phone: an ES module that soft-phone.js, or another of its helpers, imports, and that the unit tests
+ * import directly.
  */
-(function (root) {
-    'use strict';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+var PERMISSION_ERRORS = ['NotAllowedError', 'PermissionDeniedError', 'SecurityError'];
+var DEVICE_MISSING_ERRORS = ['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError'];
+var DEVICE_BUSY_ERRORS = ['NotReadableError', 'TrackStartError', 'AbortError'];
 
-    var PERMISSION_ERRORS = ['NotAllowedError', 'PermissionDeniedError', 'SecurityError'];
-    var DEVICE_MISSING_ERRORS = ['NotFoundError', 'DevicesNotFoundError', 'OverconstrainedError'];
-    var DEVICE_BUSY_ERRORS = ['NotReadableError', 'TrackStartError', 'AbortError'];
+// Chrome says "Permission denied by system" when the operating system refuses; Firefox says the request "is not
+// allowed by the user agent or the platform". Safari gives no such hint.
+var SYSTEM_REFUSAL = /(by system|by the platform|or the platform|operating system)/i;
 
-    // Chrome says "Permission denied by system" when the operating system refuses; Firefox says the request "is not
-    // allowed by the user agent or the platform". Safari gives no such hint.
-    var SYSTEM_REFUSAL = /(by system|by the platform|or the platform|operating system)/i;
+/*
+ * Names the cause of a capture failure.
+ *
+ * facts: { name, message, permissionState ('granted' | 'denied' | 'prompt' | null), isSecureContext,
+ *          policyAllowed (true | false | null when unknown), audioInputCount (number | null when unknown) }
+ *
+ * Returns one of:
+ *   'insecure'       the page is not a secure context, so no browser offers a microphone at all;
+ *   'policy'         the page is embedded where the microphone is not delegated, or the browser refused it as a
+ *                    security matter;
+ *   'system-denied'  the operating system blocks the browser from the microphone;
+ *   'site-denied'    the agent (or an administrator policy) blocked this site;
+ *   'dismissed'      the browser asked and the prompt was dismissed or closed;
+ *   'not-found'      there is no microphone, or the chosen one is gone;
+ *   'in-use'         a microphone is there but could not be started, usually because another application has it;
+ *   'unknown'        anything else.
+ */
+export function classifyMicrophoneError(facts) {
+    var details = facts || {};
+    var name = details.name || '';
+    var message = details.message || '';
 
-    /*
-     * Names the cause of a capture failure.
-     *
-     * facts: { name, message, permissionState ('granted' | 'denied' | 'prompt' | null), isSecureContext,
-     *          policyAllowed (true | false | null when unknown), audioInputCount (number | null when unknown) }
-     *
-     * Returns one of:
-     *   'insecure'       the page is not a secure context, so no browser offers a microphone at all;
-     *   'policy'         the page is embedded where the microphone is not delegated, or the browser refused it as a
-     *                    security matter;
-     *   'system-denied'  the operating system blocks the browser from the microphone;
-     *   'site-denied'    the agent (or an administrator policy) blocked this site;
-     *   'dismissed'      the browser asked and the prompt was dismissed or closed;
-     *   'not-found'      there is no microphone, or the chosen one is gone;
-     *   'in-use'         a microphone is there but could not be started, usually because another application has it;
-     *   'unknown'        anything else.
-     */
-    function classifyMicrophoneError(facts) {
-        var details = facts || {};
-        var name = details.name || '';
-        var message = details.message || '';
-
-        if (details.isSecureContext === false) {
-            return 'insecure';
-        }
-
-        if (PERMISSION_ERRORS.indexOf(name) >= 0) {
-            if (details.policyAllowed === false || name === 'SecurityError') {
-                return 'policy';
-            }
-
-            if (SYSTEM_REFUSAL.test(message)) {
-                return 'system-denied';
-            }
-
-            // The site holds the permission and capture was still refused: something below the browser said no.
-            if (details.permissionState === 'granted') {
-                return 'system-denied';
-            }
-
-            if (details.permissionState === 'prompt') {
-                return 'dismissed';
-            }
-
-            return 'site-denied';
-        }
-
-        if (DEVICE_MISSING_ERRORS.indexOf(name) >= 0 || details.audioInputCount === 0) {
-            return 'not-found';
-        }
-
-        if (DEVICE_BUSY_ERRORS.indexOf(name) >= 0) {
-            return 'in-use';
-        }
-
-        return 'unknown';
+    if (details.isSecureContext === false) {
+        return 'insecure';
     }
 
-    // The browser's own words for the failure, as shown to the agent after the explanation.
-    function describeBrowserError(facts) {
-        var details = facts || {};
-        var name = details.name || 'Error';
-
-        return details.message ? name + ': ' + details.message : name;
-    }
-
-    // Every fact the classification used, on one line, for the server log.
-    function describeMicrophoneFacts(facts) {
-        var details = facts || {};
-
-        function known(value) {
-            return value === null || value === undefined ? 'unknown' : String(value);
+    if (PERMISSION_ERRORS.indexOf(name) >= 0) {
+        if (details.policyAllowed === false || name === 'SecurityError') {
+            return 'policy';
         }
 
-        return [
-            'error=' + describeBrowserError(details),
-            'permission=' + known(details.permissionState),
-            'secureContext=' + known(details.isSecureContext),
-            'policy=' + (details.policyAllowed === true ? 'allowed' : details.policyAllowed === false ? 'blocked' : 'unknown'),
-            'audioInputs=' + known(details.audioInputCount),
-            'origin=' + known(details.origin),
-            'browser=' + known(details.userAgent),
-        ].join('; ');
+        if (SYSTEM_REFUSAL.test(message)) {
+            return 'system-denied';
+        }
+
+        // The site holds the permission and capture was still refused: something below the browser said no.
+        if (details.permissionState === 'granted') {
+            return 'system-denied';
+        }
+
+        if (details.permissionState === 'prompt') {
+            return 'dismissed';
+        }
+
+        return 'site-denied';
     }
 
-    softPhone.classifyMicrophoneError = classifyMicrophoneError;
-    softPhone.describeBrowserError = describeBrowserError;
-    softPhone.describeMicrophoneFacts = describeMicrophoneFacts;
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    if (DEVICE_MISSING_ERRORS.indexOf(name) >= 0 || details.audioInputCount === 0) {
+        return 'not-found';
+    }
+
+    if (DEVICE_BUSY_ERRORS.indexOf(name) >= 0) {
+        return 'in-use';
+    }
+
+    return 'unknown';
+}
+
+// The browser's own words for the failure, as shown to the agent after the explanation.
+export function describeBrowserError(facts) {
+    var details = facts || {};
+    var name = details.name || 'Error';
+
+    return details.message ? name + ': ' + details.message : name;
+}
+
+// Every fact the classification used, on one line, for the server log.
+export function describeMicrophoneFacts(facts) {
+    var details = facts || {};
+
+    function known(value) {
+        return value === null || value === undefined ? 'unknown' : String(value);
+    }
+
+    return [
+        'error=' + describeBrowserError(details),
+        'permission=' + known(details.permissionState),
+        'secureContext=' + known(details.isSecureContext),
+        'policy=' + (details.policyAllowed === true ? 'allowed' : details.policyAllowed === false ? 'blocked' : 'unknown'),
+        'audioInputs=' + known(details.audioInputCount),
+        'origin=' + known(details.origin),
+        'browser=' + known(details.userAgent),
+    ].join('; ');
+}

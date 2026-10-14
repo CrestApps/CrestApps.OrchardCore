@@ -9,8 +9,8 @@
  * which label a state gets, when its reason is worth showing, what a pending break says, and whether a presence
  * notification is about this agent at all -- a supervisor's connection also receives every other agent's changes.
  *
- * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
- * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ * An ES module: the scripts that use it import it, the asset build bundles it into each of them, and the unit tests
+ * import it directly.
  */
 
 // In AgentPresenceStatus order, for a client that ever receives the numeric form.

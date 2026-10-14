@@ -390,10 +390,10 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         // reimplemented, so a number looks the same wherever an agent sees it; an unrecognized value is shown as
         // it came, which is better than hiding it.
         function formatCustomer(value) {
-            var shared = window.CrestAppsSoftPhone;
+            var format = window.telephonyClient && window.telephonyClient.formatPhoneNumber;
 
-            if (shared && typeof shared.formatPhoneNumber === 'function') {
-                return shared.formatPhoneNumber(value) || value;
+            if (typeof format === 'function') {
+                return format(value) || value;
             }
 
             return value;
@@ -403,9 +403,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         // A call that was never answered has no talk time, and showing "0:00" for it would read as a call that
         // connected and said nothing — so it shows nothing at all and the status carries the outcome.
         function formatTalkTime(entry) {
-            var shared = window.CrestAppsTelephonyShared;
-
-            if (!entry || !shared || typeof shared.formatDuration !== 'function') {
+            if (!entry || typeof formatDuration !== 'function') {
                 return '';
             }
 
@@ -416,7 +414,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 return '';
             }
 
-            return shared.formatDuration(Math.round((ended - answered) / 1000));
+            return formatDuration(Math.round((ended - answered) / 1000));
         }
 
         function renderHistory() {

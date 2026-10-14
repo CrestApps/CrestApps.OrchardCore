@@ -7,6 +7,9 @@
  * CrestApps.OrchardCore.Telephony.Models.CallState enum in ordinal order; a build-time guard test
  * fails when the two drift, so the C# enum stays authoritative for the wire ordinals.
  */
+import { formatDuration } from './shared/call-timer.js';
+import { formatPhoneNumber } from './soft-phone/format.js';
+
 (function (window, document) {
     'use strict';
 
@@ -20,10 +23,6 @@
 
         return node.innerHTML;
     }
-
-    // The call timer lives in Assets/js/shared/call-timer.js, concatenated ahead of this file, so the one
-    // implementation is unit-tested and every surface that shows a call duration agrees on what it says.
-    var formatDuration = (window.CrestAppsTelephonyShared || {}).formatDuration;
 
     function normalizeCallState(state) {
         if (typeof state === 'number') {
@@ -40,7 +39,10 @@
     window.telephonyClient = {
         callStateNames: CALL_STATE_NAMES.slice(),
         escapeHtml: escapeHtml,
+        // The call timer (shared/call-timer.js) and the phone number formatter (soft-phone/format.js), one implementation
+        // each, so every surface that shows a duration or a number agrees on what it says.
         formatDuration: formatDuration,
+        formatPhoneNumber: formatPhoneNumber,
         normalizeCallState: normalizeCallState
     };
 })(window, document);

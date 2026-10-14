@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/hold-audio.js';
-
-const { selectHoldSource, buildTonePlan, findAudioSender, createHoldAudioController, HOLD_TONE_PLAN } =
-    globalThis.CrestAppsSoftPhone;
+import {
+    HOLD_TONE_PLAN,
+    buildTonePlan,
+    createHoldAudioController,
+    findAudioSender,
+    selectHoldSource,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/hold-audio.js';
 
 // A fake RTCRtpSender that records the track it currently carries and every replaceTrack it is asked to do.
 function fakeSender(track) {

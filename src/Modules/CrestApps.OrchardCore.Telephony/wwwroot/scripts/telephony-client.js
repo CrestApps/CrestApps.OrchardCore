@@ -4,69 +4,55 @@
 */
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
-	(function(root) {
-		"use strict";
-		var shared = root.CrestAppsTelephonyShared = root.CrestAppsTelephonyShared || {};
-		function pad(value) {
-			return value < 10 ? "0" + value : String(value);
-		}
-		function formatDuration(totalSeconds) {
-			if (!isFinite(totalSeconds) || totalSeconds < 0) totalSeconds = 0;
-			var seconds = Math.floor(totalSeconds % 60);
-			var minutes = Math.floor(totalSeconds / 60 % 60);
-			var hours = Math.floor(totalSeconds / 3600);
-			return (hours > 0 ? hours + ":" + pad(minutes) : minutes) + ":" + pad(seconds);
-		}
-		shared.pad = pad;
-		shared.formatDuration = formatDuration;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+	function pad(value) {
+		return value < 10 ? "0" + value : String(value);
+	}
+	function formatDuration(totalSeconds) {
+		if (!isFinite(totalSeconds) || totalSeconds < 0) totalSeconds = 0;
+		var seconds = Math.floor(totalSeconds % 60);
+		var minutes = Math.floor(totalSeconds / 60 % 60);
+		var hours = Math.floor(totalSeconds / 3600);
+		return (hours > 0 ? hours + ":" + pad(minutes) : minutes) + ":" + pad(seconds);
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function normalizeDialNumber(value) {
-			var input = String(value || "").trim();
-			var hasInternationalPrefix = input.charAt(0) === "+";
-			var digits = input.replace(/\D/g, "");
-			return (hasInternationalPrefix ? "+" : "") + digits;
+	function normalizeDialNumber(value) {
+		var input = String(value || "").trim();
+		var hasInternationalPrefix = input.charAt(0) === "+";
+		var digits = input.replace(/\D/g, "");
+		return (hasInternationalPrefix ? "+" : "") + digits;
+	}
+	function formatNanpNumber(digits, international) {
+		var national = international ? digits.substring(1) : digits;
+		var formatted = "";
+		if (international) formatted = "+1";
+		if (national.length > 0) formatted += (international ? " " : "") + "(" + national.substring(0, 3);
+		if (national.length >= 3) formatted += ")";
+		if (national.length > 3) formatted += " " + national.substring(3, 6);
+		if (national.length > 6) formatted += "-" + national.substring(6, 10);
+		return formatted;
+	}
+	function formatInternationalNumber(digits) {
+		if (!digits) return "+";
+		var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
+		var countryCode = digits.substring(0, countryCodeLength);
+		var national = digits.substring(countryCodeLength);
+		var groups = [];
+		while (national.length > 4) {
+			groups.push(national.substring(0, 3));
+			national = national.substring(3);
 		}
-		function formatNanpNumber(digits, international) {
-			var national = international ? digits.substring(1) : digits;
-			var formatted = "";
-			if (international) formatted = "+1";
-			if (national.length > 0) formatted += (international ? " " : "") + "(" + national.substring(0, 3);
-			if (national.length >= 3) formatted += ")";
-			if (national.length > 3) formatted += " " + national.substring(3, 6);
-			if (national.length > 6) formatted += "-" + national.substring(6, 10);
-			return formatted;
-		}
-		function formatInternationalNumber(digits) {
-			if (!digits) return "+";
-			var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
-			var countryCode = digits.substring(0, countryCodeLength);
-			var national = digits.substring(countryCodeLength);
-			var groups = [];
-			while (national.length > 4) {
-				groups.push(national.substring(0, 3));
-				national = national.substring(3);
-			}
-			if (national) groups.push(national);
-			return "+" + countryCode + (groups.length ? " " + groups.join(" ") : "");
-		}
-		function formatPhoneNumber(value) {
-			var normalized = normalizeDialNumber(value);
-			var international = normalized.charAt(0) === "+";
-			var digits = normalized.replace(/\D/g, "");
-			if (!international && digits.length < 7) return digits;
-			if (!international && digits.length <= 10 || international && digits.charAt(0) === "1" && digits.length <= 11) return formatNanpNumber(digits, international);
-			return international ? formatInternationalNumber(digits) : digits;
-		}
-		softPhone.normalizeDialNumber = normalizeDialNumber;
-		softPhone.formatNanpNumber = formatNanpNumber;
-		softPhone.formatInternationalNumber = formatInternationalNumber;
-		softPhone.formatPhoneNumber = formatPhoneNumber;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		if (national) groups.push(national);
+		return "+" + countryCode + (groups.length ? " " + groups.join(" ") : "");
+	}
+	function formatPhoneNumber(value) {
+		var normalized = normalizeDialNumber(value);
+		var international = normalized.charAt(0) === "+";
+		var digits = normalized.replace(/\D/g, "");
+		if (!international && digits.length < 7) return digits;
+		if (!international && digits.length <= 10 || international && digits.charAt(0) === "1" && digits.length <= 11) return formatNanpNumber(digits, international);
+		return international ? formatInternationalNumber(digits) : digits;
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js
 	(function(window, document) {
@@ -85,7 +71,6 @@
 			node.textContent = value == null ? "" : String(value);
 			return node.innerHTML;
 		}
-		var formatDuration = (window.CrestAppsTelephonyShared || {}).formatDuration;
 		function normalizeCallState(state) {
 			if (typeof state === "number") return CALL_STATE_NAMES[state] || "Idle";
 			if (typeof state === "string" && state.length) return state;
@@ -95,6 +80,7 @@
 			callStateNames: CALL_STATE_NAMES.slice(),
 			escapeHtml,
 			formatDuration,
+			formatPhoneNumber,
 			normalizeCallState
 		};
 	})(window, document);

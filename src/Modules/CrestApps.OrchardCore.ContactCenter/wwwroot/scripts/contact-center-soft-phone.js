@@ -3,6 +3,12 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	function isStandbyEligible(presenceStatus, campaignIds) {
+		return presenceStatus === "Available" && Array.isArray(campaignIds) && campaignIds.some(function(id) {
+			return !!id;
+		});
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
 	var STATUS_NAMES = [
 		"Offline",
@@ -272,11 +278,10 @@
 		}
 		function syncPredictiveStandby(root, presenceStatus) {
 			var api = root && root.__contactCenterSoftPhoneApi;
-			var modules = window.CrestAppsSoftPhone || {};
-			if (!api || typeof api.setPredictiveStandby !== "function" || typeof modules.isStandbyEligible !== "function") return;
+			if (!api || typeof api.setPredictiveStandby !== "function") return;
 			var snapshot = root.__contactCenterMembershipSnapshot || {};
 			if (presenceStatus !== void 0 && presenceStatus !== null && presenceStatus !== "") root.__contactCenterPresenceStatus = normalizePresenceStatus ? normalizePresenceStatus(presenceStatus) : presenceStatus;
-			api.setPredictiveStandby(modules.isStandbyEligible(root.__contactCenterPresenceStatus, snapshot.campaignIds || []), ownUserId || snapshot.userId || "");
+			api.setPredictiveStandby(isStandbyEligible(root.__contactCenterPresenceStatus, snapshot.campaignIds || []), ownUserId || snapshot.userId || "");
 		}
 		function updateMembershipUi(root, snapshot) {
 			if (!root || !snapshot) return;

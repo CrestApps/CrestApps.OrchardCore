@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js';
-
-const { normalizeDialNumber, formatNanpNumber, formatInternationalNumber, formatPhoneNumber } = globalThis.CrestAppsSoftPhone;
+import {
+    formatInternationalNumber,
+    formatNanpNumber,
+    formatPhoneNumber,
+    normalizeDialNumber,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js';
 
 // Every number an agent sees in the soft phone goes through here: call history, the active-call row, the
 // keypad. These are characterization tests written against the behaviour as it shipped, so the split that

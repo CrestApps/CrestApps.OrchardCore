@@ -112,19 +112,27 @@ _manifest
 
 Scripts are built with [Vite](https://vite.dev/) into a classic script that a page loads with a plain `<script>` tag. It is not an ES module. The output targets current browsers and is minified for the `.min.js` file.
 
-A group with several sources runs them in the order they are listed, so **list a helper before the script that uses it**. Files in a bundle share state through a namespace on `window` rather than through `import` statements:
+Write a script's helpers as ES modules: a helper `export`s its functions, and the script that uses them `import`s them. Point the group's `source` at the main script alone; the build follows its imports, so a helper can neither be left out of the bundle nor run too late. The unit tests import the same helpers.
 
 ```js
-(function (root) {
+// Assets/js/soft-phone/format.js
+export function formatPhoneNumber(number) {
+    // ...
+}
+```
+
+```js
+// Assets/js/soft-phone.js, the group's source
+import { formatPhoneNumber } from './soft-phone/format.js';
+
+(function () {
     'use strict';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-
-    softPhone.formatPhoneNumber = function (number) {
-        // ...
-    };
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    // ... the script uses formatPhoneNumber directly ...
+}());
 ```
+
+A helper can import another module's helper with a relative path, and the build copies it into the bundle. What one bundle offers another on the same page is a deliberate page API on `window`, such as `window.telephonyClient` or `window.telephonySoftPhone`, not a helper. A group can still list several sources; they then run in the order they are listed.
 
 Each source is built as its own strict-mode module. Two habits that work in a plain script do not work in a bundle:
 

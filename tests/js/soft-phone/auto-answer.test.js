@@ -1,22 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
-
-const {
+import {
     AUTO_ANSWER_WINDOW_MS,
     EXTENSION_CALL_KEY,
-    autoAnswerOfferKey,
-    createAutoAnswerArm,
     armAutoAnswer,
+    autoAnswerOfferKey,
+    canArmForAcceptedOffer,
+    canArmForOffer,
     consumeAutoAnswer,
+    createAutoAnswerArm,
     disarmAutoAnswer,
     disarmOtherOffers,
-    shouldAutoAnswerInboundLeg,
     isDestinationLeg,
-    canArmForOffer,
-    canArmForAcceptedOffer,
-} = globalThis.CrestAppsSoftPhone;
+    shouldAutoAnswerInboundLeg,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
 
 // The arm for an offer accepted elsewhere is only for an offer this phone was showing: an offer it never had is
 // another agent's, and arming for it answers whatever leg comes next.

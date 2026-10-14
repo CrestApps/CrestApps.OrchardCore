@@ -2,6 +2,7 @@
  * Keeps the Contact Center soft-phone tab and inbound-offer recovery on the real-time hub so queue
  * sign-in/sign-out do not reload the page and a reconnect restores only the still-valid offer.
  */
+import { isStandbyEligible } from '../../../CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js';
 import {
     breakChoiceLabel,
     isOwnOfferNotification,
@@ -20,7 +21,7 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
     // drops it. Keep this in sync with ContactCenterConstants.CampaignQueue.Prefix on the server.
     var CAMPAIGN_QUEUE_PREFIX = '__campaign-queue__';
 
-    // How the agent's presence reads (see shared/agent-presence.js, concatenated ahead of this file).
+    // How the agent's presence reads: see shared/agent-presence.js, imported above.
 
     // The user this page belongs to, from the hub snapshot. A supervisor's connection also receives every other
     // agent's presence changes, and only this agent's own may relabel the header.
@@ -287,9 +288,7 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
     // the push about the claim (see the telephony soft phone's soft-phone/predictive-standby.js).
     function syncPredictiveStandby(root, presenceStatus) {
         var api = root && root.__contactCenterSoftPhoneApi;
-        var modules = window.CrestAppsSoftPhone || {};
-
-        if (!api || typeof api.setPredictiveStandby !== 'function' || typeof modules.isStandbyEligible !== 'function') {
+        if (!api || typeof api.setPredictiveStandby !== 'function') {
             return;
         }
 
@@ -302,7 +301,7 @@ import { supervisorMessageHtml } from './shared/supervisor-actions.js';
         }
 
         api.setPredictiveStandby(
-            modules.isStandbyEligible(root.__contactCenterPresenceStatus, snapshot.campaignIds || []),
+            isStandbyEligible(root.__contactCenterPresenceStatus, snapshot.campaignIds || []),
             ownUserId || snapshot.userId || '');
     }
 

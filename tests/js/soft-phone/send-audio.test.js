@@ -1,15 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/send-audio.js';
-
-const {
+import {
     OUTBOUND_SILENCE_MS,
+    createOutboundAudioWatch,
     hasLiveAudioTrack,
     releaseSharedCapture,
-    createOutboundAudioWatch,
-    startOutboundAudioMonitor,
     replaceSendTrackOnPeers,
-} = globalThis.CrestAppsSoftPhone;
+    startOutboundAudioMonitor,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/send-audio.js';
 
 function track(readyState = 'live', kind = 'audio') {
     return {
