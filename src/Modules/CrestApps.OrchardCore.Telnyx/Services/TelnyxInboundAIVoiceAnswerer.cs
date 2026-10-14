@@ -37,6 +37,7 @@ public sealed class TelnyxInboundAIVoiceAnswerer : IInboundAIVoiceAnswerer
         {
             Intent = TelnyxOutboundBridgeState.AiVoiceLegIntent,
             ActivityId = activityId,
+            Inbound = true,
         }.ToClientStateJson();
 
         var result = await _apiClient.AnswerAsync(providerCallId, clientState, cancellationToken);

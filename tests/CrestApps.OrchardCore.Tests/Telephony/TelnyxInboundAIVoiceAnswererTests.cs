@@ -38,6 +38,9 @@ public sealed class TelnyxInboundAIVoiceAnswererTests
         Assert.True(TelnyxOutboundBridgeState.TryParseEncoded(echoedClientState, out var state));
         Assert.Equal(TelnyxOutboundBridgeState.AiVoiceLegIntent, state.Intent);
         Assert.Equal("activity-1", state.ActivityId);
+
+        // The answered event carries no direction, so the state says the customer placed the call.
+        Assert.True(state.Inbound);
     }
 
     private static TelnyxApiClient CreateClient(HttpMessageHandler handler)

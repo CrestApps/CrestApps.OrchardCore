@@ -199,6 +199,14 @@ public sealed class TelnyxOutboundBridgeState
     public string ActivityId { get; set; }
 
     /// <summary>
+    /// Gets or sets whether an automated AI voice leg is a call the customer placed, answered by an entry point
+    /// routed to an AI voice agent, rather than a call the AI placed (AI-voice state only). Telnyx reports a leg's
+    /// direction on <c>call.initiated</c> only, so the later events of the call read it from here.
+    /// </summary>
+    [JsonPropertyName("in")]
+    public bool? Inbound { get; set; }
+
+    /// <summary>
     /// Gets or sets the destination address to dial once the agent leg answers (agent-leg state only).
     /// </summary>
     [JsonPropertyName("d")]
