@@ -4,5400 +4,4591 @@
 */
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function normalizeDialNumber(value) {
-			var input = String(value || "").trim();
-			var hasInternationalPrefix = input.charAt(0) === "+";
-			var digits = input.replace(/\D/g, "");
-			return (hasInternationalPrefix ? "+" : "") + digits;
+	function normalizeDialNumber(value) {
+		var input = String(value || "").trim();
+		var hasInternationalPrefix = input.charAt(0) === "+";
+		var digits = input.replace(/\D/g, "");
+		return (hasInternationalPrefix ? "+" : "") + digits;
+	}
+	function formatNanpNumber(digits, international) {
+		var national = international ? digits.substring(1) : digits;
+		var formatted = "";
+		if (international) formatted = "+1";
+		if (national.length > 0) formatted += (international ? " " : "") + "(" + national.substring(0, 3);
+		if (national.length >= 3) formatted += ")";
+		if (national.length > 3) formatted += " " + national.substring(3, 6);
+		if (national.length > 6) formatted += "-" + national.substring(6, 10);
+		return formatted;
+	}
+	function formatInternationalNumber(digits) {
+		if (!digits) return "+";
+		var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
+		var countryCode = digits.substring(0, countryCodeLength);
+		var national = digits.substring(countryCodeLength);
+		var groups = [];
+		while (national.length > 4) {
+			groups.push(national.substring(0, 3));
+			national = national.substring(3);
 		}
-		function formatNanpNumber(digits, international) {
-			var national = international ? digits.substring(1) : digits;
-			var formatted = "";
-			if (international) formatted = "+1";
-			if (national.length > 0) formatted += (international ? " " : "") + "(" + national.substring(0, 3);
-			if (national.length >= 3) formatted += ")";
-			if (national.length > 3) formatted += " " + national.substring(3, 6);
-			if (national.length > 6) formatted += "-" + national.substring(6, 10);
-			return formatted;
+		if (national) groups.push(national);
+		return "+" + countryCode + (groups.length ? " " + groups.join(" ") : "");
+	}
+	function formatPhoneNumber(value) {
+		var normalized = normalizeDialNumber(value);
+		var international = normalized.charAt(0) === "+";
+		var digits = normalized.replace(/\D/g, "");
+		if (!international && digits.length < 7) return digits;
+		if (!international && digits.length <= 10 || international && digits.charAt(0) === "1" && digits.length <= 11) return formatNanpNumber(digits, international);
+		return international ? formatInternationalNumber(digits) : digits;
+	}
+	function estimateMos(rttMs, jitterMs, lossPercent) {
+		var effectiveLatency = (rttMs || 0) + (jitterMs || 0) * 2 + 10;
+		var r = effectiveLatency < 160 ? 93.2 - effectiveLatency / 40 : 93.2 - (effectiveLatency - 120) / 10;
+		r = r - 2.5 * (lossPercent || 0);
+		if (r < 0) return 1;
+		if (r > 100) return 4.5;
+		return 1 + .035 * r + r * (r - 60) * (100 - r) * 7e-6;
+	}
+	function readJitterBufferMs(inbound, previous) {
+		if (!inbound || typeof inbound.jitterBufferDelay !== "number" || typeof inbound.jitterBufferEmittedCount !== "number") return -1;
+		var delayDelta = inbound.jitterBufferDelay - (previous && previous.jitterBufferDelay || 0);
+		var emittedDelta = inbound.jitterBufferEmittedCount - (previous && previous.jitterBufferEmittedCount || 0);
+		if (emittedDelta > 0) return delayDelta / emittedDelta * 1e3;
+		return inbound.jitterBufferEmittedCount > 0 ? inbound.jitterBufferDelay / inbound.jitterBufferEmittedCount * 1e3 : -1;
+	}
+	function isCaptureSilent(level, energyDelta) {
+		return (level || 0) <= .005 && (energyDelta || 0) <= 0;
+	}
+	function windowedMicrophoneLevel(mediaSource, previous) {
+		if (!mediaSource) return -1;
+		if (!(typeof mediaSource.totalAudioEnergy === "number" && typeof mediaSource.totalSamplesDuration === "number")) return typeof mediaSource.audioLevel === "number" ? mediaSource.audioLevel : -1;
+		var energy = mediaSource.totalAudioEnergy;
+		var duration = mediaSource.totalSamplesDuration;
+		var previousEnergy = previous && typeof previous.totalAudioEnergy === "number" ? previous.totalAudioEnergy : 0;
+		var previousDuration = previous && typeof previous.totalSamplesDuration === "number" ? previous.totalSamplesDuration : 0;
+		if (energy < previousEnergy || duration < previousDuration) {
+			previousEnergy = 0;
+			previousDuration = 0;
 		}
-		function formatInternationalNumber(digits) {
-			if (!digits) return "+";
-			var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
-			var countryCode = digits.substring(0, countryCodeLength);
-			var national = digits.substring(countryCodeLength);
-			var groups = [];
-			while (national.length > 4) {
-				groups.push(national.substring(0, 3));
-				national = national.substring(3);
+		var durationDelta = duration - previousDuration;
+		if (durationDelta <= 0) return 0;
+		return Math.min(1, Math.sqrt(Math.max(0, energy - previousEnergy) / durationDelta));
+	}
+	function parseWebRtcStats(report) {
+		/** @type {any} */
+		var inbound = null;
+		var remoteInbound = null;
+		var mediaSource = null;
+		/** @type {any} */
+		var outbound = null;
+		var selectedPair = null;
+		var nominatedPair = null;
+		var transportPairId = null;
+		var codecs = {};
+		var localCandidates = {};
+		var remoteCandidates = {};
+		var pairs = {};
+		report.forEach(function(stat) {
+			switch (stat.type) {
+				case "inbound-rtp":
+					if (stat.kind === "audio" || stat.mediaType === "audio") inbound = stat;
+					break;
+				case "remote-inbound-rtp":
+					if (stat.kind === "audio" || stat.mediaType === "audio") remoteInbound = stat;
+					break;
+				case "media-source":
+					if (stat.kind === "audio" || stat.mediaType === "audio") mediaSource = stat;
+					break;
+				case "outbound-rtp":
+					if (stat.kind === "audio" || stat.mediaType === "audio") outbound = stat;
+					break;
+				case "candidate-pair":
+					pairs[stat.id] = stat;
+					if (stat.selected) selectedPair = stat;
+					if (stat.nominated && stat.state === "succeeded" && (!nominatedPair || (stat.bytesReceived || 0) > (nominatedPair.bytesReceived || 0))) nominatedPair = stat;
+					break;
+				case "codec":
+					codecs[stat.id] = stat;
+					break;
+				case "local-candidate":
+					localCandidates[stat.id] = stat;
+					break;
+				case "remote-candidate":
+					remoteCandidates[stat.id] = stat;
+					break;
+				case "transport": if (stat.selectedCandidatePairId) transportPairId = stat.selectedCandidatePairId;
 			}
-			if (national) groups.push(national);
-			return "+" + countryCode + (groups.length ? " " + groups.join(" ") : "");
+		});
+		var pair = selectedPair || transportPairId && pairs[transportPairId] || nominatedPair || null;
+		var codec = inbound && inbound.codecId && codecs[inbound.codecId] ? codecs[inbound.codecId] : null;
+		var sendCodec = outbound && outbound.codecId && codecs[outbound.codecId] ? codecs[outbound.codecId] : null;
+		var localCandidate = pair && pair.localCandidateId ? localCandidates[pair.localCandidateId] : null;
+		var remoteCandidate = pair && pair.remoteCandidateId ? remoteCandidates[pair.remoteCandidateId] : null;
+		return {
+			inbound,
+			remoteInbound,
+			mediaSource,
+			outbound,
+			pair,
+			codec: codec ? codec.mimeType || "" : "",
+			sendCodec: sendCodec ? sendCodec.mimeType || "" : "",
+			localCandidateType: localCandidate ? localCandidate.candidateType || "" : "",
+			remoteCandidateType: remoteCandidate ? remoteCandidate.candidateType || "" : ""
+		};
+	}
+	function frameRms$1(samples, length) {
+		var total = 0;
+		for (var i = 0; i < length; i++) total += samples[i] * samples[i];
+		return Math.sqrt(total / length);
+	}
+	function createLevelProbe(stream, options) {
+		var settings = options || {};
+		var AudioCtx = settings.audioContext || globalThis.AudioContext || globalThis.webkitAudioContext;
+		var timers = settings.timers || globalThis;
+		if (!AudioCtx || !stream || typeof stream.getAudioTracks !== "function" || !stream.getAudioTracks().length) return null;
+		var context;
+		var analyser;
+		var source;
+		var sink;
+		var data;
+		try {
+			context = new AudioCtx();
+			source = context.createMediaStreamSource(stream);
+			analyser = context.createAnalyser();
+			analyser.fftSize = 512;
+			source.connect(analyser);
+			sink = context.createGain();
+			sink.gain.value = 0;
+			analyser.connect(sink);
+			sink.connect(context.destination);
+			data = new Float32Array(analyser.fftSize);
+		} catch (error) {
+			return null;
 		}
-		function formatPhoneNumber(value) {
-			var normalized = normalizeDialNumber(value);
-			var international = normalized.charAt(0) === "+";
-			var digits = normalized.replace(/\D/g, "");
-			if (!international && digits.length < 7) return digits;
-			if (!international && digits.length <= 10 || international && digits.charAt(0) === "1" && digits.length <= 11) return formatNanpNumber(digits, international);
-			return international ? formatInternationalNumber(digits) : digits;
+		function resume() {
+			if (context.state === "suspended" && typeof context.resume === "function") try {
+				Promise.resolve(context.resume()).catch(function() {});
+			} catch (error) {}
 		}
-		softPhone.normalizeDialNumber = normalizeDialNumber;
-		softPhone.formatNanpNumber = formatNanpNumber;
-		softPhone.formatInternationalNumber = formatInternationalNumber;
-		softPhone.formatPhoneNumber = formatPhoneNumber;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var QUALITY_POOR_MOS = 3.5;
-		var QUALITY_POOR_LOSS_PERCENT = 5;
-		var QUALITY_SILENT_MIC_LEVEL = .005;
-		var QUALITY_SILENT_MIC_SAMPLES = 3;
-		function estimateMos(rttMs, jitterMs, lossPercent) {
-			var effectiveLatency = (rttMs || 0) + (jitterMs || 0) * 2 + 10;
-			var r = effectiveLatency < 160 ? 93.2 - effectiveLatency / 40 : 93.2 - (effectiveLatency - 120) / 10;
-			r = r - 2.5 * (lossPercent || 0);
-			if (r < 0) return 1;
-			if (r > 100) return 4.5;
-			return 1 + .035 * r + r * (r - 60) * (100 - r) * 7e-6;
-		}
-		var QUALITY_HIGH_JITTER_BUFFER_MS = 200;
-		function readJitterBufferMs(inbound, previous) {
-			if (!inbound || typeof inbound.jitterBufferDelay !== "number" || typeof inbound.jitterBufferEmittedCount !== "number") return -1;
-			var delayDelta = inbound.jitterBufferDelay - (previous && previous.jitterBufferDelay || 0);
-			var emittedDelta = inbound.jitterBufferEmittedCount - (previous && previous.jitterBufferEmittedCount || 0);
-			if (emittedDelta > 0) return delayDelta / emittedDelta * 1e3;
-			return inbound.jitterBufferEmittedCount > 0 ? inbound.jitterBufferDelay / inbound.jitterBufferEmittedCount * 1e3 : -1;
-		}
-		function isCaptureSilent(level, energyDelta) {
-			return (level || 0) <= QUALITY_SILENT_MIC_LEVEL && (energyDelta || 0) <= 0;
-		}
-		function windowedMicrophoneLevel(mediaSource, previous) {
-			if (!mediaSource) return -1;
-			if (!(typeof mediaSource.totalAudioEnergy === "number" && typeof mediaSource.totalSamplesDuration === "number")) return typeof mediaSource.audioLevel === "number" ? mediaSource.audioLevel : -1;
-			var energy = mediaSource.totalAudioEnergy;
-			var duration = mediaSource.totalSamplesDuration;
-			var previousEnergy = previous && typeof previous.totalAudioEnergy === "number" ? previous.totalAudioEnergy : 0;
-			var previousDuration = previous && typeof previous.totalSamplesDuration === "number" ? previous.totalSamplesDuration : 0;
-			if (energy < previousEnergy || duration < previousDuration) {
-				previousEnergy = 0;
-				previousDuration = 0;
-			}
-			var durationDelta = duration - previousDuration;
-			if (durationDelta <= 0) return 0;
-			return Math.min(1, Math.sqrt(Math.max(0, energy - previousEnergy) / durationDelta));
-		}
-		function parseWebRtcStats(report) {
-			var inbound = null;
-			var remoteInbound = null;
-			var mediaSource = null;
-			var outbound = null;
-			var selectedPair = null;
-			var nominatedPair = null;
-			var transportPairId = null;
-			var codecs = {};
-			var localCandidates = {};
-			var remoteCandidates = {};
-			var pairs = {};
-			report.forEach(function(stat) {
-				switch (stat.type) {
-					case "inbound-rtp":
-						if (stat.kind === "audio" || stat.mediaType === "audio") inbound = stat;
-						break;
-					case "remote-inbound-rtp":
-						if (stat.kind === "audio" || stat.mediaType === "audio") remoteInbound = stat;
-						break;
-					case "media-source":
-						if (stat.kind === "audio" || stat.mediaType === "audio") mediaSource = stat;
-						break;
-					case "outbound-rtp":
-						if (stat.kind === "audio" || stat.mediaType === "audio") outbound = stat;
-						break;
-					case "candidate-pair":
-						pairs[stat.id] = stat;
-						if (stat.selected) selectedPair = stat;
-						if (stat.nominated && stat.state === "succeeded" && (!nominatedPair || (stat.bytesReceived || 0) > (nominatedPair.bytesReceived || 0))) nominatedPair = stat;
-						break;
-					case "codec":
-						codecs[stat.id] = stat;
-						break;
-					case "local-candidate":
-						localCandidates[stat.id] = stat;
-						break;
-					case "remote-candidate":
-						remoteCandidates[stat.id] = stat;
-						break;
-					case "transport": if (stat.selectedCandidatePairId) transportPairId = stat.selectedCandidatePairId;
-				}
-			});
-			var pair = selectedPair || transportPairId && pairs[transportPairId] || nominatedPair || null;
-			var codec = inbound && inbound.codecId && codecs[inbound.codecId] ? codecs[inbound.codecId] : null;
-			var sendCodec = outbound && outbound.codecId && codecs[outbound.codecId] ? codecs[outbound.codecId] : null;
-			var localCandidate = pair && pair.localCandidateId ? localCandidates[pair.localCandidateId] : null;
-			var remoteCandidate = pair && pair.remoteCandidateId ? remoteCandidates[pair.remoteCandidateId] : null;
-			return {
-				inbound,
-				remoteInbound,
-				mediaSource,
-				outbound,
-				pair,
-				codec: codec ? codec.mimeType || "" : "",
-				sendCodec: sendCodec ? sendCodec.mimeType || "" : "",
-				localCandidateType: localCandidate ? localCandidate.candidateType || "" : "",
-				remoteCandidateType: remoteCandidate ? remoteCandidate.candidateType || "" : ""
-			};
-		}
-		softPhone.QUALITY_POOR_MOS = QUALITY_POOR_MOS;
-		softPhone.QUALITY_POOR_LOSS_PERCENT = QUALITY_POOR_LOSS_PERCENT;
-		softPhone.QUALITY_SILENT_MIC_LEVEL = QUALITY_SILENT_MIC_LEVEL;
-		softPhone.QUALITY_SILENT_MIC_SAMPLES = QUALITY_SILENT_MIC_SAMPLES;
-		softPhone.QUALITY_HIGH_JITTER_BUFFER_MS = QUALITY_HIGH_JITTER_BUFFER_MS;
-		softPhone.estimateMos = estimateMos;
-		softPhone.readJitterBufferMs = readJitterBufferMs;
-		softPhone.isCaptureSilent = isCaptureSilent;
-		softPhone.windowedMicrophoneLevel = windowedMicrophoneLevel;
-		softPhone.parseWebRtcStats = parseWebRtcStats;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/level-probe.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var LEVEL_PROBE_INTERVAL_MS = 100;
-		var LEVEL_UNKNOWN = -1;
-		var LEVEL_SILENT = .005;
-		function frameRms(samples, length) {
-			var total = 0;
-			for (var i = 0; i < length; i++) total += samples[i] * samples[i];
-			return Math.sqrt(total / length);
-		}
-		function createLevelProbe(stream, options) {
-			var settings = options || {};
-			var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
-			var timers = settings.timers || root;
-			if (!AudioCtx || !stream || typeof stream.getAudioTracks !== "function" || !stream.getAudioTracks().length) return null;
-			var context;
-			var analyser;
-			var source;
-			var sink;
-			var data;
+		resume();
+		var peak = 0;
+		var sum = 0;
+		var reads = 0;
+		var disposed = false;
+		var timer = timers.setInterval(function() {
+			if (disposed) return;
 			try {
-				context = new AudioCtx();
-				source = context.createMediaStreamSource(stream);
-				analyser = context.createAnalyser();
-				analyser.fftSize = 512;
-				source.connect(analyser);
-				sink = context.createGain();
-				sink.gain.value = 0;
-				analyser.connect(sink);
-				sink.connect(context.destination);
-				data = new Float32Array(analyser.fftSize);
+				analyser.getFloatTimeDomainData(data);
 			} catch (error) {
-				return null;
+				return;
 			}
-			function resume() {
-				if (context.state === "suspended" && typeof context.resume === "function") try {
-					Promise.resolve(context.resume()).catch(function() {});
-				} catch (error) {}
-			}
-			resume();
-			var peak = 0;
-			var sum = 0;
-			var reads = 0;
-			var disposed = false;
-			var timer = timers.setInterval(function() {
-				if (disposed) return;
-				try {
-					analyser.getFloatTimeDomainData(data);
-				} catch (error) {
-					return;
-				}
-				var rms = frameRms(data, data.length);
-				peak = Math.max(peak, rms);
-				sum += rms;
-				reads++;
-			}, LEVEL_PROBE_INTERVAL_MS);
-			return {
-				read: function() {
-					resume();
-					if (!reads) return {
-						peak: 0,
-						average: 0,
-						reads: 0
-					};
-					var window = {
-						peak,
-						average: sum / reads,
-						reads
-					};
-					peak = 0;
-					sum = 0;
-					reads = 0;
-					return window;
-				},
-				state: function() {
-					return disposed ? "disposed" : context.state;
-				},
-				dispose: function() {
-					if (disposed) return;
-					disposed = true;
-					timers.clearInterval(timer);
-					try {
-						source.disconnect();
-						analyser.disconnect();
-						sink.disconnect();
-					} catch (error) {}
-					try {
-						if (typeof context.close === "function") context.close();
-					} catch (error) {}
-				}
-			};
-		}
-		function isTrackDeliverable(track) {
-			return !!track && track.readyState === "live" && !track.muted;
-		}
-		function captureProbeNeedsRebuild(probeTrackId, currentTrackId, currentTrackState) {
-			if (!currentTrackId || currentTrackState === "ended") return false;
-			return probeTrackId !== currentTrackId;
-		}
-		function selectReceiveTrack(receivers, remoteStream) {
-			var receiver = (receivers || []).filter(function(candidate) {
-				return candidate && candidate.track && candidate.track.kind === "audio";
-			})[0];
-			if (receiver) return receiver.track;
-			return remoteStream && typeof remoteStream.getAudioTracks === "function" ? remoteStream.getAudioTracks()[0] || null : null;
-		}
-		function inboundProbeNeedsRebuild(probeTrackId, receiveTrack) {
-			return captureProbeNeedsRebuild(probeTrackId, receiveTrack ? receiveTrack.id : null, receiveTrack ? receiveTrack.readyState : null);
-		}
-		function probeLevel(probe) {
-			if (!probe) return LEVEL_UNKNOWN;
-			var window = probe.read();
-			return window && window.reads ? window.peak : LEVEL_UNKNOWN;
-		}
-		softPhone.LEVEL_PROBE_INTERVAL_MS = LEVEL_PROBE_INTERVAL_MS;
-		softPhone.LEVEL_UNKNOWN = LEVEL_UNKNOWN;
-		softPhone.LEVEL_SILENT = LEVEL_SILENT;
-		softPhone.frameRms = frameRms;
-		softPhone.createLevelProbe = createLevelProbe;
-		softPhone.probeLevel = probeLevel;
-		softPhone.isTrackDeliverable = isTrackDeliverable;
-		softPhone.captureProbeNeedsRebuild = captureProbeNeedsRebuild;
-		softPhone.selectReceiveTrack = selectReceiveTrack;
-		softPhone.inboundProbeNeedsRebuild = inboundProbeNeedsRebuild;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-status.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var STATUS_SEPARATOR = " · ";
-		function pad(value) {
-			return value < 10 ? "0" + value : String(value);
-		}
-		function formatElapsed(totalSeconds) {
-			var shared = root.CrestAppsTelephonyShared;
-			if (shared && typeof shared.formatDuration === "function") return shared.formatDuration(totalSeconds);
-			if (!isFinite(totalSeconds) || totalSeconds < 0) totalSeconds = 0;
-			var seconds = Math.floor(totalSeconds % 60);
-			var minutes = Math.floor(totalSeconds / 60 % 60);
-			var hours = Math.floor(totalSeconds / 3600);
-			return (hours > 0 ? hours + ":" + pad(minutes) : minutes) + ":" + pad(seconds);
-		}
-		function formatCallStatus(statusText, elapsedSeconds) {
-			var text = statusText || "";
-			if (typeof elapsedSeconds !== "number" || !isFinite(elapsedSeconds) || elapsedSeconds < 0) return text;
-			return text + STATUS_SEPARATOR + formatElapsed(elapsedSeconds);
-		}
-		function connectedAtFor(isConnected, previousConnectedAt, nowMs) {
-			if (!isConnected) return null;
-			return typeof previousConnectedAt === "number" && isFinite(previousConnectedAt) ? previousConnectedAt : nowMs;
-		}
-		function durationMeta(durationSeconds, inProgress) {
-			if (inProgress || typeof durationSeconds !== "number" || !isFinite(durationSeconds) || durationSeconds <= 0) return "";
-			return formatElapsed(durationSeconds);
-		}
-		softPhone.STATUS_SEPARATOR = STATUS_SEPARATOR;
-		softPhone.formatElapsed = formatElapsed;
-		softPhone.formatCallStatus = formatCallStatus;
-		softPhone.connectedAtFor = connectedAtFor;
-		softPhone.durationMeta = durationMeta;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/mic-boost.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var MIC_BOOST_OPTIONS_DB = [
-			0,
-			3,
-			6,
-			9,
-			12
-		];
-		var LIMITER_THRESHOLD_DB = -3;
-		var LIMITER_KNEE_DB = 0;
-		var LIMITER_RATIO = 20;
-		var LIMITER_ATTACK_S = .003;
-		var LIMITER_RELEASE_S = .05;
-		var CLIPPER_KNEE = .9;
-		function clampBoostDb(value) {
-			var db = typeof value === "number" ? value : parseInt(value, 10);
-			return MIC_BOOST_OPTIONS_DB.indexOf(db) === -1 ? 0 : db;
-		}
-		function boostGainFor(db) {
-			return Math.pow(10, clampBoostDb(db) / 20);
-		}
-		function describeBoost(db) {
-			var clamped = clampBoostDb(db);
-			return clamped > 0 ? "boost+" + clamped : "";
-		}
-		function connectBoostStage(context, input, boostDb, options) {
-			var db = clampBoostDb(boostDb);
-			var alwaysLimit = !!(options && options.alwaysLimit);
-			if (db === 0 && !alwaysLimit) return null;
-			var nodes = [];
-			var tail = input;
-			if (db !== 0) {
-				var gain = context.createGain();
-				gain.gain.value = boostGainFor(db);
-				tail.connect(gain);
-				tail = gain;
-				nodes.push(gain);
-			}
-			var limiter = context.createDynamicsCompressor();
-			limiter.threshold.value = LIMITER_THRESHOLD_DB;
-			limiter.knee.value = LIMITER_KNEE_DB;
-			limiter.ratio.value = LIMITER_RATIO;
-			limiter.attack.value = LIMITER_ATTACK_S;
-			limiter.release.value = LIMITER_RELEASE_S;
-			tail.connect(limiter);
-			nodes.push(limiter);
-			tail = limiter;
-			if (typeof context.createWaveShaper === "function") {
-				var clipper = context.createWaveShaper();
-				clipper.curve = softClipCurve();
-				clipper.oversample = "2x";
-				tail.connect(clipper);
-				nodes.push(clipper);
-				tail = clipper;
-			}
-			return {
-				output: tail,
-				nodes
-			};
-		}
-		var clipCurve = null;
-		function softClipCurve() {
-			if (clipCurve) return clipCurve;
-			var points = 4097;
-			var curve = new Float32Array(points);
-			for (var i = 0; i < points; i++) {
-				var x = i / (points - 1) * 2 - 1;
-				var magnitude = Math.abs(x);
-				var y = magnitude <= CLIPPER_KNEE ? magnitude : CLIPPER_KNEE + (1 - CLIPPER_KNEE) * Math.tanh((magnitude - CLIPPER_KNEE) / (1 - CLIPPER_KNEE));
-				curve[i] = x < 0 ? -y : y;
-			}
-			clipCurve = curve;
-			return curve;
-		}
-		function createBoostPipeline(sourceStream, boostDb, options) {
-			var db = clampBoostDb(boostDb);
-			var AudioCtx = (options || {}).audioContext || root.AudioContext || root.webkitAudioContext;
-			if (!sourceStream || db === 0 || !AudioCtx) return {
-				stream: sourceStream,
-				boosted: false,
-				dispose: function() {}
-			};
-			var context;
-			var source;
-			var stage;
-			var destination;
-			try {
-				context = new AudioCtx();
-				source = context.createMediaStreamSource(sourceStream);
-				stage = connectBoostStage(context, source, db);
-				destination = context.createMediaStreamDestination();
-				stage.output.connect(destination);
-				if (context.state === "suspended" && typeof context.resume === "function") try {
-					Promise.resolve(context.resume()).catch(function() {});
-				} catch (error) {}
-			} catch (error) {
-				try {
-					if (context && typeof context.close === "function") context.close();
-				} catch (closeError) {}
-				return {
-					stream: sourceStream,
-					boosted: false,
-					dispose: function() {}
+			var rms = frameRms$1(data, data.length);
+			peak = Math.max(peak, rms);
+			sum += rms;
+			reads++;
+		}, 100);
+		return {
+			read: function() {
+				resume();
+				if (!reads) return {
+					peak: 0,
+					average: 0,
+					reads: 0
 				};
-			}
-			var disposed = false;
-			return {
-				stream: destination.stream,
-				boosted: true,
-				dispose: function() {
-					if (disposed) return;
-					disposed = true;
-					try {
-						source.disconnect();
-						stage.nodes.forEach(function(node) {
-							node.disconnect();
-						});
-					} catch (error) {}
-					try {
-						if (typeof context.close === "function") context.close();
-					} catch (error) {}
-				}
-			};
-		}
-		softPhone.MIC_BOOST_OPTIONS_DB = MIC_BOOST_OPTIONS_DB;
-		softPhone.clampBoostDb = clampBoostDb;
-		softPhone.boostGainFor = boostGainFor;
-		softPhone.describeBoost = describeBoost;
-		softPhone.connectBoostStage = connectBoostStage;
-		softPhone.createBoostPipeline = createBoostPipeline;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-level.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var AUTO_LEVEL_DEFAULTS = {
-			targetDb: -18,
-			maxGainDb: 20,
-			minGainDb: -6,
-			hotDb: -10,
-			riseDbPerSec: 6,
-			fallDbPerSec: 15,
-			speechThresholdDb: -40,
-			toleranceDb: 1,
-			maxStepMs: 200
-		};
-		function option(options, name) {
-			var value = options ? options[name] : void 0;
-			return typeof value === "number" && isFinite(value) ? value : AUTO_LEVEL_DEFAULTS[name];
-		}
-		function clamp(value, low, high) {
-			return Math.min(high, Math.max(low, value));
-		}
-		function amplitudeToDb(amplitude) {
-			return typeof amplitude === "number" && amplitude > 0 ? 20 * Math.log10(amplitude) : -Infinity;
-		}
-		function dbToGain(db) {
-			return Math.pow(10, db / 20);
-		}
-		function clampAutoLevelGainDb(gainDb, options) {
-			if (typeof gainDb !== "number" || !isFinite(gainDb)) return 0;
-			return clamp(gainDb, option(options, "minGainDb"), option(options, "maxGainDb"));
-		}
-		function nextAutoLevelGainDb(currentGainDb, measuredDb, options, elapsedMs) {
-			var current = clampAutoLevelGainDb(currentGainDb, options);
-			if (typeof measuredDb !== "number" || !isFinite(measuredDb) || measuredDb < option(options, "speechThresholdDb")) return current;
-			var elapsed = typeof elapsedMs === "number" && isFinite(elapsedMs) ? Math.min(elapsedMs, option(options, "maxStepMs")) : 0;
-			if (elapsed <= 0) return current;
-			var error = option(options, "targetDb") - measuredDb - current;
-			if (Math.abs(error) <= option(options, "toleranceDb")) return current;
-			var seconds = elapsed / 1e3;
-			var next = current + clamp(error, -option(options, "fallDbPerSec") * seconds, option(options, "riseDbPerSec") * seconds);
-			if (measuredDb <= option(options, "hotDb")) next = Math.max(next, Math.min(current, 0));
-			return clampAutoLevelGainDb(next, options);
-		}
-		softPhone.AUTO_LEVEL_DEFAULTS = AUTO_LEVEL_DEFAULTS;
-		softPhone.amplitudeToDb = amplitudeToDb;
-		softPhone.dbToGain = dbToGain;
-		softPhone.clampAutoLevelGainDb = clampAutoLevelGainDb;
-		softPhone.nextAutoLevelGainDb = nextAutoLevelGainDb;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voice-isolation.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var VOICE_ISOLATION_ENGINES = ["gtcrn", "rnnoise"];
-		var VOICE_ISOLATION_STRENGTHS = [
-			"low",
-			"medium",
-			"high"
-		];
-		var GATE_SETTINGS = {
-			low: {
-				openThreshold: -50,
-				closeThreshold: -58,
-				holdMs: 300,
-				floorDb: -24
+				var window = {
+					peak,
+					average: sum / reads,
+					reads
+				};
+				peak = 0;
+				sum = 0;
+				reads = 0;
+				return window;
 			},
-			medium: {
-				openThreshold: -40,
-				closeThreshold: -50,
-				holdMs: 250,
-				floorDb: -30
+			state: function() {
+				return disposed ? "disposed" : context.state;
 			},
-			high: {
-				openThreshold: -36,
-				closeThreshold: -45,
-				holdMs: 200,
-				floorDb: -40
-			}
-		};
-		var SAMPLE_RATE = 48e3;
-		var WORKLET_PATHS = {
-			gtcrn: "gtcrn/workletProcessor.js",
-			rnnoise: "rnnoise/workletProcessor.js",
-			gate: "noiseGate/workletProcessor.js"
-		};
-		var PROCESSOR_NAMES = {
-			gtcrn: "@sapphi-red/web-noise-suppressor/gtcrn",
-			rnnoise: "@sapphi-red/web-noise-suppressor/rnnoise",
-			gate: "@sapphi-red/web-noise-suppressor/noise-gate"
-		};
-		var WASM_PATHS = {
-			gtcrn: { url: "gtcrn.wasm" },
-			rnnoise: {
-				url: "rnnoise.wasm",
-				simdUrl: "rnnoise_simd.wasm"
-			}
-		};
-		var SIMD_PROBE = [
-			0,
-			97,
-			115,
-			109,
-			1,
-			0,
-			0,
-			0,
-			1,
-			5,
-			1,
-			96,
-			0,
-			1,
-			123,
-			3,
-			2,
-			1,
-			0,
-			10,
-			10,
-			1,
-			8,
-			0,
-			65,
-			0,
-			253,
-			15,
-			253,
-			98,
-			11
-		];
-		var BUILD_TIMEOUT_MS = 6e3;
-		var RESUME_TIMEOUT_MS = 400;
-		var SOURCE_METER_INTERVAL_MS = 200;
-		var AUTO_LEVEL_INTERVAL_MS = 50;
-		var AUTO_LEVEL_FFT_SIZE = 2048;
-		var AUTO_LEVEL_SMOOTHING_S = .03;
-		var RAW_CAPTURE_SILENT_LEVEL = 1e-4;
-		var wasmCache = {};
-		function clampVoiceIsolationEngine(value) {
-			return VOICE_ISOLATION_ENGINES.indexOf(value) === -1 ? VOICE_ISOLATION_ENGINES[0] : value;
-		}
-		function clampVoiceIsolationStrength(value) {
-			return VOICE_ISOLATION_STRENGTHS.indexOf(value) === -1 ? "medium" : value;
-		}
-		function noiseGateSettingsFor(strength) {
-			var settings = GATE_SETTINGS[clampVoiceIsolationStrength(strength)];
-			return {
-				openThreshold: settings.openThreshold,
-				closeThreshold: settings.closeThreshold,
-				holdMs: settings.holdMs,
-				floorDb: settings.floorDb
-			};
-		}
-		function describeVoiceIsolation(state, engine, autoLevelGainDb) {
-			if (state === "active") {
-				var label = "vi=" + (engine || "?") + "+gate";
-				if (typeof autoLevelGainDb === "number" && isFinite(autoLevelGainDb)) {
-					var rounded = Math.round(autoLevelGainDb);
-					label += "+level(" + (rounded >= 0 ? "+" : "") + rounded + "dB)";
-				}
-				return label;
-			}
-			if (state === "pending" || state === "failed") return "vi=" + state;
-			return "vi=off";
-		}
-		function joinUrl(base, path) {
-			return String(base || "").replace(/\/+$/, "") + "/" + path;
-		}
-		function isVoiceIsolationSupported(options) {
-			var settings = options || {};
-			var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
-			var WorkletNode = settings.audioWorkletNode || root.AudioWorkletNode;
-			var wasm = settings.webAssembly || root.WebAssembly;
-			return !!AudioCtx && !!WorkletNode && !!wasm && typeof wasm.validate === "function";
-		}
-		function reasonError(reason, message, cause) {
-			var error = new Error(message);
-			error.voiceIsolationReason = reason;
-			if (cause) error.cause = cause;
-			return error;
-		}
-		function loadWasm(engine, baseUrl, fetchFn, wasm) {
-			var paths = WASM_PATHS[engine];
-			var useSimd = false;
-			if (paths.simdUrl) try {
-				useSimd = !!wasm.validate(new Uint8Array(SIMD_PROBE));
-			} catch (error) {
-				useSimd = false;
-			}
-			var url = joinUrl(baseUrl, useSimd ? paths.simdUrl : paths.url);
-			if (!wasmCache[url]) {
-				wasmCache[url] = Promise.resolve(fetchFn(url, { credentials: "same-origin" })).then(function(response) {
-					if (!response || typeof response.ok === "boolean" && !response.ok) throw new Error("Loading " + url + " failed" + (response && response.status ? " (" + response.status + ")" : "") + ".");
-					return response.arrayBuffer();
-				});
-				wasmCache[url].catch(function() {
-					delete wasmCache[url];
-				});
-			}
-			return wasmCache[url];
-		}
-		function waitForRunning(context, timers, timeoutMs) {
-			if (context.state === "running") return Promise.resolve(true);
-			return new Promise(function(resolve) {
-				var settled = false;
-				var timer = timers.setTimeout(function() {
-					if (!settled) {
-						settled = true;
-						resolve(context.state === "running");
-					}
-				}, timeoutMs);
-				var resumed;
-				try {
-					resumed = typeof context.resume === "function" ? context.resume() : null;
-				} catch (error) {
-					resumed = null;
-				}
-				Promise.resolve(resumed).then(function() {
-					if (!settled && context.state === "running") {
-						settled = true;
-						timers.clearTimeout(timer);
-						resolve(true);
-					}
-				}, function() {});
-			});
-		}
-		function createVoiceIsolationPipeline(sourceStream, options) {
-			var settings = options || {};
-			var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
-			var WorkletNode = settings.audioWorkletNode || root.AudioWorkletNode;
-			var wasm = settings.webAssembly || root.WebAssembly;
-			var fetchFn = settings.fetch || (typeof root.fetch === "function" ? root.fetch.bind(root) : null);
-			var timers = settings.timers || root;
-			var baseUrl = settings.assetBaseUrl;
-			var requestedEngine = clampVoiceIsolationEngine(settings.engine);
-			var strength = clampVoiceIsolationStrength(settings.strength);
-			var gateSettings = noiseGateSettingsFor(strength);
-			var connectBoostStage = softPhone.connectBoostStage;
-			var clampBoostDb = softPhone.clampBoostDb;
-			var nextAutoLevelGainDb = softPhone.nextAutoLevelGainDb;
-			var clampAutoLevelGainDb = softPhone.clampAutoLevelGainDb;
-			var amplitudeToDb = softPhone.amplitudeToDb;
-			var dbToGain = softPhone.dbToGain;
-			var now = typeof settings.now === "function" ? settings.now : function() {
-				return Date.now();
-			};
-			var autoLevelOn = settings.autoLevel !== false && typeof nextAutoLevelGainDb === "function";
-			var autoLevelOptions = { speechThresholdDb: gateSettings.openThreshold };
-			if (!sourceStream || !baseUrl || !fetchFn || !isVoiceIsolationSupported(settings)) return Promise.reject(reasonError("unsupported", !baseUrl ? "No voice isolation asset URL is configured." : "This browser does not support AudioWorklet and WebAssembly."));
-			var context;
-			try {
-				context = new AudioCtx({
-					sampleRate: SAMPLE_RATE,
-					latencyHint: "interactive"
-				});
-			} catch (error) {
-				return Promise.reject(reasonError("graph-failed", "The audio engine could not be created: " + (error && error.message || error), error));
-			}
-			if (!context.audioWorklet || typeof context.audioWorklet.addModule !== "function") {
-				closeQuietly(context);
-				return Promise.reject(reasonError("unsupported", "This browser does not support AudioWorklet."));
-			}
-			var running = waitForRunning(context, timers, RESUME_TIMEOUT_MS);
-			var nodes = [];
-			var meterTimer = null;
-			var levelTimer = null;
-			var autoLevelGainDb = autoLevelOn ? clampAutoLevelGainDb(settings.autoLevelInitialDb) : null;
-			var disposed = false;
-			var timedOut = false;
-			var engine = null;
-			var denoiser = null;
-			var analyser = null;
-			var meterData = null;
-			var sourcePeak = 0;
-			var sourceReads = 0;
-			function dispose() {
+			dispose: function() {
 				if (disposed) return;
 				disposed = true;
-				if (meterTimer !== null) {
-					timers.clearInterval(meterTimer);
-					meterTimer = null;
-				}
-				if (levelTimer !== null) {
-					timers.clearInterval(levelTimer);
-					levelTimer = null;
-				}
+				timers.clearInterval(timer);
 				try {
-					if (denoiser && denoiser.port && typeof denoiser.port.postMessage === "function") denoiser.port.postMessage("destroy");
+					source.disconnect();
+					analyser.disconnect();
+					sink.disconnect();
 				} catch (error) {}
+				try {
+					if (typeof context.close === "function") context.close();
+				} catch (error) {}
+			}
+		};
+	}
+	function isTrackDeliverable(track) {
+		return !!track && track.readyState === "live" && !track.muted;
+	}
+	function captureProbeNeedsRebuild(probeTrackId, currentTrackId, currentTrackState) {
+		if (!currentTrackId || currentTrackState === "ended") return false;
+		return probeTrackId !== currentTrackId;
+	}
+	function selectReceiveTrack(receivers, remoteStream) {
+		var receiver = (receivers || []).filter(function(candidate) {
+			return candidate && candidate.track && candidate.track.kind === "audio";
+		})[0];
+		if (receiver) return receiver.track;
+		return remoteStream && typeof remoteStream.getAudioTracks === "function" ? remoteStream.getAudioTracks()[0] || null : null;
+	}
+	function inboundProbeNeedsRebuild(probeTrackId, receiveTrack) {
+		return captureProbeNeedsRebuild(probeTrackId, receiveTrack ? receiveTrack.id : null, receiveTrack ? receiveTrack.readyState : null);
+	}
+	function probeLevel(probe) {
+		if (!probe) return -1;
+		var window = probe.read();
+		return window && window.reads ? window.peak : -1;
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/hold-audio.js
+	var TONE_PLAN = {
+		frequencies: [440, 480],
+		gain: .05,
+		onSeconds: 1,
+		offSeconds: 3
+	};
+	function selectHoldSource(config) {
+		config = config || {};
+		var url = typeof config.mediaUrl === "string" ? config.mediaUrl.trim() : "";
+		if (url) return {
+			kind: "url",
+			url
+		};
+		return { kind: "tone" };
+	}
+	function buildTonePlan() {
+		return {
+			frequencies: TONE_PLAN.frequencies.slice(),
+			gain: TONE_PLAN.gain,
+			onSeconds: TONE_PLAN.onSeconds,
+			offSeconds: TONE_PLAN.offSeconds
+		};
+	}
+	function findAudioSender(senders) {
+		if (!senders || !senders.length) return null;
+		var i = 0;
+		for (; i < senders.length; i++) if (senders[i] && senders[i].track && senders[i].track.kind === "audio") return senders[i];
+		for (i = 0; i < senders.length; i++) if (senders[i] && (!senders[i].track || senders[i].track.kind === "audio")) return senders[i];
+		return null;
+	}
+	function createHoldAudioController(options) {
+		options = options || {};
+		var source = selectHoldSource(options);
+		var createEngine = typeof options.createEngine === "function" ? options.createEngine : defaultHoldAudioEngine;
+		var engine = null;
+		var savedSender = null;
+		var savedTrack = null;
+		var engaged = false;
+		var engaging = null;
+		function engage(peerConnection, micTrack) {
+			if (engaged) return Promise.resolve(true);
+			if (engaging) return engaging;
+			engaging = startEngage(peerConnection, micTrack).then(function(result) {
+				engaging = null;
+				return result;
+			}, function(error) {
+				engaging = null;
+				throw error;
+			});
+			return engaging;
+		}
+		function startEngage(peerConnection, micTrack) {
+			var sender = findAudioSender(peerConnection && typeof peerConnection.getSenders === "function" ? peerConnection.getSenders() : []);
+			if (!sender || typeof sender.replaceTrack !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: no audio sender to replace"));
+			engine = createEngine(source, buildTonePlan());
+			return Promise.resolve(engine.start()).then(function(holdTrack) {
+				if (!holdTrack) throw new Error("hold-audio: engine produced no track");
+				savedSender = sender;
+				savedTrack = micTrack || sender.track || null;
+				return sender.replaceTrack(holdTrack);
+			}).then(function() {
+				engaged = true;
+				return true;
+			}).catch(function(error) {
+				return teardownEngine().then(function() {
+					throw error;
+				});
+			});
+		}
+		function release(peerConnection) {
+			if (engaging) return engaging.then(function() {
+				return release(peerConnection);
+			}, function() {
+				return false;
+			});
+			if (!engaged) return Promise.resolve(false);
+			var sender = savedSender || findAudioSender(peerConnection && typeof peerConnection.getSenders === "function" ? peerConnection.getSenders() : []);
+			var restoreTrack = savedTrack;
+			return (sender && typeof sender.replaceTrack === "function" ? Promise.resolve(sender.replaceTrack(restoreTrack)).catch(function() {}) : Promise.resolve()).then(teardownEngine).then(function() {
+				engaged = false;
+				return true;
+			});
+		}
+		function teardownEngine() {
+			savedSender = null;
+			savedTrack = null;
+			var stopping = engine && typeof engine.stop === "function" ? engine.stop() : null;
+			engine = null;
+			return Promise.resolve(stopping).catch(function() {});
+		}
+		return {
+			engage,
+			release,
+			isEngaged: function() {
+				return engaged || !!engaging;
+			},
+			source
+		};
+	}
+	function defaultHoldAudioEngine(source, tonePlan) {
+		var element = null;
+		var audioContext = null;
+		var nodes = [];
+		function startUrl() {
+			var audio = globalThis.document ? globalThis.document.createElement("audio") : null;
+			if (!audio || typeof audio.play !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: cannot create audio element"));
+			element = audio;
+			audio.src = source.url;
+			audio.loop = true;
+			audio.crossOrigin = "anonymous";
+			audio.preload = "auto";
+			var media = audio;
+			var capture = media.captureStream || media.mozCaptureStream;
+			if (typeof capture !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: captureStream unavailable"));
+			return Promise.resolve(audio.play()).then(function() {
+				var stream = capture.call(audio);
+				return (stream && stream.getAudioTracks ? stream.getAudioTracks() : [])[0] || null;
+			});
+		}
+		function startTone() {
+			var Ctx = globalThis.AudioContext || globalThis.webkitAudioContext;
+			if (typeof Ctx !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: WebAudio unavailable"));
+			audioContext = new Ctx();
+			var destination = audioContext.createMediaStreamDestination();
+			var gain = audioContext.createGain();
+			gain.gain.value = 0;
+			gain.connect(destination);
+			nodes.push(gain);
+			tonePlan.frequencies.forEach(function(frequency) {
+				var oscillator = audioContext.createOscillator();
+				oscillator.type = "sine";
+				oscillator.frequency.value = frequency;
+				oscillator.connect(gain);
+				oscillator.start();
+				nodes.push(oscillator);
+			});
+			var cycle = tonePlan.onSeconds + tonePlan.offSeconds;
+			var now = audioContext.currentTime;
+			for (var i = 0; i < 600 / cycle; i++) {
+				var base = now + i * cycle;
+				gain.gain.setValueAtTime(tonePlan.gain, base);
+				gain.gain.setValueAtTime(0, base + tonePlan.onSeconds);
+			}
+			var track = destination.stream.getAudioTracks()[0];
+			if (typeof audioContext.resume === "function") try {
+				audioContext.resume();
+			} catch (error) {}
+			return Promise.resolve(track || null);
+		}
+		return {
+			start: function() {
+				return source.kind === "url" ? startUrl() : startTone();
+			},
+			stop: function() {
+				if (element) {
+					try {
+						element.pause();
+					} catch (error) {}
+					element.src = "";
+					element = null;
+				}
 				nodes.forEach(function(node) {
+					try {
+						if (typeof node.stop === "function") node.stop();
+					} catch (error) {}
 					try {
 						node.disconnect();
 					} catch (error) {}
 				});
-				closeQuietly(context);
+				nodes = [];
+				if (audioContext && typeof audioContext.close === "function") try {
+					audioContext.close();
+				} catch (error) {}
+				audioContext = null;
+				return Promise.resolve();
 			}
-			function startAutoLevel(input, level, destination) {
-				var levelAnalyser = context.createAnalyser();
-				levelAnalyser.fftSize = AUTO_LEVEL_FFT_SIZE;
-				nodes.push(levelAnalyser);
-				var levelSink = context.createGain();
-				levelSink.gain.value = 0;
-				nodes.push(levelSink);
-				input.connect(levelAnalyser);
-				levelAnalyser.connect(levelSink);
-				levelSink.connect(destination);
-				var levelData = new Float32Array(levelAnalyser.fftSize);
-				var lastDecision = now();
-				levelTimer = timers.setInterval(function() {
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js
+	function pad(value) {
+		return value < 10 ? "0" + value : String(value);
+	}
+	function formatDuration(totalSeconds) {
+		if (!isFinite(totalSeconds) || totalSeconds < 0) totalSeconds = 0;
+		var seconds = Math.floor(totalSeconds % 60);
+		var minutes = Math.floor(totalSeconds / 60 % 60);
+		var hours = Math.floor(totalSeconds / 3600);
+		return (hours > 0 ? hours + ":" + pad(minutes) : minutes) + ":" + pad(seconds);
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-status.js
+	var STATUS_SEPARATOR = " · ";
+	function formatElapsed(totalSeconds) {
+		return formatDuration(totalSeconds);
+	}
+	function formatCallStatus(statusText, elapsedSeconds) {
+		var text = statusText || "";
+		if (typeof elapsedSeconds !== "number" || !isFinite(elapsedSeconds) || elapsedSeconds < 0) return text;
+		return text + STATUS_SEPARATOR + formatElapsed(elapsedSeconds);
+	}
+	function connectedAtFor(isConnected, previousConnectedAt, nowMs) {
+		if (!isConnected) return null;
+		return typeof previousConnectedAt === "number" && isFinite(previousConnectedAt) ? previousConnectedAt : nowMs;
+	}
+	function durationMeta(durationSeconds, inProgress) {
+		if (inProgress || typeof durationSeconds !== "number" || !isFinite(durationSeconds) || durationSeconds <= 0) return "";
+		return formatElapsed(durationSeconds);
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/audio-devices.js
+	var VIRTUAL_DEVICE_PATTERNS = [
+		/vb-audio/,
+		/\bvb-cable\b/,
+		/\bcable (input|output)\b/,
+		/virtual (audio )?cable/,
+		/voicemeeter/,
+		/stereo mix/,
+		/what u hear/,
+		/wave out mix/,
+		/\bblackhole\b/,
+		/soundflower/,
+		/loopback audio/
+	];
+	function isVirtualAudioDevice(label) {
+		if (typeof label !== "string" || !label.trim()) return false;
+		var normalized = label.toLowerCase();
+		for (var i = 0; i < VIRTUAL_DEVICE_PATTERNS.length; i++) if (VIRTUAL_DEVICE_PATTERNS[i].test(normalized)) return true;
+		return false;
+	}
+	function resolveDeviceLabel(devices, kind, deviceId) {
+		if (!Array.isArray(devices)) return "";
+		var wanted = deviceId || "default";
+		for (var i = 0; i < devices.length; i++) {
+			var device = devices[i];
+			if (device && device.kind === kind && device.deviceId === wanted) return device.label || "";
+		}
+		return "";
+	}
+	function shouldFallBackToDefaultMicrophone(error, selectedDeviceId) {
+		var name = error && error.name || "";
+		return !!selectedDeviceId && (name === "OverconstrainedError" || name === "NotFoundError" || name === "DevicesNotFoundError");
+	}
+	function captureWithFallback(getUserMedia, buildConstraints, readSelectedId, onFallback) {
+		return getUserMedia(buildConstraints()).catch(function(error) {
+			var selectedDeviceId = readSelectedId();
+			if (!shouldFallBackToDefaultMicrophone(error, selectedDeviceId)) throw error;
+			onFallback(selectedDeviceId, error);
+			return getUserMedia(buildConstraints());
+		});
+	}
+	function shouldFallBackToDefaultSpeaker(outputs, selectedDeviceId) {
+		if (!selectedDeviceId) return false;
+		var known = (outputs || []).filter(function(device) {
+			return device && device.deviceId;
+		});
+		if (known.length === 0) return false;
+		return !known.some(function(device) {
+			return device.deviceId === selectedDeviceId;
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/mic-boost.js
+	var MIC_BOOST_OPTIONS_DB = [
+		0,
+		3,
+		6,
+		9,
+		12
+	];
+	var LIMITER_THRESHOLD_DB = -3;
+	var LIMITER_KNEE_DB = 0;
+	var LIMITER_RATIO = 20;
+	var LIMITER_ATTACK_S = .003;
+	var LIMITER_RELEASE_S = .05;
+	var CLIPPER_KNEE = .9;
+	function clampBoostDb(value) {
+		var db = typeof value === "number" ? value : parseInt(value, 10);
+		return MIC_BOOST_OPTIONS_DB.indexOf(db) === -1 ? 0 : db;
+	}
+	function boostGainFor(db) {
+		return Math.pow(10, clampBoostDb(db) / 20);
+	}
+	function describeBoost(db) {
+		var clamped = clampBoostDb(db);
+		return clamped > 0 ? "boost+" + clamped : "";
+	}
+	function connectBoostStage(context, input, boostDb, options) {
+		var db = clampBoostDb(boostDb);
+		var alwaysLimit = !!(options && options.alwaysLimit);
+		if (db === 0 && !alwaysLimit) return null;
+		var nodes = [];
+		var tail = input;
+		if (db !== 0) {
+			var gain = context.createGain();
+			gain.gain.value = boostGainFor(db);
+			tail.connect(gain);
+			tail = gain;
+			nodes.push(gain);
+		}
+		var limiter = context.createDynamicsCompressor();
+		limiter.threshold.value = LIMITER_THRESHOLD_DB;
+		limiter.knee.value = LIMITER_KNEE_DB;
+		limiter.ratio.value = LIMITER_RATIO;
+		limiter.attack.value = LIMITER_ATTACK_S;
+		limiter.release.value = LIMITER_RELEASE_S;
+		tail.connect(limiter);
+		nodes.push(limiter);
+		tail = limiter;
+		if (typeof context.createWaveShaper === "function") {
+			var clipper = context.createWaveShaper();
+			clipper.curve = softClipCurve();
+			clipper.oversample = "2x";
+			tail.connect(clipper);
+			nodes.push(clipper);
+			tail = clipper;
+		}
+		return {
+			output: tail,
+			nodes
+		};
+	}
+	var clipCurve = null;
+	function softClipCurve() {
+		if (clipCurve) return clipCurve;
+		var points = 4097;
+		var curve = new Float32Array(points);
+		for (var i = 0; i < points; i++) {
+			var x = i / (points - 1) * 2 - 1;
+			var magnitude = Math.abs(x);
+			var y = magnitude <= CLIPPER_KNEE ? magnitude : CLIPPER_KNEE + (1 - CLIPPER_KNEE) * Math.tanh((magnitude - CLIPPER_KNEE) / (1 - CLIPPER_KNEE));
+			curve[i] = x < 0 ? -y : y;
+		}
+		clipCurve = curve;
+		return curve;
+	}
+	function createBoostPipeline(sourceStream, boostDb, options) {
+		var db = clampBoostDb(boostDb);
+		var AudioCtx = (options || {}).audioContext || globalThis.AudioContext || globalThis.webkitAudioContext;
+		if (!sourceStream || db === 0 || !AudioCtx) return {
+			stream: sourceStream,
+			boosted: false,
+			dispose: function() {}
+		};
+		var context;
+		var source;
+		var stage;
+		var destination;
+		try {
+			context = new AudioCtx();
+			source = context.createMediaStreamSource(sourceStream);
+			stage = connectBoostStage(context, source, db);
+			destination = context.createMediaStreamDestination();
+			stage.output.connect(destination);
+			if (context.state === "suspended" && typeof context.resume === "function") try {
+				Promise.resolve(context.resume()).catch(function() {});
+			} catch (error) {}
+		} catch (error) {
+			try {
+				if (context && typeof context.close === "function") context.close();
+			} catch (closeError) {}
+			return {
+				stream: sourceStream,
+				boosted: false,
+				dispose: function() {}
+			};
+		}
+		var disposed = false;
+		return {
+			stream: destination.stream,
+			boosted: true,
+			dispose: function() {
+				if (disposed) return;
+				disposed = true;
+				try {
+					source.disconnect();
+					stage.nodes.forEach(function(node) {
+						node.disconnect();
+					});
+				} catch (error) {}
+				try {
+					if (typeof context.close === "function") context.close();
+				} catch (error) {}
+			}
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-level.js
+	var AUTO_LEVEL_DEFAULTS = {
+		targetDb: -18,
+		maxGainDb: 20,
+		minGainDb: -6,
+		hotDb: -10,
+		riseDbPerSec: 6,
+		fallDbPerSec: 15,
+		speechThresholdDb: -40,
+		toleranceDb: 1,
+		maxStepMs: 200
+	};
+	function option(options, name) {
+		var value = options ? options[name] : void 0;
+		return typeof value === "number" && isFinite(value) ? value : AUTO_LEVEL_DEFAULTS[name];
+	}
+	function clamp(value, low, high) {
+		return Math.min(high, Math.max(low, value));
+	}
+	function amplitudeToDb(amplitude) {
+		return typeof amplitude === "number" && amplitude > 0 ? 20 * Math.log10(amplitude) : -Infinity;
+	}
+	function dbToGain(db) {
+		return Math.pow(10, db / 20);
+	}
+	function clampAutoLevelGainDb(gainDb, options) {
+		if (typeof gainDb !== "number" || !isFinite(gainDb)) return 0;
+		return clamp(gainDb, option(options, "minGainDb"), option(options, "maxGainDb"));
+	}
+	function nextAutoLevelGainDb(currentGainDb, measuredDb, options, elapsedMs) {
+		var current = clampAutoLevelGainDb(currentGainDb, options);
+		if (typeof measuredDb !== "number" || !isFinite(measuredDb) || measuredDb < option(options, "speechThresholdDb")) return current;
+		var elapsed = typeof elapsedMs === "number" && isFinite(elapsedMs) ? Math.min(elapsedMs, option(options, "maxStepMs")) : 0;
+		if (elapsed <= 0) return current;
+		var error = option(options, "targetDb") - measuredDb - current;
+		if (Math.abs(error) <= option(options, "toleranceDb")) return current;
+		var seconds = elapsed / 1e3;
+		var next = current + clamp(error, -option(options, "fallDbPerSec") * seconds, option(options, "riseDbPerSec") * seconds);
+		if (measuredDb <= option(options, "hotDb")) next = Math.max(next, Math.min(current, 0));
+		return clampAutoLevelGainDb(next, options);
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voice-isolation.js
+	var VOICE_ISOLATION_ENGINES = ["gtcrn", "rnnoise"];
+	var VOICE_ISOLATION_STRENGTHS = [
+		"low",
+		"medium",
+		"high"
+	];
+	var GATE_SETTINGS = {
+		low: {
+			openThreshold: -50,
+			closeThreshold: -58,
+			holdMs: 300,
+			floorDb: -24
+		},
+		medium: {
+			openThreshold: -40,
+			closeThreshold: -50,
+			holdMs: 250,
+			floorDb: -30
+		},
+		high: {
+			openThreshold: -36,
+			closeThreshold: -45,
+			holdMs: 200,
+			floorDb: -40
+		}
+	};
+	var SAMPLE_RATE = 48e3;
+	var WORKLET_PATHS = {
+		gtcrn: "gtcrn/workletProcessor.js",
+		rnnoise: "rnnoise/workletProcessor.js",
+		gate: "noiseGate/workletProcessor.js"
+	};
+	var PROCESSOR_NAMES = {
+		gtcrn: "@sapphi-red/web-noise-suppressor/gtcrn",
+		rnnoise: "@sapphi-red/web-noise-suppressor/rnnoise",
+		gate: "@sapphi-red/web-noise-suppressor/noise-gate"
+	};
+	var WASM_PATHS = {
+		gtcrn: { url: "gtcrn.wasm" },
+		rnnoise: {
+			url: "rnnoise.wasm",
+			simdUrl: "rnnoise_simd.wasm"
+		}
+	};
+	var SIMD_PROBE = [
+		0,
+		97,
+		115,
+		109,
+		1,
+		0,
+		0,
+		0,
+		1,
+		5,
+		1,
+		96,
+		0,
+		1,
+		123,
+		3,
+		2,
+		1,
+		0,
+		10,
+		10,
+		1,
+		8,
+		0,
+		65,
+		0,
+		253,
+		15,
+		253,
+		98,
+		11
+	];
+	var BUILD_TIMEOUT_MS = 6e3;
+	var RESUME_TIMEOUT_MS = 400;
+	var SOURCE_METER_INTERVAL_MS = 200;
+	var AUTO_LEVEL_INTERVAL_MS = 50;
+	var AUTO_LEVEL_FFT_SIZE = 2048;
+	var AUTO_LEVEL_SMOOTHING_S = .03;
+	var RAW_CAPTURE_SILENT_LEVEL = 1e-4;
+	var wasmCache = {};
+	function clampVoiceIsolationEngine(value) {
+		return VOICE_ISOLATION_ENGINES.indexOf(value) === -1 ? VOICE_ISOLATION_ENGINES[0] : value;
+	}
+	function clampVoiceIsolationStrength(value) {
+		return VOICE_ISOLATION_STRENGTHS.indexOf(value) === -1 ? "medium" : value;
+	}
+	function noiseGateSettingsFor(strength) {
+		var settings = GATE_SETTINGS[clampVoiceIsolationStrength(strength)];
+		return {
+			openThreshold: settings.openThreshold,
+			closeThreshold: settings.closeThreshold,
+			holdMs: settings.holdMs,
+			floorDb: settings.floorDb
+		};
+	}
+	function describeVoiceIsolation(state, engine, autoLevelGainDb) {
+		if (state === "active") {
+			var label = "vi=" + (engine || "?") + "+gate";
+			if (typeof autoLevelGainDb === "number" && isFinite(autoLevelGainDb)) {
+				var rounded = Math.round(autoLevelGainDb);
+				label += "+level(" + (rounded >= 0 ? "+" : "") + rounded + "dB)";
+			}
+			return label;
+		}
+		if (state === "pending" || state === "failed") return "vi=" + state;
+		return "vi=off";
+	}
+	function joinUrl(base, path) {
+		return String(base || "").replace(/\/+$/, "") + "/" + path;
+	}
+	function isVoiceIsolationSupported(options) {
+		var settings = options || {};
+		var AudioCtx = settings.audioContext || globalThis.AudioContext || globalThis.webkitAudioContext;
+		var WorkletNode = settings.audioWorkletNode || globalThis.AudioWorkletNode;
+		var wasm = settings.webAssembly || globalThis.WebAssembly;
+		return !!AudioCtx && !!WorkletNode && !!wasm && typeof wasm.validate === "function";
+	}
+	function reasonError(reason, message, cause) {
+		/** @type {Error & { voiceIsolationReason?: string }} */
+		var error = new Error(message);
+		error.voiceIsolationReason = reason;
+		if (cause) error.cause = cause;
+		return error;
+	}
+	function loadWasm(engine, baseUrl, fetchFn, wasm) {
+		var paths = WASM_PATHS[engine];
+		var useSimd = false;
+		if (paths.simdUrl) try {
+			useSimd = !!wasm.validate(new Uint8Array(SIMD_PROBE));
+		} catch (error) {
+			useSimd = false;
+		}
+		var url = joinUrl(baseUrl, useSimd ? paths.simdUrl : paths.url);
+		if (!wasmCache[url]) {
+			wasmCache[url] = Promise.resolve(fetchFn(url, { credentials: "same-origin" })).then(function(response) {
+				if (!response || typeof response.ok === "boolean" && !response.ok) throw new Error("Loading " + url + " failed" + (response && response.status ? " (" + response.status + ")" : "") + ".");
+				return response.arrayBuffer();
+			});
+			wasmCache[url].catch(function() {
+				delete wasmCache[url];
+			});
+		}
+		return wasmCache[url];
+	}
+	function waitForRunning(context, timers, timeoutMs) {
+		if (context.state === "running") return Promise.resolve(true);
+		return new Promise(function(resolve) {
+			var settled = false;
+			var timer = timers.setTimeout(function() {
+				if (!settled) {
+					settled = true;
+					resolve(context.state === "running");
+				}
+			}, timeoutMs);
+			var resumed;
+			try {
+				resumed = typeof context.resume === "function" ? context.resume() : null;
+			} catch (error) {
+				resumed = null;
+			}
+			Promise.resolve(resumed).then(function() {
+				if (!settled && context.state === "running") {
+					settled = true;
+					timers.clearTimeout(timer);
+					resolve(true);
+				}
+			}, function() {});
+		});
+	}
+	function createVoiceIsolationPipeline(sourceStream, options) {
+		var settings = options || {};
+		var AudioCtx = settings.audioContext || globalThis.AudioContext || globalThis.webkitAudioContext;
+		var WorkletNode = settings.audioWorkletNode || globalThis.AudioWorkletNode;
+		var wasm = settings.webAssembly || globalThis.WebAssembly;
+		var fetchFn = settings.fetch || (typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null);
+		var timers = settings.timers || globalThis;
+		var baseUrl = settings.assetBaseUrl;
+		var requestedEngine = clampVoiceIsolationEngine(settings.engine);
+		var strength = clampVoiceIsolationStrength(settings.strength);
+		var gateSettings = noiseGateSettingsFor(strength);
+		var now = typeof settings.now === "function" ? settings.now : function() {
+			return Date.now();
+		};
+		var autoLevelOn = settings.autoLevel !== false && typeof nextAutoLevelGainDb === "function";
+		var autoLevelOptions = { speechThresholdDb: gateSettings.openThreshold };
+		if (!sourceStream || !baseUrl || !fetchFn || !isVoiceIsolationSupported(settings)) return Promise.reject(reasonError("unsupported", !baseUrl ? "No voice isolation asset URL is configured." : "This browser does not support AudioWorklet and WebAssembly."));
+		var context;
+		try {
+			context = new AudioCtx({
+				sampleRate: SAMPLE_RATE,
+				latencyHint: "interactive"
+			});
+		} catch (error) {
+			return Promise.reject(reasonError("graph-failed", "The audio engine could not be created: " + (error && error.message || error), error));
+		}
+		if (!context.audioWorklet || typeof context.audioWorklet.addModule !== "function") {
+			closeQuietly(context);
+			return Promise.reject(reasonError("unsupported", "This browser does not support AudioWorklet."));
+		}
+		var running = waitForRunning(context, timers, RESUME_TIMEOUT_MS);
+		var nodes = [];
+		var meterTimer = null;
+		var levelTimer = null;
+		var autoLevelGainDb = autoLevelOn ? clampAutoLevelGainDb(settings.autoLevelInitialDb) : null;
+		var disposed = false;
+		var timedOut = false;
+		var engine = null;
+		var denoiser = null;
+		var analyser = null;
+		var meterData = null;
+		var sourcePeak = 0;
+		var sourceReads = 0;
+		function dispose() {
+			if (disposed) return;
+			disposed = true;
+			if (meterTimer !== null) {
+				timers.clearInterval(meterTimer);
+				meterTimer = null;
+			}
+			if (levelTimer !== null) {
+				timers.clearInterval(levelTimer);
+				levelTimer = null;
+			}
+			try {
+				if (denoiser && denoiser.port && typeof denoiser.port.postMessage === "function") denoiser.port.postMessage("destroy");
+			} catch (error) {}
+			nodes.forEach(function(node) {
+				try {
+					node.disconnect();
+				} catch (error) {}
+			});
+			closeQuietly(context);
+		}
+		function startAutoLevel(input, level, destination) {
+			var levelAnalyser = context.createAnalyser();
+			levelAnalyser.fftSize = AUTO_LEVEL_FFT_SIZE;
+			nodes.push(levelAnalyser);
+			var levelSink = context.createGain();
+			levelSink.gain.value = 0;
+			nodes.push(levelSink);
+			input.connect(levelAnalyser);
+			levelAnalyser.connect(levelSink);
+			levelSink.connect(destination);
+			var levelData = new Float32Array(levelAnalyser.fftSize);
+			var lastDecision = now();
+			levelTimer = timers.setInterval(function() {
+				if (disposed) return;
+				var at = now();
+				var elapsed = at - lastDecision;
+				lastDecision = at;
+				try {
+					levelAnalyser.getFloatTimeDomainData(levelData);
+				} catch (error) {
+					return;
+				}
+				var next = nextAutoLevelGainDb(autoLevelGainDb, amplitudeToDb(frameRms(levelData)), autoLevelOptions, elapsed);
+				if (next === autoLevelGainDb) return;
+				autoLevelGainDb = next;
+				try {
+					if (typeof level.gain.setTargetAtTime === "function") level.gain.setTargetAtTime(dbToGain(next), context.currentTime, AUTO_LEVEL_SMOOTHING_S);
+					else level.gain.value = dbToGain(next);
+				} catch (error) {}
+			}, AUTO_LEVEL_INTERVAL_MS);
+		}
+		function loadEngine(name) {
+			return Promise.all([context.audioWorklet.addModule(joinUrl(baseUrl, WORKLET_PATHS[name])), loadWasm(name, baseUrl, fetchFn, wasm)]).then(function(results) {
+				return {
+					name,
+					wasmBinary: results[1]
+				};
+			});
+		}
+		function loadAnyEngine() {
+			return loadEngine(requestedEngine).catch(function(firstError) {
+				var fallback = requestedEngine === "rnnoise" ? null : "rnnoise";
+				if (!fallback) throw firstError;
+				return loadEngine(fallback).catch(function() {
+					throw firstError;
+				});
+			});
+		}
+		var build = Promise.all([
+			loadAnyEngine().catch(function(error) {
+				throw reasonError("load-failed", "The voice isolation model could not be loaded: " + (error && error.message || error), error);
+			}),
+			context.audioWorklet.addModule(joinUrl(baseUrl, WORKLET_PATHS.gate)).catch(function(error) {
+				throw reasonError("load-failed", "The noise gate could not be loaded: " + (error && error.message || error), error);
+			}),
+			running
+		]).then(function(results) {
+			if (timedOut || disposed) throw reasonError("timeout", "Voice isolation took too long to start.");
+			if (!results[2]) throw reasonError("suspended", "The browser has not allowed the audio engine to start yet; it needs a click on the page.");
+			var loaded = results[0];
+			var mono = {
+				channelCount: 1,
+				channelCountMode: "explicit",
+				channelInterpretation: "speakers",
+				numberOfInputs: 1,
+				numberOfOutputs: 1,
+				outputChannelCount: [1]
+			};
+			engine = loaded.name;
+			try {
+				var source = context.createMediaStreamSource(sourceStream);
+				nodes.push(source);
+				denoiser = new WorkletNode(context, PROCESSOR_NAMES[engine], Object.assign({ processorOptions: {
+					maxChannels: 1,
+					wasmBinary: loaded.wasmBinary
+				} }, mono));
+				nodes.push(denoiser);
+				var gate = new WorkletNode(context, PROCESSOR_NAMES.gate, Object.assign({ processorOptions: {
+					openThreshold: gateSettings.openThreshold,
+					closeThreshold: gateSettings.closeThreshold,
+					holdMs: gateSettings.holdMs,
+					maxChannels: 1
+				} }, mono));
+				nodes.push(gate);
+				var floor = context.createGain();
+				floor.gain.value = Math.pow(10, gateSettings.floorDb / 20);
+				nodes.push(floor);
+				var mix = context.createGain();
+				mix.gain.value = 1;
+				nodes.push(mix);
+				source.connect(denoiser);
+				denoiser.connect(gate);
+				denoiser.connect(floor);
+				gate.connect(mix);
+				floor.connect(mix);
+				var output = mix;
+				var level = null;
+				if (autoLevelOn) {
+					level = context.createGain();
+					level.gain.value = dbToGain(autoLevelGainDb);
+					nodes.push(level);
+					mix.connect(level);
+					output = level;
+				}
+				var boost = typeof connectBoostStage === "function" ? connectBoostStage(context, output, settings.boostDb, { alwaysLimit: autoLevelOn }) : null;
+				if (boost) {
+					boost.nodes.forEach(function(node) {
+						nodes.push(node);
+					});
+					output = boost.output;
+				}
+				var destination = context.createMediaStreamDestination();
+				output.connect(destination);
+				if (level) startAutoLevel(denoiser, level, destination);
+				analyser = context.createAnalyser();
+				analyser.fftSize = 512;
+				nodes.push(analyser);
+				var meterSink = context.createGain();
+				meterSink.gain.value = 0;
+				nodes.push(meterSink);
+				source.connect(analyser);
+				analyser.connect(meterSink);
+				meterSink.connect(destination);
+				meterData = new Float32Array(analyser.fftSize);
+				meterTimer = timers.setInterval(function() {
 					if (disposed) return;
-					var at = now();
-					var elapsed = at - lastDecision;
-					lastDecision = at;
 					try {
-						levelAnalyser.getFloatTimeDomainData(levelData);
+						analyser.getFloatTimeDomainData(meterData);
 					} catch (error) {
 						return;
 					}
-					var next = nextAutoLevelGainDb(autoLevelGainDb, amplitudeToDb(frameRms(levelData)), autoLevelOptions, elapsed);
-					if (next === autoLevelGainDb) return;
-					autoLevelGainDb = next;
-					try {
-						if (typeof level.gain.setTargetAtTime === "function") level.gain.setTargetAtTime(dbToGain(next), context.currentTime, AUTO_LEVEL_SMOOTHING_S);
-						else level.gain.value = dbToGain(next);
-					} catch (error) {}
-				}, AUTO_LEVEL_INTERVAL_MS);
-			}
-			function loadEngine(name) {
-				return Promise.all([context.audioWorklet.addModule(joinUrl(baseUrl, WORKLET_PATHS[name])), loadWasm(name, baseUrl, fetchFn, wasm)]).then(function(results) {
-					return {
-						name,
-						wasmBinary: results[1]
-					};
-				});
-			}
-			function loadAnyEngine() {
-				return loadEngine(requestedEngine).catch(function(firstError) {
-					var fallback = requestedEngine === "rnnoise" ? null : "rnnoise";
-					if (!fallback) throw firstError;
-					return loadEngine(fallback).catch(function() {
-						throw firstError;
-					});
-				});
-			}
-			var build = Promise.all([
-				loadAnyEngine().catch(function(error) {
-					throw reasonError("load-failed", "The voice isolation model could not be loaded: " + (error && error.message || error), error);
-				}),
-				context.audioWorklet.addModule(joinUrl(baseUrl, WORKLET_PATHS.gate)).catch(function(error) {
-					throw reasonError("load-failed", "The noise gate could not be loaded: " + (error && error.message || error), error);
-				}),
-				running
-			]).then(function(results) {
-				if (timedOut || disposed) throw reasonError("timeout", "Voice isolation took too long to start.");
-				if (!results[2]) throw reasonError("suspended", "The browser has not allowed the audio engine to start yet; it needs a click on the page.");
-				var loaded = results[0];
-				var mono = {
-					channelCount: 1,
-					channelCountMode: "explicit",
-					channelInterpretation: "speakers",
-					numberOfInputs: 1,
-					numberOfOutputs: 1,
-					outputChannelCount: [1]
-				};
-				engine = loaded.name;
-				try {
-					var source = context.createMediaStreamSource(sourceStream);
-					nodes.push(source);
-					denoiser = new WorkletNode(context, PROCESSOR_NAMES[engine], Object.assign({ processorOptions: {
-						maxChannels: 1,
-						wasmBinary: loaded.wasmBinary
-					} }, mono));
-					nodes.push(denoiser);
-					var gate = new WorkletNode(context, PROCESSOR_NAMES.gate, Object.assign({ processorOptions: {
-						openThreshold: gateSettings.openThreshold,
-						closeThreshold: gateSettings.closeThreshold,
-						holdMs: gateSettings.holdMs,
-						maxChannels: 1
-					} }, mono));
-					nodes.push(gate);
-					var floor = context.createGain();
-					floor.gain.value = Math.pow(10, gateSettings.floorDb / 20);
-					nodes.push(floor);
-					var mix = context.createGain();
-					mix.gain.value = 1;
-					nodes.push(mix);
-					source.connect(denoiser);
-					denoiser.connect(gate);
-					denoiser.connect(floor);
-					gate.connect(mix);
-					floor.connect(mix);
-					var output = mix;
-					var level = null;
-					if (autoLevelOn) {
-						level = context.createGain();
-						level.gain.value = dbToGain(autoLevelGainDb);
-						nodes.push(level);
-						mix.connect(level);
-						output = level;
-					}
-					var boost = typeof connectBoostStage === "function" ? connectBoostStage(context, output, settings.boostDb, { alwaysLimit: autoLevelOn }) : null;
-					if (boost) {
-						boost.nodes.forEach(function(node) {
-							nodes.push(node);
-						});
-						output = boost.output;
-					}
-					var destination = context.createMediaStreamDestination();
-					output.connect(destination);
-					if (level) startAutoLevel(denoiser, level, destination);
-					analyser = context.createAnalyser();
-					analyser.fftSize = 512;
-					nodes.push(analyser);
-					var meterSink = context.createGain();
-					meterSink.gain.value = 0;
-					nodes.push(meterSink);
-					source.connect(analyser);
-					analyser.connect(meterSink);
-					meterSink.connect(destination);
-					meterData = new Float32Array(analyser.fftSize);
-					meterTimer = timers.setInterval(function() {
-						if (disposed) return;
-						try {
-							analyser.getFloatTimeDomainData(meterData);
-						} catch (error) {
-							return;
-						}
-						sourcePeak = Math.max(sourcePeak, frameRms(meterData));
-						sourceReads++;
-					}, SOURCE_METER_INTERVAL_MS);
-					return destination.stream;
-				} catch (error) {
-					throw reasonError("graph-failed", "The browser refused the voice isolation graph: " + (error && error.message || error), error);
-				}
-			}).then(function(stream) {
-				return {
-					stream,
-					boosted: typeof clampBoostDb === "function" && clampBoostDb(settings.boostDb) > 0,
-					isolated: true,
-					autoLevel: autoLevelOn,
-					engine,
-					requestedEngine,
-					strength,
-					label: describeVoiceIsolation("active", engine, autoLevelGainDb),
-					readAutoLevelGainDb: function() {
-						return autoLevelGainDb;
-					},
-					state: function() {
-						return disposed ? "closed" : context.state;
-					},
-					readSourcePeak: function() {
-						if (!sourceReads) return -1;
-						var peak = sourcePeak;
-						sourcePeak = 0;
-						sourceReads = 0;
-						return peak;
-					},
-					dispose
-				};
-			});
-			return new Promise(function(resolve, reject) {
-				var timer = timers.setTimeout(function() {
-					timedOut = true;
-					dispose();
-					reject(reasonError("timeout", "Voice isolation took longer than " + BUILD_TIMEOUT_MS + " ms to start."));
-				}, typeof settings.timeoutMs === "number" ? settings.timeoutMs : BUILD_TIMEOUT_MS);
-				build.then(function(pipeline) {
-					timers.clearTimeout(timer);
-					if (timedOut) {
-						pipeline.dispose();
-						return;
-					}
-					resolve(pipeline);
-				}, function(error) {
-					timers.clearTimeout(timer);
-					dispose();
-					reject(error);
-				});
-			});
-		}
-		function frameRms(samples) {
-			var total = 0;
-			for (var i = 0; i < samples.length; i++) total += samples[i] * samples[i];
-			return samples.length ? Math.sqrt(total / samples.length) : 0;
-		}
-		function closeQuietly(context) {
-			try {
-				if (context && typeof context.close === "function") Promise.resolve(context.close()).catch(function() {});
-			} catch (error) {}
-		}
-		function resetVoiceIsolationCache() {
-			wasmCache = {};
-		}
-		softPhone.VOICE_ISOLATION_ENGINES = VOICE_ISOLATION_ENGINES;
-		softPhone.VOICE_ISOLATION_STRENGTHS = VOICE_ISOLATION_STRENGTHS;
-		softPhone.RAW_CAPTURE_SILENT_LEVEL = RAW_CAPTURE_SILENT_LEVEL;
-		softPhone.clampVoiceIsolationEngine = clampVoiceIsolationEngine;
-		softPhone.clampVoiceIsolationStrength = clampVoiceIsolationStrength;
-		softPhone.noiseGateSettingsFor = noiseGateSettingsFor;
-		softPhone.describeVoiceIsolation = describeVoiceIsolation;
-		softPhone.isVoiceIsolationSupported = isVoiceIsolationSupported;
-		softPhone.createVoiceIsolationPipeline = createVoiceIsolationPipeline;
-		softPhone.resetVoiceIsolationCache = resetVoiceIsolationCache;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/playout-delay.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var PLAYOUT_DELAY_OPTIONS = [
-			-1,
-			.12,
-			.08,
-			.04,
-			.02
-		];
-		var CONCEALMENT_WARNING_PERCENT = 5;
-		function clampPlayoutDelay(value) {
-			var seconds = typeof value === "number" ? value : parseFloat(value);
-			if (!isFinite(seconds)) return -1;
-			for (var i = 0; i < PLAYOUT_DELAY_OPTIONS.length; i++) if (Math.abs(PLAYOUT_DELAY_OPTIONS[i] - seconds) < 5e-4) return PLAYOUT_DELAY_OPTIONS[i];
-			return -1;
-		}
-		function describePlayoutDelay(seconds) {
-			var clamped = clampPlayoutDelay(seconds);
-			return clamped < 0 ? "" : "playout " + Math.round(clamped * 1e3) + "ms";
-		}
-		function applyPlayoutDelay(peerConnection, seconds) {
-			if (!peerConnection || typeof peerConnection.getReceivers !== "function") return 0;
-			var clamped = clampPlayoutDelay(seconds);
-			var applied = 0;
-			peerConnection.getReceivers().forEach(function(receiver) {
-				if (!receiver || !receiver.track || receiver.track.kind !== "audio") return;
-				if (!("playoutDelayHint" in receiver)) return;
-				try {
-					receiver.playoutDelayHint = clamped < 0 ? void 0 : clamped;
-					applied++;
-				} catch (error) {}
-			});
-			return applied;
-		}
-		function concealmentPercent(inbound, previous) {
-			if (!inbound || typeof inbound.concealedSamples !== "number" || typeof inbound.totalSamplesReceived !== "number") return -1;
-			var concealed = inbound.concealedSamples - (previous && previous.concealedSamples || 0);
-			var received = inbound.totalSamplesReceived - (previous && previous.totalSamplesReceived || 0);
-			if (received > 0) return Math.max(0, concealed / received * 100);
-			return inbound.totalSamplesReceived > 0 ? Math.max(0, inbound.concealedSamples / inbound.totalSamplesReceived * 100) : -1;
-		}
-		softPhone.PLAYOUT_DELAY_OPTIONS = PLAYOUT_DELAY_OPTIONS;
-		softPhone.CONCEALMENT_WARNING_PERCENT = CONCEALMENT_WARNING_PERCENT;
-		softPhone.clampPlayoutDelay = clampPlayoutDelay;
-		softPhone.describePlayoutDelay = describePlayoutDelay;
-		softPhone.applyPlayoutDelay = applyPlayoutDelay;
-		softPhone.concealmentPercent = concealmentPercent;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/signaling-region.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var SIGNALING_REGIONS = [
-			{
-				value: "",
-				label: "Automatic"
-			},
-			{
-				value: "us-west",
-				label: "US West"
-			},
-			{
-				value: "us-central",
-				label: "US Central"
-			},
-			{
-				value: "us-east",
-				label: "US East"
-			},
-			{
-				value: "ca-central",
-				label: "Canada Central"
-			},
-			{
-				value: "eu",
-				label: "Europe"
-			},
-			{
-				value: "apac",
-				label: "Asia Pacific"
-			},
-			{
-				value: "south-asia",
-				label: "South Asia"
-			}
-		];
-		function clampSignalingRegion(value) {
-			var region = typeof value === "string" ? value.trim().toLowerCase() : "";
-			if (!region) return "";
-			for (var i = 0; i < SIGNALING_REGIONS.length; i++) if (SIGNALING_REGIONS[i].value && SIGNALING_REGIONS[i].value === region) return region;
-			return "";
-		}
-		function describeSignalingRegion(value) {
-			var region = clampSignalingRegion(value);
-			if (!region) return "";
-			for (var i = 0; i < SIGNALING_REGIONS.length; i++) if (SIGNALING_REGIONS[i].value === region) return SIGNALING_REGIONS[i].label;
-			return region;
-		}
-		function resolveSignalingRegion(configuredRegion, agentChoice) {
-			return clampSignalingRegion(agentChoice) || clampSignalingRegion(configuredRegion);
-		}
-		function withSignalingRegion(clientOptions, value) {
-			var region = clampSignalingRegion(value);
-			if (region) clientOptions.region = region;
-			return clientOptions;
-		}
-		softPhone.SIGNALING_REGIONS = SIGNALING_REGIONS;
-		softPhone.clampSignalingRegion = clampSignalingRegion;
-		softPhone.describeSignalingRegion = describeSignalingRegion;
-		softPhone.resolveSignalingRegion = resolveSignalingRegion;
-		softPhone.withSignalingRegion = withSignalingRegion;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/audio-devices.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var VIRTUAL_DEVICE_PATTERNS = [
-			/vb-audio/,
-			/\bvb-cable\b/,
-			/\bcable (input|output)\b/,
-			/virtual (audio )?cable/,
-			/voicemeeter/,
-			/stereo mix/,
-			/what u hear/,
-			/wave out mix/,
-			/\bblackhole\b/,
-			/soundflower/,
-			/loopback audio/
-		];
-		function isVirtualAudioDevice(label) {
-			if (typeof label !== "string" || !label.trim()) return false;
-			var normalized = label.toLowerCase();
-			for (var i = 0; i < VIRTUAL_DEVICE_PATTERNS.length; i++) if (VIRTUAL_DEVICE_PATTERNS[i].test(normalized)) return true;
-			return false;
-		}
-		function resolveDeviceLabel(devices, kind, deviceId) {
-			if (!Array.isArray(devices)) return "";
-			var wanted = deviceId || "default";
-			for (var i = 0; i < devices.length; i++) {
-				var device = devices[i];
-				if (device && device.kind === kind && device.deviceId === wanted) return device.label || "";
-			}
-			return "";
-		}
-		function shouldFallBackToDefaultMicrophone(error, selectedDeviceId) {
-			var name = error && error.name || "";
-			return !!selectedDeviceId && (name === "OverconstrainedError" || name === "NotFoundError" || name === "DevicesNotFoundError");
-		}
-		function captureWithFallback(getUserMedia, buildConstraints, readSelectedId, onFallback) {
-			return getUserMedia(buildConstraints()).catch(function(error) {
-				var selectedDeviceId = readSelectedId();
-				if (!shouldFallBackToDefaultMicrophone(error, selectedDeviceId)) throw error;
-				onFallback(selectedDeviceId, error);
-				return getUserMedia(buildConstraints());
-			});
-		}
-		function shouldFallBackToDefaultSpeaker(outputs, selectedDeviceId) {
-			if (!selectedDeviceId) return false;
-			var known = (outputs || []).filter(function(device) {
-				return device && device.deviceId;
-			});
-			if (known.length === 0) return false;
-			return !known.some(function(device) {
-				return device.deviceId === selectedDeviceId;
-			});
-		}
-		softPhone.shouldFallBackToDefaultMicrophone = shouldFallBackToDefaultMicrophone;
-		softPhone.captureWithFallback = captureWithFallback;
-		softPhone.shouldFallBackToDefaultSpeaker = shouldFallBackToDefaultSpeaker;
-		softPhone.isVirtualAudioDevice = isVirtualAudioDevice;
-		softPhone.resolveDeviceLabel = resolveDeviceLabel;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/microphone-errors.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var PERMISSION_ERRORS = [
-			"NotAllowedError",
-			"PermissionDeniedError",
-			"SecurityError"
-		];
-		var DEVICE_MISSING_ERRORS = [
-			"NotFoundError",
-			"DevicesNotFoundError",
-			"OverconstrainedError"
-		];
-		var DEVICE_BUSY_ERRORS = [
-			"NotReadableError",
-			"TrackStartError",
-			"AbortError"
-		];
-		var SYSTEM_REFUSAL = /(by system|by the platform|or the platform|operating system)/i;
-		function classifyMicrophoneError(facts) {
-			var details = facts || {};
-			var name = details.name || "";
-			var message = details.message || "";
-			if (details.isSecureContext === false) return "insecure";
-			if (PERMISSION_ERRORS.indexOf(name) >= 0) {
-				if (details.policyAllowed === false || name === "SecurityError") return "policy";
-				if (SYSTEM_REFUSAL.test(message)) return "system-denied";
-				if (details.permissionState === "granted") return "system-denied";
-				if (details.permissionState === "prompt") return "dismissed";
-				return "site-denied";
-			}
-			if (DEVICE_MISSING_ERRORS.indexOf(name) >= 0 || details.audioInputCount === 0) return "not-found";
-			if (DEVICE_BUSY_ERRORS.indexOf(name) >= 0) return "in-use";
-			return "unknown";
-		}
-		function describeBrowserError(facts) {
-			var details = facts || {};
-			var name = details.name || "Error";
-			return details.message ? name + ": " + details.message : name;
-		}
-		function describeMicrophoneFacts(facts) {
-			var details = facts || {};
-			function known(value) {
-				return value === null || value === void 0 ? "unknown" : String(value);
-			}
-			return [
-				"error=" + describeBrowserError(details),
-				"permission=" + known(details.permissionState),
-				"secureContext=" + known(details.isSecureContext),
-				"policy=" + (details.policyAllowed === true ? "allowed" : details.policyAllowed === false ? "blocked" : "unknown"),
-				"audioInputs=" + known(details.audioInputCount),
-				"origin=" + known(details.origin),
-				"browser=" + known(details.userAgent)
-			].join("; ");
-		}
-		softPhone.classifyMicrophoneError = classifyMicrophoneError;
-		softPhone.describeBrowserError = describeBrowserError;
-		softPhone.describeMicrophoneFacts = describeMicrophoneFacts;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/diagnostics.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var WARNING_TEXT_LIMIT = 400;
-		function describeProviderWarning(warning) {
-			if (!warning) return "";
-			if (typeof warning === "string") return warning;
-			var code = warning.code || warning.name || warning.type || "";
-			var message = warning.message || warning.error || warning.detail || warning.reason || "";
-			if (!message) try {
-				var serialized = JSON.stringify(warning);
-				message = serialized && serialized !== "{}" ? serialized.slice(0, WARNING_TEXT_LIMIT) : "keys=[" + Object.keys(warning).join(",") + "]";
+					sourcePeak = Math.max(sourcePeak, frameRms(meterData));
+					sourceReads++;
+				}, SOURCE_METER_INTERVAL_MS);
+				return destination.stream;
 			} catch (error) {
-				message = "unserializable " + typeof warning;
+				throw reasonError("graph-failed", "The browser refused the voice isolation graph: " + (error && error.message || error), error);
 			}
-			if (typeof message !== "string") message = String(message);
-			return (code ? "[" + code + "] " : "") + (message || "no payload");
-		}
-		var PAUSE_DRIVEN_WARNING_CODES = { 31006: true };
-		function classifyProviderWarning(warning) {
-			var code = warning && typeof warning === "object" ? warning.code || warning.warning && warning.warning.code : null;
-			return code != null && PAUSE_DRIVEN_WARNING_CODES[code] ? "info" : "warning";
-		}
-		softPhone.PAUSE_DRIVEN_WARNING_CODES = PAUSE_DRIVEN_WARNING_CODES;
-		softPhone.classifyProviderWarning = classifyProviderWarning;
-		softPhone.describeProviderWarning = describeProviderWarning;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/telnyx-state.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function mapTelnyxOutboundState(state) {
-			switch (state) {
-				case "new":
-				case "requesting":
-				case "trying":
-				case "recovering":
-				case "ringing":
-				case "answering":
-				case "early": return "Ringing";
-				case "active": return "Connected";
-				case "held": return null;
-				case "hangup":
-				case "destroy":
-				case "purge": return "Disconnected";
-				default: return null;
-			}
-		}
-		function isTelnyxTerminalState(state) {
-			return state === "hangup" || state === "destroy" || state === "purge";
-		}
-		function iceServersIncludeTurn(iceServers) {
-			if (!Array.isArray(iceServers)) return false;
-			return iceServers.some(function(server) {
-				var urls = server && server.urls;
-				return (Array.isArray(urls) ? urls : urls ? [urls] : []).some(function(url) {
-					return /^turns?:/i.test(String(url || ""));
-				});
-			});
-		}
-		softPhone.mapTelnyxOutboundState = mapTelnyxOutboundState;
-		softPhone.isTelnyxTerminalState = isTelnyxTerminalState;
-		softPhone.iceServersIncludeTurn = iceServersIncludeTurn;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/reconnect.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var RECONNECT_DELAYS_MS = [
-			0,
-			2e3,
-			5e3,
-			1e4,
-			2e4,
-			3e4
-		];
-		function reconnectDelayMs(attempt) {
-			return RECONNECT_DELAYS_MS[Math.min(attempt > 0 ? attempt : 0, RECONNECT_DELAYS_MS.length - 1)];
-		}
-		softPhone.RECONNECT_DELAYS_MS = RECONNECT_DELAYS_MS;
-		softPhone.reconnectDelayMs = reconnectDelayMs;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/hold-audio.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var TONE_PLAN = {
-			frequencies: [440, 480],
-			gain: .05,
-			onSeconds: 1,
-			offSeconds: 3
-		};
-		function selectHoldSource(config) {
-			config = config || {};
-			var url = typeof config.mediaUrl === "string" ? config.mediaUrl.trim() : "";
-			if (url) return {
-				kind: "url",
-				url
-			};
-			return { kind: "tone" };
-		}
-		function buildTonePlan() {
+		}).then(function(stream) {
 			return {
-				frequencies: TONE_PLAN.frequencies.slice(),
-				gain: TONE_PLAN.gain,
-				onSeconds: TONE_PLAN.onSeconds,
-				offSeconds: TONE_PLAN.offSeconds
-			};
-		}
-		function findAudioSender(senders) {
-			if (!senders || !senders.length) return null;
-			var i = 0;
-			for (; i < senders.length; i++) if (senders[i] && senders[i].track && senders[i].track.kind === "audio") return senders[i];
-			for (i = 0; i < senders.length; i++) if (senders[i] && (!senders[i].track || senders[i].track.kind === "audio")) return senders[i];
-			return null;
-		}
-		function createHoldAudioController(options) {
-			options = options || {};
-			var source = selectHoldSource(options);
-			var createEngine = typeof options.createEngine === "function" ? options.createEngine : defaultHoldAudioEngine;
-			var engine = null;
-			var savedSender = null;
-			var savedTrack = null;
-			var engaged = false;
-			var engaging = null;
-			function engage(peerConnection, micTrack) {
-				if (engaged) return Promise.resolve(true);
-				if (engaging) return engaging;
-				engaging = startEngage(peerConnection, micTrack).then(function(result) {
-					engaging = null;
-					return result;
-				}, function(error) {
-					engaging = null;
-					throw error;
-				});
-				return engaging;
-			}
-			function startEngage(peerConnection, micTrack) {
-				var sender = findAudioSender(peerConnection && typeof peerConnection.getSenders === "function" ? peerConnection.getSenders() : []);
-				if (!sender || typeof sender.replaceTrack !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: no audio sender to replace"));
-				engine = createEngine(source, buildTonePlan());
-				return Promise.resolve(engine.start()).then(function(holdTrack) {
-					if (!holdTrack) throw new Error("hold-audio: engine produced no track");
-					savedSender = sender;
-					savedTrack = micTrack || sender.track || null;
-					return sender.replaceTrack(holdTrack);
-				}).then(function() {
-					engaged = true;
-					return true;
-				}).catch(function(error) {
-					return teardownEngine().then(function() {
-						throw error;
-					});
-				});
-			}
-			function release(peerConnection) {
-				if (engaging) return engaging.then(function() {
-					return release(peerConnection);
-				}, function() {
-					return false;
-				});
-				if (!engaged) return Promise.resolve(false);
-				var sender = savedSender || findAudioSender(peerConnection && typeof peerConnection.getSenders === "function" ? peerConnection.getSenders() : []);
-				var restoreTrack = savedTrack;
-				return (sender && typeof sender.replaceTrack === "function" ? Promise.resolve(sender.replaceTrack(restoreTrack)).catch(function() {}) : Promise.resolve()).then(teardownEngine).then(function() {
-					engaged = false;
-					return true;
-				});
-			}
-			function teardownEngine() {
-				savedSender = null;
-				savedTrack = null;
-				var stopping = engine && typeof engine.stop === "function" ? engine.stop() : null;
-				engine = null;
-				return Promise.resolve(stopping).catch(function() {});
-			}
-			return {
-				engage,
-				release,
-				isEngaged: function() {
-					return engaged || !!engaging;
+				stream,
+				boosted: typeof clampBoostDb === "function" && clampBoostDb(settings.boostDb) > 0,
+				isolated: true,
+				autoLevel: autoLevelOn,
+				engine,
+				requestedEngine,
+				strength,
+				label: describeVoiceIsolation("active", engine, autoLevelGainDb),
+				readAutoLevelGainDb: function() {
+					return autoLevelGainDb;
 				},
-				source
-			};
-		}
-		function defaultHoldAudioEngine(source, tonePlan) {
-			var element = null;
-			var audioContext = null;
-			var nodes = [];
-			function startUrl() {
-				var audio = root.document ? root.document.createElement("audio") : null;
-				if (!audio || typeof audio.play !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: cannot create audio element"));
-				element = audio;
-				audio.src = source.url;
-				audio.loop = true;
-				audio.crossOrigin = "anonymous";
-				audio.preload = "auto";
-				var capture = audio.captureStream || audio.mozCaptureStream;
-				if (typeof capture !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: captureStream unavailable"));
-				return Promise.resolve(audio.play()).then(function() {
-					var stream = capture.call(audio);
-					return (stream && stream.getAudioTracks ? stream.getAudioTracks() : [])[0] || null;
-				});
-			}
-			function startTone() {
-				var Ctx = root.AudioContext || root.webkitAudioContext;
-				if (typeof Ctx !== "function") return Promise.reject(/* @__PURE__ */ new Error("hold-audio: WebAudio unavailable"));
-				audioContext = new Ctx();
-				var destination = audioContext.createMediaStreamDestination();
-				var gain = audioContext.createGain();
-				gain.gain.value = 0;
-				gain.connect(destination);
-				nodes.push(gain);
-				tonePlan.frequencies.forEach(function(frequency) {
-					var oscillator = audioContext.createOscillator();
-					oscillator.type = "sine";
-					oscillator.frequency.value = frequency;
-					oscillator.connect(gain);
-					oscillator.start();
-					nodes.push(oscillator);
-				});
-				var cycle = tonePlan.onSeconds + tonePlan.offSeconds;
-				var now = audioContext.currentTime;
-				for (var i = 0; i < 600 / cycle; i++) {
-					var base = now + i * cycle;
-					gain.gain.setValueAtTime(tonePlan.gain, base);
-					gain.gain.setValueAtTime(0, base + tonePlan.onSeconds);
-				}
-				var track = destination.stream.getAudioTracks()[0];
-				if (typeof audioContext.resume === "function") try {
-					audioContext.resume();
-				} catch (error) {}
-				return Promise.resolve(track || null);
-			}
-			return {
-				start: function() {
-					return source.kind === "url" ? startUrl() : startTone();
+				state: function() {
+					return disposed ? "closed" : context.state;
 				},
-				stop: function() {
-					if (element) {
-						try {
-							element.pause();
-						} catch (error) {}
-						element.src = "";
-						element = null;
-					}
-					nodes.forEach(function(node) {
-						try {
-							if (typeof node.stop === "function") node.stop();
-						} catch (error) {}
-						try {
-							node.disconnect();
-						} catch (error) {}
-					});
-					nodes = [];
-					if (audioContext && typeof audioContext.close === "function") try {
-						audioContext.close();
-					} catch (error) {}
-					audioContext = null;
-					return Promise.resolve();
-				}
-			};
-		}
-		softPhone.HOLD_TONE_PLAN = TONE_PLAN;
-		softPhone.selectHoldSource = selectHoldSource;
-		softPhone.buildTonePlan = buildTonePlan;
-		softPhone.findAudioSender = findAudioSender;
-		softPhone.createHoldAudioController = createHoldAudioController;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/send-audio.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var OUTBOUND_SILENCE_MS = 5e3;
-		var OUTBOUND_CHECK_INTERVAL_MS = 1e3;
-		var TEARDOWN_STATES = ["destroy", "recovering"];
-		function hasLiveAudioTrack(stream) {
-			if (!stream || typeof stream.getAudioTracks !== "function") return false;
-			return stream.getAudioTracks().some(function(track) {
-				return !!track && track.readyState === "live";
-			});
-		}
-		function releaseSharedCapture(call, sharedStream) {
-			if (!call || !sharedStream || !call.options || call.options.localStream !== sharedStream) return false;
-			if (TEARDOWN_STATES.indexOf(call.state) === -1) return false;
-			call.options.localStream = null;
-			return true;
-		}
-		function createOutboundAudioWatch(options) {
-			var thresholdMs = options && options.thresholdMs > 0 ? options.thresholdMs : OUTBOUND_SILENCE_MS;
-			var windowStart = null;
-			var lastBytes = 0;
-			var stalled = false;
-			var everStalled = false;
-			function observe(sample) {
-				var now = sample && typeof sample.now === "number" ? sample.now : 0;
-				var bytes = sample && typeof sample.bytesSent === "number" ? sample.bytesSent : 0;
-				if (sample && sample.suppressed) {
-					windowStart = null;
-					return null;
-				}
-				if (windowStart === null) {
-					windowStart = now;
-					lastBytes = bytes;
-					return null;
-				}
-				var progressed = sample.trackLive !== false && bytes > lastBytes;
-				lastBytes = bytes;
-				if (progressed) {
-					windowStart = now;
-					if (stalled) {
-						stalled = false;
-						return "resumed";
-					}
-					return null;
-				}
-				if (!stalled && now - windowStart >= thresholdMs) {
-					stalled = true;
-					everStalled = true;
-					return "stalled";
-				}
-				return null;
-			}
-			return {
-				observe,
-				isStalled: function() {
-					return stalled;
+				readSourcePeak: function() {
+					if (!sourceReads) return -1;
+					var peak = sourcePeak;
+					sourcePeak = 0;
+					sourceReads = 0;
+					return peak;
 				},
-				hasStalled: function() {
-					return everStalled;
-				}
+				dispose
 			};
-		}
-		function readSendTrack(peer) {
-			var senders = peer && typeof peer.getSenders === "function" ? peer.getSenders() : [];
-			var i = 0;
-			for (; i < senders.length; i++) if (senders[i] && senders[i].track && senders[i].track.kind === "audio") return senders[i].track;
-			return null;
-		}
-		function readBytesSent(report) {
-			var total = 0;
-			if (report && typeof report.forEach === "function") report.forEach(function(stat) {
-				if (stat && stat.type === "outbound-rtp" && (stat.kind || stat.mediaType) === "audio" && typeof stat.bytesSent === "number") total += stat.bytesSent;
-			});
-			return total;
-		}
-		function startOutboundAudioMonitor(options) {
-			options = options || {};
-			var watch = createOutboundAudioWatch(options);
-			var now = typeof options.now === "function" ? options.now : function() {
-				return Date.now();
-			};
-			var schedule = typeof options.setInterval === "function" ? options.setInterval : function(fn, ms) {
-				return root.setInterval(fn, ms);
-			};
-			var unschedule = typeof options.clearInterval === "function" ? options.clearInterval : function(id) {
-				root.clearInterval(id);
-			};
-			var stopped = false;
-			var reading = false;
-			function tick() {
-				var peer = stopped || reading || typeof options.readPeer !== "function" ? null : options.readPeer();
-				if (!peer || typeof peer.getStats !== "function") return;
-				var suppressed = typeof options.isSuppressed === "function" && !!options.isSuppressed();
-				var track = readSendTrack(peer);
-				reading = true;
-				Promise.resolve(peer.getStats()).then(function(report) {
-					reading = false;
-					if (stopped) return;
-					var bytesSent = readBytesSent(report);
-					var result = watch.observe({
-						now: now(),
-						bytesSent,
-						trackLive: !!track && track.readyState === "live",
-						suppressed
-					});
-					if (result === "stalled" && typeof options.onStalled === "function") options.onStalled({
-						trackState: track ? track.readyState : "none",
-						bytesSent
-					});
-					else if (result === "resumed" && typeof options.onResumed === "function") options.onResumed();
-				}, function() {
-					reading = false;
-				});
-			}
-			var timer = schedule(tick, options.intervalMs > 0 ? options.intervalMs : OUTBOUND_CHECK_INTERVAL_MS);
-			return {
-				stop: function() {
-					if (!stopped) {
-						stopped = true;
-						unschedule(timer);
-					}
-				},
-				isStalled: watch.isStalled,
-				hasStalled: watch.hasStalled
-			};
-		}
-		function replaceSendTrackOnPeers(peers, track, findSender) {
-			var replacing = (peers || []).map(function(peer) {
-				var sender = peer && typeof peer.getSenders === "function" && typeof findSender === "function" ? findSender(peer.getSenders()) : null;
-				if (!sender || typeof sender.replaceTrack !== "function") return Promise.resolve(0);
-				return Promise.resolve().then(function() {
-					return sender.replaceTrack(track);
-				}).then(function() {
-					return 1;
-				}, function() {
-					return 0;
-				});
-			});
-			return Promise.all(replacing).then(function(counts) {
-				return counts.reduce(function(sum, count) {
-					return sum + count;
-				}, 0);
-			});
-		}
-		softPhone.OUTBOUND_SILENCE_MS = OUTBOUND_SILENCE_MS;
-		softPhone.replaceSendTrackOnPeers = replaceSendTrackOnPeers;
-		softPhone.hasLiveAudioTrack = hasLiveAudioTrack;
-		softPhone.releaseSharedCapture = releaseSharedCapture;
-		softPhone.createOutboundAudioWatch = createOutboundAudioWatch;
-		softPhone.startOutboundAudioMonitor = startOutboundAudioMonitor;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-hold.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function isUp(stateName) {
-			return stateName === "Connected" || stateName === "OnHold";
-		}
-		function isPreConnect(stateName) {
-			return stateName === "Ringing" || stateName === "Connecting";
-		}
-		function resolveReportedState(previousStateName, reportedStateName) {
-			if (isUp(previousStateName) && isPreConnect(reportedStateName)) return previousStateName;
-			return reportedStateName;
-		}
-		function rememberAgentHold(holds, callId, onHold) {
-			if (!holds || !callId) return;
-			if (onHold) holds[callId] = true;
-			else delete holds[callId];
-		}
-		function isAgentHeld(holds, callId) {
-			return !!(holds && callId && holds[callId] === true);
-		}
-		function pruneAgentHolds(holds, liveCallIds) {
-			if (!holds) return;
-			var live = {};
-			(liveCallIds || []).forEach(function(callId) {
-				live[callId] = true;
-			});
-			Object.keys(holds).forEach(function(callId) {
-				if (!live[callId]) delete holds[callId];
-			});
-		}
-		function reconcileAgentHold(stateName, reportedOnHold, agentHeld, holdIsLocal) {
-			var reportedHeld = stateName === "OnHold" || !!reportedOnHold && isUp(stateName);
-			if (agentHeld && isPreConnect(stateName)) return {
-				stateName: "OnHold",
-				isOnHold: true,
-				agentHeld: true
-			};
-			if (!isUp(stateName)) return {
-				stateName,
-				isOnHold: false,
-				agentHeld: false
-			};
-			if (!agentHeld) return {
-				stateName,
-				isOnHold: reportedHeld,
-				agentHeld: false
-			};
-			if (reportedHeld || holdIsLocal) return {
-				stateName: "OnHold",
-				isOnHold: true,
-				agentHeld: true
-			};
-			return {
-				stateName,
-				isOnHold: false,
-				agentHeld: false
-			};
-		}
-		function holdCommandRoute(call, hasBrowserController) {
-			if (!call || !call.callId) return "none";
-			if (!call.browserOriginated) return "hub";
-			return hasBrowserController ? "local" : "none";
-		}
-		softPhone.resolveReportedState = resolveReportedState;
-		softPhone.holdCommandRoute = holdCommandRoute;
-		softPhone.rememberAgentHold = rememberAgentHold;
-		softPhone.isAgentHeld = isAgentHeld;
-		softPhone.pruneAgentHolds = pruneAgentHolds;
-		softPhone.reconcileAgentHold = reconcileAgentHold;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-mute.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function rememberAgentMute(mutes, callId, muted) {
-			if (!mutes || !callId) return;
-			if (muted) mutes[callId] = true;
-			else delete mutes[callId];
-		}
-		function isAgentMuted(mutes, callId) {
-			return !!(mutes && callId && mutes[callId] === true);
-		}
-		function pruneAgentMutes(mutes, liveCallIds) {
-			if (!mutes) return;
-			var live = {};
-			(liveCallIds || []).forEach(function(callId) {
-				live[callId] = true;
-			});
-			Object.keys(mutes).forEach(function(callId) {
-				if (!live[callId]) delete mutes[callId];
-			});
-		}
-		function reconcileAgentMute(reportedMuted, agentMuted, muteIsLocal) {
-			if (muteIsLocal) return {
-				isMuted: !!agentMuted,
-				agentMuted: !!agentMuted
-			};
-			return {
-				isMuted: !!reportedMuted,
-				agentMuted: !!reportedMuted
-			};
-		}
-		function metadataValue(call, key) {
-			var metadata = call && call.metadata;
-			return metadata && metadata[key] !== void 0 && metadata[key] !== null ? metadata[key] : null;
-		}
-		function isConferenceCall(call) {
-			var value = metadataValue(call, "isConference");
-			return value === true || value === "true" || value === "True";
-		}
-		function conferenceKey(call) {
-			var primary = metadataValue(call, "conferencePrimaryCallId");
-			if (primary) return "primary:" + String(primary);
-			var name = metadataValue(call, "conferenceName");
-			return name ? "name:" + String(name) : "";
-		}
-		function muteGroupCallIds(calls, call) {
-			if (!call || !call.callId) return [];
-			var ids = [call.callId];
-			if (!isConferenceCall(call)) return ids;
-			var key = conferenceKey(call);
-			(calls || []).forEach(function(other) {
-				if (!other || !other.callId || other.callId === call.callId || !isConferenceCall(other)) return;
-				var otherKey = conferenceKey(other);
-				if (!key || !otherKey || otherKey === key) ids.push(other.callId);
-			});
-			return ids;
-		}
-		function conferenceMuted(callIds, mutes, talkingCallId) {
-			var ids = callIds || [];
-			if (talkingCallId && ids.indexOf(talkingCallId) >= 0) return isAgentMuted(mutes, talkingCallId);
-			return ids.some(function(callId) {
-				return isAgentMuted(mutes, callId);
-			});
-		}
-		softPhone.rememberAgentMute = rememberAgentMute;
-		softPhone.isAgentMuted = isAgentMuted;
-		softPhone.pruneAgentMutes = pruneAgentMutes;
-		softPhone.reconcileAgentMute = reconcileAgentMute;
-		softPhone.muteGroupCallIds = muteGroupCallIds;
-		softPhone.conferenceMuted = conferenceMuted;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var PRE_DIALED_LEG_INTENT = "cc-predial";
-		var OFFER_ID_HEADER = "x-offer-id";
-		var ACCEPTED_OFFER_MEMORY_MS = 6e4;
-		function decodeBase64(value) {
-			try {
-				if (typeof root.atob === "function") return root.atob(value);
-			} catch (error) {
-				return null;
-			}
-			return null;
-		}
-		function parseObject(text) {
-			try {
-				var parsed = JSON.parse(text);
-				return parsed && typeof parsed === "object" ? parsed : null;
-			} catch (error) {
-				return null;
-			}
-		}
-		function readClientState(value) {
-			if (!value || typeof value !== "string") return null;
-			var decoded = decodeBase64(value);
-			return decoded && parseObject(decoded) || parseObject(value);
-		}
-		function readHeader(headers, name) {
-			if (!headers) return "";
-			if (Array.isArray(headers)) {
-				for (var i = 0; i < headers.length; i++) {
-					var header = headers[i];
-					if (header && typeof header.name === "string" && header.name.toLowerCase() === name) return header.value == null ? "" : String(header.value);
-				}
-				return "";
-			}
-			if (typeof headers === "object") {
-				var keys = Object.keys(headers);
-				for (var j = 0; j < keys.length; j++) if (keys[j].toLowerCase() === name) return headers[keys[j]] == null ? "" : String(headers[keys[j]]);
-			}
-			return "";
-		}
-		function readOfferLegTag(options) {
-			options = options || {};
-			var reservationId = "";
-			var state = readClientState(options.clientState || options.client_state);
-			if (state && state.i === PRE_DIALED_LEG_INTENT && state.r) reservationId = String(state.r);
-			if (!reservationId) reservationId = readHeader(options.customHeaders || options.custom_headers, OFFER_ID_HEADER);
-			var legId = options.telnyxCallControlId || options.callControlId || "";
-			return {
-				reservationId,
-				legId: legId ? String(legId) : ""
-			};
-		}
-		function rememberAcceptedOffer(accepted, reservationId, now) {
-			if (!accepted || !reservationId) return;
-			accepted[reservationId] = now;
-			Object.keys(accepted).forEach(function(id) {
-				if (now - accepted[id] > ACCEPTED_OFFER_MEMORY_MS) delete accepted[id];
-			});
-		}
-		function forgetAcceptedOffer(accepted, reservationId) {
-			if (accepted && reservationId) delete accepted[reservationId];
-		}
-		function isOfferAccepted(accepted, reservationId, now) {
-			if (!accepted || !reservationId || typeof accepted[reservationId] !== "number") return false;
-			return now - accepted[reservationId] <= ACCEPTED_OFFER_MEMORY_MS;
-		}
-		function classifyOfferLeg(tag, offer, accepted, now) {
-			if (!tag) return null;
-			var matchesOffer = !!(offer && offer.reservationId && (tag.reservationId && tag.reservationId === offer.reservationId || tag.legId && offer.agentLegId && tag.legId === offer.agentLegId));
-			var reservationId = tag.reservationId || (matchesOffer ? offer.reservationId : "");
-			if (!reservationId) return null;
-			if (isOfferAccepted(accepted, reservationId, now) || matchesOffer && offer.accepting) return {
-				action: "answer",
-				reservationId
-			};
-			return {
-				action: "hold",
-				reservationId
-			};
-		}
-		softPhone.readProviderClientState = readClientState;
-		softPhone.readProviderHeader = readHeader;
-		softPhone.readOfferLegTag = readOfferLegTag;
-		softPhone.classifyOfferLeg = classifyOfferLeg;
-		softPhone.rememberAcceptedOffer = rememberAcceptedOffer;
-		softPhone.forgetAcceptedOffer = forgetAcceptedOffer;
-		softPhone.isOfferAccepted = isOfferAccepted;
-		softPhone.OFFER_LEG_CAPABILITY = "held-offer-leg";
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-report.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var UNACCEPTED_OFFER_CALL_TTL_MS = 36e5;
-		function isLiveStateName(stateName) {
-			return stateName === "Connecting" || stateName === "Connected" || stateName === "OnHold";
-		}
-		function isAccepted(accepted, reservationId, now) {
-			return typeof softPhone.isOfferAccepted === "function" && softPhone.isOfferAccepted(accepted, reservationId, now);
-		}
-		function prune(unaccepted, now) {
-			Object.keys(unaccepted).forEach(function(callId) {
-				if (now - unaccepted[callId] > UNACCEPTED_OFFER_CALL_TTL_MS) delete unaccepted[callId];
-			});
-		}
-		function rememberUnacceptedOfferCall(unaccepted, callId, now) {
-			if (!unaccepted || !callId) return;
-			prune(unaccepted, now);
-			unaccepted[callId] = now;
-		}
-		function forgetUnacceptedOfferCall(unaccepted, callId) {
-			if (unaccepted && callId) delete unaccepted[callId];
-		}
-		function isUnacceptedOfferCall(unaccepted, callId, now) {
-			return !!unaccepted && !!callId && typeof unaccepted[callId] === "number" && now - unaccepted[callId] <= UNACCEPTED_OFFER_CALL_TTL_MS;
-		}
-		function planOfferCallReport(report, offer, accepted, unaccepted, now) {
-			if (!report || !report.callId || !isLiveStateName(report.stateName)) return "apply";
-			if (offer && offer.callId === report.callId) return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? "apply" : "keep-ringing";
-			return isUnacceptedOfferCall(unaccepted, report.callId, now) ? "ignore" : "apply";
-		}
-		softPhone.UNACCEPTED_OFFER_CALL_TTL_MS = UNACCEPTED_OFFER_CALL_TTL_MS;
-		softPhone.rememberUnacceptedOfferCall = rememberUnacceptedOfferCall;
-		softPhone.forgetUnacceptedOfferCall = forgetUnacceptedOfferCall;
-		softPhone.isUnacceptedOfferCall = isUnacceptedOfferCall;
-		softPhone.planOfferCallReport = planOfferCallReport;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var AUTO_ANSWER_WINDOW_MS = 2e4;
-		var EXTENSION_CALL_KEY = "extension";
-		function offerKey(reservationId) {
-			return "offer:" + (reservationId || "");
-		}
-		function createAutoAnswerArm() {
-			return {
-				key: "",
-				until: 0
-			};
-		}
-		function armAutoAnswer(arm, key, now, windowMs) {
-			if (!arm || !key) return false;
-			arm.key = key;
-			arm.until = now + (typeof windowMs === "number" && windowMs > 0 ? windowMs : AUTO_ANSWER_WINDOW_MS);
-			return true;
-		}
-		function consumeAutoAnswer(arm, now) {
-			if (!arm || !arm.key) return "";
-			var key = arm.key;
-			var live = now < arm.until;
-			arm.key = "";
-			arm.until = 0;
-			return live ? key : "";
-		}
-		function disarmAutoAnswer(arm, key) {
-			if (arm && arm.key && arm.key === key) {
-				arm.key = "";
-				arm.until = 0;
-			}
-		}
-		function disarmOtherOffers(arm, key) {
-			if (arm && arm.key && arm.key !== key && arm.key !== EXTENSION_CALL_KEY) {
-				arm.key = "";
-				arm.until = 0;
-			}
-		}
-		var DESTINATION_LEG_INTENT = "ob-dest";
-		var DESTINATION_LEG_HEADER = "x-destination-leg";
-		function isDestinationLeg(options) {
-			if (!options) return false;
-			var read = softPhone.readProviderClientState;
-			var state = typeof read === "function" ? read(options.clientState || options.client_state) : null;
-			if (state && state.i === DESTINATION_LEG_INTENT) return true;
-			var readHeader = softPhone.readProviderHeader;
-			return typeof readHeader === "function" && !!readHeader(options.customHeaders || options.custom_headers, DESTINATION_LEG_HEADER);
-		}
-		function canArmForOffer(reservationId, offeredReservations) {
-			return !!reservationId && !!offeredReservations && Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
-		}
-		function canArmForAcceptedOffer(reservationId, offeredReservations, acceptedUserId, ownUserId) {
-			if (canArmForOffer(reservationId, offeredReservations)) return true;
-			return !!reservationId && !!acceptedUserId && !!ownUserId && String(acceptedUserId) === String(ownUserId);
-		}
-		function shouldAutoAnswerInboundLeg(arm, now, leg) {
-			if (leg && (leg.transferLeg || isDestinationLeg(leg))) return false;
-			return consumeAutoAnswer(arm, now) !== "";
-		}
-		softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
-		softPhone.isDestinationLeg = isDestinationLeg;
-		softPhone.canArmForOffer = canArmForOffer;
-		softPhone.canArmForAcceptedOffer = canArmForAcceptedOffer;
-		softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
-		softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
-		softPhone.autoAnswerOfferKey = offerKey;
-		softPhone.createAutoAnswerArm = createAutoAnswerArm;
-		softPhone.armAutoAnswer = armAutoAnswer;
-		softPhone.consumeAutoAnswer = consumeAutoAnswer;
-		softPhone.disarmAutoAnswer = disarmAutoAnswer;
-		softPhone.disarmOtherOffers = disarmOtherOffers;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var STANDBY_RESERVATION_HEADER = "x-cc-reservation";
-		var STANDBY_AGENT_USER_HEADER = "x-cc-agent-user";
-		var STANDBY_GRACE_MS = 5e3;
-		var STANDBY_LEG_MEMORY_MS = 6e4;
-		function createPredictiveStandby() {
-			return {
-				armed: false,
-				until: 0,
-				userId: "",
-				legs: {}
-			};
-		}
-		function isStandbyEligible(presenceStatus, campaignIds) {
-			return presenceStatus === "Available" && Array.isArray(campaignIds) && campaignIds.some(function(id) {
-				return !!id;
-			});
-		}
-		function setPredictiveStandby(standby, armed, userId, now, graceMs) {
-			if (!standby) return false;
-			if (userId) standby.userId = String(userId);
-			if (armed) {
-				standby.armed = true;
-				standby.until = 0;
-				return true;
-			}
-			if (standby.armed) {
-				standby.armed = false;
-				standby.until = now + (typeof graceMs === "number" && graceMs >= 0 ? graceMs : STANDBY_GRACE_MS);
-			}
-			return false;
-		}
-		function isStandingBy(standby, now) {
-			return !!standby && (standby.armed || now < standby.until);
-		}
-		function readStandbyLegTag(options) {
-			var readHeader = softPhone.readProviderHeader;
-			var headers = options ? options.customHeaders || options.custom_headers : null;
-			if (typeof readHeader !== "function" || !headers) return {
-				reservationId: "",
-				agentUserId: ""
-			};
-			return {
-				reservationId: readHeader(headers, STANDBY_RESERVATION_HEADER),
-				agentUserId: readHeader(headers, STANDBY_AGENT_USER_HEADER)
-			};
-		}
-		function forgetOldLegs(standby, now) {
-			Object.keys(standby.legs).forEach(function(id) {
-				if (now - standby.legs[id] > STANDBY_LEG_MEMORY_MS) delete standby.legs[id];
-			});
-		}
-		function noteStandbyLeg(standby, reservationId, now) {
-			if (!standby || !reservationId) return;
-			forgetOldLegs(standby, now);
-			standby.legs[reservationId] = now;
-		}
-		function wasStandbyLegSeen(standby, reservationId, now) {
-			if (!standby || !reservationId || typeof standby.legs[reservationId] !== "number") return false;
-			return now - standby.legs[reservationId] <= STANDBY_LEG_MEMORY_MS;
-		}
-		function shouldStandbyAnswerLeg(standby, leg, now, context) {
-			if (!leg || !isStandingBy(standby, now)) return "";
-			if (leg.transferLeg || typeof softPhone.isDestinationLeg === "function" && softPhone.isDestinationLeg(leg)) return "";
-			if (context && context.onCall) return "";
-			var tag = readStandbyLegTag(leg);
-			if (!tag.reservationId || !tag.agentUserId) return "";
-			var ownUserId = context && context.ownUserId || standby.userId;
-			if (!ownUserId || String(ownUserId) !== tag.agentUserId) return "";
-			return tag.reservationId;
-		}
-		softPhone.STANDBY_GRACE_MS = STANDBY_GRACE_MS;
-		softPhone.STANDBY_LEG_MEMORY_MS = STANDBY_LEG_MEMORY_MS;
-		softPhone.createPredictiveStandby = createPredictiveStandby;
-		softPhone.isStandbyEligible = isStandbyEligible;
-		softPhone.setPredictiveStandby = setPredictiveStandby;
-		softPhone.isStandingBy = isStandingBy;
-		softPhone.readStandbyLegTag = readStandbyLegTag;
-		softPhone.noteStandbyLeg = noteStandbyLeg;
-		softPhone.wasStandbyLegSeen = wasStandbyLegSeen;
-		softPhone.shouldStandbyAnswerLeg = shouldStandbyAnswerLeg;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/monitor-leg.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var MONITOR_LEG_INTENT = "cc-sv";
-		var MONITOR_LEG_HEADER = "x-monitor-leg";
-		var MONITOR_ARM_WINDOW_MS = 3e4;
-		var MONITOR_ARM_WAIT_MS = 3e3;
-		function createMonitorLegArms() {
-			return {};
-		}
-		function armMonitorLeg(arms, token, now, info, windowMs) {
-			if (!arms || !token) return false;
-			arms[token] = {
-				until: now + (typeof windowMs === "number" && windowMs > 0 ? windowMs : MONITOR_ARM_WINDOW_MS),
-				info: info || null
-			};
-			return true;
-		}
-		function disarmMonitorLeg(arms, token) {
-			if (arms && token && Object.prototype.hasOwnProperty.call(arms, token)) delete arms[token];
-		}
-		function readMonitorLegTag(options) {
-			if (!options) return null;
-			var readState = softPhone.readProviderClientState;
-			var readHeader = softPhone.readProviderHeader;
-			var state = typeof readState === "function" ? readState(options.clientState || options.client_state) : null;
-			var header = typeof readHeader === "function" ? readHeader(options.customHeaders || options.custom_headers, MONITOR_LEG_HEADER) : "";
-			var isMonitor = !!(state && state.i === MONITOR_LEG_INTENT);
-			if (!isMonitor && !header) return null;
-			return {
-				token: String(isMonitor && state.l || header || ""),
-				legId: options.telnyxCallControlId || options.callControlId || ""
-			};
-		}
-		function claimMonitorLegArm(arms, tag, now) {
-			if (!arms || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(arms, tag.token)) return null;
-			var arm = arms[tag.token];
-			delete arms[tag.token];
-			return now < arm.until ? arm : null;
-		}
-		function monitorLegAction(arms, tag, now, arrivedAt) {
-			if (!tag) return "none";
-			var arm = tag.token && arms && Object.prototype.hasOwnProperty.call(arms, tag.token) ? arms[tag.token] : null;
-			if (arm && now < arm.until) return "answer";
-			return now - arrivedAt < MONITOR_ARM_WAIT_MS ? "wait" : "hangup";
-		}
-		function monitorLegReplaces(legs, tag) {
-			if (!legs || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(legs, tag.token)) return false;
-			var held = legs[tag.token];
-			return !!(held && held.legId && tag.legId && held.legId !== tag.legId);
-		}
-		function planMonitorLegPromotion(legs, token) {
-			var leg = token && legs ? legs[token] : null;
-			if (!leg || !leg.controller || typeof leg.controller.promote !== "function") return null;
-			delete legs[token];
-			return leg;
-		}
-		function planMonitorCallPromotion(calls, call, current, ended) {
-			var index = calls ? calls.indexOf(call) : -1;
-			if (index >= 0) calls.splice(index, 1);
-			if (ended) return {
-				promoted: false,
-				current
-			};
-			return {
-				promoted: true,
-				current: current || call
-			};
-		}
-		function monitorLegTalks(mode) {
-			return mode === "Whisper" || mode === "Barge";
-		}
-		function anyMonitorLegTalks(legs) {
-			return Object.keys(legs || {}).some(function(token) {
-				var leg = legs[token];
-				return !!(leg && leg.info && monitorLegTalks(leg.info.mode));
-			});
-		}
-		function holdsMonitorLeg(legs) {
-			return Object.keys(legs || {}).some(function(token) {
-				return !!legs[token];
-			});
-		}
-		function readMonitorLegMedia(report, previous) {
-			var parse = softPhone.parseWebRtcStats;
-			var windowed = softPhone.windowedMicrophoneLevel;
-			var parsed = typeof parse === "function" && report && typeof report.forEach === "function" ? parse(report) : {};
-			var inbound = parsed.inbound || null;
-			var outbound = parsed.outbound || null;
-			var mediaSource = parsed.mediaSource || null;
-			var level = function(stat, before) {
-				return typeof windowed === "function" ? windowed(stat, before) : -1;
-			};
-			return {
-				bytesSent: outbound && outbound.bytesSent || 0,
-				bytesReceived: inbound && inbound.bytesReceived || 0,
-				heardLevel: level(inbound, previous && previous.inbound),
-				microphoneLevel: level(mediaSource, previous && previous.mediaSource),
-				codec: parsed.codec || "",
-				inbound,
-				mediaSource
-			};
-		}
-		function describeMonitorLegMedia(directions, media) {
-			var format = function(value) {
-				return typeof value === "number" && value >= 0 ? value.toFixed(3) : "-";
-			};
-			media = media || {};
-			return "Monitor leg media: transceivers " + (directions || "none") + ", sent " + (media.bytesSent || 0) + " bytes (mic " + format(media.microphoneLevel) + "), received " + (media.bytesReceived || 0) + " bytes (heard " + format(media.heardLevel) + "), codec " + (media.codec || "-") + ".";
-		}
-		softPhone.MONITOR_LEG_INTENT = MONITOR_LEG_INTENT;
-		softPhone.MONITOR_LEG_HEADER = MONITOR_LEG_HEADER;
-		softPhone.MONITOR_ARM_WINDOW_MS = MONITOR_ARM_WINDOW_MS;
-		softPhone.MONITOR_ARM_WAIT_MS = MONITOR_ARM_WAIT_MS;
-		softPhone.createMonitorLegArms = createMonitorLegArms;
-		softPhone.armMonitorLeg = armMonitorLeg;
-		softPhone.disarmMonitorLeg = disarmMonitorLeg;
-		softPhone.readMonitorLegTag = readMonitorLegTag;
-		softPhone.claimMonitorLegArm = claimMonitorLegArm;
-		softPhone.monitorLegAction = monitorLegAction;
-		softPhone.monitorLegReplaces = monitorLegReplaces;
-		softPhone.planMonitorLegPromotion = planMonitorLegPromotion;
-		softPhone.planMonitorCallPromotion = planMonitorCallPromotion;
-		softPhone.monitorLegTalks = monitorLegTalks;
-		softPhone.anyMonitorLegTalks = anyMonitorLegTalks;
-		softPhone.holdsMonitorLeg = holdsMonitorLeg;
-		softPhone.readMonitorLegMedia = readMonitorLegMedia;
-		softPhone.describeMonitorLegMedia = describeMonitorLegMedia;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-ring.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var OFFER_CHANNEL_NAME = "crestapps-soft-phone-offers";
-		var OFFER_HANDLED_MESSAGE = "offer-handled";
-		function shouldRingForOffer(offerVisible, acceptPending) {
-			return !!offerVisible && !acceptPending;
-		}
-		function readOfferHandledMessage(message, currentCallId) {
-			if (!message || message.type !== OFFER_HANDLED_MESSAGE) return null;
-			return {
-				reservationId: message.reservationId || "",
-				answered: !!message.answered,
-				marksCurrentCallHandled: !!currentCallId && currentCallId === message.callId
-			};
-		}
-		softPhone.OFFER_CHANNEL_NAME = OFFER_CHANNEL_NAME;
-		softPhone.OFFER_HANDLED_MESSAGE = OFFER_HANDLED_MESSAGE;
-		softPhone.shouldRingForOffer = shouldRingForOffer;
-		softPhone.readOfferHandledMessage = readOfferHandledMessage;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ringback.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var RINGBACK_MAX_MS = 12e4;
-		var RINGBACK_CADENCE = {
-			frequencies: [440, 480],
-			onSeconds: 2,
-			offSeconds: 4
-		};
-		var RINGING = "ringing";
-		var ANSWERED = "answered";
-		var ENDED = "ended";
-		var STATES_BY_NAME = {
-			ringing: RINGING,
-			answered: ANSWERED,
-			ended: ENDED
-		};
-		var STATES_BY_VALUE = [
-			RINGING,
-			ANSWERED,
-			ENDED
-		];
-		function normalizeRemotePartyState(value) {
-			if (typeof value === "number") return STATES_BY_VALUE[value] || null;
-			return typeof value === "string" ? STATES_BY_NAME[value.trim().toLowerCase()] || null : null;
-		}
-		function createRingbackMemory() {
-			return { calls: {} };
-		}
-		function noteRemoteParty(memory, update, nowMs) {
-			if (!memory || !update || !update.callId) return null;
-			var state = normalizeRemotePartyState(update.state);
-			if (!state) return null;
-			var entry = memory.calls[update.callId];
-			if (entry && entry.state !== RINGING) return entry.state;
-			if (state === RINGING) {
-				if (!entry) memory.calls[update.callId] = {
-					state: RINGING,
-					since: nowMs
-				};
-				return RINGING;
-			}
-			memory.calls[update.callId] = {
-				state,
-				since: entry ? entry.since : nowMs
-			};
-			return state;
-		}
-		function forgetRemoteParty(memory, callId) {
-			if (memory && callId) delete memory.calls[callId];
-		}
-		function pruneRemoteParties(memory, activeCallIds) {
-			if (!memory) return;
-			var keep = {};
-			(activeCallIds || []).forEach(function(callId) {
-				keep[callId] = true;
-			});
-			Object.keys(memory.calls).forEach(function(callId) {
-				if (!keep[callId]) delete memory.calls[callId];
-			});
-		}
-		function isRemotePartyRinging(memory, callId, nowMs) {
-			var entry = memory && callId ? memory.calls[callId] : null;
-			return !!entry && entry.state === RINGING && nowMs - entry.since < RINGBACK_MAX_MS;
-		}
-		function ringbackTimeLeftMs(memory, callId, nowMs) {
-			return isRemotePartyRinging(memory, callId, nowMs) ? Math.max(0, RINGBACK_MAX_MS - (nowMs - memory.calls[callId].since)) : null;
-		}
-		function isLive(call) {
-			var state = call && call.state ? String(call.state) : "";
-			return !!state && state !== "Disconnected" && state !== "Failed" && state !== "Idle";
-		}
-		function planRingback(memory, call, options) {
-			options = options || {};
-			var nowMs = typeof options.nowMs === "number" ? options.nowMs : Date.now();
-			if (!call || !call.callId) return {
-				play: false,
-				reason: "no-call"
-			};
-			if (call.browserOriginated) return {
-				play: false,
-				reason: "browser-call"
-			};
-			if (!isLive(call)) return {
-				play: false,
-				reason: "call-ended"
-			};
-			if (call.isOnHold || options.isHeld) return {
-				play: false,
-				reason: "held"
-			};
-			var entry = memory ? memory.calls[call.callId] : null;
-			if (!entry) return {
-				play: false,
-				reason: "not-ringing"
-			};
-			if (entry.state === ANSWERED || entry.state === ENDED) return {
-				play: false,
-				reason: entry.state
-			};
-			if (!isRemotePartyRinging(memory, call.callId, nowMs)) return {
-				play: false,
-				reason: "timeout"
-			};
-			return { play: true };
-		}
-		softPhone.RINGBACK_MAX_MS = RINGBACK_MAX_MS;
-		softPhone.RINGBACK_CADENCE = RINGBACK_CADENCE;
-		softPhone.normalizeRemotePartyState = normalizeRemotePartyState;
-		softPhone.createRingbackMemory = createRingbackMemory;
-		softPhone.noteRemoteParty = noteRemoteParty;
-		softPhone.forgetRemoteParty = forgetRemoteParty;
-		softPhone.pruneRemoteParties = pruneRemoteParties;
-		softPhone.isRemotePartyRinging = isRemotePartyRinging;
-		softPhone.ringbackTimeLeftMs = ringbackTimeLeftMs;
-		softPhone.planRingback = planRingback;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-deadline.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var OFFER_RING_STOP_GRACE_MS = 2e3;
-		var OFFSET_KEY = "__crestAppsServerOffsetMs";
-		function parseUtcMs(value) {
-			if (!value) return null;
-			var parsed = Date.parse(value);
-			return isFinite(parsed) ? parsed : null;
-		}
-		function computeServerOffsetMs(serverTimeUtc, receivedAtMs) {
-			var serverMs = parseUtcMs(serverTimeUtc);
-			return serverMs === null || !isFinite(receivedAtMs) ? 0 : receivedAtMs - serverMs;
-		}
-		function computeOfferRingStopDelayMs(expiresUtc, serverOffsetMs, nowMs, graceMs) {
-			var expiresMs = parseUtcMs(expiresUtc);
-			if (expiresMs === null) return null;
-			var grace = typeof graceMs === "number" && graceMs >= 0 ? graceMs : OFFER_RING_STOP_GRACE_MS;
-			return Math.max(0, expiresMs + (isFinite(serverOffsetMs) ? serverOffsetMs : 0) + grace - nowMs);
-		}
-		function offerRingStopDelayMs(properties, nowMs) {
-			if (!properties) return null;
-			if (typeof properties[OFFSET_KEY] !== "number") try {
-				Object.defineProperty(properties, OFFSET_KEY, {
-					value: computeServerOffsetMs(properties.serverTimeUtc, nowMs),
-					enumerable: false,
-					configurable: true,
-					writable: true
-				});
-			} catch (e) {
-				return computeOfferRingStopDelayMs(properties.expiresUtc, computeServerOffsetMs(properties.serverTimeUtc, nowMs), nowMs);
-			}
-			return computeOfferRingStopDelayMs(properties.expiresUtc, properties[OFFSET_KEY], nowMs);
-		}
-		softPhone.OFFER_RING_STOP_GRACE_MS = OFFER_RING_STOP_GRACE_MS;
-		softPhone.computeServerOffsetMs = computeServerOffsetMs;
-		softPhone.computeOfferRingStopDelayMs = computeOfferRingStopDelayMs;
-		softPhone.offerRingStopDelayMs = offerRingStopDelayMs;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function createCallLegs() {
-			return {
-				platform: null,
-				platformLegs: [],
-				browser: null,
-				browserLegs: []
-			};
-		}
-		function notePlatformLeg(legs, leg) {
-			if (legs && leg) {
-				legs.platformLegs = legs.platformLegs || [];
-				if (legs.platformLegs.indexOf(leg) < 0) legs.platformLegs.push(leg);
-				legs.platform = leg;
-			}
-		}
-		function legCallId(leg) {
-			var options = leg && leg.options || {};
-			return String(options.telnyxCallControlId || options.callControlId || "");
-		}
-		function noteBrowserLeg(legs, leg) {
-			if (legs && leg) {
-				legs.browserLegs = legs.browserLegs || [];
-				if (legs.browserLegs.indexOf(leg) < 0) legs.browserLegs.push(leg);
-				legs.browser = leg;
-			}
-		}
-		function forgetLeg(legs, leg) {
-			if (!legs || !leg) return;
-			var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
-			if (platformIndex >= 0) legs.platformLegs.splice(platformIndex, 1);
-			if (legs.platform === leg) legs.platform = legs.platformLegs && legs.platformLegs.length ? legs.platformLegs[legs.platformLegs.length - 1] : null;
-			var index = legs.browserLegs ? legs.browserLegs.indexOf(leg) : -1;
-			if (index >= 0) legs.browserLegs.splice(index, 1);
-			if (legs.browser === leg) legs.browser = legs.browserLegs && legs.browserLegs.length ? legs.browserLegs[legs.browserLegs.length - 1] : null;
-		}
-		function platformLegFor(legs, callId) {
-			var candidates = legs && legs.platformLegs || [];
-			var id = callId ? String(callId) : "";
-			if (id) {
-				for (var i = 0; i < candidates.length; i++) if (legCallId(candidates[i]) === id) return candidates[i];
-			}
-			var latest = legs && legs.platform || null;
-			if (latest && id && legs.reportedCallIds && legs.reportedCallIds.indexOf(legCallId(latest)) >= 0) return null;
-			return latest;
-		}
-		function noteReportedCall(legs, callId) {
-			if (legs && callId) {
-				legs.reportedCallIds = legs.reportedCallIds || [];
-				if (legs.reportedCallIds.indexOf(String(callId)) < 0) legs.reportedCallIds.push(String(callId));
-			}
-		}
-		function planPlatformReport(legs, stateName, callId) {
-			noteReportedCall(legs, callId);
-			var leg = platformLegFor(legs, callId);
-			if (!leg) return {
-				action: "none",
-				leg: null
-			};
-			if (!stateName || stateName === "Disconnected" || stateName === "Failed") return {
-				action: "hangup",
-				leg
-			};
-			if (stateName === "OnHold") return {
-				action: "hold",
-				leg
-			};
-			if (stateName === "Connected") return {
-				action: "resume",
-				leg
-			};
-			return {
-				action: "none",
-				leg
-			};
-		}
-		function legAfterEnd(legs, endedLeg) {
-			forgetLeg(legs, endedLeg);
-			return legs && (legs.platform || legs.browser) || null;
-		}
-		function allLegs(legs) {
-			var all = [];
-			if (!legs) return all;
-			[legs.platform].concat(legs.platformLegs || [], [legs.browser], legs.browserLegs || []).forEach(function(leg) {
-				if (leg && all.indexOf(leg) < 0) all.push(leg);
-			});
-			return all;
-		}
-		function canConferenceCall(call) {
-			return !!(call && call.callId && !call.browserOriginated);
-		}
-		softPhone.createCallLegs = createCallLegs;
-		softPhone.notePlatformLeg = notePlatformLeg;
-		softPhone.noteBrowserLeg = noteBrowserLeg;
-		softPhone.forgetLeg = forgetLeg;
-		softPhone.planPlatformReport = planPlatformReport;
-		softPhone.platformLegFor = platformLegFor;
-		softPhone.legAfterEnd = legAfterEnd;
-		softPhone.allLegs = allLegs;
-		softPhone.canConferenceCall = canConferenceCall;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var BRIDGED_DIAL_LEG_CAPABILITY = "bridged-dial-leg";
-		var BRIDGE_UNAVAILABLE = "bridge-unavailable";
-		var SOFT_PHONE_CREDENTIAL_ID = "softPhoneCredentialId";
-		function canOriginate(session) {
-			return !!(session && session.canOriginate && typeof session.originate === "function");
-		}
-		function planKeypadDial(options) {
-			options = options || {};
-			if (options.bridgedDial && options.session && options.credentialId) return "bridge";
-			return canOriginate(options.session) ? "browser" : "server";
-		}
-		function bridgedDialRequest(number, credentialId) {
-			var metadata = {};
-			metadata[SOFT_PHONE_CREDENTIAL_ID] = credentialId;
-			return {
-				to: number,
-				isExtension: false,
-				metadata
-			};
-		}
-		function shouldDialFromBrowser(result, session) {
-			return !!(result && result.succeeded === false && result.errorCode === BRIDGE_UNAVAILABLE && canOriginate(session));
-		}
-		function sharedMicrophoneEnabled(reported, others, isHeld) {
-			var held = typeof isHeld === "function" ? isHeld : function() {
-				return false;
-			};
-			if (reported && reported.state === "Connected" && !reported.isOnHold && !held(reported)) return !reported.isMuted;
-			return (others || []).some(function(call) {
-				if (!call) return false;
-				if (call.browserOriginated) return !call.isMuted;
-				return call.state === "Connected" && !call.isMuted && !call.isOnHold && !held(call);
-			});
-		}
-		softPhone.BRIDGED_DIAL_LEG_CAPABILITY = BRIDGED_DIAL_LEG_CAPABILITY;
-		softPhone.BRIDGE_UNAVAILABLE = BRIDGE_UNAVAILABLE;
-		softPhone.planKeypadDial = planKeypadDial;
-		softPhone.bridgedDialRequest = bridgedDialRequest;
-		softPhone.shouldDialFromBrowser = shouldDialFromBrowser;
-		softPhone.sharedMicrophoneEnabled = sharedMicrophoneEnabled;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function defaultStateOf(call) {
-			return call ? String(call.state || "") : "";
-		}
-		function defaultIsConference(call) {
-			var value = call && call.metadata ? call.metadata.isConference : false;
-			return value === true || value === 1 || value === "true" || value === "True";
-		}
-		function metadataText(call, key) {
-			var value = call && call.metadata ? call.metadata[key] : null;
-			return value == null ? "" : String(value);
-		}
-		function canJoin(call) {
-			return typeof softPhone.canConferenceCall === "function" ? softPhone.canConferenceCall(call) : !!(call && call.callId && !call.browserOriginated);
-		}
-		function planMerge(calls, selections, options) {
-			options = options || {};
-			selections = selections || {};
-			var stateOf = options.stateOf || defaultStateOf;
-			var isConference = options.isConference || defaultIsConference;
-			var live = (calls || []).filter(function(call) {
-				var state = stateOf(call);
-				return call && (state === "Connected" || state === "OnHold");
-			});
-			var eligible = live.filter(canJoin);
-			var participants = eligible.filter(isConference);
-			var others = eligible.filter(function(call) {
-				return !isConference(call);
-			});
-			var ticked = function(call) {
-				return !!selections[call.callId];
-			};
-			var conferenceTicked = participants.some(ticked);
-			var tickedOthers = others.filter(ticked);
-			var units = (participants.length ? 1 : 0) + others.length;
-			var selectedCount = (conferenceTicked ? 1 : 0) + tickedOthers.length;
-			var canMerge = selectedCount >= 2;
-			var primary = null;
-			var conferenceName = "";
-			if (participants.length) {
-				var primaryId = participants.map(function(call) {
-					return metadataText(call, "conferencePrimaryCallId");
-				}).filter(Boolean)[0];
-				primary = participants.filter(function(call) {
-					return call.callId === primaryId;
-				})[0] || participants[0];
-				conferenceName = metadataText(primary, "conferenceName") || participants.map(function(call) {
-					return metadataText(call, "conferenceName");
-				}).filter(Boolean)[0] || "";
-			}
-			var chosen = conferenceTicked ? [primary].concat(tickedOthers) : tickedOthers;
-			return {
-				offered: units >= 2,
-				canMerge,
-				selectedCount,
-				callIds: canMerge ? chosen.map(function(call) {
-					return call.callId;
-				}) : [],
-				calls: (conferenceTicked ? participants.filter(ticked) : []).concat(tickedOthers),
-				addsToConference: canMerge && conferenceTicked,
-				conferenceName: conferenceTicked ? conferenceName : "",
-				eligibleCallIds: eligible.map(function(call) {
-					return call.callId;
-				}),
-				allSelected: eligible.length > 0 && eligible.every(ticked),
-				blocked: live.length > eligible.length ? "browser-call" : ""
-			};
-		}
-		function conferenceAfterMerge(calls, plan, result, options) {
-			options = options || {};
-			var isConference = options.isConference || defaultIsConference;
-			var callIds = plan.addsToConference ? (calls || []).filter(isConference).map(function(call) {
-				return call.callId;
-			}) : [];
-			(plan.callIds || []).forEach(function(callId) {
-				if (callIds.indexOf(callId) === -1) callIds.push(callId);
-			});
-			var resultCall = result && result.call ? result.call : null;
-			return {
-				callIds,
-				primaryCallId: plan.addsToConference || !resultCall || !resultCall.callId ? (plan.callIds || [])[0] || "" : String(resultCall.callId),
-				conferenceName: metadataText(resultCall, "conferenceName") || plan.conferenceName || ""
-			};
-		}
-		function format(template, value) {
-			return String(template).replace("{0}", value);
-		}
-		function unselectableText(reason, strings) {
-			if (reason === "browser-call") return strings.cannotMergeBrowserCall || "A call dialed from this phone cannot be merged into a conference.";
-			return reason === "not-answered" ? strings.cannotMergeUnanswered || "Waiting for them to answer before this call can be merged." : "";
-		}
-		function row(item, strings, escapeHtml, inConference, withCheck) {
-			var reason = item.selectable ? "" : unselectableText(item.unselectableReason, strings);
-			var check = withCheck ? "<input type=\"checkbox\" class=\"telephony-soft-phone__active-call-check\" data-telephony-conference-call=\"" + escapeHtml(item.callId) + "\"" + (item.selected && item.selectable ? " checked" : "") + (item.selectable ? "" : " disabled") + (reason ? " title=\"" + escapeHtml(reason) + "\"" : "") + " aria-label=\"" + escapeHtml(format(strings.selectCall || "Select {0}", item.number)) + "\" />" : "";
-			var hangup = inConference && item.canHangup ? "<button type=\"button\" class=\"telephony-soft-phone__participant-hangup\" data-telephony-participant-hangup=\"" + escapeHtml(item.callId) + "\" title=\"" + escapeHtml(format(strings.hangupParticipant || "Hang up {0}", item.number)) + "\" aria-label=\"" + escapeHtml(format(strings.hangupParticipant || "Hang up {0}", item.number)) + "\"><i class=\"fa-solid fa-user-minus\" aria-hidden=\"true\"></i></button>" : "";
-			var stateKind = item.stateKind ? " telephony-soft-phone__line-state--" + escapeHtml(item.stateKind) : "";
-			var timer = item.elapsed ? "<span class=\"telephony-soft-phone__line-timer\" data-telephony-line-timer=\"" + escapeHtml(item.callId) + "\">" + escapeHtml(item.elapsed) + "</span>" : "";
-			return "<div class=\"telephony-soft-phone__active-call" + (item.current ? " is-current" : "") + (inConference ? " is-participant" : "") + "\"" + (inConference ? " data-telephony-conference-participant=\"" + escapeHtml(item.callId) + "\"" : "") + ">" + check + "<button type=\"button\" class=\"telephony-soft-phone__active-call-select\" data-telephony-call-select=\"" + escapeHtml(item.callId) + "\"" + (item.current ? " aria-current=\"true\"" : "") + "><span class=\"telephony-soft-phone__active-call-number\">" + escapeHtml(item.number) + "</span><span class=\"telephony-soft-phone__active-call-meta\"><span class=\"telephony-soft-phone__active-call-state telephony-soft-phone__line-state" + stateKind + "\">" + escapeHtml(item.state) + "</span>" + timer + "</span></button>" + hangup + "</div>";
-		}
-		function mergeBarHtml(merge, strings, escapeHtml) {
-			var names = (merge.numbers || []).join(" + ");
-			var summary;
-			var action;
-			if (!merge.canMerge) {
-				summary = strings.mergeSelectHint || "Tick two or more calls to merge them.";
-				action = strings.mergeCalls || "Merge calls";
-			} else if (merge.addsToConference) {
-				summary = format(strings.addToConferenceSummary || "Add {0} to the conference.", names);
-				action = strings.addToConference || "Add to conference";
-			} else {
-				summary = format(strings.mergeSummary || "Join {0} in one conference.", names);
-				action = format(strings.mergeSelectedCalls || "Merge {0} calls", merge.selectedCount);
-			}
-			return "<div class=\"telephony-soft-phone__merge-bar\"><label class=\"telephony-soft-phone__merge-select-all\"><input type=\"checkbox\" data-telephony-merge-select-all" + (merge.allSelected ? " checked" : "") + " /> <span>" + escapeHtml(strings.selectAllCalls || "Select all") + "</span></label><span class=\"telephony-soft-phone__merge-summary\" data-telephony-merge-summary role=\"status\">" + escapeHtml(summary) + "</span><button type=\"button\" class=\"btn btn-sm btn-primary telephony-soft-phone__merge-calls\" data-telephony-merge-calls" + (merge.canMerge ? "" : " disabled") + "><i class=\"fa-solid fa-code-merge\" aria-hidden=\"true\"></i> " + escapeHtml(action) + "</button></div>";
-		}
-		function buildActiveCallsHtml(model, strings, escapeHtml) {
-			model = model || {};
-			strings = strings || {};
-			var calls = model.calls || [];
-			var participants = calls.filter(function(call) {
-				return call.inConference;
-			});
-			var others = calls.filter(function(call) {
-				return !call.inConference;
-			});
-			var html = "";
-			var merge = model.merge || {};
-			var waiting = calls.length > 1 && calls.some(function(call) {
-				return call.unselectableReason === "not-answered";
-			});
-			var withChecks = !!(merge.offered || merge.blocked || waiting);
-			if (participants.length) html += "<div class=\"telephony-soft-phone__conference\" data-telephony-conference role=\"group\" aria-label=\"" + escapeHtml(format(strings.conferenceParticipants || "Conference · {0} participants", participants.length)) + "\"><div class=\"telephony-soft-phone__conference-heading\"><i class=\"fa-solid fa-users\" aria-hidden=\"true\"></i> " + escapeHtml(format(strings.conferenceParticipants || "Conference · {0} participants", participants.length)) + "</div>" + participants.map(function(call) {
-				return row(call, strings, escapeHtml, true, withChecks);
-			}).join("") + "</div>";
-			html += others.map(function(call) {
-				return row(call, strings, escapeHtml, false, withChecks);
-			}).join("");
-			if (merge.blocked) html += "<div class=\"telephony-soft-phone__merge-note\" data-telephony-merge-blocked><i class=\"fa-solid fa-circle-info\" aria-hidden=\"true\"></i> " + escapeHtml(unselectableText(merge.blocked, strings)) + "</div>";
-			if (waiting && !merge.blocked) html += "<div class=\"telephony-soft-phone__merge-note\" data-telephony-merge-waiting><i class=\"fa-solid fa-hourglass-half\" aria-hidden=\"true\"></i> " + escapeHtml(unselectableText("not-answered", strings)) + "</div>";
-			if (merge.offered) html += mergeBarHtml(merge, strings, escapeHtml);
-			return html;
-		}
-		function createConferenceMemory() {
-			return { members: {} };
-		}
-		function memberOf(memory, callId) {
-			return memory && memory.members && callId && Object.prototype.hasOwnProperty.call(memory.members, callId) ? memory.members[callId] : null;
-		}
-		function membersByKey(memory, key) {
-			return Object.keys(memory && memory.members || {}).filter(function(callId) {
-				return memory.members[callId].key === key;
-			});
-		}
-		function rememberConference(memory, conference) {
-			if (!memory || !conference || !conference.callIds || !conference.callIds.length) return;
-			var existing = conference.callIds.map(function(callId) {
-				return memberOf(memory, callId);
-			}).filter(Boolean)[0];
-			var key = existing ? existing.key : String(conference.primaryCallId || conference.callIds[0]);
-			conference.callIds.forEach(function(callId) {
-				var member = memberOf(memory, callId);
-				memory.members[callId] = {
-					key,
-					left: !!(member && member.left)
-				};
-			});
-			membersByKey(memory, key).forEach(function(callId) {
-				memory.members[callId].primaryCallId = String(conference.primaryCallId || key);
-				memory.members[callId].conferenceName = String(conference.conferenceName || "");
-			});
-		}
-		function applyConferenceMemory(memory, call) {
-			var member = call ? memberOf(memory, call.callId) : null;
-			if (!member) return call;
-			call.metadata = call.metadata || {};
-			call.metadata.isConference = true;
-			call.metadata.conferencePrimaryCallId = member.primaryCallId || member.key;
-			call.metadata.conferenceName = member.conferenceName || metadataText(call, "conferenceName");
-			call.metadata.participantCount = membersByKey(memory, member.key).filter(function(callId) {
-				return !memory.members[callId].left;
-			}).length;
-			return call;
-		}
-		function markParticipantLeft(memory, callId) {
-			var member = memberOf(memory, callId);
-			if (member) member.left = true;
-		}
-		function forgetConferenceCall(memory, callId) {
-			if (memberOf(memory, callId)) delete memory.members[callId];
-		}
-		function conferenceMembers(memory, callId) {
-			var member = memberOf(memory, callId);
-			return member ? membersByKey(memory, member.key) : [];
-		}
-		function visibleConferenceCalls(memory, calls) {
-			return (calls || []).filter(function(call) {
-				var member = call ? memberOf(memory, call.callId) : null;
-				return !(member && member.left);
-			});
-		}
-		function isOneConference(memory, callIds) {
-			if (!callIds || callIds.length < 2) return false;
-			var first = memberOf(memory, callIds[0]);
-			return !!first && callIds.every(function(callId) {
-				var member = memberOf(memory, callId);
-				return !!member && member.key === first.key;
-			});
-		}
-		function conferenceLegsWithoutParticipants(memory, liveCallIds) {
-			var live = (liveCallIds || []).filter(function(callId) {
-				return !!memberOf(memory, callId);
-			});
-			var keys = [];
-			live.forEach(function(callId) {
-				var key = memory.members[callId].key;
-				if (keys.indexOf(key) === -1) keys.push(key);
-			});
-			return keys.reduce(function(legs, key) {
-				var ofKey = live.filter(function(callId) {
-					return memory.members[callId].key === key;
-				});
-				return ofKey.some(function(callId) {
-					return !memory.members[callId].left;
-				}) ? legs : legs.concat(ofKey);
-			}, []);
-		}
-		function liveMembers(memory, calls, callId) {
-			var up = (calls || []).map(function(call) {
-				return call && call.callId;
-			}).filter(Boolean);
-			return conferenceMembers(memory, callId).filter(function(id) {
-				return up.indexOf(id) !== -1;
-			});
-		}
-		function planConferenceHangup(memory, calls, callId, options) {
-			options = options || {};
-			var members = liveMembers(memory, calls, callId);
-			var plan = {
-				action: "none",
-				leaveCallIds: [],
-				keepCallIds: [],
-				endCallIds: []
-			};
-			if (!members.length) return plan;
-			if (members.filter(function(id) {
-				return !memory.members[id].left;
-			}).length <= 1) {
-				plan.action = "end";
-				plan.endCallIds = members;
-				return plan;
-			}
-			var isContactCenterCall = options.isContactCenterCall || function() {
-				return false;
-			};
-			var byId = {};
-			(calls || []).forEach(function(call) {
-				if (call && call.callId) byId[call.callId] = call;
-			});
-			plan.action = "leave";
-			members.forEach(function(id) {
-				(isContactCenterCall(byId[id]) ? plan.keepCallIds : plan.leaveCallIds).push(id);
-			});
-			return plan;
-		}
-		function planConferenceEnd(memory, calls, callId) {
-			var members = liveMembers(memory, calls, callId);
-			if (!members.length) return null;
-			var member = memory.members[members[0]];
-			var primaryCallId = members.indexOf(member.primaryCallId) !== -1 ? member.primaryCallId : members[0];
-			return {
-				primaryCallId,
-				conferenceName: member.conferenceName || "",
-				callIds: [primaryCallId].concat(members.filter(function(id) {
-					return id !== primaryCallId;
-				})),
-				partyCount: members.filter(function(id) {
-					return !memory.members[id].left;
-				}).length
-			};
-		}
-		softPhone.planConferenceHangup = planConferenceHangup;
-		softPhone.planConferenceEnd = planConferenceEnd;
-		softPhone.createConferenceMemory = createConferenceMemory;
-		softPhone.rememberConference = rememberConference;
-		softPhone.applyConferenceMemory = applyConferenceMemory;
-		softPhone.markParticipantLeft = markParticipantLeft;
-		softPhone.forgetConferenceCall = forgetConferenceCall;
-		softPhone.conferenceMembers = conferenceMembers;
-		softPhone.visibleConferenceCalls = visibleConferenceCalls;
-		softPhone.isOneConference = isOneConference;
-		softPhone.conferenceLegsWithoutParticipants = conferenceLegsWithoutParticipants;
-		softPhone.planMerge = planMerge;
-		softPhone.conferenceAfterMerge = conferenceAfterMerge;
-		softPhone.buildActiveCallsHtml = buildActiveCallsHtml;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-labels.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var ID_PATTERNS = [
-			/^v\d+:/i,
-			/^(conf|ext|consult|cc-[a-z]+)-/i,
-			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-			/^call-[0-9a-f-]{8,}$/i
-		];
-		function looksLikeId(value) {
-			return ID_PATTERNS.some(function(pattern) {
-				return pattern.test(value);
-			});
-		}
-		function friendlyCallLabel(label, fallback) {
-			var text = label == null ? "" : String(label).trim();
-			return text && !looksLikeId(text) ? text : fallback || "";
-		}
-		function createCallPartyMemory() {
-			return {};
-		}
-		var PARTY_KEYS = [
-			"from",
-			"to",
-			"direction"
-		];
-		function carryCallParty(memory, call) {
-			if (!call || !call.callId || !memory) return call;
-			var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : {};
-			PARTY_KEYS.forEach(function(key) {
-				var value = call[key];
-				if (value != null && value !== "") remembered[key] = value;
-				else if (remembered[key] != null) call[key] = remembered[key];
-			});
-			if (Object.keys(remembered).length) memory[call.callId] = remembered;
-			return call;
-		}
-		function forgetCallParty(memory, callId) {
-			if (memory && callId) delete memory[callId];
-		}
-		softPhone.friendlyCallLabel = friendlyCallLabel;
-		softPhone.createCallPartyMemory = createCallPartyMemory;
-		softPhone.carryCallParty = carryCallParty;
-		softPhone.forgetCallParty = forgetCallParty;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-call-controls.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function planInCallControls(options) {
-			options = options || {};
-			var stateName = String(options.stateName || "Idle");
-			var active = !!options.active;
-			var connected = active && stateName === "Connected";
-			var held = active && stateName === "OnHold";
-			var live = connected || held;
-			var inCall = active && !options.ringingOffer;
-			var adding = inCall && !!options.addingCall;
-			var parties = Number(options.conferenceParties) || 0;
-			var dialOffered = typeof softPhone.shouldOfferDial === "function" ? softPhone.shouldOfferDial({
-				callActive: active,
-				stateName,
-				numberIsCallDisplay: !!options.numberIsCallDisplay
-			}) : !active || held && !options.numberIsCallDisplay;
-			var controls = inCall && !adding;
-			var addCallVisible = controls && live && !!options.canDial;
-			return {
-				callControls: controls,
-				options: controls && live,
-				mute: {
-					visible: controls && connected && !!options.canMute,
-					pressed: !!options.muted
-				},
-				hold: {
-					visible: controls && (connected && !!options.canHold || held && !!options.canResume),
-					pressed: held
-				},
-				keypad: {
-					visible: controls && connected && !options.transferOpen,
-					pressed: !!options.keypadOpen
-				},
-				hangup: {
-					visible: controls && !!options.canHangup,
-					kind: options.isConference && parties >= 2 ? "leave" : "hangup"
-				},
-				transfer: controls && live && !!options.canTransfer,
-				addCall: {
-					visible: addCallVisible,
-					disabledReason: addCallVisible && connected && !options.canHold ? "hold-unavailable" : ""
-				},
-				endAll: {
-					visible: controls && (Number(options.lineCount) || 0) > 1 && !!options.canHangup,
-					kind: options.isConference ? "conference" : "calls"
-				},
-				dial: !!options.canDial && (adding || dialOffered),
-				cancelAdd: adding,
-				showKeypad: !options.transferOpen && (!active || adding || held || connected && !!options.keypadOpen)
-			};
-		}
-		softPhone.planInCallControls = planInCallControls;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/browser-calls.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function createCallNotifiers() {
-			return { entries: {} };
-		}
-		function trackCall(notifiers, callId, notify) {
-			if (!notifiers || !callId || typeof notify !== "function") return false;
-			notifiers.entries[callId] = notify;
-			return true;
-		}
-		function isCallTracked(notifiers, callId) {
-			return !!(notifiers && callId && Object.prototype.hasOwnProperty.call(notifiers.entries, callId));
-		}
-		function trackedCallIds(notifiers) {
-			return notifiers ? Object.keys(notifiers.entries) : [];
-		}
-		function deliverCallState(notifiers, callId, stateName) {
-			if (!stateName || !isCallTracked(notifiers, callId)) return false;
-			var notify = notifiers.entries[callId];
-			if (stateName === "Disconnected") delete notifiers.entries[callId];
-			try {
-				notify(stateName);
-			} catch (error) {}
-			return true;
-		}
-		function findVanishedCalls(notifiers, sdkCalls, isTerminal) {
-			var registry = sdkCalls || {};
-			return trackedCallIds(notifiers).filter(function(callId) {
-				var call = Object.prototype.hasOwnProperty.call(registry, callId) ? registry[callId] : null;
-				return !call || typeof isTerminal === "function" && isTerminal(call.state);
-			});
-		}
-		function endAllCalls(notifiers) {
-			var callIds = trackedCallIds(notifiers);
-			callIds.forEach(function(callId) {
-				deliverCallState(notifiers, callId, "Disconnected");
-			});
-			return callIds;
-		}
-		function planShownBrowserCalls(calls, controllers) {
-			var plan = {
-				keep: [],
-				ended: []
-			};
-			(calls || []).forEach(function(call) {
-				if (!call || !call.callId || !call.browserOriginated) return;
-				if (call.browserInbound && call.state === "Ringing") {
-					plan.keep.push(call.callId);
+		});
+		return new Promise(function(resolve, reject) {
+			var timer = timers.setTimeout(function() {
+				timedOut = true;
+				dispose();
+				reject(reasonError("timeout", "Voice isolation took longer than " + BUILD_TIMEOUT_MS + " ms to start."));
+			}, typeof settings.timeoutMs === "number" ? settings.timeoutMs : BUILD_TIMEOUT_MS);
+			build.then(function(pipeline) {
+				timers.clearTimeout(timer);
+				if (timedOut) {
+					pipeline.dispose();
 					return;
 				}
-				var controller = controllers ? controllers[call.callId] : null;
-				(!!controller && (typeof controller.isLive !== "function" || controller.isLive() !== false) ? plan.keep : plan.ended).push(call.callId);
+				resolve(pipeline);
+			}, function(error) {
+				timers.clearTimeout(timer);
+				dispose();
+				reject(error);
 			});
-			return plan;
-		}
-		var JOURNAL_KEY = "crestapps-soft-phone:browser-calls";
-		function readCallJournal(storage) {
+		});
+	}
+	function frameRms(samples) {
+		var total = 0;
+		for (var i = 0; i < samples.length; i++) total += samples[i] * samples[i];
+		return samples.length ? Math.sqrt(total / samples.length) : 0;
+	}
+	function closeQuietly(context) {
+		try {
+			if (context && typeof context.close === "function") Promise.resolve(context.close()).catch(function() {});
+		} catch (error) {}
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/playout-delay.js
+	var PLAYOUT_DELAY_OPTIONS = [
+		-1,
+		.12,
+		.08,
+		.04,
+		.02
+	];
+	function clampPlayoutDelay(value) {
+		var seconds = typeof value === "number" ? value : parseFloat(value);
+		if (!isFinite(seconds)) return -1;
+		for (var i = 0; i < PLAYOUT_DELAY_OPTIONS.length; i++) if (Math.abs(PLAYOUT_DELAY_OPTIONS[i] - seconds) < 5e-4) return PLAYOUT_DELAY_OPTIONS[i];
+		return -1;
+	}
+	function applyPlayoutDelay(peerConnection, seconds) {
+		if (!peerConnection || typeof peerConnection.getReceivers !== "function") return 0;
+		var clamped = clampPlayoutDelay(seconds);
+		var applied = 0;
+		peerConnection.getReceivers().forEach(function(receiver) {
+			if (!receiver || !receiver.track || receiver.track.kind !== "audio") return;
+			if (!("playoutDelayHint" in receiver)) return;
 			try {
-				var text = storage ? storage.getItem(JOURNAL_KEY) : null;
-				var journal = text ? JSON.parse(text) : null;
-				return journal && typeof journal === "object" && !Array.isArray(journal) ? journal : {};
-			} catch (error) {
-				return {};
-			}
-		}
-		function writeCallJournal(storage, journal) {
-			try {
-				if (!storage) return;
-				if (!journal || !Object.keys(journal).length) storage.removeItem(JOURNAL_KEY);
-				else storage.setItem(JOURNAL_KEY, JSON.stringify(journal));
+				receiver.playoutDelayHint = clamped < 0 ? void 0 : clamped;
+				applied++;
 			} catch (error) {}
-		}
-		function updateCallJournal(storage, callId, update) {
-			if (!callId) return;
-			var journal = readCallJournal(storage);
-			update(journal);
-			writeCallJournal(storage, journal);
-		}
-		function journalCallStarted(storage, callId) {
-			updateCallJournal(storage, callId, function(journal) {
-				journal[callId] = journal[callId] || {
-					connected: false,
-					ended: false
-				};
-			});
-		}
-		function journalCallConnected(storage, callId) {
-			updateCallJournal(storage, callId, function(journal) {
-				var entry = journal[callId] = journal[callId] || {
-					connected: false,
-					ended: false
-				};
-				entry.connected = true;
-			});
-		}
-		function journalCallEnded(storage, callId, connected) {
-			updateCallJournal(storage, callId, function(journal) {
-				var entry = journal[callId] = journal[callId] || {
-					connected: false,
-					ended: false
-				};
-				entry.connected = !!(entry.connected || connected);
-				entry.ended = true;
-			});
-		}
-		function journalCallSettled(storage, callId) {
-			updateCallJournal(storage, callId, function(journal) {
-				delete journal[callId];
-			});
-		}
-		function planOwedCallEnds(journal, liveCallIds) {
-			var live = {};
-			(liveCallIds || []).forEach(function(callId) {
-				live[callId] = true;
-			});
-			return Object.keys(journal || {}).filter(function(callId) {
-				var entry = journal[callId];
-				return !!entry && (entry.ended || !live[callId]);
-			}).map(function(callId) {
-				return {
-					callId,
-					connected: !!journal[callId].connected
-				};
-			});
-		}
-		var HEARTBEAT_INTERVAL_MS = 3e4;
-		function planCallHeartbeat(calls, lastSentMs, nowMs, intervalMs) {
-			var interval = typeof intervalMs === "number" && intervalMs > 0 ? intervalMs : HEARTBEAT_INTERVAL_MS;
-			if (lastSentMs && nowMs - lastSentMs < interval) return null;
-			var browserCalls = (calls || []).filter(function(call) {
-				return call && call.callId && call.browserOriginated && !call.browserInbound;
-			});
-			if (!browserCalls.length) return null;
-			return {
-				callIds: browserCalls.map(function(call) {
-					return call.callId;
-				}),
-				connectedCallIds: browserCalls.filter(function(call) {
-					return !!call.everConnected || call.state === "Connected" || call.state === "OnHold";
-				}).map(function(call) {
-					return call.callId;
-				})
-			};
-		}
-		softPhone.createCallNotifiers = createCallNotifiers;
-		softPhone.trackCall = trackCall;
-		softPhone.isCallTracked = isCallTracked;
-		softPhone.trackedCallIds = trackedCallIds;
-		softPhone.deliverCallState = deliverCallState;
-		softPhone.findVanishedCalls = findVanishedCalls;
-		softPhone.endAllCalls = endAllCalls;
-		softPhone.planShownBrowserCalls = planShownBrowserCalls;
-		softPhone.readCallJournal = readCallJournal;
-		softPhone.journalCallStarted = journalCallStarted;
-		softPhone.journalCallConnected = journalCallConnected;
-		softPhone.journalCallEnded = journalCallEnded;
-		softPhone.journalCallSettled = journalCallSettled;
-		softPhone.planOwedCallEnds = planOwedCallEnds;
-		softPhone.planCallHeartbeat = planCallHeartbeat;
-		softPhone.BROWSER_CALL_HEARTBEAT_INTERVAL_MS = HEARTBEAT_INTERVAL_MS;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		});
+		return applied;
+	}
+	function concealmentPercent(inbound, previous) {
+		if (!inbound || typeof inbound.concealedSamples !== "number" || typeof inbound.totalSamplesReceived !== "number") return -1;
+		var concealed = inbound.concealedSamples - (previous && previous.concealedSamples || 0);
+		var received = inbound.totalSamplesReceived - (previous && previous.totalSamplesReceived || 0);
+		if (received > 0) return Math.max(0, concealed / received * 100);
+		return inbound.totalSamplesReceived > 0 ? Math.max(0, inbound.concealedSamples / inbound.totalSamplesReceived * 100) : -1;
+	}
 	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/remote-elements.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function createRemoteElementPool(primary, createElement, disposeElement) {
-			return {
-				primary: primary || null,
-				create: typeof createElement === "function" ? createElement : function() {
-					return null;
-				},
-				dispose: typeof disposeElement === "function" ? disposeElement : function() {},
-				byKey: {}
-			};
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/signaling-region.js
+	var SIGNALING_REGIONS = [
+		{
+			value: "",
+			label: "Automatic"
+		},
+		{
+			value: "us-west",
+			label: "US West"
+		},
+		{
+			value: "us-central",
+			label: "US Central"
+		},
+		{
+			value: "us-east",
+			label: "US East"
+		},
+		{
+			value: "ca-central",
+			label: "Canada Central"
+		},
+		{
+			value: "eu",
+			label: "Europe"
+		},
+		{
+			value: "apac",
+			label: "Asia Pacific"
+		},
+		{
+			value: "south-asia",
+			label: "South Asia"
 		}
-		function isElementInUse(pool, element) {
-			return Object.keys(pool.byKey).some(function(key) {
-				return pool.byKey[key] === element;
-			});
-		}
-		function acquireRemoteElement(pool, key) {
-			if (!pool || !key) return pool ? pool.primary : null;
-			if (pool.byKey[key]) return pool.byKey[key];
-			var element = pool.primary && !isElementInUse(pool, pool.primary) ? pool.primary : pool.create() || pool.primary;
-			if (element) pool.byKey[key] = element;
-			return element;
-		}
-		function remoteElementFor(pool, key) {
-			return pool && key && pool.byKey[key] ? pool.byKey[key] : null;
-		}
-		function rekeyRemoteElement(pool, fromKey, toKey) {
-			if (!pool || !fromKey || !toKey || fromKey === toKey || !pool.byKey[fromKey]) return;
-			pool.byKey[toKey] = pool.byKey[fromKey];
-			delete pool.byKey[fromKey];
-		}
-		function releaseRemoteElement(pool, key) {
-			if (!pool || !key || !pool.byKey[key]) return;
-			var element = pool.byKey[key];
-			delete pool.byKey[key];
-			if (element !== pool.primary && !isElementInUse(pool, element)) try {
-				pool.dispose(element);
-			} catch (error) {}
-		}
-		function releaseAllRemoteElements(pool) {
-			if (!pool) return;
-			Object.keys(pool.byKey).forEach(function(key) {
-				releaseRemoteElement(pool, key);
-			});
-		}
-		softPhone.createRemoteElementPool = createRemoteElementPool;
-		softPhone.acquireRemoteElement = acquireRemoteElement;
-		softPhone.remoteElementFor = remoteElementFor;
-		softPhone.rekeyRemoteElement = rekeyRemoteElement;
-		softPhone.releaseRemoteElement = releaseRemoteElement;
-		softPhone.releaseAllRemoteElements = releaseAllRemoteElements;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+	];
+	function clampSignalingRegion(value) {
+		var region = typeof value === "string" ? value.trim().toLowerCase() : "";
+		if (!region) return "";
+		for (var i = 0; i < SIGNALING_REGIONS.length; i++) if (SIGNALING_REGIONS[i].value && SIGNALING_REGIONS[i].value === region) return region;
+		return "";
+	}
+	function describeSignalingRegion(value) {
+		var region = clampSignalingRegion(value);
+		if (!region) return "";
+		for (var i = 0; i < SIGNALING_REGIONS.length; i++) if (SIGNALING_REGIONS[i].value === region) return SIGNALING_REGIONS[i].label;
+		return region;
+	}
+	function resolveSignalingRegion(configuredRegion, agentChoice) {
+		return clampSignalingRegion(agentChoice) || clampSignalingRegion(configuredRegion);
+	}
+	function withSignalingRegion(clientOptions, value) {
+		var region = clampSignalingRegion(value);
+		if (region) clientOptions.region = region;
+		return clientOptions;
+	}
 	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function digitsOf(value) {
-			return value == null ? "" : String(value).replace(/\D+/g, "");
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/diagnostics.js
+	var WARNING_TEXT_LIMIT = 400;
+	function describeProviderWarning(warning) {
+		if (!warning) return "";
+		if (typeof warning === "string") return warning;
+		var code = warning.code || warning.name || warning.type || "";
+		var message = warning.message || warning.error || warning.detail || warning.reason || "";
+		if (!message) try {
+			var serialized = JSON.stringify(warning);
+			message = serialized && serialized !== "{}" ? serialized.slice(0, WARNING_TEXT_LIMIT) : "keys=[" + Object.keys(warning).join(",") + "]";
+		} catch (error) {
+			message = "unserializable " + typeof warning;
 		}
-		function isSameNumber(left, right) {
-			var a = digitsOf(left);
-			return !!a && a === digitsOf(right);
+		if (typeof message !== "string") message = String(message);
+		return (code ? "[" + code + "] " : "") + (message || "no payload");
+	}
+	var PAUSE_DRIVEN_WARNING_CODES = { 31006: true };
+	function classifyProviderWarning(warning) {
+		var code = warning && typeof warning === "object" ? warning.code || warning.warning && warning.warning.code : null;
+		return code != null && PAUSE_DRIVEN_WARNING_CODES[code] ? "info" : "warning";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/telnyx-state.js
+	function mapTelnyxOutboundState(state) {
+		switch (state) {
+			case "new":
+			case "requesting":
+			case "trying":
+			case "recovering":
+			case "ringing":
+			case "answering":
+			case "early": return "Ringing";
+			case "active": return "Connected";
+			case "held": return null;
+			case "hangup":
+			case "destroy":
+			case "purge": return "Disconnected";
+			default: return null;
 		}
-		function resolveDialTarget(options) {
-			options = options || {};
-			var number = options.number ? String(options.number) : "";
-			if (!number) return {
-				number: "",
-				refused: ""
-			};
-			if (options.isCallDisplay) return {
-				number: "",
-				refused: "call-display"
-			};
-			if (options.isExtension && (options.ownExtensions || []).some(function(own) {
-				return String(own).trim() === number.trim();
-			})) return {
-				number: "",
-				refused: "own-extension"
-			};
-			if (options.liveCall && (options.ownNumbers || []).some(function(own) {
-				return isSameNumber(number, own);
-			})) return {
-				number: "",
-				refused: "own-number"
-			};
-			return {
-				number,
-				refused: ""
-			};
-		}
-		function shouldOfferDial(options) {
-			options = options || {};
-			if (!options.callActive) return true;
-			return options.stateName === "OnHold" && !options.numberIsCallDisplay;
-		}
-		function shouldShowCallNumber(options) {
-			options = options || {};
-			return !(options.stateName === "OnHold" && options.agentEntered);
-		}
-		function resolvePeerNumber(call, ownNumbers) {
-			if (!call) return "";
-			var candidates = call.direction === 1 || call.direction === "Inbound" ? [call.from, call.to] : [call.to, call.from];
-			var own = ownNumbers || [];
-			for (var i = 0; i < candidates.length; i++) {
-				var candidate = candidates[i] ? String(candidates[i]) : "";
-				if (candidate && !own.some(isOwn(candidate))) return candidate;
+	}
+	function isTelnyxTerminalState(state) {
+		return state === "hangup" || state === "destroy" || state === "purge";
+	}
+	function iceServersIncludeTurn(iceServers) {
+		if (!Array.isArray(iceServers)) return false;
+		return iceServers.some(function(server) {
+			var urls = server && server.urls;
+			return (Array.isArray(urls) ? urls : urls ? [urls] : []).some(function(url) {
+				return /^turns?:/i.test(String(url || ""));
+			});
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/reconnect.js
+	var RECONNECT_DELAYS_MS = [
+		0,
+		2e3,
+		5e3,
+		1e4,
+		2e4,
+		3e4
+	];
+	function reconnectDelayMs(attempt) {
+		return RECONNECT_DELAYS_MS[Math.min(attempt > 0 ? attempt : 0, RECONNECT_DELAYS_MS.length - 1)];
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/send-audio.js
+	var OUTBOUND_SILENCE_MS = 5e3;
+	var OUTBOUND_CHECK_INTERVAL_MS = 1e3;
+	var TEARDOWN_STATES = ["destroy", "recovering"];
+	function hasLiveAudioTrack(stream) {
+		if (!stream || typeof stream.getAudioTracks !== "function") return false;
+		return stream.getAudioTracks().some(function(track) {
+			return !!track && track.readyState === "live";
+		});
+	}
+	function releaseSharedCapture(call, sharedStream) {
+		if (!call || !sharedStream || !call.options || call.options.localStream !== sharedStream) return false;
+		if (TEARDOWN_STATES.indexOf(call.state) === -1) return false;
+		call.options.localStream = null;
+		return true;
+	}
+	function createOutboundAudioWatch(options) {
+		var thresholdMs = options && options.thresholdMs > 0 ? options.thresholdMs : OUTBOUND_SILENCE_MS;
+		var windowStart = null;
+		var lastBytes = 0;
+		var stalled = false;
+		var everStalled = false;
+		function observe(sample) {
+			var now = sample && typeof sample.now === "number" ? sample.now : 0;
+			var bytes = sample && typeof sample.bytesSent === "number" ? sample.bytesSent : 0;
+			if (sample && sample.suppressed) {
+				windowStart = null;
+				return null;
 			}
-			return "";
-		}
-		function isOwn(candidate) {
-			return function(number) {
-				return isSameNumber(candidate, number);
-			};
-		}
-		var LIVE_STATES = [
-			"Connected",
-			"OnHold",
-			"Connecting",
-			"Ringing"
-		];
-		function planNumberField(options) {
-			options = options || {};
-			var keep = {
-				action: "keep",
-				value: "",
-				callId: ""
-			};
-			var clear = {
-				action: "clear",
-				value: "",
-				callId: ""
-			};
-			if (!!options.callId && LIVE_STATES.indexOf(options.stateName) !== -1) {
-				var label = options.extensionLabel ? String(options.extensionLabel) : "";
-				var number = options.peerNumber ? String(options.peerNumber) : "";
-				if ((label || number) && shouldShowCallNumber({
-					stateName: options.stateName,
-					agentEntered: options.agentEntered
-				})) return label ? {
-					action: "label",
-					value: label,
-					callId: options.callId
-				} : {
-					action: "number",
-					value: number,
-					callId: options.callId
-				};
-				return options.isCallDisplay && options.displayCallId && options.displayCallId !== options.callId ? clear : keep;
+			if (windowStart === null) {
+				windowStart = now;
+				lastBytes = bytes;
+				return null;
 			}
-			if (options.pendingDial && !options.callId) return options.pendingDialNumber ? {
-				action: "pending",
-				value: String(options.pendingDialNumber),
-				callId: ""
-			} : keep;
-			return options.isCallDisplay ? clear : keep;
-		}
-		function planEntryStart(options) {
-			return options && options.isCallDisplay ? "clear" : "keep";
-		}
-		function planEntryEnd(options) {
-			options = options || {};
-			var value = options.value == null ? "" : String(options.value).trim();
-			return options.agentEntered && !value ? "release" : "keep";
-		}
-		softPhone.planEntryStart = planEntryStart;
-		softPhone.planEntryEnd = planEntryEnd;
-		softPhone.planNumberField = planNumberField;
-		softPhone.isSameNumber = isSameNumber;
-		softPhone.resolvePeerNumber = resolvePeerNumber;
-		softPhone.resolveDialTarget = resolveDialTarget;
-		softPhone.shouldOfferDial = shouldOfferDial;
-		softPhone.shouldShowCallNumber = shouldShowCallNumber;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/phone-input.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function normalize(value) {
-			return typeof softPhone.normalizeDialNumber === "function" ? softPhone.normalizeDialNumber(value) : String(value || "").trim();
-		}
-		function enhancePhoneInput(input, options) {
-			options = options || {};
-			if (!input || typeof options.intlTelInput !== "function") return null;
-			var settings = {
-				containerClass: options.containerClass,
-				dropdownParent: options.dropdownParent
-			};
-			if (options.initialCountry) settings.initialCountry = options.initialCountry;
-			if (typeof options.strictMode === "boolean") settings.strictMode = options.strictMode;
-			return options.intlTelInput(input, settings);
-		}
-		function readPhoneInput(raw, telInput) {
-			var value = normalize(raw);
-			if (value.charAt(0) === "+") return value;
-			var visibleDigits = value.replace(/\D/g, "");
-			if (telInput && typeof telInput.getNumber === "function") {
-				if (typeof telInput.isValidNumber !== "function" || telInput.isValidNumber()) {
-					var e164 = telInput.getNumber();
-					if (e164 && e164.charAt(0) === "+" && (visibleDigits === "" || e164.replace(/\D/g, "").indexOf(visibleDigits) !== -1)) return e164;
+			var progressed = sample.trackLive !== false && bytes > lastBytes;
+			lastBytes = bytes;
+			if (progressed) {
+				windowStart = now;
+				if (stalled) {
+					stalled = false;
+					return "resumed";
 				}
+				return null;
 			}
-			if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === "function") {
-				var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
-				if (dialCode) return visibleDigits.indexOf(dialCode) === 0 ? "+" + visibleDigits : "+" + dialCode + visibleDigits;
+			if (!stalled && now - windowStart >= thresholdMs) {
+				stalled = true;
+				everStalled = true;
+				return "stalled";
 			}
-			return value;
-		}
-		function readTransferNumber(raw, telInput) {
-			if (telInput && typeof telInput.isValidNumber === "function") {
-				var value = readPhoneInput(raw, telInput);
-				return {
-					value,
-					valid: !!telInput.isValidNumber() && value.charAt(0) === "+"
-				};
-			}
-			var number = typeof softPhone.toInternationalNumber === "function" ? softPhone.toInternationalNumber(raw) : "";
-			return {
-				value: number,
-				valid: !!number
-			};
-		}
-		softPhone.enhancePhoneInput = enhancePhoneInput;
-		softPhone.readPhoneInput = readPhoneInput;
-		softPhone.readTransferNumber = readTransferNumber;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/extension-names.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var EXTENSION_DIRECTORY_MAX_AGE_MS = 3e5;
-		function text(value) {
-			return value == null ? "" : String(value).trim();
-		}
-		function label(strings, key, fallback) {
-			return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
-		}
-		function format(template, values) {
-			return String(template).replace(/\{(\d+)\}/g, function(match, index) {
-				var value = values[Number(index)];
-				return value === void 0 ? match : String(value);
-			});
-		}
-		function createExtensionDirectory() {
-			return {
-				names: {},
-				own: [],
-				loadedAt: 0
-			};
-		}
-		function storeExtensionEntries(directory, entries, now, ownExtensions) {
-			if (!directory) return;
-			var names = {};
-			var own = (ownExtensions || []).map(text).filter(Boolean);
-			(entries || []).forEach(function(entry) {
-				var number = text(entry && entry.extension);
-				var name = text(entry && entry.displayName);
-				if (number && name && name !== number) names[number] = name;
-			});
-			directory.names = names;
-			directory.own = own;
-			directory.loadedAt = now || Date.now();
-		}
-		function ownExtensions(directory) {
-			return directory && Array.isArray(directory.own) ? directory.own.slice() : [];
-		}
-		function isOwnExtension(directory, number) {
-			var key = text(number);
-			return !!key && ownExtensions(directory).indexOf(key) !== -1;
-		}
-		function shouldReloadExtensions(directory, now) {
-			return !directory || !directory.loadedAt || now - directory.loadedAt >= EXTENSION_DIRECTORY_MAX_AGE_MS;
-		}
-		function extensionName(directory, number) {
-			var key = text(number);
-			return directory && directory.names && key && Object.prototype.hasOwnProperty.call(directory.names, key) ? directory.names[key] : "";
-		}
-		function isPersonName(value, number) {
-			var candidate = text(value);
-			return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().\-]+$/.test(candidate);
-		}
-		function describeExtension(strings, name, number, fallbackName) {
-			var extension = text(number);
-			var person = text(name) || (isPersonName(fallbackName, extension) ? text(fallbackName) : "");
-			if (!extension) return person;
-			return person ? format(label(strings, "extensionWithName", "{0} · ext {1}"), [person, extension]) : extension;
-		}
-		function transferToExtensionLabel(strings, number, name) {
-			var person = text(name);
-			return person ? format(label(strings, "transferToExtensionNamed", "Transfer to extension {0} · {1}"), [number, person]) : format(label(strings, "transferToExtensionNumber", "Transfer to extension {0}"), [number]);
-		}
-		function callExtensionNumber(call) {
-			var metadata = call && call.metadata;
-			return metadata ? text(metadata.extensionNumber) : "";
-		}
-		function extensionDirectoryEntries(directory, strings) {
-			var names = directory && directory.names || {};
-			return Object.keys(names).filter(function(number) {
-				return !isOwnExtension(directory, number);
-			}).sort(function(left, right) {
-				return names[left].localeCompare(names[right]) || left.localeCompare(right);
-			}).map(function(number) {
-				return {
-					id: "extension:" + number,
-					name: names[number],
-					destination: number,
-					detail: format(label(strings, "transferExtension", "Ext {0}"), [number]),
-					extension: number,
-					isExtension: true,
-					kind: "agent",
-					group: label(strings, "transferGroupExtensions", "Extensions")
-				};
-			});
-		}
-		softPhone.EXTENSION_DIRECTORY_MAX_AGE_MS = EXTENSION_DIRECTORY_MAX_AGE_MS;
-		softPhone.createExtensionDirectory = createExtensionDirectory;
-		softPhone.storeExtensionEntries = storeExtensionEntries;
-		softPhone.ownExtensions = ownExtensions;
-		softPhone.isOwnExtension = isOwnExtension;
-		softPhone.shouldReloadExtensions = shouldReloadExtensions;
-		softPhone.extensionName = extensionName;
-		softPhone.describeExtension = describeExtension;
-		softPhone.transferToExtensionLabel = transferToExtensionLabel;
-		softPhone.callExtensionNumber = callExtensionNumber;
-		softPhone.extensionDirectoryEntries = extensionDirectoryEntries;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var TRANSFER_CAPABILITY = 32;
-		var ATTENDED_TRANSFER_CAPABILITY = 2048;
-		var TRANSFER_MODE_VALUES = {
-			blind: 0,
-			warm: 1
-		};
-		function digitsOf(value) {
-			return value == null ? "" : String(value).replace(/\D+/g, "");
-		}
-		function isSameLine(left, right) {
-			var a = digitsOf(left);
-			var b = digitsOf(right);
-			if (!a || !b) return false;
-			if (a === b) return true;
-			return a.length === 11 && a.charAt(0) === "1" && a.substring(1) === b || b.length === 11 && b.charAt(0) === "1" && b.substring(1) === a;
-		}
-		function transferModes(capabilities) {
-			var value = Number(capabilities) || 0;
-			var modes = [];
-			if ((value & TRANSFER_CAPABILITY) === TRANSFER_CAPABILITY) modes.push("blind");
-			if ((value & ATTENDED_TRANSFER_CAPABILITY) === ATTENDED_TRANSFER_CAPABILITY) modes.push("warm");
-			return modes;
-		}
-		function transferModeValue(mode) {
-			return Object.prototype.hasOwnProperty.call(TRANSFER_MODE_VALUES, mode) ? TRANSFER_MODE_VALUES[mode] : 0;
-		}
-		function isNumberLike(value) {
-			var text = value == null ? "" : String(value).trim();
-			return !!text && /^[+\d\s().\-]+$/.test(text) && /\d/.test(text);
-		}
-		var SERVICE_ENTRY_FIELDS = [
-			"kind",
-			"targetType",
-			"targetId",
-			"group",
-			"presence",
-			"status",
-			"disabled",
-			"isExtension"
-		];
-		function normalizeDirectoryEntry(entry) {
-			entry = entry || {};
-			var destination = String(entry.destination || entry.extension || entry.phoneNumber || "");
-			var detail = entry.kind ? String(entry.detail == null ? "" : entry.detail) : String(entry.extension || entry.phoneNumber || entry.detail || destination);
-			var normalized = {
-				id: String(entry.id || destination),
-				name: String(entry.displayName || entry.name || destination),
-				destination,
-				detail
-			};
-			SERVICE_ENTRY_FIELDS.forEach(function(field) {
-				if (entry[field] !== void 0) normalized[field] = entry[field];
-			});
-			return normalized;
-		}
-		function filterTransferTargets(entries, query) {
-			var text = query == null ? "" : String(query).trim().toLowerCase();
-			var digits = digitsOf(text);
-			return (entries || []).map(normalizeDirectoryEntry).filter(function(entry) {
-				if (!entry.destination) return false;
-				if (!text) return true;
-				if (entry.name.toLowerCase().indexOf(text) !== -1 || entry.detail.toLowerCase().indexOf(text) !== -1) return true;
-				return !!digits && isNumberLike(text) && (digitsOf(entry.destination).indexOf(digits) !== -1 || digitsOf(entry.detail).indexOf(digits) !== -1);
-			});
-		}
-		function toInternationalNumber(value) {
-			var text = value == null ? "" : String(value).trim();
-			var digits = digitsOf(text);
-			if (text.charAt(0) === "+") return digits.length >= 8 && digits.length <= 15 ? "+" + digits : "";
-			if (digits.length === 10) return "+1" + digits;
-			if (digits.length === 11 && digits.charAt(0) === "1") return "+" + digits;
-			return "";
-		}
-		function readExtension(value) {
-			var text = value == null ? "" : String(value).trim();
-			var digits = digitsOf(text);
-			return /^[\d\s-]+$/.test(text) && digits.length >= 1 && digits.length <= 15 ? digits : "";
-		}
-		function resolveTransferTarget(options) {
-			options = options || {};
-			var selected = options.selected;
-			var refuse = function(reason) {
-				return {
-					destination: "",
-					isExtension: false,
-					label: "",
-					refused: reason
-				};
-			};
-			if (selected && selected.destination) return {
-				destination: String(selected.destination),
-				isExtension: !!selected.isExtension,
-				label: String(selected.name || selected.destination),
-				refused: ""
-			};
-			var text = options.query == null ? "" : String(options.query).trim();
-			if (!text) return refuse("empty");
-			if (options.dialMode === "extension") {
-				var extension = readExtension(text);
-				return extension ? {
-					destination: extension,
-					isExtension: true,
-					label: text,
-					refused: ""
-				} : refuse("invalid-extension");
-			}
-			if (!isNumberLike(text)) return refuse("empty");
-			var reading = options.number || {
-				value: toInternationalNumber(text),
-				valid: !!toInternationalNumber(text)
-			};
-			var number = reading.value ? String(reading.value) : "";
-			if ((options.ownNumbers || []).some(function(own) {
-				return isSameLine(text, own) || isSameLine(number, own);
-			})) return refuse("own-number");
-			if (!reading.valid || !number) return refuse("invalid-number");
-			return {
-				destination: number,
-				isExtension: false,
-				label: text,
-				refused: ""
-			};
-		}
-		function pickTypedMatch(entries, query) {
-			var text = query == null ? "" : String(query).trim();
-			if (!text || isNumberLike(text)) return {
-				entry: null,
-				refused: ""
-			};
-			var matches = filterTransferTargets(entries, text);
-			if (matches.length === 1) return {
-				entry: matches[0],
-				refused: ""
-			};
-			return {
-				entry: null,
-				refused: matches.length ? "several-match" : "no-match"
-			};
-		}
-		function ownExtensionRefusal(options) {
-			options = options || {};
-			var own = (options.ownExtensions || []).map(function(number) {
-				return String(number).trim();
-			}).filter(Boolean);
-			var selected = options.selected;
-			var candidate = selected ? String(selected.isExtension ? selected.destination : selected.extension || "") : options.dialMode === "extension" ? readExtension(options.query) : "";
-			return candidate && own.indexOf(candidate.trim()) !== -1 ? "own-extension" : "";
-		}
-		var REFUSAL_MESSAGES = {
-			"own-number": ["transferOwnNumber", "That is this phone system's own number. Choose who to transfer the call to."],
-			"invalid-number": ["transferInvalidNumber", "Enter a complete phone number, or switch to an extension."],
-			"invalid-extension": ["transferInvalidExtension", "Enter the extension as digits only."],
-			"own-extension": ["ownExtension", "That's your own extension."],
-			"several-match": ["transferSeveralMatch", "More than one person matches. Choose one from the list."],
-			"no-match": ["directoryNoMatch", "Nobody in the directory matches."],
-			"browser-call": ["transferBrowserCall", "This call was dialed straight from this phone, so the phone system cannot transfer it. Ask the other person to call the destination, or hang up and dial it."],
-			"unavailable": ["transferAgentUnavailable", "That agent cannot take a call right now. Choose someone who is available."],
-			"warm-queue": ["transferWarmQueue", "A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer."],
-			"external-not-allowed": ["transferNumberNotAllowed", "Transfers to numbers that are not on the approved list are turned off. Choose from the list."]
-		};
-		function transferRefusalMessage(strings, refused) {
-			var message = Object.prototype.hasOwnProperty.call(REFUSAL_MESSAGES, refused) ? REFUSAL_MESSAGES[refused] : ["transferTargetRequired", "Choose who to transfer the call to, or enter a number."];
-			var localized = strings && strings[message[0]];
-			return typeof localized === "string" && localized ? localized : message[1];
-		}
-		function transferBlockedReason(options) {
-			options = options || {};
-			return options.call && options.call.browserOriginated && !options.serviceApplies ? "browser-call" : "";
-		}
-		softPhone.TRANSFER_MODE_VALUES = TRANSFER_MODE_VALUES;
-		softPhone.isSameLine = isSameLine;
-		softPhone.transferModes = transferModes;
-		softPhone.transferModeValue = transferModeValue;
-		softPhone.isNumberLike = isNumberLike;
-		softPhone.normalizeDirectoryEntry = normalizeDirectoryEntry;
-		softPhone.filterTransferTargets = filterTransferTargets;
-		softPhone.toInternationalNumber = toInternationalNumber;
-		softPhone.readExtension = readExtension;
-		softPhone.resolveTransferTarget = resolveTransferTarget;
-		softPhone.pickTypedMatch = pickTypedMatch;
-		softPhone.ownExtensionRefusal = ownExtensionRefusal;
-		softPhone.transferRefusalMessage = transferRefusalMessage;
-		softPhone.transferBlockedReason = transferBlockedReason;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-search.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var MAX_KEYPAD_MATCHES = 6;
-		function text(value) {
-			return value == null ? "" : String(value).trim();
-		}
-		function keypadExtensionMatches(directory, query, strings) {
-			var typed = text(query);
-			if (!typed) return [];
-			var entries = softPhone.extensionDirectoryEntries(directory, strings || {});
-			return softPhone.filterTransferTargets(entries, typed).map(function(entry) {
-				return {
-					extension: String(entry.destination),
-					name: entry.name,
-					detail: entry.detail
-				};
-			});
-		}
-		function resolveKeypadExtension(directory, query, strings) {
-			var typed = text(query);
-			if (!typed) return {
-				extension: "",
-				refused: "empty"
-			};
-			var digits = softPhone.readExtension(typed);
-			if (digits) return softPhone.isOwnExtension(directory, digits) ? {
-				extension: "",
-				refused: "own-extension"
-			} : {
-				extension: digits,
-				refused: ""
-			};
-			var pick = softPhone.pickTypedMatch(softPhone.extensionDirectoryEntries(directory, strings || {}), typed);
-			return pick.entry ? {
-				extension: String(pick.entry.destination),
-				refused: ""
-			} : {
-				extension: "",
-				refused: pick.refused || "no-match"
-			};
-		}
-		function buildKeypadExtensionResultsHtml(matches, strings, escapeHtml) {
-			if (!matches || !matches.length) return "";
-			strings = strings || {};
-			return "<div class=\"telephony-soft-phone__keypad-results-list\" role=\"list\" aria-label=\"" + escapeHtml(strings.keypadExtensionResults || "Matching extensions") + "\">" + matches.slice(0, MAX_KEYPAD_MATCHES).map(function(match) {
-				return "<button type=\"button\" role=\"listitem\" class=\"telephony-soft-phone__keypad-result\" data-telephony-keypad-extension=\"" + escapeHtml(match.extension) + "\"><span class=\"telephony-soft-phone__keypad-result-name\">" + escapeHtml(match.name) + "</span><span class=\"telephony-soft-phone__keypad-result-extension\">" + escapeHtml(match.detail) + "</span></button>";
-			}).join("") + "</div>";
-		}
-		softPhone.keypadExtensionMatches = keypadExtensionMatches;
-		softPhone.resolveKeypadExtension = resolveKeypadExtension;
-		softPhone.buildKeypadExtensionResultsHtml = buildKeypadExtensionResultsHtml;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-service.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function label(strings, key, fallback) {
-			return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
-		}
-		function format(template, value) {
-			return String(template).replace("{0}", value);
-		}
-		function presenceLabel(presence, strings) {
-			return label(strings, "presence" + String(presence || ""), String(presence || ""));
-		}
-		function serviceDirectoryEntries(directory, strings) {
-			if (!directory) return [];
-			var entries = [];
-			var agentsGroup = label(strings, "transferGroupAgents", "Agents");
-			var queuesGroup = label(strings, "transferGroupQueues", "Queues");
-			var externalGroup = label(strings, "transferGroupExternal", "Outside numbers");
-			(directory.agents || []).forEach(function(agent) {
-				if (!agent || !agent.id) return;
-				entries.push({
-					id: String(agent.id),
-					name: String(agent.name || agent.id),
-					destination: "agent:" + agent.id,
-					detail: agent.extension ? format(label(strings, "transferExtension", "Ext {0}"), agent.extension) : "",
-					extension: agent.extension ? String(agent.extension) : "",
-					kind: "agent",
-					targetType: "agent",
-					targetId: String(agent.id),
-					group: agentsGroup,
-					presence: String(agent.presence || ""),
-					status: presenceLabel(agent.presence, strings),
-					disabled: agent.available !== true
-				});
-			});
-			(directory.queues || []).forEach(function(queue) {
-				if (!queue || !queue.id) return;
-				entries.push({
-					id: String(queue.id),
-					name: String(queue.name || queue.id),
-					destination: "queue:" + queue.id,
-					detail: format(label(strings, "transferWaiting", "{0} waiting"), Number(queue.waiting) || 0),
-					kind: "queue",
-					targetType: "queue",
-					targetId: String(queue.id),
-					group: queuesGroup,
-					status: "",
-					disabled: false
-				});
-			});
-			(directory.externalDestinations || []).forEach(function(destination) {
-				if (!destination || !destination.id) return;
-				entries.push({
-					id: String(destination.id),
-					name: String(destination.name || destination.number || destination.id),
-					destination: "external:" + destination.id,
-					detail: String(destination.number || ""),
-					kind: "external",
-					targetType: "external",
-					targetId: String(destination.id),
-					group: externalGroup,
-					status: "",
-					disabled: false
-				});
-			});
-			return entries;
-		}
-		function serviceModes(directory) {
-			return directory && directory.supportsConsult ? ["blind", "warm"] : ["blind"];
-		}
-		function resolveServiceTarget(options) {
-			options = options || {};
-			var selected = options.selected;
-			var refuse = function(reason) {
-				return {
-					targetType: "",
-					targetId: "",
-					label: "",
-					refused: reason
-				};
-			};
-			if (selected && selected.targetType) {
-				if (selected.disabled) return refuse("unavailable");
-				if (options.mode === "warm" && selected.targetType === "queue") return refuse("warm-queue");
-				return {
-					targetType: selected.targetType,
-					targetId: selected.targetId,
-					label: selected.name,
-					refused: ""
-				};
-			}
-			var text = options.query == null ? "" : String(options.query).trim();
-			if (options.dialMode === "extension") {
-				if (!text) return refuse("empty");
-				var extension = softPhone.readExtension(text);
-				return extension ? {
-					targetType: "extension",
-					targetId: extension,
-					label: text,
-					refused: ""
-				} : refuse("invalid-extension");
-			}
-			if (!text || !softPhone.isNumberLike(text)) return refuse("empty");
-			var directory = options.directory || {};
-			if (!directory.canTransferExternally || !directory.allowExternalNumbers) return refuse("external-not-allowed");
-			var reading = options.number || null;
-			var number = reading ? reading.valid ? String(reading.value || "") : "" : softPhone.toInternationalNumber(text);
-			if ((options.ownNumbers || []).some(function(own) {
-				return softPhone.isSameLine(text, own) || softPhone.isSameLine(number, own);
-			})) return refuse("own-number");
-			if (!number) return refuse("invalid-number");
-			return {
-				targetType: "external",
-				targetId: number,
-				label: text,
-				refused: ""
-			};
-		}
-		function createTransferService(options) {
-			options = options || {};
-			var urls = options.urls || {};
-			var fetchImpl = options.fetch || (typeof root.fetch === "function" ? root.fetch.bind(root) : null);
-			function interactionOf(call) {
-				return call && call.metadata && call.metadata.interactionId ? String(call.metadata.interactionId) : "";
-			}
-			function applies(call) {
-				return !!(fetchImpl && urls.targetsUrl && urls.transferUrl && interactionOf(call));
-			}
-			function read(response) {
-				return Promise.resolve(response.json ? response.json() : null).catch(function() {
-					return null;
-				}).then(function(body) {
-					if (!response.ok) return {
-						succeeded: false,
-						error: body && (body.detail || body.error || body.title) || "The request was refused."
-					};
-					return body || {};
-				});
-			}
-			function send(method, url, body) {
-				var headers = { "Accept": "application/json" };
-				var init = {
-					method,
-					credentials: "same-origin",
-					headers
-				};
-				if (body) {
-					headers["Content-Type"] = "application/json";
-					init.body = JSON.stringify(body);
-				}
-				if (method !== "GET" && options.antiForgeryToken) headers.RequestVerificationToken = options.antiForgeryToken;
-				return fetchImpl(url, init).then(read).catch(function(error) {
-					return {
-						succeeded: false,
-						error: error && error.message ? error.message : String(error)
-					};
-				});
-			}
-			function query(url, parameters) {
-				var pairs = Object.keys(parameters).filter(function(key) {
-					return parameters[key];
-				}).map(function(key) {
-					return encodeURIComponent(key) + "=" + encodeURIComponent(parameters[key]);
-				});
-				return url + (pairs.length ? (url.indexOf("?") === -1 ? "?" : "&") + pairs.join("&") : "");
-			}
-			function loadDirectory(call) {
-				return send("GET", query(urls.targetsUrl, { interactionId: interactionOf(call) })).then(function(body) {
-					if (body && body.succeeded === false) throw new Error(body.error);
-					return body;
-				});
-			}
-			function transfer(call, target) {
-				return send("POST", urls.transferUrl, {
-					interactionId: interactionOf(call),
-					targetType: target.targetType,
-					targetId: target.targetId
-				});
-			}
-			function startConsult(call, target) {
-				return send("POST", urls.consultUrl, {
-					interactionId: interactionOf(call),
-					targetType: target.targetType,
-					targetId: target.targetId
-				});
-			}
-			function getConsult(call, consultId) {
-				return send("GET", query(urls.consultUrl, {
-					interactionId: interactionOf(call),
-					consultId
-				}));
-			}
-			function completeConsult(call, consultId) {
-				return send("POST", urls.consultCompleteUrl, {
-					interactionId: interactionOf(call),
-					consultId
-				});
-			}
-			function cancelConsult(call, consultId) {
-				return send("POST", urls.consultCancelUrl, {
-					interactionId: interactionOf(call),
-					consultId
-				});
-			}
-			return {
-				applies,
-				loadDirectory,
-				transfer,
-				startConsult,
-				getConsult,
-				completeConsult,
-				cancelConsult
-			};
-		}
-		var CALL_CONTEXT_KEYS = [
-			"interactionId",
-			"activityItemId",
-			"queueId",
-			"callSessionId"
-		];
-		function createCallContextMemory() {
-			return {};
-		}
-		function carryCallContext(memory, call) {
-			if (!call || !call.callId || !memory) return call;
-			var metadata = call.metadata || {};
-			var reported = {};
-			CALL_CONTEXT_KEYS.forEach(function(key) {
-				if (metadata[key] != null && metadata[key] !== "") reported[key] = metadata[key];
-			});
-			if (reported.interactionId) {
-				memory[call.callId] = reported;
-				return call;
-			}
-			var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : null;
-			if (!remembered) return call;
-			call.metadata = call.metadata || {};
-			CALL_CONTEXT_KEYS.forEach(function(key) {
-				if (remembered[key] != null && (call.metadata[key] == null || call.metadata[key] === "")) call.metadata[key] = remembered[key];
-			});
-			return call;
-		}
-		function forgetCallContext(memory, callId) {
-			if (memory && callId) delete memory[callId];
-		}
-		softPhone.createCallContextMemory = createCallContextMemory;
-		softPhone.carryCallContext = carryCallContext;
-		softPhone.forgetCallContext = forgetCallContext;
-		softPhone.serviceDirectoryEntries = serviceDirectoryEntries;
-		softPhone.serviceModes = serviceModes;
-		softPhone.resolveServiceTarget = resolveServiceTarget;
-		softPhone.createTransferService = createTransferService;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/consult-state.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var CONSULT_POLL_INTERVAL_MS = 1500;
-		function label(strings, key, fallback) {
-			return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
-		}
-		function format(template, value) {
-			return String(template).replace("{0}", value);
-		}
-		function isLive(status) {
-			return status === "ringing" || status === "connected";
-		}
-		function consultView(consult, targetName, strings) {
-			var status = consult && consult.status ? String(consult.status) : "cancelled";
-			var live = !!consult && consult.live !== false && isLive(status);
-			var name = targetName || "";
-			var message;
-			switch (status) {
-				case "connected":
-					message = format(label(strings, "consultConnected", "Talking to {0}. The caller is on hold."), name);
-					break;
-				case "completed":
-					message = format(label(strings, "consultCompleted", "The call was handed to {0}."), name);
-					break;
-				case "ringing":
-					message = format(label(strings, "consultRinging", "Calling {0}..."), name);
-					break;
-				default: message = label(strings, "consultCancelled", "The caller is back with you.");
-			}
-			return {
-				status,
-				live,
-				message,
-				canComplete: live && status === "connected",
-				canCancel: live
-			};
-		}
-		function consultEndedMessage(previousStatus, next, targetName, strings, context) {
-			var status = next && next.status ? String(next.status) : "cancelled";
-			if (next && next.live !== false && isLive(status)) return "";
-			if (context && context.callEnded) return label(strings, "consultCallerLeft", "The caller hung up.");
-			if (status === "completed") return format(label(strings, "consultCompleted", "The call was handed to {0}."), targetName || "");
-			if (isLive(previousStatus)) return format(label(strings, "consultTargetLeft", "{0} did not take the call. The caller is back with you."), targetName || "");
-			return label(strings, "consultCancelled", "The caller is back with you.");
-		}
-		softPhone.CONSULT_POLL_INTERVAL_MS = CONSULT_POLL_INTERVAL_MS;
-		softPhone.consultView = consultView;
-		softPhone.consultEndedMessage = consultEndedMessage;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/bridged-transfer.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var TRANSFER_LEG_INTENT = "ob-xfer";
-		var TRANSFER_LEG_HEADER = "x-transfer-leg";
-		var LIVE_STATUSES = ["ringing", "connected"];
-		function text(value) {
-			return value == null ? "" : String(value);
-		}
-		function isTrue(value) {
-			return value === true || value === "true" || value === "True";
-		}
-		function readTransferLegTag(options) {
-			options = options || {};
-			var legId = text(options.telnyxCallControlId || options.callControlId);
-			var readState = softPhone.readProviderClientState;
-			var readHeader = softPhone.readProviderHeader;
-			var state = typeof readState === "function" ? readState(options.clientState || options.client_state) : null;
-			var header = typeof readHeader === "function" ? readHeader(options.customHeaders || options.custom_headers, TRANSFER_LEG_HEADER) : "";
-			if (!legId) return null;
-			if (state && state.i === TRANSFER_LEG_INTENT) return {
-				legId,
-				partyNumber: text(state.m),
-				transferredBy: text(state.n)
-			};
-			if (header) return {
-				legId,
-				partyNumber: header === "1" ? "" : header,
-				transferredBy: ""
-			};
 			return null;
 		}
-		function providerTransferRequest(callId, target, mode, credentialId) {
-			var request = {
-				callId,
-				to: target && target.destination,
-				mode,
-				isExtension: !!(target && target.isExtension)
-			};
-			if (credentialId) request.metadata = { softPhoneCredentialId: credentialId };
-			return request;
-		}
-		function consultFromCall(call) {
-			var metadata = call && call.metadata;
-			if (!metadata || !metadata.consultId) return null;
-			var status = text(metadata.consultStatus) || "cancelled";
-			var consultOf = text(metadata.consultOf);
-			return {
-				id: text(metadata.consultId),
-				callId: consultOf || text(call.callId),
-				status,
-				live: metadata.consultLive === void 0 ? LIVE_STATUSES.indexOf(status) >= 0 : isTrue(metadata.consultLive),
-				callEnded: isTrue(metadata.consultCallEnded),
-				blind: !consultOf && text(metadata.consultId) !== text(call.callId)
-			};
-		}
-		function consultRequest(consult) {
-			return {
-				callId: consult ? consult.callId : "",
-				consultCallId: consult ? consult.id : ""
-			};
-		}
-		function consultCommandResult(result, previous) {
-			if (!result || result.succeeded === false) return {
-				succeeded: false,
-				error: result && result.error ? result.error : ""
-			};
-			var consult = consultFromCall(result.call);
-			if (consult && previous) {
-				consult.blind = !!previous.blind;
-				consult.callId = previous.callId || consult.callId;
+		return {
+			observe,
+			isStalled: function() {
+				return stalled;
+			},
+			hasStalled: function() {
+				return everStalled;
 			}
+		};
+	}
+	function readSendTrack(peer) {
+		var senders = peer && typeof peer.getSenders === "function" ? peer.getSenders() : [];
+		var i = 0;
+		for (; i < senders.length; i++) if (senders[i] && senders[i].track && senders[i].track.kind === "audio") return senders[i].track;
+		return null;
+	}
+	function readBytesSent(report) {
+		var total = 0;
+		if (report && typeof report.forEach === "function") report.forEach(function(stat) {
+			if (stat && stat.type === "outbound-rtp" && (stat.kind || stat.mediaType) === "audio" && typeof stat.bytesSent === "number") total += stat.bytesSent;
+		});
+		return total;
+	}
+	function startOutboundAudioMonitor(options) {
+		options = options || {};
+		var watch = createOutboundAudioWatch(options);
+		var now = typeof options.now === "function" ? options.now : function() {
+			return Date.now();
+		};
+		var schedule = typeof options.setInterval === "function" ? options.setInterval : function(fn, ms) {
+			return globalThis.setInterval(fn, ms);
+		};
+		var unschedule = typeof options.clearInterval === "function" ? options.clearInterval : function(id) {
+			globalThis.clearInterval(id);
+		};
+		var stopped = false;
+		var reading = false;
+		function tick() {
+			var peer = stopped || reading || typeof options.readPeer !== "function" ? null : options.readPeer();
+			if (!peer || typeof peer.getStats !== "function") return;
+			var suppressed = typeof options.isSuppressed === "function" && !!options.isSuppressed();
+			var track = readSendTrack(peer);
+			reading = true;
+			Promise.resolve(peer.getStats()).then(function(report) {
+				reading = false;
+				if (stopped) return;
+				var bytesSent = readBytesSent(report);
+				var result = watch.observe({
+					now: now(),
+					bytesSent,
+					trackLive: !!track && track.readyState === "live",
+					suppressed
+				});
+				if (result === "stalled" && typeof options.onStalled === "function") options.onStalled({
+					trackState: track ? track.readyState : "none",
+					bytesSent
+				});
+				else if (result === "resumed" && typeof options.onResumed === "function") options.onResumed();
+			}, function() {
+				reading = false;
+			});
+		}
+		var timer = schedule(tick, options.intervalMs > 0 ? options.intervalMs : OUTBOUND_CHECK_INTERVAL_MS);
+		return {
+			stop: function() {
+				if (!stopped) {
+					stopped = true;
+					unschedule(timer);
+				}
+			},
+			isStalled: watch.isStalled,
+			hasStalled: watch.hasStalled
+		};
+	}
+	function replaceSendTrackOnPeers(peers, track, findSender) {
+		var replacing = (peers || []).map(function(peer) {
+			var sender = peer && typeof peer.getSenders === "function" && typeof findSender === "function" ? findSender(peer.getSenders()) : null;
+			if (!sender || typeof sender.replaceTrack !== "function") return Promise.resolve(0);
+			return Promise.resolve().then(function() {
+				return sender.replaceTrack(track);
+			}).then(function() {
+				return 1;
+			}, function() {
+				return 0;
+			});
+		});
+		return Promise.all(replacing).then(function(counts) {
+			return counts.reduce(function(sum, count) {
+				return sum + count;
+			}, 0);
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-hold.js
+	function isUp(stateName) {
+		return stateName === "Connected" || stateName === "OnHold";
+	}
+	function isPreConnect(stateName) {
+		return stateName === "Ringing" || stateName === "Connecting";
+	}
+	function resolveReportedState(previousStateName, reportedStateName) {
+		if (isUp(previousStateName) && isPreConnect(reportedStateName)) return previousStateName;
+		return reportedStateName;
+	}
+	function rememberAgentHold(holds, callId, onHold) {
+		if (!holds || !callId) return;
+		if (onHold) holds[callId] = true;
+		else delete holds[callId];
+	}
+	function isAgentHeld(holds, callId) {
+		return !!(holds && callId && holds[callId] === true);
+	}
+	function pruneAgentHolds(holds, liveCallIds) {
+		if (!holds) return;
+		var live = {};
+		(liveCallIds || []).forEach(function(callId) {
+			live[callId] = true;
+		});
+		Object.keys(holds).forEach(function(callId) {
+			if (!live[callId]) delete holds[callId];
+		});
+	}
+	function reconcileAgentHold(stateName, reportedOnHold, agentHeld, holdIsLocal) {
+		var reportedHeld = stateName === "OnHold" || !!reportedOnHold && isUp(stateName);
+		if (agentHeld && isPreConnect(stateName)) return {
+			stateName: "OnHold",
+			isOnHold: true,
+			agentHeld: true
+		};
+		if (!isUp(stateName)) return {
+			stateName,
+			isOnHold: false,
+			agentHeld: false
+		};
+		if (!agentHeld) return {
+			stateName,
+			isOnHold: reportedHeld,
+			agentHeld: false
+		};
+		if (reportedHeld || holdIsLocal) return {
+			stateName: "OnHold",
+			isOnHold: true,
+			agentHeld: true
+		};
+		return {
+			stateName,
+			isOnHold: false,
+			agentHeld: false
+		};
+	}
+	function holdCommandRoute(call, hasBrowserController) {
+		if (!call || !call.callId) return "none";
+		if (!call.browserOriginated) return "hub";
+		return hasBrowserController ? "local" : "none";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-mute.js
+	function rememberAgentMute(mutes, callId, muted) {
+		if (!mutes || !callId) return;
+		if (muted) mutes[callId] = true;
+		else delete mutes[callId];
+	}
+	function isAgentMuted(mutes, callId) {
+		return !!(mutes && callId && mutes[callId] === true);
+	}
+	function pruneAgentMutes(mutes, liveCallIds) {
+		if (!mutes) return;
+		var live = {};
+		(liveCallIds || []).forEach(function(callId) {
+			live[callId] = true;
+		});
+		Object.keys(mutes).forEach(function(callId) {
+			if (!live[callId]) delete mutes[callId];
+		});
+	}
+	function reconcileAgentMute(reportedMuted, agentMuted, muteIsLocal) {
+		if (muteIsLocal) return {
+			isMuted: !!agentMuted,
+			agentMuted: !!agentMuted
+		};
+		return {
+			isMuted: !!reportedMuted,
+			agentMuted: !!reportedMuted
+		};
+	}
+	function metadataValue(call, key) {
+		var metadata = call && call.metadata;
+		return metadata && metadata[key] !== void 0 && metadata[key] !== null ? metadata[key] : null;
+	}
+	function isConferenceCall(call) {
+		var value = metadataValue(call, "isConference");
+		return value === true || value === "true" || value === "True";
+	}
+	function conferenceKey(call) {
+		var primary = metadataValue(call, "conferencePrimaryCallId");
+		if (primary) return "primary:" + String(primary);
+		var name = metadataValue(call, "conferenceName");
+		return name ? "name:" + String(name) : "";
+	}
+	function muteGroupCallIds(calls, call) {
+		if (!call || !call.callId) return [];
+		var ids = [call.callId];
+		if (!isConferenceCall(call)) return ids;
+		var key = conferenceKey(call);
+		(calls || []).forEach(function(other) {
+			if (!other || !other.callId || other.callId === call.callId || !isConferenceCall(other)) return;
+			var otherKey = conferenceKey(other);
+			if (!key || !otherKey || otherKey === key) ids.push(other.callId);
+		});
+		return ids;
+	}
+	function conferenceMuted(callIds, mutes, talkingCallId) {
+		var ids = callIds || [];
+		if (talkingCallId && ids.indexOf(talkingCallId) >= 0) return isAgentMuted(mutes, talkingCallId);
+		return ids.some(function(callId) {
+			return isAgentMuted(mutes, callId);
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js
+	var PRE_DIALED_LEG_INTENT = "cc-predial";
+	var OFFER_ID_HEADER = "x-offer-id";
+	var ACCEPTED_OFFER_MEMORY_MS = 6e4;
+	function decodeBase64(value) {
+		try {
+			if (typeof globalThis.atob === "function") return globalThis.atob(value);
+		} catch (error) {
+			return null;
+		}
+		return null;
+	}
+	function parseObject(text) {
+		try {
+			var parsed = JSON.parse(text);
+			return parsed && typeof parsed === "object" ? parsed : null;
+		} catch (error) {
+			return null;
+		}
+	}
+	function readClientState(value) {
+		if (!value || typeof value !== "string") return null;
+		var decoded = decodeBase64(value);
+		return decoded && parseObject(decoded) || parseObject(value);
+	}
+	function readHeader(headers, name) {
+		if (!headers) return "";
+		if (Array.isArray(headers)) {
+			for (var i = 0; i < headers.length; i++) {
+				var header = headers[i];
+				if (header && typeof header.name === "string" && header.name.toLowerCase() === name) return header.value == null ? "" : String(header.value);
+			}
+			return "";
+		}
+		if (typeof headers === "object") {
+			var keys = Object.keys(headers);
+			for (var j = 0; j < keys.length; j++) if (keys[j].toLowerCase() === name) return headers[keys[j]] == null ? "" : String(headers[keys[j]]);
+		}
+		return "";
+	}
+	function readOfferLegTag(options) {
+		options = options || {};
+		var reservationId = "";
+		var state = readClientState(options.clientState || options.client_state);
+		if (state && state.i === PRE_DIALED_LEG_INTENT && state.r) reservationId = String(state.r);
+		if (!reservationId) reservationId = readHeader(options.customHeaders || options.custom_headers, OFFER_ID_HEADER);
+		var legId = options.telnyxCallControlId || options.callControlId || "";
+		return {
+			reservationId,
+			legId: legId ? String(legId) : ""
+		};
+	}
+	function rememberAcceptedOffer(accepted, reservationId, now) {
+		if (!accepted || !reservationId) return;
+		accepted[reservationId] = now;
+		Object.keys(accepted).forEach(function(id) {
+			if (now - accepted[id] > ACCEPTED_OFFER_MEMORY_MS) delete accepted[id];
+		});
+	}
+	function forgetAcceptedOffer(accepted, reservationId) {
+		if (accepted && reservationId) delete accepted[reservationId];
+	}
+	function isOfferAccepted(accepted, reservationId, now) {
+		if (!accepted || !reservationId || typeof accepted[reservationId] !== "number") return false;
+		return now - accepted[reservationId] <= ACCEPTED_OFFER_MEMORY_MS;
+	}
+	function classifyOfferLeg(tag, offer, accepted, now) {
+		if (!tag) return null;
+		var matchesOffer = !!(offer && offer.reservationId && (tag.reservationId && tag.reservationId === offer.reservationId || tag.legId && offer.agentLegId && tag.legId === offer.agentLegId));
+		var reservationId = tag.reservationId || (matchesOffer ? offer.reservationId : "");
+		if (!reservationId) return null;
+		if (isOfferAccepted(accepted, reservationId, now) || matchesOffer && offer.accepting) return {
+			action: "answer",
+			reservationId
+		};
+		return {
+			action: "hold",
+			reservationId
+		};
+	}
+	var OFFER_LEG_CAPABILITY = "held-offer-leg";
+	function isLiveStateName(stateName) {
+		return stateName === "Connecting" || stateName === "Connected" || stateName === "OnHold";
+	}
+	function isAccepted(accepted, reservationId, now) {
+		return typeof isOfferAccepted === "function" && isOfferAccepted(accepted, reservationId, now);
+	}
+	function prune(unaccepted, now) {
+		Object.keys(unaccepted).forEach(function(callId) {
+			if (now - unaccepted[callId] > 36e5) delete unaccepted[callId];
+		});
+	}
+	function rememberUnacceptedOfferCall(unaccepted, callId, now) {
+		if (!unaccepted || !callId) return;
+		prune(unaccepted, now);
+		unaccepted[callId] = now;
+	}
+	function forgetUnacceptedOfferCall(unaccepted, callId) {
+		if (unaccepted && callId) delete unaccepted[callId];
+	}
+	function isUnacceptedOfferCall(unaccepted, callId, now) {
+		return !!unaccepted && !!callId && typeof unaccepted[callId] === "number" && now - unaccepted[callId] <= 36e5;
+	}
+	function planOfferCallReport(report, offer, accepted, unaccepted, now) {
+		if (!report || !report.callId || !isLiveStateName(report.stateName)) return "apply";
+		if (offer && offer.callId === report.callId) return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? "apply" : "keep-ringing";
+		return isUnacceptedOfferCall(unaccepted, report.callId, now) ? "ignore" : "apply";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js
+	var AUTO_ANSWER_WINDOW_MS = 2e4;
+	var EXTENSION_CALL_KEY = "extension";
+	function offerKey(reservationId) {
+		return "offer:" + (reservationId || "");
+	}
+	function createAutoAnswerArm() {
+		return {
+			key: "",
+			until: 0
+		};
+	}
+	function armAutoAnswer(arm, key, now, windowMs) {
+		if (!arm || !key) return false;
+		arm.key = key;
+		arm.until = now + (typeof windowMs === "number" && windowMs > 0 ? windowMs : AUTO_ANSWER_WINDOW_MS);
+		return true;
+	}
+	function consumeAutoAnswer(arm, now) {
+		if (!arm || !arm.key) return "";
+		var key = arm.key;
+		var live = now < arm.until;
+		arm.key = "";
+		arm.until = 0;
+		return live ? key : "";
+	}
+	function disarmAutoAnswer(arm, key) {
+		if (arm && arm.key && arm.key === key) {
+			arm.key = "";
+			arm.until = 0;
+		}
+	}
+	function disarmOtherOffers(arm, key) {
+		if (arm && arm.key && arm.key !== key && arm.key !== "extension") {
+			arm.key = "";
+			arm.until = 0;
+		}
+	}
+	var DESTINATION_LEG_INTENT = "ob-dest";
+	var DESTINATION_LEG_HEADER = "x-destination-leg";
+	function isDestinationLeg(options) {
+		if (!options) return false;
+		var read = readClientState;
+		var state = typeof read === "function" ? read(options.clientState || options.client_state) : null;
+		if (state && state.i === DESTINATION_LEG_INTENT) return true;
+		var readHeader$4 = readHeader;
+		return typeof readHeader$4 === "function" && !!readHeader$4(options.customHeaders || options.custom_headers, DESTINATION_LEG_HEADER);
+	}
+	function canArmForOffer(reservationId, offeredReservations) {
+		return !!reservationId && !!offeredReservations && Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
+	}
+	function canArmForAcceptedOffer(reservationId, offeredReservations, acceptedUserId, ownUserId) {
+		if (canArmForOffer(reservationId, offeredReservations)) return true;
+		return !!reservationId && !!acceptedUserId && !!ownUserId && String(acceptedUserId) === String(ownUserId);
+	}
+	function shouldAutoAnswerInboundLeg(arm, now, leg) {
+		if (leg && (leg.transferLeg || isDestinationLeg(leg))) return false;
+		return consumeAutoAnswer(arm, now) !== "";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js
+	var STANDBY_RESERVATION_HEADER = "x-cc-reservation";
+	var STANDBY_AGENT_USER_HEADER = "x-cc-agent-user";
+	var STANDBY_GRACE_MS = 5e3;
+	var STANDBY_LEG_MEMORY_MS = 6e4;
+	function createPredictiveStandby() {
+		return {
+			armed: false,
+			until: 0,
+			userId: "",
+			legs: {}
+		};
+	}
+	function setPredictiveStandby(standby, armed, userId, now, graceMs) {
+		if (!standby) return false;
+		if (userId) standby.userId = String(userId);
+		if (armed) {
+			standby.armed = true;
+			standby.until = 0;
+			return true;
+		}
+		if (standby.armed) {
+			standby.armed = false;
+			standby.until = now + (typeof graceMs === "number" && graceMs >= 0 ? graceMs : STANDBY_GRACE_MS);
+		}
+		return false;
+	}
+	function isStandingBy(standby, now) {
+		return !!standby && (standby.armed || now < standby.until);
+	}
+	function readStandbyLegTag(options) {
+		var readHeader$3 = readHeader;
+		var headers = options ? options.customHeaders || options.custom_headers : null;
+		if (typeof readHeader$3 !== "function" || !headers) return {
+			reservationId: "",
+			agentUserId: ""
+		};
+		return {
+			reservationId: readHeader$3(headers, STANDBY_RESERVATION_HEADER),
+			agentUserId: readHeader$3(headers, STANDBY_AGENT_USER_HEADER)
+		};
+	}
+	function forgetOldLegs(standby, now) {
+		Object.keys(standby.legs).forEach(function(id) {
+			if (now - standby.legs[id] > 6e4) delete standby.legs[id];
+		});
+	}
+	function noteStandbyLeg(standby, reservationId, now) {
+		if (!standby || !reservationId) return;
+		forgetOldLegs(standby, now);
+		standby.legs[reservationId] = now;
+	}
+	function wasStandbyLegSeen(standby, reservationId, now) {
+		if (!standby || !reservationId || typeof standby.legs[reservationId] !== "number") return false;
+		return now - standby.legs[reservationId] <= STANDBY_LEG_MEMORY_MS;
+	}
+	function shouldStandbyAnswerLeg(standby, leg, now, context) {
+		if (!leg || !isStandingBy(standby, now)) return "";
+		if (leg.transferLeg || typeof isDestinationLeg === "function" && isDestinationLeg(leg)) return "";
+		if (context && context.onCall) return "";
+		var tag = readStandbyLegTag(leg);
+		if (!tag.reservationId || !tag.agentUserId) return "";
+		var ownUserId = context && context.ownUserId || standby.userId;
+		if (!ownUserId || String(ownUserId) !== tag.agentUserId) return "";
+		return tag.reservationId;
+	}
+	var MONITOR_LEG_HEADER = "x-monitor-leg";
+	var MONITOR_ARM_WINDOW_MS = 3e4;
+	function createMonitorLegArms() {
+		return {};
+	}
+	function armMonitorLeg(arms, token, now, info, windowMs) {
+		if (!arms || !token) return false;
+		arms[token] = {
+			until: now + (typeof windowMs === "number" && windowMs > 0 ? windowMs : MONITOR_ARM_WINDOW_MS),
+			info: info || null
+		};
+		return true;
+	}
+	function disarmMonitorLeg(arms, token) {
+		if (arms && token && Object.prototype.hasOwnProperty.call(arms, token)) delete arms[token];
+	}
+	function readMonitorLegTag(options) {
+		if (!options) return null;
+		var readState = readClientState;
+		var readHeader$2 = readHeader;
+		var state = typeof readState === "function" ? readState(options.clientState || options.client_state) : null;
+		var header = typeof readHeader$2 === "function" ? readHeader$2(options.customHeaders || options.custom_headers, MONITOR_LEG_HEADER) : "";
+		var isMonitor = !!(state && state.i === "cc-sv");
+		if (!isMonitor && !header) return null;
+		return {
+			token: String(isMonitor && state.l || header || ""),
+			legId: options.telnyxCallControlId || options.callControlId || ""
+		};
+	}
+	function claimMonitorLegArm(arms, tag, now) {
+		if (!arms || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(arms, tag.token)) return null;
+		var arm = arms[tag.token];
+		delete arms[tag.token];
+		return now < arm.until ? arm : null;
+	}
+	function monitorLegAction(arms, tag, now, arrivedAt) {
+		if (!tag) return "none";
+		var arm = tag.token && arms && Object.prototype.hasOwnProperty.call(arms, tag.token) ? arms[tag.token] : null;
+		if (arm && now < arm.until) return "answer";
+		return now - arrivedAt < 3e3 ? "wait" : "hangup";
+	}
+	function monitorLegReplaces(legs, tag) {
+		if (!legs || !tag || !tag.token || !Object.prototype.hasOwnProperty.call(legs, tag.token)) return false;
+		var held = legs[tag.token];
+		return !!(held && held.legId && tag.legId && held.legId !== tag.legId);
+	}
+	function planMonitorLegPromotion(legs, token) {
+		var leg = token && legs ? legs[token] : null;
+		if (!leg || !leg.controller || typeof leg.controller.promote !== "function") return null;
+		delete legs[token];
+		return leg;
+	}
+	function planMonitorCallPromotion(calls, call, current, ended) {
+		var index = calls ? calls.indexOf(call) : -1;
+		if (index >= 0) calls.splice(index, 1);
+		if (ended) return {
+			promoted: false,
+			current
+		};
+		return {
+			promoted: true,
+			current: current || call
+		};
+	}
+	function monitorLegTalks(mode) {
+		return mode === "Whisper" || mode === "Barge";
+	}
+	function anyMonitorLegTalks(legs) {
+		return Object.keys(legs || {}).some(function(token) {
+			var leg = legs[token];
+			return !!(leg && leg.info && monitorLegTalks(leg.info.mode));
+		});
+	}
+	function holdsMonitorLeg(legs) {
+		return Object.keys(legs || {}).some(function(token) {
+			return !!legs[token];
+		});
+	}
+	function readMonitorLegMedia(report, previous) {
+		var parse = parseWebRtcStats;
+		var windowed = windowedMicrophoneLevel;
+		var parsed = typeof parse === "function" && report && typeof report.forEach === "function" ? parse(report) : {};
+		var inbound = parsed.inbound || null;
+		var outbound = parsed.outbound || null;
+		var mediaSource = parsed.mediaSource || null;
+		var level = function(stat, before) {
+			return typeof windowed === "function" ? windowed(stat, before) : -1;
+		};
+		return {
+			bytesSent: outbound && outbound.bytesSent || 0,
+			bytesReceived: inbound && inbound.bytesReceived || 0,
+			heardLevel: level(inbound, previous && previous.inbound),
+			microphoneLevel: level(mediaSource, previous && previous.mediaSource),
+			codec: parsed.codec || "",
+			inbound,
+			mediaSource
+		};
+	}
+	function describeMonitorLegMedia(directions, media) {
+		var format = function(value) {
+			return typeof value === "number" && value >= 0 ? value.toFixed(3) : "-";
+		};
+		media = media || {};
+		return "Monitor leg media: transceivers " + (directions || "none") + ", sent " + (media.bytesSent || 0) + " bytes (mic " + format(media.microphoneLevel) + "), received " + (media.bytesReceived || 0) + " bytes (heard " + format(media.heardLevel) + "), codec " + (media.codec || "-") + ".";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js
+	function digitsOf$1(value) {
+		return value == null ? "" : String(value).replace(/\D+/g, "");
+	}
+	function isSameNumber(left, right) {
+		var a = digitsOf$1(left);
+		return !!a && a === digitsOf$1(right);
+	}
+	function resolveDialTarget(options) {
+		options = options || {};
+		var number = options.number ? String(options.number) : "";
+		if (!number) return {
+			number: "",
+			refused: ""
+		};
+		if (options.isCallDisplay) return {
+			number: "",
+			refused: "call-display"
+		};
+		if (options.isExtension && (options.ownExtensions || []).some(function(own) {
+			return String(own).trim() === number.trim();
+		})) return {
+			number: "",
+			refused: "own-extension"
+		};
+		if (options.liveCall && (options.ownNumbers || []).some(function(own) {
+			return isSameNumber(number, own);
+		})) return {
+			number: "",
+			refused: "own-number"
+		};
+		return {
+			number,
+			refused: ""
+		};
+	}
+	function shouldOfferDial(options) {
+		options = options || {};
+		if (!options.callActive) return true;
+		return options.stateName === "OnHold" && !options.numberIsCallDisplay;
+	}
+	function shouldShowCallNumber(options) {
+		options = options || {};
+		return !(options.stateName === "OnHold" && options.agentEntered);
+	}
+	function resolvePeerNumber(call, ownNumbers) {
+		if (!call) return "";
+		var candidates = call.direction === 1 || call.direction === "Inbound" ? [call.from, call.to] : [call.to, call.from];
+		var own = ownNumbers || [];
+		for (var i = 0; i < candidates.length; i++) {
+			var candidate = candidates[i] ? String(candidates[i]) : "";
+			if (candidate && !own.some(isOwn(candidate))) return candidate;
+		}
+		return "";
+	}
+	function isOwn(candidate) {
+		return function(number) {
+			return isSameNumber(candidate, number);
+		};
+	}
+	var LIVE_STATES = [
+		"Connected",
+		"OnHold",
+		"Connecting",
+		"Ringing"
+	];
+	function planNumberField(options) {
+		options = options || {};
+		var keep = {
+			action: "keep",
+			value: "",
+			callId: ""
+		};
+		var clear = {
+			action: "clear",
+			value: "",
+			callId: ""
+		};
+		if (!!options.callId && LIVE_STATES.indexOf(options.stateName) !== -1) {
+			var label = options.extensionLabel ? String(options.extensionLabel) : "";
+			var number = options.peerNumber ? String(options.peerNumber) : "";
+			if ((label || number) && shouldShowCallNumber({
+				stateName: options.stateName,
+				agentEntered: options.agentEntered
+			})) return label ? {
+				action: "label",
+				value: label,
+				callId: options.callId
+			} : {
+				action: "number",
+				value: number,
+				callId: options.callId
+			};
+			return options.isCallDisplay && options.displayCallId && options.displayCallId !== options.callId ? clear : keep;
+		}
+		if (options.pendingDial && !options.callId) return options.pendingDialNumber ? {
+			action: "pending",
+			value: String(options.pendingDialNumber),
+			callId: ""
+		} : keep;
+		return options.isCallDisplay ? clear : keep;
+	}
+	function planEntryStart(options) {
+		return options && options.isCallDisplay ? "clear" : "keep";
+	}
+	function planEntryEnd(options) {
+		options = options || {};
+		var value = options.value == null ? "" : String(options.value).trim();
+		return options.agentEntered && !value ? "release" : "keep";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js
+	var BRIDGED_DIAL_LEG_CAPABILITY = "bridged-dial-leg";
+	var SOFT_PHONE_CREDENTIAL_ID = "softPhoneCredentialId";
+	function canOriginate(session) {
+		return !!(session && session.canOriginate && typeof session.originate === "function");
+	}
+	function planKeypadDial(options) {
+		options = options || {};
+		if (options.bridgedDial && options.session && options.credentialId) return "bridge";
+		return canOriginate(options.session) ? "browser" : "server";
+	}
+	function bridgedDialRequest(number, credentialId) {
+		var metadata = {};
+		metadata[SOFT_PHONE_CREDENTIAL_ID] = credentialId;
+		return {
+			to: number,
+			isExtension: false,
+			metadata
+		};
+	}
+	function shouldDialFromBrowser(result, session) {
+		return !!(result && result.succeeded === false && result.errorCode === "bridge-unavailable" && canOriginate(session));
+	}
+	function sharedMicrophoneEnabled(reported, others, isHeld) {
+		var held = typeof isHeld === "function" ? isHeld : function() {
+			return false;
+		};
+		if (reported && reported.state === "Connected" && !reported.isOnHold && !held(reported)) return !reported.isMuted;
+		return (others || []).some(function(call) {
+			if (!call) return false;
+			if (call.browserOriginated) return !call.isMuted;
+			return call.state === "Connected" && !call.isMuted && !call.isOnHold && !held(call);
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-ring.js
+	var OFFER_CHANNEL_NAME = "crestapps-soft-phone-offers";
+	var OFFER_HANDLED_MESSAGE = "offer-handled";
+	function shouldRingForOffer(offerVisible, acceptPending) {
+		return !!offerVisible && !acceptPending;
+	}
+	function readOfferHandledMessage(message, currentCallId) {
+		if (!message || message.type !== "offer-handled") return null;
+		return {
+			reservationId: message.reservationId || "",
+			answered: !!message.answered,
+			marksCurrentCallHandled: !!currentCallId && currentCallId === message.callId
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ringback.js
+	var RINGBACK_MAX_MS = 12e4;
+	var RINGBACK_CADENCE = {
+		frequencies: [440, 480],
+		onSeconds: 2,
+		offSeconds: 4
+	};
+	var RINGING = "ringing";
+	var ANSWERED = "answered";
+	var ENDED = "ended";
+	var STATES_BY_NAME = {
+		ringing: RINGING,
+		answered: ANSWERED,
+		ended: ENDED
+	};
+	var STATES_BY_VALUE = [
+		RINGING,
+		ANSWERED,
+		ENDED
+	];
+	function normalizeRemotePartyState(value) {
+		if (typeof value === "number") return STATES_BY_VALUE[value] || null;
+		return typeof value === "string" ? STATES_BY_NAME[value.trim().toLowerCase()] || null : null;
+	}
+	function createRingbackMemory() {
+		return { calls: {} };
+	}
+	function noteRemoteParty(memory, update, nowMs) {
+		if (!memory || !update || !update.callId) return null;
+		var state = normalizeRemotePartyState(update.state);
+		if (!state) return null;
+		var entry = memory.calls[update.callId];
+		if (entry && entry.state !== RINGING) return entry.state;
+		if (state === RINGING) {
+			if (!entry) memory.calls[update.callId] = {
+				state: RINGING,
+				since: nowMs
+			};
+			return RINGING;
+		}
+		memory.calls[update.callId] = {
+			state,
+			since: entry ? entry.since : nowMs
+		};
+		return state;
+	}
+	function forgetRemoteParty(memory, callId) {
+		if (memory && callId) delete memory.calls[callId];
+	}
+	function pruneRemoteParties(memory, activeCallIds) {
+		if (!memory) return;
+		var keep = {};
+		(activeCallIds || []).forEach(function(callId) {
+			keep[callId] = true;
+		});
+		Object.keys(memory.calls).forEach(function(callId) {
+			if (!keep[callId]) delete memory.calls[callId];
+		});
+	}
+	function isRemotePartyRinging(memory, callId, nowMs) {
+		var entry = memory && callId ? memory.calls[callId] : null;
+		return !!entry && entry.state === RINGING && nowMs - entry.since < 12e4;
+	}
+	function ringbackTimeLeftMs(memory, callId, nowMs) {
+		return isRemotePartyRinging(memory, callId, nowMs) ? Math.max(0, RINGBACK_MAX_MS - (nowMs - memory.calls[callId].since)) : null;
+	}
+	function isLive$1(call) {
+		var state = call && call.state ? String(call.state) : "";
+		return !!state && state !== "Disconnected" && state !== "Failed" && state !== "Idle";
+	}
+	function planRingback(memory, call, options) {
+		options = options || {};
+		var nowMs = typeof options.nowMs === "number" ? options.nowMs : Date.now();
+		if (!call || !call.callId) return {
+			play: false,
+			reason: "no-call"
+		};
+		if (call.browserOriginated) return {
+			play: false,
+			reason: "browser-call"
+		};
+		if (!isLive$1(call)) return {
+			play: false,
+			reason: "call-ended"
+		};
+		if (call.isOnHold || options.isHeld) return {
+			play: false,
+			reason: "held"
+		};
+		var entry = memory ? memory.calls[call.callId] : null;
+		if (!entry) return {
+			play: false,
+			reason: "not-ringing"
+		};
+		if (entry.state === ANSWERED || entry.state === ENDED) return {
+			play: false,
+			reason: entry.state
+		};
+		if (!isRemotePartyRinging(memory, call.callId, nowMs)) return {
+			play: false,
+			reason: "timeout"
+		};
+		return { play: true };
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js
+	function shouldStartRegistration(state) {
+		state = state || {};
+		return !!state.browserAudioEnabled && !state.registered && !state.registering && !state.microphoneBlocked && !state.captureInFlight && state.hubConnected !== false;
+	}
+	var REGISTRATION_RETRY_DELAYS_MS = [
+		5e3,
+		15e3,
+		3e4,
+		6e4,
+		12e4
+	];
+	function registrationRetryDelay(failures) {
+		return REGISTRATION_RETRY_DELAYS_MS[Math.max(0, Math.min(REGISTRATION_RETRY_DELAYS_MS.length - 1, (failures || 1) - 1))];
+	}
+	function shouldReportRegistrationFailure(failures, message, previousMessage) {
+		return failures <= 1 || message !== previousMessage || failures % 10 === 0;
+	}
+	function answerClickAction(state) {
+		state = state || {};
+		if (state.acceptPending || state.registeringForAnswer) return "ignore";
+		return state.browserAudioEnabled && !state.registered ? "register" : "accept";
+	}
+	function isAnswerInProgress(state) {
+		state = state || {};
+		return !!state.acceptPending || !!state.registeringForAnswer;
+	}
+	function planRegistrationSelfHeal(state) {
+		state = state || {};
+		if (state.liveMedia) return "keep";
+		if (state.expiring || state.reregisterRequested) return "reregister";
+		return state.captureDead ? "replace-capture" : "keep";
+	}
+	function planMicrophoneLossRecovery(state) {
+		return {
+			first: "replace-capture",
+			onFailure: state && state.liveMedia ? "warn" : "reregister"
+		};
+	}
+	var REGISTRATION_TIMEOUT_MS = 3e4;
+	var REGISTRATION_RETRY_MS = 5e3;
+	function guardRegistration(attempt, timeoutMs, stageOf, onLate) {
+		return new Promise(function(resolve, reject) {
+			var timedOut = false;
+			var timer = globalThis.setTimeout(function() {
+				var stage = typeof stageOf === "function" ? stageOf() || "" : "";
+				var error = /* @__PURE__ */ new Error("The phone did not finish registering within " + Math.round(timeoutMs / 1e3) + " seconds" + (stage ? " (it was waiting for the " + stage + ")" : "") + ".");
+				timedOut = true;
+				reject(Object.assign(error, {
+					registrationTimedOut: true,
+					stage
+				}));
+			}, timeoutMs);
+			Promise.resolve(attempt).then(function(session) {
+				if (timedOut) {
+					if (typeof onLate === "function") onLate(session);
+					return;
+				}
+				globalThis.clearTimeout(timer);
+				resolve(session);
+			}, function(error) {
+				if (timedOut) return;
+				globalThis.clearTimeout(timer);
+				reject(error);
+			});
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/answer-state.js
+	var ANSWER_REGISTRATION_TIMEOUT_MS = 15e3;
+	function answerButtonView(inProgress, restingLabel, labels) {
+		if (!inProgress) return {
+			disabled: false,
+			spinner: false,
+			label: restingLabel
+		};
+		return {
+			disabled: true,
+			spinner: true,
+			label: labels && labels.answering || "Answering…"
+		};
+	}
+	function settledKeys(offer) {
+		var keys = [];
+		if (offer && offer.reservationId) keys.push("r:" + offer.reservationId);
+		if (offer && offer.callId) keys.push("c:" + offer.callId);
+		return keys;
+	}
+	function rememberSettledOffer(settled, offer, now) {
+		Object.keys(settled).forEach(function(key) {
+			if (now - settled[key] > 3e4) delete settled[key];
+		});
+		settledKeys(offer).forEach(function(key) {
+			settled[key] = now;
+		});
+	}
+	function isOfferSettled(settled, offer, now) {
+		return settledKeys(offer).some(function(key) {
+			return typeof settled[key] === "number" && now - settled[key] <= 3e4;
+		});
+	}
+	function offerActionClick(pending, offer, now) {
+		if (!pending) return "act";
+		if (isOfferActionPending(pending, offer)) return "ignore";
+		return typeof pending.at === "number" && now - pending.at < 800 ? "ignore" : "act";
+	}
+	function isOfferActionPending(pending, offer) {
+		return !!(pending && offer && pending.reservationId && pending.reservationId === offer.reservationId);
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js
+	function createCallLegs() {
+		return {
+			platform: null,
+			platformLegs: [],
+			browser: null,
+			browserLegs: []
+		};
+	}
+	function notePlatformLeg(legs, leg) {
+		if (legs && leg) {
+			legs.platformLegs = legs.platformLegs || [];
+			if (legs.platformLegs.indexOf(leg) < 0) legs.platformLegs.push(leg);
+			legs.platform = leg;
+		}
+	}
+	function legCallId(leg) {
+		var options = leg && leg.options || {};
+		return String(options.telnyxCallControlId || options.callControlId || "");
+	}
+	function noteBrowserLeg(legs, leg) {
+		if (legs && leg) {
+			legs.browserLegs = legs.browserLegs || [];
+			if (legs.browserLegs.indexOf(leg) < 0) legs.browserLegs.push(leg);
+			legs.browser = leg;
+		}
+	}
+	function forgetLeg(legs, leg) {
+		if (!legs || !leg) return;
+		var platformIndex = legs.platformLegs ? legs.platformLegs.indexOf(leg) : -1;
+		if (platformIndex >= 0) legs.platformLegs.splice(platformIndex, 1);
+		if (legs.platform === leg) legs.platform = legs.platformLegs && legs.platformLegs.length ? legs.platformLegs[legs.platformLegs.length - 1] : null;
+		var index = legs.browserLegs ? legs.browserLegs.indexOf(leg) : -1;
+		if (index >= 0) legs.browserLegs.splice(index, 1);
+		if (legs.browser === leg) legs.browser = legs.browserLegs && legs.browserLegs.length ? legs.browserLegs[legs.browserLegs.length - 1] : null;
+	}
+	function platformLegFor(legs, callId) {
+		var candidates = legs && legs.platformLegs || [];
+		var id = callId ? String(callId) : "";
+		if (id) {
+			for (var i = 0; i < candidates.length; i++) if (legCallId(candidates[i]) === id) return candidates[i];
+		}
+		var latest = legs && legs.platform || null;
+		if (latest && id && legs.reportedCallIds && legs.reportedCallIds.indexOf(legCallId(latest)) >= 0) return null;
+		return latest;
+	}
+	function noteReportedCall(legs, callId) {
+		if (legs && callId) {
+			legs.reportedCallIds = legs.reportedCallIds || [];
+			if (legs.reportedCallIds.indexOf(String(callId)) < 0) legs.reportedCallIds.push(String(callId));
+		}
+	}
+	function planPlatformReport(legs, stateName, callId) {
+		noteReportedCall(legs, callId);
+		var leg = platformLegFor(legs, callId);
+		if (!leg) return {
+			action: "none",
+			leg: null
+		};
+		if (!stateName || stateName === "Disconnected" || stateName === "Failed") return {
+			action: "hangup",
+			leg
+		};
+		if (stateName === "OnHold") return {
+			action: "hold",
+			leg
+		};
+		if (stateName === "Connected") return {
+			action: "resume",
+			leg
+		};
+		return {
+			action: "none",
+			leg
+		};
+	}
+	function legAfterEnd(legs, endedLeg) {
+		forgetLeg(legs, endedLeg);
+		return legs && (legs.platform || legs.browser) || null;
+	}
+	function allLegs(legs) {
+		var all = [];
+		if (!legs) return all;
+		[legs.platform].concat(legs.platformLegs || [], [legs.browser], legs.browserLegs || []).forEach(function(leg) {
+			if (leg && all.indexOf(leg) < 0) all.push(leg);
+		});
+		return all;
+	}
+	function canConferenceCall(call) {
+		return !!(call && call.callId && !call.browserOriginated);
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js
+	function defaultStateOf(call) {
+		return call ? String(call.state || "") : "";
+	}
+	function defaultIsConference(call) {
+		var value = call && call.metadata ? call.metadata.isConference : false;
+		return value === true || value === 1 || value === "true" || value === "True";
+	}
+	function metadataText(call, key) {
+		var value = call && call.metadata ? call.metadata[key] : null;
+		return value == null ? "" : String(value);
+	}
+	function canJoin(call) {
+		return typeof canConferenceCall === "function" ? canConferenceCall(call) : !!(call && call.callId && !call.browserOriginated);
+	}
+	function planMerge(calls, selections, options) {
+		options = options || {};
+		selections = selections || {};
+		var stateOf = options.stateOf || defaultStateOf;
+		var isConference = options.isConference || defaultIsConference;
+		var live = (calls || []).filter(function(call) {
+			var state = stateOf(call);
+			return call && (state === "Connected" || state === "OnHold");
+		});
+		var eligible = live.filter(canJoin);
+		var participants = eligible.filter(isConference);
+		var others = eligible.filter(function(call) {
+			return !isConference(call);
+		});
+		var ticked = function(call) {
+			return !!selections[call.callId];
+		};
+		var conferenceTicked = participants.some(ticked);
+		var tickedOthers = others.filter(ticked);
+		var units = (participants.length ? 1 : 0) + others.length;
+		var selectedCount = (conferenceTicked ? 1 : 0) + tickedOthers.length;
+		var canMerge = selectedCount >= 2;
+		var primary = null;
+		var conferenceName = "";
+		if (participants.length) {
+			var primaryId = participants.map(function(call) {
+				return metadataText(call, "conferencePrimaryCallId");
+			}).filter(Boolean)[0];
+			primary = participants.filter(function(call) {
+				return call.callId === primaryId;
+			})[0] || participants[0];
+			conferenceName = metadataText(primary, "conferenceName") || participants.map(function(call) {
+				return metadataText(call, "conferenceName");
+			}).filter(Boolean)[0] || "";
+		}
+		var chosen = conferenceTicked ? [primary].concat(tickedOthers) : tickedOthers;
+		return {
+			offered: units >= 2,
+			canMerge,
+			selectedCount,
+			callIds: canMerge ? chosen.map(function(call) {
+				return call.callId;
+			}) : [],
+			calls: (conferenceTicked ? participants.filter(ticked) : []).concat(tickedOthers),
+			addsToConference: canMerge && conferenceTicked,
+			conferenceName: conferenceTicked ? conferenceName : "",
+			eligibleCallIds: eligible.map(function(call) {
+				return call.callId;
+			}),
+			allSelected: eligible.length > 0 && eligible.every(ticked),
+			blocked: live.length > eligible.length ? "browser-call" : ""
+		};
+	}
+	function conferenceAfterMerge(calls, plan, result, options) {
+		options = options || {};
+		var isConference = options.isConference || defaultIsConference;
+		var callIds = plan.addsToConference ? (calls || []).filter(isConference).map(function(call) {
+			return call.callId;
+		}) : [];
+		(plan.callIds || []).forEach(function(callId) {
+			if (callIds.indexOf(callId) === -1) callIds.push(callId);
+		});
+		var resultCall = result && result.call ? result.call : null;
+		return {
+			callIds,
+			primaryCallId: plan.addsToConference || !resultCall || !resultCall.callId ? (plan.callIds || [])[0] || "" : String(resultCall.callId),
+			conferenceName: metadataText(resultCall, "conferenceName") || plan.conferenceName || ""
+		};
+	}
+	function format$4(template, value) {
+		return String(template).replace("{0}", value);
+	}
+	function unselectableText(reason, strings) {
+		if (reason === "browser-call") return strings.cannotMergeBrowserCall || "A call dialed from this phone cannot be merged into a conference.";
+		return reason === "not-answered" ? strings.cannotMergeUnanswered || "Waiting for them to answer before this call can be merged." : "";
+	}
+	function row(item, strings, escapeHtml, inConference, withCheck) {
+		var reason = item.selectable ? "" : unselectableText(item.unselectableReason, strings);
+		var check = withCheck ? "<input type=\"checkbox\" class=\"telephony-soft-phone__active-call-check\" data-telephony-conference-call=\"" + escapeHtml(item.callId) + "\"" + (item.selected && item.selectable ? " checked" : "") + (item.selectable ? "" : " disabled") + (reason ? " title=\"" + escapeHtml(reason) + "\"" : "") + " aria-label=\"" + escapeHtml(format$4(strings.selectCall || "Select {0}", item.number)) + "\" />" : "";
+		var hangup = inConference && item.canHangup ? "<button type=\"button\" class=\"telephony-soft-phone__participant-hangup\" data-telephony-participant-hangup=\"" + escapeHtml(item.callId) + "\" title=\"" + escapeHtml(format$4(strings.hangupParticipant || "Hang up {0}", item.number)) + "\" aria-label=\"" + escapeHtml(format$4(strings.hangupParticipant || "Hang up {0}", item.number)) + "\"><i class=\"fa-solid fa-user-minus\" aria-hidden=\"true\"></i></button>" : "";
+		var stateKind = item.stateKind ? " telephony-soft-phone__line-state--" + escapeHtml(item.stateKind) : "";
+		var timer = item.elapsed ? "<span class=\"telephony-soft-phone__line-timer\" data-telephony-line-timer=\"" + escapeHtml(item.callId) + "\">" + escapeHtml(item.elapsed) + "</span>" : "";
+		return "<div class=\"telephony-soft-phone__active-call" + (item.current ? " is-current" : "") + (inConference ? " is-participant" : "") + "\"" + (inConference ? " data-telephony-conference-participant=\"" + escapeHtml(item.callId) + "\"" : "") + ">" + check + "<button type=\"button\" class=\"telephony-soft-phone__active-call-select\" data-telephony-call-select=\"" + escapeHtml(item.callId) + "\"" + (item.current ? " aria-current=\"true\"" : "") + "><span class=\"telephony-soft-phone__active-call-number\">" + escapeHtml(item.number) + "</span><span class=\"telephony-soft-phone__active-call-meta\"><span class=\"telephony-soft-phone__active-call-state telephony-soft-phone__line-state" + stateKind + "\">" + escapeHtml(item.state) + "</span>" + timer + "</span></button>" + hangup + "</div>";
+	}
+	function mergeBarHtml(merge, strings, escapeHtml) {
+		var names = (merge.numbers || []).join(" + ");
+		var summary;
+		var action;
+		if (!merge.canMerge) {
+			summary = strings.mergeSelectHint || "Tick two or more calls to merge them.";
+			action = strings.mergeCalls || "Merge calls";
+		} else if (merge.addsToConference) {
+			summary = format$4(strings.addToConferenceSummary || "Add {0} to the conference.", names);
+			action = strings.addToConference || "Add to conference";
+		} else {
+			summary = format$4(strings.mergeSummary || "Join {0} in one conference.", names);
+			action = format$4(strings.mergeSelectedCalls || "Merge {0} calls", merge.selectedCount);
+		}
+		return "<div class=\"telephony-soft-phone__merge-bar\"><label class=\"telephony-soft-phone__merge-select-all\"><input type=\"checkbox\" data-telephony-merge-select-all" + (merge.allSelected ? " checked" : "") + " /> <span>" + escapeHtml(strings.selectAllCalls || "Select all") + "</span></label><span class=\"telephony-soft-phone__merge-summary\" data-telephony-merge-summary role=\"status\">" + escapeHtml(summary) + "</span><button type=\"button\" class=\"btn btn-sm btn-primary telephony-soft-phone__merge-calls\" data-telephony-merge-calls" + (merge.canMerge ? "" : " disabled") + "><i class=\"fa-solid fa-code-merge\" aria-hidden=\"true\"></i> " + escapeHtml(action) + "</button></div>";
+	}
+	function buildActiveCallsHtml(model, strings, escapeHtml) {
+		model = model || {};
+		strings = strings || {};
+		var calls = model.calls || [];
+		var participants = calls.filter(function(call) {
+			return call.inConference;
+		});
+		var others = calls.filter(function(call) {
+			return !call.inConference;
+		});
+		var html = "";
+		var merge = model.merge || {};
+		var waiting = calls.length > 1 && calls.some(function(call) {
+			return call.unselectableReason === "not-answered";
+		});
+		var withChecks = !!(merge.offered || merge.blocked || waiting);
+		if (participants.length) html += "<div class=\"telephony-soft-phone__conference\" data-telephony-conference role=\"group\" aria-label=\"" + escapeHtml(format$4(strings.conferenceParticipants || "Conference · {0} participants", participants.length)) + "\"><div class=\"telephony-soft-phone__conference-heading\"><i class=\"fa-solid fa-users\" aria-hidden=\"true\"></i> " + escapeHtml(format$4(strings.conferenceParticipants || "Conference · {0} participants", participants.length)) + "</div>" + participants.map(function(call) {
+			return row(call, strings, escapeHtml, true, withChecks);
+		}).join("") + "</div>";
+		html += others.map(function(call) {
+			return row(call, strings, escapeHtml, false, withChecks);
+		}).join("");
+		if (merge.blocked) html += "<div class=\"telephony-soft-phone__merge-note\" data-telephony-merge-blocked><i class=\"fa-solid fa-circle-info\" aria-hidden=\"true\"></i> " + escapeHtml(unselectableText(merge.blocked, strings)) + "</div>";
+		if (waiting && !merge.blocked) html += "<div class=\"telephony-soft-phone__merge-note\" data-telephony-merge-waiting><i class=\"fa-solid fa-hourglass-half\" aria-hidden=\"true\"></i> " + escapeHtml(unselectableText("not-answered", strings)) + "</div>";
+		if (merge.offered) html += mergeBarHtml(merge, strings, escapeHtml);
+		return html;
+	}
+	function createConferenceMemory() {
+		return { members: {} };
+	}
+	function memberOf(memory, callId) {
+		return memory && memory.members && callId && Object.prototype.hasOwnProperty.call(memory.members, callId) ? memory.members[callId] : null;
+	}
+	function membersByKey(memory, key) {
+		return Object.keys(memory && memory.members || {}).filter(function(callId) {
+			return memory.members[callId].key === key;
+		});
+	}
+	function rememberConference(memory, conference) {
+		if (!memory || !conference || !conference.callIds || !conference.callIds.length) return;
+		var existing = conference.callIds.map(function(callId) {
+			return memberOf(memory, callId);
+		}).filter(Boolean)[0];
+		var key = existing ? existing.key : String(conference.primaryCallId || conference.callIds[0]);
+		conference.callIds.forEach(function(callId) {
+			var member = memberOf(memory, callId);
+			memory.members[callId] = {
+				key,
+				left: !!(member && member.left)
+			};
+		});
+		membersByKey(memory, key).forEach(function(callId) {
+			memory.members[callId].primaryCallId = String(conference.primaryCallId || key);
+			memory.members[callId].conferenceName = String(conference.conferenceName || "");
+		});
+	}
+	function applyConferenceMemory(memory, call) {
+		var member = call ? memberOf(memory, call.callId) : null;
+		if (!member) return call;
+		call.metadata = call.metadata || {};
+		call.metadata.isConference = true;
+		call.metadata.conferencePrimaryCallId = member.primaryCallId || member.key;
+		call.metadata.conferenceName = member.conferenceName || metadataText(call, "conferenceName");
+		call.metadata.participantCount = membersByKey(memory, member.key).filter(function(callId) {
+			return !memory.members[callId].left;
+		}).length;
+		return call;
+	}
+	function markParticipantLeft(memory, callId) {
+		var member = memberOf(memory, callId);
+		if (member) member.left = true;
+	}
+	function forgetConferenceCall(memory, callId) {
+		if (memberOf(memory, callId)) delete memory.members[callId];
+	}
+	function conferenceMembers(memory, callId) {
+		var member = memberOf(memory, callId);
+		return member ? membersByKey(memory, member.key) : [];
+	}
+	function visibleConferenceCalls(memory, calls) {
+		return (calls || []).filter(function(call) {
+			var member = call ? memberOf(memory, call.callId) : null;
+			return !(member && member.left);
+		});
+	}
+	function isOneConference(memory, callIds) {
+		if (!callIds || callIds.length < 2) return false;
+		var first = memberOf(memory, callIds[0]);
+		return !!first && callIds.every(function(callId) {
+			var member = memberOf(memory, callId);
+			return !!member && member.key === first.key;
+		});
+	}
+	function conferenceLegsWithoutParticipants(memory, liveCallIds) {
+		var live = (liveCallIds || []).filter(function(callId) {
+			return !!memberOf(memory, callId);
+		});
+		var keys = [];
+		live.forEach(function(callId) {
+			var key = memory.members[callId].key;
+			if (keys.indexOf(key) === -1) keys.push(key);
+		});
+		return keys.reduce(function(legs, key) {
+			var ofKey = live.filter(function(callId) {
+				return memory.members[callId].key === key;
+			});
+			return ofKey.some(function(callId) {
+				return !memory.members[callId].left;
+			}) ? legs : legs.concat(ofKey);
+		}, []);
+	}
+	function liveMembers(memory, calls, callId) {
+		var up = (calls || []).map(function(call) {
+			return call && call.callId;
+		}).filter(Boolean);
+		return conferenceMembers(memory, callId).filter(function(id) {
+			return up.indexOf(id) !== -1;
+		});
+	}
+	function planConferenceHangup(memory, calls, callId, options) {
+		options = options || {};
+		var members = liveMembers(memory, calls, callId);
+		var plan = {
+			action: "none",
+			leaveCallIds: [],
+			keepCallIds: [],
+			endCallIds: []
+		};
+		if (!members.length) return plan;
+		if (members.filter(function(id) {
+			return !memory.members[id].left;
+		}).length <= 1) {
+			plan.action = "end";
+			plan.endCallIds = members;
+			return plan;
+		}
+		var isContactCenterCall = options.isContactCenterCall || function() {
+			return false;
+		};
+		var byId = {};
+		(calls || []).forEach(function(call) {
+			if (call && call.callId) byId[call.callId] = call;
+		});
+		plan.action = "leave";
+		members.forEach(function(id) {
+			(isContactCenterCall(byId[id]) ? plan.keepCallIds : plan.leaveCallIds).push(id);
+		});
+		return plan;
+	}
+	function planConferenceEnd(memory, calls, callId) {
+		var members = liveMembers(memory, calls, callId);
+		if (!members.length) return null;
+		var member = memory.members[members[0]];
+		var primaryCallId = members.indexOf(member.primaryCallId) !== -1 ? member.primaryCallId : members[0];
+		return {
+			primaryCallId,
+			conferenceName: member.conferenceName || "",
+			callIds: [primaryCallId].concat(members.filter(function(id) {
+				return id !== primaryCallId;
+			})),
+			partyCount: members.filter(function(id) {
+				return !memory.members[id].left;
+			}).length
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-call-controls.js
+	function planInCallControls(options) {
+		options = options || {};
+		var stateName = String(options.stateName || "Idle");
+		var active = !!options.active;
+		var connected = active && stateName === "Connected";
+		var held = active && stateName === "OnHold";
+		var live = connected || held;
+		var inCall = active && !options.ringingOffer;
+		var adding = inCall && !!options.addingCall;
+		var parties = Number(options.conferenceParties) || 0;
+		var dialOffered = typeof shouldOfferDial === "function" ? shouldOfferDial({
+			callActive: active,
+			stateName,
+			numberIsCallDisplay: !!options.numberIsCallDisplay
+		}) : !active || held && !options.numberIsCallDisplay;
+		var controls = inCall && !adding;
+		var addCallVisible = controls && live && !!options.canDial;
+		return {
+			callControls: controls,
+			options: controls && live,
+			mute: {
+				visible: controls && connected && !!options.canMute,
+				pressed: !!options.muted
+			},
+			hold: {
+				visible: controls && (connected && !!options.canHold || held && !!options.canResume),
+				pressed: held
+			},
+			keypad: {
+				visible: controls && connected && !options.transferOpen,
+				pressed: !!options.keypadOpen
+			},
+			hangup: {
+				visible: controls && !!options.canHangup,
+				kind: options.isConference && parties >= 2 ? "leave" : "hangup"
+			},
+			transfer: controls && live && !!options.canTransfer,
+			addCall: {
+				visible: addCallVisible,
+				disabledReason: addCallVisible && connected && !options.canHold ? "hold-unavailable" : ""
+			},
+			endAll: {
+				visible: controls && (Number(options.lineCount) || 0) > 1 && !!options.canHangup,
+				kind: options.isConference ? "conference" : "calls"
+			},
+			dial: !!options.canDial && (adding || dialOffered),
+			cancelAdd: adding,
+			showKeypad: !options.transferOpen && (!active || adding || held || connected && !!options.keypadOpen)
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-labels.js
+	var ID_PATTERNS = [
+		/^v\d+:/i,
+		/^(conf|ext|consult|cc-[a-z]+)-/i,
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+		/^call-[0-9a-f-]{8,}$/i
+	];
+	function looksLikeId(value) {
+		return ID_PATTERNS.some(function(pattern) {
+			return pattern.test(value);
+		});
+	}
+	function friendlyCallLabel(label, fallback) {
+		var text = label == null ? "" : String(label).trim();
+		return text && !looksLikeId(text) ? text : fallback || "";
+	}
+	function createCallPartyMemory() {
+		return {};
+	}
+	var PARTY_KEYS = [
+		"from",
+		"to",
+		"direction"
+	];
+	function carryCallParty(memory, call) {
+		if (!call || !call.callId || !memory) return call;
+		var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : {};
+		PARTY_KEYS.forEach(function(key) {
+			var value = call[key];
+			if (value != null && value !== "") remembered[key] = value;
+			else if (remembered[key] != null) call[key] = remembered[key];
+		});
+		if (Object.keys(remembered).length) memory[call.callId] = remembered;
+		return call;
+	}
+	function forgetCallParty(memory, callId) {
+		if (memory && callId) delete memory[callId];
+	}
+	function text$3(value) {
+		return value == null ? "" : String(value).trim();
+	}
+	function label$3(strings, key, fallback) {
+		return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
+	}
+	function format$3(template, values) {
+		return String(template).replace(/\{(\d+)\}/g, function(match, index) {
+			var value = values[Number(index)];
+			return value === void 0 ? match : String(value);
+		});
+	}
+	function createExtensionDirectory() {
+		return {
+			names: {},
+			own: [],
+			loadedAt: 0
+		};
+	}
+	function storeExtensionEntries(directory, entries, now, ownExtensions) {
+		if (!directory) return;
+		var names = {};
+		var own = (ownExtensions || []).map(text$3).filter(Boolean);
+		(entries || []).forEach(function(entry) {
+			var number = text$3(entry && entry.extension);
+			var name = text$3(entry && entry.displayName);
+			if (number && name && name !== number) names[number] = name;
+		});
+		directory.names = names;
+		directory.own = own;
+		directory.loadedAt = now || Date.now();
+	}
+	function ownExtensions(directory) {
+		return directory && Array.isArray(directory.own) ? directory.own.slice() : [];
+	}
+	function isOwnExtension(directory, number) {
+		var key = text$3(number);
+		return !!key && ownExtensions(directory).indexOf(key) !== -1;
+	}
+	function shouldReloadExtensions(directory, now) {
+		return !directory || !directory.loadedAt || now - directory.loadedAt >= 3e5;
+	}
+	function extensionName(directory, number) {
+		var key = text$3(number);
+		return directory && directory.names && key && Object.prototype.hasOwnProperty.call(directory.names, key) ? directory.names[key] : "";
+	}
+	function isPersonName(value, number) {
+		var candidate = text$3(value);
+		return !!candidate && candidate !== text$3(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().-]+$/.test(candidate);
+	}
+	function describeExtension(strings, name, number, fallbackName) {
+		var extension = text$3(number);
+		var person = text$3(name) || (isPersonName(fallbackName, extension) ? text$3(fallbackName) : "");
+		if (!extension) return person;
+		return person ? format$3(label$3(strings, "extensionWithName", "{0} · ext {1}"), [person, extension]) : extension;
+	}
+	function transferToExtensionLabel(strings, number, name) {
+		var person = text$3(name);
+		return person ? format$3(label$3(strings, "transferToExtensionNamed", "Transfer to extension {0} · {1}"), [number, person]) : format$3(label$3(strings, "transferToExtensionNumber", "Transfer to extension {0}"), [number]);
+	}
+	function callExtensionNumber(call) {
+		var metadata = call && call.metadata;
+		return metadata ? text$3(metadata.extensionNumber) : "";
+	}
+	function extensionDirectoryEntries(directory, strings) {
+		var names = directory && directory.names || {};
+		return Object.keys(names).filter(function(number) {
+			return !isOwnExtension(directory, number);
+		}).sort(function(left, right) {
+			return names[left].localeCompare(names[right]) || left.localeCompare(right);
+		}).map(function(number) {
 			return {
-				succeeded: true,
-				consult
+				id: "extension:" + number,
+				name: names[number],
+				destination: number,
+				detail: format$3(label$3(strings, "transferExtension", "Ext {0}"), [number]),
+				extension: number,
+				isExtension: true,
+				kind: "agent",
+				group: label$3(strings, "transferGroupExtensions", "Extensions")
+			};
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js
+	var TRANSFER_CAPABILITY = 32;
+	var ATTENDED_TRANSFER_CAPABILITY = 2048;
+	var TRANSFER_MODE_VALUES = {
+		blind: 0,
+		warm: 1
+	};
+	function digitsOf(value) {
+		return value == null ? "" : String(value).replace(/\D+/g, "");
+	}
+	function isSameLine(left, right) {
+		var a = digitsOf(left);
+		var b = digitsOf(right);
+		if (!a || !b) return false;
+		if (a === b) return true;
+		return a.length === 11 && a.charAt(0) === "1" && a.substring(1) === b || b.length === 11 && b.charAt(0) === "1" && b.substring(1) === a;
+	}
+	function transferModes(capabilities) {
+		var value = Number(capabilities) || 0;
+		var modes = [];
+		if ((value & TRANSFER_CAPABILITY) === TRANSFER_CAPABILITY) modes.push("blind");
+		if ((value & ATTENDED_TRANSFER_CAPABILITY) === ATTENDED_TRANSFER_CAPABILITY) modes.push("warm");
+		return modes;
+	}
+	function transferModeValue(mode) {
+		return Object.prototype.hasOwnProperty.call(TRANSFER_MODE_VALUES, mode) ? TRANSFER_MODE_VALUES[mode] : 0;
+	}
+	function isNumberLike(value) {
+		var text = value == null ? "" : String(value).trim();
+		return !!text && /^[+\d\s().-]+$/.test(text) && /\d/.test(text);
+	}
+	var SERVICE_ENTRY_FIELDS = [
+		"kind",
+		"targetType",
+		"targetId",
+		"group",
+		"presence",
+		"status",
+		"disabled",
+		"isExtension"
+	];
+	function normalizeDirectoryEntry(entry) {
+		entry = entry || {};
+		var destination = String(entry.destination || entry.extension || entry.phoneNumber || "");
+		var detail = entry.kind ? String(entry.detail == null ? "" : entry.detail) : String(entry.extension || entry.phoneNumber || entry.detail || destination);
+		var normalized = {
+			id: String(entry.id || destination),
+			name: String(entry.displayName || entry.name || destination),
+			destination,
+			detail
+		};
+		SERVICE_ENTRY_FIELDS.forEach(function(field) {
+			if (entry[field] !== void 0) normalized[field] = entry[field];
+		});
+		return normalized;
+	}
+	function filterTransferTargets(entries, query) {
+		var text = query == null ? "" : String(query).trim().toLowerCase();
+		var digits = digitsOf(text);
+		return (entries || []).map(normalizeDirectoryEntry).filter(function(entry) {
+			if (!entry.destination) return false;
+			if (!text) return true;
+			if (entry.name.toLowerCase().indexOf(text) !== -1 || entry.detail.toLowerCase().indexOf(text) !== -1) return true;
+			return !!digits && isNumberLike(text) && (digitsOf(entry.destination).indexOf(digits) !== -1 || digitsOf(entry.detail).indexOf(digits) !== -1);
+		});
+	}
+	function toInternationalNumber(value) {
+		var text = value == null ? "" : String(value).trim();
+		var digits = digitsOf(text);
+		if (text.charAt(0) === "+") return digits.length >= 8 && digits.length <= 15 ? "+" + digits : "";
+		if (digits.length === 10) return "+1" + digits;
+		if (digits.length === 11 && digits.charAt(0) === "1") return "+" + digits;
+		return "";
+	}
+	function readExtension(value) {
+		var text = value == null ? "" : String(value).trim();
+		var digits = digitsOf(text);
+		return /^[\d\s-]+$/.test(text) && digits.length >= 1 && digits.length <= 15 ? digits : "";
+	}
+	function resolveTransferTarget(options) {
+		options = options || {};
+		var selected = options.selected;
+		var refuse = function(reason) {
+			return {
+				destination: "",
+				isExtension: false,
+				label: "",
+				refused: reason
+			};
+		};
+		if (selected && selected.destination) return {
+			destination: String(selected.destination),
+			isExtension: !!selected.isExtension,
+			label: String(selected.name || selected.destination),
+			refused: ""
+		};
+		var text = options.query == null ? "" : String(options.query).trim();
+		if (!text) return refuse("empty");
+		if (options.dialMode === "extension") {
+			var extension = readExtension(text);
+			return extension ? {
+				destination: extension,
+				isExtension: true,
+				label: text,
+				refused: ""
+			} : refuse("invalid-extension");
+		}
+		if (!isNumberLike(text)) return refuse("empty");
+		var reading = options.number || {
+			value: toInternationalNumber(text),
+			valid: !!toInternationalNumber(text)
+		};
+		var number = reading.value ? String(reading.value) : "";
+		if ((options.ownNumbers || []).some(function(own) {
+			return isSameLine(text, own) || isSameLine(number, own);
+		})) return refuse("own-number");
+		if (!reading.valid || !number) return refuse("invalid-number");
+		return {
+			destination: number,
+			isExtension: false,
+			label: text,
+			refused: ""
+		};
+	}
+	function pickTypedMatch(entries, query) {
+		var text = query == null ? "" : String(query).trim();
+		if (!text || isNumberLike(text)) return {
+			entry: null,
+			refused: ""
+		};
+		var matches = filterTransferTargets(entries, text);
+		if (matches.length === 1) return {
+			entry: matches[0],
+			refused: ""
+		};
+		return {
+			entry: null,
+			refused: matches.length ? "several-match" : "no-match"
+		};
+	}
+	function ownExtensionRefusal(options) {
+		options = options || {};
+		var own = (options.ownExtensions || []).map(function(number) {
+			return String(number).trim();
+		}).filter(Boolean);
+		var selected = options.selected;
+		var candidate = selected ? String(selected.isExtension ? selected.destination : selected.extension || "") : options.dialMode === "extension" ? readExtension(options.query) : "";
+		return candidate && own.indexOf(candidate.trim()) !== -1 ? "own-extension" : "";
+	}
+	var REFUSAL_MESSAGES = {
+		"own-number": ["transferOwnNumber", "That is this phone system's own number. Choose who to transfer the call to."],
+		"invalid-number": ["transferInvalidNumber", "Enter a complete phone number, or switch to an extension."],
+		"invalid-extension": ["transferInvalidExtension", "Enter the extension as digits only."],
+		"own-extension": ["ownExtension", "That's your own extension."],
+		"several-match": ["transferSeveralMatch", "More than one person matches. Choose one from the list."],
+		"no-match": ["directoryNoMatch", "Nobody in the directory matches."],
+		"browser-call": ["transferBrowserCall", "This call was dialed straight from this phone, so the phone system cannot transfer it. Ask the other person to call the destination, or hang up and dial it."],
+		"unavailable": ["transferAgentUnavailable", "That agent cannot take a call right now. Choose someone who is available."],
+		"warm-queue": ["transferWarmQueue", "A queue cannot be consulted. Choose an agent or a number, or send the call to the queue with a blind transfer."],
+		"external-not-allowed": ["transferNumberNotAllowed", "Transfers to numbers that are not on the approved list are turned off. Choose from the list."]
+	};
+	function transferRefusalMessage(strings, refused) {
+		var message = Object.prototype.hasOwnProperty.call(REFUSAL_MESSAGES, refused) ? REFUSAL_MESSAGES[refused] : ["transferTargetRequired", "Choose who to transfer the call to, or enter a number."];
+		var localized = strings && strings[message[0]];
+		return typeof localized === "string" && localized ? localized : message[1];
+	}
+	function transferBlockedReason(options) {
+		options = options || {};
+		return options.call && options.call.browserOriginated && !options.serviceApplies ? "browser-call" : "";
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-search.js
+	var MAX_KEYPAD_MATCHES = 6;
+	function text$2(value) {
+		return value == null ? "" : String(value).trim();
+	}
+	function keypadExtensionMatches(directory, query, strings) {
+		var typed = text$2(query);
+		if (!typed) return [];
+		return filterTransferTargets(extensionDirectoryEntries(directory, strings || {}), typed).map(function(entry) {
+			return {
+				extension: String(entry.destination),
+				name: entry.name,
+				detail: entry.detail
+			};
+		});
+	}
+	function resolveKeypadExtension(directory, query, strings) {
+		var typed = text$2(query);
+		if (!typed) return {
+			extension: "",
+			refused: "empty"
+		};
+		var digits = readExtension(typed);
+		if (digits) return isOwnExtension(directory, digits) ? {
+			extension: "",
+			refused: "own-extension"
+		} : {
+			extension: digits,
+			refused: ""
+		};
+		var pick = pickTypedMatch(extensionDirectoryEntries(directory, strings || {}), typed);
+		return pick.entry ? {
+			extension: String(pick.entry.destination),
+			refused: ""
+		} : {
+			extension: "",
+			refused: pick.refused || "no-match"
+		};
+	}
+	function buildKeypadExtensionResultsHtml(matches, strings, escapeHtml) {
+		if (!matches || !matches.length) return "";
+		strings = strings || {};
+		return "<div class=\"telephony-soft-phone__keypad-results-list\" role=\"list\" aria-label=\"" + escapeHtml(strings.keypadExtensionResults || "Matching extensions") + "\">" + matches.slice(0, MAX_KEYPAD_MATCHES).map(function(match) {
+			return "<button type=\"button\" role=\"listitem\" class=\"telephony-soft-phone__keypad-result\" data-telephony-keypad-extension=\"" + escapeHtml(match.extension) + "\"><span class=\"telephony-soft-phone__keypad-result-name\">" + escapeHtml(match.name) + "</span><span class=\"telephony-soft-phone__keypad-result-extension\">" + escapeHtml(match.detail) + "</span></button>";
+		}).join("") + "</div>";
+	}
+	function label$2(strings, key, fallback) {
+		return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
+	}
+	function format$2(template, value) {
+		return String(template).replace("{0}", value);
+	}
+	function isLive(status) {
+		return status === "ringing" || status === "connected";
+	}
+	function consultView(consult, targetName, strings) {
+		var status = consult && consult.status ? String(consult.status) : "cancelled";
+		var live = !!consult && consult.live !== false && isLive(status);
+		var name = targetName || "";
+		var message;
+		switch (status) {
+			case "connected":
+				message = format$2(label$2(strings, "consultConnected", "Talking to {0}. The caller is on hold."), name);
+				break;
+			case "completed":
+				message = format$2(label$2(strings, "consultCompleted", "The call was handed to {0}."), name);
+				break;
+			case "ringing":
+				message = format$2(label$2(strings, "consultRinging", "Calling {0}..."), name);
+				break;
+			default: message = label$2(strings, "consultCancelled", "The caller is back with you.");
+		}
+		return {
+			status,
+			live,
+			message,
+			canComplete: live && status === "connected",
+			canCancel: live
+		};
+	}
+	function consultEndedMessage(previousStatus, next, targetName, strings, context) {
+		var status = next && next.status ? String(next.status) : "cancelled";
+		if (next && next.live !== false && isLive(status)) return "";
+		if (context && context.callEnded) return label$2(strings, "consultCallerLeft", "The caller hung up.");
+		if (status === "completed") return format$2(label$2(strings, "consultCompleted", "The call was handed to {0}."), targetName || "");
+		if (isLive(previousStatus)) return format$2(label$2(strings, "consultTargetLeft", "{0} did not take the call. The caller is back with you."), targetName || "");
+		return label$2(strings, "consultCancelled", "The caller is back with you.");
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/phone-input.js
+	function normalize(value) {
+		return typeof normalizeDialNumber === "function" ? normalizeDialNumber(value) : String(value || "").trim();
+	}
+	function enhancePhoneInput(input, options) {
+		options = options || {};
+		if (!input || typeof options.intlTelInput !== "function") return null;
+		var settings = {
+			containerClass: options.containerClass,
+			dropdownParent: options.dropdownParent
+		};
+		if (options.initialCountry) settings.initialCountry = options.initialCountry;
+		if (typeof options.strictMode === "boolean") settings.strictMode = options.strictMode;
+		return options.intlTelInput(input, settings);
+	}
+	function readPhoneInput(raw, telInput) {
+		var value = normalize(raw);
+		if (value.charAt(0) === "+") return value;
+		var visibleDigits = value.replace(/\D/g, "");
+		if (telInput && typeof telInput.getNumber === "function") {
+			if (typeof telInput.isValidNumber !== "function" || telInput.isValidNumber()) {
+				var e164 = telInput.getNumber();
+				if (e164 && e164.charAt(0) === "+" && (visibleDigits === "" || e164.replace(/\D/g, "").indexOf(visibleDigits) !== -1)) return e164;
+			}
+		}
+		if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === "function") {
+			var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
+			if (dialCode) return visibleDigits.indexOf(dialCode) === 0 ? "+" + visibleDigits : "+" + dialCode + visibleDigits;
+		}
+		return value;
+	}
+	function readTransferNumber(raw, telInput) {
+		if (telInput && typeof telInput.isValidNumber === "function") {
+			var value = readPhoneInput(raw, telInput);
+			return {
+				value,
+				valid: !!telInput.isValidNumber() && value.charAt(0) === "+"
 			};
 		}
-		function shouldHoldBeforeTransfer(options) {
-			options = options || {};
-			var call = options.call;
-			return !!(options.bridgedDial && call && call.callId && !call.browserOriginated && !call.isOnHold && !options.serviceCall);
-		}
-		softPhone.TRANSFER_LEG_INTENT = TRANSFER_LEG_INTENT;
-		softPhone.readTransferLegTag = readTransferLegTag;
-		softPhone.providerTransferRequest = providerTransferRequest;
-		softPhone.consultFromCall = consultFromCall;
-		softPhone.consultRequest = consultRequest;
-		softPhone.consultCommandResult = consultCommandResult;
-		softPhone.shouldHoldBeforeTransfer = shouldHoldBeforeTransfer;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		var number = typeof toInternationalNumber === "function" ? toInternationalNumber(raw) : "";
+		return {
+			value: number,
+			valid: !!number
+		};
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-panel.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var KIND_ICONS = {
-			agent: "fa-user",
-			queue: "fa-users",
-			external: "fa-phone"
+	var KIND_ICONS = {
+		agent: "fa-user",
+		queue: "fa-users",
+		external: "fa-phone"
+	};
+	function label$1(strings, key, fallback) {
+		return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
+	}
+	function format$1(template, value) {
+		return String(template).replace("{0}", value);
+	}
+	function createTransferPanel(container, options) {
+		options = options || {};
+		var strings = options.strings || {};
+		var escapeHtml = options.escapeHtml || function(value) {
+			return String(value == null ? "" : value);
 		};
-		function label(strings, key, fallback) {
-			return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
+		var formatNumber = options.formatNumber || function(value) {
+			return value;
+		};
+		var state = {
+			open: false,
+			query: "",
+			selected: null,
+			mode: "blind",
+			dialMode: "number",
+			entries: [],
+			loading: false,
+			error: "",
+			consult: null
+		};
+		var parts = {};
+		var pollTimer = null;
+		var telInput = null;
+		function modes() {
+			return typeof options.modes === "function" ? options.modes() : ["blind"];
 		}
-		function format(template, value) {
-			return String(template).replace("{0}", value);
+		function extensionName(number) {
+			return number && typeof options.extensionName === "function" ? options.extensionName(number) || "" : "";
 		}
-		function createTransferPanel(container, options) {
-			options = options || {};
-			var strings = options.strings || {};
-			var escapeHtml = options.escapeHtml || function(value) {
-				return String(value == null ? "" : value);
-			};
-			var formatNumber = options.formatNumber || function(value) {
-				return value;
-			};
-			var state = {
-				open: false,
+		function allowNumbers() {
+			return typeof options.allowNumbers === "function" ? options.allowNumbers() !== false : true;
+		}
+		function changed() {
+			if (typeof options.onChange === "function") options.onChange();
+		}
+		function isOpen() {
+			return state.open;
+		}
+		function open(context) {
+			if (!container) return;
+			var supported = modes();
+			stopPolling();
+			state = {
+				open: true,
 				query: "",
 				selected: null,
-				mode: "blind",
+				mode: supported.length ? supported[0] : "blind",
 				dialMode: "number",
 				entries: [],
 				loading: false,
 				error: "",
 				consult: null
 			};
-			var parts = {};
-			var pollTimer = null;
-			var telInput = null;
-			function modes() {
-				return typeof options.modes === "function" ? options.modes() : ["blind"];
-			}
-			function extensionName(number) {
-				return number && typeof options.extensionName === "function" ? options.extensionName(number) || "" : "";
-			}
-			function allowNumbers() {
-				return typeof options.allowNumbers === "function" ? options.allowNumbers() !== false : true;
-			}
-			function changed() {
-				if (typeof options.onChange === "function") options.onChange();
-			}
-			function isOpen() {
-				return state.open;
-			}
-			function open(context) {
-				if (!container) return;
-				var supported = modes();
-				stopPolling();
-				state = {
-					open: true,
-					query: "",
-					selected: null,
-					mode: supported.length ? supported[0] : "blind",
-					dialMode: "number",
-					entries: [],
-					loading: false,
-					error: "",
-					consult: null
-				};
-				var blocked = typeof options.blockedReason === "function" ? options.blockedReason() : "";
-				if (blocked) {
-					renderBlocked(context || {}, blocked);
-					changed();
-					return;
-				}
-				renderShell(context || {});
-				loadDirectory();
+			var blocked = typeof options.blockedReason === "function" ? options.blockedReason() : "";
+			if (blocked) {
+				renderBlocked(context || {}, blocked);
 				changed();
-				if (parts.input) parts.input.focus();
+				return;
 			}
-			function releaseNumberInput() {
-				if (telInput && typeof telInput.destroy === "function") try {
-					telInput.destroy();
-				} catch (error) {}
-				telInput = null;
+			renderShell(context || {});
+			loadDirectory();
+			changed();
+			if (parts.input) parts.input.focus();
+		}
+		function releaseNumberInput() {
+			if (telInput && typeof telInput.destroy === "function") try {
+				telInput.destroy();
+			} catch (error) {}
+			telInput = null;
+		}
+		function close() {
+			if (!state.open) return;
+			stopPolling();
+			releaseNumberInput();
+			state.open = false;
+			state.entries = [];
+			state.consult = null;
+			if (container) {
+				container.innerHTML = "";
+				container.classList.remove("telephony-soft-phone__transfer-panel--extension");
 			}
-			function close() {
+			parts = {};
+			changed();
+		}
+		function loadDirectory() {
+			var pending = typeof options.loadDirectory === "function" ? options.loadDirectory() : null;
+			if (!pending || typeof pending.then !== "function") {
+				renderResults();
+				return;
+			}
+			state.loading = true;
+			renderResults();
+			pending.then(function(entries) {
 				if (!state.open) return;
-				stopPolling();
-				releaseNumberInput();
-				state.open = false;
+				state.entries = Array.isArray(entries) ? entries : [];
+			}).catch(function() {
 				state.entries = [];
-				state.consult = null;
-				if (container) {
-					container.innerHTML = "";
-					container.classList.remove("telephony-soft-phone__transfer-panel--extension");
+			}).then(function() {
+				state.loading = false;
+				if (state.open && !state.consult) {
+					renderModes();
+					renderResults();
 				}
-				parts = {};
-				changed();
-			}
-			function loadDirectory() {
-				var pending = typeof options.loadDirectory === "function" ? options.loadDirectory() : null;
-				if (!pending || typeof pending.then !== "function") {
-					renderResults();
-					return;
-				}
-				state.loading = true;
-				renderResults();
-				pending.then(function(entries) {
-					if (!state.open) return;
-					state.entries = Array.isArray(entries) ? entries : [];
-				}).catch(function() {
-					state.entries = [];
-				}).then(function() {
-					state.loading = false;
-					if (state.open && !state.consult) {
-						renderModes();
-						renderResults();
-					}
-				});
-			}
-			function headerHtml(context) {
-				var title = context.callLabel ? format(label(strings, "transferCallOf", "Transfer {0}"), context.callLabel) : label(strings, "transferTitle", "Transfer call");
-				return "<div class=\"telephony-soft-phone__transfer-header\"><button type=\"button\" class=\"telephony-soft-phone__settings-back\" data-telephony-transfer-back title=\"" + escapeHtml(label(strings, "back", "Back")) + "\" aria-label=\"" + escapeHtml(label(strings, "back", "Back")) + "\"><i class=\"fa-solid fa-arrow-left\" aria-hidden=\"true\"></i></button><span class=\"telephony-soft-phone__transfer-title\" data-telephony-transfer-title>" + escapeHtml(title) + "</span></div>";
-			}
-			function renderBlocked(context, reason) {
-				container.innerHTML = headerHtml(context) + "<div class=\"telephony-soft-phone__transfer-blocked\" data-telephony-transfer-blocked=\"" + escapeHtml(reason) + "\" role=\"status\"><i class=\"fa-solid fa-circle-info\" aria-hidden=\"true\"></i> " + escapeHtml(refusalMessage(reason)) + "</div><div class=\"telephony-soft-phone__transfer-actions\"><button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-telephony-transfer-cancel>" + escapeHtml(label(strings, "back", "Back")) + "</button></div>";
-				parts = {};
-				container.querySelector("[data-telephony-transfer-back]").addEventListener("click", close);
-				container.querySelector("[data-telephony-transfer-cancel]").addEventListener("click", close);
-			}
-			function renderShell(context) {
-				container.innerHTML = headerHtml(context) + "<div data-telephony-transfer-modes-slot></div><div class=\"telephony-soft-phone__transfer-entry\"><input type=\"tel\" class=\"telephony-soft-phone__transfer-input\" data-telephony-transfer-input autocomplete=\"off\" /><button type=\"button\" class=\"telephony-soft-phone__dial-mode\" data-telephony-transfer-dial-mode aria-pressed=\"false\"><i class=\"fa-solid fa-hashtag\" aria-hidden=\"true\"></i> <span data-telephony-transfer-dial-mode-label></span></button></div><div class=\"telephony-soft-phone__transfer-error\" data-telephony-transfer-error role=\"alert\" hidden></div><div class=\"telephony-soft-phone__transfer-results\" data-telephony-transfer-results></div><div class=\"telephony-soft-phone__transfer-actions\" data-telephony-transfer-actions><button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-telephony-transfer-cancel>" + escapeHtml(label(strings, "cancel", "Cancel")) + "</button><button type=\"button\" class=\"btn btn-sm btn-primary\" data-telephony-transfer-confirm>" + escapeHtml(label(strings, "transfer", "Transfer")) + "</button></div>";
-				parts = {
-					back: container.querySelector("[data-telephony-transfer-back]"),
-					modesSlot: container.querySelector("[data-telephony-transfer-modes-slot]"),
-					entry: container.querySelector(".telephony-soft-phone__transfer-entry"),
-					input: container.querySelector("[data-telephony-transfer-input]"),
-					error: container.querySelector("[data-telephony-transfer-error]"),
-					results: container.querySelector("[data-telephony-transfer-results]"),
-					actions: container.querySelector("[data-telephony-transfer-actions]"),
-					confirm: container.querySelector("[data-telephony-transfer-confirm]"),
-					dialMode: container.querySelector("[data-telephony-transfer-dial-mode]"),
-					dialModeLabel: container.querySelector("[data-telephony-transfer-dial-mode-label]"),
-					hint: null,
-					modes: []
-				};
-				applyDialModeInput();
-				parts.dialMode.addEventListener("click", function() {
-					setDialMode(state.dialMode === "extension" ? "number" : "extension");
-				});
-				renderDialMode();
-				parts.back.addEventListener("click", close);
-				container.querySelector("[data-telephony-transfer-cancel]").addEventListener("click", close);
-				parts.confirm.addEventListener("click", submit);
-				parts.input.addEventListener("input", function() {
-					state.query = parts.input.value;
-					state.selected = null;
-					setError("");
-					renderResults();
-				});
-				parts.input.addEventListener("keydown", function(event) {
-					if (event.key === "Enter") {
-						event.preventDefault();
-						submit();
-					} else if (event.key === "Escape") {
-						event.preventDefault();
-						close();
-					}
-				});
-				parts.results.addEventListener("click", function(event) {
-					var target = event.target && event.target.closest ? event.target.closest("[data-telephony-transfer-option]") : null;
-					if (!target) return;
-					var destination = target.getAttribute("data-telephony-directory-destination");
-					if (destination !== null) {
-						var entry = visibleEntries("").filter(function(candidate) {
-							return candidate.destination === destination;
-						})[0];
-						state.selected = state.selected && entry && state.selected.destination === entry.destination ? null : entry || null;
-					} else state.selected = null;
-					setError("");
-					renderResults();
-					if (target.hasAttribute("data-telephony-transfer-number")) submit();
-				});
-				renderModes();
-			}
-			function renderModes() {
-				if (!parts.modesSlot) return;
-				var supported = modes();
-				if (supported.indexOf(state.mode) === -1) state.mode = supported.length ? supported[0] : "blind";
-				parts.modesSlot.innerHTML = supported.length > 1 ? "<div class=\"telephony-soft-phone__transfer-modes\" role=\"radiogroup\" aria-label=\"" + escapeHtml(label(strings, "transferType", "Transfer type")) + "\">" + supported.map(function(mode) {
-					var text = mode === "warm" ? label(strings, "transferWarm", "Warm") : label(strings, "transferBlind", "Blind");
-					return "<button type=\"button\" role=\"radio\" class=\"telephony-soft-phone__transfer-mode\" data-telephony-transfer-mode=\"" + mode + "\" aria-checked=\"false\">" + escapeHtml(text) + "</button>";
-				}).join("") + "</div><div class=\"telephony-soft-phone__transfer-hint\" data-telephony-transfer-mode-hint></div>" : "";
-				parts.hint = parts.modesSlot.querySelector("[data-telephony-transfer-mode-hint]");
-				parts.modes = Array.prototype.slice.call(parts.modesSlot.querySelectorAll("[data-telephony-transfer-mode]"));
-				parts.modes.forEach(function(button) {
-					button.addEventListener("click", function() {
-						state.mode = button.getAttribute("data-telephony-transfer-mode");
-						setError("");
-						renderMode();
-					});
-				});
-				renderMode();
-			}
-			function renderMode() {
-				(parts.modes || []).forEach(function(button) {
-					var selected = button.getAttribute("data-telephony-transfer-mode") === state.mode;
-					button.classList.toggle("is-active", selected);
-					button.setAttribute("aria-checked", selected ? "true" : "false");
-				});
-				if (parts.hint) parts.hint.textContent = state.mode === "warm" ? label(strings, "transferWarmHint", "You speak to them before the call is handed over.") : label(strings, "transferBlindHint", "The call is sent straight to them.");
-			}
-			function setDialMode(dialMode) {
-				state.dialMode = dialMode === "extension" ? "extension" : "number";
-				state.query = "";
+			});
+		}
+		function headerHtml(context) {
+			var title = context.callLabel ? format$1(label$1(strings, "transferCallOf", "Transfer {0}"), context.callLabel) : label$1(strings, "transferTitle", "Transfer call");
+			return "<div class=\"telephony-soft-phone__transfer-header\"><button type=\"button\" class=\"telephony-soft-phone__settings-back\" data-telephony-transfer-back title=\"" + escapeHtml(label$1(strings, "back", "Back")) + "\" aria-label=\"" + escapeHtml(label$1(strings, "back", "Back")) + "\"><i class=\"fa-solid fa-arrow-left\" aria-hidden=\"true\"></i></button><span class=\"telephony-soft-phone__transfer-title\" data-telephony-transfer-title>" + escapeHtml(title) + "</span></div>";
+		}
+		function renderBlocked(context, reason) {
+			container.innerHTML = headerHtml(context) + "<div class=\"telephony-soft-phone__transfer-blocked\" data-telephony-transfer-blocked=\"" + escapeHtml(reason) + "\" role=\"status\"><i class=\"fa-solid fa-circle-info\" aria-hidden=\"true\"></i> " + escapeHtml(refusalMessage(reason)) + "</div><div class=\"telephony-soft-phone__transfer-actions\"><button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-telephony-transfer-cancel>" + escapeHtml(label$1(strings, "back", "Back")) + "</button></div>";
+			parts = {};
+			container.querySelector("[data-telephony-transfer-back]").addEventListener("click", close);
+			container.querySelector("[data-telephony-transfer-cancel]").addEventListener("click", close);
+		}
+		function renderShell(context) {
+			container.innerHTML = headerHtml(context) + "<div data-telephony-transfer-modes-slot></div><div class=\"telephony-soft-phone__transfer-entry\"><input type=\"tel\" class=\"telephony-soft-phone__transfer-input\" data-telephony-transfer-input autocomplete=\"off\" /><button type=\"button\" class=\"telephony-soft-phone__dial-mode\" data-telephony-transfer-dial-mode aria-pressed=\"false\"><i class=\"fa-solid fa-hashtag\" aria-hidden=\"true\"></i> <span data-telephony-transfer-dial-mode-label></span></button></div><div class=\"telephony-soft-phone__transfer-error\" data-telephony-transfer-error role=\"alert\" hidden></div><div class=\"telephony-soft-phone__transfer-results\" data-telephony-transfer-results></div><div class=\"telephony-soft-phone__transfer-actions\" data-telephony-transfer-actions><button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-telephony-transfer-cancel>" + escapeHtml(label$1(strings, "cancel", "Cancel")) + "</button><button type=\"button\" class=\"btn btn-sm btn-primary\" data-telephony-transfer-confirm>" + escapeHtml(label$1(strings, "transfer", "Transfer")) + "</button></div>";
+			parts = {
+				back: container.querySelector("[data-telephony-transfer-back]"),
+				modesSlot: container.querySelector("[data-telephony-transfer-modes-slot]"),
+				entry: container.querySelector(".telephony-soft-phone__transfer-entry"),
+				input: container.querySelector("[data-telephony-transfer-input]"),
+				error: container.querySelector("[data-telephony-transfer-error]"),
+				results: container.querySelector("[data-telephony-transfer-results]"),
+				actions: container.querySelector("[data-telephony-transfer-actions]"),
+				confirm: container.querySelector("[data-telephony-transfer-confirm]"),
+				dialMode: container.querySelector("[data-telephony-transfer-dial-mode]"),
+				dialModeLabel: container.querySelector("[data-telephony-transfer-dial-mode-label]"),
+				hint: null,
+				modes: []
+			};
+			applyDialModeInput();
+			parts.dialMode.addEventListener("click", function() {
+				setDialMode(state.dialMode === "extension" ? "number" : "extension");
+			});
+			renderDialMode();
+			parts.back.addEventListener("click", close);
+			container.querySelector("[data-telephony-transfer-cancel]").addEventListener("click", close);
+			parts.confirm.addEventListener("click", submit);
+			parts.input.addEventListener("input", function() {
+				state.query = parts.input.value;
 				state.selected = null;
-				if (parts.input) parts.input.value = "";
 				setError("");
-				applyDialModeInput();
-				renderDialMode();
 				renderResults();
-				if (parts.input) parts.input.focus();
-			}
-			function applyDialModeInput() {
-				releaseNumberInput();
-				if (!parts.input) return;
-				parts.input.setAttribute("type", state.dialMode === "extension" ? "text" : "tel");
-				telInput = state.dialMode !== "extension" && typeof options.enhanceNumberInput === "function" ? options.enhanceNumberInput(parts.input) || null : null;
-			}
-			function ownExtensions() {
-				return typeof options.ownExtensions === "function" ? options.ownExtensions() || [] : [];
-			}
-			function renderDialMode() {
-				var extension = state.dialMode === "extension";
-				container.classList.toggle("telephony-soft-phone__transfer-panel--extension", extension);
-				if (parts.input) {
-					parts.input.setAttribute("inputmode", extension ? "text" : "tel");
-					parts.input.setAttribute("data-telephony-transfer-dial-mode-value", state.dialMode);
-					parts.input.setAttribute("placeholder", extension ? label(strings, "transferExtensionPlaceholder", "Search a name, or enter an extension") : label(strings, "transferSearchPlaceholder", "Search a name, or enter a number"));
-					parts.input.setAttribute("aria-label", extension ? label(strings, "transferExtensionDestination", "Extension to transfer to") : label(strings, "transferDestination", "Transfer destination"));
+			});
+			parts.input.addEventListener("keydown", function(event) {
+				if (event.key === "Enter") {
+					event.preventDefault();
+					submit();
+				} else if (event.key === "Escape") {
+					event.preventDefault();
+					close();
 				}
-				if (parts.dialMode) parts.dialMode.setAttribute("aria-pressed", extension ? "true" : "false");
-				if (parts.dialModeLabel) parts.dialModeLabel.textContent = extension ? label(strings, "transferToPhoneNumber", "Transfer to a phone number") : label(strings, "transferToExtension", "Transfer to an extension");
-			}
-			function entryHtml(entry) {
-				var selected = !!(state.selected && state.selected.destination === entry.destination);
-				var icon = KIND_ICONS[entry.kind] || "fa-user";
-				var presence = entry.presence ? " data-telephony-presence=\"" + escapeHtml(entry.presence) + "\"" : "";
-				var status = entry.status ? "<span class=\"telephony-soft-phone__directory-presence telephony-soft-phone__directory-presence--" + escapeHtml(String(entry.presence || "").toLowerCase()) + "\">" + escapeHtml(entry.status) + "</span>" : "";
-				return "<button type=\"button\" class=\"telephony-soft-phone__directory-entry telephony-soft-phone__transfer-option" + (selected ? " is-selected" : "") + (entry.disabled ? " is-unavailable" : "") + "\" data-telephony-transfer-option data-telephony-directory-destination=\"" + escapeHtml(entry.destination) + "\"" + presence + " aria-pressed=\"" + (selected ? "true" : "false") + "\"" + (entry.disabled ? " aria-disabled=\"true\"" : "") + "><i class=\"fa-solid " + icon + "\" aria-hidden=\"true\"></i><span class=\"telephony-soft-phone__directory-name\">" + escapeHtml(entry.name) + "</span>" + status + "<span class=\"telephony-soft-phone__directory-destination\">" + escapeHtml(entry.detail) + "</span></button>";
-			}
-			function visibleEntries(query) {
-				return softPhone.filterTransferTargets(state.entries, query).filter(function(entry) {
-					return !softPhone.ownExtensionRefusal({
-						selected: entry,
-						ownExtensions: ownExtensions()
-					});
-				});
-			}
-			function renderResults() {
-				if (!parts.results || state.consult) return;
-				var matches = visibleEntries(state.query);
-				var html = "";
-				var query = String(state.query || "").trim();
-				var extensionMode = state.dialMode === "extension";
-				var ownTyped = softPhone.ownExtensionRefusal({
-					dialMode: state.dialMode,
-					query,
-					ownExtensions: ownExtensions()
-				});
-				if (ownTyped) html += "<div class=\"telephony-soft-phone__directory-empty\" data-telephony-transfer-own>" + escapeHtml(refusalMessage(ownTyped)) + "</div>";
-				else if (query && softPhone.isNumberLike(query) && (extensionMode || allowNumbers())) {
-					var typed = extensionMode ? softPhone.transferToExtensionLabel(strings, softPhone.readExtension(query) || query, extensionName(softPhone.readExtension(query))) : format(label(strings, "transferToNumber", "Transfer to {0}"), formatNumber(query) || query);
-					html += "<button type=\"button\" class=\"telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number\" data-telephony-transfer-option data-telephony-transfer-number><i class=\"fa-solid " + (extensionMode ? "fa-hashtag" : "fa-phone") + "\" aria-hidden=\"true\"></i><span class=\"telephony-soft-phone__directory-name\">" + escapeHtml(typed) + "</span></button>";
-				}
-				if (state.loading) html += "<div class=\"telephony-soft-phone__directory-empty\">" + escapeHtml(label(strings, "directoryLoading", "Loading the directory...")) + "</div>";
-				else if (matches.length) {
-					var group = null;
-					matches.forEach(function(entry) {
-						var entryGroup = entry.group || label(strings, "directory", "Directory");
-						if (entryGroup !== group) {
-							group = entryGroup;
-							html += "<div class=\"telephony-soft-phone__transfer-group\" role=\"presentation\">" + escapeHtml(group) + "</div>";
-						}
-						html += entryHtml(entry);
-					});
-				} else if (state.entries.length && query) html += "<div class=\"telephony-soft-phone__directory-empty\">" + escapeHtml(label(strings, "directoryNoMatch", "Nobody in the directory matches.")) + "</div>";
-				else if (!query) html += "<div class=\"telephony-soft-phone__directory-empty\">" + escapeHtml(label(strings, state.entries.length ? "directoryEmpty" : "transferEnterNumber", state.entries.length ? "No directory entries are available." : "Enter the number or extension to transfer to.")) + "</div>";
-				parts.results.innerHTML = html;
-				if (parts.confirm) {
-					var text = state.selected ? format(label(strings, "transferToNumber", "Transfer to {0}"), state.selected.name) : label(strings, "transfer", "Transfer");
-					parts.confirm.textContent = text;
-				}
-			}
-			function setError(message) {
-				state.error = message || "";
-				if (parts.error) {
-					parts.error.textContent = state.error;
-					parts.error.hidden = !state.error;
-				}
-			}
-			function refusalMessage(refused) {
-				return softPhone.transferRefusalMessage(strings, refused);
-			}
-			function resolveTarget() {
-				var typed = state.selected ? {
-					entry: null,
-					refused: ""
-				} : softPhone.pickTypedMatch(visibleEntries(state.query), state.query);
-				if (typed.entry) {
-					state.selected = typed.entry;
-					renderResults();
-				}
-				var own = typed.refused || softPhone.ownExtensionRefusal({
-					dialMode: state.dialMode,
-					query: state.query,
-					selected: state.selected,
-					ownExtensions: ownExtensions()
-				});
-				if (own) return {
-					target: null,
-					refused: own
-				};
-				state.number = state.dialMode === "extension" || !parts.input ? null : softPhone.readTransferNumber(parts.input.value, telInput);
-				var resolved = typeof options.resolveTarget === "function" ? options.resolveTarget(state) : null;
-				if (resolved) return {
-					target: resolved,
-					refused: resolved.refused
-				};
-				var target = softPhone.resolveTransferTarget({
-					query: state.query,
-					selected: state.selected,
-					dialMode: state.dialMode,
-					number: state.number,
-					ownNumbers: typeof options.ownNumbers === "function" ? options.ownNumbers() : []
-				});
-				return {
-					target,
-					refused: target.refused
-				};
-			}
-			function submit() {
-				if (state.consult) return;
-				var resolved = resolveTarget();
-				if (resolved.refused) {
-					setError(refusalMessage(resolved.refused));
-					if (parts.input) parts.input.focus();
-					return;
-				}
+			});
+			parts.results.addEventListener("click", function(event) {
+				var target = event.target && event.target.closest ? event.target.closest("[data-telephony-transfer-option]") : null;
+				if (!target) return;
+				var destination = target.getAttribute("data-telephony-directory-destination");
+				if (destination !== null) {
+					var entry = visibleEntries("").filter(function(candidate) {
+						return candidate.destination === destination;
+					})[0];
+					state.selected = state.selected && entry && state.selected.destination === entry.destination ? null : entry || null;
+				} else state.selected = null;
 				setError("");
-				var targetName = state.selected ? state.selected.name : resolved.target && resolved.target.label || "";
-				var submitted = state;
-				var pending = typeof options.transfer === "function" ? options.transfer(resolved.target, softPhone.transferModeValue(state.mode), state.mode) : null;
-				submitted.submitting = true;
-				Promise.resolve(pending).then(function(result) {
-					submitted.submitting = false;
-					if (!state.open) return;
-					if (result && result.consult && result.consult.live) {
-						showConsult(result.consult, targetName);
-						return;
+				renderResults();
+				if (target.hasAttribute("data-telephony-transfer-number")) submit();
+			});
+			renderModes();
+		}
+		function renderModes() {
+			if (!parts.modesSlot) return;
+			var supported = modes();
+			if (supported.indexOf(state.mode) === -1) state.mode = supported.length ? supported[0] : "blind";
+			parts.modesSlot.innerHTML = supported.length > 1 ? "<div class=\"telephony-soft-phone__transfer-modes\" role=\"radiogroup\" aria-label=\"" + escapeHtml(label$1(strings, "transferType", "Transfer type")) + "\">" + supported.map(function(mode) {
+				var text = mode === "warm" ? label$1(strings, "transferWarm", "Warm") : label$1(strings, "transferBlind", "Blind");
+				return "<button type=\"button\" role=\"radio\" class=\"telephony-soft-phone__transfer-mode\" data-telephony-transfer-mode=\"" + mode + "\" aria-checked=\"false\">" + escapeHtml(text) + "</button>";
+			}).join("") + "</div><div class=\"telephony-soft-phone__transfer-hint\" data-telephony-transfer-mode-hint></div>" : "";
+			parts.hint = parts.modesSlot.querySelector("[data-telephony-transfer-mode-hint]");
+			parts.modes = Array.prototype.slice.call(parts.modesSlot.querySelectorAll("[data-telephony-transfer-mode]"));
+			parts.modes.forEach(function(button) {
+				button.addEventListener("click", function() {
+					state.mode = button.getAttribute("data-telephony-transfer-mode");
+					setError("");
+					renderMode();
+				});
+			});
+			renderMode();
+		}
+		function renderMode() {
+			(parts.modes || []).forEach(function(button) {
+				var selected = button.getAttribute("data-telephony-transfer-mode") === state.mode;
+				button.classList.toggle("is-active", selected);
+				button.setAttribute("aria-checked", selected ? "true" : "false");
+			});
+			if (parts.hint) parts.hint.textContent = state.mode === "warm" ? label$1(strings, "transferWarmHint", "You speak to them before the call is handed over.") : label$1(strings, "transferBlindHint", "The call is sent straight to them.");
+		}
+		function setDialMode(dialMode) {
+			state.dialMode = dialMode === "extension" ? "extension" : "number";
+			state.query = "";
+			state.selected = null;
+			if (parts.input) parts.input.value = "";
+			setError("");
+			applyDialModeInput();
+			renderDialMode();
+			renderResults();
+			if (parts.input) parts.input.focus();
+		}
+		function applyDialModeInput() {
+			releaseNumberInput();
+			if (!parts.input) return;
+			parts.input.setAttribute("type", state.dialMode === "extension" ? "text" : "tel");
+			telInput = state.dialMode !== "extension" && typeof options.enhanceNumberInput === "function" ? options.enhanceNumberInput(parts.input) || null : null;
+		}
+		function ownExtensions() {
+			return typeof options.ownExtensions === "function" ? options.ownExtensions() || [] : [];
+		}
+		function renderDialMode() {
+			var extension = state.dialMode === "extension";
+			container.classList.toggle("telephony-soft-phone__transfer-panel--extension", extension);
+			if (parts.input) {
+				parts.input.setAttribute("inputmode", extension ? "text" : "tel");
+				parts.input.setAttribute("data-telephony-transfer-dial-mode-value", state.dialMode);
+				parts.input.setAttribute("placeholder", extension ? label$1(strings, "transferExtensionPlaceholder", "Search a name, or enter an extension") : label$1(strings, "transferSearchPlaceholder", "Search a name, or enter a number"));
+				parts.input.setAttribute("aria-label", extension ? label$1(strings, "transferExtensionDestination", "Extension to transfer to") : label$1(strings, "transferDestination", "Transfer destination"));
+			}
+			if (parts.dialMode) parts.dialMode.setAttribute("aria-pressed", extension ? "true" : "false");
+			if (parts.dialModeLabel) parts.dialModeLabel.textContent = extension ? label$1(strings, "transferToPhoneNumber", "Transfer to a phone number") : label$1(strings, "transferToExtension", "Transfer to an extension");
+		}
+		function entryHtml(entry) {
+			var selected = !!(state.selected && state.selected.destination === entry.destination);
+			var icon = KIND_ICONS[entry.kind] || "fa-user";
+			var presence = entry.presence ? " data-telephony-presence=\"" + escapeHtml(entry.presence) + "\"" : "";
+			var status = entry.status ? "<span class=\"telephony-soft-phone__directory-presence telephony-soft-phone__directory-presence--" + escapeHtml(String(entry.presence || "").toLowerCase()) + "\">" + escapeHtml(entry.status) + "</span>" : "";
+			return "<button type=\"button\" class=\"telephony-soft-phone__directory-entry telephony-soft-phone__transfer-option" + (selected ? " is-selected" : "") + (entry.disabled ? " is-unavailable" : "") + "\" data-telephony-transfer-option data-telephony-directory-destination=\"" + escapeHtml(entry.destination) + "\"" + presence + " aria-pressed=\"" + (selected ? "true" : "false") + "\"" + (entry.disabled ? " aria-disabled=\"true\"" : "") + "><i class=\"fa-solid " + icon + "\" aria-hidden=\"true\"></i><span class=\"telephony-soft-phone__directory-name\">" + escapeHtml(entry.name) + "</span>" + status + "<span class=\"telephony-soft-phone__directory-destination\">" + escapeHtml(entry.detail) + "</span></button>";
+		}
+		function visibleEntries(query) {
+			return filterTransferTargets(state.entries, query).filter(function(entry) {
+				return !ownExtensionRefusal({
+					selected: entry,
+					ownExtensions: ownExtensions()
+				});
+			});
+		}
+		function renderResults() {
+			if (!parts.results || state.consult) return;
+			var matches = visibleEntries(state.query);
+			var html = "";
+			var query = String(state.query || "").trim();
+			var extensionMode = state.dialMode === "extension";
+			var ownTyped = ownExtensionRefusal({
+				dialMode: state.dialMode,
+				query,
+				ownExtensions: ownExtensions()
+			});
+			if (ownTyped) html += "<div class=\"telephony-soft-phone__directory-empty\" data-telephony-transfer-own>" + escapeHtml(refusalMessage(ownTyped)) + "</div>";
+			else if (query && isNumberLike(query) && (extensionMode || allowNumbers())) {
+				var typed = extensionMode ? transferToExtensionLabel(strings, readExtension(query) || query, extensionName(readExtension(query))) : format$1(label$1(strings, "transferToNumber", "Transfer to {0}"), formatNumber(query) || query);
+				html += "<button type=\"button\" class=\"telephony-soft-phone__transfer-option telephony-soft-phone__transfer-option--number\" data-telephony-transfer-option data-telephony-transfer-number><i class=\"fa-solid " + (extensionMode ? "fa-hashtag" : "fa-phone") + "\" aria-hidden=\"true\"></i><span class=\"telephony-soft-phone__directory-name\">" + escapeHtml(typed) + "</span></button>";
+			}
+			if (state.loading) html += "<div class=\"telephony-soft-phone__directory-empty\">" + escapeHtml(label$1(strings, "directoryLoading", "Loading the directory...")) + "</div>";
+			else if (matches.length) {
+				var group = null;
+				matches.forEach(function(entry) {
+					var entryGroup = entry.group || label$1(strings, "directory", "Directory");
+					if (entryGroup !== group) {
+						group = entryGroup;
+						html += "<div class=\"telephony-soft-phone__transfer-group\" role=\"presentation\">" + escapeHtml(group) + "</div>";
 					}
-					if (result && result.succeeded !== false) close();
-					else if (result && result.error) setError(result.error);
-				}).catch(function() {
-					submitted.submitting = false;
+					html += entryHtml(entry);
 				});
+			} else if (state.entries.length && query) html += "<div class=\"telephony-soft-phone__directory-empty\">" + escapeHtml(label$1(strings, "directoryNoMatch", "Nobody in the directory matches.")) + "</div>";
+			else if (!query) html += "<div class=\"telephony-soft-phone__directory-empty\">" + escapeHtml(label$1(strings, state.entries.length ? "directoryEmpty" : "transferEnterNumber", state.entries.length ? "No directory entries are available." : "Enter the number or extension to transfer to.")) + "</div>";
+			parts.results.innerHTML = html;
+			if (parts.confirm) {
+				var text = state.selected ? format$1(label$1(strings, "transferToNumber", "Transfer to {0}"), state.selected.name) : label$1(strings, "transfer", "Transfer");
+				parts.confirm.textContent = text;
 			}
-			function isBusy() {
-				return !!(state.open && (state.submitting || state.consult && state.consult.view && state.consult.view.live));
+		}
+		function setError(message) {
+			state.error = message || "";
+			if (parts.error) {
+				parts.error.textContent = state.error;
+				parts.error.hidden = !state.error;
 			}
-			function stopPolling() {
-				if (pollTimer) {
-					root.clearTimeout(pollTimer);
-					pollTimer = null;
-				}
+		}
+		function refusalMessage(refused) {
+			return transferRefusalMessage(strings, refused);
+		}
+		function resolveTarget() {
+			var typed = state.selected ? {
+				entry: null,
+				refused: ""
+			} : pickTypedMatch(visibleEntries(state.query), state.query);
+			if (typed.entry) {
+				state.selected = typed.entry;
+				renderResults();
 			}
-			function schedulePoll() {
-				stopPolling();
-				if (!state.consult || !state.consult.view.live || typeof options.getConsult !== "function") return;
-				pollTimer = root.setTimeout(function() {
-					pollTimer = null;
-					if (!state.open || !state.consult) return;
-					Promise.resolve(options.getConsult(state.consult.consult)).then(function(result) {
-						if (state.open && state.consult && result && result.consult) updateConsult(result.consult, false);
-					}).catch(function() {}).then(schedulePoll);
-				}, softPhone.CONSULT_POLL_INTERVAL_MS || 1500);
-			}
-			function showConsult(consult, targetName) {
-				state.consult = {
-					consult,
-					name: targetName,
-					view: null,
-					message: ""
-				};
-				if (parts.modesSlot) parts.modesSlot.innerHTML = "";
-				if (parts.entry) parts.entry.hidden = true;
-				if (parts.back) parts.back.hidden = true;
-				parts.results.innerHTML = "<div class=\"telephony-soft-phone__consult\" data-telephony-consult><i class=\"fa-solid fa-user-clock\" aria-hidden=\"true\"></i><span class=\"telephony-soft-phone__consult-status\" data-telephony-consult-status role=\"status\" aria-live=\"polite\"></span></div>";
-				parts.actions.innerHTML = "<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-telephony-consult-cancel>" + escapeHtml(label(strings, "consultCancel", "Cancel transfer")) + "</button><button type=\"button\" class=\"btn btn-sm btn-primary\" data-telephony-consult-complete>" + escapeHtml(label(strings, "consultComplete", "Complete transfer")) + "</button><button type=\"button\" class=\"btn btn-sm btn-primary\" data-telephony-consult-done hidden>" + escapeHtml(label(strings, "consultDone", "Back to the call")) + "</button>";
-				parts.consultStatus = parts.results.querySelector("[data-telephony-consult-status]");
-				parts.consultCancel = parts.actions.querySelector("[data-telephony-consult-cancel]");
-				parts.consultComplete = parts.actions.querySelector("[data-telephony-consult-complete]");
-				parts.consultDone = parts.actions.querySelector("[data-telephony-consult-done]");
-				parts.consultComplete.addEventListener("click", function() {
-					finishConsult(options.completeConsult);
-				});
-				parts.consultCancel.addEventListener("click", function() {
-					finishConsult(options.cancelConsult);
-				});
-				parts.consultDone.addEventListener("click", close);
-				updateConsult(consult, true);
-			}
-			function updateConsult(consult, byAgent) {
-				var previous = state.consult.view ? state.consult.view.status : "";
-				var view = softPhone.consultView(consult, state.consult.name, strings);
-				state.consult.consult = consult;
-				state.consult.view = view;
-				var message = view.message;
-				if (!view.live && !byAgent && previous) message = softPhone.consultEndedMessage(previous, consult, state.consult.name, strings, { callEnded: !!(consult && consult.callEnded) }) || message;
-				parts.consultStatus.textContent = message;
-				parts.consultComplete.disabled = !view.canComplete;
-				parts.consultCancel.disabled = !view.canCancel;
-				parts.consultComplete.hidden = !view.live || !!(consult && consult.blind);
-				parts.consultCancel.hidden = !view.live;
-				parts.consultDone.hidden = view.live;
-				if (view.live) schedulePoll();
-				else stopPolling();
-			}
-			function finishConsult(command) {
-				if (!state.consult || typeof command !== "function") return;
-				parts.consultComplete.disabled = true;
-				parts.consultCancel.disabled = true;
-				stopPolling();
-				Promise.resolve(command(state.consult.consult)).then(function(result) {
-					if (!state.open || !state.consult) return;
-					if (result && result.succeeded !== false) {
-						close();
-						return;
-					}
-					setError(result && result.error ? result.error : label(strings, "failed", "Call failed"));
-					updateConsult(state.consult.consult, true);
-				}).catch(function() {
-					if (state.open && state.consult) updateConsult(state.consult.consult, true);
-				});
-			}
+			var own = typed.refused || ownExtensionRefusal({
+				dialMode: state.dialMode,
+				query: state.query,
+				selected: state.selected,
+				ownExtensions: ownExtensions()
+			});
+			if (own) return {
+				target: null,
+				refused: own
+			};
+			state.number = state.dialMode === "extension" || !parts.input ? null : readTransferNumber(parts.input.value, telInput);
+			var resolved = typeof options.resolveTarget === "function" ? options.resolveTarget(state) : null;
+			if (resolved) return {
+				target: resolved,
+				refused: resolved.refused
+			};
+			var target = resolveTransferTarget({
+				query: state.query,
+				selected: state.selected,
+				dialMode: state.dialMode,
+				number: state.number,
+				ownNumbers: typeof options.ownNumbers === "function" ? options.ownNumbers() : []
+			});
 			return {
-				open,
-				close,
-				isOpen,
-				isBusy,
-				submit
+				target,
+				refused: target.refused
 			};
 		}
-		softPhone.createTransferPanel = createTransferPanel;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		function submit() {
+			if (state.consult) return;
+			var resolved = resolveTarget();
+			if (resolved.refused) {
+				setError(refusalMessage(resolved.refused));
+				if (parts.input) parts.input.focus();
+				return;
+			}
+			setError("");
+			var targetName = state.selected ? state.selected.name : resolved.target && resolved.target.label || "";
+			var submitted = state;
+			var pending = typeof options.transfer === "function" ? options.transfer(resolved.target, transferModeValue(state.mode), state.mode) : null;
+			submitted.submitting = true;
+			Promise.resolve(pending).then(function(result) {
+				submitted.submitting = false;
+				if (!state.open) return;
+				if (result && result.consult && result.consult.live) {
+					showConsult(result.consult, targetName);
+					return;
+				}
+				if (result && result.succeeded !== false) close();
+				else if (result && result.error) setError(result.error);
+			}).catch(function() {
+				submitted.submitting = false;
+			});
+		}
+		function isBusy() {
+			return !!(state.open && (state.submitting || state.consult && state.consult.view && state.consult.view.live));
+		}
+		function stopPolling() {
+			if (pollTimer) {
+				globalThis.clearTimeout(pollTimer);
+				pollTimer = null;
+			}
+		}
+		function schedulePoll() {
+			stopPolling();
+			if (!state.consult || !state.consult.view.live || typeof options.getConsult !== "function") return;
+			pollTimer = globalThis.setTimeout(function() {
+				pollTimer = null;
+				if (!state.open || !state.consult) return;
+				Promise.resolve(options.getConsult(state.consult.consult)).then(function(result) {
+					if (state.open && state.consult && result && result.consult) updateConsult(result.consult, false);
+				}).catch(function() {}).then(schedulePoll);
+			}, 1500);
+		}
+		function showConsult(consult, targetName) {
+			state.consult = {
+				consult,
+				name: targetName,
+				view: null,
+				message: ""
+			};
+			if (parts.modesSlot) parts.modesSlot.innerHTML = "";
+			if (parts.entry) parts.entry.hidden = true;
+			if (parts.back) parts.back.hidden = true;
+			parts.results.innerHTML = "<div class=\"telephony-soft-phone__consult\" data-telephony-consult><i class=\"fa-solid fa-user-clock\" aria-hidden=\"true\"></i><span class=\"telephony-soft-phone__consult-status\" data-telephony-consult-status role=\"status\" aria-live=\"polite\"></span></div>";
+			parts.actions.innerHTML = "<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-telephony-consult-cancel>" + escapeHtml(label$1(strings, "consultCancel", "Cancel transfer")) + "</button><button type=\"button\" class=\"btn btn-sm btn-primary\" data-telephony-consult-complete>" + escapeHtml(label$1(strings, "consultComplete", "Complete transfer")) + "</button><button type=\"button\" class=\"btn btn-sm btn-primary\" data-telephony-consult-done hidden>" + escapeHtml(label$1(strings, "consultDone", "Back to the call")) + "</button>";
+			parts.consultStatus = parts.results.querySelector("[data-telephony-consult-status]");
+			parts.consultCancel = parts.actions.querySelector("[data-telephony-consult-cancel]");
+			parts.consultComplete = parts.actions.querySelector("[data-telephony-consult-complete]");
+			parts.consultDone = parts.actions.querySelector("[data-telephony-consult-done]");
+			parts.consultComplete.addEventListener("click", function() {
+				finishConsult(options.completeConsult);
+			});
+			parts.consultCancel.addEventListener("click", function() {
+				finishConsult(options.cancelConsult);
+			});
+			parts.consultDone.addEventListener("click", close);
+			updateConsult(consult, true);
+		}
+		function updateConsult(consult, byAgent) {
+			var previous = state.consult.view ? state.consult.view.status : "";
+			var view = consultView(consult, state.consult.name, strings);
+			state.consult.consult = consult;
+			state.consult.view = view;
+			var message = view.message;
+			if (!view.live && !byAgent && previous) message = consultEndedMessage(previous, consult, state.consult.name, strings, { callEnded: !!(consult && consult.callEnded) }) || message;
+			parts.consultStatus.textContent = message;
+			parts.consultComplete.disabled = !view.canComplete;
+			parts.consultCancel.disabled = !view.canCancel;
+			parts.consultComplete.hidden = !view.live || !!(consult && consult.blind);
+			parts.consultCancel.hidden = !view.live;
+			parts.consultDone.hidden = view.live;
+			if (view.live) schedulePoll();
+			else stopPolling();
+		}
+		function finishConsult(command) {
+			if (!state.consult || typeof command !== "function") return;
+			parts.consultComplete.disabled = true;
+			parts.consultCancel.disabled = true;
+			stopPolling();
+			Promise.resolve(command(state.consult.consult)).then(function(result) {
+				if (!state.open || !state.consult) return;
+				if (result && result.succeeded !== false) {
+					close();
+					return;
+				}
+				setError(result && result.error ? result.error : label$1(strings, "failed", "Call failed"));
+				updateConsult(state.consult.consult, true);
+			}).catch(function() {
+				if (state.open && state.consult) updateConsult(state.consult.consult, true);
+			});
+		}
+		return {
+			open,
+			close,
+			isOpen,
+			isBusy,
+			submit
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-service.js
+	function label(strings, key, fallback) {
+		return strings && typeof strings[key] === "string" && strings[key] ? strings[key] : fallback;
+	}
+	function format(template, value) {
+		return String(template).replace("{0}", value);
+	}
+	function presenceLabel(presence, strings) {
+		return label(strings, "presence" + String(presence || ""), String(presence || ""));
+	}
+	function serviceDirectoryEntries(directory, strings) {
+		if (!directory) return [];
+		var entries = [];
+		var agentsGroup = label(strings, "transferGroupAgents", "Agents");
+		var queuesGroup = label(strings, "transferGroupQueues", "Queues");
+		var externalGroup = label(strings, "transferGroupExternal", "Outside numbers");
+		(directory.agents || []).forEach(function(agent) {
+			if (!agent || !agent.id) return;
+			entries.push({
+				id: String(agent.id),
+				name: String(agent.name || agent.id),
+				destination: "agent:" + agent.id,
+				detail: agent.extension ? format(label(strings, "transferExtension", "Ext {0}"), agent.extension) : "",
+				extension: agent.extension ? String(agent.extension) : "",
+				kind: "agent",
+				targetType: "agent",
+				targetId: String(agent.id),
+				group: agentsGroup,
+				presence: String(agent.presence || ""),
+				status: presenceLabel(agent.presence, strings),
+				disabled: agent.available !== true
+			});
+		});
+		(directory.queues || []).forEach(function(queue) {
+			if (!queue || !queue.id) return;
+			entries.push({
+				id: String(queue.id),
+				name: String(queue.name || queue.id),
+				destination: "queue:" + queue.id,
+				detail: format(label(strings, "transferWaiting", "{0} waiting"), Number(queue.waiting) || 0),
+				kind: "queue",
+				targetType: "queue",
+				targetId: String(queue.id),
+				group: queuesGroup,
+				status: "",
+				disabled: false
+			});
+		});
+		(directory.externalDestinations || []).forEach(function(destination) {
+			if (!destination || !destination.id) return;
+			entries.push({
+				id: String(destination.id),
+				name: String(destination.name || destination.number || destination.id),
+				destination: "external:" + destination.id,
+				detail: String(destination.number || ""),
+				kind: "external",
+				targetType: "external",
+				targetId: String(destination.id),
+				group: externalGroup,
+				status: "",
+				disabled: false
+			});
+		});
+		return entries;
+	}
+	function serviceModes(directory) {
+		return directory && directory.supportsConsult ? ["blind", "warm"] : ["blind"];
+	}
+	function resolveServiceTarget(options) {
+		options = options || {};
+		var selected = options.selected;
+		var refuse = function(reason) {
+			return {
+				targetType: "",
+				targetId: "",
+				label: "",
+				refused: reason
+			};
+		};
+		if (selected && selected.targetType) {
+			if (selected.disabled) return refuse("unavailable");
+			if (options.mode === "warm" && selected.targetType === "queue") return refuse("warm-queue");
+			return {
+				targetType: selected.targetType,
+				targetId: selected.targetId,
+				label: selected.name,
+				refused: ""
+			};
+		}
+		var text = options.query == null ? "" : String(options.query).trim();
+		if (options.dialMode === "extension") {
+			if (!text) return refuse("empty");
+			var extension = readExtension(text);
+			return extension ? {
+				targetType: "extension",
+				targetId: extension,
+				label: text,
+				refused: ""
+			} : refuse("invalid-extension");
+		}
+		if (!text || !isNumberLike(text)) return refuse("empty");
+		var directory = options.directory || {};
+		if (!directory.canTransferExternally || !directory.allowExternalNumbers) return refuse("external-not-allowed");
+		var reading = options.number || null;
+		var number = reading ? reading.valid ? String(reading.value || "") : "" : toInternationalNumber(text);
+		if ((options.ownNumbers || []).some(function(own) {
+			return isSameLine(text, own) || isSameLine(number, own);
+		})) return refuse("own-number");
+		if (!number) return refuse("invalid-number");
+		return {
+			targetType: "external",
+			targetId: number,
+			label: text,
+			refused: ""
+		};
+	}
+	function createTransferService(options) {
+		options = options || {};
+		var urls = options.urls || {};
+		var fetchImpl = options.fetch || (typeof globalThis.fetch === "function" ? globalThis.fetch.bind(globalThis) : null);
+		function interactionOf(call) {
+			return call && call.metadata && call.metadata.interactionId ? String(call.metadata.interactionId) : "";
+		}
+		function applies(call) {
+			return !!(fetchImpl && urls.targetsUrl && urls.transferUrl && interactionOf(call));
+		}
+		function read(response) {
+			return Promise.resolve(response.json ? response.json() : null).catch(function() {
+				return null;
+			}).then(function(body) {
+				if (!response.ok) return {
+					succeeded: false,
+					error: body && (body.detail || body.error || body.title) || "The request was refused."
+				};
+				return body || {};
+			});
+		}
+		function send(method, url, body) {
+			var headers = { "Accept": "application/json" };
+			var init = {
+				method,
+				credentials: "same-origin",
+				headers
+			};
+			if (body) {
+				headers["Content-Type"] = "application/json";
+				init.body = JSON.stringify(body);
+			}
+			if (method !== "GET" && options.antiForgeryToken) headers.RequestVerificationToken = options.antiForgeryToken;
+			return fetchImpl(url, init).then(read).catch(function(error) {
+				return {
+					succeeded: false,
+					error: error && error.message ? error.message : String(error)
+				};
+			});
+		}
+		function query(url, parameters) {
+			var pairs = Object.keys(parameters).filter(function(key) {
+				return parameters[key];
+			}).map(function(key) {
+				return encodeURIComponent(key) + "=" + encodeURIComponent(parameters[key]);
+			});
+			return url + (pairs.length ? (url.indexOf("?") === -1 ? "?" : "&") + pairs.join("&") : "");
+		}
+		function loadDirectory(call) {
+			return send("GET", query(urls.targetsUrl, { interactionId: interactionOf(call) })).then(function(body) {
+				if (body && body.succeeded === false) throw new Error(body.error);
+				return body;
+			});
+		}
+		function transfer(call, target) {
+			return send("POST", urls.transferUrl, {
+				interactionId: interactionOf(call),
+				targetType: target.targetType,
+				targetId: target.targetId
+			});
+		}
+		function startConsult(call, target) {
+			return send("POST", urls.consultUrl, {
+				interactionId: interactionOf(call),
+				targetType: target.targetType,
+				targetId: target.targetId
+			});
+		}
+		function getConsult(call, consultId) {
+			return send("GET", query(urls.consultUrl, {
+				interactionId: interactionOf(call),
+				consultId
+			}));
+		}
+		function completeConsult(call, consultId) {
+			return send("POST", urls.consultCompleteUrl, {
+				interactionId: interactionOf(call),
+				consultId
+			});
+		}
+		function cancelConsult(call, consultId) {
+			return send("POST", urls.consultCancelUrl, {
+				interactionId: interactionOf(call),
+				consultId
+			});
+		}
+		return {
+			applies,
+			loadDirectory,
+			transfer,
+			startConsult,
+			getConsult,
+			completeConsult,
+			cancelConsult
+		};
+	}
+	var CALL_CONTEXT_KEYS = [
+		"interactionId",
+		"activityItemId",
+		"queueId",
+		"callSessionId"
+	];
+	function createCallContextMemory() {
+		return {};
+	}
+	function carryCallContext(memory, call) {
+		if (!call || !call.callId || !memory) return call;
+		var metadata = call.metadata || {};
+		var reported = {};
+		CALL_CONTEXT_KEYS.forEach(function(key) {
+			if (metadata[key] != null && metadata[key] !== "") reported[key] = metadata[key];
+		});
+		if (reported.interactionId) {
+			memory[call.callId] = reported;
+			return call;
+		}
+		var remembered = Object.prototype.hasOwnProperty.call(memory, call.callId) ? memory[call.callId] : null;
+		if (!remembered) return call;
+		call.metadata = call.metadata || {};
+		CALL_CONTEXT_KEYS.forEach(function(key) {
+			if (remembered[key] != null && (call.metadata[key] == null || call.metadata[key] === "")) call.metadata[key] = remembered[key];
+		});
+		return call;
+	}
+	function forgetCallContext(memory, callId) {
+		if (memory && callId) delete memory[callId];
+	}
+	var TRANSFER_LEG_HEADER = "x-transfer-leg";
+	var LIVE_STATUSES = ["ringing", "connected"];
+	function text$1(value) {
+		return value == null ? "" : String(value);
+	}
+	function isTrue(value) {
+		return value === true || value === "true" || value === "True";
+	}
+	function readTransferLegTag(options) {
+		options = options || {};
+		var legId = text$1(options.telnyxCallControlId || options.callControlId);
+		var readState = readClientState;
+		var readHeader$1 = readHeader;
+		var state = typeof readState === "function" ? readState(options.clientState || options.client_state) : null;
+		var header = typeof readHeader$1 === "function" ? readHeader$1(options.customHeaders || options.custom_headers, TRANSFER_LEG_HEADER) : "";
+		if (!legId) return null;
+		if (state && state.i === "ob-xfer") return {
+			legId,
+			partyNumber: text$1(state.m),
+			transferredBy: text$1(state.n)
+		};
+		if (header) return {
+			legId,
+			partyNumber: header === "1" ? "" : header,
+			transferredBy: ""
+		};
+		return null;
+	}
+	function providerTransferRequest(callId, target, mode, credentialId) {
+		var request = {
+			callId,
+			to: target && target.destination,
+			mode,
+			isExtension: !!(target && target.isExtension)
+		};
+		if (credentialId) request.metadata = { softPhoneCredentialId: credentialId };
+		return request;
+	}
+	function consultFromCall(call) {
+		var metadata = call && call.metadata;
+		if (!metadata || !metadata.consultId) return null;
+		var status = text$1(metadata.consultStatus) || "cancelled";
+		var consultOf = text$1(metadata.consultOf);
+		return {
+			id: text$1(metadata.consultId),
+			callId: consultOf || text$1(call.callId),
+			status,
+			live: metadata.consultLive === void 0 ? LIVE_STATUSES.indexOf(status) >= 0 : isTrue(metadata.consultLive),
+			callEnded: isTrue(metadata.consultCallEnded),
+			blind: !consultOf && text$1(metadata.consultId) !== text$1(call.callId)
+		};
+	}
+	function consultRequest(consult) {
+		return {
+			callId: consult ? consult.callId : "",
+			consultCallId: consult ? consult.id : ""
+		};
+	}
+	function consultCommandResult(result, previous) {
+		if (!result || result.succeeded === false) return {
+			succeeded: false,
+			error: result && result.error ? result.error : ""
+		};
+		var consult = consultFromCall(result.call);
+		if (consult && previous) {
+			consult.blind = !!previous.blind;
+			consult.callId = previous.callId || consult.callId;
+		}
+		return {
+			succeeded: true,
+			consult
+		};
+	}
+	function shouldHoldBeforeTransfer(options) {
+		options = options || {};
+		var call = options.call;
+		return !!(options.bridgedDial && call && call.callId && !call.browserOriginated && !call.isOnHold && !options.serviceCall);
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-app-confirm.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function showInAppConfirm(host, options) {
-			options = options || {};
-			if (!host || !host.ownerDocument) return Promise.resolve(false);
-			var existing = host.querySelector("[data-telephony-confirm]");
-			if (existing && typeof existing.__telephonyCancel === "function") existing.__telephonyCancel();
-			var doc = host.ownerDocument;
-			var bar = doc.createElement("div");
-			var message = doc.createElement("p");
-			var actions = doc.createElement("div");
-			var cancel = doc.createElement("button");
-			var confirm = doc.createElement("button");
-			var messageId = "telephony-confirm-" + Date.now();
-			bar.className = "telephony-soft-phone__confirm";
-			bar.setAttribute("data-telephony-confirm", "");
-			bar.setAttribute("role", "alertdialog");
-			bar.setAttribute("aria-labelledby", messageId);
-			message.className = "telephony-soft-phone__confirm-text";
-			message.id = messageId;
-			message.textContent = options.message || "";
-			actions.className = "telephony-soft-phone__confirm-actions";
-			cancel.type = "button";
-			cancel.className = "btn btn-sm btn-outline-secondary";
-			cancel.setAttribute("data-telephony-confirm-cancel", "");
-			cancel.textContent = options.cancelLabel || "Cancel";
-			confirm.type = "button";
-			confirm.className = "btn btn-sm btn-danger";
-			confirm.setAttribute("data-telephony-confirm-accept", "");
-			confirm.textContent = options.confirmLabel || "OK";
-			actions.appendChild(cancel);
-			actions.appendChild(confirm);
-			bar.appendChild(message);
-			bar.appendChild(actions);
-			return new Promise(function(resolve) {
-				function finish(answer) {
-					if (bar.parentNode) bar.parentNode.removeChild(bar);
-					resolve(answer);
-				}
-				bar.__telephonyCancel = function() {
-					finish(false);
-				};
-				cancel.addEventListener("click", function() {
-					finish(false);
-				});
-				confirm.addEventListener("click", function() {
-					finish(true);
-				});
-				bar.addEventListener("keydown", function(event) {
-					if (event.key === "Escape") {
-						event.preventDefault();
-						finish(false);
-					}
-				});
-				if (options.before && options.before.parentNode === host) host.insertBefore(bar, options.before);
-				else host.appendChild(bar);
-				(options.focusCancel ? cancel : confirm).focus();
+	function showInAppConfirm(host, options) {
+		options = options || {};
+		if (!host || !host.ownerDocument) return Promise.resolve(false);
+		var existing = host.querySelector("[data-telephony-confirm]");
+		if (existing && typeof existing.__telephonyCancel === "function") existing.__telephonyCancel();
+		var doc = host.ownerDocument;
+		var bar = doc.createElement("div");
+		var message = doc.createElement("p");
+		var actions = doc.createElement("div");
+		var cancel = doc.createElement("button");
+		var confirm = doc.createElement("button");
+		var messageId = "telephony-confirm-" + Date.now();
+		bar.className = "telephony-soft-phone__confirm";
+		bar.setAttribute("data-telephony-confirm", "");
+		bar.setAttribute("role", "alertdialog");
+		bar.setAttribute("aria-labelledby", messageId);
+		message.className = "telephony-soft-phone__confirm-text";
+		message.id = messageId;
+		message.textContent = options.message || "";
+		actions.className = "telephony-soft-phone__confirm-actions";
+		cancel.type = "button";
+		cancel.className = "btn btn-sm btn-outline-secondary";
+		cancel.setAttribute("data-telephony-confirm-cancel", "");
+		cancel.textContent = options.cancelLabel || "Cancel";
+		confirm.type = "button";
+		confirm.className = "btn btn-sm btn-danger";
+		confirm.setAttribute("data-telephony-confirm-accept", "");
+		confirm.textContent = options.confirmLabel || "OK";
+		actions.appendChild(cancel);
+		actions.appendChild(confirm);
+		bar.appendChild(message);
+		bar.appendChild(actions);
+		return new Promise(function(resolve) {
+			function finish(answer) {
+				if (bar.parentNode) bar.parentNode.removeChild(bar);
+				resolve(answer);
+			}
+			bar.__telephonyCancel = function() {
+				finish(false);
+			};
+			cancel.addEventListener("click", function() {
+				finish(false);
 			});
+			confirm.addEventListener("click", function() {
+				finish(true);
+			});
+			bar.addEventListener("keydown", function(event) {
+				if (event.key === "Escape") {
+					event.preventDefault();
+					finish(false);
+				}
+			});
+			if (options.before && options.before.parentNode === host) host.insertBefore(bar, options.before);
+			else host.appendChild(bar);
+			(options.focusCancel ? cancel : confirm).focus();
+		});
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/browser-calls.js
+	function createCallNotifiers() {
+		return { entries: {} };
+	}
+	function trackCall(notifiers, callId, notify) {
+		if (!notifiers || !callId || typeof notify !== "function") return false;
+		notifiers.entries[callId] = notify;
+		return true;
+	}
+	function isCallTracked(notifiers, callId) {
+		return !!(notifiers && callId && Object.prototype.hasOwnProperty.call(notifiers.entries, callId));
+	}
+	function trackedCallIds(notifiers) {
+		return notifiers ? Object.keys(notifiers.entries) : [];
+	}
+	function deliverCallState(notifiers, callId, stateName) {
+		if (!stateName || !isCallTracked(notifiers, callId)) return false;
+		var notify = notifiers.entries[callId];
+		if (stateName === "Disconnected") delete notifiers.entries[callId];
+		try {
+			notify(stateName);
+		} catch (error) {}
+		return true;
+	}
+	function findVanishedCalls(notifiers, sdkCalls, isTerminal) {
+		var registry = sdkCalls || {};
+		return trackedCallIds(notifiers).filter(function(callId) {
+			var call = Object.prototype.hasOwnProperty.call(registry, callId) ? registry[callId] : null;
+			return !call || typeof isTerminal === "function" && isTerminal(call.state);
+		});
+	}
+	function endAllCalls(notifiers) {
+		var callIds = trackedCallIds(notifiers);
+		callIds.forEach(function(callId) {
+			deliverCallState(notifiers, callId, "Disconnected");
+		});
+		return callIds;
+	}
+	function planShownBrowserCalls(calls, controllers) {
+		var plan = {
+			keep: [],
+			ended: []
+		};
+		(calls || []).forEach(function(call) {
+			if (!call || !call.callId || !call.browserOriginated) return;
+			if (call.browserInbound && call.state === "Ringing") {
+				plan.keep.push(call.callId);
+				return;
+			}
+			var controller = controllers ? controllers[call.callId] : null;
+			(!!controller && (typeof controller.isLive !== "function" || controller.isLive() !== false) ? plan.keep : plan.ended).push(call.callId);
+		});
+		return plan;
+	}
+	var JOURNAL_KEY = "crestapps-soft-phone:browser-calls";
+	function readCallJournal(storage) {
+		try {
+			var text = storage ? storage.getItem(JOURNAL_KEY) : null;
+			var journal = text ? JSON.parse(text) : null;
+			return journal && typeof journal === "object" && !Array.isArray(journal) ? journal : {};
+		} catch (error) {
+			return {};
 		}
-		softPhone.showInAppConfirm = showInAppConfirm;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+	}
+	function writeCallJournal(storage, journal) {
+		try {
+			if (!storage) return;
+			if (!journal || !Object.keys(journal).length) storage.removeItem(JOURNAL_KEY);
+			else storage.setItem(JOURNAL_KEY, JSON.stringify(journal));
+		} catch (error) {}
+	}
+	function updateCallJournal(storage, callId, update) {
+		if (!callId) return;
+		var journal = readCallJournal(storage);
+		update(journal);
+		writeCallJournal(storage, journal);
+	}
+	function journalCallStarted(storage, callId) {
+		updateCallJournal(storage, callId, function(journal) {
+			journal[callId] = journal[callId] || {
+				connected: false,
+				ended: false
+			};
+		});
+	}
+	function journalCallConnected(storage, callId) {
+		updateCallJournal(storage, callId, function(journal) {
+			var entry = journal[callId] = journal[callId] || {
+				connected: false,
+				ended: false
+			};
+			entry.connected = true;
+		});
+	}
+	function journalCallEnded(storage, callId, connected) {
+		updateCallJournal(storage, callId, function(journal) {
+			var entry = journal[callId] = journal[callId] || {
+				connected: false,
+				ended: false
+			};
+			entry.connected = !!(entry.connected || connected);
+			entry.ended = true;
+		});
+	}
+	function journalCallSettled(storage, callId) {
+		updateCallJournal(storage, callId, function(journal) {
+			delete journal[callId];
+		});
+	}
+	function planOwedCallEnds(journal, liveCallIds) {
+		var live = {};
+		(liveCallIds || []).forEach(function(callId) {
+			live[callId] = true;
+		});
+		return Object.keys(journal || {}).filter(function(callId) {
+			var entry = journal[callId];
+			return !!entry && (entry.ended || !live[callId]);
+		}).map(function(callId) {
+			return {
+				callId,
+				connected: !!journal[callId].connected
+			};
+		});
+	}
+	var HEARTBEAT_INTERVAL_MS = 3e4;
+	function planCallHeartbeat(calls, lastSentMs, nowMs, intervalMs) {
+		var interval = typeof intervalMs === "number" && intervalMs > 0 ? intervalMs : HEARTBEAT_INTERVAL_MS;
+		if (lastSentMs && nowMs - lastSentMs < interval) return null;
+		var browserCalls = (calls || []).filter(function(call) {
+			return call && call.callId && call.browserOriginated && !call.browserInbound;
+		});
+		if (!browserCalls.length) return null;
+		return {
+			callIds: browserCalls.map(function(call) {
+				return call.callId;
+			}),
+			connectedCallIds: browserCalls.filter(function(call) {
+				return !!call.everConnected || call.state === "Connected" || call.state === "OnHold";
+			}).map(function(call) {
+				return call.callId;
+			})
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/remote-elements.js
+	function createRemoteElementPool(primary, createElement, disposeElement) {
+		return {
+			primary: primary || null,
+			create: typeof createElement === "function" ? createElement : function() {
+				return null;
+			},
+			dispose: typeof disposeElement === "function" ? disposeElement : function() {},
+			byKey: {}
+		};
+	}
+	function isElementInUse(pool, element) {
+		return Object.keys(pool.byKey).some(function(key) {
+			return pool.byKey[key] === element;
+		});
+	}
+	function acquireRemoteElement(pool, key) {
+		if (!pool || !key) return pool ? pool.primary : null;
+		if (pool.byKey[key]) return pool.byKey[key];
+		var element = pool.primary && !isElementInUse(pool, pool.primary) ? pool.primary : pool.create() || pool.primary;
+		if (element) pool.byKey[key] = element;
+		return element;
+	}
+	function remoteElementFor(pool, key) {
+		return pool && key && pool.byKey[key] ? pool.byKey[key] : null;
+	}
+	function rekeyRemoteElement(pool, fromKey, toKey) {
+		if (!pool || !fromKey || !toKey || fromKey === toKey || !pool.byKey[fromKey]) return;
+		pool.byKey[toKey] = pool.byKey[fromKey];
+		delete pool.byKey[fromKey];
+	}
+	function releaseRemoteElement(pool, key) {
+		if (!pool || !key || !pool.byKey[key]) return;
+		var element = pool.byKey[key];
+		delete pool.byKey[key];
+		if (element !== pool.primary && !isElementInUse(pool, element)) try {
+			pool.dispose(element);
+		} catch (error) {}
+	}
+	function releaseAllRemoteElements(pool) {
+		if (!pool) return;
+		Object.keys(pool.byKey).forEach(function(key) {
+			releaseRemoteElement(pool, key);
+		});
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/incoming-card.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function pick(value, fallback) {
-			return typeof value === "string" && value.trim() ? value : fallback;
-		}
-		function incomingCardActionLabels(card, strings) {
-			card = card || {};
-			strings = strings || {};
-			return {
-				answerAndOpen: pick(card.answerAndOpenText, pick(strings.answerAndOpen, "Answer & open")),
-				open: pick(card.openText, pick(strings.open, "Open"))
-			};
-		}
-		softPhone.incomingCardActionLabels = incomingCardActionLabels;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		function shouldStartRegistration(state) {
-			state = state || {};
-			return !!state.browserAudioEnabled && !state.registered && !state.registering && !state.microphoneBlocked && !state.captureInFlight && state.hubConnected !== false;
-		}
-		var REGISTRATION_RETRY_DELAYS_MS = [
-			5e3,
-			15e3,
-			3e4,
-			6e4,
-			12e4
-		];
-		function registrationRetryDelay(failures) {
-			return REGISTRATION_RETRY_DELAYS_MS[Math.max(0, Math.min(REGISTRATION_RETRY_DELAYS_MS.length - 1, (failures || 1) - 1))];
-		}
-		function shouldReportRegistrationFailure(failures, message, previousMessage) {
-			return failures <= 1 || message !== previousMessage || failures % 10 === 0;
-		}
-		function answerClickAction(state) {
-			state = state || {};
-			if (state.acceptPending || state.registeringForAnswer) return "ignore";
-			return state.browserAudioEnabled && !state.registered ? "register" : "accept";
-		}
-		function isAnswerInProgress(state) {
-			state = state || {};
-			return !!state.acceptPending || !!state.registeringForAnswer;
-		}
-		function planRegistrationSelfHeal(state) {
-			state = state || {};
-			if (state.liveMedia) return "keep";
-			if (state.expiring || state.reregisterRequested) return "reregister";
-			return state.captureDead ? "replace-capture" : "keep";
-		}
-		function planMicrophoneLossRecovery(state) {
-			return {
-				first: "replace-capture",
-				onFailure: state && state.liveMedia ? "warn" : "reregister"
-			};
-		}
-		var REGISTRATION_TIMEOUT_MS = 3e4;
-		var REGISTRATION_RETRY_MS = 5e3;
-		function guardRegistration(attempt, timeoutMs, stageOf, onLate) {
-			return new Promise(function(resolve, reject) {
-				var timedOut = false;
-				var timer = root.setTimeout(function() {
-					var stage = typeof stageOf === "function" ? stageOf() || "" : "";
-					var error = /* @__PURE__ */ new Error("The phone did not finish registering within " + Math.round(timeoutMs / 1e3) + " seconds" + (stage ? " (it was waiting for the " + stage + ")" : "") + ".");
-					timedOut = true;
-					error.registrationTimedOut = true;
-					error.stage = stage;
-					reject(error);
-				}, timeoutMs);
-				Promise.resolve(attempt).then(function(session) {
-					if (timedOut) {
-						if (typeof onLate === "function") onLate(session);
-						return;
-					}
-					root.clearTimeout(timer);
-					resolve(session);
-				}, function(error) {
-					if (timedOut) return;
-					root.clearTimeout(timer);
-					reject(error);
-				});
-			});
-		}
-		softPhone.REGISTRATION_TIMEOUT_MS = REGISTRATION_TIMEOUT_MS;
-		softPhone.REGISTRATION_RETRY_MS = REGISTRATION_RETRY_MS;
-		softPhone.guardRegistration = guardRegistration;
-		softPhone.registrationRetryDelay = registrationRetryDelay;
-		softPhone.shouldReportRegistrationFailure = shouldReportRegistrationFailure;
-		softPhone.shouldStartRegistration = shouldStartRegistration;
-		softPhone.planRegistrationSelfHeal = planRegistrationSelfHeal;
-		softPhone.planMicrophoneLossRecovery = planMicrophoneLossRecovery;
-		softPhone.answerClickAction = answerClickAction;
-		softPhone.isAnswerInProgress = isAnswerInProgress;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/answer-state.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var ANSWER_REGISTRATION_TIMEOUT_MS = 15e3;
-		var SETTLED_OFFER_TTL_MS = 3e4;
-		function answerButtonView(inProgress, restingLabel, labels) {
-			if (!inProgress) return {
-				disabled: false,
-				spinner: false,
-				label: restingLabel
-			};
-			return {
-				disabled: true,
-				spinner: true,
-				label: labels && labels.answering || "Answering…"
-			};
-		}
-		function withTimeout(promise, ms) {
-			return new Promise(function(resolve, reject) {
-				var timer = root.setTimeout(function() {
-					var error = /* @__PURE__ */ new Error("Timed out.");
-					error.timedOut = true;
-					reject(error);
-				}, ms);
-				Promise.resolve(promise).then(function(value) {
-					root.clearTimeout(timer);
-					resolve(value);
-				}, function(error) {
-					root.clearTimeout(timer);
-					reject(error);
-				});
-			});
-		}
-		function settledKeys(offer) {
-			var keys = [];
-			if (offer && offer.reservationId) keys.push("r:" + offer.reservationId);
-			if (offer && offer.callId) keys.push("c:" + offer.callId);
-			return keys;
-		}
-		function rememberSettledOffer(settled, offer, now) {
-			Object.keys(settled).forEach(function(key) {
-				if (now - settled[key] > SETTLED_OFFER_TTL_MS) delete settled[key];
-			});
-			settledKeys(offer).forEach(function(key) {
-				settled[key] = now;
-			});
-		}
-		function isOfferSettled(settled, offer, now) {
-			return settledKeys(offer).some(function(key) {
-				return typeof settled[key] === "number" && now - settled[key] <= SETTLED_OFFER_TTL_MS;
-			});
-		}
-		var OFFER_CLICK_GUARD_MS = 800;
-		function offerActionClick(pending, offer, now) {
-			if (!pending) return "act";
-			if (isOfferActionPending(pending, offer)) return "ignore";
-			return typeof pending.at === "number" && now - pending.at < OFFER_CLICK_GUARD_MS ? "ignore" : "act";
-		}
-		function isOfferActionPending(pending, offer) {
-			return !!(pending && offer && pending.reservationId && pending.reservationId === offer.reservationId);
-		}
-		softPhone.OFFER_CLICK_GUARD_MS = OFFER_CLICK_GUARD_MS;
-		softPhone.offerActionClick = offerActionClick;
-		softPhone.isOfferActionPending = isOfferActionPending;
-		softPhone.ANSWER_REGISTRATION_TIMEOUT_MS = ANSWER_REGISTRATION_TIMEOUT_MS;
-		softPhone.SETTLED_OFFER_TTL_MS = SETTLED_OFFER_TTL_MS;
-		softPhone.answerButtonView = answerButtonView;
-		softPhone.withTimeout = withTimeout;
-		softPhone.rememberSettledOffer = rememberSettledOffer;
-		softPhone.isOfferSettled = isOfferSettled;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/host-bridge.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var HOST_BRIDGE_PROTOCOL = 1;
-		var HOST_ACK_TIMEOUT_MS = 2e3;
-		var HOST_ACTION_GRACE_MS = 5e3;
-		var PAGE_MESSAGES = {
-			ready: "softphone-ready",
-			incomingCall: "incoming-call",
-			incomingCallEnded: "incoming-call-ended",
-			actionResult: "incoming-call-action-result"
+	function pick(value, fallback) {
+		return typeof value === "string" && value.trim() ? value : fallback;
+	}
+	function incomingCardActionLabels(card, strings) {
+		card = card || {};
+		strings = strings || {};
+		return {
+			answerAndOpen: pick(card.answerAndOpenText, pick(strings.answerAndOpen, "Answer & open")),
+			open: pick(card.openText, pick(strings.open, "Open"))
 		};
-		var HOST_MESSAGES = {
-			ready: "host-ready",
-			shown: "incoming-call-shown",
-			dismissed: "incoming-call-dismissed",
-			action: "incoming-call-action"
-		};
-		var HOST_ACTIONS = [
-			"answer",
-			"decline",
-			"voicemail"
-		];
-		function findHostChannel(win) {
-			var channel = win && win.chrome ? win.chrome.webview : null;
-			if (!channel || typeof channel.postMessage !== "function" || typeof channel.addEventListener !== "function") return null;
-			return channel;
+	}
+	var HOST_ACK_TIMEOUT_MS = 2e3;
+	var HOST_ACTION_GRACE_MS = 5e3;
+	var PAGE_MESSAGES = {
+		ready: "softphone-ready",
+		incomingCall: "incoming-call",
+		incomingCallEnded: "incoming-call-ended",
+		actionResult: "incoming-call-action-result"
+	};
+	var HOST_MESSAGES = {
+		ready: "host-ready",
+		shown: "incoming-call-shown",
+		dismissed: "incoming-call-dismissed",
+		action: "incoming-call-action"
+	};
+	var HOST_ACTIONS = [
+		"answer",
+		"decline",
+		"voicemail"
+	];
+	function findHostChannel(win) {
+		var channel = win && win.chrome ? win.chrome.webview : null;
+		if (!channel || typeof channel.postMessage !== "function" || typeof channel.addEventListener !== "function") return null;
+		return channel;
+	}
+	function text(value) {
+		return typeof value === "string" ? value : "";
+	}
+	function absoluteHttpUrl(url, baseUrl) {
+		if (typeof url !== "string" || !url.trim()) return "";
+		try {
+			var resolved = new URL(url.trim(), baseUrl);
+			return resolved.protocol === "https:" || resolved.protocol === "http:" ? resolved.href : "";
+		} catch (e) {
+			return "";
 		}
-		function text(value) {
-			return typeof value === "string" ? value : "";
-		}
-		function absoluteHttpUrl(url, baseUrl) {
-			if (typeof url !== "string" || !url.trim()) return "";
-			try {
-				var resolved = new URL(url.trim(), baseUrl);
-				return resolved.protocol === "https:" || resolved.protocol === "http:" ? resolved.href : "";
-			} catch (e) {
-				return "";
-			}
-		}
-		function buildCard(card, baseUrl) {
-			card = card || {};
-			var links = Array.isArray(card.links) ? card.links : [];
-			return {
-				id: text(card.id),
-				title: text(card.title),
-				subtitle: text(card.subtitle),
-				description: text(card.description),
-				badges: (Array.isArray(card.badges) ? card.badges : []).filter(function(badge) {
-					return typeof badge === "string" && badge;
-				}),
-				url: absoluteHttpUrl(card.url, baseUrl),
-				answerAndOpenText: text(card.answerAndOpenText),
-				openText: text(card.openText),
-				links: links.map(function(link) {
-					return link ? {
-						text: text(link.text),
-						url: absoluteHttpUrl(link.url, baseUrl)
-					} : null;
-				}).filter(function(link) {
-					return !!(link && link.url);
-				})
-			};
-		}
-		function buildIncomingCallMessage(offer, baseUrl) {
-			offer = offer || {};
-			return {
-				type: PAGE_MESSAGES.incomingCall,
-				protocol: HOST_BRIDGE_PROTOCOL,
-				callId: text(offer.callId),
-				from: text(offer.from),
-				queue: text(offer.queue),
-				heading: text(offer.heading),
-				canVoicemail: !!offer.canVoicemail,
-				cards: (Array.isArray(offer.cards) ? offer.cards : []).map(function(card) {
-					return buildCard(card, baseUrl);
-				})
-			};
-		}
-		function readHostMessage(data) {
-			if (typeof data === "string") try {
-				data = JSON.parse(data);
-			} catch (e) {
-				return null;
-			}
-			if (!data || typeof data !== "object" || typeof data.type !== "string") return null;
-			var protocol = typeof data.protocol === "number" ? data.protocol : 0;
-			switch (data.type) {
-				case HOST_MESSAGES.ready: return protocol >= HOST_BRIDGE_PROTOCOL ? {
-					type: HOST_MESSAGES.ready,
-					protocol
+	}
+	function buildCard(card, baseUrl) {
+		card = card || {};
+		var links = Array.isArray(card.links) ? card.links : [];
+		return {
+			id: text(card.id),
+			title: text(card.title),
+			subtitle: text(card.subtitle),
+			description: text(card.description),
+			badges: (Array.isArray(card.badges) ? card.badges : []).filter(function(badge) {
+				return typeof badge === "string" && badge;
+			}),
+			url: absoluteHttpUrl(card.url, baseUrl),
+			answerAndOpenText: text(card.answerAndOpenText),
+			openText: text(card.openText),
+			links: links.map(function(link) {
+				return link ? {
+					text: text(link.text),
+					url: absoluteHttpUrl(link.url, baseUrl)
 				} : null;
-				case HOST_MESSAGES.shown:
-				case HOST_MESSAGES.dismissed:
-					if (!text(data.callId)) return null;
-					return {
-						type: data.type,
-						callId: data.callId,
-						ringing: !!data.ringing
-					};
-				case HOST_MESSAGES.action:
-					if (!text(data.callId) || HOST_ACTIONS.indexOf(data.action) === -1) return null;
-					return {
-						type: HOST_MESSAGES.action,
-						callId: data.callId,
-						action: data.action
-					};
-				default: return null;
-			}
+			}).filter(function(link) {
+				return !!(link && link.url);
+			})
+		};
+	}
+	function buildIncomingCallMessage(offer, baseUrl) {
+		offer = offer || {};
+		return {
+			type: PAGE_MESSAGES.incomingCall,
+			protocol: 1,
+			callId: text(offer.callId),
+			from: text(offer.from),
+			queue: text(offer.queue),
+			heading: text(offer.heading),
+			canVoicemail: !!offer.canVoicemail,
+			cards: (Array.isArray(offer.cards) ? offer.cards : []).map(function(card) {
+				return buildCard(card, baseUrl);
+			})
+		};
+	}
+	function readHostMessage(data) {
+		if (typeof data === "string") try {
+			data = JSON.parse(data);
+		} catch (e) {
+			return null;
 		}
-		function presentationFor(offerVisible, delegation) {
-			if (!offerVisible) return {
+		if (!data || typeof data !== "object" || typeof data.type !== "string") return null;
+		var protocol = typeof data.protocol === "number" ? data.protocol : 0;
+		switch (data.type) {
+			case HOST_MESSAGES.ready: return protocol >= 1 ? {
+				type: HOST_MESSAGES.ready,
+				protocol
+			} : null;
+			case HOST_MESSAGES.shown:
+			case HOST_MESSAGES.dismissed:
+				if (!text(data.callId)) return null;
+				return {
+					type: data.type,
+					callId: data.callId,
+					ringing: !!data.ringing
+				};
+			case HOST_MESSAGES.action:
+				if (!text(data.callId) || HOST_ACTIONS.indexOf(data.action) === -1) return null;
+				return {
+					type: HOST_MESSAGES.action,
+					callId: data.callId,
+					action: data.action
+				};
+			default: return null;
+		}
+	}
+	function presentationFor(offerVisible, delegation) {
+		if (!offerVisible) return {
+			showModal: false,
+			ring: false
+		};
+		if (!delegation) return {
+			showModal: true,
+			ring: true
+		};
+		switch (delegation.status) {
+			case "pending": return {
+				showModal: delegation.modalOnScreen,
+				ring: delegation.modalOnScreen
+			};
+			case "shown": return {
+				showModal: false,
+				ring: !delegation.hostRinging
+			};
+			case "acting": return {
 				showModal: false,
 				ring: false
 			};
-			if (!delegation) return {
+			default: return {
 				showModal: true,
 				ring: true
 			};
-			switch (delegation.status) {
-				case "pending": return {
-					showModal: delegation.modalOnScreen,
-					ring: delegation.modalOnScreen
-				};
-				case "shown": return {
-					showModal: false,
-					ring: !delegation.hostRinging
-				};
-				case "acting": return {
-					showModal: false,
-					ring: false
-				};
-				default: return {
-					showModal: true,
-					ring: true
-				};
+		}
+	}
+	function createHostDelegation(options) {
+		options = options || {};
+		var post = options.post || function() {};
+		var onChange = options.onChange || function() {};
+		var isActionUnderWay = options.isActionUnderWay || function() {
+			return false;
+		};
+		var schedule = options.schedule || function(fn, ms) {
+			return globalThis.setTimeout(fn, ms);
+		};
+		var cancel = options.cancel || function(handle) {
+			globalThis.clearTimeout(handle);
+		};
+		var ackTimeoutMs = typeof options.ackTimeoutMs === "number" ? options.ackTimeoutMs : HOST_ACK_TIMEOUT_MS;
+		var actionGraceMs = typeof options.actionGraceMs === "number" ? options.actionGraceMs : HOST_ACTION_GRACE_MS;
+		var hostReady = false;
+		var current = null;
+		function stopTimer() {
+			if (current && current.timer !== null) {
+				cancel(current.timer);
+				current.timer = null;
 			}
 		}
-		function createHostDelegation(options) {
-			options = options || {};
-			var post = options.post || function() {};
-			var onChange = options.onChange || function() {};
-			var isActionUnderWay = options.isActionUnderWay || function() {
-				return false;
-			};
-			var schedule = options.schedule || function(fn, ms) {
-				return root.setTimeout(fn, ms);
-			};
-			var cancel = options.cancel || function(handle) {
-				root.clearTimeout(handle);
-			};
-			var ackTimeoutMs = typeof options.ackTimeoutMs === "number" ? options.ackTimeoutMs : HOST_ACK_TIMEOUT_MS;
-			var actionGraceMs = typeof options.actionGraceMs === "number" ? options.actionGraceMs : HOST_ACTION_GRACE_MS;
-			var hostReady = false;
-			var current = null;
-			function stopTimer() {
-				if (current && current.timer !== null) {
-					cancel(current.timer);
-					current.timer = null;
+		function fallBackAfter(ms) {
+			var delegation = current;
+			stopTimer();
+			delegation.timer = schedule(function() {
+				if (current !== delegation) return;
+				delegation.timer = null;
+				if (delegation.status === "acting" && isActionUnderWay()) {
+					fallBackAfter(ms);
+					return;
 				}
-			}
-			function fallBackAfter(ms) {
-				var delegation = current;
+				if (delegation.status === "pending" || delegation.status === "acting") {
+					delegation.status = "fallback";
+					onChange();
+				}
+			}, ms);
+		}
+		function end() {
+			if (!current) return;
+			stopTimer();
+			post({
+				type: PAGE_MESSAGES.incomingCallEnded,
+				callId: current.callId
+			});
+			current = null;
+		}
+		return {
+			isHostReady: function() {
+				return hostReady;
+			},
+			current: function() {
+				return current;
+			},
+			sync: function(message, modalOnScreen) {
+				if (!message || !message.callId) {
+					end();
+					return;
+				}
+				if (!hostReady) return;
+				if (!current || current.callId !== message.callId) {
+					end();
+					current = {
+						callId: message.callId,
+						status: "pending",
+						hostRinging: false,
+						modalOnScreen: !!modalOnScreen,
+						signature: "",
+						timer: null
+					};
+					fallBackAfter(ackTimeoutMs);
+				}
+				var signature = JSON.stringify(message);
+				if (signature !== current.signature) {
+					current.signature = signature;
+					post(message);
+				}
+			},
+			receive: function(data) {
+				var message = readHostMessage(data);
+				if (!message) return null;
+				var matches = !!(current && current.callId === message.callId);
+				switch (message.type) {
+					case HOST_MESSAGES.ready:
+						if (!hostReady) {
+							hostReady = true;
+							onChange();
+						}
+						return null;
+					case HOST_MESSAGES.shown:
+						if (matches && current.status !== "acting") {
+							stopTimer();
+							current.status = "shown";
+							current.hostRinging = message.ringing;
+							onChange();
+						}
+						return null;
+					case HOST_MESSAGES.dismissed:
+						if (matches && current.status !== "fallback") {
+							stopTimer();
+							current.status = "fallback";
+							onChange();
+						}
+						return null;
+					case HOST_MESSAGES.action:
+						if (matches) {
+							current.status = "acting";
+							fallBackAfter(actionGraceMs);
+							onChange();
+						}
+						return {
+							action: message.action,
+							callId: message.callId,
+							matchesOffer: matches
+						};
+					default: return null;
+				}
+			},
+			presentation: function(offerVisible) {
+				return presentationFor(offerVisible, current);
+			},
+			reset: function() {
 				stopTimer();
-				delegation.timer = schedule(function() {
-					if (current !== delegation) return;
-					delegation.timer = null;
-					if (delegation.status === "acting" && isActionUnderWay()) {
-						fallBackAfter(ms);
-						return;
-					}
-					if (delegation.status === "pending" || delegation.status === "acting") {
-						delegation.status = "fallback";
-						onChange();
-					}
-				}, ms);
-			}
-			function end() {
-				if (!current) return;
-				stopTimer();
-				post({
-					type: PAGE_MESSAGES.incomingCallEnded,
-					callId: current.callId
-				});
 				current = null;
 			}
-			return {
-				isHostReady: function() {
-					return hostReady;
-				},
-				current: function() {
-					return current;
-				},
-				sync: function(message, modalOnScreen) {
-					if (!message || !message.callId) {
-						end();
-						return;
-					}
-					if (!hostReady) return;
-					if (!current || current.callId !== message.callId) {
-						end();
-						current = {
-							callId: message.callId,
-							status: "pending",
-							hostRinging: false,
-							modalOnScreen: !!modalOnScreen,
-							signature: "",
-							timer: null
-						};
-						fallBackAfter(ackTimeoutMs);
-					}
-					var signature = JSON.stringify(message);
-					if (signature !== current.signature) {
-						current.signature = signature;
-						post(message);
-					}
-				},
-				receive: function(data) {
-					var message = readHostMessage(data);
-					if (!message) return null;
-					var matches = !!(current && current.callId === message.callId);
-					switch (message.type) {
-						case HOST_MESSAGES.ready:
-							if (!hostReady) {
-								hostReady = true;
-								onChange();
-							}
-							return null;
-						case HOST_MESSAGES.shown:
-							if (matches && current.status !== "acting") {
-								stopTimer();
-								current.status = "shown";
-								current.hostRinging = message.ringing;
-								onChange();
-							}
-							return null;
-						case HOST_MESSAGES.dismissed:
-							if (matches && current.status !== "fallback") {
-								stopTimer();
-								current.status = "fallback";
-								onChange();
-							}
-							return null;
-						case HOST_MESSAGES.action:
-							if (matches) {
-								current.status = "acting";
-								fallBackAfter(actionGraceMs);
-								onChange();
-							}
-							return {
-								action: message.action,
-								callId: message.callId,
-								matchesOffer: matches
-							};
-						default: return null;
-					}
-				},
-				presentation: function(offerVisible) {
-					return presentationFor(offerVisible, current);
-				},
-				reset: function() {
-					stopTimer();
-					current = null;
-				}
-			};
-		}
-		softPhone.HOST_BRIDGE_PROTOCOL = HOST_BRIDGE_PROTOCOL;
-		softPhone.HOST_ACK_TIMEOUT_MS = HOST_ACK_TIMEOUT_MS;
-		softPhone.HOST_ACTION_GRACE_MS = HOST_ACTION_GRACE_MS;
-		softPhone.HOST_PAGE_MESSAGES = PAGE_MESSAGES;
-		softPhone.HOST_MESSAGES = HOST_MESSAGES;
-		softPhone.findHostChannel = findHostChannel;
-		softPhone.buildIncomingCallMessage = buildIncomingCallMessage;
-		softPhone.readHostMessage = readHostMessage;
-		softPhone.presentationFor = presentationFor;
-		softPhone.createHostDelegation = createHostDelegation;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		};
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-route.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var VOICEMAIL_ROUTES = Object.freeze({
-			browserLeg: "browser-leg",
-			contactCenter: "contact-center",
-			telephony: "telephony",
-			none: "none"
-		});
-		function voicemailRoute(state) {
-			var current = state || {};
-			if (current.browserInboundRinging) return { route: VOICEMAIL_ROUTES.browserLeg };
-			var offer = current.offer || {};
-			var lifecycleKey = offer.voicemailUrl ? "voicemailUrl" : offer.declineUrl ? "declineUrl" : null;
-			if (lifecycleKey) return {
-				route: VOICEMAIL_ROUTES.contactCenter,
-				lifecycleKey
-			};
-			return { route: current.hasCall ? VOICEMAIL_ROUTES.telephony : VOICEMAIL_ROUTES.none };
+	var VOICEMAIL_ROUTES = Object.freeze({
+		browserLeg: "browser-leg",
+		contactCenter: "contact-center",
+		telephony: "telephony",
+		none: "none"
+	});
+	function voicemailRoute(state) {
+		var current = state || {};
+		if (current.browserInboundRinging) return { route: VOICEMAIL_ROUTES.browserLeg };
+		var offer = current.offer || {};
+		var lifecycleKey = offer.voicemailUrl ? "voicemailUrl" : offer.declineUrl ? "declineUrl" : null;
+		if (lifecycleKey) return {
+			route: VOICEMAIL_ROUTES.contactCenter,
+			lifecycleKey
+		};
+		return { route: current.hasCall ? VOICEMAIL_ROUTES.telephony : VOICEMAIL_ROUTES.none };
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/microphone-errors.js
+	var PERMISSION_ERRORS = [
+		"NotAllowedError",
+		"PermissionDeniedError",
+		"SecurityError"
+	];
+	var DEVICE_MISSING_ERRORS = [
+		"NotFoundError",
+		"DevicesNotFoundError",
+		"OverconstrainedError"
+	];
+	var DEVICE_BUSY_ERRORS = [
+		"NotReadableError",
+		"TrackStartError",
+		"AbortError"
+	];
+	var SYSTEM_REFUSAL = /(by system|by the platform|or the platform|operating system)/i;
+	function classifyMicrophoneError(facts) {
+		var details = facts || {};
+		var name = details.name || "";
+		var message = details.message || "";
+		if (details.isSecureContext === false) return "insecure";
+		if (PERMISSION_ERRORS.indexOf(name) >= 0) {
+			if (details.policyAllowed === false || name === "SecurityError") return "policy";
+			if (SYSTEM_REFUSAL.test(message)) return "system-denied";
+			if (details.permissionState === "granted") return "system-denied";
+			if (details.permissionState === "prompt") return "dismissed";
+			return "site-denied";
 		}
-		softPhone.VOICEMAIL_ROUTES = VOICEMAIL_ROUTES;
-		softPhone.voicemailRoute = voicemailRoute;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		if (DEVICE_MISSING_ERRORS.indexOf(name) >= 0 || details.audioInputCount === 0) return "not-found";
+		if (DEVICE_BUSY_ERRORS.indexOf(name) >= 0) return "in-use";
+		return "unknown";
+	}
+	function describeBrowserError(facts) {
+		var details = facts || {};
+		var name = details.name || "Error";
+		return details.message ? name + ": " + details.message : name;
+	}
+	function describeMicrophoneFacts(facts) {
+		var details = facts || {};
+		function known(value) {
+			return value === null || value === void 0 ? "unknown" : String(value);
+		}
+		return [
+			"error=" + describeBrowserError(details),
+			"permission=" + known(details.permissionState),
+			"secureContext=" + known(details.isSecureContext),
+			"policy=" + (details.policyAllowed === true ? "allowed" : details.policyAllowed === false ? "blocked" : "unknown"),
+			"audioInputs=" + known(details.audioInputCount),
+			"origin=" + known(details.origin),
+			"browser=" + known(details.userAgent)
+		].join("; ");
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-deadline.js
+	var OFFER_RING_STOP_GRACE_MS = 2e3;
+	var OFFSET_KEY = "__crestAppsServerOffsetMs";
+	function parseUtcMs(value) {
+		if (!value) return null;
+		var parsed = Date.parse(value);
+		return isFinite(parsed) ? parsed : null;
+	}
+	function computeServerOffsetMs(serverTimeUtc, receivedAtMs) {
+		var serverMs = parseUtcMs(serverTimeUtc);
+		return serverMs === null || !isFinite(receivedAtMs) ? 0 : receivedAtMs - serverMs;
+	}
+	function computeOfferRingStopDelayMs(expiresUtc, serverOffsetMs, nowMs, graceMs) {
+		var expiresMs = parseUtcMs(expiresUtc);
+		if (expiresMs === null) return null;
+		var grace = typeof graceMs === "number" && graceMs >= 0 ? graceMs : OFFER_RING_STOP_GRACE_MS;
+		return Math.max(0, expiresMs + (isFinite(serverOffsetMs) ? serverOffsetMs : 0) + grace - nowMs);
+	}
+	function offerRingStopDelayMs(properties, nowMs) {
+		if (!properties) return null;
+		if (typeof properties[OFFSET_KEY] !== "number") try {
+			Object.defineProperty(properties, OFFSET_KEY, {
+				value: computeServerOffsetMs(properties.serverTimeUtc, nowMs),
+				enumerable: false,
+				configurable: true,
+				writable: true
+			});
+		} catch (e) {
+			return computeOfferRingStopDelayMs(properties.expiresUtc, computeServerOffsetMs(properties.serverTimeUtc, nowMs), nowMs);
+		}
+		return computeOfferRingStopDelayMs(properties.expiresUtc, properties[OFFSET_KEY], nowMs);
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js
-	(function(root) {
-		"use strict";
-		var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-		var DEFAULT_TEXT = {
-			refused: "The server refused the request. Reload the page and try again.",
-			expired: "The page is out of date. Reload it and try again.",
-			signedOut: "You are signed out. Sign in again and retry.",
-			forbidden: "You do not have access to this voicemail.",
-			notFound: "This voicemail no longer exists.",
-			legalHold: "This voicemail is under legal hold and must be kept.",
-			network: "The server could not be reached.",
-			failed: "The server could not delete it."
-		};
-		var STRING_KEYS = {
-			refused: "voicemailDeleteRefused",
-			expired: "voicemailDeleteExpired",
-			signedOut: "voicemailDeleteSignedOut",
-			forbidden: "voicemailDeleteForbidden",
-			notFound: "voicemailDeleteNotFound",
-			legalHold: "voicemailDeleteLegalHold",
-			network: "voicemailDeleteNetwork",
-			failed: "voicemailDeleteServerFailed"
-		};
-		function voicemailDeleteFailureReason(response) {
-			if (!response) return "network";
-			var status = response.status;
-			if (response.type === "opaqueredirect" || response.redirected === true || status >= 300 && status < 400) return "refused";
-			if (status >= 200 && status < 300) return null;
-			switch (status) {
-				case 400: return "expired";
-				case 401: return "signedOut";
-				case 403: return "forbidden";
-				case 404: return "notFound";
-				case 409: return "legalHold";
-				default: return "failed";
-			}
+	var DEFAULT_TEXT = {
+		refused: "The server refused the request. Reload the page and try again.",
+		expired: "The page is out of date. Reload it and try again.",
+		signedOut: "You are signed out. Sign in again and retry.",
+		forbidden: "You do not have access to this voicemail.",
+		notFound: "This voicemail no longer exists.",
+		legalHold: "This voicemail is under legal hold and must be kept.",
+		network: "The server could not be reached.",
+		failed: "The server could not delete it."
+	};
+	var STRING_KEYS = {
+		refused: "voicemailDeleteRefused",
+		expired: "voicemailDeleteExpired",
+		signedOut: "voicemailDeleteSignedOut",
+		forbidden: "voicemailDeleteForbidden",
+		notFound: "voicemailDeleteNotFound",
+		legalHold: "voicemailDeleteLegalHold",
+		network: "voicemailDeleteNetwork",
+		failed: "voicemailDeleteServerFailed"
+	};
+	function voicemailDeleteFailureReason(response) {
+		if (!response) return "network";
+		var status = response.status;
+		if (response.type === "opaqueredirect" || response.redirected === true || status >= 300 && status < 400) return "refused";
+		if (status >= 200 && status < 300) return null;
+		switch (status) {
+			case 400: return "expired";
+			case 401: return "signedOut";
+			case 403: return "forbidden";
+			case 404: return "notFound";
+			case 409: return "legalHold";
+			default: return "failed";
 		}
-		function deleteVoicemailsInTurn(ids, deleteOne) {
-			var outcome = {
-				deleted: [],
-				failed: []
-			};
-			return (ids || []).reduce(function(previous, id) {
-				if (!id) return previous;
-				return previous.then(function() {
-					return Promise.resolve().then(function() {
-						return deleteOne(id);
-					}).then(voicemailDeleteFailureReason, function() {
-						return "network";
-					}).then(function(reason) {
-						if (reason) outcome.failed.push({
-							id,
-							reason
-						});
-						else outcome.deleted.push(id);
+	}
+	function deleteVoicemailsInTurn(ids, deleteOne) {
+		var outcome = {
+			deleted: [],
+			failed: []
+		};
+		return (ids || []).reduce(function(previous, id) {
+			if (!id) return previous;
+			return previous.then(function() {
+				return Promise.resolve().then(function() {
+					return deleteOne(id);
+				}).then(voicemailDeleteFailureReason, function() {
+					return "network";
+				}).then(function(reason) {
+					if (reason) outcome.failed.push({
+						id,
+						reason
 					});
+					else outcome.deleted.push(id);
 				});
-			}, Promise.resolve()).then(function() {
-				return outcome;
 			});
-		}
-		function voicemailDeleteFailureText(reason, strings) {
-			var key = Object.prototype.hasOwnProperty.call(DEFAULT_TEXT, reason) ? reason : "failed";
-			return (strings ? strings[STRING_KEYS[key]] : null) || DEFAULT_TEXT[key];
-		}
-		function describeVoicemailDeleteFailures(outcome, strings) {
-			var failed = outcome && outcome.failed ? outcome.failed : [];
-			if (!failed.length) return null;
-			var total = failed.length + (outcome.deleted ? outcome.deleted.length : 0);
-			if (total === 1) return (strings && strings.voicemailDeleteFailed || "The voicemail could not be deleted.") + " " + voicemailDeleteFailureText(failed[0].reason, strings);
-			return (strings && strings.voicemailDeletePartiallyFailed || "{0} of {1} voicemails could not be deleted. They are still selected.").replace("{0}", String(failed.length)).replace("{1}", String(total));
-		}
-		softPhone.voicemailDeleteFailureReason = voicemailDeleteFailureReason;
-		softPhone.deleteVoicemailsInTurn = deleteVoicemailsInTurn;
-		softPhone.voicemailDeleteFailureText = voicemailDeleteFailureText;
-		softPhone.describeVoicemailDeleteFailures = describeVoicemailDeleteFailures;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		}, Promise.resolve()).then(function() {
+			return outcome;
+		});
+	}
+	function voicemailDeleteFailureText(reason, strings) {
+		var key = Object.prototype.hasOwnProperty.call(DEFAULT_TEXT, reason) ? reason : "failed";
+		return (strings ? strings[STRING_KEYS[key]] : null) || DEFAULT_TEXT[key];
+	}
+	function describeVoicemailDeleteFailures(outcome, strings) {
+		var failed = outcome && outcome.failed ? outcome.failed : [];
+		if (!failed.length) return null;
+		var total = failed.length + (outcome.deleted ? outcome.deleted.length : 0);
+		if (total === 1) return (strings && strings.voicemailDeleteFailed || "The voicemail could not be deleted.") + " " + voicemailDeleteFailureText(failed[0].reason, strings);
+		return (strings && strings.voicemailDeletePartiallyFailed || "{0} of {1} voicemails could not be deleted. They are still selected.").replace("{0}", String(failed.length)).replace("{1}", String(total));
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone.js
 	(function() {
 		"use strict";
-		var softPhoneModules = (typeof globalThis !== "undefined" ? globalThis : window).CrestAppsSoftPhone || {};
-		var normalizeDialNumber = softPhoneModules.normalizeDialNumber;
-		softPhoneModules.formatNanpNumber;
-		softPhoneModules.formatInternationalNumber;
-		var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
-		var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
-		var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
-		var QUALITY_SILENT_MIC_SAMPLES = softPhoneModules.QUALITY_SILENT_MIC_SAMPLES;
-		softPhoneModules.LEVEL_UNKNOWN;
-		var LEVEL_SILENT = softPhoneModules.LEVEL_SILENT;
-		var estimateMos = softPhoneModules.estimateMos;
-		var isCaptureSilent = softPhoneModules.isCaptureSilent;
-		var readJitterBufferMs = softPhoneModules.readJitterBufferMs;
-		var parseWebRtcStats = softPhoneModules.parseWebRtcStats;
-		var createLevelProbe = softPhoneModules.createLevelProbe;
-		var probeLevel = softPhoneModules.probeLevel;
-		var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
-		var captureProbeNeedsRebuild = softPhoneModules.captureProbeNeedsRebuild;
-		var windowedMicrophoneLevel = softPhoneModules.windowedMicrophoneLevel;
-		var findAudioSender = softPhoneModules.findAudioSender;
-		var formatCallStatus = softPhoneModules.formatCallStatus;
-		var connectedAtFor = softPhoneModules.connectedAtFor;
-		var formatElapsed = softPhoneModules.formatElapsed;
-		var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
-		var captureWithFallback = softPhoneModules.captureWithFallback;
-		var shouldFallBackToDefaultSpeaker = softPhoneModules.shouldFallBackToDefaultSpeaker;
-		var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
-		var durationMeta = softPhoneModules.durationMeta;
-		var clampBoostDb = softPhoneModules.clampBoostDb;
-		var describeBoost = softPhoneModules.describeBoost;
-		var createBoostPipeline = softPhoneModules.createBoostPipeline;
-		var clampVoiceIsolationEngine = softPhoneModules.clampVoiceIsolationEngine;
-		var clampVoiceIsolationStrength = softPhoneModules.clampVoiceIsolationStrength;
-		var describeVoiceIsolation = softPhoneModules.describeVoiceIsolation;
-		var isVoiceIsolationSupported = softPhoneModules.isVoiceIsolationSupported;
-		var createVoiceIsolationPipeline = softPhoneModules.createVoiceIsolationPipeline;
-		var clampAutoLevelGainDb = softPhoneModules.clampAutoLevelGainDb;
-		var RAW_CAPTURE_SILENT_LEVEL = softPhoneModules.RAW_CAPTURE_SILENT_LEVEL;
-		var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
-		softPhoneModules.describePlayoutDelay;
-		var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
-		var concealmentPercent = softPhoneModules.concealmentPercent;
-		var clampSignalingRegion = softPhoneModules.clampSignalingRegion;
-		var describeSignalingRegion = softPhoneModules.describeSignalingRegion;
-		var resolveSignalingRegion = softPhoneModules.resolveSignalingRegion;
-		var withSignalingRegion = softPhoneModules.withSignalingRegion;
-		var describeProviderWarning = softPhoneModules.describeProviderWarning;
-		var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
-		var mapTelnyxOutboundState = softPhoneModules.mapTelnyxOutboundState;
-		var isTelnyxTerminalState = softPhoneModules.isTelnyxTerminalState;
-		var iceServersIncludeTurn = softPhoneModules.iceServersIncludeTurn;
-		var reconnectDelayMs = softPhoneModules.reconnectDelayMs;
-		var createHoldAudioController = softPhoneModules.createHoldAudioController;
-		var hasLiveAudioTrack = softPhoneModules.hasLiveAudioTrack;
-		var releaseSharedCapture = softPhoneModules.releaseSharedCapture;
-		var startOutboundAudioMonitor = softPhoneModules.startOutboundAudioMonitor;
-		var OUTBOUND_SILENCE_MS = softPhoneModules.OUTBOUND_SILENCE_MS;
-		var rememberAgentHold = softPhoneModules.rememberAgentHold;
-		var pruneAgentHolds = softPhoneModules.pruneAgentHolds;
-		var isAgentHeld = softPhoneModules.isAgentHeld;
-		var reconcileAgentHold = softPhoneModules.reconcileAgentHold;
-		var resolveReportedState = softPhoneModules.resolveReportedState;
-		var holdCommandRoute = softPhoneModules.holdCommandRoute;
-		var rememberAgentMute = softPhoneModules.rememberAgentMute;
-		var isAgentMuted = softPhoneModules.isAgentMuted;
-		var pruneAgentMutes = softPhoneModules.pruneAgentMutes;
-		var reconcileAgentMute = softPhoneModules.reconcileAgentMute;
-		var muteGroupCallIds = softPhoneModules.muteGroupCallIds;
-		var conferenceMuted = softPhoneModules.conferenceMuted;
-		var readOfferLegTag = softPhoneModules.readOfferLegTag;
-		var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
-		var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
-		var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
-		var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
-		var planOfferCallReport = softPhoneModules.planOfferCallReport;
-		var rememberUnacceptedOfferCall = softPhoneModules.rememberUnacceptedOfferCall;
-		var forgetUnacceptedOfferCall = softPhoneModules.forgetUnacceptedOfferCall;
-		var EXTENSION_CALL_KEY = softPhoneModules.EXTENSION_CALL_KEY;
-		var autoAnswerOfferKey = softPhoneModules.autoAnswerOfferKey;
-		var createAutoAnswerArm = softPhoneModules.createAutoAnswerArm;
-		var armAutoAnswer = softPhoneModules.armAutoAnswer;
-		var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
-		var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
-		var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
-		var canArmForAcceptedOffer = softPhoneModules.canArmForAcceptedOffer;
-		var createPredictiveStandby = softPhoneModules.createPredictiveStandby;
-		var setPredictiveStandbyFor = softPhoneModules.setPredictiveStandby;
-		var shouldStandbyAnswerLeg = softPhoneModules.shouldStandbyAnswerLeg;
-		var readStandbyLegTag = softPhoneModules.readStandbyLegTag;
-		var noteStandbyLeg = softPhoneModules.noteStandbyLeg;
-		var wasStandbyLegSeen = softPhoneModules.wasStandbyLegSeen;
-		var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
-		var armMonitorLegFor = softPhoneModules.armMonitorLeg;
-		var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
-		var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
-		var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
-		var monitorLegAction = softPhoneModules.monitorLegAction;
-		var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
-		var planMonitorLegPromotion = softPhoneModules.planMonitorLegPromotion;
-		var planMonitorCallPromotion = softPhoneModules.planMonitorCallPromotion;
-		var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
-		var holdsMonitorLeg = softPhoneModules.holdsMonitorLeg;
-		var readMonitorLegMedia = softPhoneModules.readMonitorLegMedia;
-		var describeMonitorLegMedia = softPhoneModules.describeMonitorLegMedia;
-		var replaceSendTrackOnPeers = softPhoneModules.replaceSendTrackOnPeers;
-		var planEntryStart = softPhoneModules.planEntryStart;
-		var planEntryEnd = softPhoneModules.planEntryEnd;
-		var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
-		var planKeypadDial = softPhoneModules.planKeypadDial;
-		var bridgedDialRequest = softPhoneModules.bridgedDialRequest;
-		var shouldDialFromBrowser = softPhoneModules.shouldDialFromBrowser;
-		var sharedMicrophoneEnabled = softPhoneModules.sharedMicrophoneEnabled;
-		var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
-		var RINGBACK_CADENCE = softPhoneModules.RINGBACK_CADENCE;
-		var createRingbackMemory = softPhoneModules.createRingbackMemory;
-		var noteRemoteParty = softPhoneModules.noteRemoteParty;
-		var forgetRemoteParty = softPhoneModules.forgetRemoteParty;
-		var pruneRemoteParties = softPhoneModules.pruneRemoteParties;
-		var isRemotePartyRinging = softPhoneModules.isRemotePartyRinging;
-		var ringbackTimeLeftMs = softPhoneModules.ringbackTimeLeftMs;
-		var planRingback = softPhoneModules.planRingback;
-		var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
-		var planRegistrationSelfHeal = softPhoneModules.planRegistrationSelfHeal;
-		var planMicrophoneLossRecovery = softPhoneModules.planMicrophoneLossRecovery;
-		var guardRegistration = softPhoneModules.guardRegistration;
-		var REGISTRATION_TIMEOUT_MS = softPhoneModules.REGISTRATION_TIMEOUT_MS;
-		var REGISTRATION_RETRY_MS = softPhoneModules.REGISTRATION_RETRY_MS;
-		var registrationRetryDelay = softPhoneModules.registrationRetryDelay;
-		var shouldReportRegistrationFailure = softPhoneModules.shouldReportRegistrationFailure;
-		var answerClickAction = softPhoneModules.answerClickAction;
-		var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
-		var answerButtonView = softPhoneModules.answerButtonView;
-		var offerActionClick = softPhoneModules.offerActionClick;
-		var isOfferActionPending = softPhoneModules.isOfferActionPending;
-		var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
-		softPhoneModules.withTimeout;
-		var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
-		var isOfferSettled = softPhoneModules.isOfferSettled;
-		var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
-		var OFFER_CHANNEL_NAME = softPhoneModules.OFFER_CHANNEL_NAME;
-		var OFFER_HANDLED_MESSAGE = softPhoneModules.OFFER_HANDLED_MESSAGE;
-		var createCallLegs = softPhoneModules.createCallLegs;
-		var notePlatformLeg = softPhoneModules.notePlatformLeg;
-		var noteBrowserLeg = softPhoneModules.noteBrowserLeg;
-		var forgetLeg = softPhoneModules.forgetLeg;
-		var planPlatformReport = softPhoneModules.planPlatformReport;
-		var legAfterEnd = softPhoneModules.legAfterEnd;
-		var allLegs = softPhoneModules.allLegs;
-		var canConferenceCall = softPhoneModules.canConferenceCall;
-		var planMerge = softPhoneModules.planMerge;
-		var conferenceAfterMerge = softPhoneModules.conferenceAfterMerge;
-		var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
-		var createConferenceMemory = softPhoneModules.createConferenceMemory;
-		var rememberConference = softPhoneModules.rememberConference;
-		var applyConferenceMemory = softPhoneModules.applyConferenceMemory;
-		var markParticipantLeft = softPhoneModules.markParticipantLeft;
-		var forgetConferenceCall = softPhoneModules.forgetConferenceCall;
-		var conferenceMembers = softPhoneModules.conferenceMembers;
-		var visibleConferenceCalls = softPhoneModules.visibleConferenceCalls;
-		var isOneConference = softPhoneModules.isOneConference;
-		var conferenceLegsWithoutParticipants = softPhoneModules.conferenceLegsWithoutParticipants;
-		var planConferenceHangup = softPhoneModules.planConferenceHangup;
-		var planConferenceEnd = softPhoneModules.planConferenceEnd;
-		var planInCallControls = softPhoneModules.planInCallControls;
-		var friendlyCallLabel = softPhoneModules.friendlyCallLabel;
-		var createCallPartyMemory = softPhoneModules.createCallPartyMemory;
-		var carryCallParty = softPhoneModules.carryCallParty;
-		var forgetCallParty = softPhoneModules.forgetCallParty;
-		var planNumberField = softPhoneModules.planNumberField;
-		var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
-		var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
-		var buildKeypadExtensionResultsHtml = softPhoneModules.buildKeypadExtensionResultsHtml;
-		var transferRefusalMessage = softPhoneModules.transferRefusalMessage;
-		var transferModes = softPhoneModules.transferModes;
-		var createTransferPanel = softPhoneModules.createTransferPanel;
-		var createExtensionDirectory = softPhoneModules.createExtensionDirectory;
-		var storeExtensionEntries = softPhoneModules.storeExtensionEntries;
-		var shouldReloadExtensions = softPhoneModules.shouldReloadExtensions;
-		var extensionName = softPhoneModules.extensionName;
-		var describeExtension = softPhoneModules.describeExtension;
-		var callExtensionNumber = softPhoneModules.callExtensionNumber;
-		var extensionDirectoryEntries = softPhoneModules.extensionDirectoryEntries;
-		var ownExtensionsOf = softPhoneModules.ownExtensions;
-		var readExtension = softPhoneModules.readExtension;
-		var createTransferService = softPhoneModules.createTransferService;
-		var createCallContextMemory = softPhoneModules.createCallContextMemory;
-		var carryCallContext = softPhoneModules.carryCallContext;
-		var forgetCallContext = softPhoneModules.forgetCallContext;
-		var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
-		var serviceModes = softPhoneModules.serviceModes;
-		var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
-		var transferBlockedReason = softPhoneModules.transferBlockedReason;
-		var readTransferLegTag = softPhoneModules.readTransferLegTag;
-		var providerTransferRequest = softPhoneModules.providerTransferRequest;
-		var consultFromCall = softPhoneModules.consultFromCall;
-		var consultRequest = softPhoneModules.consultRequest;
-		var consultCommandResult = softPhoneModules.consultCommandResult;
-		var shouldHoldBeforeTransfer = softPhoneModules.shouldHoldBeforeTransfer;
-		var enhancePhoneInput = softPhoneModules.enhancePhoneInput;
-		var readPhoneInput = softPhoneModules.readPhoneInput;
-		var showInAppConfirm = softPhoneModules.showInAppConfirm;
-		var createCallNotifiers = softPhoneModules.createCallNotifiers;
-		var trackCall = softPhoneModules.trackCall;
-		var isCallTracked = softPhoneModules.isCallTracked;
-		var deliverCallState = softPhoneModules.deliverCallState;
-		var findVanishedCalls = softPhoneModules.findVanishedCalls;
-		var endAllCalls = softPhoneModules.endAllCalls;
-		var planShownBrowserCalls = softPhoneModules.planShownBrowserCalls;
-		var readCallJournal = softPhoneModules.readCallJournal;
-		var journalCallStarted = softPhoneModules.journalCallStarted;
-		var journalCallConnected = softPhoneModules.journalCallConnected;
-		var journalCallEnded = softPhoneModules.journalCallEnded;
-		var journalCallSettled = softPhoneModules.journalCallSettled;
-		var planOwedCallEnds = softPhoneModules.planOwedCallEnds;
-		var planCallHeartbeat = softPhoneModules.planCallHeartbeat;
-		var createRemoteElementPool = softPhoneModules.createRemoteElementPool;
-		var acquireRemoteElement = softPhoneModules.acquireRemoteElement;
-		var remoteElementFor = softPhoneModules.remoteElementFor;
-		var rekeyRemoteElement = softPhoneModules.rekeyRemoteElement;
-		var releaseRemoteElement = softPhoneModules.releaseRemoteElement;
-		var releaseAllRemoteElements = softPhoneModules.releaseAllRemoteElements;
-		var resolveDialTarget = softPhoneModules.resolveDialTarget;
-		softPhoneModules.shouldOfferDial;
-		softPhoneModules.shouldShowCallNumber;
-		var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
-		var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
-		var HOST_BRIDGE_PROTOCOL = softPhoneModules.HOST_BRIDGE_PROTOCOL;
-		var HOST_PAGE_MESSAGES = softPhoneModules.HOST_PAGE_MESSAGES;
-		var findHostChannel = softPhoneModules.findHostChannel;
-		var buildIncomingCallMessage = softPhoneModules.buildIncomingCallMessage;
-		var createHostDelegation = softPhoneModules.createHostDelegation;
-		var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
-		var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
-		var voicemailRoute = softPhoneModules.voicemailRoute;
-		var VOICEMAIL_ROUTES = softPhoneModules.VOICEMAIL_ROUTES;
+		var setPredictiveStandbyFor = setPredictiveStandby;
+		var armMonitorLegFor = armMonitorLeg;
+		var disarmMonitorLegFor = disarmMonitorLeg;
+		var ownExtensionsOf = ownExtensions;
 		var CAPABILITIES = {
 			Dial: 1,
 			Hangup: 2,
@@ -5983,7 +5174,7 @@
 					var providerSessionId = callOptions.telnyxSessionId || "";
 					var bytesReceived = inbound.bytesReceived || 0;
 					var mos = estimateMos(rttMs, jitterMs, lossPercent);
-					var poor = lossPercent > QUALITY_POOR_LOSS_PERCENT || mos < QUALITY_POOR_MOS || bytesReceived === 0 && packetsReceived > 0;
+					var poor = lossPercent > 5 || mos < 3.5 || bytesReceived === 0 && packetsReceived > 0;
 					var mediaSource = parsed.mediaSource;
 					var micLevel = windowedMicrophoneLevel(mediaSource, qualityState.lastMediaSource);
 					var rawCapturePeak = typeof context.readRawCapturePeak === "function" ? context.readRawCapturePeak() : -1;
@@ -6021,9 +5212,9 @@
 					qualityState.minMos = Math.min(qualityState.minMos, mos);
 					qualityState.maxLoss = Math.max(qualityState.maxLoss, lossPercent);
 					if (captureReported) qualityState.minMicLevel = Math.min(qualityState.minMicLevel, micLevel);
-					if (rawCapturePeak >= 0 ? rawCapturePeak <= RAW_CAPTURE_SILENT_LEVEL : captureReported ? isCaptureSilent(micLevel, energyDelta) : captureProbeLevel >= 0 && captureProbeLevel <= LEVEL_SILENT) qualityState.silentSamples++;
+					if (rawCapturePeak >= 0 ? rawCapturePeak <= RAW_CAPTURE_SILENT_LEVEL : captureReported ? isCaptureSilent(micLevel, energyDelta) : captureProbeLevel >= 0 && captureProbeLevel <= .005) qualityState.silentSamples++;
 					else qualityState.silentSamples = 0;
-					if (qualityState.silentSamples >= QUALITY_SILENT_MIC_SAMPLES && !qualityState.captureAlerted && typeof context.onCaptureSilent === "function") {
+					if (qualityState.silentSamples >= 3 && !qualityState.captureAlerted && typeof context.onCaptureSilent === "function") {
 						qualityState.captureAlerted = true;
 						context.onCaptureSilent();
 					}
@@ -7396,7 +6587,7 @@
 			}
 			function handleOutboundAudioStalled(info) {
 				var trackState = info && info.trackState || "unknown";
-				reportDiagnostic("warning", "no-outbound-audio", "No audio has left this browser for " + Math.round((OUTBOUND_SILENCE_MS || 5e3) / 1e3) + " seconds on a connected call (send track " + trackState + ").", localAudioTrackLabel());
+				reportDiagnostic("warning", "no-outbound-audio", "No audio has left this browser for " + Math.round(5) + " seconds on a connected call (send track " + trackState + ").", localAudioTrackLabel());
 				showError(outboundAudioWarning());
 				if (trackState !== "live" && hasLiveMedia()) switchLocalAudioTrack("ended").catch(function() {});
 			}
@@ -7576,7 +6767,7 @@
 			}
 			function captureDeviceKey(stream) {
 				var track = stream && typeof stream.getAudioTracks === "function" ? stream.getAudioTracks()[0] : null;
-				var settings = null;
+				var settings;
 				try {
 					settings = track && typeof track.getSettings === "function" ? track.getSettings() : null;
 				} catch (error) {
@@ -7652,15 +6843,15 @@
 			}
 			function categorizeMicError(error) {
 				return gatherMicrophoneFacts(error).then(function(facts) {
-					var kind = softPhoneModules.classifyMicrophoneError(facts);
+					var kind = classifyMicrophoneError(facts);
 					var guidance = microphoneGuidance(kind);
-					var browserError = softPhoneModules.describeBrowserError(facts);
+					var browserError = describeBrowserError(facts);
 					var shown = guidance + " " + (strings.micBrowserError || "Browser error:") + " " + browserError;
 					if (facts.name === "OverconstrainedError") {
 						selectedInputDeviceId = null;
 						persistDeviceSelection();
 					}
-					reportDiagnostic("error", MICROPHONE_DIAGNOSTIC_CODES[kind] || "mic-error", kind + ": " + browserError, softPhoneModules.describeMicrophoneFacts(facts));
+					reportDiagnostic("error", MICROPHONE_DIAGNOSTIC_CODES[kind] || "mic-error", kind + ": " + browserError, describeMicrophoneFacts(facts));
 					setMicPermissionIssue(kind, shown);
 					var categorized = new Error(shown);
 					categorized.microphoneIssue = kind;
@@ -8758,7 +7949,7 @@
 					reportDiagnostic("info", "auto-answer-arm-refused", "An accept of an offer this phone was never offered did not arm it to answer the next leg.", reservationId || "");
 					return;
 				}
-				armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
+				armAutoAnswer(inboundAutoAnswer, offerKey(reservationId), Date.now());
 			}
 			function consumeInboundAutoAnswer(options) {
 				var leg = options || {};
@@ -8767,7 +7958,7 @@
 					var standbyReservationId = shouldStandbyAnswerLeg(predictiveStandby, leg, now, { onCall: !!currentCall && !isRingingInbound() });
 					if (standbyReservationId) {
 						noteStandbyLeg(predictiveStandby, standbyReservationId, now);
-						disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(standbyReservationId));
+						disarmAutoAnswer(inboundAutoAnswer, offerKey(standbyReservationId));
 						reportDiagnostic("info", "standby-leg-answered", "Answered at once the leg of a call this agent was claimed for while standing by for a campaign.", standbyReservationId);
 						return true;
 					}
@@ -8947,7 +8138,7 @@
 					legId: controller.legId || "",
 					controller
 				};
-				disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId));
+				disarmAutoAnswer(inboundAutoAnswer, offerKey(reservationId));
 				try {
 					controller.answer();
 				} catch (error) {
@@ -8992,7 +8183,7 @@
 				}
 				if (typeof forgetAcceptedOffer === "function") forgetAcceptedOffer(acceptedOfferIds, reservationId);
 				hangupAnsweredOfferLeg(reservationId);
-				disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId));
+				disarmAutoAnswer(inboundAutoAnswer, offerKey(reservationId));
 				releaseUnacceptedOfferCall(reservationId);
 				return false;
 			}
@@ -9849,12 +9040,10 @@
 				var stateName = currentCall ? normalizeState(currentCall.state) : "Idle";
 				var active = isActive(stateName);
 				var liveMedia = stateName === "Connected" || stateName === "OnHold";
-				getActiveCalls();
 				var canDial = !active || stateName === "OnHold";
 				var selectedConferenceCallIds = Object.keys(conferenceSelections).filter(function(callId) {
 					return !!activeCalls[callId];
 				});
-				metadataBoolean(currentCall, "isConference");
 				var transferBusy = transferPanel.isBusy();
 				if (transferPanel.isOpen() && !liveMedia && !transferBusy) transferPanel.close();
 				var transferOpen = transferPanel.isOpen();
@@ -10589,7 +9778,7 @@
 					pendingAnswerDeadline = Date.now() + ANSWER_ON_LOAD_WINDOW_MS;
 				}
 				postToHost({
-					type: HOST_PAGE_MESSAGES.actionResult,
+					type: PAGE_MESSAGES.actionResult,
 					callId: choice.callId,
 					action: choice.action,
 					handled
@@ -10624,7 +9813,7 @@
 			}
 			function scheduleIncomingExpiry() {
 				clearIncomingExpiryTimer();
-				var remainingMs = softPhoneModules.offerRingStopDelayMs(incomingContext && incomingContext.properties, Date.now());
+				var remainingMs = offerRingStopDelayMs(incomingContext && incomingContext.properties, Date.now());
 				if (remainingMs === null) return;
 				if (remainingMs <= 0) {
 					expireIncomingOffer();
@@ -10748,7 +9937,7 @@
 				}
 				var offerReservationId = incomingContext.properties.reservationId || "";
 				if (offerReservationId && typeof rememberAcceptedOffer === "function") rememberAcceptedOffer(acceptedOfferIds, offerReservationId, Date.now());
-				if (!answerHeldOfferLeg(offerReservationId)) armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(offerReservationId), Date.now());
+				if (!answerHeldOfferLeg(offerReservationId)) armAutoAnswer(inboundAutoAnswer, offerKey(offerReservationId), Date.now());
 				incomingAcceptPending = true;
 				announceOfferHandled(true, offerReservationId);
 				render();
@@ -10756,7 +9945,7 @@
 					if (!result || result.succeeded === false) {
 						if (typeof forgetAcceptedOffer === "function") forgetAcceptedOffer(acceptedOfferIds, offerReservationId);
 						hangupAnsweredOfferLeg(offerReservationId);
-						disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(offerReservationId));
+						disarmAutoAnswer(inboundAutoAnswer, offerKey(offerReservationId));
 						showError(strings.offerUnavailable || "This call is no longer available.");
 						incomingContext = null;
 						removeActiveCall(id);
@@ -10849,7 +10038,7 @@
 				if (offeredReservationId) {
 					offerCallIds[offeredReservationId] = call.callId;
 					forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
-					disarmOtherOffers(inboundAutoAnswer, autoAnswerOfferKey(offeredReservationId));
+					disarmOtherOffers(inboundAutoAnswer, offerKey(offeredReservationId));
 				}
 				if (!sameOffer) {
 					incomingAcceptPending = false;
@@ -11150,7 +10339,7 @@
 					var deleteFailure = voicemailDeleteFailures[interaction.interactionId];
 					var cls = "telephony-soft-phone__voicemail-item" + (unread ? " telephony-soft-phone__voicemail-item--unread" : "") + (deleteFailure ? " telephony-soft-phone__voicemail-item--delete-failed" : "");
 					var selectMarkup = canDelete ? "<input type=\"checkbox\" class=\"telephony-soft-phone__voicemail-select\" data-telephony-voicemail-select " + (deleteFailure ? "checked " : "") + "data-telephony-voicemail-id=\"" + escapeHtml(interaction.interactionId || "") + "\" aria-label=\"" + escapeHtml(strings.selectVoicemail || "Select voicemail") + "\">" : "";
-					return "<div class=\"" + cls + "\">" + selectMarkup + "<button type=\"button\" class=\"telephony-soft-phone__voicemail-play\" data-telephony-voicemail-play data-telephony-voicemail-id=\"" + escapeHtml(interaction.interactionId || "") + "\" data-telephony-voicemail-call=\"" + escapeHtml(interaction.callId || "") + "\" title=\"" + escapeHtml(strings.playVoicemail || "Play voicemail") + "\" aria-label=\"" + escapeHtml(strings.playVoicemail || "Play voicemail") + "\"><i class=\"fa-solid fa-play\"></i></button><div class=\"telephony-soft-phone__voicemail-body\" data-telephony-voicemail-body data-telephony-voicemail-call=\"" + escapeHtml(interaction.callId || "") + "\" role=\"button\" tabindex=\"0\"><span class=\"telephony-soft-phone__history-number\">" + escapeHtml(formattedNumber || number || strings.voicemailLabel || "Voicemail") + "</span><span class=\"telephony-soft-phone__history-meta\">" + escapeHtml(time) + "</span>" + (deleteFailure ? "<span class=\"telephony-soft-phone__voicemail-error\" role=\"alert\">" + escapeHtml(softPhoneModules.voicemailDeleteFailureText(deleteFailure, strings)) + "</span>" : "") + "</div><button type=\"button\" class=\"telephony-soft-phone__call-btn\" data-telephony-history-number=\"" + escapeHtml(number) + "\" title=\"" + escapeHtml(strings.callBack || "Call back") + "\" aria-label=\"" + escapeHtml(strings.callBack || "Call back") + "\"><i class=\"fa-solid fa-phone\"></i></button></div>";
+					return "<div class=\"" + cls + "\">" + selectMarkup + "<button type=\"button\" class=\"telephony-soft-phone__voicemail-play\" data-telephony-voicemail-play data-telephony-voicemail-id=\"" + escapeHtml(interaction.interactionId || "") + "\" data-telephony-voicemail-call=\"" + escapeHtml(interaction.callId || "") + "\" title=\"" + escapeHtml(strings.playVoicemail || "Play voicemail") + "\" aria-label=\"" + escapeHtml(strings.playVoicemail || "Play voicemail") + "\"><i class=\"fa-solid fa-play\"></i></button><div class=\"telephony-soft-phone__voicemail-body\" data-telephony-voicemail-body data-telephony-voicemail-call=\"" + escapeHtml(interaction.callId || "") + "\" role=\"button\" tabindex=\"0\"><span class=\"telephony-soft-phone__history-number\">" + escapeHtml(formattedNumber || number || strings.voicemailLabel || "Voicemail") + "</span><span class=\"telephony-soft-phone__history-meta\">" + escapeHtml(time) + "</span>" + (deleteFailure ? "<span class=\"telephony-soft-phone__voicemail-error\" role=\"alert\">" + escapeHtml(voicemailDeleteFailureText(deleteFailure, strings)) + "</span>" : "") + "</div><button type=\"button\" class=\"telephony-soft-phone__call-btn\" data-telephony-history-number=\"" + escapeHtml(number) + "\" title=\"" + escapeHtml(strings.callBack || "Call back") + "\" aria-label=\"" + escapeHtml(strings.callBack || "Call back") + "\"><i class=\"fa-solid fa-phone\"></i></button></div>";
 				}).join("");
 				Array.prototype.forEach.call(dom.voicemailList.querySelectorAll("[data-telephony-voicemail-play]"), function(item) {
 					item.addEventListener("click", function() {
@@ -11190,7 +10379,7 @@
 				if (config.antiForgeryToken) headers["RequestVerificationToken"] = config.antiForgeryToken;
 				headers["X-Requested-With"] = "XMLHttpRequest";
 				voicemailDeleteFailures = {};
-				softPhoneModules.deleteVoicemailsInTurn(ids, function(id) {
+				deleteVoicemailsInTurn(ids, function(id) {
 					return fetch(buildVoicemailDeleteUrl(id), {
 						method: "POST",
 						headers,
@@ -11200,7 +10389,7 @@
 					outcome.failed.forEach(function(failure) {
 						voicemailDeleteFailures[failure.id] = failure.reason;
 					});
-					showVoicemailError(softPhoneModules.describeVoicemailDeleteFailures(outcome, strings));
+					showVoicemailError(describeVoicemailDeleteFailures(outcome, strings));
 					loadVoicemails();
 					refreshVoicemailBadge();
 				});
@@ -11576,8 +10765,8 @@
 				if (hostChannel) {
 					hostChannel.addEventListener("message", onHostMessage);
 					postToHost({
-						type: HOST_PAGE_MESSAGES.ready,
-						protocol: HOST_BRIDGE_PROTOCOL
+						type: PAGE_MESSAGES.ready,
+						protocol: 1
 					});
 				}
 				window.addEventListener("beforeunload", function(event) {

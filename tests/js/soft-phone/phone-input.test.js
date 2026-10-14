@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/format.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/phone-input.js';
-
-const { readPhoneInput, readTransferNumber, enhancePhoneInput } = globalThis.CrestAppsSoftPhone;
+import {
+    enhancePhoneInput,
+    readPhoneInput,
+    readTransferNumber,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/phone-input.js';
 
 // A stand-in for an intl-tel-input instance with the United States selected.
 function telInput({ valid, e164, dialCode = '1' }) {

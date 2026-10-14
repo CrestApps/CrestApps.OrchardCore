@@ -29,7 +29,7 @@ with `vendor`).
 
 | File | Holds |
 | --- | --- |
-| Root `package.json` | Build and test tooling only: Vite, Sass, Vitest, and Babel for the undeclared-names lint test. |
+| Root `package.json` | Build, lint and test tooling only: Vite, Sass, ESLint, TypeScript (type checks only) and Vitest. |
 | A module's `package.json` | The libraries that module ships in its `wwwroot` (for example Resources declares Chart.js, SIP.js and the Telnyx SDK). |
 
 Add a library to the module that copies or bundles it (`npm install <pkg> -w <workspace name>`). A version that
@@ -83,10 +83,12 @@ should not float, such as a vendored SDK the soft phone was tested against, is p
 - **Scripts** are bundled into a classic IIFE script, not an ES module, because Razor views load them through the
   resource manager with a plain `<script>` tag. The readable file carries a "generated" banner; the `.min.js` is
   minified with Oxc. The target is Vite's modern-browser baseline.
-- **Several sources** become one entry that imports them in the listed order, so they run in that order, as the
-  concatenated files used to. The sources do not import one another; they share state through namespaces on
-  `window`/`globalThis` (for example `root.CrestAppsSoftPhone`), so **a helper must be listed before the script that
-  uses it**. Tests in `tests/js` and the Playwright `SoftPhoneAssets` helper read these lists to enforce that.
+- **Helpers are ES modules.** A bundle's `source` is its main script, which `import`s its helpers; the build follows
+  the module graph, so a helper can no longer be left out or run too late. Helpers do not touch `window`; what a
+  bundle offers others on the page is an explicit API (`window.telephonyClient`, `window.telephonySoftPhone`,
+  `window.contactCenterRealTime`, ...). Unused helper exports are dropped by the minifier, which is why the soft
+  phone's `.min.js` shrank by about 20 KB when it stopped publishing every helper on `window.CrestAppsSoftPhone`.
+- **Several sources** in one group still work: they become one entry that imports them in the listed order.
 - **Each source is its own module**, so a top-level `var` no longer leaks onto `window`, and modules are strict, so
   assigning an undeclared name throws. A script that publishes an API assigns it explicitly:
   `window.checkoutPayment = (function () { ... })();`.
@@ -119,10 +121,37 @@ filters, a pinned `.node-version`, committed output checked in CI) and deliberat
   manager.
 - **No Concurrently.** Groups build in-process through Vite's API, a few at a time.
 
-## Next steps (phase 2)
+## Lint and type checks
 
-1. Convert the multi-file bundles (Telephony soft phone, Contact Center, Messaging) to real ES modules that
-   `import`/`export` their helpers, so ordering is enforced by the module graph instead of by `Assets.json` order
-   and the tests can import named exports instead of reading `globalThis`.
-2. Add type checking (`tsc --checkJs`, or TypeScript sources) and an ESLint run to CI.
-3. Use `vite build --watch` or the Vite dev server for the UI-heavy modules.
+- `npm run lint` runs ESLint (`eslint.config.mjs`) over every module's `Assets` scripts and the build scripts, with the
+  recommended rules. The sources are linted as modules, as the build bundles them, and `no-undef` catches a name that is
+  used but never declared. Page globals the scripts read as bare names (`signalR`, `flatpickr`, `Stripe`, ...) are
+  listed in the config. A deliberately ignored `catch (error)` is not reported.
+- `npm run check` runs TypeScript (`tsconfig.json`) as a type checker only, over the scripts that opt in with
+  `// @ts-check` on their first line. Nothing is emitted. Opt a file in once it checks clean; converted ES modules are
+  the natural candidates.
+
+`assets_validation.yml` runs both before it rebuilds the assets.
+
+## Phase 2
+
+Decided on 2026-10-14:
+
+- **Sources become ES modules; the output stays classic scripts.** Helpers `export` functions and the main scripts
+  `import` them, so the module graph orders a bundle instead of `Assets.json`, and tests import named exports
+  instead of reading `globalThis`. Vite still emits IIFE scripts, so the resource manifests, the inline scripts
+  that call `flatpickrCulture`, `checkoutPayment` or `stripeCheckoutPayment` straight away, and the `window` APIs
+  other bundles use (`telephonyClient`, `telephonySoftPhone`, `contactCenterRealTime`) stay as they are.
+  `type="module"` output was not chosen: module scripts are deferred, which would change that timing.
+- **Shared helpers stay duplicated across bundles for now** (a few KB per page, up to about 21 KB minified on the
+  supervisor dashboard). A shared classic "core" bundle, or module output with shared chunks, can remove it later.
+- **ESLint now, type checks opt-in** (above).
+- **One pull request per area:** lint and type-check tooling, then Messaging, then Contact Center, then the
+  Telephony soft phone. All four are done: no source attaches helpers to a `window` namespace any more, and the
+  `CrestAppsMessaging`, `CrestAppsContactCenter`, `CrestAppsIvrMenu`, `CrestAppsSoftPhone` and
+  `CrestAppsTelephonyShared` globals are gone. `telephonyClient` gained `formatPhoneNumber`, which the agent
+  workspace used to read off `CrestAppsSoftPhone`.
+- **Next, if wanted:** shared chunks for the helpers several bundles carry (see above), and opting the main scripts
+  into `npm run check` once their DOM typings are cast.
+- **No dev server.** The scripts are classic scripts served by Orchard Core, so there is nothing for Vite's dev server
+  or hot module replacement to attach to; `npm run watch` rebuilds on save.

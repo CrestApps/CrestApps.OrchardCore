@@ -1,17 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-service.js';
-
-const {
+import {
+    carryCallContext,
+    createCallContextMemory,
+    createTransferService,
+    forgetCallContext,
+    resolveServiceTarget,
     serviceDirectoryEntries,
     serviceModes,
-    resolveServiceTarget,
-    createTransferService,
-    createCallContextMemory,
-    carryCallContext,
-    forgetCallContext
-} = globalThis.CrestAppsSoftPhone;
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-service.js';
 
 // Live: on a Contact Center call over Telnyx the transfer panel listed only extensions. The phone reads its calls again
 // every few seconds, and the provider's report of the call names no interaction; it replaced the Contact Center's report,

@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/mic-boost.js';
-
-const softPhone = globalThis.CrestAppsSoftPhone;
+import {
+    boostGainFor,
+    clampBoostDb,
+    connectBoostStage,
+    createBoostPipeline,
+    describeBoost,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/mic-boost.js';
 
 // A fake Web Audio graph that records how it was wired, so the pipeline can be checked without a browser.
 function createFakeAudio() {
@@ -31,39 +35,39 @@ const sourceStream = { id: 'mic-stream', getAudioTracks: () => [{ id: 'mic-track
 
 describe('clampBoostDb', () => {
     it('accepts the offered boosts', () => {
-        expect(softPhone.clampBoostDb(6)).toBe(6);
-        expect(softPhone.clampBoostDb('9')).toBe(9);
+        expect(clampBoostDb(6)).toBe(6);
+        expect(clampBoostDb('9')).toBe(9);
     });
 
     it('treats anything unrecognized as off -- never a surprise lift', () => {
-        expect(softPhone.clampBoostDb(5)).toBe(0);
-        expect(softPhone.clampBoostDb(-3)).toBe(0);
-        expect(softPhone.clampBoostDb('loud')).toBe(0);
-        expect(softPhone.clampBoostDb(undefined)).toBe(0);
+        expect(clampBoostDb(5)).toBe(0);
+        expect(clampBoostDb(-3)).toBe(0);
+        expect(clampBoostDb('loud')).toBe(0);
+        expect(clampBoostDb(undefined)).toBe(0);
     });
 });
 
 describe('boostGainFor', () => {
     it('is unity when off', () => {
-        expect(softPhone.boostGainFor(0)).toBe(1);
+        expect(boostGainFor(0)).toBe(1);
     });
 
     it('doubles the amplitude at +6 dB', () => {
-        expect(softPhone.boostGainFor(6)).toBeCloseTo(1.995, 2);
+        expect(boostGainFor(6)).toBeCloseTo(1.995, 2);
     });
 
     it('quadruples it at +12 dB', () => {
-        expect(softPhone.boostGainFor(12)).toBeCloseTo(3.981, 2);
+        expect(boostGainFor(12)).toBeCloseTo(3.981, 2);
     });
 });
 
 describe('describeBoost', () => {
     it('names an active boost for the capture readout', () => {
-        expect(softPhone.describeBoost(6)).toBe('boost+6');
+        expect(describeBoost(6)).toBe('boost+6');
     });
 
     it('is empty when off, so the readout does not grow a meaningless token', () => {
-        expect(softPhone.describeBoost(0)).toBe('');
+        expect(describeBoost(0)).toBe('');
     });
 });
 
@@ -71,13 +75,13 @@ describe('connectBoostStage', () => {
     it('adds nothing when the boost is off and no limiter is asked for', () => {
         const { FakeAudioContext } = createFakeAudio();
 
-        expect(softPhone.connectBoostStage(new FakeAudioContext(), { kind: 'input', connect: () => { } }, 0)).toBeNull();
+        expect(connectBoostStage(new FakeAudioContext(), { kind: 'input', connect: () => { } }, 0)).toBeNull();
     });
 
     it('adds the limiter alone when asked to limit with the boost off, so an automatic level cannot clip', () => {
         const { FakeAudioContext, state } = createFakeAudio();
         const input = { kind: 'input', connect: (to) => { state.connections.push(['input', to.kind]); } };
-        const stage = softPhone.connectBoostStage(new FakeAudioContext(), input, 0, { alwaysLimit: true });
+        const stage = connectBoostStage(new FakeAudioContext(), input, 0, { alwaysLimit: true });
 
         expect(stage.output.kind).toBe('limiter');
         expect(stage.nodes.map(node => node.kind)).toEqual(['limiter']);
@@ -87,7 +91,7 @@ describe('connectBoostStage', () => {
     it('puts the boost gain ahead of the one limiter when both are on', () => {
         const { FakeAudioContext, state } = createFakeAudio();
         const input = { kind: 'input', connect: (to) => { state.connections.push(['input', to.kind]); } };
-        const stage = softPhone.connectBoostStage(new FakeAudioContext(), input, 6, { alwaysLimit: true });
+        const stage = connectBoostStage(new FakeAudioContext(), input, 6, { alwaysLimit: true });
 
         expect(stage.nodes.map(node => node.kind)).toEqual(['gain', 'limiter']);
         expect(state.connections).toEqual([['input', 'gain'], ['gain', 'limiter']]);
@@ -105,7 +109,7 @@ describe('connectBoostStage', () => {
         };
 
         const input = { kind: 'input', connect: (to) => { state.connections.push(['input', to.kind]); } };
-        const stage = softPhone.connectBoostStage(context, input, 0, { alwaysLimit: true });
+        const stage = connectBoostStage(context, input, 0, { alwaysLimit: true });
         const curve = shaper.curve;
         const middle = (curve.length - 1) / 2;
         const at = (x) => curve[Math.round(middle + x * middle)];
@@ -125,7 +129,7 @@ describe('connectBoostStage', () => {
 describe('createBoostPipeline', () => {
     it('sends the capture untouched when the boost is off -- no graph, nothing to dispose', () => {
         const fake = createFakeAudio();
-        const pipeline = softPhone.createBoostPipeline(sourceStream, 0, { audioContext: fake.FakeAudioContext });
+        const pipeline = createBoostPipeline(sourceStream, 0, { audioContext: fake.FakeAudioContext });
 
         expect(pipeline.stream).toBe(sourceStream);
         expect(pipeline.boosted).toBe(false);
@@ -135,7 +139,7 @@ describe('createBoostPipeline', () => {
 
     it('routes source -> gain -> limiter -> destination and sends the destination stream', () => {
         const fake = createFakeAudio();
-        const pipeline = softPhone.createBoostPipeline(sourceStream, 6, { audioContext: fake.FakeAudioContext });
+        const pipeline = createBoostPipeline(sourceStream, 6, { audioContext: fake.FakeAudioContext });
 
         expect(pipeline.boosted).toBe(true);
         expect(pipeline.stream.id).toBe('boosted-stream');
@@ -144,7 +148,7 @@ describe('createBoostPipeline', () => {
 
     it('applies the chosen gain and a hard limiter just under full scale', () => {
         const fake = createFakeAudio();
-        softPhone.createBoostPipeline(sourceStream, 6, { audioContext: fake.FakeAudioContext });
+        createBoostPipeline(sourceStream, 6, { audioContext: fake.FakeAudioContext });
         const gain = fake.state.nodes.find(n => n.kind === 'gain');
         const limiter = fake.state.nodes.find(n => n.kind === 'limiter');
 
@@ -156,14 +160,14 @@ describe('createBoostPipeline', () => {
 
     it('asks a suspended context to resume, because a suspended graph is silence', () => {
         const fake = createFakeAudio();
-        softPhone.createBoostPipeline(sourceStream, 3, { audioContext: fake.FakeAudioContext });
+        createBoostPipeline(sourceStream, 3, { audioContext: fake.FakeAudioContext });
 
         expect(fake.state.resumed).toBe(1);
     });
 
     it('releases the graph on dispose', () => {
         const fake = createFakeAudio();
-        const pipeline = softPhone.createBoostPipeline(sourceStream, 9, { audioContext: fake.FakeAudioContext });
+        const pipeline = createBoostPipeline(sourceStream, 9, { audioContext: fake.FakeAudioContext });
 
         pipeline.dispose();
 
@@ -173,14 +177,14 @@ describe('createBoostPipeline', () => {
 
     it('falls back to the raw capture when the browser refuses the graph, rather than sending nothing', () => {
         class Refusing { createMediaStreamSource() { throw new Error('no'); } close() { } }
-        const pipeline = softPhone.createBoostPipeline(sourceStream, 6, { audioContext: Refusing });
+        const pipeline = createBoostPipeline(sourceStream, 6, { audioContext: Refusing });
 
         expect(pipeline.stream).toBe(sourceStream);
         expect(pipeline.boosted).toBe(false);
     });
 
     it('sends the capture untouched when no AudioContext exists', () => {
-        const pipeline = softPhone.createBoostPipeline(sourceStream, 6, { audioContext: null });
+        const pipeline = createBoostPipeline(sourceStream, 6, { audioContext: null });
 
         expect(pipeline.stream).toBe(sourceStream);
         expect(pipeline.boosted).toBe(false);

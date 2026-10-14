@@ -3,199 +3,150 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		var STATUS_NAMES = [
-			"Offline",
-			"Available",
-			"Reserved",
-			"Busy",
-			"WrapUp",
-			"Break",
-			"RequestBreak",
-			"Away",
-			"DoNotDisturb",
-			"Meeting",
-			"Training",
-			"AfterHoursUnavailable"
-		];
-		var STATUS_LABELS = {
-			Offline: ["offline", "Offline"],
-			Available: ["available", "Available"],
-			Reserved: ["reserved", "Reserved"],
-			Busy: ["busy", "On a call"],
-			WrapUp: ["wrapUp", "Wrap-up"],
-			Break: ["break", "Break"],
-			RequestBreak: ["breakPending", "Break pending"],
-			Away: ["away", "Away"],
-			DoNotDisturb: ["doNotDisturb", "Do not disturb"],
-			Meeting: ["meeting", "Meeting"],
-			Training: ["training", "Training"],
-			AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
-		};
-		var REASONED_STATES = {
-			Break: true,
-			Away: true,
-			DoNotDisturb: true,
-			Meeting: true,
-			Training: true,
-			AfterHoursUnavailable: true
-		};
-		var WORKING_STATES = {
-			Reserved: true,
-			Busy: true,
-			WrapUp: true
-		};
-		function normalizePresenceStatus(value) {
-			if (typeof value === "number") return STATUS_NAMES[value] || "Offline";
-			if (typeof value === "string" && value) {
-				if (/^\d+$/.test(value)) return STATUS_NAMES[Number(value)] || "Offline";
-				return value;
-			}
-			return "Offline";
-		}
-		function text(labels, key, fallback) {
-			var value = labels && labels[key];
-			return typeof value === "string" && value ? value : fallback;
-		}
-		function hasReason(reason) {
-			return typeof reason === "string" && reason.trim().length > 0;
-		}
-		function presenceLabel(presence, labels) {
-			presence = presence || {};
-			var status = normalizePresenceStatus(presence.status);
-			if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
-			var entry = STATUS_LABELS[status];
-			return entry ? text(labels, entry[0], entry[1]) : status;
-		}
-		function pendingPresenceLabel(presence, labels) {
-			presence = presence || {};
-			var status = normalizePresenceStatus(presence.status);
-			if ((presence.requestedStatus == null || presence.requestedStatus === "" ? "" : normalizePresenceStatus(presence.requestedStatus)) !== "Break" || status === "Break" || status === "RequestBreak") return "";
-			if (hasReason(presence.reason)) return text(labels, "breakPendingWithReason", "Break pending: {0}").replace("{0}", presence.reason.trim());
-			return text(labels, "breakPending", "Break pending");
-		}
-		function breakChoiceLabel(presence, labels) {
-			presence = presence || {};
-			return presence.hasActiveReservation === true || WORKING_STATES[normalizePresenceStatus(presence.status)] === true ? text(labels, "requestBreak", "Request break") : text(labels, "break", "Break");
-		}
-		function isOwnPresence(notification, ownUserId) {
-			if (!notification) return false;
-			if (!ownUserId || !notification.userId) return true;
-			return String(notification.userId) === String(ownUserId);
-		}
-		function isOwnOfferNotification(notification, ownUserId) {
-			return isOwnPresence(notification, ownUserId);
-		}
-		contactCenter.isOwnOfferNotification = isOwnOfferNotification;
-		contactCenter.normalizePresenceStatus = normalizePresenceStatus;
-		contactCenter.presenceLabel = presenceLabel;
-		contactCenter.pendingPresenceLabel = pendingPresenceLabel;
-		contactCenter.breakChoiceLabel = breakChoiceLabel;
-		contactCenter.isOwnPresence = isOwnPresence;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/coalesced-refresh.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		function coalesceRefresh(run) {
-			var inFlight = null;
-			var trailing = null;
-			function start() {
-				try {
-					inFlight = Promise.resolve(run());
-				} catch (error) {
-					inFlight = Promise.reject(error);
-				}
-				var settled = function() {
-					inFlight = null;
-				};
-				inFlight.then(settled, settled);
-				return inFlight;
+	function coalesceRefresh(run) {
+		var inFlight = null;
+		var trailing = null;
+		function start() {
+			try {
+				inFlight = Promise.resolve(run());
+			} catch (error) {
+				inFlight = Promise.reject(error);
 			}
-			return function refresh() {
-				if (!inFlight) return start();
-				if (!trailing) {
-					var after = function() {
-						trailing = null;
-						return start();
-					};
-					trailing = inFlight.then(after, after);
-				}
-				return trailing;
+			var settled = function() {
+				inFlight = null;
 			};
+			inFlight.then(settled, settled);
+			return inFlight;
 		}
-		contactCenter.coalesceRefresh = coalesceRefresh;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		return function refresh() {
+			if (!inFlight) return start();
+			if (!trailing) {
+				var after = function() {
+					trailing = null;
+					return start();
+				};
+				trailing = inFlight.then(after, after);
+			}
+			return trailing;
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	var STATUS_NAMES = [
+		"Offline",
+		"Available",
+		"Reserved",
+		"Busy",
+		"WrapUp",
+		"Break",
+		"RequestBreak",
+		"Away",
+		"DoNotDisturb",
+		"Meeting",
+		"Training",
+		"AfterHoursUnavailable"
+	];
+	var STATUS_LABELS = {
+		Offline: ["offline", "Offline"],
+		Available: ["available", "Available"],
+		Reserved: ["reserved", "Reserved"],
+		Busy: ["busy", "On a call"],
+		WrapUp: ["wrapUp", "Wrap-up"],
+		Break: ["break", "Break"],
+		RequestBreak: ["breakPending", "Break pending"],
+		Away: ["away", "Away"],
+		DoNotDisturb: ["doNotDisturb", "Do not disturb"],
+		Meeting: ["meeting", "Meeting"],
+		Training: ["training", "Training"],
+		AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
+	};
+	var REASONED_STATES = {
+		Break: true,
+		Away: true,
+		DoNotDisturb: true,
+		Meeting: true,
+		Training: true,
+		AfterHoursUnavailable: true
+	};
+	function normalizePresenceStatus(value) {
+		if (typeof value === "number") return STATUS_NAMES[value] || "Offline";
+		if (typeof value === "string" && value) {
+			if (/^\d+$/.test(value)) return STATUS_NAMES[Number(value)] || "Offline";
+			return value;
+		}
+		return "Offline";
+	}
+	function text$1(labels, key, fallback) {
+		var value = labels && labels[key];
+		return typeof value === "string" && value ? value : fallback;
+	}
+	function hasReason(reason) {
+		return typeof reason === "string" && reason.trim().length > 0;
+	}
+	function presenceLabel(presence, labels) {
+		presence = presence || {};
+		var status = normalizePresenceStatus(presence.status);
+		if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
+		var entry = STATUS_LABELS[status];
+		return entry ? text$1(labels, entry[0], entry[1]) : status;
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		var OFFER_ACCEPT_TIMEOUT_MS = 2e4;
-		function text(labels, key, fallback) {
-			return labels && labels[key] || fallback;
+	var OFFER_ACCEPT_TIMEOUT_MS = 2e4;
+	function text(labels, key, fallback) {
+		return labels && labels[key] || fallback;
+	}
+	function offerAcceptView(state, labels) {
+		var pending = !!(state && state.pending);
+		var preview = !!(state && state.preview);
+		if (pending) return {
+			disabled: true,
+			spinner: true,
+			label: preview ? text(labels, "dialing", "Dialing…") : text(labels, "answering", "Answering…")
+		};
+		return {
+			disabled: false,
+			spinner: false,
+			label: preview ? text(labels, "dial", "Dial") : text(labels, "accept", "Accept")
+		};
+	}
+	function showOfferAccepting(container, state, labels) {
+		if (!container || typeof container.querySelectorAll !== "function") return;
+		var view = offerAcceptView(state, labels);
+		Array.prototype.forEach.call(container.querySelectorAll("button"), function(button) {
+			button.disabled = view.disabled;
+		});
+		var acceptButton = container.querySelector("[data-cc-accept]");
+		if (!acceptButton) return;
+		if (view.spinner) {
+			if (acceptButton.__restingHtml === void 0) acceptButton.__restingHtml = acceptButton.innerHTML;
+			var spinner = acceptButton.ownerDocument.createElement("span");
+			spinner.className = "spinner-border spinner-border-sm me-1";
+			spinner.setAttribute("role", "status");
+			spinner.setAttribute("aria-hidden", "true");
+			acceptButton.textContent = "";
+			acceptButton.appendChild(spinner);
+			acceptButton.appendChild(acceptButton.ownerDocument.createTextNode(view.label));
+		} else if (acceptButton.__restingHtml !== void 0) {
+			acceptButton.innerHTML = acceptButton.__restingHtml;
+			acceptButton.__restingHtml = void 0;
 		}
-		function offerAcceptView(state, labels) {
-			var pending = !!(state && state.pending);
-			var preview = !!(state && state.preview);
-			if (pending) return {
-				disabled: true,
-				spinner: true,
-				label: preview ? text(labels, "dialing", "Dialing…") : text(labels, "answering", "Answering…")
-			};
-			return {
-				disabled: false,
-				spinner: false,
-				label: preview ? text(labels, "dial", "Dial") : text(labels, "accept", "Accept")
-			};
-		}
-		function showOfferAccepting(container, state, labels) {
-			if (!container || typeof container.querySelectorAll !== "function") return;
-			var view = offerAcceptView(state, labels);
-			Array.prototype.forEach.call(container.querySelectorAll("button"), function(button) {
-				button.disabled = view.disabled;
+	}
+	function withOfferAcceptTimeout(promise) {
+		return new Promise(function(resolve, reject) {
+			var timer = setTimeout(function() {
+				reject(Object.assign(/* @__PURE__ */ new Error("The accept timed out."), { offerAcceptTimedOut: true }));
+			}, OFFER_ACCEPT_TIMEOUT_MS);
+			Promise.resolve(promise).then(function(value) {
+				clearTimeout(timer);
+				resolve(value);
+			}, function(error) {
+				clearTimeout(timer);
+				reject(error);
 			});
-			var acceptButton = container.querySelector("[data-cc-accept]");
-			if (!acceptButton) return;
-			if (view.spinner) {
-				if (acceptButton.__restingHtml === void 0) acceptButton.__restingHtml = acceptButton.innerHTML;
-				var spinner = acceptButton.ownerDocument.createElement("span");
-				spinner.className = "spinner-border spinner-border-sm me-1";
-				spinner.setAttribute("role", "status");
-				spinner.setAttribute("aria-hidden", "true");
-				acceptButton.textContent = "";
-				acceptButton.appendChild(spinner);
-				acceptButton.appendChild(acceptButton.ownerDocument.createTextNode(view.label));
-			} else if (acceptButton.__restingHtml !== void 0) {
-				acceptButton.innerHTML = acceptButton.__restingHtml;
-				acceptButton.__restingHtml = void 0;
-			}
-		}
-		function withOfferAcceptTimeout(promise) {
-			return new Promise(function(resolve, reject) {
-				var timer = root.setTimeout(function() {
-					var error = /* @__PURE__ */ new Error("The accept timed out.");
-					error.offerAcceptTimedOut = true;
-					reject(error);
-				}, OFFER_ACCEPT_TIMEOUT_MS);
-				Promise.resolve(promise).then(function(value) {
-					root.clearTimeout(timer);
-					resolve(value);
-				}, function(error) {
-					root.clearTimeout(timer);
-					reject(error);
-				});
-			});
-		}
-		contactCenter.OFFER_ACCEPT_TIMEOUT_MS = OFFER_ACCEPT_TIMEOUT_MS;
-		contactCenter.offerAcceptView = offerAcceptView;
-		contactCenter.showOfferAccepting = showOfferAccepting;
-		contactCenter.withOfferAcceptTimeout = withOfferAcceptTimeout;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		});
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/contact-center-agent-bar.js
 	(function(window, document) {
@@ -300,6 +251,7 @@
 			var state = null;
 			var serverOffsetMs = 0;
 			var activeSignature = null;
+			var connectionStatus = null;
 			var lastPoppedActivityId = null;
 			var lastOfferReservationId = null;
 			var inner = root.querySelector("[data-cc-agent-bar-inner]");
@@ -372,7 +324,7 @@
 			function serverNow() {
 				return Date.now() - serverOffsetMs;
 			}
-			var refresh = window.CrestAppsContactCenter.coalesceRefresh(function() {
+			var refresh = coalesceRefresh(function() {
 				if (!config.stateUrl) return Promise.resolve();
 				return fetch(config.stateUrl, {
 					credentials: "same-origin",
@@ -416,9 +368,7 @@
 				return state && state.presence && state.presence.status || "Offline";
 			}
 			function presenceText() {
-				var presence = window.CrestAppsContactCenter;
-				var current = state && state.presence || {};
-				return presence ? presence.presenceLabel(current, config.presenceLabels) : current.reason || presenceStatus();
+				return presenceLabel(state && state.presence || {}, config.presenceLabels);
 			}
 			function diagnostic(code, details) {
 				if (window.console && typeof window.console.info === "function") window.console.info("[cc-agent-bar] " + code, details || {});
@@ -497,7 +447,7 @@
 			}
 			function renderTail() {
 				var collapseTitle = label("collapseBar", "Hide the Contact Center bar");
-				return "<div class=\"cc-bar__tail\"><span class=\"cc-bar__conn\" data-cc-connection role=\"status\" aria-live=\"polite\"></span>" + (config.workspaceUrl ? "<a class=\"cc-bar__workspace\" href=\"" + escapeHtml(config.workspaceUrl) + "\" title=\"" + escapeHtml(label("openWorkspace", "Open full workspace")) + "\"><i class=\"fa-solid fa-headset\" aria-hidden=\"true\"></i></a>" : "") + "<button type=\"button\" class=\"cc-bar__collapse\" data-cc-collapse title=\"" + escapeHtml(collapseTitle) + "\" aria-label=\"" + escapeHtml(collapseTitle) + "\"><i class=\"fa-solid fa-chevron-down\" aria-hidden=\"true\"></i></button></div>";
+				return "<div class=\"cc-bar__tail\"><span class=\"" + connectionStatusClass() + "\" data-cc-connection role=\"status\" aria-live=\"polite\">" + escapeHtml(connectionStatusText()) + "</span>" + (config.workspaceUrl ? "<a class=\"cc-bar__workspace\" href=\"" + escapeHtml(config.workspaceUrl) + "\" title=\"" + escapeHtml(label("openWorkspace", "Open full workspace")) + "\"><i class=\"fa-solid fa-headset\" aria-hidden=\"true\"></i></a>" : "") + "<button type=\"button\" class=\"cc-bar__collapse\" data-cc-collapse title=\"" + escapeHtml(collapseTitle) + "\" aria-label=\"" + escapeHtml(collapseTitle) + "\"><i class=\"fa-solid fa-chevron-down\" aria-hidden=\"true\"></i></button></div>";
 			}
 			function isEnded(active) {
 				return active.status === "Ended" || active.status === "Failed";
@@ -524,7 +474,6 @@
 			}
 			function accept(reservationId) {
 				if (!config.acceptOfferUrl || !reservationId) return;
-				var offerActions = window.CrestAppsContactCenter;
 				var offer = inner.querySelector("[data-cc-offer]");
 				var offerState = { preview: !!(state && state.offer && state.offer.kind === "PreviewDial") };
 				var offerLabels = {
@@ -534,18 +483,18 @@
 					dialing: label("dialing", "Dialing…")
 				};
 				showOfferError(null);
-				offerActions.showOfferAccepting(offer, {
+				showOfferAccepting(offer, {
 					pending: true,
 					preview: offerState.preview
 				}, offerLabels);
-				offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId })).then(function(response) {
+				withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId })).then(function(response) {
 					return refresh().then(function() {
 						if (response && response.ok === false) showOfferError(label("acceptFailed", "The call could not be answered. It may have been taken or re-offered."));
 					});
 				}).catch(function(error) {
 					showOfferError(error && error.offerAcceptTimedOut ? label("acceptTimedOut", "The call is taking too long to connect. Check your soft phone, then try again.") : label("acceptFailed", "The call could not be answered. It may have been taken or re-offered."));
 				}).finally(function() {
-					offerActions.showOfferAccepting(inner.querySelector("[data-cc-offer]"), {
+					showOfferAccepting(inner.querySelector("[data-cc-offer]"), {
 						pending: false,
 						preview: offerState.preview
 					}, offerLabels);
@@ -580,10 +529,22 @@
 				});
 			}
 			function setConnectionStatus(key, fallback, modifier) {
+				connectionStatus = {
+					key,
+					fallback,
+					modifier
+				};
 				var el = inner ? inner.querySelector("[data-cc-connection]") : null;
-				if (!el) return;
-				el.textContent = label(key, fallback);
-				el.className = "cc-bar__conn" + (modifier ? " " + modifier : "");
+				if (el) {
+					el.textContent = label(key, fallback);
+					el.className = connectionStatusClass();
+				}
+			}
+			function connectionStatusClass() {
+				return "cc-bar__conn" + (connectionStatus && connectionStatus.modifier ? " " + connectionStatus.modifier : "");
+			}
+			function connectionStatusText() {
+				return connectionStatus ? label(connectionStatus.key, connectionStatus.fallback) : "";
 			}
 			function tick() {
 				if (!state || !inner) return;

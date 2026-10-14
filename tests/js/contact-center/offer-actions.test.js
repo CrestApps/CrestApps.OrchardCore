@@ -1,9 +1,11 @@
-import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js';
-
-const { offerAcceptView, showOfferAccepting, withOfferAcceptTimeout, OFFER_ACCEPT_TIMEOUT_MS } = globalThis.CrestAppsContactCenter;
+import {
+    OFFER_ACCEPT_TIMEOUT_MS,
+    offerAcceptView,
+    showOfferAccepting,
+    withOfferAcceptTimeout,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js';
 
 const labels = { accept: 'Accept', dial: 'Dial', answering: 'Answering…', dialing: 'Dialing…' };
 
@@ -104,20 +106,5 @@ describe('showOfferAccepting', () => {
 
     it('ignores a missing offer', () => {
         expect(() => showOfferAccepting(null, { pending: true }, labels)).not.toThrow();
-    });
-});
-
-const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Assets.json', 'utf8'));
-const helper = 'Assets/js/shared/offer-actions.js';
-
-describe.each([
-    ['wwwroot/scripts/agent-workspace.js', 'Assets/js/agent-workspace.js'],
-    ['wwwroot/scripts/contact-center-agent-bar.js', 'Assets/js/contact-center-agent-bar.js'],
-])('the %s bundle', (output, script) => {
-    const group = assets.find(candidate => candidate.dest === output);
-
-    it('carries the offer-actions helper ahead of the script that uses it', () => {
-        expect(group.source).toContain(helper);
-        expect(group.source.indexOf(helper)).toBeLessThan(group.source.indexOf(script));
     });
 });

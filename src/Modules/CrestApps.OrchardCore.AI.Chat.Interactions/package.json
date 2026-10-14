@@ -6,8 +6,5 @@
   "license": "ISC",
   "dependencies": {
     "@crestapps/ai-chat-ui": "2.0.0-preview.215"
-  },
-  "devDependencies": {
-    "eslint": "^10.12.0"
   }
 }

@@ -6,271 +6,320 @@
  * call history, and reaches the same provider implementation regardless of which telephony provider
  * is configured server-side.
  */
+import { formatPhoneNumber, normalizeDialNumber } from './soft-phone/format.js';
+import {
+    QUALITY_POOR_LOSS_PERCENT,
+    QUALITY_POOR_MOS,
+    QUALITY_SILENT_MIC_SAMPLES,
+    estimateMos,
+    isCaptureSilent,
+    parseWebRtcStats,
+    readJitterBufferMs,
+    windowedMicrophoneLevel,
+} from './soft-phone/quality.js';
+import {
+    LEVEL_SILENT,
+    captureProbeNeedsRebuild,
+    createLevelProbe,
+    inboundProbeNeedsRebuild,
+    isTrackDeliverable,
+    probeLevel,
+    selectReceiveTrack,
+} from './soft-phone/level-probe.js';
+import { createHoldAudioController, findAudioSender } from './soft-phone/hold-audio.js';
+import { connectedAtFor, durationMeta, formatCallStatus, formatElapsed } from './soft-phone/call-status.js';
+import {
+    captureWithFallback,
+    isVirtualAudioDevice,
+    resolveDeviceLabel,
+    shouldFallBackToDefaultSpeaker,
+} from './soft-phone/audio-devices.js';
+import { clampBoostDb, createBoostPipeline, describeBoost } from './soft-phone/mic-boost.js';
+import {
+    RAW_CAPTURE_SILENT_LEVEL,
+    clampVoiceIsolationEngine,
+    clampVoiceIsolationStrength,
+    createVoiceIsolationPipeline,
+    describeVoiceIsolation,
+    isVoiceIsolationSupported,
+} from './soft-phone/voice-isolation.js';
+import { clampAutoLevelGainDb } from './soft-phone/auto-level.js';
+import { applyPlayoutDelay, clampPlayoutDelay, concealmentPercent } from './soft-phone/playout-delay.js';
+import {
+    clampSignalingRegion,
+    describeSignalingRegion,
+    resolveSignalingRegion,
+    withSignalingRegion,
+} from './soft-phone/signaling-region.js';
+import { classifyProviderWarning, describeProviderWarning } from './soft-phone/diagnostics.js';
+import { iceServersIncludeTurn, isTelnyxTerminalState, mapTelnyxOutboundState } from './soft-phone/telnyx-state.js';
+import { reconnectDelayMs } from './soft-phone/reconnect.js';
+import {
+    OUTBOUND_SILENCE_MS,
+    hasLiveAudioTrack,
+    releaseSharedCapture,
+    replaceSendTrackOnPeers,
+    startOutboundAudioMonitor,
+} from './soft-phone/send-audio.js';
+import {
+    holdCommandRoute,
+    isAgentHeld,
+    pruneAgentHolds,
+    reconcileAgentHold,
+    rememberAgentHold,
+    resolveReportedState,
+} from './soft-phone/agent-hold.js';
+import {
+    conferenceMuted,
+    isAgentMuted,
+    muteGroupCallIds,
+    pruneAgentMutes,
+    reconcileAgentMute,
+    rememberAgentMute,
+} from './soft-phone/agent-mute.js';
+import {
+    OFFER_LEG_CAPABILITY,
+    classifyOfferLeg,
+    forgetAcceptedOffer,
+    readOfferLegTag,
+    rememberAcceptedOffer,
+} from './soft-phone/offer-leg.js';
+import {
+    forgetUnacceptedOfferCall,
+    planOfferCallReport,
+    rememberUnacceptedOfferCall,
+} from './soft-phone/offer-report.js';
+import {
+    EXTENSION_CALL_KEY,
+    armAutoAnswer,
+    autoAnswerOfferKey,
+    canArmForAcceptedOffer,
+    createAutoAnswerArm,
+    disarmAutoAnswer,
+    disarmOtherOffers,
+    shouldAutoAnswerInboundLeg,
+} from './soft-phone/auto-answer.js';
+import {
+    createPredictiveStandby,
+    noteStandbyLeg,
+    readStandbyLegTag,
+    setPredictiveStandby,
+    shouldStandbyAnswerLeg,
+    wasStandbyLegSeen,
+} from './soft-phone/predictive-standby.js';
+import {
+    anyMonitorLegTalks,
+    armMonitorLeg,
+    claimMonitorLegArm,
+    createMonitorLegArms,
+    describeMonitorLegMedia,
+    disarmMonitorLeg,
+    holdsMonitorLeg,
+    monitorLegAction,
+    monitorLegReplaces,
+    planMonitorCallPromotion,
+    planMonitorLegPromotion,
+    readMonitorLegMedia,
+    readMonitorLegTag,
+} from './soft-phone/monitor-leg.js';
+import {
+    planEntryEnd,
+    planEntryStart,
+    planNumberField,
+    resolveDialTarget,
+    resolvePeerNumber,
+} from './soft-phone/dial-target.js';
+import {
+    BRIDGED_DIAL_LEG_CAPABILITY,
+    bridgedDialRequest,
+    planKeypadDial,
+    sharedMicrophoneEnabled,
+    shouldDialFromBrowser,
+} from './soft-phone/keypad-dial.js';
+import {
+    OFFER_CHANNEL_NAME,
+    OFFER_HANDLED_MESSAGE,
+    readOfferHandledMessage,
+    shouldRingForOffer,
+} from './soft-phone/offer-ring.js';
+import {
+    RINGBACK_CADENCE,
+    createRingbackMemory,
+    forgetRemoteParty,
+    isRemotePartyRinging,
+    noteRemoteParty,
+    planRingback,
+    pruneRemoteParties,
+    ringbackTimeLeftMs,
+} from './soft-phone/ringback.js';
+import {
+    REGISTRATION_RETRY_MS,
+    REGISTRATION_TIMEOUT_MS,
+    answerClickAction,
+    guardRegistration,
+    isAnswerInProgress,
+    planMicrophoneLossRecovery,
+    planRegistrationSelfHeal,
+    registrationRetryDelay,
+    shouldReportRegistrationFailure,
+    shouldStartRegistration,
+} from './soft-phone/registration.js';
+import {
+    ANSWER_REGISTRATION_TIMEOUT_MS,
+    answerButtonView,
+    isOfferActionPending,
+    isOfferSettled,
+    offerActionClick,
+    rememberSettledOffer,
+} from './soft-phone/answer-state.js';
+import {
+    allLegs,
+    canConferenceCall,
+    createCallLegs,
+    forgetLeg,
+    legAfterEnd,
+    noteBrowserLeg,
+    notePlatformLeg,
+    planPlatformReport,
+} from './soft-phone/call-legs.js';
+import {
+    applyConferenceMemory,
+    buildActiveCallsHtml,
+    conferenceAfterMerge,
+    conferenceLegsWithoutParticipants,
+    conferenceMembers,
+    createConferenceMemory,
+    forgetConferenceCall,
+    isOneConference,
+    markParticipantLeft,
+    planConferenceEnd,
+    planConferenceHangup,
+    planMerge,
+    rememberConference,
+    visibleConferenceCalls,
+} from './soft-phone/conference.js';
+import { planInCallControls } from './soft-phone/in-call-controls.js';
+import { carryCallParty, createCallPartyMemory, forgetCallParty, friendlyCallLabel } from './soft-phone/call-labels.js';
+import {
+    buildKeypadExtensionResultsHtml,
+    keypadExtensionMatches,
+    resolveKeypadExtension,
+} from './soft-phone/keypad-search.js';
+import {
+    readExtension,
+    transferBlockedReason,
+    transferModes,
+    transferRefusalMessage,
+} from './soft-phone/transfer-target.js';
+import { createTransferPanel } from './soft-phone/transfer-panel.js';
+import {
+    callExtensionNumber,
+    createExtensionDirectory,
+    describeExtension,
+    extensionDirectoryEntries,
+    extensionName,
+    ownExtensions,
+    shouldReloadExtensions,
+    storeExtensionEntries,
+} from './soft-phone/extension-names.js';
+import {
+    carryCallContext,
+    createCallContextMemory,
+    createTransferService,
+    forgetCallContext,
+    resolveServiceTarget,
+    serviceDirectoryEntries,
+    serviceModes,
+} from './soft-phone/transfer-service.js';
+import {
+    consultCommandResult,
+    consultFromCall,
+    consultRequest,
+    providerTransferRequest,
+    readTransferLegTag,
+    shouldHoldBeforeTransfer,
+} from './soft-phone/bridged-transfer.js';
+import { enhancePhoneInput, readPhoneInput } from './soft-phone/phone-input.js';
+import { showInAppConfirm } from './soft-phone/in-app-confirm.js';
+import {
+    createCallNotifiers,
+    deliverCallState,
+    endAllCalls,
+    findVanishedCalls,
+    isCallTracked,
+    journalCallConnected,
+    journalCallEnded,
+    journalCallSettled,
+    journalCallStarted,
+    planCallHeartbeat,
+    planOwedCallEnds,
+    planShownBrowserCalls,
+    readCallJournal,
+    trackCall,
+} from './soft-phone/browser-calls.js';
+import {
+    acquireRemoteElement,
+    createRemoteElementPool,
+    rekeyRemoteElement,
+    releaseAllRemoteElements,
+    releaseRemoteElement,
+    remoteElementFor,
+} from './soft-phone/remote-elements.js';
+import { incomingCardActionLabels } from './soft-phone/incoming-card.js';
+import {
+    HOST_BRIDGE_PROTOCOL,
+    HOST_PAGE_MESSAGES,
+    buildIncomingCallMessage,
+    createHostDelegation,
+    findHostChannel,
+} from './soft-phone/host-bridge.js';
+import { VOICEMAIL_ROUTES, voicemailRoute } from './soft-phone/voicemail-route.js';
+import {
+    classifyMicrophoneError,
+    describeBrowserError,
+    describeMicrophoneFacts,
+} from './soft-phone/microphone-errors.js';
+import { offerRingStopDelayMs } from './soft-phone/offer-deadline.js';
+import {
+    deleteVoicemailsInTurn,
+    describeVoicemailDeleteFailures,
+    voicemailDeleteFailureText,
+} from './soft-phone/voicemail-delete.js';
+
 (function () {
     'use strict';
 
-    // The parts of the soft phone with no DOM and no provider in them live in Assets/js/soft-phone/*.js and are
-    // concatenated ahead of this file into the same bundle. They attach to a shared namespace rather than
-    // exporting, so one source file runs both in the browser and under the JavaScript unit tests (`npm test`) —
+    // The parts of the soft phone with no DOM and no provider in them live in Assets/js/soft-phone/*.js, as ES
+    // modules this file imports (above), so one source file runs both in the browser and under the JavaScript unit
+    // tests (`npm test`) —
     // which is the point of the split: this file is far too large to test, and those parts are the ones where a
     // silent arithmetic or mapping mistake reaches an agent as a wrong number on screen or a call that looks
     // connected when it is ringing.
-    var softPhoneModules = (typeof globalThis !== 'undefined' ? globalThis : window).CrestAppsSoftPhone || {};
 
-    var normalizeDialNumber = softPhoneModules.normalizeDialNumber;
-    var formatNanpNumber = softPhoneModules.formatNanpNumber;
-    var formatInternationalNumber = softPhoneModules.formatInternationalNumber;
-    var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
 
-    var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
-    var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
-    var QUALITY_SILENT_MIC_SAMPLES = softPhoneModules.QUALITY_SILENT_MIC_SAMPLES;
-    var LEVEL_UNKNOWN = softPhoneModules.LEVEL_UNKNOWN;
-    var LEVEL_SILENT = softPhoneModules.LEVEL_SILENT;
-    var estimateMos = softPhoneModules.estimateMos;
-    var isCaptureSilent = softPhoneModules.isCaptureSilent;
-    var readJitterBufferMs = softPhoneModules.readJitterBufferMs;
-    var parseWebRtcStats = softPhoneModules.parseWebRtcStats;
-    var createLevelProbe = softPhoneModules.createLevelProbe;
-    var probeLevel = softPhoneModules.probeLevel;
-    var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
-    var captureProbeNeedsRebuild = softPhoneModules.captureProbeNeedsRebuild;
-    var windowedMicrophoneLevel = softPhoneModules.windowedMicrophoneLevel;
-    var findAudioSender = softPhoneModules.findAudioSender;
-    var formatCallStatus = softPhoneModules.formatCallStatus;
-    var connectedAtFor = softPhoneModules.connectedAtFor;
-    var formatElapsed = softPhoneModules.formatElapsed;
-    var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
-    var captureWithFallback = softPhoneModules.captureWithFallback;
-    var shouldFallBackToDefaultSpeaker = softPhoneModules.shouldFallBackToDefaultSpeaker;
-    var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
-    var durationMeta = softPhoneModules.durationMeta;
-    var clampBoostDb = softPhoneModules.clampBoostDb;
-    var describeBoost = softPhoneModules.describeBoost;
-    var createBoostPipeline = softPhoneModules.createBoostPipeline;
-    var clampVoiceIsolationEngine = softPhoneModules.clampVoiceIsolationEngine;
-    var clampVoiceIsolationStrength = softPhoneModules.clampVoiceIsolationStrength;
-    var describeVoiceIsolation = softPhoneModules.describeVoiceIsolation;
-    var isVoiceIsolationSupported = softPhoneModules.isVoiceIsolationSupported;
-    var createVoiceIsolationPipeline = softPhoneModules.createVoiceIsolationPipeline;
-    var clampAutoLevelGainDb = softPhoneModules.clampAutoLevelGainDb;
-    var RAW_CAPTURE_SILENT_LEVEL = softPhoneModules.RAW_CAPTURE_SILENT_LEVEL;
-    var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
-    var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
-    var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
-    var concealmentPercent = softPhoneModules.concealmentPercent;
-    var clampSignalingRegion = softPhoneModules.clampSignalingRegion;
-    var describeSignalingRegion = softPhoneModules.describeSignalingRegion;
-    var resolveSignalingRegion = softPhoneModules.resolveSignalingRegion;
-    var withSignalingRegion = softPhoneModules.withSignalingRegion;
-    var describeProviderWarning = softPhoneModules.describeProviderWarning;
-    var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
 
-    var mapTelnyxOutboundState = softPhoneModules.mapTelnyxOutboundState;
-    var isTelnyxTerminalState = softPhoneModules.isTelnyxTerminalState;
-    var iceServersIncludeTurn = softPhoneModules.iceServersIncludeTurn;
 
-    var reconnectDelayMs = softPhoneModules.reconnectDelayMs;
 
-    var createHoldAudioController = softPhoneModules.createHoldAudioController;
 
-    var hasLiveAudioTrack = softPhoneModules.hasLiveAudioTrack;
-    var releaseSharedCapture = softPhoneModules.releaseSharedCapture;
-    var startOutboundAudioMonitor = softPhoneModules.startOutboundAudioMonitor;
-    var OUTBOUND_SILENCE_MS = softPhoneModules.OUTBOUND_SILENCE_MS;
 
-    var rememberAgentHold = softPhoneModules.rememberAgentHold;
-    var pruneAgentHolds = softPhoneModules.pruneAgentHolds;
-    var isAgentHeld = softPhoneModules.isAgentHeld;
-    var reconcileAgentHold = softPhoneModules.reconcileAgentHold;
-    var resolveReportedState = softPhoneModules.resolveReportedState;
-    var holdCommandRoute = softPhoneModules.holdCommandRoute;
 
-    var rememberAgentMute = softPhoneModules.rememberAgentMute;
-    var isAgentMuted = softPhoneModules.isAgentMuted;
-    var pruneAgentMutes = softPhoneModules.pruneAgentMutes;
-    var reconcileAgentMute = softPhoneModules.reconcileAgentMute;
-    var muteGroupCallIds = softPhoneModules.muteGroupCallIds;
-    var conferenceMuted = softPhoneModules.conferenceMuted;
 
-    var readOfferLegTag = softPhoneModules.readOfferLegTag;
-    var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
-    var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
-    var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
-    var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
 
-    var planOfferCallReport = softPhoneModules.planOfferCallReport;
-    var rememberUnacceptedOfferCall = softPhoneModules.rememberUnacceptedOfferCall;
-    var forgetUnacceptedOfferCall = softPhoneModules.forgetUnacceptedOfferCall;
 
-    var EXTENSION_CALL_KEY = softPhoneModules.EXTENSION_CALL_KEY;
-    var autoAnswerOfferKey = softPhoneModules.autoAnswerOfferKey;
-    var createAutoAnswerArm = softPhoneModules.createAutoAnswerArm;
-    var armAutoAnswer = softPhoneModules.armAutoAnswer;
-    var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
-    var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
-    var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
-    var canArmForAcceptedOffer = softPhoneModules.canArmForAcceptedOffer;
-    var createPredictiveStandby = softPhoneModules.createPredictiveStandby;
-    var setPredictiveStandbyFor = softPhoneModules.setPredictiveStandby;
-    var shouldStandbyAnswerLeg = softPhoneModules.shouldStandbyAnswerLeg;
-    var readStandbyLegTag = softPhoneModules.readStandbyLegTag;
-    var noteStandbyLeg = softPhoneModules.noteStandbyLeg;
-    var wasStandbyLegSeen = softPhoneModules.wasStandbyLegSeen;
-    var createMonitorLegArms = softPhoneModules.createMonitorLegArms;
-    var armMonitorLegFor = softPhoneModules.armMonitorLeg;
-    var disarmMonitorLegFor = softPhoneModules.disarmMonitorLeg;
-    var readMonitorLegTag = softPhoneModules.readMonitorLegTag;
-    var claimMonitorLegArm = softPhoneModules.claimMonitorLegArm;
-    var monitorLegAction = softPhoneModules.monitorLegAction;
-    var monitorLegReplaces = softPhoneModules.monitorLegReplaces;
-    var planMonitorLegPromotion = softPhoneModules.planMonitorLegPromotion;
-    var planMonitorCallPromotion = softPhoneModules.planMonitorCallPromotion;
-    var anyMonitorLegTalks = softPhoneModules.anyMonitorLegTalks;
-    var holdsMonitorLeg = softPhoneModules.holdsMonitorLeg;
-    var readMonitorLegMedia = softPhoneModules.readMonitorLegMedia;
-    var describeMonitorLegMedia = softPhoneModules.describeMonitorLegMedia;
-    var replaceSendTrackOnPeers = softPhoneModules.replaceSendTrackOnPeers;
-    var planEntryStart = softPhoneModules.planEntryStart;
-    var planEntryEnd = softPhoneModules.planEntryEnd;
+    var setPredictiveStandbyFor = setPredictiveStandby;
+    var armMonitorLegFor = armMonitorLeg;
+    var disarmMonitorLegFor = disarmMonitorLeg;
 
-    var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
-    var planKeypadDial = softPhoneModules.planKeypadDial;
-    var bridgedDialRequest = softPhoneModules.bridgedDialRequest;
-    var shouldDialFromBrowser = softPhoneModules.shouldDialFromBrowser;
-    var sharedMicrophoneEnabled = softPhoneModules.sharedMicrophoneEnabled;
 
-    var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
-    var RINGBACK_CADENCE = softPhoneModules.RINGBACK_CADENCE;
-    var createRingbackMemory = softPhoneModules.createRingbackMemory;
-    var noteRemoteParty = softPhoneModules.noteRemoteParty;
-    var forgetRemoteParty = softPhoneModules.forgetRemoteParty;
-    var pruneRemoteParties = softPhoneModules.pruneRemoteParties;
-    var isRemotePartyRinging = softPhoneModules.isRemotePartyRinging;
-    var ringbackTimeLeftMs = softPhoneModules.ringbackTimeLeftMs;
-    var planRingback = softPhoneModules.planRingback;
-    var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
-    var planRegistrationSelfHeal = softPhoneModules.planRegistrationSelfHeal;
-    var planMicrophoneLossRecovery = softPhoneModules.planMicrophoneLossRecovery;
-    var guardRegistration = softPhoneModules.guardRegistration;
-    var REGISTRATION_TIMEOUT_MS = softPhoneModules.REGISTRATION_TIMEOUT_MS;
-    var REGISTRATION_RETRY_MS = softPhoneModules.REGISTRATION_RETRY_MS;
-    var registrationRetryDelay = softPhoneModules.registrationRetryDelay;
-    var shouldReportRegistrationFailure = softPhoneModules.shouldReportRegistrationFailure;
-    var answerClickAction = softPhoneModules.answerClickAction;
-    var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
-    var answerButtonView = softPhoneModules.answerButtonView;
-    var offerActionClick = softPhoneModules.offerActionClick;
-    var isOfferActionPending = softPhoneModules.isOfferActionPending;
-    var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
-    var withTimeout = softPhoneModules.withTimeout;
-    var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
-    var isOfferSettled = softPhoneModules.isOfferSettled;
-    var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
-    var OFFER_CHANNEL_NAME = softPhoneModules.OFFER_CHANNEL_NAME;
-    var OFFER_HANDLED_MESSAGE = softPhoneModules.OFFER_HANDLED_MESSAGE;
 
-    var createCallLegs = softPhoneModules.createCallLegs;
-    var notePlatformLeg = softPhoneModules.notePlatformLeg;
-    var noteBrowserLeg = softPhoneModules.noteBrowserLeg;
-    var forgetLeg = softPhoneModules.forgetLeg;
-    var planPlatformReport = softPhoneModules.planPlatformReport;
-    var legAfterEnd = softPhoneModules.legAfterEnd;
-    var allLegs = softPhoneModules.allLegs;
-    var canConferenceCall = softPhoneModules.canConferenceCall;
-    var planMerge = softPhoneModules.planMerge;
-    var conferenceAfterMerge = softPhoneModules.conferenceAfterMerge;
-    var buildActiveCallsHtml = softPhoneModules.buildActiveCallsHtml;
-    var createConferenceMemory = softPhoneModules.createConferenceMemory;
-    var rememberConference = softPhoneModules.rememberConference;
-    var applyConferenceMemory = softPhoneModules.applyConferenceMemory;
-    var markParticipantLeft = softPhoneModules.markParticipantLeft;
-    var forgetConferenceCall = softPhoneModules.forgetConferenceCall;
-    var conferenceMembers = softPhoneModules.conferenceMembers;
-    var visibleConferenceCalls = softPhoneModules.visibleConferenceCalls;
-    var isOneConference = softPhoneModules.isOneConference;
-    var conferenceLegsWithoutParticipants = softPhoneModules.conferenceLegsWithoutParticipants;
-    var planConferenceHangup = softPhoneModules.planConferenceHangup;
-    var planConferenceEnd = softPhoneModules.planConferenceEnd;
-    var planInCallControls = softPhoneModules.planInCallControls;
-    var friendlyCallLabel = softPhoneModules.friendlyCallLabel;
-    var createCallPartyMemory = softPhoneModules.createCallPartyMemory;
-    var carryCallParty = softPhoneModules.carryCallParty;
-    var forgetCallParty = softPhoneModules.forgetCallParty;
-    var planNumberField = softPhoneModules.planNumberField;
-    var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
-    var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
-    var buildKeypadExtensionResultsHtml = softPhoneModules.buildKeypadExtensionResultsHtml;
-    var transferRefusalMessage = softPhoneModules.transferRefusalMessage;
-    var transferModes = softPhoneModules.transferModes;
-    var createTransferPanel = softPhoneModules.createTransferPanel;
 
-    var createExtensionDirectory = softPhoneModules.createExtensionDirectory;
-    var storeExtensionEntries = softPhoneModules.storeExtensionEntries;
-    var shouldReloadExtensions = softPhoneModules.shouldReloadExtensions;
-    var extensionName = softPhoneModules.extensionName;
-    var describeExtension = softPhoneModules.describeExtension;
-    var callExtensionNumber = softPhoneModules.callExtensionNumber;
-    var extensionDirectoryEntries = softPhoneModules.extensionDirectoryEntries;
-    var ownExtensionsOf = softPhoneModules.ownExtensions;
-    var readExtension = softPhoneModules.readExtension;
-    var createTransferService = softPhoneModules.createTransferService;
-    var createCallContextMemory = softPhoneModules.createCallContextMemory;
-    var carryCallContext = softPhoneModules.carryCallContext;
-    var forgetCallContext = softPhoneModules.forgetCallContext;
-    var serviceDirectoryEntries = softPhoneModules.serviceDirectoryEntries;
-    var serviceModes = softPhoneModules.serviceModes;
-    var resolveServiceTarget = softPhoneModules.resolveServiceTarget;
-    var transferBlockedReason = softPhoneModules.transferBlockedReason;
-    var readTransferLegTag = softPhoneModules.readTransferLegTag;
-    var providerTransferRequest = softPhoneModules.providerTransferRequest;
-    var consultFromCall = softPhoneModules.consultFromCall;
-    var consultRequest = softPhoneModules.consultRequest;
-    var consultCommandResult = softPhoneModules.consultCommandResult;
-    var shouldHoldBeforeTransfer = softPhoneModules.shouldHoldBeforeTransfer;
-    var enhancePhoneInput = softPhoneModules.enhancePhoneInput;
-    var readPhoneInput = softPhoneModules.readPhoneInput;
-    var showInAppConfirm = softPhoneModules.showInAppConfirm;
+    var ownExtensionsOf = ownExtensions;
 
-    var createCallNotifiers = softPhoneModules.createCallNotifiers;
-    var trackCall = softPhoneModules.trackCall;
-    var isCallTracked = softPhoneModules.isCallTracked;
-    var deliverCallState = softPhoneModules.deliverCallState;
-    var findVanishedCalls = softPhoneModules.findVanishedCalls;
-    var endAllCalls = softPhoneModules.endAllCalls;
-    var planShownBrowserCalls = softPhoneModules.planShownBrowserCalls;
-    var readCallJournal = softPhoneModules.readCallJournal;
-    var journalCallStarted = softPhoneModules.journalCallStarted;
-    var journalCallConnected = softPhoneModules.journalCallConnected;
-    var journalCallEnded = softPhoneModules.journalCallEnded;
-    var journalCallSettled = softPhoneModules.journalCallSettled;
-    var planOwedCallEnds = softPhoneModules.planOwedCallEnds;
-    var planCallHeartbeat = softPhoneModules.planCallHeartbeat;
 
-    var createRemoteElementPool = softPhoneModules.createRemoteElementPool;
-    var acquireRemoteElement = softPhoneModules.acquireRemoteElement;
-    var remoteElementFor = softPhoneModules.remoteElementFor;
-    var rekeyRemoteElement = softPhoneModules.rekeyRemoteElement;
-    var releaseRemoteElement = softPhoneModules.releaseRemoteElement;
-    var releaseAllRemoteElements = softPhoneModules.releaseAllRemoteElements;
 
-    var resolveDialTarget = softPhoneModules.resolveDialTarget;
-    var shouldOfferDial = softPhoneModules.shouldOfferDial;
-    var shouldShowCallNumber = softPhoneModules.shouldShowCallNumber;
-    var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
-    var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
 
-    var HOST_BRIDGE_PROTOCOL = softPhoneModules.HOST_BRIDGE_PROTOCOL;
-    var HOST_PAGE_MESSAGES = softPhoneModules.HOST_PAGE_MESSAGES;
-    var findHostChannel = softPhoneModules.findHostChannel;
-    var buildIncomingCallMessage = softPhoneModules.buildIncomingCallMessage;
-    var createHostDelegation = softPhoneModules.createHostDelegation;
 
-    var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
-    var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
 
-    var voicemailRoute = softPhoneModules.voicemailRoute;
-    var VOICEMAIL_ROUTES = softPhoneModules.VOICEMAIL_ROUTES;
 
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
@@ -4236,7 +4285,7 @@
         // Which microphone a capture is on, as the key the learned auto-level gain is kept under.
         function captureDeviceKey(stream) {
             var track = stream && typeof stream.getAudioTracks === 'function' ? stream.getAudioTracks()[0] : null;
-            var settings = null;
+            var settings;
 
             try {
                 settings = track && typeof track.getSettings === 'function' ? track.getSettings() : null;
@@ -4398,9 +4447,9 @@
         // Resolves to the error to fail with; never retries on its own.
         function categorizeMicError(error) {
             return gatherMicrophoneFacts(error).then(function (facts) {
-                var kind = softPhoneModules.classifyMicrophoneError(facts);
+                var kind = classifyMicrophoneError(facts);
                 var guidance = microphoneGuidance(kind);
-                var browserError = softPhoneModules.describeBrowserError(facts);
+                var browserError = describeBrowserError(facts);
                 var shown = guidance + ' ' + (strings.micBrowserError || 'Browser error:') + ' ' + browserError;
 
                 // A selected input device that has gone away throws OverconstrainedError; drop the stale selection
@@ -4411,7 +4460,7 @@
                 }
 
                 reportDiagnostic('error', MICROPHONE_DIAGNOSTIC_CODES[kind] || 'mic-error',
-                    kind + ': ' + browserError, softPhoneModules.describeMicrophoneFacts(facts));
+                    kind + ': ' + browserError, describeMicrophoneFacts(facts));
 
                 setMicPermissionIssue(kind, shown);
 
@@ -8350,13 +8399,10 @@
             var active = isActive(stateName);
             var connected = stateName === 'Connected';
             var liveMedia = connected || stateName === 'OnHold';
-            var calls = getActiveCalls();
             var canDial = !active || stateName === 'OnHold';
             var selectedConferenceCallIds = Object.keys(conferenceSelections).filter(function (callId) {
                 return !!activeCalls[callId];
             });
-            var currentIsConference = metadataBoolean(currentCall, 'isConference');
-
             // A transfer being asked for, or a consult under way, keeps the panel up while its consult call connects.
             var transferBusy = transferPanel.isBusy();
 
@@ -9708,7 +9754,7 @@
 
             // The server's revocation is what stops the ring; this is only the fallback for one that never arrives,
             // measured on the server's clock and never before its deadline (see soft-phone/offer-deadline.js).
-            var remainingMs = softPhoneModules.offerRingStopDelayMs(incomingContext && incomingContext.properties, Date.now());
+            var remainingMs = offerRingStopDelayMs(incomingContext && incomingContext.properties, Date.now());
 
             if (remainingMs === null) {
                 return;
@@ -10654,7 +10700,7 @@
                     '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' +
                     (deleteFailure
                         ? '<span class="telephony-soft-phone__voicemail-error" role="alert">' +
-                            escapeHtml(softPhoneModules.voicemailDeleteFailureText(deleteFailure, strings)) + '</span>'
+                            escapeHtml(voicemailDeleteFailureText(deleteFailure, strings)) + '</span>'
                         : '') +
                     '</div>' +
                     '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' +
@@ -10735,27 +10781,17 @@
             headers['X-Requested-With'] = 'XMLHttpRequest';
             voicemailDeleteFailures = {};
 
-            softPhoneModules.deleteVoicemailsInTurn(ids, function (id) {
+            deleteVoicemailsInTurn(ids, function (id) {
                 return fetch(buildVoicemailDeleteUrl(id), { method: 'POST', headers: headers, redirect: 'manual' });
             }).then(function (outcome) {
                 outcome.failed.forEach(function (failure) {
                     voicemailDeleteFailures[failure.id] = failure.reason;
                 });
 
-                showVoicemailError(softPhoneModules.describeVoicemailDeleteFailures(outcome, strings));
+                showVoicemailError(describeVoicemailDeleteFailures(outcome, strings));
                 loadVoicemails();
                 refreshVoicemailBadge();
             });
-        }
-
-        function markAllVoicemailsRead() {
-            if (!connection) {
-                return;
-            }
-
-            connection.invoke('MarkAllVoicemailsRead').then(function (remaining) {
-                updateVoicemailBadge(remaining);
-            }).catch(function () { });
         }
 
         function markVoicemailRead(callId, itemElement) {

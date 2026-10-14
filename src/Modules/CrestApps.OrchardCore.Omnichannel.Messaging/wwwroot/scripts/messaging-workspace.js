@@ -4,329 +4,283 @@
 */
 (function() {
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js
-	(function(root) {
-		"use strict";
-		var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
-		function maxTicks(values) {
-			var max = 0n;
-			(values || []).forEach(function(raw) {
-				if (!raw) return;
-				try {
-					var ticks = BigInt(raw);
-					if (ticks > max) max = ticks;
-				} catch (e) {}
-			});
-			return max.toString();
-		}
-		function classifyInbound(notification, view) {
-			if (!notification) return "elsewhere";
-			var openConversationId = view && view.conversationId;
-			var openCustomerKey = view && view.customerKey;
-			if (openConversationId && notification.conversationId === openConversationId) return "thread";
-			if (openCustomerKey && notification.customerKey === openCustomerKey && notification.channel) return "tab";
-			return "elsewhere";
-		}
-		function tabBadgeCount(notification) {
-			var count = notification && Number(notification.unreadCount);
-			return count > 0 ? Math.floor(count) : 1;
-		}
-		function rowMatchesFilter(filterValue, term) {
-			var terms = (term || "").toLowerCase().split(/\s+/).filter(function(part) {
-				return part.length > 0;
-			});
-			if (terms.length === 0) return true;
-			var value = (filterValue || "").toLowerCase();
-			return terms.every(function(part) {
-				return value.indexOf(part) >= 0;
-			});
-		}
-		function selectNewBubbles(existing, incoming) {
-			var seenIds = {};
-			var seenTicks = {};
-			(existing || []).forEach(function(bubble) {
-				if (bubble.id) seenIds[bubble.id] = true;
-				if (bubble.ticks) seenTicks[bubble.ticks] = true;
-			});
-			return (incoming || []).filter(function(bubble) {
-				if (bubble.id && seenIds[bubble.id] || !bubble.id && bubble.ticks && seenTicks[bubble.ticks]) return false;
-				if (bubble.id) seenIds[bubble.id] = true;
-				if (bubble.ticks) seenTicks[bubble.ticks] = true;
-				return true;
-			});
-		}
-		function unseenInboundCount(bubbles, seen) {
-			if (seen) return 0;
-			return (bubbles || []).filter(function(bubble) {
-				return bubble && bubble.inbound;
-			}).length;
-		}
-		function isThreadInView(pageHidden, pinnedToBottom) {
-			return !pageHidden && !!pinnedToBottom;
-		}
-		function sameOriginUrl(value, baseUrl) {
-			if (!value) return null;
+	function maxTicks(values) {
+		var max = 0n;
+		(values || []).forEach(function(raw) {
+			if (!raw) return;
 			try {
-				var base = new URL(String(baseUrl));
-				var url = new URL(String(value), base);
-				if ((url.protocol === "http:" || url.protocol === "https:") && url.origin === base.origin) return url.pathname + url.search + url.hash;
+				var ticks = BigInt(raw);
+				if (ticks > max) max = ticks;
 			} catch (e) {}
-			return null;
+		});
+		return max.toString();
+	}
+	function classifyInbound(notification, view) {
+		if (!notification) return "elsewhere";
+		var openConversationId = view && view.conversationId;
+		var openCustomerKey = view && view.customerKey;
+		if (openConversationId && notification.conversationId === openConversationId) return "thread";
+		if (openCustomerKey && notification.customerKey === openCustomerKey && notification.channel) return "tab";
+		return "elsewhere";
+	}
+	function tabBadgeCount(notification) {
+		var count = notification && Number(notification.unreadCount);
+		return count > 0 ? Math.floor(count) : 1;
+	}
+	function rowMatchesFilter(filterValue, term) {
+		var terms = (term || "").toLowerCase().split(/\s+/).filter(function(part) {
+			return part.length > 0;
+		});
+		if (terms.length === 0) return true;
+		var value = (filterValue || "").toLowerCase();
+		return terms.every(function(part) {
+			return value.indexOf(part) >= 0;
+		});
+	}
+	function selectNewBubbles(existing, incoming) {
+		var seenIds = {};
+		var seenTicks = {};
+		(existing || []).forEach(function(bubble) {
+			if (bubble.id) seenIds[bubble.id] = true;
+			if (bubble.ticks) seenTicks[bubble.ticks] = true;
+		});
+		return (incoming || []).filter(function(bubble) {
+			if (bubble.id && seenIds[bubble.id] || !bubble.id && bubble.ticks && seenTicks[bubble.ticks]) return false;
+			if (bubble.id) seenIds[bubble.id] = true;
+			if (bubble.ticks) seenTicks[bubble.ticks] = true;
+			return true;
+		});
+	}
+	function unseenInboundCount(bubbles, seen) {
+		if (seen) return 0;
+		return (bubbles || []).filter(function(bubble) {
+			return bubble && bubble.inbound;
+		}).length;
+	}
+	function isThreadInView(pageHidden, pinnedToBottom) {
+		return !pageHidden && !!pinnedToBottom;
+	}
+	function sameOriginUrl(value, baseUrl) {
+		if (!value) return null;
+		try {
+			var base = new URL(String(baseUrl));
+			var url = new URL(String(value), base);
+			if ((url.protocol === "http:" || url.protocol === "https:") && url.origin === base.origin) return url.pathname + url.search + url.hash;
+		} catch (e) {}
+		return null;
+	}
+	function classifyAssignment(notification, view) {
+		if (!notification || !notification.isTransfer) return "refresh";
+		var agentId = view && view.agentId;
+		if (agentId && notification.transferredByAgentId === agentId) return "refresh";
+		if (agentId && notification.assignedAgentId === agentId) return "to-me";
+		if (view && view.conversationId && notification.conversationId === view.conversationId) return "away";
+		if (!notification.assignedAgentId && notification.ownerQueueId) return "to-queue";
+		return "refresh";
+	}
+	function formatText(template, values) {
+		var args = values || [];
+		return String(template || "").replace(/\{(\d+)\}/g, function(match, index) {
+			var value = args[Number(index)];
+			return value === void 0 || value === null ? "" : String(value);
+		});
+	}
+	function assignmentToastTitle(kind, notification, texts) {
+		var text = texts || {};
+		var by = notification && notification.transferredByName || text.someone;
+		switch (kind) {
+			case "to-me": return formatText(text.toYou, [by]);
+			case "to-queue": return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
+			case "away": return formatText(text.away, [notification && notification.transferredToName || text.someone]);
+			default: return null;
 		}
-		function classifyAssignment(notification, view) {
-			if (!notification || !notification.isTransfer) return "refresh";
-			var agentId = view && view.agentId;
-			if (agentId && notification.transferredByAgentId === agentId) return "refresh";
-			if (agentId && notification.assignedAgentId === agentId) return "to-me";
-			if (view && view.conversationId && notification.conversationId === view.conversationId) return "away";
-			if (!notification.assignedAgentId && notification.ownerQueueId) return "to-queue";
-			return "refresh";
-		}
-		function formatText(template, values) {
-			var args = values || [];
-			return String(template || "").replace(/\{(\d+)\}/g, function(match, index) {
-				var value = args[Number(index)];
-				return value === void 0 || value === null ? "" : String(value);
+	}
+	function transferTargetInputName(targetType) {
+		return targetType === "Queue" ? "targetQueueId" : "targetAgentId";
+	}
+	function createRecentNotifications(windowMs, now) {
+		var seen = {};
+		var clock = now || function() {
+			return Date.now();
+		};
+		return { isNew: function(key) {
+			var at = clock();
+			Object.keys(seen).forEach(function(existing) {
+				if (at - seen[existing] >= windowMs) delete seen[existing];
 			});
-		}
-		function assignmentToastTitle(kind, notification, texts) {
-			var text = texts || {};
-			var by = notification && notification.transferredByName || text.someone;
-			switch (kind) {
-				case "to-me": return formatText(text.toYou, [by]);
-				case "to-queue": return notification && notification.transferredToName ? formatText(text.toQueue, [by, notification.transferredToName]) : formatText(text.toYourQueue, [by]);
-				case "away": return formatText(text.away, [notification && notification.transferredToName || text.someone]);
-				default: return null;
-			}
-		}
-		function transferTargetInputName(targetType) {
-			return targetType === "Queue" ? "targetQueueId" : "targetAgentId";
-		}
-		function createRecentNotifications(windowMs, now) {
-			var seen = {};
-			var clock = now || function() {
-				return Date.now();
-			};
-			return { isNew: function(key) {
-				var at = clock();
-				Object.keys(seen).forEach(function(existing) {
-					if (at - seen[existing] >= windowMs) delete seen[existing];
-				});
-				if (Object.prototype.hasOwnProperty.call(seen, key)) return false;
-				seen[key] = at;
-				return true;
-			} };
-		}
-		function notificationKey(kind, notification) {
-			return String(kind) + ":" + (notification && notification.conversationId || "");
-		}
-		messaging.classifyAssignment = classifyAssignment;
-		messaging.assignmentToastTitle = assignmentToastTitle;
-		messaging.createRecentNotifications = createRecentNotifications;
-		messaging.notificationKey = notificationKey;
-		messaging.formatText = formatText;
-		messaging.transferTargetInputName = transferTargetInputName;
-		messaging.unseenInboundCount = unseenInboundCount;
-		messaging.isThreadInView = isThreadInView;
-		messaging.sameOriginUrl = sameOriginUrl;
-		messaging.maxTicks = maxTicks;
-		messaging.classifyInbound = classifyInbound;
-		messaging.tabBadgeCount = tabBadgeCount;
-		messaging.rowMatchesFilter = rowMatchesFilter;
-		messaging.selectNewBubbles = selectNewBubbles;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+			if (Object.prototype.hasOwnProperty.call(seen, key)) return false;
+			seen[key] = at;
+			return true;
+		} };
+	}
+	function notificationKey(kind, notification) {
+		return String(kind) + ":" + (notification && notification.conversationId || "");
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attention-badge.js
-	(function(root) {
-		"use strict";
-		var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
-		var settleDelayMs = 1500;
-		var periodicRefreshMs = 6e4;
-		function flagMenuGroups(root) {
-			(root || document).querySelectorAll("[data-admin-menu-attention]").forEach(function(badge) {
-				var item = badge.closest("li");
-				var group = item && item.parentElement ? item.parentElement.closest("li") : null;
-				while (group) {
-					var header = Array.prototype.find.call(group.querySelectorAll(".item-label"), function(label) {
-						return label.closest("li") === group;
-					});
-					var icon = header ? header.querySelector(":scope > .icon") : null;
-					if (icon) icon.classList.toggle("text-danger", !!group.querySelector("[data-admin-menu-attention]:not(.d-none)"));
-					group = group.parentElement ? group.parentElement.closest("li") : null;
-				}
-			});
-		}
-		function show(count) {
-			var value = Math.floor(Number(count) || 0);
-			document.querySelectorAll("[data-messaging-attention-badge]").forEach(function(badge) {
-				badge.textContent = value > 99 ? "99+" : value > 0 ? String(value) : "";
-				badge.classList.toggle("d-none", value <= 0);
-			});
-			flagMenuGroups(document);
-		}
-		function createAttentionBadge(url) {
-			var timer = null;
-			var inFlight = false;
-			var queued = false;
-			function refresh() {
-				if (!url || !document.querySelector("[data-messaging-attention-badge]")) return;
-				if (inFlight) {
-					queued = true;
-					return;
-				}
-				inFlight = true;
-				fetch(url, {
-					headers: { "X-Requested-With": "XMLHttpRequest" },
-					credentials: "same-origin",
-					cache: "no-store"
-				}).then(function(response) {
-					return response.ok ? response.json() : null;
-				}).then(function(data) {
-					if (data && typeof data.count === "number") show(data.count);
-				}).catch(function() {}).finally(function() {
-					inFlight = false;
-					if (queued) {
-						queued = false;
-						refresh();
-					}
+	var settleDelayMs = 1500;
+	var periodicRefreshMs = 6e4;
+	function flagMenuGroups(root) {
+		(root || document).querySelectorAll("[data-admin-menu-attention]").forEach(function(badge) {
+			var item = badge.closest("li");
+			var group = item && item.parentElement ? item.parentElement.closest("li") : null;
+			while (group) {
+				var header = Array.prototype.find.call(group.querySelectorAll(".item-label"), function(label) {
+					return label.closest("li") === group;
 				});
+				var icon = header ? header.querySelector(":scope > .icon") : null;
+				if (icon) icon.classList.toggle("text-danger", !!group.querySelector("[data-admin-menu-attention]:not(.d-none)"));
+				group = group.parentElement ? group.parentElement.closest("li") : null;
 			}
-			function schedule() {
-				if (timer !== null) clearTimeout(timer);
-				timer = setTimeout(function() {
-					timer = null;
+		});
+	}
+	function show(count) {
+		var value = Math.floor(Number(count) || 0);
+		document.querySelectorAll("[data-messaging-attention-badge]").forEach(function(badge) {
+			badge.textContent = value > 99 ? "99+" : value > 0 ? String(value) : "";
+			badge.classList.toggle("d-none", value <= 0);
+		});
+		flagMenuGroups(document);
+	}
+	function createAttentionBadge(url) {
+		var timer = null;
+		var inFlight = false;
+		var queued = false;
+		function refresh() {
+			if (!url || !document.querySelector("[data-messaging-attention-badge]")) return;
+			if (inFlight) {
+				queued = true;
+				return;
+			}
+			inFlight = true;
+			fetch(url, {
+				headers: { "X-Requested-With": "XMLHttpRequest" },
+				credentials: "same-origin",
+				cache: "no-store"
+			}).then(function(response) {
+				return response.ok ? response.json() : null;
+			}).then(function(data) {
+				if (data && typeof data.count === "number") show(data.count);
+			}).catch(function() {}).finally(function() {
+				inFlight = false;
+				if (queued) {
+					queued = false;
 					refresh();
-				}, settleDelayMs);
-			}
-			function start() {
-				refresh();
-				setInterval(function() {
-					if (!document.hidden) refresh();
-				}, periodicRefreshMs);
-				document.addEventListener("visibilitychange", function() {
-					if (!document.hidden) refresh();
-				});
-			}
-			return {
-				start,
-				refresh,
-				schedule
-			};
+				}
+			});
 		}
-		messaging.createAttentionBadge = createAttentionBadge;
-		messaging.flagMenuGroups = flagMenuGroups;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		function schedule() {
+			if (timer !== null) clearTimeout(timer);
+			timer = setTimeout(function() {
+				timer = null;
+				refresh();
+			}, settleDelayMs);
+		}
+		function start() {
+			refresh();
+			setInterval(function() {
+				if (!document.hidden) refresh();
+			}, periodicRefreshMs);
+			document.addEventListener("visibilitychange", function() {
+				if (!document.hidden) refresh();
+			});
+		}
+		return {
+			start,
+			refresh,
+			schedule
+		};
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attachments.js
-	(function(root) {
-		"use strict";
-		var messaging = root.CrestAppsMessaging = root.CrestAppsMessaging || {};
-		function extensionOf(name) {
-			var match = /\.[^.\\/]+$/.exec(String(name || ""));
-			return match ? match[0].toLowerCase() : "";
-		}
-		function findFormat(file, formats) {
-			if (!file) return null;
-			var type = String(file.type || "").toLowerCase();
-			var extension = extensionOf(file.name);
-			return (formats || []).filter(function(format) {
-				return type && String(format.contentType).toLowerCase() === type || extension && (format.extensions || []).some(function(item) {
-					return String(item).toLowerCase() === extension;
-				});
-			})[0] || null;
-		}
-		function planAttachments(existingCount, incoming, maxCount, formats) {
-			var accepted = [];
-			var notAllowed = [];
-			var overCount = [];
-			var room = Math.max(0, (maxCount || 0) - (existingCount || 0));
-			Array.prototype.forEach.call(incoming || [], function(file) {
-				if (!findFormat(file, formats)) notAllowed.push(file);
-				else if (accepted.length < room) accepted.push(file);
-				else overCount.push(file);
+	function extensionOf(name) {
+		var match = /\.[^.\\/]+$/.exec(String(name || ""));
+		return match ? match[0].toLowerCase() : "";
+	}
+	function findFormat(file, formats) {
+		if (!file) return null;
+		var type = String(file.type || "").toLowerCase();
+		var extension = extensionOf(file.name);
+		return (formats || []).filter(function(format) {
+			return type && String(format.contentType).toLowerCase() === type || extension && (format.extensions || []).some(function(item) {
+				return String(item).toLowerCase() === extension;
 			});
-			return {
-				accepted,
-				notAllowed,
-				overCount
-			};
-		}
-		function perFileBudget(maxBytes, count) {
-			if (!maxBytes || maxBytes <= 0) return 0;
-			return Math.floor(maxBytes / Math.max(1, count || 1));
-		}
-		function needsShrinking(file, budget, format, shrinkImages) {
-			return !!file && !!format && !!shrinkImages && !!format.canShrink && budget > 0 && file.size > budget;
-		}
-		function fitDimensions(width, height, maxEdge) {
-			var longest = Math.max(width || 0, height || 0);
-			if (!longest || !maxEdge || longest <= maxEdge) return {
-				width: width || 0,
-				height: height || 0
-			};
-			var scale = maxEdge / longest;
-			return {
-				width: Math.max(1, Math.round(width * scale)),
-				height: Math.max(1, Math.round(height * scale))
-			};
-		}
-		function shrinkSteps() {
-			return [
-				{
-					maxEdge: 2048,
-					quality: .85
-				},
-				{
-					maxEdge: 1600,
-					quality: .8
-				},
-				{
-					maxEdge: 1280,
-					quality: .75
-				},
-				{
-					maxEdge: 1024,
-					quality: .7
-				},
-				{
-					maxEdge: 800,
-					quality: .65
-				},
-				{
-					maxEdge: 640,
-					quality: .6
-				}
-			];
-		}
-		function totalSize(files) {
-			return Array.prototype.reduce.call(files || [], function(sum, file) {
-				return sum + (file && file.size || 0);
-			}, 0);
-		}
-		function acceptAttribute(formats) {
-			var values = [];
-			(formats || []).forEach(function(format) {
-				[format.contentType].concat(format.extensions || []).forEach(function(value) {
-					if (value && values.indexOf(value) < 0) values.push(value);
-				});
-			});
-			return values.join(",");
-		}
-		messaging.findAttachmentFormat = findFormat;
-		messaging.planAttachments = planAttachments;
-		messaging.perFileBudget = perFileBudget;
-		messaging.needsShrinking = needsShrinking;
-		messaging.fitDimensions = fitDimensions;
-		messaging.shrinkSteps = shrinkSteps;
-		messaging.totalAttachmentSize = totalSize;
-		messaging.attachmentAcceptAttribute = acceptAttribute;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		})[0] || null;
+	}
+	function planAttachments(existingCount, incoming, maxCount, formats) {
+		var accepted = [];
+		var notAllowed = [];
+		var overCount = [];
+		var room = Math.max(0, (maxCount || 0) - (existingCount || 0));
+		Array.prototype.forEach.call(incoming || [], function(file) {
+			if (!findFormat(file, formats)) notAllowed.push(file);
+			else if (accepted.length < room) accepted.push(file);
+			else overCount.push(file);
+		});
+		return {
+			accepted,
+			notAllowed,
+			overCount
+		};
+	}
+	function perFileBudget(maxBytes, count) {
+		if (!maxBytes || maxBytes <= 0) return 0;
+		return Math.floor(maxBytes / Math.max(1, count || 1));
+	}
+	function needsShrinking(file, budget, format, shrinkImages) {
+		return !!file && !!format && !!shrinkImages && !!format.canShrink && budget > 0 && file.size > budget;
+	}
+	function fitDimensions(width, height, maxEdge) {
+		var longest = Math.max(width || 0, height || 0);
+		if (!longest || !maxEdge || longest <= maxEdge) return {
+			width: width || 0,
+			height: height || 0
+		};
+		var scale = maxEdge / longest;
+		return {
+			width: Math.max(1, Math.round(width * scale)),
+			height: Math.max(1, Math.round(height * scale))
+		};
+	}
+	function shrinkSteps() {
+		return [
+			{
+				maxEdge: 2048,
+				quality: .85
+			},
+			{
+				maxEdge: 1600,
+				quality: .8
+			},
+			{
+				maxEdge: 1280,
+				quality: .75
+			},
+			{
+				maxEdge: 1024,
+				quality: .7
+			},
+			{
+				maxEdge: 800,
+				quality: .65
+			},
+			{
+				maxEdge: 640,
+				quality: .6
+			}
+		];
+	}
+	function totalSize(files) {
+		return Array.prototype.reduce.call(files || [], function(sum, file) {
+			return sum + (file && file.size || 0);
+		}, 0);
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-workspace.js
 	(function(root) {
 		"use strict";
-		var messaging = root.CrestAppsMessaging;
 		var workspace = document.querySelector("[data-messaging-workspace]");
-		if (!messaging || !workspace) return;
+		if (!workspace) return;
 		var view = {
 			conversationId: workspace.getAttribute("data-conversation-id") || null,
 			customerKey: workspace.getAttribute("data-customer-key") || null,
@@ -347,8 +301,8 @@
 			toYourQueue: workspace.getAttribute("data-transferred-to-your-queue-text"),
 			away: workspace.getAttribute("data-transferred-away-text")
 		};
-		var recent = messaging.createRecentNotifications(5e3);
-		var attentionBadge = messaging.createAttentionBadge(workspace.getAttribute("data-attention-url"));
+		var recent = createRecentNotifications(5e3);
+		var attentionBadge = createAttentionBadge(workspace.getAttribute("data-attention-url"));
 		var list = workspace.querySelector("[data-inbox-list]");
 		var search = workspace.querySelector("[data-inbox-search]");
 		var thread = workspace.querySelector("[data-thread]");
@@ -362,7 +316,7 @@
 			var rows = list.querySelectorAll("[data-customer-key]");
 			var visible = 0;
 			rows.forEach(function(row) {
-				var match = messaging.rowMatchesFilter(row.getAttribute("data-filter-value") + " " + row.textContent, term);
+				var match = rowMatchesFilter(row.getAttribute("data-filter-value") + " " + row.textContent, term);
 				row.classList.toggle("d-none", !match);
 				if (match) visible++;
 			});
@@ -370,7 +324,7 @@
 			if (favorites) {
 				var favoritesVisible = 0;
 				favorites.querySelectorAll("[data-favorite-key]").forEach(function(favorite) {
-					var match = messaging.rowMatchesFilter(favorite.getAttribute("data-filter-value") + " " + favorite.textContent, term);
+					var match = rowMatchesFilter(favorite.getAttribute("data-filter-value") + " " + favorite.textContent, term);
 					favorite.classList.toggle("d-none", !match);
 					if (match) favoritesVisible++;
 				});
@@ -464,10 +418,10 @@
 		function pullThread() {
 			if (!thread || !messagesUrl || pulling) return;
 			pulling = true;
-			var after = messaging.maxTicks(bubblesOnScreen().map(function(bubble) {
+			var after = maxTicks(bubblesOnScreen().map(function(bubble) {
 				return bubble.ticks;
 			}));
-			var seen = messaging.isThreadInView(document.hidden, isPinnedToBottom());
+			var seen = isThreadInView(document.hidden, isPinnedToBottom());
 			var url = messagesUrl + (messagesUrl.indexOf("?") >= 0 ? "&" : "?") + "afterTicks=" + after + "&seen=" + seen;
 			fetch(url, {
 				headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -479,7 +433,7 @@
 				var holder = document.createElement("div");
 				holder.innerHTML = html;
 				var incomingNodes = Array.prototype.slice.call(holder.querySelectorAll(".messaging-message"));
-				var fresh = messaging.selectNewBubbles(bubblesOnScreen(), incomingNodes.map(function(node) {
+				var fresh = selectNewBubbles(bubblesOnScreen(), incomingNodes.map(function(node) {
 					return {
 						id: node.getAttribute("data-message-id"),
 						ticks: node.getAttribute("data-created-ticks"),
@@ -495,7 +449,7 @@
 					thread.appendChild(bubble.node);
 				});
 				if (pinned) scrollToBottom();
-				var added = messaging.unseenInboundCount(fresh, seen);
+				var added = unseenInboundCount(fresh, seen);
 				if (added > 0) setActiveTabBadge(unseen + added);
 				refreshInbox();
 				attentionBadge.schedule();
@@ -599,9 +553,9 @@
 		function addFiles(files) {
 			if (!fileInput) return;
 			var maxCount = parseInt(composerText("data-max-media-count"), 10) || 0;
-			var plan = messaging.planAttachments(pending.length, files, maxCount, attachmentFormats);
+			var plan = planAttachments(pending.length, files, maxCount, attachmentFormats);
 			plan.accepted.forEach(function(file) {
-				var format = messaging.findAttachmentFormat(file, attachmentFormats);
+				var format = findFormat(file, attachmentFormats);
 				pending.push({
 					file,
 					format,
@@ -630,7 +584,7 @@
 			});
 		}
 		function toJpeg(image, step) {
-			var size = messaging.fitDimensions(image.naturalWidth, image.naturalHeight, step.maxEdge);
+			var size = fitDimensions(image.naturalWidth, image.naturalHeight, step.maxEdge);
 			var canvas = document.createElement("canvas");
 			canvas.width = size.width;
 			canvas.height = size.height;
@@ -644,9 +598,9 @@
 		}
 		function fit(item, budget, shrinkImages) {
 			var file = item.file;
-			if (!messaging.needsShrinking(file, budget, item.format, shrinkImages)) return Promise.resolve(file);
+			if (!needsShrinking(file, budget, item.format, shrinkImages)) return Promise.resolve(file);
 			return loadImage(file).then(function(image) {
-				var steps = messaging.shrinkSteps();
+				var steps = shrinkSteps();
 				function attempt(index) {
 					if (index >= steps.length) return null;
 					return toJpeg(image, steps[index]).then(function(blob) {
@@ -719,7 +673,7 @@
 				if (submitButton) submitButton.disabled = true;
 				var maxBytes = parseInt(composerText("data-max-media-bytes"), 10) || 0;
 				var shrinkImages = composerText("data-shrink-images") === "true";
-				var budget = messaging.perFileBudget(maxBytes, pending.length);
+				var budget = perFileBudget(maxBytes, pending.length);
 				Promise.all(pending.map(function(item) {
 					return fit(item, budget, shrinkImages).catch(function() {
 						return null;
@@ -733,7 +687,7 @@
 					var failed = results.filter(function(result) {
 						return !result.fitted;
 					});
-					var total = messaging.totalAttachmentSize(results.map(function(result) {
+					var total = totalSize(results.map(function(result) {
 						return result.fitted;
 					}));
 					if (failed.length > 0 || maxBytes > 0 && total > maxBytes) {
@@ -798,7 +752,7 @@
 			});
 			showTransferTarget();
 			transferForm.addEventListener("submit", function(event) {
-				var inputName = messaging.transferTargetInputName(transferType());
+				var inputName = transferTargetInputName(transferType());
 				var chosen = transferForm.querySelector("[name=\"" + inputName + "\"]");
 				if (!chosen || !chosen.value) {
 					event.preventDefault();
@@ -828,7 +782,7 @@
 			var bodyElement = document.createElement("div");
 			bodyElement.className = "toast-body";
 			bodyElement.textContent = body || "";
-			var safeHref = messaging.sameOriginUrl(href, root.location.href);
+			var safeHref = sameOriginUrl(href, root.location.href);
 			if (safeHref) {
 				var link = document.createElement("a");
 				link.href = safeHref;
@@ -847,14 +801,14 @@
 			} else toast.classList.add("show");
 		}
 		function onInbound(notification) {
-			switch (messaging.classifyInbound(notification, view)) {
+			switch (classifyInbound(notification, view)) {
 				case "thread":
 					pullThread();
 					break;
 				case "tab":
-					badgeTab(notification.channel, messaging.tabBadgeCount(notification));
+					badgeTab(notification.channel, tabBadgeCount(notification));
 					break;
-				default: if (recent.isNew(messaging.notificationKey("inbound", notification))) showToast(notification && notification.contactAddress ? newMessageText + " — " + notification.contactAddress : newMessageText, notification ? notification.preview : "", notification && notification.conversationId ? conversationUrlTemplate.replace("__ID__", encodeURIComponent(notification.conversationId)) : null);
+				default: if (recent.isNew(notificationKey("inbound", notification))) showToast(notification && notification.contactAddress ? newMessageText + " — " + notification.contactAddress : newMessageText, notification ? notification.preview : "", notification && notification.conversationId ? conversationUrlTemplate.replace("__ID__", encodeURIComponent(notification.conversationId)) : null);
 			}
 			refreshInbox();
 			attentionBadge.schedule();
@@ -863,13 +817,13 @@
 			return conversationId ? conversationUrlTemplate.replace("__ID__", encodeURIComponent(conversationId)) : null;
 		}
 		function onAssigned(notification) {
-			var kind = messaging.classifyAssignment(notification, view);
-			switch (kind !== "refresh" && recent.isNew(messaging.notificationKey(kind, notification)) ? kind : "refresh") {
+			var kind = classifyAssignment(notification, view);
+			switch (kind !== "refresh" && recent.isNew(notificationKey(kind, notification)) ? kind : "refresh") {
 				case "to-me":
 				case "to-queue":
-					showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), "", conversationHref(notification.conversationId));
+					showToast(assignmentToastTitle(kind, notification, transferTexts), "", conversationHref(notification.conversationId));
 					break;
-				case "away": showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), "", null);
+				case "away": showToast(assignmentToastTitle(kind, notification, transferTexts), "", null);
 			}
 			refreshInbox();
 			attentionBadge.schedule();

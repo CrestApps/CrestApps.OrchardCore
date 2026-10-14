@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Finding a colleague's extension by name on the keypad.
  *
@@ -10,81 +11,74 @@
  * The search is the transfer panel's own (soft-phone/transfer-target.js) over the phone system's extensions
  * (soft-phone/extension-names.js).
  *
- * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
- * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Part of the soft phone: an ES module that soft-phone.js, or another of its helpers, imports, and that the unit tests
+ * import directly.
  */
-(function (root) {
-    'use strict';
+import { extensionDirectoryEntries, isOwnExtension } from './extension-names.js';
+import { filterTransferTargets, pickTypedMatch, readExtension } from './transfer-target.js';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+// How many matches the keypad lists; the rest are found by typing more of the name.
+var MAX_KEYPAD_MATCHES = 6;
 
-    // How many matches the keypad lists; the rest are found by typing more of the name.
-    var MAX_KEYPAD_MATCHES = 6;
+function text(value) {
+    return value == null ? '' : String(value).trim();
+}
 
-    function text(value) {
-        return value == null ? '' : String(value).trim();
+// The extensions matching what was typed, by name or digits, the agent's own left out: [{ extension, name, detail }].
+export function keypadExtensionMatches(directory, query, strings) {
+    var typed = text(query);
+
+    if (!typed) {
+        return [];
     }
 
-    // The extensions matching what was typed, by name or digits, the agent's own left out: [{ extension, name, detail }].
-    function keypadExtensionMatches(directory, query, strings) {
-        var typed = text(query);
+    var entries = extensionDirectoryEntries(directory, strings || {});
 
-        if (!typed) {
-            return [];
-        }
+    return filterTransferTargets(entries, typed).map(function (entry) {
+        return { extension: String(entry.destination), name: entry.name, detail: entry.detail };
+    });
+}
 
-        var entries = softPhone.extensionDirectoryEntries(directory, strings || {});
+// What dialing from the extension field calls: { extension, refused }, refused being 'empty', 'own-extension',
+// 'several-match' or 'no-match'.
+export function resolveKeypadExtension(directory, query, strings) {
+    var typed = text(query);
 
-        return softPhone.filterTransferTargets(entries, typed).map(function (entry) {
-            return { extension: String(entry.destination), name: entry.name, detail: entry.detail };
-        });
+    if (!typed) {
+        return { extension: '', refused: 'empty' };
     }
 
-    // What dialing from the extension field calls: { extension, refused }, refused being 'empty', 'own-extension',
-    // 'several-match' or 'no-match'.
-    function resolveKeypadExtension(directory, query, strings) {
-        var typed = text(query);
+    var digits = readExtension(typed);
 
-        if (!typed) {
-            return { extension: '', refused: 'empty' };
-        }
-
-        var digits = softPhone.readExtension(typed);
-
-        if (digits) {
-            return softPhone.isOwnExtension(directory, digits)
-                ? { extension: '', refused: 'own-extension' }
-                : { extension: digits, refused: '' };
-        }
-
-        var pick = softPhone.pickTypedMatch(softPhone.extensionDirectoryEntries(directory, strings || {}), typed);
-
-        return pick.entry
-            ? { extension: String(pick.entry.destination), refused: '' }
-            : { extension: '', refused: pick.refused || 'no-match' };
+    if (digits) {
+        return isOwnExtension(directory, digits)
+            ? { extension: '', refused: 'own-extension' }
+            : { extension: digits, refused: '' };
     }
 
-    // The list under the field: one button per match, each dialing its extension.
-    function buildKeypadExtensionResultsHtml(matches, strings, escapeHtml) {
-        if (!matches || !matches.length) {
-            return '';
-        }
+    var pick = pickTypedMatch(extensionDirectoryEntries(directory, strings || {}), typed);
 
-        strings = strings || {};
+    return pick.entry
+        ? { extension: String(pick.entry.destination), refused: '' }
+        : { extension: '', refused: pick.refused || 'no-match' };
+}
 
-        return '<div class="telephony-soft-phone__keypad-results-list" role="list" aria-label="' +
-            escapeHtml(strings.keypadExtensionResults || 'Matching extensions') + '">' +
-            matches.slice(0, MAX_KEYPAD_MATCHES).map(function (match) {
-                return '<button type="button" role="listitem" class="telephony-soft-phone__keypad-result" data-telephony-keypad-extension="' +
-                    escapeHtml(match.extension) + '">' +
-                    '<span class="telephony-soft-phone__keypad-result-name">' + escapeHtml(match.name) + '</span>' +
-                    '<span class="telephony-soft-phone__keypad-result-extension">' + escapeHtml(match.detail) + '</span>' +
-                    '</button>';
-            }).join('') +
-            '</div>';
+// The list under the field: one button per match, each dialing its extension.
+export function buildKeypadExtensionResultsHtml(matches, strings, escapeHtml) {
+    if (!matches || !matches.length) {
+        return '';
     }
 
-    softPhone.keypadExtensionMatches = keypadExtensionMatches;
-    softPhone.resolveKeypadExtension = resolveKeypadExtension;
-    softPhone.buildKeypadExtensionResultsHtml = buildKeypadExtensionResultsHtml;
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    strings = strings || {};
+
+    return '<div class="telephony-soft-phone__keypad-results-list" role="list" aria-label="' +
+        escapeHtml(strings.keypadExtensionResults || 'Matching extensions') + '">' +
+        matches.slice(0, MAX_KEYPAD_MATCHES).map(function (match) {
+            return '<button type="button" role="listitem" class="telephony-soft-phone__keypad-result" data-telephony-keypad-extension="' +
+                escapeHtml(match.extension) + '">' +
+                '<span class="telephony-soft-phone__keypad-result-name">' + escapeHtml(match.name) + '</span>' +
+                '<span class="telephony-soft-phone__keypad-result-extension">' + escapeHtml(match.detail) + '</span>' +
+                '</button>';
+        }).join('') +
+        '</div>';
+}

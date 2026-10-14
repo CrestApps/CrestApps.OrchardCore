@@ -99,7 +99,6 @@ window.contentTransferImport = (function () {
             }
             var file = fileInput.files[0];
             var url = form.action;
-            var url = form.action;
 
             uploadError.style.display = 'none';
 
@@ -225,7 +224,7 @@ window.contentTransferImport = (function () {
                 if (response && response.error) {
                     message = response.error;
                 }
-            } catch (e) { }
+            } catch (e) { /* not JSON: the generic message stands */ }
 
             uploadError.textContent = message;
             uploadError.style.display = '';

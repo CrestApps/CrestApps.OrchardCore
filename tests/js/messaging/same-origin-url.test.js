@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
-
-const { sameOriginUrl } = globalThis.CrestAppsMessaging;
+import { sameOriginUrl } from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
 
 // A notification's "View" link is built from page data, so it may only ever lead back into this site: a crafted value
 // such as a javascript: URL must never become a clickable link.

@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-level.js';
+import {
+    AUTO_LEVEL_DEFAULTS,
+    amplitudeToDb,
+    clampAutoLevelGainDb,
+    dbToGain,
+    nextAutoLevelGainDb,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-level.js';
 
-const softPhone = globalThis.CrestAppsSoftPhone;
-const next = softPhone.nextAutoLevelGainDb;
-const defaults = softPhone.AUTO_LEVEL_DEFAULTS;
+const next = nextAutoLevelGainDb;
+const defaults = AUTO_LEVEL_DEFAULTS;
 
 // Runs the level for a stretch of audio at one measured (pre-gain) level, deciding every `stepMs`.
 function run(gainDb, measuredDb, seconds, options = {}, stepMs = 50) {
@@ -109,24 +114,24 @@ describe('nextAutoLevelGainDb', () => {
 
 describe('clampAutoLevelGainDb', () => {
     it('keeps a gain inside the allowed range', () => {
-        expect(softPhone.clampAutoLevelGainDb(9)).toBe(9);
-        expect(softPhone.clampAutoLevelGainDb(50)).toBe(defaults.maxGainDb);
-        expect(softPhone.clampAutoLevelGainDb(-50)).toBe(defaults.minGainDb);
-        expect(softPhone.clampAutoLevelGainDb('9')).toBe(0);
-        expect(softPhone.clampAutoLevelGainDb(null)).toBe(0);
+        expect(clampAutoLevelGainDb(9)).toBe(9);
+        expect(clampAutoLevelGainDb(50)).toBe(defaults.maxGainDb);
+        expect(clampAutoLevelGainDb(-50)).toBe(defaults.minGainDb);
+        expect(clampAutoLevelGainDb('9')).toBe(0);
+        expect(clampAutoLevelGainDb(null)).toBe(0);
     });
 });
 
 describe('level conversions', () => {
     it('converts an RMS amplitude to dBFS, with silence at minus infinity', () => {
-        expect(softPhone.amplitudeToDb(1)).toBe(0);
-        expect(softPhone.amplitudeToDb(0.1)).toBeCloseTo(-20, 5);
-        expect(softPhone.amplitudeToDb(0)).toBe(-Infinity);
+        expect(amplitudeToDb(1)).toBe(0);
+        expect(amplitudeToDb(0.1)).toBeCloseTo(-20, 5);
+        expect(amplitudeToDb(0)).toBe(-Infinity);
     });
 
     it('converts a gain in dB to a linear factor', () => {
-        expect(softPhone.dbToGain(0)).toBe(1);
-        expect(softPhone.dbToGain(20)).toBeCloseTo(10, 5);
-        expect(softPhone.dbToGain(-6)).toBeCloseTo(0.501, 3);
+        expect(dbToGain(0)).toBe(1);
+        expect(dbToGain(20)).toBeCloseTo(10, 5);
+        expect(dbToGain(-6)).toBeCloseTo(0.501, 3);
     });
 });

@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
-
-const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber, shouldShowCallNumber, planNumberField, planEntryStart, planEntryEnd } = globalThis.CrestAppsSoftPhone;
+import {
+    isSameNumber,
+    planEntryEnd,
+    planEntryStart,
+    planNumberField,
+    resolveDialTarget,
+    resolvePeerNumber,
+    shouldOfferDial,
+    shouldShowCallNumber,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
 
 // The held call's number in the field is a display: reaching for the field to add a call had the agent delete it by
 // hand first. Starting an entry -- focusing the field, the first key, switching Number / Extension -- clears it, and

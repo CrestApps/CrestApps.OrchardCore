@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/reconnect.js';
-
-const { reconnectDelayMs, RECONNECT_DELAYS_MS } = globalThis.CrestAppsSoftPhone;
+import {
+    RECONNECT_DELAYS_MS,
+    reconnectDelayMs,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/reconnect.js';
 
 // A soft phone that stops trying to reconnect is a phone that stops ringing, with nothing on screen saying so.
 // The same schedule is used by the automatic reconnect and by the manual restart loop, so they cannot drift.
