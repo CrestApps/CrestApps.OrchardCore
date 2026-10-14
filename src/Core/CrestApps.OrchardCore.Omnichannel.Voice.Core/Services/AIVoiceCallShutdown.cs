@@ -136,6 +136,10 @@ internal sealed class AIVoiceCallShutdown : ModularTenantEvents, IAIVoiceCallShu
             LiveCalls,
             _handOns.Count);
 
+        // Taken before the conversations are told to end, so the wait runs from the moment the host began to stop
+        // and not from whenever the cancellation below happens to be scheduled.
+        var deadline = _timeProvider.GetTimestamp() + (long)(HandOnTimeout.TotalSeconds * _timeProvider.TimestampFrequency);
+
         // Off this thread: cancelling runs each conversation's teardown, and some of it would otherwise run here,
         // on the thread the host is stopping on.
         _ = Task.Run(() =>
@@ -149,8 +153,6 @@ internal sealed class AIVoiceCallShutdown : ModularTenantEvents, IAIVoiceCallShu
                 // The tenant was released while the host was stopping; there is nothing left to hand on.
             }
         });
-
-        var deadline = _timeProvider.GetTimestamp() + (long)(HandOnTimeout.TotalSeconds * _timeProvider.TimestampFrequency);
 
         while (!IsSettled() && _timeProvider.GetTimestamp() < deadline)
         {
