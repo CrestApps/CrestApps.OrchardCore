@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js';
-
-const { formatDuration } = globalThis.CrestAppsTelephonyShared;
+import { formatDuration } from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/shared/call-timer.js';
 
 // The call timer runs on the soft phone, the contact-center soft-phone tab, the agent bar and the workspace. It
 // had two implementations that disagreed the moment a call passed an hour: one showed "1:15:03", the other

@@ -1,22 +1,21 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/call-legs.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js';
-
-const {
-    planMerge,
-    conferenceAfterMerge,
-    buildActiveCallsHtml,
-    createConferenceMemory,
-    rememberConference,
+import {
     applyConferenceMemory,
-    markParticipantLeft,
-    forgetConferenceCall,
+    buildActiveCallsHtml,
+    conferenceAfterMerge,
+    conferenceLegsWithoutParticipants,
     conferenceMembers,
-    visibleConferenceCalls,
+    createConferenceMemory,
+    forgetConferenceCall,
     isOneConference,
-    conferenceLegsWithoutParticipants
-} = globalThis.CrestAppsSoftPhone;
+    markParticipantLeft,
+    planConferenceEnd,
+    planConferenceHangup,
+    planMerge,
+    rememberConference,
+    visibleConferenceCalls,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/conference.js';
 
 const escapeHtml = value => String(value == null ? '' : value)
     .replace(/&/g, '&amp;')
@@ -408,7 +407,6 @@ describe('the conference memory', () => {
 // because the phone hung up every one of the agent's calls in it. A phone system's Hang up leaves a conference and the
 // others stay connected; ending it for everyone is its own action.
 describe('planConferenceHangup', () => {
-    const { planConferenceHangup, planConferenceEnd } = globalThis.CrestAppsSoftPhone;
     const threeWay = { callIds: ['cell-leg', 'ext-leg'], primaryCallId: 'cell-leg', conferenceName: 'conf-cell-leg' };
     const call = (callId, metadata) => ({ callId, state: 'Connected', metadata: metadata || {} });
 

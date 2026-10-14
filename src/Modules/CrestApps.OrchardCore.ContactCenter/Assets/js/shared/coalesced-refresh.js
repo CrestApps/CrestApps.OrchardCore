@@ -8,8 +8,8 @@
  * in flight now folds into it, plus exactly one trailing fetch: the events that arrived mid-flight may describe a
  * change the response in flight predates, and the trailing fetch is what picks it up.
  *
- * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
- * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ * An ES module: the scripts that use it import it, the asset build bundles it into each of them, and the unit tests
+ * import it directly.
  */
 
 // Wraps `run` (which returns a promise) so concurrent calls share work. Every call returns a promise that settles

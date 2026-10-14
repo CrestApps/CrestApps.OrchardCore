@@ -6,8 +6,8 @@
  * interaction" had the same signature as "never drawn", so the first state the page loaded was skipped and the
  * empty state never appeared until a call had come and gone. A change gate always lets its first value through.
  *
- * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
- * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ * An ES module: the scripts that use it import it, the asset build bundles it into each of them, and the unit tests
+ * import it directly.
  */
 
 // The signature of the card when the agent has no active interaction.

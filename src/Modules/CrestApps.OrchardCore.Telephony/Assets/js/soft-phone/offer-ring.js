@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * When the soft phone rings for a Contact Center offer, and when another open page silences it.
  *
@@ -9,39 +10,29 @@
  * the offer's leg if it is the one holding it, and a page ringing for that same call marks it handled and falls silent
  * -- only for that call, so an unrelated call ringing in another page keeps ringing.
  *
- * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
- * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Part of the soft phone: an ES module that soft-phone.js, or another of its helpers, imports, and that the unit tests
+ * import directly.
  */
-(function (root) {
-    'use strict';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+export var OFFER_CHANNEL_NAME = 'crestapps-soft-phone-offers';
+export var OFFER_HANDLED_MESSAGE = 'offer-handled';
 
-    var OFFER_CHANNEL_NAME = 'crestapps-soft-phone-offers';
-    var OFFER_HANDLED_MESSAGE = 'offer-handled';
+// Whether to ring: an offer is on screen and nobody has started accepting it.
+export function shouldRingForOffer(offerVisible, acceptPending) {
+    return !!offerVisible && !acceptPending;
+}
 
-    // Whether to ring: an offer is on screen and nobody has started accepting it.
-    function shouldRingForOffer(offerVisible, acceptPending) {
-        return !!offerVisible && !acceptPending;
+// What an 'offer-handled' message from another page means here. Returns null for anything else, otherwise
+// { reservationId, answered, marksCurrentCallHandled }: the offer whose leg to settle (may be empty), whether it
+// was answered, and whether the call this page is showing is the one that was handled.
+export function readOfferHandledMessage(message, currentCallId) {
+    if (!message || message.type !== OFFER_HANDLED_MESSAGE) {
+        return null;
     }
 
-    // What an 'offer-handled' message from another page means here. Returns null for anything else, otherwise
-    // { reservationId, answered, marksCurrentCallHandled }: the offer whose leg to settle (may be empty), whether it
-    // was answered, and whether the call this page is showing is the one that was handled.
-    function readOfferHandledMessage(message, currentCallId) {
-        if (!message || message.type !== OFFER_HANDLED_MESSAGE) {
-            return null;
-        }
-
-        return {
-            reservationId: message.reservationId || '',
-            answered: !!message.answered,
-            marksCurrentCallHandled: !!currentCallId && currentCallId === message.callId
-        };
-    }
-
-    softPhone.OFFER_CHANNEL_NAME = OFFER_CHANNEL_NAME;
-    softPhone.OFFER_HANDLED_MESSAGE = OFFER_HANDLED_MESSAGE;
-    softPhone.shouldRingForOffer = shouldRingForOffer;
-    softPhone.readOfferHandledMessage = readOfferHandledMessage;
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    return {
+        reservationId: message.reservationId || '',
+        answered: !!message.answered,
+        marksCurrentCallHandled: !!currentCallId && currentCallId === message.callId
+    };
+}

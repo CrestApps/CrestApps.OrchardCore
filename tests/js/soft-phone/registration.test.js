@@ -1,19 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js';
-
-const {
-    shouldStartRegistration,
-    answerClickAction,
-    isAnswerInProgress,
-    planRegistrationSelfHeal,
-    planMicrophoneLossRecovery,
-    guardRegistration,
-    REGISTRATION_TIMEOUT_MS,
+import {
     REGISTRATION_RETRY_MS,
+    REGISTRATION_TIMEOUT_MS,
+    answerClickAction,
+    guardRegistration,
+    isAnswerInProgress,
+    planMicrophoneLossRecovery,
+    planRegistrationSelfHeal,
     registrationRetryDelay,
     shouldReportRegistrationFailure,
-} = globalThis.CrestAppsSoftPhone;
+    shouldStartRegistration,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/registration.js';
 
 const idle = {
     browserAudioEnabled: true,

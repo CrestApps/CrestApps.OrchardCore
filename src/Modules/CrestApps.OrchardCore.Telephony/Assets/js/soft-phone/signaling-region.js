@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Signaling region: which of the provider's points of presence this browser connects to.
  *
@@ -15,93 +16,82 @@
  * browser leg is chosen, so whether media follows is a question for measurement, not for assumption. The round
  * trip reported on a call is what settles it.
  *
- * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
- * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Part of the soft phone: an ES module that soft-phone.js, or another of its helpers, imports, and that the unit tests
+ * import directly.
  */
-(function (root) {
-    'use strict';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+// The regions the vendored SDK accepts, with labels for the picker. Kept in step with the SDK's own Region
+// constant (lib/src/Region.d.ts); an unknown value is treated as automatic rather than passed through, so a
+// stale stored choice cannot send a client to a host that no longer exists.
+//
+// There is no Middle East entry. An agent in that part of the world has no in-region edge: Europe is the
+// nearest, and saying so here is more use than leaving them to discover it.
+export var SIGNALING_REGIONS = [
+    { value: '', label: 'Automatic' },
+    { value: 'us-west', label: 'US West' },
+    { value: 'us-central', label: 'US Central' },
+    { value: 'us-east', label: 'US East' },
+    { value: 'ca-central', label: 'Canada Central' },
+    { value: 'eu', label: 'Europe' },
+    { value: 'apac', label: 'Asia Pacific' },
+    { value: 'south-asia', label: 'South Asia' }
+];
 
-    // The regions the vendored SDK accepts, with labels for the picker. Kept in step with the SDK's own Region
-    // constant (lib/src/Region.d.ts); an unknown value is treated as automatic rather than passed through, so a
-    // stale stored choice cannot send a client to a host that no longer exists.
-    //
-    // There is no Middle East entry. An agent in that part of the world has no in-region edge: Europe is the
-    // nearest, and saying so here is more use than leaving them to discover it.
-    var SIGNALING_REGIONS = [
-        { value: '', label: 'Automatic' },
-        { value: 'us-west', label: 'US West' },
-        { value: 'us-central', label: 'US Central' },
-        { value: 'us-east', label: 'US East' },
-        { value: 'ca-central', label: 'Canada Central' },
-        { value: 'eu', label: 'Europe' },
-        { value: 'apac', label: 'Asia Pacific' },
-        { value: 'south-asia', label: 'South Asia' }
-    ];
+// Normalizes a stored, configured or chosen region. Empty means automatic: let the provider's geo-routing
+// decide, which is what every client did before this existed.
+export function clampSignalingRegion(value) {
+    var region = typeof value === 'string' ? value.trim().toLowerCase() : '';
 
-    // Normalizes a stored, configured or chosen region. Empty means automatic: let the provider's geo-routing
-    // decide, which is what every client did before this existed.
-    function clampSignalingRegion(value) {
-        var region = typeof value === 'string' ? value.trim().toLowerCase() : '';
-
-        if (!region) {
-            return '';
-        }
-
-        for (var i = 0; i < SIGNALING_REGIONS.length; i++) {
-            if (SIGNALING_REGIONS[i].value && SIGNALING_REGIONS[i].value === region) {
-                return region;
-            }
-        }
-
+    if (!region) {
         return '';
     }
 
-    // The label for a region value, for the readout.
-    function describeSignalingRegion(value) {
-        var region = clampSignalingRegion(value);
-
-        if (!region) {
-            return '';
+    for (var i = 0; i < SIGNALING_REGIONS.length; i++) {
+        if (SIGNALING_REGIONS[i].value && SIGNALING_REGIONS[i].value === region) {
+            return region;
         }
-
-        for (var i = 0; i < SIGNALING_REGIONS.length; i++) {
-            if (SIGNALING_REGIONS[i].value === region) {
-                return SIGNALING_REGIONS[i].label;
-            }
-        }
-
-        return region;
     }
 
-    // The region this browser should actually register on, given what the operator configured for the tenant and
-    // what this agent chose for themselves.
-    //
-    // The agent's choice wins when they made one, because the right edge is a property of where the person is
-    // sitting rather than of where the tenant was set up: a team on two continents has no single right answer,
-    // and the operator's value is a starting point for everyone rather than a rule over anyone. Automatic -- the
-    // choice an agent starts with -- falls through to the tenant setting, and when that is empty too, to the
-    // provider's own geo-routing, which is what every client did before any of this existed.
-    function resolveSignalingRegion(configuredRegion, agentChoice) {
-        return clampSignalingRegion(agentChoice) || clampSignalingRegion(configuredRegion);
+    return '';
+}
+
+// The label for a region value, for the readout.
+export function describeSignalingRegion(value) {
+    var region = clampSignalingRegion(value);
+
+    if (!region) {
+        return '';
     }
 
-    // Adds the region to the provider client options when one is chosen. Automatic adds nothing at all, so the
-    // SDK's own default routing is left exactly as it was rather than being overridden with an empty string.
-    function withSignalingRegion(clientOptions, value) {
-        var region = clampSignalingRegion(value);
-
-        if (region) {
-            clientOptions.region = region;
+    for (var i = 0; i < SIGNALING_REGIONS.length; i++) {
+        if (SIGNALING_REGIONS[i].value === region) {
+            return SIGNALING_REGIONS[i].label;
         }
-
-        return clientOptions;
     }
 
-    softPhone.SIGNALING_REGIONS = SIGNALING_REGIONS;
-    softPhone.clampSignalingRegion = clampSignalingRegion;
-    softPhone.describeSignalingRegion = describeSignalingRegion;
-    softPhone.resolveSignalingRegion = resolveSignalingRegion;
-    softPhone.withSignalingRegion = withSignalingRegion;
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    return region;
+}
+
+// The region this browser should actually register on, given what the operator configured for the tenant and
+// what this agent chose for themselves.
+//
+// The agent's choice wins when they made one, because the right edge is a property of where the person is
+// sitting rather than of where the tenant was set up: a team on two continents has no single right answer,
+// and the operator's value is a starting point for everyone rather than a rule over anyone. Automatic -- the
+// choice an agent starts with -- falls through to the tenant setting, and when that is empty too, to the
+// provider's own geo-routing, which is what every client did before any of this existed.
+export function resolveSignalingRegion(configuredRegion, agentChoice) {
+    return clampSignalingRegion(agentChoice) || clampSignalingRegion(configuredRegion);
+}
+
+// Adds the region to the provider client options when one is chosen. Automatic adds nothing at all, so the
+// SDK's own default routing is left exactly as it was rather than being overridden with an empty string.
+export function withSignalingRegion(clientOptions, value) {
+    var region = clampSignalingRegion(value);
+
+    if (region) {
+        clientOptions.region = region;
+    }
+
+    return clientOptions;
+}

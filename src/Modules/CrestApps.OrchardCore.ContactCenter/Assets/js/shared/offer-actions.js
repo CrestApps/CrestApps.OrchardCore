@@ -7,8 +7,8 @@
  * it and its siblings (Decline, Skip) are disabled until the call is on screen. An accept that fails brings the buttons
  * back with an error; one that never answers is given up on after a while so the buttons are never stuck.
  *
- * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
- * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ * An ES module: the scripts that use it import it, the asset build bundles it into each of them, and the unit tests
+ * import it directly.
  */
 
 // How long an accept may go unanswered before the buttons come back.

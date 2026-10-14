@@ -1,23 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/extension-names.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
-
-const {
+import {
     EXTENSION_DIRECTORY_MAX_AGE_MS,
-    createExtensionDirectory,
-    storeExtensionEntries,
-    shouldReloadExtensions,
-    extensionName,
-    describeExtension,
-    transferToExtensionLabel,
     callExtensionNumber,
+    createExtensionDirectory,
+    describeExtension,
     extensionDirectoryEntries,
+    extensionName,
     isOwnExtension,
     ownExtensions,
+    shouldReloadExtensions,
+    storeExtensionEntries,
+    transferToExtensionLabel,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/extension-names.js';
+import {
     filterTransferTargets,
     resolveTransferTarget,
-} = globalThis.CrestAppsSoftPhone;
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/transfer-target.js';
 
 function directoryOf(entries) {
     const directory = createExtensionDirectory();

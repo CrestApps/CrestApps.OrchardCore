@@ -5,8 +5,7 @@
  * looking for. The board is filtered in the browser from the state the dashboard already polls, so a filter answers at
  * once and costs the server nothing.
  *
- * Concatenated ahead of the dashboard by the module asset pipeline. It attaches to a shared namespace rather than
- * exporting, so the same file runs in the browser bundle and under the unit tests.
+ * An ES module: the dashboard imports it, and the unit tests import it directly.
  */
 
 // The status groups, in the order the filter offers them. They group presence the way the queue tiles count it, so a

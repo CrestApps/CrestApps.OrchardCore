@@ -9,8 +9,8 @@
  * permission allows, whether they are engaged and connected); these helpers only decide how it looks. Every string is
  * the page's localized one, with an English fallback.
  *
- * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
- * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ * An ES module: the scripts that use it import it, the asset build bundles it into each of them, and the unit tests
+ * import it directly.
  */
 
 // The engagement modes, in the order they are offered.

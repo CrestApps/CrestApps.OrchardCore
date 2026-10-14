@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js';
-
-const {
+import {
     BRIDGED_DIAL_LEG_CAPABILITY,
     BRIDGE_UNAVAILABLE,
-    planKeypadDial,
     bridgedDialRequest,
-    shouldDialFromBrowser,
+    planKeypadDial,
     sharedMicrophoneEnabled,
-} = globalThis.CrestAppsSoftPhone;
+    shouldDialFromBrowser,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js';
 
 const browserSession = { canOriginate: true, originate: () => ({}) };
 
