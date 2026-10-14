@@ -12,9 +12,9 @@ import { describe, expect, it } from 'vitest';
 // scopes that enclose it, and fails on any name that is neither declared there nor a known global.
 //
 // Scripts are checked one file at a time. They wrap themselves in an IIFE and share state through namespaces on
-// `window`/`globalThis` (read as members, so never bare names here), not through top-level declarations leaking
-// between the concatenated files of a bundle; if a script ever needs another file's top-level name, expose it
-// on a namespace instead.
+// `window`/`globalThis` (read as members, so never bare names here). The build bundles each file as its own
+// module, so a top-level declaration never reaches another file of the bundle, or the page; if a script needs
+// another file's top-level name, expose it on a namespace instead.
 const scriptGlob = 'src/Modules/*/Assets/**/*.js';
 
 // ECMAScript's own globals (Object, Promise, Intl, globalThis, NaN, parseInt, ...), taken from a fresh V8
@@ -41,7 +41,7 @@ const BROWSER_GLOBALS = [
 const PAGE_GLOBALS = [
     'signalR',          // @microsoft/signalr, loaded ahead of the soft phone's hub connection.
     'flatpickr',        // The flatpickr date picker the range picker and query builder decorate.
-    'flatpickrCulture', // Created (as a deliberate sloppy-mode global) by Resources' flatpickr-culture.js.
+    'flatpickrCulture', // Set on window by Resources' flatpickr-culture.js.
     'confirmDialog',    // Orchard Core's admin theme confirmation dialog, used by the list bulk actions.
     'Stripe',           // Stripe.js, loaded from js.stripe.com ahead of the Stripe payment scripts.
     'checkoutPayment',  // The checkout's payment driver (checkout-payment.js), which payment providers register with.

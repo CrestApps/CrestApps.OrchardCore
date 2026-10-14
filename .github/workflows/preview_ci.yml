@@ -30,7 +30,7 @@ jobs:
     - uses: actions/setup-node@v7
       if: steps.check-publish.outputs.should-publish == 'true'
       with:
-        node-version: "15"
+        node-version-file: ".node-version"
     - uses: actions/setup-dotnet@v6
       if: steps.check-publish.outputs.should-publish == 'true'
       with:

@@ -272,11 +272,11 @@ describe('the bundles', () => {
         ['wwwroot/scripts/supervisor-dashboard.js', 'Assets/js/supervisor-dashboard.js'],
         ['wwwroot/scripts/contact-center-supervisor-phone.js', 'Assets/js/contact-center-supervisor-phone.js'],
     ])('%s carries the helper ahead of the script that uses it', (output, script) => {
-        const group = assets.find(candidate => candidate.output === output);
+        const group = assets.find(candidate => candidate.dest === output);
 
         expect(group).toBeDefined();
-        expect(group.inputs.indexOf(helper)).toBeGreaterThanOrEqual(0);
-        expect(group.inputs.indexOf(helper)).toBeLessThan(group.inputs.indexOf(script));
+        expect(group.source.indexOf(helper)).toBeGreaterThanOrEqual(0);
+        expect(group.source.indexOf(helper)).toBeLessThan(group.source.indexOf(script));
     });
 });
 

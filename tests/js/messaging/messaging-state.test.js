@@ -100,15 +100,15 @@ describe('rowMatchesFilter', () => {
     });
 });
 
-// The bundles are concatenations, not a module graph: a helper not listed ahead of the script that calls it is not in
-// the browser at all.
+// The bundles run their listed sources in order, and the sources do not import one another: a helper not listed ahead
+// of the script that calls it is not in the browser at all.
 describe('the messaging workspace bundle', () => {
     const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets.json', 'utf8'));
-    const group = assets.find(candidate => candidate.output === 'wwwroot/scripts/messaging-workspace.js');
+    const group = assets.find(candidate => candidate.dest === 'wwwroot/scripts/messaging-workspace.js');
 
     it('carries the state helpers ahead of the workspace script', () => {
         expect(group).toBeDefined();
-        expect(group.inputs.indexOf('Assets/js/shared/messaging-state.js'))
-            .toBeLessThan(group.inputs.indexOf('Assets/js/messaging-workspace.js'));
+        expect(group.source.indexOf('Assets/js/shared/messaging-state.js'))
+            .toBeLessThan(group.source.indexOf('Assets/js/messaging-workspace.js'));
     });
 });

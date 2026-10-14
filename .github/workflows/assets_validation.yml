@@ -28,12 +28,13 @@ jobs:
     - uses: actions/setup-node@v7
       with:
         # The Node major decides the npm major, and npm 10 and npm 11 disagree about which optional peers the
-        # lockfile must satisfy. Match the Node developers run, so a lockfile written locally installs here.
-        node-version: "24"
-    - name: Rebuild packages
-      run: |
-        npm ci
-        gulp rebuild
+        # lockfile must satisfy. .node-version pins the Node developers run, so a lockfile written locally installs here.
+        node-version-file: ".node-version"
+        cache: npm
+    - name: Install packages
+      run: npm ci
+    - name: Rebuild assets
+      run: npm run rebuild
     - name: Normalize line endings (gitattributes)
       run: |
         git add --renormalize .
@@ -45,7 +46,7 @@ jobs:
 
         if ($changes)
         {
-            Write-Output 'Please make sure to build the assets properly before pushing, see https://docs.orchardcore.net/en/latest/guides/gulp-pipeline/.'
+            Write-Output 'Please run `npm run rebuild` and commit the changed wwwroot files before pushing, see docs/engineering/assets-pipeline.md.'
             Write-Output 'The following files changed:'
             Write-Output $changes
             Write-Output 'You can also download the attached artifact to see the changes.'
@@ -76,7 +77,7 @@ jobs:
                         Remove-Item tmp.txt
 
                         # Filtering out this pattern is necessary because certain CRLF line endings are not replaced by
-                        # gulp-eol, so the output files can still have some CRLF.
+                        # the build, so the output files can still have some CRLF.
                         if ($($diffOutput ?? '').Contains('CRLF will be replaced by LF the next time Git touches it'))
                         {
                             Write-Output "Warning: CRLF will be replaced by LF in $file. Fix this if you can, but certain CRLF line endings can't be replaced."

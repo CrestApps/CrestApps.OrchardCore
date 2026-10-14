@@ -123,23 +123,29 @@ public static partial class SoftPhoneAssets
 
     /// <summary>
     /// Every name each helper file of a served bundle exports on its shared namespace, read from the module's
-    /// <c>Assets.json</c> inputs, keyed by the input file. A bundle that is missing one of these was not rebuilt after
+    /// <c>Assets.json</c> sources, keyed by the source file. A bundle that is missing one of these was not rebuilt after
     /// the helper was added or changed.
     /// </summary>
     public static IReadOnlyList<HelperExport> ReadHelperExports(string bundleOutput)
     {
         using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(ModuleDirectory, "Assets.json")));
         var group = document.RootElement.EnumerateArray()
-            .FirstOrDefault(element => element.GetProperty("output").GetString() == bundleOutput);
+            .FirstOrDefault(element => element.GetProperty("dest").GetString() == bundleOutput);
 
         if (group.ValueKind == JsonValueKind.Undefined)
         {
             throw new InvalidOperationException($"Assets.json has no asset group for '{bundleOutput}'.");
         }
 
+        // A group built from one file names it directly; a group built from several lists them in order.
+        var sources = group.GetProperty("source");
+        var inputs = sources.ValueKind == JsonValueKind.Array
+            ? sources.EnumerateArray().Select(element => element.GetString())
+            : [sources.GetString()];
+
         var exports = new List<HelperExport>();
 
-        foreach (var input in group.GetProperty("inputs").EnumerateArray().Select(element => element.GetString()))
+        foreach (var input in inputs)
         {
             var source = File.ReadAllText(Path.Combine(ModuleDirectory, input));
 
