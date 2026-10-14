@@ -184,7 +184,7 @@ The list shows one row per plan, with its title, status and these badges: **Cust
 | When a charge is declined | A notice that the payment could not be taken and when it will be tried again, then an overdue notice once no retries are left. |
 | When a started plan is canceled | A notice that the plan was canceled and how much was received. |
 
-The customer can also see every payment of the plan in **My Transactions** and pay what is due from there. When they pay online from a phone with Apple Pay or Google Pay set up, they can pay with the wallet. Reminders need the **Transaction Reminders** feature and receipts need the **Payment Receipts** feature. See [Transactions](transactions.md) and [Invoices and receipts](invoices-and-receipts.md).
+The customer can also see every payment of the plan in **My Transactions** and pay what is due from there. When they pay online from a phone with Apple Pay or Google Pay set up, they can pay with the wallet. Reminders need the **Transaction Reminders** feature and receipts are sent with the **Send Payment Receipts** feature. See [Transactions](transactions.md) and [Invoices and receipts](invoices-and-receipts.md).
 
 ## Change the plan defaults
 

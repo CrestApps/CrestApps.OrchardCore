@@ -13,7 +13,7 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 | --- | --- |
 | **Menu** | Commerce > Transactions (administrators), Commerce > My Transactions (customers) |
 | **Permission** | Manage transactions, or View own transactions for a customer's own invoices and receipts |
-| **Feature** | Payment Receipts (printable invoices and receipts, receipts and refund notices), Transaction Reminders (invoices and pay links) |
+| **Feature** | Transactions and Receipts (printable invoices and receipts), Send Payment Receipts (receipts and refund notices sent to customers), Transaction Reminders (invoices and pay links) |
 
 <AskYourAdmin />
 
@@ -42,7 +42,7 @@ Every reminder for a payment the customer pays themselves carries a **link that 
 
 ### The pay page
 
-The page shows the payment's title, the **Amount due** and the **Due on** date, and a button such as **Pay USD 50.00**. Clicking it opens [checkout](checkout.md) with the balance ready to pay. With the **Payment Receipts** feature on, the full invoice is shown under the button, with a **Print invoice** button.
+The page shows the payment's title, the **Amount due** and the **Due on** date, and a button such as **Pay USD 50.00**. Clicking it opens [checkout](checkout.md) with the balance ready to pay. With the **Receipts** feature on, the full invoice is shown under the button, with a **Print invoice** button.
 
 The page says instead:
 
@@ -85,7 +85,7 @@ The link works for 60 days, and a new one is made each time you open the page. I
 
 ## Receipts
 
-With the **Payment Receipts** feature on, the customer is sent a receipt after **every payment** on a transaction, however it was paid: online through checkout or a pay link, charged automatically to a saved card, or recorded by an administrator with **Record payment** or **Mark as paid**.
+With the **Send Payment Receipts** feature on, the customer is sent a receipt after **every payment** on a transaction, however it was paid: online through checkout or a pay link, charged automatically to a saved card, or recorded by an administrator with **Record payment** or **Mark as paid**.
 
 - Each receipt gets its own number, in order across the site: **R-1001**, **R-1002**, and so on. The number never changes, so a reprinted receipt shows the number the customer was sent.
 - The message is titled *Receipt for your payment of*, followed by the amount, thanks the customer, gives the receipt number, and includes the receipt itself.
@@ -110,7 +110,7 @@ A receipt shows:
 
 ## Refund notices
 
-With the **Payment Receipts** feature on, when a refund of a payment on a transaction succeeds, the customer is told. The message is titled *Your refund of*, followed by the amount, and says the money went back to the card or account they paid with and can take a few business days to appear on their statement. The transaction's **Timeline** notes that the customer was told. A refund that an administrator settles by hand with **Mark settled** sends the same notice. See [Payments and Refunds](payments-and-refunds.md).
+With the **Send Payment Receipts** feature on, when a refund of a payment on a transaction succeeds, the customer is told. The message is titled *Your refund of*, followed by the amount, and says the money went back to the card or account they paid with and can take a few business days to appear on their statement. The transaction's **Timeline** notes that the customer was told. A refund that an administrator settles by hand with **Mark settled** sends the same notice. See [Payments and Refunds](payments-and-refunds.md).
 
 ## Brand your invoices and receipts
 

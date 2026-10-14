@@ -29,7 +29,7 @@ When it is done:
 
 | You need | Who sets it up |
 | --- | --- |
-| The features **Subscriptions**, **Stripe** and **Payment Receipts**, plus **Pay Later**, **Taxation** or **Subscriptions - Sites** if you use them | Your administrator, in **Tools > Features** |
+| The features **Subscriptions**, **Stripe** and **Send Payment Receipts**, plus **Pay Later**, **Taxation** or **Subscriptions - Sites** if you use them | Your administrator, in **Tools > Features** |
 | Stripe connected, with your keys saved | Your administrator; see [Payment providers](../commerce/payment-providers.md) |
 | The currencies you sell in | Your administrator; see [Products and currencies](../commerce/products-and-currencies.md) |
 | Permissions to manage subscriptions and their settings | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |

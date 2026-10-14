@@ -75,12 +75,15 @@ says which card will be charged and when instead of asking the owner to pay.
 
 ### Payment receipts
 
-The **Payment Receipts** feature (`CrestApps.OrchardCore.Transactions.Receipts`, which needs the
-[Receipts](receipts) module) sends the owner a receipt for every payment applied to a transaction: settled online,
+Printable receipts and invoices come with the [Receipts](receipts) module: whenever it is enabled with Transactions,
+each payment on a transaction's timeline links to its printable receipt, and a transaction links its invoice. They only
+show what the ledger already holds, so they need no feature of their own.
+
+The **Send Payment Receipts** feature (`CrestApps.OrchardCore.Transactions.Receipts`, which needs the Receipts module
+and Notifications) sends the owner a receipt for every payment applied to a transaction: settled online,
 recorded offline, or marked paid. A receipt covers the money in that one payment, with that payment's share of the
 transaction's tax, so a balance paid in three parts gets three receipts that add up. A signed-up owner receives it
-through the notification system with an HTML body; a guest owner receives it by email. Each payment on a
-transaction's timeline links to its printable receipt, for the owner and for administrators.
+through the notification system with an HTML body; a guest owner receives it by email.
 
 Each receipt gets a short sequential number per site, `R-1001`, `R-1002` and so on, issued once when it is first sent
 and shown on every copy after that (`TransactionEvent.ReceiptNumber`). The numbers come from
@@ -112,7 +115,7 @@ A transaction its owner pays themselves (one that is not charged automatically) 
   pay. A link that was altered or expired shows nothing about any transaction. Links use the site's **Base URL**
   from the general settings, so set it to the public address; without it, a link made outside a request is left out
   and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
-- **The invoice page.** With **Payment Receipts** enabled, the transaction's page links its invoice: the same layout
+- **The invoice page.** With the Receipts module enabled, the transaction's page links its invoice: the same layout
   as a receipt, headed *Invoice*, with a *Due* status until it is paid. Administrators also see the pay link there,
   to send it by hand. The receipt for the payment names the invoice it settled.
 - **The first reminder on the due date** reads as the payment being due today; later ones chase the unpaid balance.
