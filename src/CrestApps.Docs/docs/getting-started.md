@@ -64,7 +64,7 @@ dotnet build .\CrestApps.OrchardCore.slnx -c Release
 
 > The .NET build depends on Orchard Core preview packages. If Cloudsmith is unreachable, asset builds still work but the .NET restore/build will not.
 >
-> The asset pipeline waits for each generated CSS and JavaScript stream to finish before Gulp completes the task, which keeps `npm run rebuild` reliable on current Node.js and Gulp releases.
+> The asset build needs Node.js 24, the version pinned in `.node-version`. `npm install` at the repository root installs the packages of every module, and `npm run rebuild` builds each module's `Assets.json` with Vite. See [Building Front-End Assets](building-assets.md) for the commands, the `Assets.json` format, and how to add a script or a library to a module.
 
 ## Run the startup apps
 

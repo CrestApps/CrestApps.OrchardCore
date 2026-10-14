@@ -12,18 +12,44 @@
     var formId = "add-to-cart-" + Model.ContentItemId;
 }
 
-<form method="post" asp-route="@CartConstants.RouteNames.Add" class="product-add-to-cart w-100" id="@formId">
+@if (Model.Variants.Count > 0 && Model.Options.Count > 0)
+{
+    <script asp-name="product-variant-picker" at="Foot"></script>
+}
+
+<form method="post" asp-route="@CartConstants.RouteNames.Add" class="product-add-to-cart w-100" id="@formId" data-product-variant-form="@(Model.Options.Count > 0 ? "" : null)" data-sku-template="@T["SKU {0}"].Value">
     <input type="hidden" name="contentItemId" value="@Model.ContentItemId" />
     <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
 
     @if (Model.Variants.Count > 0)
     {
-        <div class="mb-2">
+        @* One list per option, shown by the script; without it, the list of variants below is used. *@
+        @if (Model.Options.Count > 0)
+        {
+            <div class="d-none" data-product-variant-options>
+                @for (var i = 0; i < Model.Options.Count; i++)
+                {
+                    var option = Model.Options[i];
+
+                    <div class="mb-2">
+                        <label class="form-label small text-muted" for="@(formId)-option-@i">@option.Name</label>
+                        <select id="@(formId)-option-@i" class="form-select form-select-sm" data-product-option="@option.Name">
+                            @foreach (var value in option.Values)
+                            {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="mb-2" data-product-variant-fallback>
             <label class="form-label small text-muted" for="@(formId)-variant">@T["Choose"]</label>
             <select name="variantId" id="@(formId)-variant" class="form-select form-select-sm" data-product-variant>
                 @foreach (var variant in Model.Variants)
                 {
-                    <option value="@variant.VariantId" data-sku="@variant.Sku" data-price="@variant.Price">
+                    <option value="@variant.VariantId" data-sku="@variant.Sku" data-price="@variant.Price" data-image="@variant.ImagePath" data-options="@System.Text.Json.JsonSerializer.Serialize(variant.Options)">
                         @(string.IsNullOrEmpty(variant.Price) ? variant.Title : variant.Title + " — " + variant.Price)
                     </option>
                 }

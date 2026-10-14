@@ -114,10 +114,10 @@ describe.each([
     ['wwwroot/scripts/agent-workspace.js', 'Assets/js/agent-workspace.js'],
     ['wwwroot/scripts/contact-center-agent-bar.js', 'Assets/js/contact-center-agent-bar.js'],
 ])('the %s bundle', (output, script) => {
-    const group = assets.find(candidate => candidate.output === output);
+    const group = assets.find(candidate => candidate.dest === output);
 
     it('carries the offer-actions helper ahead of the script that uses it', () => {
-        expect(group.inputs).toContain(helper);
-        expect(group.inputs.indexOf(helper)).toBeLessThan(group.inputs.indexOf(script));
+        expect(group.source).toContain(helper);
+        expect(group.source.indexOf(helper)).toBeLessThan(group.source.indexOf(script));
     });
 });

@@ -61,8 +61,21 @@ The returned `session` must expose:
 The provider SDK is **vendored locally** (no public CDN serves the exact browser bundle), and only loaded for
 the active provider.
 
-1. Build a browser IIFE bundle of the SDK (esbuild `--global-name=<Global>`), e.g. `window.TwilioVoice`, and
-   drop it under `src/Modules/CrestApps.OrchardCore.Resources/wwwroot/vendors/<sdk>/` (min + non-min).
+1. Add the SDK package to `src/Modules/CrestApps.OrchardCore.Resources/package.json` (pin the exact version), run
+   `npm install`, and add a `vite` group with a `global` to that module's `Assets.json`, the way `sip.js` and
+   `telnyx-webrtc` are built:
+   ```json
+   {
+     "action": "vite",
+     "name": "twilio-voice",
+     "source": "node_modules/@twilio/voice-sdk/<the package's entry file>",
+     "dest": "wwwroot/vendors/twilio-voice/twilio-voice.js",
+     "global": "TwilioVoice",
+     "tags": ["vendor"]
+   }
+   ```
+   `npm run build -- -n twilio-voice` writes the readable and `.min.js` IIFE bundles that set `window.TwilioVoice`.
+   Commit them with the manifest change.
 2. Register it as a named script in
    `src/Modules/CrestApps.OrchardCore.Resources/ResourceManagementOptionsConfiguration.cs`:
    ```csharp

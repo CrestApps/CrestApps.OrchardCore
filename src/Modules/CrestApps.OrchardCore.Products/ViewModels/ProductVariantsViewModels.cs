@@ -13,6 +13,12 @@ public class ProductVariantsPartViewModel
 
     [BindNever]
     public decimal? ProductPrice { get; set; }
+
+    /// <summary>
+    /// The media library paths of the product's own images, which a variant picks from.
+    /// </summary>
+    [BindNever]
+    public IList<string> Images { get; set; } = [];
 }
 
 public class ProductOptionViewModel

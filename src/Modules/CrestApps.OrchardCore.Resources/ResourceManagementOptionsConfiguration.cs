@@ -317,9 +317,10 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-N83jF0rz0F/vFCbfB2Xsk8rEusD+lnnKdj/PlkThBnO117YTpYeHF5wdoNQOczzB")
             .SetVersion("29.5.3");
 
-        // SIP.js is distributed as ES modules only from 0.16+; this is a browser IIFE bundle
-        // (esbuild, --global-name=SIP) of sip.js@0.21.2 exposing window.SIP for the soft phone's
-        // WebRTC adapter. No public CDN serves this exact bundle, so it is vendored locally only.
+        // SIP.js is distributed as ES modules only from 0.16+; this is a browser IIFE bundle of
+        // sip.js@0.21.2 exposing window.SIP for the soft phone's WebRTC adapter, built from the module's
+        // package.json by the "sip.js" group in Assets.json. No public CDN serves this exact bundle, so it
+        // is vendored locally only.
         _manifest
             .DefineScript("sip.js")
             .SetUrl(
@@ -327,10 +328,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/sip.js/sip.js")
             .SetVersion("0.21.2");
 
-        // The Telnyx WebRTC SDK ships as CommonJS/ESM only; this is a browser IIFE bundle
-        // (esbuild, --global-name=TelnyxWebRTC) of @telnyx/webrtc@2.27.9 exposing window.TelnyxWebRTC
-        // (with TelnyxRTC, Call, TELNYX_ICE_SERVERS, ...) for the soft phone's Telnyx browser audio
-        // adapter. No public CDN serves this exact bundle, so it is vendored locally only.
+        // The Telnyx WebRTC SDK ships as CommonJS/ESM only; this is a browser IIFE bundle of
+        // @telnyx/webrtc@2.27.9 exposing window.TelnyxWebRTC (with TelnyxRTC, Call, TELNYX_ICE_SERVERS, ...)
+        // for the soft phone's Telnyx browser audio adapter, built from the module's package.json by the
+        // "telnyx-webrtc" group in Assets.json. No public CDN serves this exact bundle, so it is vendored
+        // locally only.
         _manifest
             .DefineScript("telnyx-webrtc")
             .SetUrl(

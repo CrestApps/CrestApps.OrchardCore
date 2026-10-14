@@ -180,6 +180,7 @@ const sidebars = {
     technicalSidebar: [
         { type: 'doc', id: 'intro', className: icon('compass') },
         { type: 'doc', id: 'getting-started', className: icon('rocket') },
+        { type: 'doc', id: 'building-assets', className: icon('wrench') },
         { type: 'doc', id: 'configuration', className: icon('file-cog') },
         { type: 'doc', id: 'feature-reference', className: icon('tags') },
         {

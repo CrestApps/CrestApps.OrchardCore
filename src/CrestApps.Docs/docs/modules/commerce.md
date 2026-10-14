@@ -27,7 +27,7 @@ This video walks through the commerce modules, their screens, configuration and 
 | Checkout | Checkout | The checkout engine: sessions, steps, the durable payment and refund ledgers, coupons, and the public checkout. | [Checkout](checkout) |
 | Stripe | Stripe | The Stripe payment provider: cards, saved cards, Apple Pay and Google Pay, Connect, webhooks. | [Payments](payments) |
 | Pay Later | Pay Later | An offline "pay later" payment option that records the balance as a transaction. | [Pay Later](pay-later) |
-| Transactions | Transactions, Transaction Reminders, Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
+| Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
 | Receipts | Receipts | The reusable printable receipt and its branding settings. | [Receipts](receipts) |
 | Subscriptions | Subscriptions, Subscriptions - Sites, Subscriptions - Installment Plans | Recurring plans and their agreements, selling sites, and administrator-made payment plans. | [Subscriptions](subscriptions), [Installment Plans](installment-plans) |
 | Taxation | Taxation | Tax categories, jurisdictions, rules and calculation. | [Taxation](taxation) |
@@ -40,7 +40,7 @@ Every way of taking money goes through the same path, so there is one ledger to 
 2. **The buyer completes the steps.** The checkout collects what the steps need, prices the order (products, coupons, taxes), and opens the payment step.
 3. **A payment provider takes the money.** The payment is begun through the provider (for example Stripe) and recorded as a durable payment attempt before anything else happens.
 4. **The checkout settles.** A confirmed attempt completes the session, which applies the payment to its transaction (`ITransactionSettlementService`).
-5. **Handlers react.** Checkout handlers (`CheckoutHandlerBase`) let the seller finish the purchase, for example Subscriptions activates or renews an agreement and queues a site. When the payment settles a transaction, `ITransactionPaymentHandler` tells every interested module once per payment: Installment Plans moves its schedule, and Payment Receipts numbers and sends the receipt.
+5. **Handlers react.** Checkout handlers (`CheckoutHandlerBase`) let the seller finish the purchase, for example Subscriptions activates or renews an agreement and queues a site. When the payment settles a transaction, `ITransactionPaymentHandler` tells every interested module once per payment: Installment Plans moves its schedule, and Send Payment Receipts numbers and sends the receipt.
 
 Refunds follow the same pattern through the durable refund ledger, and `IPaymentRefundHandler` is raised once per refund, however it finished.
 

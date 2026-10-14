@@ -1,20 +1,20 @@
 [
   {
-    "inputs": [
-      "Assets/js/product-listing.js"
-    ],
-    "output": "wwwroot/Scripts/product-listing.js"
+    "action": "vite",
+    "name": "product-listing.js",
+    "source": "Assets/js/product-listing.js",
+    "dest": "wwwroot/Scripts/product-listing.js"
   },
   {
-    "inputs": [
-      "Assets/js/product-listing-editor.js"
-    ],
-    "output": "wwwroot/Scripts/product-listing-editor.js"
+    "action": "vite",
+    "name": "product-listing-editor.js",
+    "source": "Assets/js/product-listing-editor.js",
+    "dest": "wwwroot/Scripts/product-listing-editor.js"
   },
   {
-    "inputs": [
-      "Assets/css/product-listing.css"
-    ],
-    "output": "wwwroot/Styles/product-listing.css"
+    "action": "vite",
+    "name": "product-listing.css",
+    "source": "Assets/css/product-listing.css",
+    "dest": "wwwroot/Styles/product-listing.css"
   }
 ]

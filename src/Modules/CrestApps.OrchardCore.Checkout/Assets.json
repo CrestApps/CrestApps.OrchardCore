@@ -1,8 +1,8 @@
 [
   {
-    "inputs": [
-      "Assets/js/checkout-payment.js"
-    ],
-    "output": "wwwroot/Scripts/checkout-payment.js"
+    "action": "vite",
+    "name": "checkout-payment.js",
+    "source": "Assets/js/checkout-payment.js",
+    "dest": "wwwroot/Scripts/checkout-payment.js"
   }
 ]

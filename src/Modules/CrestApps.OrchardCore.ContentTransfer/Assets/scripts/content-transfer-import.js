@@ -1,7 +1,7 @@
 // Handles the bulk import upload form, including client-side size validation and
 // chunked uploading of large files. Localized messages can be supplied through the
 // configuration passed to initialize() to override the built-in English defaults.
-var contentTransferImport = (function () {
+window.contentTransferImport = (function () {
     'use strict';
 
     var UPLOAD_ID_FIELD_NAME = '__chunkedFileUploadId';

@@ -1,8 +1,8 @@
 [
   {
-    "inputs": [
-      "Assets/js/commerce-admin-list.js"
-    ],
-    "output": "wwwroot/Scripts/commerce-admin-list.js"
+    "action": "vite",
+    "name": "commerce-admin-list.js",
+    "source": "Assets/js/commerce-admin-list.js",
+    "dest": "wwwroot/Scripts/commerce-admin-list.js"
   }
 ]

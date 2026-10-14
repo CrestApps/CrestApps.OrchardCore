@@ -1,8 +1,14 @@
 [
   {
-    "inputs": [
-      "node_modules/@microsoft/signalr/dist/browser/signalr.js"
+    "action": "copy",
+    "name": "signalr",
+    "source": [
+      "node_modules/@microsoft/signalr/dist/browser/signalr.js",
+      "node_modules/@microsoft/signalr/dist/browser/signalr.min.js"
     ],
-    "output": "wwwroot/js/signalr.js"
+    "dest": "wwwroot/js/",
+    "tags": [
+      "vendor"
+    ]
   }
 ]

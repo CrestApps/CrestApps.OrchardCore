@@ -1,393 +1,263 @@
 [
   {
-    "inputs": [
-      "Assets/js/date-range-picker.js"
-    ],
-    "output": "wwwroot/scripts/date-range-picker.js"
+    "action": "vite",
+    "name": "date-range-picker.js",
+    "source": "Assets/js/date-range-picker.js",
+    "dest": "wwwroot/scripts/date-range-picker.js"
   },
   {
-    "inputs": [
-      "Assets/js/list-management-ui.js"
-    ],
-    "output": "wwwroot/scripts/list-management-ui.js"
+    "action": "vite",
+    "name": "list-management-ui.js",
+    "source": "Assets/js/list-management-ui.js",
+    "dest": "wwwroot/scripts/list-management-ui.js"
   },
   {
-    "inputs": [
-      "Assets/js/item-selector.js"
-    ],
-    "output": "wwwroot/scripts/item-selector.js"
+    "action": "vite",
+    "name": "item-selector.js",
+    "source": "Assets/js/item-selector.js",
+    "dest": "wwwroot/scripts/item-selector.js"
   },
   {
-    "inputs": [
-      "Assets/js/collapsible-panel.js"
-    ],
-    "output": "wwwroot/scripts/collapsible-panel.js"
+    "action": "vite",
+    "name": "collapsible-panel.js",
+    "source": "Assets/js/collapsible-panel.js",
+    "dest": "wwwroot/scripts/collapsible-panel.js"
   },
   {
-    "inputs": [
-      "Assets/js/tool-instance-parameters.js"
-    ],
-    "output": "wwwroot/scripts/tool-instance-parameters.js"
+    "action": "vite",
+    "name": "tool-instance-parameters.js",
+    "source": "Assets/js/tool-instance-parameters.js",
+    "dest": "wwwroot/scripts/tool-instance-parameters.js"
   },
   {
-    "inputs": [
-      "Assets/css/item-selector.css"
-    ],
-    "output": "wwwroot/styles/item-selector.css"
+    "action": "vite",
+    "name": "item-selector.css",
+    "source": "Assets/css/item-selector.css",
+    "dest": "wwwroot/styles/item-selector.css"
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/chart.js/dist/chart.umd.js"
-    ],
-    "output": "wwwroot/vendors/chartjs/chart.js"
+    "action": "vite",
+    "name": "flatpickr-culture.js",
+    "source": "Assets/js/flatpickr-culture.js",
+    "dest": "wwwroot/scripts/flatpickr-culture.js"
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/medium-zoom/dist/medium-zoom.js"
-    ],
-    "output": "wwwroot/vendors/medium-zoom/medium-zoom.js"
+    "action": "vite",
+    "name": "marked",
+    "source": "node_modules/marked/lib/marked.esm.js",
+    "dest": "wwwroot/scripts/marked.js",
+    "global": "marked",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/medium-zoom/dist/medium-zoom.min.js"
-    ],
-    "output": "wwwroot/vendors/medium-zoom/medium-zoom.min.js"
+    "action": "vite",
+    "name": "sip.js",
+    "source": "node_modules/sip.js/lib/index.js",
+    "dest": "wwwroot/vendors/sip.js/sip.js",
+    "global": "SIP",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn/workletProcessor.js"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/gtcrn/workletProcessor.js"
+    "action": "vite",
+    "name": "telnyx-webrtc",
+    "source": "node_modules/@telnyx/webrtc/lib/bundle.js",
+    "dest": "wwwroot/vendors/telnyx-webrtc/telnyx-webrtc.js",
+    "global": "TelnyxWebRTC",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise/workletProcessor.js"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise/workletProcessor.js"
+    "action": "copy",
+    "name": "chartjs",
+    "source": "node_modules/chart.js/dist/chart.umd.js",
+    "dest": "wwwroot/vendors/chartjs/chart.js",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/dist/noiseGate/workletProcessor.js"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/noiseGate/workletProcessor.js"
+    "action": "copy",
+    "name": "chartjs-min",
+    "source": "node_modules/chart.js/dist/chart.umd.min.js",
+    "dest": "wwwroot/vendors/chartjs/chart.min.js",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn.wasm"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/gtcrn.wasm"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise.wasm"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise.wasm"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise_simd.wasm"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/rnnoise_simd.wasm"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@sapphi-red/web-noise-suppressor/LICENSE"
-    ],
-    "output": "wwwroot/vendors/web-noise-suppressor/LICENSE"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/chart.js/dist/chart.umd.js.map"
-    ],
-    "output": "wwwroot/vendors/chartjs/chart.umd.js.map"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "chartjs-maps",
+    "source": [
+      "node_modules/chart.js/dist/chart.umd.js.map",
       "node_modules/chart.js/dist/chart.umd.min.js.map"
     ],
-    "output": "wwwroot/vendors/chartjs/chart.umd.min.js.map"
+    "dest": "wwwroot/vendors/chartjs/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/chart.js/dist/chart.umd.min.js"
+    "action": "copy",
+    "name": "medium-zoom",
+    "source": [
+      "node_modules/medium-zoom/dist/medium-zoom.js",
+      "node_modules/medium-zoom/dist/medium-zoom.min.js"
     ],
-    "output": "wwwroot/vendors/chartjs/chart.min.js"
+    "dest": "wwwroot/vendors/medium-zoom/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/easymde/dist/easymde.min.js"
+    "action": "copy",
+    "name": "web-noise-suppressor",
+    "source": [
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn.wasm",
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise.wasm",
+      "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise_simd.wasm",
+      "node_modules/@sapphi-red/web-noise-suppressor/LICENSE"
     ],
-    "output": "wwwroot/vendors/easymde/js/easymde.js"
+    "dest": "wwwroot/vendors/web-noise-suppressor/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/easymde/dist/easymde.min.js"
-    ],
-    "output": "wwwroot/vendors/easymde/js/easymde.min.js"
+    "action": "copy",
+    "name": "web-noise-suppressor-gtcrn",
+    "source": "node_modules/@sapphi-red/web-noise-suppressor/dist/gtcrn/workletProcessor.js",
+    "dest": "wwwroot/vendors/web-noise-suppressor/gtcrn/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/easymde/dist/easymde.min.css"
-    ],
-    "output": "wwwroot/vendors/easymde/css/easymde.css"
+    "action": "copy",
+    "name": "web-noise-suppressor-rnnoise",
+    "source": "node_modules/@sapphi-red/web-noise-suppressor/dist/rnnoise/workletProcessor.js",
+    "dest": "wwwroot/vendors/web-noise-suppressor/rnnoise/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/easymde/dist/easymde.min.css"
-    ],
-    "output": "wwwroot/vendors/easymde/css/easymde.min.css"
+    "action": "copy",
+    "name": "web-noise-suppressor-noise-gate",
+    "source": "node_modules/@sapphi-red/web-noise-suppressor/dist/noiseGate/workletProcessor.js",
+    "dest": "wwwroot/vendors/web-noise-suppressor/noiseGate/",
+    "tags": ["vendor"]
   },
   {
-    "inputs": [
-      "node_modules/marked/lib/marked.umd.js"
-    ],
-    "output": "wwwroot/scripts/marked.js"
+    "action": "copy",
+    "name": "easymde-js",
+    "source": "node_modules/easymde/dist/easymde.min.js",
+    "dest": "wwwroot/vendors/easymde/js/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/flatpickr/dist/flatpickr.js"
-    ],
-    "output": "wwwroot/vendors/flatpickr/js/flatpickr.js"
+    "action": "copy",
+    "name": "easymde-js-debug",
+    "source": "node_modules/easymde/dist/easymde.min.js",
+    "dest": "wwwroot/vendors/easymde/js/easymde.js",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "easymde-css",
+    "source": "node_modules/easymde/dist/easymde.min.css",
+    "dest": "wwwroot/vendors/easymde/css/",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "easymde-css-debug",
+    "source": "node_modules/easymde/dist/easymde.min.css",
+    "dest": "wwwroot/vendors/easymde/css/easymde.css",
+    "tags": ["vendor"]
+  },
+  {
+    "action": "copy",
+    "name": "flatpickr-js",
+    "source": [
+      "node_modules/flatpickr/dist/flatpickr.js",
       "node_modules/flatpickr/dist/flatpickr.min.js"
     ],
-    "output": "wwwroot/vendors/flatpickr/js/flatpickr.min.js"
+    "dest": "wwwroot/vendors/flatpickr/js/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/flatpickr/dist/flatpickr.css"
-    ],
-    "output": "wwwroot/vendors/flatpickr/css/flatpickr.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "flatpickr-css",
+    "source": [
+      "node_modules/flatpickr/dist/flatpickr.css",
       "node_modules/flatpickr/dist/flatpickr.min.css"
     ],
-    "output": "wwwroot/vendors/flatpickr/css/flatpickr.min.css"
+    "dest": "wwwroot/vendors/flatpickr/css/",
+    "tags": ["vendor"]
   },
   {
-    "inputs": [
-      "Assets/js/flatpickr-culture.js"
-    ],
-    "output": "wwwroot/scripts/flatpickr-culture.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/dompurify/dist/purify.js"
-    ],
-    "output": "wwwroot/vendors/dompurify/purify.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/dompurify/dist/purify.min.js"
-    ],
-    "output": "wwwroot/vendors/dompurify/purify.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "dompurify",
+    "source": [
+      "node_modules/dompurify/dist/purify.js",
+      "node_modules/dompurify/dist/purify.min.js",
       "node_modules/dompurify/dist/purify.min.js.map"
     ],
-    "output": "wwwroot/vendors/dompurify/purify.min.js.map"
+    "dest": "wwwroot/vendors/dompurify/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/highlight.js/styles/github.css"
-    ],
-    "output": "wwwroot/vendors/highlightjs/css/highlightjs.css"
+    "action": "copy",
+    "name": "highlightjs-css",
+    "source": "node_modules/highlight.js/styles/github.css",
+    "dest": "wwwroot/vendors/highlightjs/css/highlightjs.css",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/highlight.js/styles/github.min.css"
-    ],
-    "output": "wwwroot/vendors/highlightjs/css/highlightjs.min.css"
+    "action": "copy",
+    "name": "highlightjs-css-min",
+    "source": "node_modules/highlight.js/styles/github.min.css",
+    "dest": "wwwroot/vendors/highlightjs/css/highlightjs.min.css",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/technical-name-generator.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.min.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/technical-name-generator.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/document-drop-zone.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/document-drop-zone.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.css"
-    ],
-    "output": "wwwroot/vendors/crestapps/document-drop-zone.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.css"
-    ],
-    "output": "wwwroot/vendors/crestapps/document-drop-zone.min.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-markers.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.min.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-markers.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.min.js.map"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-markers.min.js.map"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/realtime-audio.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/realtime-audio.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js.map"
-    ],
-    "output": "wwwroot/vendors/crestapps/realtime-audio.min.js.map"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-image-carousel.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js.map"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.js.map"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.css"
-    ],
-    "output": "wwwroot/vendors/crestapps/chat-image-carousel.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "ai-chat-ui-components",
+    "source": [
+      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/technical-name-generator.min.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.css",
+      "node_modules/@crestapps/ai-chat-ui/dist/document-drop-zone.min.css",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.min.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-markers.min.js.map",
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js.map",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.js.map",
+      "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.css",
       "node_modules/@crestapps/ai-chat-ui/dist/chat-image-carousel.min.css"
     ],
-    "output": "wwwroot/vendors/crestapps/chat-image-carousel.min.css"
+    "dest": "wwwroot/vendors/crestapps/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js"
-    ],
-    "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "intl-tel-input-js",
+    "source": [
+      "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js",
       "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.min.js"
     ],
-    "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.min.js"
+    "dest": "wwwroot/vendors/intl-tel-input/js/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/intl-tel-input/dist/css/intlTelInput.css"
-    ],
-    "output": "wwwroot/vendors/intl-tel-input/css/intlTelInput.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "intl-tel-input-css",
+    "source": [
+      "node_modules/intl-tel-input/dist/css/intlTelInput.css",
       "node_modules/intl-tel-input/dist/css/intlTelInput.min.css"
     ],
-    "output": "wwwroot/vendors/intl-tel-input/css/intlTelInput.min.css"
+    "dest": "wwwroot/vendors/intl-tel-input/css/",
+    "tags": ["vendor"]
   },
   {
-    "copy": true,
-    "inputs": [
-      "node_modules/intl-tel-input/dist/img/flags.webp"
-    ],
-    "output": "wwwroot/vendors/intl-tel-input/img/flags.webp"
-  },
-  {
-    "copy": true,
-    "inputs": [
+    "action": "copy",
+    "name": "intl-tel-input-img",
+    "source": [
+      "node_modules/intl-tel-input/dist/img/flags.webp",
       "node_modules/intl-tel-input/dist/img/flags@2x.webp"
     ],
-    "output": "wwwroot/vendors/intl-tel-input/img/flags@2x.webp"
+    "dest": "wwwroot/vendors/intl-tel-input/img/",
+    "tags": ["vendor"]
   }
 ]

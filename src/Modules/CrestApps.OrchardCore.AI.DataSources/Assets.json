@@ -1,8 +1,8 @@
 [
   {
-    "inputs": [
-      "Assets/js/ai-data-source-editor.js"
-    ],
-    "output": "wwwroot/scripts/ai-data-source-editor.js"
+    "action": "vite",
+    "name": "ai-data-source-editor.js",
+    "source": "Assets/js/ai-data-source-editor.js",
+    "dest": "wwwroot/scripts/ai-data-source-editor.js"
   }
 ]

@@ -57,6 +57,75 @@ public sealed class ProductVariantsTests
         => Assert.Empty(ProductVariants.Combine([new ProductOption { Name = "Size", Values = [] }], [], () => "x"));
 
     [Fact]
+    public void WhenTheTypeGainsAnOption_EachVariantCarriesOnAsItsFirstCombination()
+    {
+        var ids = 0;
+        string NewId() => $"v{++ids}";
+
+        var sizes = ProductVariants.Combine([new ProductOption { Name = "Size", Values = ["S", "M"] }], [], NewId);
+        var medium = sizes.Single(variant => variant.Options["Size"] == "M");
+        medium.Sku = "CAP-M";
+        medium.Price = 25m;
+
+        var withColors = ProductVariants.Combine(
+            [new ProductOption { Name = "Size", Values = ["S", "M"] }, new ProductOption { Name = "Color", Values = ["Red", "Blue"] }],
+            sizes,
+            NewId);
+
+        Assert.Equal(4, withColors.Count);
+
+        // M becomes M / Red, with its SKU and price; M / Blue is new.
+        var mediumRed = withColors.Single(variant => variant.Options["Size"] == "M" && variant.Options["Color"] == "Red");
+        Assert.Equal(medium.VariantId, mediumRed.VariantId);
+        Assert.Equal("CAP-M", mediumRed.Sku);
+        Assert.Equal(25m, mediumRed.Price);
+        Assert.Null(withColors.Single(variant => variant.Options["Size"] == "M" && variant.Options["Color"] == "Blue").Sku);
+    }
+
+    [Fact]
+    public void WhenTheTypeLosesAnOption_TheFirstVariantOfEachValueCarriesOn()
+    {
+        var ids = 0;
+        string NewId() => $"v{++ids}";
+
+        var both = ProductVariants.Combine(
+            [new ProductOption { Name = "Size", Values = ["S", "M"] }, new ProductOption { Name = "Color", Values = ["Red", "Blue"] }],
+            [],
+            NewId);
+
+        var mediumRed = both.Single(variant => variant.Options["Size"] == "M" && variant.Options["Color"] == "Red");
+        mediumRed.Sku = "CAP-M-RED";
+
+        var sizesOnly = ProductVariants.Combine([new ProductOption { Name = "Size", Values = ["S", "M"] }], both, NewId);
+
+        Assert.Equal(2, sizesOnly.Count);
+        Assert.Equal("CAP-M-RED", sizesOnly.Single(variant => variant.Options["Size"] == "M").Sku);
+        Assert.All(sizesOnly, variant => Assert.Single(variant.Options));
+    }
+
+    [Fact]
+    public void AnExactMatch_IsNeverTakenByAVariantThatOnlyAgrees()
+    {
+        var ids = 0;
+        string NewId() => $"v{++ids}";
+
+        // The old "M" variant agrees with M / Red, but M / Red already has its own variant.
+        ProductVariant[] existing =
+        [
+            new() { VariantId = "old-m", Options = new(StringComparer.OrdinalIgnoreCase) { ["Size"] = "M" }, Sku = "OLD-M" },
+            new() { VariantId = "m-red", Options = new(StringComparer.OrdinalIgnoreCase) { ["Size"] = "M", ["Color"] = "Red" }, Sku = "M-RED" },
+        ];
+
+        var variants = ProductVariants.Combine(
+            [new ProductOption { Name = "Size", Values = ["M"] }, new ProductOption { Name = "Color", Values = ["Red", "Blue"] }],
+            existing,
+            NewId);
+
+        Assert.Equal("M-RED", variants.Single(variant => variant.Options["Color"] == "Red").Sku);
+        Assert.Equal("OLD-M", variants.Single(variant => variant.Options["Color"] == "Blue").Sku);
+    }
+
+    [Fact]
     public async Task AVariantProduct_IsSoldAsAnEnabledVariant_WithItsSkuPriceAndTitle()
     {
         var resolver = CreateSnapshotResolver();

@@ -10,4 +10,9 @@
     <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Declares the npm packages the asset build copies into wwwroot; it is not part of the app. -->
+    <Content Update="package.json" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
 </Project>
