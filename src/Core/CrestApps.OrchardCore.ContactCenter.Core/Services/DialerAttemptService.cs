@@ -398,6 +398,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             cancellationToken);
 
         DialerCallMetadata.StampDial(interaction, profile, attemptNumber);
+        DialerCallMetadata.StampReservation(interaction, reservationId);
 
         if (agent is null)
         {
