@@ -123,7 +123,10 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
 
         var earliestUtc = (previous.CompletedUtc ?? _clock.UtcNow).AddMinutes(Math.Max(0, profile.RetryDelayMinutes));
 
-        if (followUp.ScheduledUtc < earliestUtc)
+        // The subject flow decides when, if it said: a date the person picked, or the action's default schedule hours.
+        // When it said nothing, the profile's retry delay is the wait rather than a placeholder nobody chose, and it is
+        // never dialed sooner than the delay either way.
+        if (!context.HasChosenSchedule || followUp.ScheduledUtc < earliestUtc)
         {
             followUp.ScheduledUtc = earliestUtc;
         }

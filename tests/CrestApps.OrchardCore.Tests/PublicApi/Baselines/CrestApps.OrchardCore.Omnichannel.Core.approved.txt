@@ -632,6 +632,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string CancelReason { get; set; }
         public string CreatedBy { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity FollowUpActivity { get; set; }
+        public bool HasChosenSchedule { get; set; }
         public bool HasNamedOwner { get; set; }
         public int? MaxAttempts { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }

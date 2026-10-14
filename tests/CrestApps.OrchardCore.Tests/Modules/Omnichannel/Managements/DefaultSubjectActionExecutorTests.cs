@@ -144,6 +144,49 @@ public sealed class DefaultSubjectActionExecutorTests
     }
 
     [Theory]
+    [InlineData(null, false, false)]
+    [InlineData(24, false, true)]
+    [InlineData(null, true, true)]
+    public async Task ExecuteAsync_TryAgain_SaysWhetherTheScheduleWasChosen(int? defaultScheduleHours, bool datePicked, bool expectedChosen)
+    {
+        // Arrange
+        var action = CreateAction(OmnichannelConstants.ActionTypes.TryAgain, SubjectActionOwnerAssignmentType.SameOwner);
+        action.Put(new TryAgainActionMetadata
+        {
+            AssignmentType = SubjectActionOwnerAssignmentType.SameOwner,
+            DefaultScheduleHours = defaultScheduleHours,
+        });
+
+        var session = new Mock<ISession>();
+        SetupSave(session, _ => { });
+
+        FollowUpActivityContext followUp = null;
+        var handler = new Mock<IFollowUpActivityHandler>();
+        handler
+            .Setup(x => x.CreatingAsync(It.IsAny<FollowUpActivityContext>(), It.IsAny<CancellationToken>()))
+            .Callback<FollowUpActivityContext, CancellationToken>((value, _) => followUp = value)
+            .Returns(Task.CompletedTask);
+
+        var executor = CreateExecutor(action, session, followUpHandlers: [handler.Object]);
+        var context = CreateContext();
+
+        if (datePicked)
+        {
+            context.ActionScheduleDates = new Dictionary<string, DateTime?>
+            {
+                [action.ItemId] = _now.AddHours(2),
+            };
+        }
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert: with neither a picked date nor default hours, the carrier, such as a dialer, may set its own wait.
+        Assert.NotNull(followUp);
+        Assert.Equal(expectedChosen, followUp.HasChosenSchedule);
+    }
+
+    [Theory]
     [InlineData("TryAgain", ContactResolutionStatus.Unknown)]
     [InlineData("TryAgain", ContactResolutionStatus.Unresolved)]
     [InlineData("TryAgain", ContactResolutionStatus.Ambiguous)]
@@ -452,7 +495,8 @@ public sealed class DefaultSubjectActionExecutorTests
         SubjectAction action,
         Mock<ISession> session,
         ILocalClock localClock = null,
-        Mock<IContentManager> contentManager = null)
+        Mock<IContentManager> contentManager = null,
+        IEnumerable<IFollowUpActivityHandler> followUpHandlers = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
@@ -475,7 +519,8 @@ public sealed class DefaultSubjectActionExecutorTests
             session.Object,
             clock.Object,
             localClock ?? Mock.Of<ILocalClock>(),
-            NullLogger<DefaultSubjectActionExecutor>.Instance);
+            NullLogger<DefaultSubjectActionExecutor>.Instance,
+            followUpHandlers: followUpHandlers);
     }
 
     private static SubjectAction CreateAction(

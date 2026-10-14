@@ -72,7 +72,7 @@
     <div class="ocat-end">
         <input asp-for="RetryDelayMinutes" type="number" min="0" class="form-control" />
         <span asp-validation-for="RetryDelayMinutes" class="text-danger"></span>
-        <span class="hint">@T["How long to wait before re-dialing an activity that was not answered on a previous attempt."]</span>
+        <span class="hint">@T["How long to wait before re-dialing an activity that was not answered on a previous attempt. The subject flow decides first: a date picked when the call is dispositioned, or the Try Again action's Default schedule hours, sets when the next attempt is dialed. When neither is set, the next attempt is dialed after this delay. A retry is never dialed sooner than this delay."]</span>
     </div>
 </div>
 

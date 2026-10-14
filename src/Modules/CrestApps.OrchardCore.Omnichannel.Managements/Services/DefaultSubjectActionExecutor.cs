@@ -168,6 +168,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
             HasNamedOwner = SubjectActionOwnerAssignmentTypeResolver.Resolve(metadata.AssignmentType, metadata.NormalizedUserName) != SubjectActionOwnerAssignmentType.SameOwner,
             MaxAttempts = metadata.MaxAttempt,
+            HasChosenSchedule = HasChosenScheduleDate(action, context) || metadata.DefaultScheduleHours.HasValue,
         };
 
         foreach (var handler in _followUpHandlers)
@@ -390,6 +391,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             await _contentManager.PublishAsync(contact);
         }
     }
+
+    private static bool HasChosenScheduleDate(SubjectAction action, SubjectActionExecutionContext context)
+        => context.ActionScheduleDates?.TryGetValue(action.ItemId, out var userDate) == true && userDate.HasValue;
 
     private async Task<DateTime> ResolveScheduleDateAsync(
         SubjectAction action,

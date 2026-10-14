@@ -82,7 +82,7 @@ Extra fields on **Try Again** and **New Activity**:
 | **Urgency level** | The follow-up's urgency, from **Very low** to **Very high**. **Use original activity's urgency level** keeps the original. |
 | **Assignment type** | **Same owner** gives the follow-up to the user who completes the current activity. **Specific owner** gives it to the user you pick. |
 | **Assign to user** | The owner when **Specific owner** is chosen. Required then. |
-| **Default schedule hours** | How many hours later the follow-up is scheduled (24 by default). The agent can change the date on the Complete page. |
+| **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
 
 ## What the agent sees
 

@@ -35,6 +35,13 @@ public sealed class FollowUpActivityContext
     public int? MaxAttempts { get; set; }
 
     /// <summary>
+    /// Gets or sets whether whatever created the follow-up chose when it is due, such as a date the person picked or a
+    /// "Try again" action's default schedule hours. When <see langword="false"/> the follow-up's due time is only a
+    /// placeholder, and the work's carrier may set its own wait in its place, such as the dialer profile's retry delay.
+    /// </summary>
+    public bool HasChosenSchedule { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a handler refused the follow-up, so it is not created.
     /// </summary>
     public bool Cancel { get; set; }

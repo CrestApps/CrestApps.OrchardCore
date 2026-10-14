@@ -85,7 +85,7 @@
     <label asp-for="DefaultScheduleHours" class="ocat-label">@T["Default schedule hours"]</label>
     <div class="ocat-end">
         <input asp-for="DefaultScheduleHours" class="form-control" type="number" min="1" />
-        <span class="hint">@T["Default hours ahead to schedule the retry. Used when no schedule date is provided during completion. Defaults to 24 hours."]</span>
+        <span class="hint">@T["Default hours ahead to schedule the retry. Used when no schedule date is provided during completion. When empty, dialer campaign work is retried after the dialer profile's Retry delay, and other work after 24 hours."]</span>
     </div>
 </div>
 

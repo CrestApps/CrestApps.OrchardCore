@@ -119,6 +119,7 @@ public sealed class DialerRetryScheduler : IDialerRetryScheduler
             PreviousActivity = activity,
             FollowUpActivity = nextAttempt,
             CreatedBy = createdBy,
+            HasChosenSchedule = delayMinutes.HasValue,
         };
 
         foreach (var handler in _followUpHandlers)

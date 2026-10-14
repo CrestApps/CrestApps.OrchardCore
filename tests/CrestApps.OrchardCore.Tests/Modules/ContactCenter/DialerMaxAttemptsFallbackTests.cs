@@ -75,6 +75,31 @@ public sealed class DialerMaxAttemptsFallbackTests
     }
 
     [Theory]
+    [InlineData(false, 24 * 60, 60)]
+    [InlineData(true, 24 * 60, 24 * 60)]
+    [InlineData(true, 5, 60)]
+    [InlineData(false, 5, 60)]
+    public async Task CreatingAsync_UsesTheProfilesRetryDelay_WhenTheSubjectChoseNoSchedule(bool hasChosenSchedule, int scheduledInMinutes, int expectedDueInMinutes)
+    {
+        // Arrange: the profile waits 60 minutes between attempts, and the last call ended now.
+        var harness = new FollowUpHarness();
+        var context = new FollowUpActivityContext
+        {
+            PreviousActivity = new OmnichannelActivity { ItemId = "activity-1", Source = ActivitySources.PowerDial, Attempts = 1, CompletedUtc = _now },
+            FollowUpActivity = new OmnichannelActivity { ItemId = "activity-2", Attempts = 2, ScheduledUtc = _now.AddMinutes(scheduledInMinutes) },
+            CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
+            HasChosenSchedule = hasChosenSchedule,
+        };
+
+        // Act
+        await harness.Handler.CreatingAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert: a schedule the subject chose stands, never sooner than the delay; one it did not is the delay.
+        Assert.False(context.Cancel);
+        Assert.Equal(_now.AddMinutes(expectedDueInMinutes), context.FollowUpActivity.ScheduledUtc);
+    }
+
+    [Theory]
     [InlineData(DialerAttemptOutcomes.NoAnswer, false, true)]
     [InlineData(DialerAttemptOutcomes.Busy, false, true)]
     [InlineData(DialerAttemptOutcomes.AnsweringMachine, false, true)]
@@ -226,7 +251,7 @@ public sealed class DialerMaxAttemptsFallbackTests
             var profiles = new Mock<IDialerProfileReader>();
             profiles
                 .Setup(value => value.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new DialerProfile { ItemId = "profile-1", Name = "Profile", MaxAttempts = 3 });
+                .ReturnsAsync(new DialerProfile { ItemId = "profile-1", Name = "Profile", MaxAttempts = 3, RetryDelayMinutes = 60 });
 
             var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
             scopeExecutor.Setup(value => value.ScheduleAfterCommit(It.IsAny<Func<IActivityQueueService, Task>>())).Returns(true);
