@@ -1,7 +1,12 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
+using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -13,6 +18,12 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
     private readonly IDialerProfileManager _dialerProfileManager;
     private readonly IActivityQueueService _activityQueueService;
     private readonly IQueueItemManager _queueItemManager;
+    private readonly ISession _session;
+    private readonly IDistributedLock _distributedLock;
+    private readonly ContactCenterCoordinationOptions _coordinationOptions;
+
+    // How many activity ids one in-flight query names, well inside every engine's parameter limit.
+    private const int InFlightQueryBatchSize = 500;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterActivityDialerContributor"/> class.
@@ -20,14 +31,23 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
     /// <param name="dialerProfileManager">The dialer profile manager.</param>
     /// <param name="activityQueueService">The activity queue service.</param>
     /// <param name="queueItemManager">The queue item manager, which reads and re-tags waiting campaign records.</param>
+    /// <param name="session">The YesSql session, used to read the queue items of many activities at once.</param>
+    /// <param name="distributedLock">The distributed lock, used to move a record while routing cannot offer it.</param>
+    /// <param name="coordinationOptions">The coordination options that time the queue lock.</param>
     public ContactCenterActivityDialerContributor(
         IDialerProfileManager dialerProfileManager,
         IActivityQueueService activityQueueService,
-        IQueueItemManager queueItemManager)
+        IQueueItemManager queueItemManager,
+        ISession session,
+        IDistributedLock distributedLock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions)
     {
         _dialerProfileManager = dialerProfileManager;
         _activityQueueService = activityQueueService;
         _queueItemManager = queueItemManager;
+        _session = session;
+        _distributedLock = distributedLock;
+        _coordinationOptions = coordinationOptions.Value;
     }
 
     /// <inheritdoc/>
@@ -109,6 +129,105 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
             priority: null,
             dialerProfileId: profile.ProfileId,
             cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ActivityDialerCampaignMoveResult> MoveToCampaignAsync(
+        string activityId,
+        string campaignId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(activityId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(campaignId);
+
+        var targetQueueId = ContactCenterConstants.CampaignQueue.CreateId(campaignId);
+        var existing = await _queueItemManager.FindByActivityIdAsync(activityId, cancellationToken);
+
+        // Only campaign work moves: a record waiting in a real queue was routed there for its own reasons.
+        if (existing is null || existing.IsSettled || !ContactCenterConstants.IsCampaignQueue(existing.QueueId))
+        {
+            return ActivityDialerCampaignMoveResult.NotQueued;
+        }
+
+        if (string.Equals(existing.QueueId, targetQueueId, StringComparison.OrdinalIgnoreCase))
+        {
+            return ActivityDialerCampaignMoveResult.AlreadyThere;
+        }
+
+        if (existing.Status != QueueItemStatus.Waiting)
+        {
+            return ActivityDialerCampaignMoveResult.InFlight;
+        }
+
+        // The old queue's assignment lock is the one routing holds while it picks and offers work, so the record
+        // cannot be offered from the old campaign while it is being moved to the new one.
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            ActivityAssignmentService.GetQueueLockKey(existing.QueueId),
+            _coordinationOptions.AssignmentLockTimeout,
+            _coordinationOptions.AssignmentLockExpiration);
+
+        if (!locked)
+        {
+            return ActivityDialerCampaignMoveResult.InFlight;
+        }
+
+        await using var acquiredLock = locker;
+
+        // Read again under the lock: routing may have offered the record since it was first read.
+        existing = await _queueItemManager.FindByIdAsync(existing.ItemId, cancellationToken);
+
+        if (existing is null || existing.IsSettled)
+        {
+            return ActivityDialerCampaignMoveResult.NotQueued;
+        }
+
+        if (existing.Status != QueueItemStatus.Waiting)
+        {
+            return ActivityDialerCampaignMoveResult.InFlight;
+        }
+
+        // Taken out of the old campaign and queued afresh in the new one, so each campaign's queue reports its own wait.
+        await _activityQueueService.DequeueAsync(existing, QueueItemStatus.Removed, cancellationToken);
+        await _activityQueueService.EnqueueAsync(
+            activityId,
+            targetQueueId,
+            existing.Priority,
+            existing.DialerProfileId,
+            cancellationToken);
+
+        return ActivityDialerCampaignMoveResult.Moved;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlySet<string>> GetActivitiesInFlightAsync(
+        IEnumerable<string> activityIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(activityIds);
+
+        var inFlight = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var batch in activityIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .Chunk(InFlightQueryBatchSize))
+        {
+            var items = await _session.QueryIndex<QueueItemIndex>(
+                index => index.ActivityItemId.IsIn(batch) &&
+                    (index.Status == QueueItemStatus.Reserved || index.Status == QueueItemStatus.Assigned),
+                collection: ContactCenterStorage.CollectionName)
+                .ListAsync(cancellationToken);
+
+            foreach (var item in items)
+            {
+                if (ContactCenterConstants.IsCampaignQueue(item.QueueId))
+                {
+                    inFlight.Add(item.ActivityItemId);
+                }
+            }
+        }
+
+        return inFlight;
     }
 
     private static ActivityDialerProfileDescriptor CreateDescriptor(DialerProfile profile)

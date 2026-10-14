@@ -61,7 +61,7 @@ When it is done:
 ## Tips
 
 - **Start with Preview.** It is the easiest to train, and agents see the record before every call. Move to Power or Progressive once agents are comfortable.
-- The dialer does not disposition a call that rang out, was busy or reached a machine: it dials the record again after the retry delay, up to **Max attempts**.
+- A call that rang out, was busy or reached a machine is dispositioned by the system with that outcome. The record is dialed again only if the subject flow has a **Try Again** action for that disposition (or a workflow schedules a dialer retry). **Max attempts** on the dialer profile is a cap on top of that: no retry is created past it, whatever the flow says.
 - Tick **Prevent duplicate activity with the same subject** on the load so contacts who already have an open activity are not loaded twice.
 - A call outside the calling window is not dropped; it is tried again in a later cycle.
 - To text the customers you could not reach, use a workflow on the **Dialer attempt completed** event. See [Contact Center workflows](../workflows.md).

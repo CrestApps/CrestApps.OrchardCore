@@ -200,6 +200,12 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
     /// </summary>
     private sealed class CommittingDialerContributor : IActivityDialerContributor
     {
+        public Task<ActivityDialerCampaignMoveResult> MoveToCampaignAsync(string activityId, string campaignId, CancellationToken cancellationToken = default)
+            => Task.FromResult(ActivityDialerCampaignMoveResult.NotQueued);
+
+        public Task<IReadOnlySet<string>> GetActivitiesInFlightAsync(IEnumerable<string> activityIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>(StringComparer.Ordinal));
+
         private readonly ISession _session;
 
         public CommittingDialerContributor(ISession session)

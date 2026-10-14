@@ -298,6 +298,65 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string LastActivityDispositionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the attempt numbers the last completed activity must have been on, written as
+    /// <see cref="ActivityAttemptRange"/> reads it, such as <c>4</c>, <c>4+</c>, <c>4-</c> or <c>2..5</c>.
+    /// </summary>
+    public string LastActivityAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the last load stopped without loading, in words the operator can act on, or
+    /// <see langword="null"/> when it did not fail.
+    /// </summary>
+    public string LoadError { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the current load was started.
+    /// </summary>
+    public DateTime? LoadStartedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the user who started the current load, so a resumed load creates its activities
+    /// in their name.
+    /// </summary>
+    public string LoadStartedById { get; set; }
+
+    /// <summary>
+    /// Gets or sets the username of the user who started the current load.
+    /// </summary>
+    public string LoadStartedByUsername { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the current load last recorded progress. A load whose progress stops being recorded has
+    /// died with its process, and is resumed.
+    /// </summary>
+    public DateTime? LoadHeartbeatUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the document id of the last record the current load finished with, so a load that is resumed
+    /// carries on after it instead of starting again.
+    /// </summary>
+    public long? LoadCursor { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many times the current load was resumed after it stopped recording progress.
+    /// </summary>
+    public int LoadResumeCount { get; set; }
+
+    /// <summary>
+    /// Clears what the previous load recorded about its own run, so a new load starts from the beginning.
+    /// </summary>
+    public void ResetLoadProgress()
+    {
+        LoadError = null;
+        LoadStartedUtc = null;
+        LoadStartedById = null;
+        LoadStartedByUsername = null;
+        LoadHeartbeatUtc = null;
+        LoadCursor = null;
+        LoadResumeCount = 0;
+    }
+
+    /// <summary>
     /// Clears the counts of the previous load, so a reload reports only what it did itself.
     /// </summary>
     public void ResetLoadCounts()
@@ -374,6 +433,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             TimeZoneIds = TimeZoneIds?.ToArray(),
             LastActivitySubjectContentType = LastActivitySubjectContentType,
             LastActivityDispositionId = LastActivityDispositionId,
+            LastActivityAttempts = LastActivityAttempts,
             // Everything a driver stores with Put lives here; a clone without it drops those settings on every save.
             Properties = Properties is null
                 ? null

@@ -33,6 +33,17 @@ public class BulkActivityActionsViewModel
     public IEnumerable<SelectListItem> DialerProfileOptions { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the campaigns the Change Campaign action can move activities to, led by "No campaign".
+    /// </summary>
+    public IEnumerable<SelectListItem> CampaignOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the campaigns the Change Dialer Profile action can move activities to, led by "Keep current
+    /// campaign".
+    /// </summary>
+    public IEnumerable<SelectListItem> DialerCampaignOptions { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the user search endpoint URL.
     /// </summary>
     public string UserSearchEndpoint { get; set; }

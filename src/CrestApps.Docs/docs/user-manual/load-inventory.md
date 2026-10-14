@@ -102,12 +102,14 @@ The automatic source adds AI fields; see [Automated AI SMS and voice](automated-
 | **Phone number filter** | A match type (**Contains**, **Exact match**, **Begins with** or **Ends with**) and a number. See the tips below. |
 | **Time zones** | Only records in these time zones, for example to call only where it is a good time of day. |
 | **Limit** | The most activities to create. |
+| **Count matching records** | Counts how many records the filters on the form match right now and how many would be loaded, with the reasons the rest would be skipped. It applies the last activity filters too, works before the load is saved, and creates nothing. |
 
 ### Last activity filters
 
 | Field | What it does |
 | --- | --- |
 | **Last activity subject** / **Last activity disposition** | Only records whose last completed activity had this subject and outcome, for example everyone whose last *Lead generation* call was *No answer*. |
+| **Last activity attempts** | Only records whose last completed activity was on these attempts. Type `4` for the fourth attempt, `4+` for the fourth or later, `4-` for the fourth or earlier, or `2..5` for the second to the fifth. Attempts count across a contact's follow-ups, so `4+` finds everyone whose latest try was at least their fourth. It works with or without a subject. |
 
 ### Phone number tips
 
@@ -132,3 +134,12 @@ When a load finishes, its row in the list and the top of its page say how many o
 | Not loaded because the limit was reached | The **Limit** was reached before this record. |
 
 If the filters match nobody, the load says so. Loading the same batch again replaces the counts rather than adding to them.
+
+## When a load stops part-way
+
+While a load runs, its row shows how many activities it has loaded so far and when it last made progress. A load commits its progress every hundred records, so it is never lost:
+
+- **The server restarts during a load.** The load is resumed automatically, within about ten minutes, after the last records it committed. Nobody it already loaded is loaded again. A load that keeps stopping is resumed up to three times, then stopped with a message.
+- **The load fails.** It goes back to *New*, and its row and its page say why, for example a dialer profile that no longer exists. Fix the cause and load it again.
+
+A load that was already stuck in *Loading* before loads could resume has no record of where it stopped. It is set back to *New* with a message saying how many activities it loaded. Load it again with **Prevent duplicate activity with the same subject** ticked, so the records it already loaded are not loaded twice.

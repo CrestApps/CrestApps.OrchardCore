@@ -22,6 +22,13 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" at="Foot"></script>
 
+@if (!string.IsNullOrEmpty(Model.LoadError))
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>@T["The last load did not finish."]</strong> @Model.LoadError
+    </div>
+}
+
 @if (Model.Status != OmnichannelActivityBatchStatus.New)
 {
     <div class="alert alert-info" role="alert">
@@ -450,6 +457,18 @@
                 <span class="hint">@T["Optionally, limit the number of records loaded into this batch."]</span>
             </div>
         </div>
+
+        <div class="ocat-wrapper">
+            <span class="ocat-label"></span>
+            <div class="ocat-end">
+                <button type="button" class="btn btn-outline-secondary" id="activity-load-count-button"
+                        data-url="@Url.RouteUrl("OmnichannelActivityBatchesCount", new { source = Model.Source, id = Model.BatchId })">
+                    <i class="fa-solid fa-calculator" aria-hidden="true"></i> @T["Count matching records"]
+                </button>
+                <div id="activity-load-count-result" class="mt-2" aria-live="polite"></div>
+                <span class="hint">@T["Counts how many records these filters, including the last activity filters below, match and how many would be loaded right now, without loading anything."]</span>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -478,8 +497,129 @@
                 <span class="hint">@T["Only include records whose last completed activity had this disposition."]</span>
             </div>
         </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="LastActivityAttempts" class="ocat-label">@T["Last activity attempts"]</label>
+            <div class="ocat-end">
+                <input asp-for="LastActivityAttempts" class="form-control" placeholder="@T["Any attempt"]" />
+                <span asp-validation-for="LastActivityAttempts" class="text-danger"></span>
+                <span class="hint">@T["Only include records whose last completed activity was on these attempts: 4 for the fourth attempt, 4+ for the fourth or later, 4- for the fourth or earlier, or 2..5 for the second to the fifth. Works with or without a subject."]</span>
+            </div>
+        </div>
     </div>
 </div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', function () {
+        var button = document.getElementById('activity-load-count-button');
+        var result = document.getElementById('activity-load-count-result');
+
+        if (!button || !result) {
+            return;
+        }
+
+        var text = @Html.Raw(JsonSerializer.Serialize(new Dictionary<string, string>
+        {
+            ["counting"] = T["Counting matching records..."].Value,
+            ["failed"] = T["The records could not be counted. Try again."].Value,
+            ["summary"] = T["{0} records match; {1} would be loaded."].Value,
+            ["duplicate"] = T["{0} already have an open activity for this subject"].Value,
+            ["optedOut"] = T["{0} asked not to be reached on this channel"].Value,
+            ["noDestination"] = T["{0} have no address on this channel"].Value,
+            ["notInService"] = T["{0} have only numbers that are not in service"].Value,
+            ["lead"] = T["{0} are converted leads or share a number with a contact"].Value,
+            ["limit"] = T["{0} are over the limit"].Value,
+            ["skipped"] = T["Not loaded:"].Value,
+        }));
+
+        function format(template) {
+            var args = Array.prototype.slice.call(arguments, 1);
+
+            return template.replace(/\{(\d+)\}/g, function (match, index) {
+                var value = args[Number(index)];
+
+                return typeof value === 'number' ? value.toLocaleString() : String(value);
+            });
+        }
+
+        function show(className, message, details) {
+            result.replaceChildren();
+
+            var box = document.createElement('div');
+            box.className = 'alert py-2 mb-0 ' + className;
+            box.textContent = message;
+
+            if (details && details.length) {
+                var label = document.createElement('div');
+                label.className = 'mt-1';
+                label.textContent = text.skipped;
+                box.appendChild(label);
+
+                var list = document.createElement('ul');
+                list.className = 'mb-0';
+                details.forEach(function (detail) {
+                    var item = document.createElement('li');
+                    item.textContent = detail;
+                    list.appendChild(item);
+                });
+                box.appendChild(list);
+            }
+
+            result.appendChild(box);
+        }
+
+        button.addEventListener('click', async function () {
+            var form = button.closest('form');
+
+            if (!form) {
+                return;
+            }
+
+            button.disabled = true;
+            show('alert-secondary', text.counting);
+
+            try {
+                var response = await fetch(button.dataset.url, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                });
+
+                if (!response.ok) {
+                    throw new Error(response.status);
+                }
+
+                var count = await response.json();
+
+                if (count.error) {
+                    show('alert-warning', count.error);
+
+                    return;
+                }
+
+                var details = [];
+                [
+                    ['duplicate', count.skippedAsDuplicate],
+                    ['optedOut', count.skippedAsOptedOut],
+                    ['noDestination', count.skippedForNoDestination],
+                    ['notInService', count.skippedAsNotInService],
+                    ['lead', count.skippedAsLead],
+                    ['limit', count.skippedByLimit],
+                ].forEach(function (entry) {
+                    if (entry[1] > 0) {
+                        details.push(format(text[entry[0]], entry[1]));
+                    }
+                });
+
+                show('alert-info', format(text.summary, count.matched, count.wouldLoad), details);
+            } catch (error) {
+                show('alert-danger', text.failed);
+            } finally {
+                button.disabled = false;
+            }
+        });
+    });
+</script>
 
 <script at="Foot" depends-on="flatpickr,flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
