@@ -73,6 +73,8 @@ public sealed class OrderService : IOrderService
                 Sku = line.Product?.Sku,
                 PriceId = line.Price?.PriceId,
                 PriceName = line.Price?.Price?.Name,
+                VariantId = line.Line.VariantId,
+                VariantTitle = line.Product?.VariantTitle,
                 Quantity = line.Line.Quantity,
                 UnitPrice = line.UnitPrice,
                 LineTotal = line.LineTotal,

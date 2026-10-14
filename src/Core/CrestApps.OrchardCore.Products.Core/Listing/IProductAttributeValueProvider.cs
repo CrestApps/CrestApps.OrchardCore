@@ -60,6 +60,16 @@ public enum ProductAttributeValueKind
     /// Taxonomy terms, which can be nested.
     /// </summary>
     Term = 4,
+
+    /// <summary>
+    /// A time of day, listed as text such as <c>09:30</c> and sorted by minutes after midnight.
+    /// </summary>
+    Time = 5,
+
+    /// <summary>
+    /// Long text, such as an HTML description, which keyword search matches but nothing filters or sorts by.
+    /// </summary>
+    RichText = 6,
 }
 
 /// <summary>

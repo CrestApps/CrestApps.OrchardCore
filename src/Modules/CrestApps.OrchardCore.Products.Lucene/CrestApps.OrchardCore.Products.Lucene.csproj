@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Products - Lucene</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Product listings that search a Lucene index.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Products Commerce Search Lucene</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Lucene.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Products.Core/CrestApps.OrchardCore.Products.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Products/CrestApps.OrchardCore.Products.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

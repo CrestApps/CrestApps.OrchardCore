@@ -92,6 +92,38 @@ public sealed class ProductListingMigrations : DataMigration
         return 1;
     }
 
+    /// <summary>
+    /// Adds the culture of localized products, so a listing shows the products of its own culture.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .AddColumn<string>(nameof(ProductSearchIndex.Culture), column => column.Nullable().WithLength(32))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .CreateIndex("IDX_ProductSearchIndex_Culture", "DocumentId", nameof(ProductSearchIndex.Culture))
+        );
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the merchant's featured flag and position, which the "Featured first" and "Recommended" sorts order by.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .AddColumn<bool>(nameof(ProductSearchIndex.Featured), column => column.WithDefault(false))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<ProductSearchIndex>(table => table
+            .AddColumn<int?>(nameof(ProductSearchIndex.Position), column => column.Nullable())
+        );
+
+        return 3;
+    }
+
     // Mirrors the Autoroute module's settings by name, so the type can be defined without a reference to it.
     private sealed class AutoroutePartSettings
     {

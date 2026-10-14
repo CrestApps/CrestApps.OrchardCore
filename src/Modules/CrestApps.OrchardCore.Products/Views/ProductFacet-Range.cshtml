@@ -1,4 +1,5 @@
 @using System.Globalization
+@using CrestApps.OrchardCore.Products.Core.Listing
 @using CrestApps.OrchardCore.Products.ViewModels
 
 @model ProductFacetViewModel
@@ -9,8 +10,10 @@
     var format = string.IsNullOrWhiteSpace(Model.NumberFormat) ? "#,0.##" : Model.NumberFormat;
     var prefix = Model.IsPrice ? Model.CurrencySymbol : null;
     var suffix = Model.IsPrice ? null : Model.Suffix;
-    string Invariant(decimal? value) => value?.ToString("0.##", CultureInfo.InvariantCulture);
-    string Display(decimal? value) => value?.ToString(format, CultureInfo.CurrentCulture);
+    // A date range uses date inputs; its bounds are dates written as numbers (20260115).
+    var inputType = Model.IsDate ? "date" : "number";
+    string Invariant(decimal? value) => Model.IsDate ? ProductDateNumbers.ToIso(value) : value?.ToString("0.##", CultureInfo.InvariantCulture);
+    string Display(decimal? value) => Model.IsDate ? null : value?.ToString(format, CultureInfo.CurrentCulture);
 }
 
 <section class="product-facet" data-facet="@Model.Key">
@@ -46,7 +49,7 @@
                     {
                         <span class="input-group-text">@prefix</span>
                     }
-                    <input type="number" class="form-control" id="@id-min" name="@(Model.Key)_min" value="@Invariant(Model.SelectedMin)" placeholder="@Display(Model.AvailableMin)" step="any" inputmode="decimal" aria-label="@T["Minimum {0}", Model.Label]" />
+                    <input type="@inputType" class="form-control" id="@id-min" name="@(Model.Key)_min" value="@Invariant(Model.SelectedMin)" placeholder="@Display(Model.AvailableMin)" min="@(Model.IsDate ? Invariant(Model.AvailableMin) : null)" max="@(Model.IsDate ? Invariant(Model.AvailableMax) : null)" step="@(Model.IsDate ? null : "any")" inputmode="@(Model.IsDate ? null : "decimal")" aria-label="@(Model.IsDate ? T["From {0}", Model.Label] : T["Minimum {0}", Model.Label])" />
                     @if (!string.IsNullOrEmpty(suffix))
                     {
                         <span class="input-group-text">@suffix</span>
@@ -58,7 +61,7 @@
                     {
                         <span class="input-group-text">@prefix</span>
                     }
-                    <input type="number" class="form-control" id="@id-max" name="@(Model.Key)_max" value="@Invariant(Model.SelectedMax)" placeholder="@Display(Model.AvailableMax)" step="any" inputmode="decimal" aria-label="@T["Maximum {0}", Model.Label]" />
+                    <input type="@inputType" class="form-control" id="@id-max" name="@(Model.Key)_max" value="@Invariant(Model.SelectedMax)" placeholder="@Display(Model.AvailableMax)" min="@(Model.IsDate ? Invariant(Model.AvailableMin) : null)" max="@(Model.IsDate ? Invariant(Model.AvailableMax) : null)" step="@(Model.IsDate ? null : "any")" inputmode="@(Model.IsDate ? null : "decimal")" aria-label="@(Model.IsDate ? T["To {0}", Model.Label] : T["Maximum {0}", Model.Label])" />
                     @if (!string.IsNullOrEmpty(suffix))
                     {
                         <span class="input-group-text">@suffix</span>

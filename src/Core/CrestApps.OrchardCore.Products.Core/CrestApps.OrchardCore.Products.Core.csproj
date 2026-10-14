@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
+    <PackageReference Include="OrchardCore.Indexing.Abstractions" />
   </ItemGroup>
 
 </Project>

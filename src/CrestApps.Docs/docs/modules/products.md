@@ -156,7 +156,7 @@ Because taxation is an optional feature dependency, products keep working normal
 A price on a content item is not enough to sell it: a cart or order must capture *what was purchasable at the moment of purchase* so a later price or definition change never rewrites history. The Products module provides that seam without forcing every consumer to read the content item directly.
 
 - **`ISellableProduct`** is an immutable snapshot of a purchasable product — its content item id and version, content type, SKU, title, unit price (as `decimal`), currency, product type, and tax classification codes.
-- **`IProductSnapshotResolver`** resolves an `ISellableProduct` from a `ProductSnapshotContext` (the content item plus the requested currency, quantity, SKU, and variant). The default resolver reads the **Product** and **Taxation** parts and the `ProductPartSettings`.
+- **`IProductSnapshotResolver`** resolves an `ISellableProduct` from a `ProductSnapshotContext` (the content item plus the requested currency, quantity, SKU, and variant). The default resolver reads the **Product**, **Product variants** and **Taxation** parts and the `ProductPartSettings`. For a product sold in variants it resolves only an enabled variant named by `VariantId`, and the snapshot carries that variant's SKU, price, `VariantId` and `VariantTitle` (see [Selling a product in variants](#selling-a-product-in-variants)).
 
 Both the editable `ProductPart.Price` and the snapshot's unit price are `decimal`, the authoritative representation for stored financial records, so a price never suffers binary floating-point drift between editing and settlement. A consuming module (a future storefront, or the existing checkout) resolves a snapshot once and stores it, so the order of record is stable and self-contained.
 
@@ -202,6 +202,19 @@ an existing agreement bills, and withdrawing one deactivates it rather than dele
 created from a price still names it.
 :::
 
+## Selling a product in variants
+
+The **Product variants** part (`ProductVariantsPart`) sells one product in versions, such as sizes and colors.
+
+- The **option names** belong to the content type, in the part's settings (`ProductVariantsPartSettings.Options`), each with a **Filterable** switch. Every product of the type uses the same options, so listings filter them the same way.
+- Each product holds its **values** per option (`ProductVariantsPart.Options`) and one **variant** per combination of values (`ProductVariantsPart.Variants`). A `ProductVariant` has a stable `VariantId`, its option values, and optional `Sku`, `Price`, `CompareAtPrice` and `ImagePath`, plus `Enabled`. An empty SKU or price falls back to the product's.
+- Saving the editor recomputes the combinations with `ProductVariants.Combine`: a combination that already has a variant keeps it (and its SKU and prices), new combinations get new variants, and combinations whose values were removed are dropped. Duplicate variant SKUs are refused.
+- **Pricing.** `IProductSnapshotResolver` refuses a variant product without a `VariantId`, or with a disabled or unknown one, so no checkout path can sell a product without a chosen variant. `IPriceResolver` prices a chosen variant at its own price, ahead of any **Product prices** list.
+- **Carts and orders.** `ICartService.AddAsync` takes a `variantId`; a cart line (`CartLine.VariantId`) and an order line (`OrderLine.VariantId` and `VariantTitle`) record it, the line's title reads like *Cap (L / Gloss)*, and its SKU is the variant's. The *Add to cart* form offers the enabled variants as one list with their prices.
+- **Listings.** `ProductVariantsSearchDocumentContributor` adds to the product's search record the option values of the enabled variants under the `Option.{Name}` attribute key, their SKUs as searchable text, one price row per variant price (so a price filter finds the product when any variant is in range), and the lowest price with `MaxPrice` set when prices differ, which cards show as *From $25*. A filterable option appears in the listing editor like a field, with the default URL key `option-{name}`.
+
+Changing a type's option names rebuilds the search index, like any other change to what products are filtered on.
+
 
 ## Product listing
 
@@ -220,7 +233,7 @@ Product attributes are ordinary content fields on the product type. The settings
 | Setting | Effect |
 | --- | --- |
 | **Filterable** | Visitors can filter listings by the field. |
-| **Sortable** | Visitors can sort listings by the field. Offered for numbers, dates and single values. |
+| **Sortable** | Visitors can sort listings by the field: numbers, dates and times by value, and text and taxonomy fields by the name visitors see. |
 | **Searchable** | Keyword search matches the field's value. |
 | **Show on product cards** | Shown as a short chip on the product's card. |
 | **Show in specifications** | Shown in the specification table of list rows and the product page. |
@@ -229,11 +242,11 @@ Product attributes are ordinary content fields on the product type. The settings
 | **Swatch colors** | For text and taxonomy fields: the color of each value when a filter draws them as color swatches, one per line, such as `Midnight = #191970` or `Sky = light blue`. |
 | **Color field on terms** | For taxonomy fields: the name of a text field on the terms that holds each term's color, so a color is set once on its term. |
 
-Text, multi-text, numeric, boolean, date, content picker and taxonomy fields are supported. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter. Terms appear in URLs by a readable slug made from their name, such as `?make=toyota&model=camry`, and a link that still uses a term's identifier keeps working.
+Text, multi-text, numeric, boolean, date, date and time, time, link, content picker, user picker and taxonomy fields are supported, and HTML and Markdown fields can be searched (their text without markup). Dates are indexed as `yyyyMMdd` numbers (`ProductDateNumbers`) so they filter by range, with ready-made ranges by year, and read as ISO dates in the URL, such as `?available_min=2026-01-15`. Times are minutes since midnight. A module supports another field type by implementing `IProductAttributeValueProvider`. A taxonomy field can offer one level of its tree as a filter, so a *Make and model* taxonomy gives a **Make** filter and a **Model** filter. Terms appear in URLs by a readable slug made from their name, such as `?make=toyota&model=camry`, and a link that still uses a term's identifier keeps working.
 
 The section appears only for fields whose part is attached to a type with the Product part, so the fields of articles, pages and other content are left alone. A part used by several types qualifies when any of them is a product type.
 
-The price, the content type and whether a product can be bought online are always available as attributes.
+The price, the content type, whether a product can be bought online and whether it is featured are always available as attributes, and a type sold in variants adds its filterable options.
 
 ### Managing products and listings
 
@@ -253,7 +266,11 @@ Create a **Product Listing** content item, from **Commerce → Product Listings*
 - the filters it offers, either one for every filterable field or a chosen set, each with a label, a URL key, a kind (*Checkboxes*, *Radio buttons*, *Range* or *Toggle*), a [style](#filter-styles), [ready-made ranges](#ranges) above a range filter, the number of options shown before *See more*, and whether it starts collapsed;
 - *Shown after*, which hides a filter until another filter has a selection, for example **Model** after **Make**;
 - **Let visitors change the sort**: turn it off to always show the products in the default sort's order. The default sort can then be any sort, even one not offered;
-- the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search.
+- the sorts, the default sort, the grid or list layout, the shape of the product images (landscape, square, portrait or wide), the page sizes, and keyword search;
+- **Paging** (`ProductListingPart.Paging`): *Numbered pages*, *A Load more button* or *Infinite scroll*. Every mode renders real page links; with the other two the script hides them, shows a button that fetches the next page and appends its cards (infinite scroll presses it when it comes near the viewport), keeps the result count right, and replaces the address so a reload starts from the last page shown. A page opened directly, such as `?page=3`, keeps its page links so the visitor can go back to the first;
+- **Search index** (`ProductListingPart.IndexProfileName`): the database by default, or a product search index; see [Search servers](#search-servers).
+
+The editor keeps each filter row to its main settings, with the rest under **More settings** and summed up beside the field name. Rows reorder by dragging their handle (Orchard Core's `Sortable` resource) or with the arrow keys on it; each row still posts an `Order` number, and a move hands its group's numbers out again so rows of other groups keep their place. The editor script is the `product-listing-editor` resource.
 
 The page is an ordinary content item, so it has its own URL, menu entry and permissions.
 
@@ -390,7 +407,7 @@ return Initialize<MyActionViewModel>("MyAction", model => { /* ... */ })
 
 A module can also add to a product's search record by implementing `IProductSearchDocumentContributor`, which Subscriptions uses to give a plan its billing period and its position.
 
-A product type can have a merchant-chosen order. A module that stores a position adds it to the search record as the `Product.Position` attribute and implements `IProductPositionProvider` to name the types that have one. A listing of such a type then offers a **Recommended** sort, which orders by the position and puts products without one last. Subscriptions does this with the plan's **Sort** value.
+Merchandising lives on the **Product** part of every product: **Featured** (`ProductPart.Featured`) and **Position** (`ProductPart.Position`). Every listing offers **Recommended**, which orders by position with products without one last, and **Featured first**, and a *Featured* toggle filter. Ties in any sort go to featured products, then the newest. A contributor can set `ProductSearchDocument.Position` for products without one; Subscriptions does this with a plan's **Sort** value.
 
 The pages are styled by a small stylesheet whose colors and sizes come from custom properties, which fall back to Bootstrap's own: `--product-accent`, `--product-sale-color`, `--product-success-color`, `--product-border-color`, `--product-muted-color`, `--product-surface`, `--product-surface-alt` and `--product-radius`. Set them on `:root` or on `.product-listing` to restyle the pages without replacing any template.
 
@@ -402,6 +419,27 @@ Each published product has one search record, with one row per attribute value, 
 - Publishing a taxonomy refreshes the products filed under it, so a renamed term shows its new name and slug.
 - The index is rebuilt in the background when a product type, a field's listing settings or a taxonomy's terms change. Records are replaced product by product, so a listing never shows empty during a rebuild.
 - Search results are kept in memory for a few minutes per tenant and per set of filters, and dropped as soon as a record changes. On a web farm another node can show a result up to five minutes old.
+- Each record carries the product's culture from its `LocalizationPart`. A listing shows the products of the request's UI culture and the products that are not localized, and a product's breadcrumb uses a listing in the product's own culture.
+
+### Search servers
+
+A listing can search an index held by Elasticsearch, Lucene or Azure AI Search instead of the database. Each is an optional module built on Orchard Core Indexing:
+
+| Feature | Module | Depends on |
+| --- | --- | --- |
+| Product Search (Elasticsearch) | `CrestApps.OrchardCore.Products.Elasticsearch` | `OrchardCore.Elasticsearch` |
+| Product Search (Lucene) | `CrestApps.OrchardCore.Products.Lucene` | `OrchardCore.Lucene` |
+| Product Search (Azure AI Search) | `CrestApps.OrchardCore.Products.AzureAI` | `OrchardCore.AzureAI` |
+
+Each registers a `ProductSearch` index type, so **Search > Indexes** offers *Products (Elasticsearch)* and the like. How it works:
+
+- **One record, every index.** The database record is built once. `ProductSearchIndexer` raises `IProductSearchIndexHandler` after it writes, removes or rebuilds records; while Orchard Core Indexing is enabled the Product Listing feature writes the same records to every index profile of the `ProductSearch` type through the provider's keyed `IDocumentIndexManager`. A created, reset or rebuilt index is filled from the records. When product types or their attributes change, each profile is saved again (so a provider that declares its fields up front declares the new ones), rebuilt and filled.
+- **Shared fields.** `ProductSearchIndexFields` writes a record as the same fields for every provider: key, type, culture (`neutral` when not localized), title, a lower-case title for sorting, SKU, keywords, price, featured, position, published date and a sequence number. Each attribute gets fields under a safe name such as `a_vehicle_year_1a2b3c4d`: its values (`_v`) for filters, facet tokens (`_f`) that carry the level, label and order next to the value, its numbers (`_n`), its smallest and largest number (`_sn`, `_nx`) and a sort text (`_st`). Values longer than 256 characters are searched but not filtered.
+- **Shared query plan.** `ProductSearchIndexQuery` turns a listing query into filters on those fields and the same sort as the database. A facet counts with every filter but its own (`FiltersExcept`), so each option says how many products it adds.
+- **Providers.** Each module adds a keyed `IProductIndexSearchService`. Elasticsearch answers in one request with a post filter and one filter aggregation per facet. Lucene has no facets in Orchard Core, so counts come from a collector over `FieldCache` term ordinals. Azure AI Search declares every field from the attribute catalog; because Orchard Core cannot declare a list of numbers there, its ranges and bounds read each attribute's smallest and largest number, which is exact for single-number attributes such as a year or a price, and a `_has` companion keeps products without a value last.
+- **Fallback.** `ProductSearchRouter` searches the index a listing names, and the database when it names none, when the index or its provider is gone, or when the server fails (logged as a warning).
+
+Keyword search behaves a little differently on a search server: it matches the start of words and ranks the best matches first, where the database matches any part of a word. A module can add another search server the same way: register a `ProductSearch` indexing source, write its mapping in an index profile handler, and register an `IProductIndexSearchService` under the provider's name.
 
 ### Search engines
 
@@ -433,7 +471,7 @@ When the same feature is enabled, JSON Schema is also contributed for the manage
 dotnet add package CrestApps.OrchardCore.Products
 ```
 
-Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools → Features**. Enable **Product Listing** too to list products on the front end.
+Then enable **Products** in the **Orchard Core Admin Dashboard** under **Tools → Features**. Enable **Product Listing** too to list products on the front end. To search a search server, add and enable `CrestApps.OrchardCore.Products.Elasticsearch`, `CrestApps.OrchardCore.Products.Lucene` or `CrestApps.OrchardCore.Products.AzureAI`.
 
 ## Related modules
 

@@ -18,6 +18,10 @@ public class ProductPartViewModel
 
     public ProductPriceDisplay? PriceDisplay { get; set; }
 
+    public bool Featured { get; set; }
+
+    public int? Position { get; set; }
+
     [BindNever]
     public bool ShowPurchasable { get; set; }
 

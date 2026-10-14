@@ -77,6 +77,11 @@ public sealed class ProductListingPart : ContentPart
     public int[] PageSizes { get; set; } = [12, 24, 48];
 
     /// <summary>
+    /// Gets or sets how visitors move through the pages: numbered pages, a "Load more" button, or infinite scroll.
+    /// </summary>
+    public ProductListingPaging Paging { get; set; }
+
+    /// <summary>
     /// Gets or sets the page size used when the visitor picks none.
     /// </summary>
     public int DefaultPageSize { get; set; } = 24;
@@ -85,4 +90,10 @@ public sealed class ProductListingPart : ContentPart
     /// Gets or sets whether visitors can search the listing by keyword.
     /// </summary>
     public bool EnableKeywordSearch { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the name of the product search index (an Orchard Core index profile) the listing searches.
+    /// The database search is used when it is empty, or when the index cannot be reached.
+    /// </summary>
+    public string IndexProfileName { get; set; }
 }

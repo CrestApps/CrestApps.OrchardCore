@@ -49,4 +49,9 @@ public sealed class ProductAttributeValue
     /// Gets or sets whether keyword search matches this value.
     /// </summary>
     public bool Searchable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address the value links to, such as a link field's URL.
+    /// </summary>
+    public string Url { get; set; }
 }

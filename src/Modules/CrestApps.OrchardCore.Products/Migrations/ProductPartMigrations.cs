@@ -21,8 +21,9 @@ public sealed class ProductPartMigrations : DataMigration
         );
 
         await CreatePricePartAsync();
+        await CreateVariantsPartAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -35,10 +36,27 @@ public sealed class ProductPartMigrations : DataMigration
         return 2;
     }
 
+    /// <summary>
+    /// Adds the part that sells a product in variants.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateVariantsPartAsync();
+
+        return 3;
+    }
+
     private Task CreatePricePartAsync()
         => _contentDefinitionManager.AlterPartDefinitionAsync("ProductPricePart", part => part
             .Attachable()
             .WithDisplayName("Product prices")
             .WithDescription("Offers a product at more than one price, one-time or recurring.")
+        );
+
+    private Task CreateVariantsPartAsync()
+        => _contentDefinitionManager.AlterPartDefinitionAsync("ProductVariantsPart", part => part
+            .Attachable()
+            .WithDisplayName("Product variants")
+            .WithDescription("Sells a product in versions, such as sizes and colors, each with its own SKU and price.")
         );
 }

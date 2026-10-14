@@ -6,6 +6,10 @@
 @if (Model.Display == ProductPriceDisplay.Show && !string.IsNullOrEmpty(Model.Price))
 {
     <div class="product-price">
+        @if (Model.IsFrom)
+        {
+            <span class="product-price-from">@T["From"]</span>
+        }
         <span class="product-price-amount">@Model.Price</span>
         @if (!string.IsNullOrEmpty(Model.Period))
         {

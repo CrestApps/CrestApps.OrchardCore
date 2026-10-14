@@ -63,7 +63,8 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
             viewModel.Suffix = settings.Suffix;
             viewModel.SwatchColors = ProductSwatchColors.Format(settings.SwatchColors);
             viewModel.TermColorField = settings.TermColorField;
-            viewModel.CanSort = kind is ProductAttributeValueKind.Number or ProductAttributeValueKind.Date;
+            viewModel.CanSort = ProductListingService.IsSortable(kind);
+            viewModel.IsRichText = kind == ProductAttributeValueKind.RichText;
             viewModel.IsNumber = kind == ProductAttributeValueKind.Number;
             viewModel.CanHaveSwatches = kind is ProductAttributeValueKind.Text or ProductAttributeValueKind.Term;
             viewModel.IsTaxonomy = kind == ProductAttributeValueKind.Term && model.FieldDefinition.Name == "TaxonomyField";

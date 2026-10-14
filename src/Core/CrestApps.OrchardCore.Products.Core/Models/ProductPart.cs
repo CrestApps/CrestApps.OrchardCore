@@ -46,4 +46,16 @@ public sealed class ProductPart : ContentPart
     /// <see cref="ProductPartSettings.PriceDisplay"/>. It is honored only when the content type allows it.
     /// </summary>
     public ProductPriceDisplay? PriceDisplay { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the merchant features this product. Listings can sort featured products first and
+    /// filter on them.
+    /// </summary>
+    public bool Featured { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's place in the order the merchant arranged: a smaller number comes first in a
+    /// listing's "Recommended" sort, and products without one come after those with one.
+    /// </summary>
+    public int? Position { get; set; }
 }
