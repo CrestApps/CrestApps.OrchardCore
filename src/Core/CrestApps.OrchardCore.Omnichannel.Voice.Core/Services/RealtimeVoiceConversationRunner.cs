@@ -329,6 +329,14 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             ? context.HandoffRequested.Register(() => callScope.CancelAfter(HandoffClosingGrace))
             : default;
 
+        // The node is shutting down, and this conversation cannot outlive the process. It is ended now and reported
+        // lost, so whoever holds the call hands the caller on while there is still a process to do it, instead of
+        // leaving them on a line that goes silent when the process exits. Registered on a token that has already
+        // fired, it ends a call answered during the shutdown before it begins.
+        using var stoppingRegistration = context.NodeStopping.CanBeCanceled
+            ? context.NodeStopping.Register(() => EndForShutdown(context, callScope))
+            : default;
+
         // The model saying the conversation is over is not the same as the call being over, which is why this is
         // a watchdog rather than another CancelAfter: it waits for the goodbye to finish and then leaves the line
         // open a moment, and abandons the hangup entirely if the caller uses it.
@@ -388,6 +396,35 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         await _session.SaveChangesAsync(CancellationToken.None);
 
         return true;
+    }
+
+    /// <summary>
+    /// Ends the conversation because this node is shutting down, reporting the session lost so the caller is handed
+    /// on.
+    /// </summary>
+    /// <param name="context">The call being held.</param>
+    /// <param name="callScope">The scope whose cancellation ends the call.</param>
+    private void EndForShutdown(RealtimeVoiceConversationContext context, CancellationTokenSource callScope)
+    {
+        // Set before the cancellation, which is what the caller of this runner reads once the session returns.
+        context.EndedByShutdown = true;
+        context.SessionLost = true;
+
+        if (_logger.IsEnabled(LogLevel.Warning))
+        {
+            _logger.LogWarning(
+                "This node is shutting down; ending the realtime session on activity '{ActivityId}' so its caller can be handed on.",
+                context.Activity?.ItemId.SanitizeLogValue());
+        }
+
+        try
+        {
+            callScope.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // The call ended on its own as the node began to stop.
+        }
     }
 
     /// <summary>

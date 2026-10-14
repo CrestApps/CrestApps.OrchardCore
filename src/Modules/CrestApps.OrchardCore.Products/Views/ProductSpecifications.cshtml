@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductDetailsShapeViewModel
+
+@{
+    var specifications = Model.Product?.Specifications ?? [];
+}
+
+@if (specifications.Count > 0)
+{
+    <section class="product-specifications my-4" aria-labelledby="product-specifications-title">
+        <h2 class="h5 mb-3" id="product-specifications-title">@T["Specifications"]</h2>
+        <dl class="product-specifications-list">
+            @foreach (var specification in specifications)
+            {
+                <div class="product-specifications-row" data-specification="@specification.Key">
+                    <dt>@specification.Label</dt>
+                    <dd>@specification.Value</dd>
+                </div>
+            }
+        </dl>
+    </section>
+}

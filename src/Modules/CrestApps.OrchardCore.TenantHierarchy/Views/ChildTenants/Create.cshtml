@@ -1,0 +1,170 @@
+@model ChildTenantEditViewModel
+
+@{
+    var labels = Model.Labels;
+    var suffix = Model.HostPattern?.Replace("{business}", string.Empty);
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyChildrenCreate" title="@T["Add {0}", labels.ChildLower]">
+        <breadcrumb-item id="TenantHierarchyChildren" action="Index" controller="ChildTenants" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ViewChildTenants.Name">@labels.Children</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Create" method="post" class="no-multisubmit" id="th-child-form">
+    @Html.ValidationSummary(true, string.Empty, new { @class = "text-danger" })
+
+    <p class="text-muted">@T["The new {0} gets its own site at its own address, with its own users and data. It is ready a few moments after you save.", labels.ChildLower]</p>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayName" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayName" class="form-control" autofocus autocomplete="off" maxlength="100" data-th-name />
+            <span asp-validation-for="DisplayName" class="text-danger"></span>
+            <span class="hint">@T["The name everybody sees, for example \"Northwind Traders\"."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Slug" class="ocat-label">@T["Address"]</label>
+        <div class="ocat-end">
+            <div class="input-group">
+                <span class="input-group-text">@($"{Model.Scheme}://")</span>
+                <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" data-th-slug data-check-url="@Url.Action("CheckAddress")" />
+                @if (!string.IsNullOrEmpty(suffix))
+                {
+                    <span class="input-group-text">@suffix</span>
+                }
+            </div>
+            <span asp-validation-for="Slug" class="text-danger" data-th-slug-error></span>
+            <span class="hint" data-th-slug-status data-available-text="@T["Available:"]">@T["Lowercase letters, digits and hyphens, 3 to 40 characters. It is filled in from the name, and you can change it."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="Description" class="form-control" rows="2" maxlength="500"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+            <span class="hint">@T["Optional. Only you see it, in this list."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Start from"]</span>
+        <div class="ocat-end">
+            @if (Model.Recipes.Count == 0)
+            {
+                <div class="alert alert-warning mb-0">@T["No setup recipe is available. Ask the platform administrator to allow one."]</div>
+            }
+            else
+            {
+                <div class="row row-cols-1 row-cols-md-2 g-2">
+                    @foreach (var recipe in Model.Recipes)
+                    {
+                        var id = $"recipe-{recipe.Value}";
+                        <div class="col">
+                            <label class="card h-100 th-recipe" for="@id">
+                                <div class="card-body d-flex gap-2">
+                                    <input class="form-check-input mt-1" type="radio" name="RecipeName" id="@id" value="@recipe.Value" @(recipe.Value == Model.RecipeName ? "checked" : null) required />
+                                    <span>
+                                        <span class="fw-semibold d-block">@recipe.Text</span>
+                                        @if (Model.RecipeDescriptions.TryGetValue(recipe.Value, out var description) && !string.IsNullOrEmpty(description))
+                                        {
+                                            <span class="small text-muted">@description</span>
+                                        }
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+                    }
+                </div>
+            }
+            <span asp-validation-for="RecipeName" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Create {0}", labels.ChildLower]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+            <span class="text-muted small ms-2">@T["{0} of {1} used", Model.TotalCount, Model.MaxChildren]</span>
+        </div>
+    </div>
+</form>
+
+<style at="Head">
+    .th-recipe { cursor: pointer; }
+    .th-recipe:has(input:checked) { border-color: var(--bs-primary); box-shadow: 0 0 0 .15rem var(--bs-primary-bg-subtle); }
+</style>
+
+<script at="Foot">
+    (function () {
+        const form = document.getElementById('th-child-form');
+        const name = form.querySelector('[data-th-name]');
+        const slug = form.querySelector('[data-th-slug]');
+        const status = form.querySelector('[data-th-slug-status]');
+        const error = form.querySelector('[data-th-slug-error]');
+        const defaultHint = status.textContent;
+        let slugEdited = slug.value.length > 0;
+        let timer = null;
+
+        const toSlug = (value) => value
+            .normalize('NFD')
+            .replace(/[̀-ͯ]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+            .substring(0, 40)
+            .replace(/-+$/g, '');
+
+        const check = () => {
+            window.clearTimeout(timer);
+
+            if (!slug.value) {
+                status.textContent = defaultHint;
+                status.classList.remove('text-success', 'text-danger');
+                return;
+            }
+
+            timer = window.setTimeout(async () => {
+                try {
+                    const url = new URL(slug.dataset.checkUrl, window.location.origin);
+                    url.searchParams.set('slug', slug.value);
+                    const response = await fetch(url, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const result = await response.json();
+                    error.textContent = '';
+                    status.classList.toggle('text-success', result.available);
+                    status.classList.toggle('text-danger', !result.available);
+                    status.textContent = result.available
+                        ? status.dataset.availableText + ' ' + result.address
+                        : result.message;
+                } catch (e) {
+                    status.textContent = defaultHint;
+                }
+            }, 300);
+        };
+
+        name.addEventListener('input', () => {
+            if (!slugEdited) {
+                slug.value = toSlug(name.value);
+                check();
+            }
+        });
+
+        slug.addEventListener('input', () => {
+            slugEdited = slug.value.length > 0;
+            slug.value = slug.value.toLowerCase();
+            check();
+        });
+
+        if (slug.value) {
+            check();
+        }
+    })();
+</script>

@@ -11,7 +11,10 @@ builder.Services
     .AddOrchardCms(orchardCoreBuilder => orchardCoreBuilder
         // Enable WAL + a busy timeout on every SQLite connection so the app's concurrent writers do not fail
         // with "database is locked". Applied to all tenants; a no-op on non-SQLite providers.
-        .AddSqliteConnectionTuning());
+        .AddSqliteConnectionTuning()
+        // Installs the tenant hierarchy guards in every tenant. They do nothing for a tenant that is not a parent or
+        // a child tenant.
+        .AddTenantHierarchy());
 
 var app = builder.Build();
 

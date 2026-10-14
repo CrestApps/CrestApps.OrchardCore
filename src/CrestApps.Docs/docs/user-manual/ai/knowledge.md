@@ -105,7 +105,7 @@ On the profile's **Knowledge** tab:
 | Field | What it does |
 | --- | --- |
 | **Data source** | The data source to answer from. **No data source** for none. |
-| **Filter** | Searches only some entries, for example only active products. Ask your technical team for the expression. |
+| **Filter** | Searches only some entries, for example only active products. Ask your technical team for the expression. A filter that is not valid is not saved. A filter has no effect when the knowledge base is an Azure AI Search index. |
 | **Restrict answers to retrieved data only** | The assistant answers only from the data source. When nothing matches, it says so instead of answering from general knowledge. Turn it on for a public assistant that must stay on topic. |
 | **Strictness** | From 1 to 5. How closely a passage must match the question. Higher values use fewer, more relevant passages. Empty uses the site default (3). |
 | **Retrieved documents** | From 3 to 20. How many passages are retrieved for each question. Empty uses the site default. |

@@ -1,0 +1,23 @@
+WEBVTT
+
+00:00:03.200 --> 00:00:08.146
+In Program.cs, call AddTenantHierarchy inside AddOrchardCms.
+
+00:00:08.146 --> 00:00:15.340
+It installs the guards in every tenant, and does nothing for a tenant outside a hierarchy.
+
+00:00:16.090 --> 00:00:22.282
+In appsettings.json, the Tenant Hierarchy section names the platform domain that parent addresses
+
+00:00:22.282 --> 00:00:26.670
+go under, and the database servers child tenants can be created on.
+
+00:00:27.420 --> 00:00:30.440
+SQL Server and PostgreSQL are built in.
+
+00:00:30.440 --> 00:00:36.346
+For another server, implement I Child Tenant Database Provisioner and register it:
+
+00:00:36.346 --> 00:00:40.910
+it creates each client's database and login, and removes them.
+

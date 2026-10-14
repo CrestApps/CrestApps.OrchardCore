@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model FeatureProfilesViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="FeatureProfile">
+    <label asp-for="FeatureProfile" class="ocat-label">@T["Feature profile"]</label>
+    <div class="ocat-end">
+        <select asp-for="FeatureProfile" asp-items="Model.FeatureProfiles" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span asp-validation-for="FeatureProfile"></span>
+        <span class="hint">@T["Limits the features the new site can enable. Leave at None to allow every feature."]</span>
+    </div>
+</div>

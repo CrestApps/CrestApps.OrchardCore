@@ -45,6 +45,15 @@ public sealed class ListTenantTool : AIFunction
             logger.LogDebug("AI tool '{ToolName}' invoked.", Name);
         }
 
+        var shellSettings = arguments.Services.GetRequiredService<ShellSettings>();
+
+        if (!shellSettings.IsDefaultShell())
+        {
+            logger.LogWarning("AI tool '{ToolName}' failed: not supported outside the default tenant.", Name);
+
+            return "This function is not supported in this tenant. It can only be used in the default tenant.";
+        }
+
         var shellHost = arguments.Services.GetRequiredService<IShellHost>();
 
         var shells = shellHost.GetAllSettings();

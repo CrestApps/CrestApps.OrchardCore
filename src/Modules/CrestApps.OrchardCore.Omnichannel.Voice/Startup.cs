@@ -35,6 +35,13 @@ public sealed class Startup : StartupBase
         services.AddScoped<IRealtimeCallCompletionRunner, RealtimeCallCompletionRunner>();
         services.AddScoped<ITurnBasedSilenceWatchdog, TurnBasedSilenceWatchdog>();
 
+        // A live conversation runs in this process, so when the node begins to stop each one is ended and its
+        // caller handed on, rather than left on a line that falls silent. A singleton, so the registration on the
+        // host's stopping token goes with the shell; activation is what makes it.
+        services.AddSingleton<AIVoiceCallShutdown>();
+        services.AddSingleton<IAIVoiceCallShutdown>(serviceProvider => serviceProvider.GetRequiredService<AIVoiceCallShutdown>());
+        services.AddScoped<IModularTenantEvents>(serviceProvider => serviceProvider.GetRequiredService<AIVoiceCallShutdown>());
+
         // One per call, so the tool and the session holding the line share an instance and two calls running at
         // once cannot end each other.
         services.TryAddScoped<IVoiceCallEndTurn, VoiceCallEndTurn>();

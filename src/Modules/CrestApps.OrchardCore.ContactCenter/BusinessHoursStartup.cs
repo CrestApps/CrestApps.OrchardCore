@@ -32,6 +32,11 @@ public sealed class BusinessHoursStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Calendars live in the Contact Center storage collection. Register it here so the feature is self-contained
+        // when it is the only Contact Center feature enabled, as when Omnichannel Activities pulls it in on its own (the
+        // base Area feature registers the same collection; the registration is idempotent).
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
+
         services
             .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
             .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()

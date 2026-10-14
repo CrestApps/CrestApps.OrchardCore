@@ -1,0 +1,328 @@
+@model ChildTenantsIndexViewModel
+
+@{
+    var labels = Model.Labels;
+    var pager = Model.Pager;
+    int startIndex = (pager.Page - 1) * pager.PageSize + 1;
+    int endIndex = startIndex + Model.Items.Count - 1;
+    var atLimit = Model.TotalCount >= Model.MaxChildren;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyChildren" title="@T["{0}", labels.Children]" />
+</zone>
+
+<style asp-name="bootstrap-select" at="Head"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+
+@if (!Model.HostGuardInstalled)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>
+        @T["New {0} cannot be created yet: the platform administrator must finish the setup of the tenant hierarchy.", labels.ChildrenLower]
+    </div>
+}
+
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2 align-items-center">
+                <div class="col">
+                    <div class="input-group">
+                        <div class="has-search flex-grow-1">
+                            <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                            <input id="search-box" asp-for="Options.Search" class="form-control rounded-end-0" placeholder="@T["Search by name or address"]" type="search" autocomplete="off" />
+                        </div>
+                        <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                            <i class="fa-solid fa-search me-1" aria-hidden="true"></i>@T["Go"]
+                        </button>
+                    </div>
+                </div>
+                @if (Model.CanCreate)
+                {
+                    <div class="col-auto">
+                        @if (atLimit || !Model.HostGuardInstalled)
+                        {
+                            <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="@(atLimit ? T["You have reached your limit of {0} {1}.", Model.MaxChildren, labels.ChildrenLower] : T["Not available yet."])">
+                                <button type="button" class="btn btn-secondary" disabled>
+                                    <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add {0}", labels.ChildLower]
+                                </button>
+                            </span>
+                        }
+                        else
+                        {
+                            <a class="btn btn-secondary create" role="button" asp-action="Create">
+                                <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add {0}", labels.ChildLower]
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group with-checkbox">
+        <li class="list-group-item text-bg-theme">
+            <div class="row gx-3">
+                <div class="col text-nowrap">
+                    <div class="form-check my-1">
+                        @if (Model.BulkActions.Count > 0)
+                        {
+                            <input type="checkbox" class="form-check-input" id="select-all">
+                            <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
+                        }
+                        <label id="items" for="select-all">
+                            @T.Plural(Model.Items.Count, "1 item", "{0} items")
+                            @if (Model.FilteredCount > 0)
+                            {
+                                <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">@T.Plural(Model.FilteredCount, " / {0} item in total", " / {0} items in total")</span>
+                            }
+                        </label>
+                        <label id="selected-items" class="text-muted" for="select-all"></label>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    @if (Model.BulkActions.Count > 0)
+                    {
+                        <div class="dropdown d-none" id="actions">
+                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="bulk-action-menu-button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                @T["Actions"]
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bulk-action-menu-button">
+                                @foreach (var item in Model.BulkActions)
+                                {
+                                    <li>
+                                        <a class="dropdown-item" href="javascript:void(0)" data-action="@item.Value" data-title="@T["Bulk Action"]" data-message="@T["Are you sure you want to {0} the selected {1}?", item.Text.ToLowerInvariant(), labels.ChildrenLower]">@item.Text</a>
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    <div class="btn-group filter">
+                        <select asp-for="Options.State" asp-items="@Model.StateOptions" class="selectpicker show-tick me-2" data-header="@T["Filter by state"]" data-width="fit" data-selected-text-format="static" data-dropdown-align-right="true" title="@T["State"]" data-style="btn-sm" data-filter-submit></select>
+                        <select asp-for="Options.OrderBy" asp-items="@Model.SortOptions" class="selectpicker show-tick" data-header="@T["Sort by"]" data-width="fit" data-selected-text-format="static" data-dropdown-align-right="true" title="@T["Sort"]" data-style="btn-sm" data-filter-submit></select>
+                    </div>
+                </div>
+            </div>
+        </li>
+
+        @if (Model.Items.Count == 0)
+        {
+            <li class="list-group-item text-center py-5">
+                @if (Model.TotalCount == 0)
+                {
+                    <div class="mb-3"><i class="fa-solid fa-sitemap fa-3x text-muted" aria-hidden="true"></i></div>
+                    <h4>@T["No {0} yet", labels.ChildrenLower]</h4>
+                    <p class="text-muted mb-3">@T["Each {0} gets its own site with its own address, users and data. You can open any of them from here without signing in again.", labels.ChildLower]</p>
+                    @if (Model.CanCreate && Model.HostGuardInstalled)
+                    {
+                        <a class="btn btn-primary" asp-action="Create"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add your first {0}", labels.ChildLower]</a>
+                    }
+                }
+                else
+                {
+                    <p class="mb-0">@T["<strong>Nothing here!</strong> Your search returned no results."]</p>
+                }
+            </li>
+        }
+
+        @foreach (var item in Model.Items)
+        {
+            var entry = item.Entry;
+            var entryId = entry.EntryId;
+            var isBusy = entry.Status == ChildTenantStatus.Provisioning || entry.Status == ChildTenantStatus.Removing || item.State == ChildTenantRuntimeState.Initializing;
+            var canEnter = item.CanEnter && Model.EnterableEntryIds.Contains(entryId);
+            var initials = new TenantSwitchItem { Info = item }.Initials;
+
+            <li class="list-group-item" data-entry-id="@entryId" @(isBusy ? Html.Raw($"data-status-url=\"{Url.Action("Status", new { id = entryId })}\"") : null)>
+                <div class="d-flex align-items-center gap-3">
+                    @if (Model.BulkActions.Count > 0)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" value="@entryId" name="itemIds" id="itemIds-@entryId">
+                            <label class="form-check-label" for="itemIds-@entryId"><span class="visually-hidden">@entry.DisplayName</span></label>
+                        </div>
+                    }
+
+                    <div class="th-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">@initials</div>
+
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <strong class="text-break">@entry.DisplayName</strong>
+                            @switch (entry.Status)
+                            {
+                                case ChildTenantStatus.Provisioning:
+                                    <span class="badge ta-badge fw-normal"><span class="spinner-border spinner-border-sm text-info me-1" aria-hidden="true"></span>@T["Setting up"]</span>
+                                    break;
+                                case ChildTenantStatus.Failed:
+                                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-circle-exclamation text-danger" aria-hidden="true"></i> @T["Setup failed"]</span>
+                                    break;
+                                case ChildTenantStatus.Removing:
+                                    <span class="badge ta-badge fw-normal"><span class="spinner-border spinner-border-sm text-warning me-1" aria-hidden="true"></span>@T["Removing"]</span>
+                                    break;
+                                case ChildTenantStatus.PendingRemoval:
+                                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-clock text-warning" aria-hidden="true"></i> @T["Removal on {0}", entry.RetainUntilUtc?.ToLocalTime().ToString("d")]</span>
+                                    break;
+                                default:
+                                    switch (item.State)
+                                    {
+                                        case ChildTenantRuntimeState.Running:
+                                            <span class="badge ta-badge fw-normal"><i class="fa-solid fa-check text-success" aria-hidden="true"></i> @T["Running"]</span>
+                                            break;
+                                        case ChildTenantRuntimeState.Suspended:
+                                            <span class="badge ta-badge fw-normal"><i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Suspended"]</span>
+                                            break;
+                                        case ChildTenantRuntimeState.ChangedByPlatform:
+                                            <span class="badge ta-badge fw-normal" title="@T["The platform administrator removed this {0} or moved it to another owner.", labels.ChildLower]"><i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i> @T["Changed by platform"]</span>
+                                            break;
+                                        default:
+                                            <span class="badge ta-badge fw-normal">@item.State</span>
+                                            break;
+                                    }
+                                    break;
+                            }
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(item.Address))
+                        {
+                            <div class="small"><a href="@item.Address" class="text-decoration-none text-break" target="_blank" rel="noopener noreferrer"><code>@entry.Host</code></a></div>
+                        }
+                        else if (!string.IsNullOrEmpty(entry.Host))
+                        {
+                            <div class="small text-muted"><code>@entry.Host</code></div>
+                        }
+
+                        @if (!string.IsNullOrEmpty(entry.Description))
+                        {
+                            <div class="small text-muted text-break">@entry.Description</div>
+                        }
+
+                        @if (entry.Status == ChildTenantStatus.Failed && !string.IsNullOrEmpty(entry.Error))
+                        {
+                            <div class="small text-danger mt-1"><i class="fa-solid fa-circle-exclamation me-1" aria-hidden="true"></i>@entry.Error</div>
+                        }
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1 justify-content-end flex-shrink-0">
+                        @if (canEnter)
+                        {
+                            <a class="btn btn-primary btn-sm" href="@Url.Content($"~/delegated-access/open/{entryId}")" title="@T["Open {0} without signing in again", entry.DisplayName]">
+                                <i class="fa-solid fa-arrow-right-to-bracket me-1" aria-hidden="true"></i>@T["Open"]
+                            </a>
+                        }
+
+                        @if (entry.Status == ChildTenantStatus.Failed && Model.CanCreate)
+                        {
+                            <a class="btn btn-success btn-sm" asp-action="Retry" asp-route-id="@entryId" data-url-af="UnsafeUrl">@T["Retry"]</a>
+                            <a class="btn btn-danger btn-sm" asp-action="Discard" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard"]" data-message="@T["Discard {0}? Its address becomes free again.", entry.DisplayName]">@T["Discard"]</a>
+                        }
+
+                        @if (entry.Status == ChildTenantStatus.PendingRemoval && Model.CanRemove)
+                        {
+                            <a class="btn btn-success btn-sm" asp-action="Restore" asp-route-id="@entryId" data-url-af="UnsafeUrl">@T["Restore"]</a>
+                        }
+
+                        @if (item.State == ChildTenantRuntimeState.ChangedByPlatform && Model.CanManage)
+                        {
+                            <a class="btn btn-secondary btn-sm" asp-action="Dismiss" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove from list"]" data-message="@T["Remove {0} from this list?", entry.DisplayName]">@T["Remove from list"]</a>
+                        }
+
+                        @if (!isBusy && item.State != ChildTenantRuntimeState.ChangedByPlatform && entry.Status != ChildTenantStatus.Failed)
+                        {
+                            <div class="dropdown">
+                                <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    @T["Manage"]
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    @if (Model.CanManage)
+                                    {
+                                        <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@entryId"><i class="fa-solid fa-pen fa-fw me-2" aria-hidden="true"></i>@T["Edit"]</a></li>
+                                    }
+                                    @if (Model.CanManageFeatures && item.State == ChildTenantRuntimeState.Running)
+                                    {
+                                        <li><a class="dropdown-item" asp-action="Features" asp-route-id="@entryId"><i class="fa-solid fa-puzzle-piece fa-fw me-2" aria-hidden="true"></i>@T["Features"]</a></li>
+                                    }
+                                    @if (Model.CanManageAccess)
+                                    {
+                                        <li><a class="dropdown-item" asp-controller="Access" asp-action="Child" asp-route-id="@entryId"><i class="fa-solid fa-user-shield fa-fw me-2" aria-hidden="true"></i>@T["Access"]</a></li>
+                                    }
+                                    <li><a class="dropdown-item" asp-area="OrchardCore.AuditTrail" asp-controller="Admin" asp-action="Index" asp-route-correlationId="@entryId"><i class="fa-solid fa-clock-rotate-left fa-fw me-2" aria-hidden="true"></i>@T["Activity"]</a></li>
+                                    @if (Model.CanManage && entry.Status == ChildTenantStatus.Ready)
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                        if (item.State == ChildTenantRuntimeState.Running)
+                                        {
+                                            <li><a class="dropdown-item" asp-action="Reload" asp-route-id="@entryId" data-url-af="UnsafeUrl"><i class="fa-solid fa-rotate fa-fw me-2" aria-hidden="true"></i>@T["Reload"]</a></li>
+                                            <li><a class="dropdown-item" asp-action="Suspend" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend {0}", labels.ChildLower]" data-message="@T["Suspend {0}? Nobody can use it, including its own staff, until you resume it.", entry.DisplayName]" data-ok="@T["Suspend"]" data-ok-class="btn-warning"><i class="fa-solid fa-pause fa-fw me-2" aria-hidden="true"></i>@T["Suspend"]</a></li>
+                                        }
+                                        else if (item.State == ChildTenantRuntimeState.Suspended)
+                                        {
+                                            <li><a class="dropdown-item" asp-action="Resume" asp-route-id="@entryId" data-url-af="UnsafeUrl"><i class="fa-solid fa-play fa-fw me-2" aria-hidden="true"></i>@T["Resume"]</a></li>
+                                        }
+                                    }
+                                    @if (Model.CanRemove && item.State == ChildTenantRuntimeState.Suspended && entry.Status == ChildTenantStatus.Ready)
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" asp-action="Remove" asp-route-id="@entryId"><i class="fa-solid fa-trash fa-fw me-2" aria-hidden="true"></i>@T["Remove"]</a></li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+</form>
+
+@await DisplayAsync(Model.Pager)
+
+<style at="Head">
+    .th-avatar { width: 2.5rem; height: 2.5rem; background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+    .min-w-0 { min-width: 0; }
+</style>
+
+<script asp-name="list-management-ui" at="Foot"></script>
+<script at="Foot">
+    (function () {
+        const rows = document.querySelectorAll('[data-status-url]');
+
+        if (rows.length === 0) {
+            return;
+        }
+
+        let attempts = 0;
+        const poll = async () => {
+            attempts++;
+
+            for (const row of rows) {
+                try {
+                    const response = await fetch(row.dataset.statusUrl, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' });
+
+                    if (!response.ok) {
+                        continue;
+                    }
+
+                    const status = await response.json();
+
+                    if (status.status !== 'Provisioning' && status.status !== 'Removing' && status.state !== 'Initializing') {
+                        window.location.reload();
+                        return;
+                    }
+                } catch (e) {
+                    // Keep polling: the tenant may be restarting.
+                }
+            }
+
+            if (attempts < 120) {
+                window.setTimeout(poll, 3000);
+            }
+        };
+
+        window.setTimeout(poll, 3000);
+    })();
+</script>

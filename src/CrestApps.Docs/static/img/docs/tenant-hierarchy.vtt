@@ -1,0 +1,344 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:05.707
+The CrestApps Tenant Hierarchy lets one tenant create and run its own child
+
+00:00:05.707 --> 00:00:09.774
+tenants, and lets its people open them without signing in again.
+
+00:00:09.774 --> 00:00:14.423
+This video shows the problem it solves, how it is organized, every screen,
+
+00:00:14.423 --> 00:00:16.980
+and how it keeps each tenant isolated.
+
+00:00:21.580 --> 00:00:26.342
+Many organizations run a separate site for each customer they serve:
+
+00:00:26.342 --> 00:00:30.911
+a bookkeeping firm keeps one per client, an agency one per brand.
+
+00:00:30.911 --> 00:00:36.510
+With plain multi-tenancy, only the platform administrator can create those sites.
+
+00:00:37.260 --> 00:00:41.926
+The organization's staff then need a separate account and password on every customer
+
+00:00:41.926 --> 00:00:45.970
+site, and nothing ties what they do there back to the person who did it.
+
+00:00:46.720 --> 00:00:50.926
+And the more sites one team manages, the more a single mistake could
+
+00:00:50.926 --> 00:00:53.540
+let one customer's site reach another's.
+
+00:00:54.290 --> 00:00:58.332
+The Tenant Hierarchy makes such an organization a parent.
+
+00:00:58.332 --> 00:01:03.272
+It creates and runs its own child tenants, its people open them without
+
+00:01:03.272 --> 00:01:06.480
+a password, and every tenant stays isolated.
+
+00:01:10.680 --> 00:01:12.904
+The main site is the platform.
+
+00:01:12.904 --> 00:01:18.650
+Its administrator decides which tenants become parents, and sets a policy for each one.
+
+00:01:19.400 --> 00:01:25.114
+A parent creates, edits, suspends and removes its own child tenants, within that
+
+00:01:25.114 --> 00:01:29.100
+policy, and decides which of its people may open them.
+
+00:01:29.850 --> 00:01:34.902
+Each child tenant is a complete site, with its own address, users and data.
+
+00:01:34.902 --> 00:01:40.390
+People from the parent arrive signed in, with only the roles the parent gave them.
+
+00:01:41.140 --> 00:01:45.270
+Every action is recorded in the parent's audit trail, so you can always
+
+00:01:45.270 --> 00:01:48.220
+tell who did what, where, and how they signed in.
+
+00:01:52.406 --> 00:01:58.440
+On the platform, Multi-Tenancy, Tenant Hierarchy lists every parent with its child tenants,
+
+00:01:58.440 --> 00:02:01.364
+the way the Tenants screen lists tenants.
+
+00:02:01.364 --> 00:02:05.346
+Riverside Accounting is already a parent, with one client.
+
+00:02:05.800 --> 00:02:08.608
+Let's make Contoso Bookkeeping a parent.
+
+00:02:08.608 --> 00:02:11.905
+Click Make a Parent Tenant, and pick the tenant.
+
+00:02:11.905 --> 00:02:17.460
+Its display name and address fill in from the tenant, so its address does not change.
+
+00:02:17.913 --> 00:02:22.701
+The policy sets how many child tenants the parent may have, the setup
+
+00:02:22.701 --> 00:02:26.659
+recipes they can start from, and where their data lives:
+
+00:02:26.659 --> 00:02:30.873
+a file, a database, a schema or a table prefix for each one.
+
+00:02:31.326 --> 00:02:36.261
+It also lists the features child tenants never get, the permissions their own
+
+00:02:36.261 --> 00:02:41.376
+users never get, and how many days a removed child tenant can still be restored.
+
+00:02:41.376 --> 00:02:43.636
+Let's keep them for thirty days.
+
+00:02:44.089 --> 00:02:51.680
+Opening child tenants can require two-factor authentication, and sessions can end after a period without activity.
+
+00:02:51.680 --> 00:02:56.109
+The tenant switcher opens a picker page, or shows it in a panel.
+
+00:02:56.562 --> 00:02:58.820
+Finally, the words on screen.
+
+00:02:58.820 --> 00:03:04.241
+Contoso calls itself a practice, and calls its child tenants clients, so every
+
+00:03:04.241 --> 00:03:07.532
+screen of the parent says Client and Clients.
+
+00:03:07.982 --> 00:03:10.165
+Click Make parent tenant.
+
+00:03:10.165 --> 00:03:14.602
+Contoso Bookkeeping is now a parent, with no clients yet.
+
+00:03:18.790 --> 00:03:23.211
+In the parent, Jamie, Contoso's owner, opens Clients.
+
+00:03:23.211 --> 00:03:25.010
+The list is empty.
+
+00:03:25.464 --> 00:03:27.747
+Click Add client and type the name.
+
+00:03:27.747 --> 00:03:31.646
+The address fills in from it, and the screen checks at once that
+
+00:03:31.646 --> 00:03:33.094
+the address is free.
+
+00:03:33.546 --> 00:03:38.366
+Pick what the new site starts from, such as a blank site, and click Create client.
+
+00:03:38.818 --> 00:03:41.464
+The client is set up in the background.
+
+00:03:41.464 --> 00:03:46.758
+The list shows Setting up, and refreshes on its own to Running, with an Open button.
+
+00:03:50.950 --> 00:03:53.669
+Contoso has a few more clients now.
+
+00:03:53.669 --> 00:03:56.520
+Click Open next to Northwind Traders.
+
+00:03:56.971 --> 00:04:00.619
+Jamie lands in the client's admin, already signed in.
+
+00:04:00.619 --> 00:04:03.402
+No password was asked, and none exists:
+
+00:04:03.402 --> 00:04:06.741
+the parent vouched for her with a one-time code.
+
+00:04:07.191 --> 00:04:09.580
+The building icon shows where you are:
+
+00:04:09.580 --> 00:04:14.681
+working in Northwind Traders, as a linked account of Jamie, through Contoso Bookkeeping.
+
+00:04:15.135 --> 00:04:18.423
+Switch client lists the clients Jamie may open.
+
+00:04:18.423 --> 00:04:22.145
+Mark favorites with the star, and pick another client.
+
+00:04:22.595 --> 00:04:27.389
+From any client, Back to Contoso Bookkeeping returns to the parent, and Leave
+
+00:04:27.389 --> 00:04:29.815
+this client signs out of the client.
+
+00:04:34.004 --> 00:04:38.025
+Manage, next to a client, holds everything else:
+
+00:04:38.025 --> 00:04:45.024
+edit its name, address and description, its features, its access rules and its activity.
+
+00:04:45.477 --> 00:04:48.566
+Features turns features of the client on or off.
+
+00:04:48.566 --> 00:04:53.087
+Features that could reach other sites are hidden, and some are always on.
+
+00:04:53.542 --> 00:04:58.082
+Suspend closes the client to everyone, including its own staff.
+
+00:04:58.729 --> 00:05:04.389
+Its address then shows that the site is not available, never the platform or another site.
+
+00:05:04.841 --> 00:05:06.691
+Resume opens it again.
+
+00:05:06.691 --> 00:05:10.721
+To remove a suspended client, type its name to confirm.
+
+00:05:15.273 --> 00:05:20.346
+The policy keeps removed clients for thirty days, so the client waits, removal
+
+00:05:20.346 --> 00:05:23.003
+scheduled, and Restore brings it back.
+
+00:05:27.204 --> 00:05:29.530
+Clients, Access holds the rules.
+
+00:05:29.530 --> 00:05:34.059
+Each one says who in Contoso may open which clients, and which roles
+
+00:05:34.059 --> 00:05:36.324
+they have once they are inside.
+
+00:05:36.776 --> 00:05:41.639
+The parent's administrators can open every client, as administrators.
+
+00:05:41.639 --> 00:05:46.956
+Let's let everyone with the Bookkeeper role open every client, as an editor.
+
+00:05:47.409 --> 00:05:49.804
+A rule can also name one person.
+
+00:05:49.804 --> 00:05:53.649
+Rules on a client's own page apply to that client only.
+
+00:05:54.101 --> 00:05:58.651
+Someone who matches several rules gets all of their roles, and someone who
+
+00:05:58.651 --> 00:06:01.039
+matches none cannot open the client.
+
+00:06:01.039 --> 00:06:05.191
+Removing a rule ends the sessions that depend on it within minutes.
+
+00:06:09.391 --> 00:06:15.220
+Clients, Activity opens the audit trail, filtered to the tenant hierarchy:
+
+00:06:15.220 --> 00:06:21.631
+every client created, opened, suspended or removed, and every access rule changed.
+
+00:06:22.085 --> 00:06:25.762
+Each event says who did it and when, with the client, the roles
+
+00:06:25.762 --> 00:06:29.385
+someone received, how they signed in, and the network address.
+
+00:06:29.837 --> 00:06:31.991
+Details shows the whole event.
+
+00:06:31.991 --> 00:06:36.537
+Events can be turned off and trimmed like any other audit trail event.
+
+00:06:40.721 --> 00:06:45.824
+Back on the platform, the hierarchy shows both firms and their clients.
+
+00:06:45.824 --> 00:06:48.211
+Each parent sees only its own.
+
+00:06:48.663 --> 00:06:54.203
+Search finds a parent by its name or address, or by those of its clients.
+
+00:06:54.656 --> 00:06:56.459
+Manage opens a parent:
+
+00:06:56.459 --> 00:07:01.161
+suspend or resume it with all its clients, move a client to another
+
+00:07:01.161 --> 00:07:03.416
+parent, or remove everything.
+
+00:07:07.616 --> 00:07:13.008
+Opening a client follows the shape of the OAuth authorization code flow with PKCE.
+
+00:07:13.008 --> 00:07:17.910
+The one-time code is random, lives sixty seconds, works once, and only for
+
+00:07:17.910 --> 00:07:21.036
+the client and the browser that asked for it.
+
+00:07:21.786 --> 00:07:25.469
+In the client, people from the parent are linked accounts.
+
+00:07:25.469 --> 00:07:29.901
+They have no password, nobody can edit them there, and their roles come
+
+00:07:29.901 --> 00:07:31.916
+only from the parent's rules.
+
+00:07:32.666 --> 00:07:34.528
+Guards keep tenants apart:
+
+00:07:34.528 --> 00:07:39.593
+code in one tenant cannot reach another outside the broker, blocked features stay
+
+00:07:39.593 --> 00:07:44.426
+hidden, and outbound requests cannot reach other tenants or private networks.
+
+00:07:45.176 --> 00:07:49.771
+Cookies stay on each tenant's own address, a client page cannot call its
+
+00:07:49.771 --> 00:07:54.249
+parent from a script, and the address of a suspended or removed tenant
+
+00:07:54.249 --> 00:07:56.076
+never shows another site.
+
+00:08:00.276 --> 00:08:05.221
+In Program.cs, call AddTenantHierarchy inside AddOrchardCms.
+
+00:08:05.221 --> 00:08:12.416
+It installs the guards in every tenant, and does nothing for a tenant outside a hierarchy.
+
+00:08:13.166 --> 00:08:19.357
+In appsettings.json, the Tenant Hierarchy section names the platform domain that parent addresses
+
+00:08:19.357 --> 00:08:23.746
+go under, and the database servers child tenants can be created on.
+
+00:08:24.496 --> 00:08:27.516
+SQL Server and PostgreSQL are built in.
+
+00:08:27.516 --> 00:08:33.422
+For another server, implement I Child Tenant Database Provisioner and register it:
+
+00:08:33.422 --> 00:08:37.986
+it creates each client's database and login, and removes them.
+
+00:08:39.986 --> 00:08:44.706
+The Tenant Hierarchy gives an organization its own sites to run for its
+
+00:08:44.706 --> 00:08:50.101
+customers, one sign-in to reach them all, and a record of everything done in them.
+
+00:08:50.101 --> 00:08:51.696
+Thanks for watching.
+

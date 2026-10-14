@@ -1,0 +1,39 @@
+@model TenantSwitchViewModel
+
+@{
+    var labels = Model.Labels;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyChildrenSwitch" title="@T["Open a {0}", labels.ChildLower]">
+        <breadcrumb-item id="TenantHierarchyChildren" action="Index" controller="ChildTenants" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ViewChildTenants.Name">@labels.Children</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (Model.SignedOutCount.HasValue)
+{
+    <div class="alert alert-success">
+        @T.Plural(Model.SignedOutCount.Value, "You were signed out of 1 open session.", "You were signed out of {0} open sessions.")
+    </div>
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-7">
+        <p class="text-muted">@T["Pick a {0} to open it. You are signed in there as yourself, with the roles your administrator gave you.", labels.ChildLower]</p>
+
+        <partial name="_TenantPickerList" model="Model" />
+
+        <hr class="my-4" />
+
+        <form method="post" action="@Url.Content("~/delegated-access/sign-out-everywhere")" asp-antiforgery="true" class="d-flex flex-wrap align-items-center gap-2">
+            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-right-from-bracket me-1" aria-hidden="true"></i>@T["Sign out of every {0}", labels.ChildLower]</button>
+            <span class="small text-muted">@T["Ends every session you have open in your {0}, on every device.", labels.ChildrenLower]</span>
+        </form>
+    </div>
+</div>
+
+<style at="Head">
+    .th-avatar { width: 2.5rem; height: 2.5rem; background-color: var(--bs-primary-bg-subtle); color: var(--bs-primary-text-emphasis); }
+    .list-group-item.active .th-avatar { background-color: rgba(255, 255, 255, .25); color: inherit; }
+    .min-w-0 { min-width: 0; }
+</style>

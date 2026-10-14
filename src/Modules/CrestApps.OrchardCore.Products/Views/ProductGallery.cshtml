@@ -1,0 +1,58 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductDetailsShapeViewModel
+
+@*
+    The images of a product: the first media field of its type that has images. Several images become a Bootstrap
+    carousel with thumbnails.
+*@
+
+@{
+    var product = Model.Product;
+    var images = product?.Images ?? [];
+    var id = $"product-gallery-{product?.ContentItem?.ContentItemId}";
+}
+
+@if (images.Count == 0)
+{
+    <div class="product-gallery product-gallery-empty" aria-hidden="true">
+        <span class="fa-regular fa-image fa-3x"></span>
+    </div>
+}
+else if (images.Count == 1)
+{
+    <div class="product-gallery">
+        <img src="@images[0].Url" alt="@images[0].Alt" class="product-gallery-image" />
+    </div>
+}
+else
+{
+    <div class="product-gallery">
+        <div id="@id" class="carousel slide" data-bs-ride="false" data-bs-interval="false">
+            <div class="carousel-inner">
+                @for (var i = 0; i < images.Count; i++)
+                {
+                    <div class="carousel-item @(i == 0 ? "active" : null)">
+                        <img src="@images[i].Url" alt="@images[i].Alt" class="product-gallery-image d-block" loading="@(i == 0 ? "eager" : "lazy")" />
+                    </div>
+                }
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#@id" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">@T["Previous image"]</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#@id" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">@T["Next image"]</span>
+            </button>
+        </div>
+        <div class="product-gallery-thumbnails">
+            @for (var i = 0; i < images.Count; i++)
+            {
+                <button type="button" data-bs-target="#@id" data-bs-slide-to="@i" class="@(i == 0 ? "active" : null)" aria-current="@(i == 0 ? "true" : null)" aria-label="@T["Image {0}", i + 1]">
+                    <img src="@images[i].ThumbnailUrl" alt="" loading="lazy" />
+                </button>
+            }
+        </div>
+    </div>
+}

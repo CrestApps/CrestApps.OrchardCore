@@ -1412,6 +1412,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public CancellationToken EndCallRequested { get; set; }
 
         /// <summary>
+        /// The token the loop passes that fires when the node begins to shut down.
+        /// </summary>
+        public CancellationToken NodeStopping { get; set; }
+
+        /// <summary>
         /// Whether the model said, as it ended the call, that it had reached voicemail.
         /// </summary>
         public bool ReachedVoicemail { get; set; }
@@ -1455,6 +1460,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 ProviderCallId = "call-1",
                 HandoffRequested = HandoffRequested,
                 EndCallRequested = EndCallRequested,
+                NodeStopping = NodeStopping,
                 ReachedVoicemail = () => ReachedVoicemail,
                 EndCallRequests = EndCallRequests,
                 HandoffInstructions = HandoffInstructions,

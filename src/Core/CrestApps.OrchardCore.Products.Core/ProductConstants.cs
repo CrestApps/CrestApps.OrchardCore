@@ -1,0 +1,19 @@
+namespace CrestApps.OrchardCore.Products.Core;
+
+public static class ProductConstants
+{
+    /// <summary>
+    /// The content type of a product listing page.
+    /// </summary>
+    public const string ProductListingContentType = "ProductListing";
+
+    public static class Feature
+    {
+        public const string ModuleId = "CrestApps.OrchardCore.Products";
+
+        /// <summary>
+        /// The feature that lists products on the front end, with filters, sorting and product pages.
+        /// </summary>
+        public const string Listing = "CrestApps.OrchardCore.Products.Listing";
+    }
+}

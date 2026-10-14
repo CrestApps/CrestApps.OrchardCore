@@ -1,0 +1,68 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductPartViewModel
+
+@if (Model.ShowPurchasable)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="IsPurchasable" />
+                <label class="form-check-label" asp-for="IsPurchasable">@T["Sell online"]</label>
+                <span class="hint dashed">@T["When unchecked, the product is listed but cannot be bought online."]</span>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Price">
+    <label asp-for="Price" class="ocat-label">@T["Price"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input type="number" min="0" step="0.01" asp-for="Price" class="form-control" />
+            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" aria-label="@T["Currency"]">
+                <option value="">@T["Use the default currency"]</option>
+            </select>
+        </div>
+        @if (Model.PriceRequired)
+        {
+            <span class="hint">@T["Select the currency this price is sold in. Leave it empty to use the content type's default currency."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["Optional: this product is not sold online and its price is not shown. Select the currency this price is in, or leave it empty to use the content type's default currency."]</span>
+        }
+        <span asp-validation-for="Price"></span>
+        <span asp-validation-for="Currency"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CompareAtPrice">
+    <label asp-for="CompareAtPrice" class="ocat-label">@T["Compare-at price"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="0.01" asp-for="CompareAtPrice" class="form-control" />
+        <span class="hint">@T["Optional \"was\" or list price. When it is higher than the price, it is shown struck through with the discount."]</span>
+        <span asp-validation-for="CompareAtPrice"></span>
+    </div>
+</div>
+
+@if (Model.ShowPriceDisplay)
+{
+    <div class="ocat-wrapper" asp-validation-class-for="PriceDisplay">
+        <label asp-for="PriceDisplay" class="ocat-label">@T["Price display"]</label>
+        <div class="ocat-end">
+            <select asp-for="PriceDisplay" asp-items="Model.PriceDisplays" class="form-select"></select>
+            <span class="hint">@T["How this product's price is shown to visitors."]</span>
+            <span asp-validation-for="PriceDisplay"></span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Sku">
+    <label asp-for="Sku" class="ocat-label">@T["SKU"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="Sku" class="form-control" />
+        <span class="hint">@T["An optional stock-keeping unit that uniquely identifies this product."]</span>
+        <span asp-validation-for="Sku"></span>
+    </div>
+</div>

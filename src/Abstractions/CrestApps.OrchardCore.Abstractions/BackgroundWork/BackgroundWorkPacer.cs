@@ -19,8 +19,9 @@ public static class BackgroundWorkPacer
     /// </summary>
     /// <remarks>
     /// The gate lives in memory, so a crash or restart can never leave it held, and it is released on every way a
-    /// batch ends. The one thing that could still hold it is a batch that hangs instead of failing; giving up the
-    /// wait after this long means such a batch slows the other jobs down but never stops them.
+    /// batch ends, including when its caller is cancelled while the batch itself keeps running. The one thing that
+    /// could still hold it is a batch that hangs while its caller keeps waiting; giving up the wait after this long
+    /// means such a batch slows the other jobs down but never stops them.
     /// </remarks>
     public static readonly TimeSpan GateWaitLimit = TimeSpan.FromMinutes(5);
 
@@ -66,7 +67,28 @@ public static class BackgroundWorkPacer
         try
         {
             var started = TimeProvider.System.GetTimestamp();
-            var result = await batch(cancellationToken);
+            var batchTask = batch(cancellationToken);
+            TResult result;
+
+            try
+            {
+                // A batch that does not stop when it is cancelled used to keep the gate for as long as it hung, and
+                // every other job of every tenant then waited out the full wait limit before each of its batches.
+                // The caller stops waiting once it is cancelled, and the gate is released with it.
+                result = await batchTask.WaitAsync(cancellationToken);
+            }
+            catch (OperationCanceledException) when (!batchTask.IsCompleted)
+            {
+                // Nobody awaits the batch any more; its failure, if it ends in one, is observed here.
+                _ = batchTask.ContinueWith(
+                    static task => _ = task.Exception,
+                    CancellationToken.None,
+                    TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                    TaskScheduler.Default);
+
+                throw;
+            }
+
             var pause = GetPause(TimeProvider.System.GetElapsedTime(started), options);
 
             if (pause > TimeSpan.Zero)

@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Products.Deployments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CurrencyDeploymentStep>
+
+<h5>@T["Currencies"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All currencies"]</span>
+}
+else if (Model.Value.CurrencyIds?.Length > 0)
+{
+    <span class="badge text-bg-warning">@(Model.Value.CurrencyIds.Length == 1 ? T["1 selected currency."] : T["{0} selected currencies.", Model.Value.CurrencyIds.Length])</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected currencies."]</span>
+}

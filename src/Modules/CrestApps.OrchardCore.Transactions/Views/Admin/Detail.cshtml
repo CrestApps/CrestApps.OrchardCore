@@ -1,0 +1,203 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Transactions.Core
+@using CrestApps.OrchardCore.Transactions.Core.Services
+@using CrestApps.OrchardCore.Transactions.Models
+@model TransactionDetailViewModel
+@inject TransactionDisplayText DisplayText
+
+@{
+    var transaction = Model.Transaction;
+
+    // The same rules the actions apply, so a button is only offered when pressing it would work.
+    var canRecordPayment = TransactionStateMachine.CanRecordPayment(transaction);
+    var canMarkPaid = TransactionStateMachine.CanMarkPaid(transaction);
+    var canCancel = TransactionStateMachine.CanCancel(transaction);
+    var canSendReminder = TransactionStateMachine.CanSendReminder(transaction);
+
+    var decimalPlaces = CurrencyScale.GetDecimalPlaces(transaction.Currency);
+    var amountStep = decimalPlaces == 0 ? "1" : "0." + new string('0', decimalPlaces - 1) + "1";
+}
+
+<zone Name="Title">
+    <breadcrumb name="TransactionsDetail" title="@(T["Transaction: {0}", string.IsNullOrEmpty(transaction.Title) ? T["(untitled)"].Value : transaction.Title])">
+        <breadcrumb-item id="Transactions" action="Index" controller="Admin" area="CrestApps.OrchardCore.Transactions" permission="@TransactionsPermissions.ManageTransactions.Name">@T["Transactions"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T["Summary"]</span>
+                <partial name="_TransactionStatusBadge" model="transaction.Status" />
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">@T["Owner"]</dt>
+                    <dd class="col-sm-8">@(Model.OwnerName ?? T["Unknown"].Value)</dd>
+
+                    <dt class="col-sm-4">@T["Source"]</dt>
+                    <dd class="col-sm-8">@(DisplayText.SourceName(transaction.Source) ?? T["None"].Value)</dd>
+
+                    <dt class="col-sm-4">@T["Reference"]</dt>
+                    <dd class="col-sm-8">@transaction.ReferenceType @(string.IsNullOrEmpty(transaction.ReferenceId) ? "" : $"({transaction.ReferenceId})")</dd>
+
+                    <dt class="col-sm-4">@T["Total"]</dt>
+                    <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)</dd>
+
+                    <dt class="col-sm-4">@T["Paid"]</dt>
+                    <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountPaid, transaction.Currency)</dd>
+
+                    @if (transaction.AmountRefunded > 0m)
+                    {
+                        <dt class="col-sm-4">@T["Refunded"]</dt>
+                        <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountRefunded, transaction.Currency)</dd>
+                    }
+
+                    <dt class="col-sm-4">@T["Outstanding"]</dt>
+                    <dd class="col-sm-8"><strong>@transaction.Currency @CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)</strong></dd>
+
+                    <dt class="col-sm-4">@T["Created"]</dt>
+                    <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.CreatedUtc, Format: "g"))</dd>
+
+                    @if (transaction.DueUtc.HasValue)
+                    {
+                        <dt class="col-sm-4">@T["Due"]</dt>
+                        <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
+                    {
+                        <dt class="col-sm-4">@T["Invoice"]</dt>
+                        <dd class="col-sm-8">
+                            @if (Model.ShowReceipts)
+                            {
+                                <a asp-action="Index" asp-controller="TransactionInvoice" asp-route-itemId="@transaction.ItemId">@transaction.InvoiceNumber</a>
+                            }
+                            else
+                            {
+                                @transaction.InvoiceNumber
+                            }
+                        </dd>
+                    }
+
+                    @if (transaction.SettledUtc.HasValue)
+                    {
+                        <dt class="col-sm-4">@T["Settled"]</dt>
+                        <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.SettledUtc.Value, Format: "g")) (@DisplayText.SettlementMethodName(transaction.SettlementMethod))</dd>
+                    }
+
+                    <dt class="col-sm-4">@T["Reminders sent"]</dt>
+                    <dd class="col-sm-8">@transaction.ReminderCount</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">@T["Timeline"]</div>
+            <ul class="list-group list-group-flush">
+                @if (transaction.Events.Count > 0)
+                {
+                    @foreach (var evt in transaction.Events.OrderByDescending(x => x.CreatedUtc))
+                    {
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>@DisplayText.EventTypeName(evt.Type)</strong>
+                                <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: evt.CreatedUtc, Format: "g"))</span>
+                            </div>
+                            <div>@evt.Message</div>
+                            @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))
+                            {
+                                <a class="small" asp-action="Index" asp-controller="TransactionReceipt" asp-route-itemId="@transaction.ItemId" asp-route-paymentId="@evt.Id">@T["View receipt"]</a>
+                            }
+                            @if (!string.IsNullOrEmpty(evt.ActorName))
+                            {
+                                <div class="text-muted small">@T["By {0}", evt.ActorName]</div>
+                            }
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="list-group-item text-muted">@T["No events recorded yet."]</li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        @if (Model.CanManage)
+        {
+            @if (Model.CanSendReminder)
+            {
+                <div class="card mb-3">
+                    <div class="card-header">@T["Send a reminder"]</div>
+                    <div class="card-body">
+                        <p class="text-muted">@T["Notify the owner about the outstanding balance through their preferred notification channel."]</p>
+                        <form asp-action="SendReminder" method="post">
+                            <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                            <button type="submit" class="btn btn-primary" disabled="@(!canSendReminder)"
+                                    data-url-af="RemoveUrl" data-title="@T["Send reminder"]" data-message="@T["Send the owner a reminder about the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send reminder"]" data-cancel-text="@T["Cancel"]">
+                                @T["Send reminder"]
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <div class="card mb-3">
+                <div class="card-header">@T["Record an offline payment"]</div>
+                <div class="card-body">
+                    <form asp-action="RecordPayment" method="post">
+                        <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
+                        <div class="mb-2">
+                            <label class="form-label" for="Amount">@T["Amount"]</label>
+                            <input type="number" step="@amountStep" min="0" class="form-control" id="Amount" name="Amount" value="@CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency).ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canRecordPayment)" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="Note">@T["Note"]</label>
+                            <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["How the payment was received"]" />
+                        </div>
+                        <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
+                                data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">
+                            @T["Record payment"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-body d-grid gap-2">
+                    <form asp-action="MarkPaid" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <button type="submit" class="btn btn-outline-success w-100" disabled="@(!canMarkPaid)"
+                                data-url-af="RemoveUrl" data-title="@T["Mark as paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]" data-ok-text="@T["Mark as paid"]" data-cancel-text="@T["Cancel"]">
+                            @T["Mark as paid"]
+                        </button>
+                    </form>
+                    <form asp-action="Cancel" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <input type="text" class="form-control mb-2" name="note" placeholder="@T["Cancellation reason (optional)"]" disabled="@(!canCancel)" />
+                        <button type="submit" class="btn btn-outline-danger w-100" disabled="@(!canCancel)"
+                                data-url-af="RemoveUrl" data-title="@T["Cancel transaction"]" data-message="@T["Are you sure you want to cancel this transaction? Nothing more will be collected for it."]" data-ok-text="@T["Cancel transaction"]" data-cancel-text="@T["Keep it"]">
+                            @T["Cancel transaction"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">@T["Add a note"]</div>
+                <div class="card-body">
+                    <form asp-action="AddNote" method="post">
+                        <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                        <textarea class="form-control mb-2" name="note" rows="2" placeholder="@T["Internal note"]"></textarea>
+                        <button type="submit" class="btn btn-secondary">@T["Add note"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<a class="btn btn-link" asp-action="Index">@T["Back to transactions"]</a>

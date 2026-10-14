@@ -1,0 +1,18 @@
+@model OrderConfirmationViewModel
+
+@*
+    The order number on the checkout's confirmation page.
+*@
+
+<div class="alert alert-light border text-center mb-4" role="status">
+    <div class="small text-muted">@T["Order number"]</div>
+    <div class="h4 mb-1 font-monospace">@Model.OrderNumber</div>
+    @if (Model.IsSignedIn)
+    {
+        <a asp-area="CrestApps.OrchardCore.Orders" asp-controller="OrdersAdmin" asp-action="Detail" asp-route-orderId="@Model.OrderId" class="small">@T["View your order"]</a>
+    }
+    else
+    {
+        <div class="small text-muted">@T["Keep this number if you need to contact us about your order."]</div>
+    }
+</div>

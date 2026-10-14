@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@{
+    var listing = Model.Listing;
+    var panelId = $"{listing.FormId}-filters";
+}
+
+<aside class="product-listing-sidebar">
+    <div class="product-listing-filters offcanvas-lg offcanvas-start" tabindex="-1" id="@panelId" aria-labelledby="@panelId-title">
+        <div class="offcanvas-header border-bottom">
+            <h2 class="offcanvas-title h5" id="@panelId-title">@T["Filters"]</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#@panelId" aria-label="@T["Close"]"></button>
+        </div>
+        <div class="offcanvas-body">
+            <div class="product-listing-filters-heading d-none d-lg-flex justify-content-between align-items-baseline mb-2">
+                <h2 class="h6 mb-0">@T["Filters"]</h2>
+                @if (listing.ActiveFilters.Count > 0)
+                {
+                    <a href="@listing.ClearAllUrl" class="small" data-product-listing-link>@T["Clear all"]</a>
+                }
+            </div>
+
+            @await DisplayAsync(listing.SearchShape)
+
+            @foreach (var facet in listing.Facets)
+            {
+                @await DisplayAsync(facet)
+            }
+
+            <div class="d-grid gap-2 mt-3 d-lg-none">
+                <button type="submit" class="btn btn-primary" data-product-listing-apply>@T["Show results"]</button>
+                @if (listing.ActiveFilters.Count > 0)
+                {
+                    <a href="@listing.ClearAllUrl" class="btn btn-outline-secondary">@T["Clear all"]</a>
+                }
+            </div>
+        </div>
+    </div>
+</aside>

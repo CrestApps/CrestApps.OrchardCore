@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Code coverage settings for the tenant hierarchy: only its own assemblies are measured, not the tests or Orchard Core.
+     Compiler-generated code is kept: the body of every async method is a compiler-generated state machine. -->
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*CrestApps\.OrchardCore\.TenantHierarchy\.dll$</ModulePath>
+        <ModulePath>.*CrestApps\.OrchardCore\.TenantHierarchy\.Core\.dll$</ModulePath>
+        <ModulePath>.*CrestApps\.OrchardCore\.TenantHierarchy\.Abstractions\.dll$</ModulePath>
+      </Include>
+    </ModulePaths>
+    <Attributes>
+      <Exclude>
+        <Attribute>^System\.CodeDom\.Compiler\.GeneratedCodeAttribute$</Attribute>
+      </Exclude>
+    </Attributes>
+  </CodeCoverage>
+</Configuration>

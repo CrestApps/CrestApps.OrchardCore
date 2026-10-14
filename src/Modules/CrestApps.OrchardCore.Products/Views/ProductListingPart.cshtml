@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.Products.Core.Listing
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@*
+    The listing page. Each section is its own shape: ProductListingFilters, ProductListingToolbar,
+    ProductListingActiveFilters, ProductListingResults and ProductListingPager. Override this template to rearrange
+    them, or override one section on its own.
+*@
+
+@{
+    var listing = Model.Listing;
+    var id = listing.ContentItem?.ContentItemId;
+}
+
+<style asp-name="font-awesome"></style>
+<style asp-name="product-listing"></style>
+<script asp-name="product-listing" at="Foot"></script>
+
+<div class="visually-hidden" aria-live="polite" data-product-listing-status="@id"></div>
+
+<div class="product-listing my-4" data-product-listing="@id" style="--product-image-aspect-ratio: @listing.ImageAspectRatio">
+    @*
+        The filter form holds only the filters. The toolbar's controls join it through their form attribute, and the
+        results stay outside it, so a product card can carry a form of its own, such as a subscribe form. A listing
+        without filters or keyword search has no filters panel, and its results take the full width.
+    *@
+    <div class="row g-4">
+        <div class="@(listing.ShowFilters ? "col-lg-3" : "d-none")">
+            <form id="@listing.FormId" method="get" action="@listing.FormAction" data-product-listing-form>
+                @if (listing.AllowViewSwitching)
+                {
+                    <input type="hidden" name="view" value="@(listing.View == ProductListingView.List ? "list" : "grid")" data-default="@(listing.DefaultView == ProductListingView.List ? "list" : "grid")" />
+                }
+
+                @if (listing.ShowFilters)
+                {
+                    @await DisplayAsync(listing.FiltersShape)
+                }
+            </form>
+        </div>
+        <div class="@(listing.ShowFilters ? "col-lg-9" : "col-12")">
+            @await DisplayAsync(listing.ToolbarShape)
+            @await DisplayAsync(listing.ActiveFiltersShape)
+            @await DisplayAsync(listing.ResultsShape)
+            @await DisplayAsync(listing.PagerShape)
+        </div>
+    </div>
+</div>

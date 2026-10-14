@@ -72,6 +72,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ITurnBasedSilenceWatchdog _silenceWatchdog;
     private readonly IAIVoiceSessionTracker _sessionTracker;
+    private readonly IAIVoiceCallShutdown _callShutdown;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
@@ -100,6 +101,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeVoiceConversationRunner realtimeRunner,
         ITurnBasedSilenceWatchdog silenceWatchdog,
         IAIVoiceSessionTracker sessionTracker,
+        IAIVoiceCallShutdown callShutdown,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IClock clock,
@@ -126,6 +128,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _realtimeRunner = realtimeRunner;
         _silenceWatchdog = silenceWatchdog;
         _sessionTracker = sessionTracker;
+        _callShutdown = callShutdown;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _clock = clock;
@@ -254,6 +257,10 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             var meter = new AIVoiceSessionMeter(measuresCallerSpeech: true);
             RealtimeVoiceConversationContext realtime = null;
 
+            // Held until the call has been handed on below, so a node that starts shutting down waits for this
+            // caller to be passed to somebody before it goes.
+            using var heldCall = _callShutdown.HoldCall();
+
             try
             {
                 sessionHeldTheCall = await _realtimeRunner.RunAsync(realtime = new RealtimeVoiceConversationContext
@@ -305,6 +312,10 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
                     // Talk time, silence and interruptions, measured from the session's own audio.
                     Meter = meter,
+
+                    // The session lives in this process, so it ends when the node begins to stop, and the caller is
+                    // handed on below as from any lost session.
+                    NodeStopping = _callShutdown.Stopping,
                 }, cancellationToken);
 
                 // The session is over. Said plainly on the record, because the failure this instrumentation was

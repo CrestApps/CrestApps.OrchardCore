@@ -1,0 +1,38 @@
+WEBVTT
+
+00:00:03.200 --> 00:00:08.593
+Opening a client follows the shape of the OAuth authorization code flow with PKCE.
+
+00:00:08.593 --> 00:00:13.495
+The one-time code is random, lives sixty seconds, works once, and only for
+
+00:00:13.495 --> 00:00:16.620
+the client and the browser that asked for it.
+
+00:00:17.370 --> 00:00:21.054
+In the client, people from the parent are linked accounts.
+
+00:00:21.054 --> 00:00:25.486
+They have no password, nobody can edit them there, and their roles come
+
+00:00:25.486 --> 00:00:27.500
+only from the parent's rules.
+
+00:00:28.250 --> 00:00:30.113
+Guards keep tenants apart:
+
+00:00:30.113 --> 00:00:35.178
+code in one tenant cannot reach another outside the broker, blocked features stay
+
+00:00:35.178 --> 00:00:40.010
+hidden, and outbound requests cannot reach other tenants or private networks.
+
+00:00:40.760 --> 00:00:45.356
+Cookies stay on each tenant's own address, a client page cannot call its
+
+00:00:45.356 --> 00:00:49.834
+parent from a script, and the address of a suspended or removed tenant
+
+00:00:49.834 --> 00:00:51.660
+never shows another site.
+

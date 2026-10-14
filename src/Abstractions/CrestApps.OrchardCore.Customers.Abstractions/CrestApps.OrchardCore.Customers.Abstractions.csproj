@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Customers</RootNamespace>
+    <Title>CrestApps OrchardCore Customers Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provider-agnostic abstractions for reusable buyer identity. Contains the customer owner value
+      (authenticated user or guest), the contact value, and the contact-resolver contract that lets
+      commerce modules (Transactions, and future Orders/Carts) address a buyer for statements and
+      notifications without hard-coding the authenticated user service.
+    </Description>
+    <PackageTags>$(PackageTags) Customers Commerce Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+</Project>

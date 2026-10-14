@@ -23,8 +23,7 @@ When AI profiles are configured with data sources, the system needs to search an
 - **Index schema management** — Creates and manages Azure AI Search index fields for knowledge base indexes with vector search profiles and embedding fields.
 - **Document indexing** — Indexes source documents with their embeddings into Azure AI Search knowledge base indexes.
 - **Vector search** — Performs vector similarity searches using Azure AI Search's built-in vector search to find the most relevant documents.
-- **Filter execution** — Applies OData filter expressions translated to Azure AI Search OData filters targeting root-level filter fields.
-- **OData filter translation** — Translates user OData filters into Azure AI Search-compatible OData with proper field prefixing.
+- **Filters** — Not supported on an Azure AI Search knowledge base index. The index declares no `filters` field, and Azure AI Search rejects a filter on an undeclared field, so the feature registers no OData filter translator. A filter set on an AI profile, a chat interaction or a data source search tool instance is ignored, and a warning is logged. See [Filtering retrieval](index.md#filtering-retrieval).
 - **Batch document reading** — Reads source documents from Azure AI Search indexes in batches for efficient indexing.
 - **Automatic source sync** — When Orchard Core updates or deletes documents in Azure AI Search, the module forwards those provider notifications into the shared data-source indexing queue so mapped knowledge-base indexes stay aligned.
 - **External source connections** — Adds **Azure AI Search** as a selectable AI data-source **Source type** so operators can read directly from an external Azure AI Search index by configuring endpoint, authentication type, index name, and optional managed-identity client ID.

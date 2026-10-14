@@ -20,6 +20,8 @@ Use them to plan a rollout, or as a checklist when you set something up for the 
 | [Let the AI answer your customers](ai-answers-customers.md) | An AI agent answers your numbers' texts and calls, or reaches out to a list, and hands the customer to a person when needed. | Managers, AI content managers |
 | [Put an AI assistant on your website](ai-assistant-on-your-website.md) | A chat window on your public website, answered by an AI profile you control. | AI content managers, administrators |
 | [Build an AI knowledge assistant](ai-knowledge-assistant.md) | An AI that answers from your own documents and data, and can stick to them. | AI content managers |
+| [Sell subscriptions online](sell-subscriptions-online.md) | Plans that renew every month or year, bought through an online checkout, with receipts and a page where subscribers manage their plans. | Store managers, administrators |
+| [Sell on a payment plan](sell-on-a-payment-plan.md) | A down payment by card today, then the rest in scheduled payments, charged to the card or invoiced with a link that pays it. | Store managers |
 
 :::tip[Not an administrator?]
 Each use case lists the features and permissions it needs. Most steps need a manager's or administrator's access. If a menu in a step is missing, see [Roles and permissions](../getting-started/roles-and-permissions.md) for a message you can send your administrator.

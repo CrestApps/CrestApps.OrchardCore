@@ -1159,9 +1159,12 @@ See [Base-voice deployment acceptance](contact-center/production-support.md#base
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:FeatureLifecycle` |
-| **Controls** | How long a Contact Center feature waits for running work to finish when it is disabled |
+| **Controls** | How long Contact Center waits for running work to finish when a feature is disabled, or when the node shuts down |
 
-Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
+| Key | Default | Range | What it does |
+| --- | --- | --- | --- |
+| `DrainTimeoutSeconds` | `30` | `1` to `300` | How long disabling a feature waits for its running work to finish. |
+| `ShutdownDrainTimeoutSeconds` | `5` | `0` to `60` | How long a shutting-down node waits for routing work it already started. The wait holds up shutdown, so keep it short. `0` stops new routing work without waiting. |
 
 ```json
 {
@@ -1169,7 +1172,8 @@ Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
     "CrestApps": {
       "ContactCenter": {
         "FeatureLifecycle": {
-          "DrainTimeoutSeconds": 60
+          "DrainTimeoutSeconds": 60,
+          "ShutdownDrainTimeoutSeconds": 5
         }
       }
     }
@@ -1179,6 +1183,7 @@ Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
 
 ```text
 OrchardCore__CrestApps__ContactCenter__FeatureLifecycle__DrainTimeoutSeconds=60
+OrchardCore__CrestApps__ContactCenter__FeatureLifecycle__ShutdownDrainTimeoutSeconds=5
 ```
 
 See [Feature lifecycle contract](contact-center/production-support.md#feature-lifecycle-contract).
@@ -1579,6 +1584,46 @@ The registry credentials (USA FTC, Canada DNCL) are set only in the admin. See
 The phone number verification providers have no configuration section. Set them up under
 **Settings > Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
+
+## Multi-tenancy
+
+### Tenant hierarchy
+
+| | |
+| --- | --- |
+| **Section** | `TenantHierarchy`, at the root of the application configuration |
+| **Controls** | The platform domain, the egress guard, the database pools child tenants are created in, and reserved slugs |
+
+This section is read from the application configuration only, not from `OrchardCore` or a tenant's own
+configuration, so no tenant can change it.
+
+Keys: `PlatformDomain`, `Scheme`, `UseHostPrefixedCookies` (on, except in development), `ReservedSlugs`,
+`Egress:Enabled` (`true`), `Egress:BlockPrivateNetworks` (`true`), `Egress:AllowedHosts`, and per pool
+`DatabasePools:{name}:DatabaseProvider`, `DatabasePools:{name}:ConnectionString` and
+`DatabasePools:{name}:RetainRemovedDatabases` (`true`).
+
+```json
+{
+  "TenantHierarchy": {
+    "PlatformDomain": "platform.com",
+    "DatabasePools": {
+      "firms": {
+        "DatabaseProvider": "Postgres",
+        "ConnectionString": "Host=db;Username=provisioner;Password=..."
+      }
+    }
+  }
+}
+```
+
+```text
+TenantHierarchy__PlatformDomain=platform.com
+TenantHierarchy__Egress__AllowedHosts__0=ollama.internal
+TenantHierarchy__DatabasePools__firms__DatabaseProvider=Postgres
+```
+
+A parent's policy is set on the platform's **Policy** screen and stored in the parent's shell settings. See
+[Tenant Hierarchy](modules/tenant-hierarchy.md#configuration).
 
 ## Orchard Core sections the modules depend on
 

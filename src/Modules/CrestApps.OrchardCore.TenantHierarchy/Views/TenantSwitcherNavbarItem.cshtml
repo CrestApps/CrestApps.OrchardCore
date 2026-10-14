@@ -1,0 +1,78 @@
+@model TenantSwitcherNavbarViewModel
+
+@{
+    var childWord = string.IsNullOrWhiteSpace(Model.ChildLabel) ? T["site"].Value : Model.ChildLabel.ToLowerInvariant();
+}
+
+@* The same markup as the other navbar menus: the menu floats over the page instead of growing the navbar. *@
+<li class="nav-item th-switcher">
+    <div class="dropdown">
+        <button type="button" class="btn btn-link nav-link dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="@T["{0}, through {1}", Model.ChildName, Model.ParentName]" aria-label="@T["{0}, through {1}", Model.ChildName, Model.ParentName]">
+            <i class="fa-solid fa-building" aria-hidden="true"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end position-absolute shadow">
+            <li class="px-3 py-2 small">
+                <div class="text-muted">@T["You are working in"]</div>
+                <div class="fw-semibold">@Model.ChildName</div>
+                <div class="text-muted">@T["as {0}, through {1}", Model.UserName, Model.ParentName]</div>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                @if (string.IsNullOrEmpty(Model.EmbeddedPickerUrl))
+                {
+                    <a class="dropdown-item" href="@Model.SwitchUrl"><i class="fa-solid fa-shuffle fa-fw me-2" aria-hidden="true"></i>@T["Switch {0}", childWord]</a>
+                }
+                else
+                {
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#th-switcher-modal"><i class="fa-solid fa-shuffle fa-fw me-2" aria-hidden="true"></i>@T["Switch {0}", childWord]</a>
+                }
+            </li>
+            <li><a class="dropdown-item" href="@Model.BackUrl"><i class="fa-solid fa-arrow-left fa-fw me-2" aria-hidden="true"></i>@T["Back to {0}", Model.ParentName]</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form method="post" action="@Url.Content($"~/{TenantHierarchyConstants.Routes.SignOut}")" asp-antiforgery="true" class="m-0">
+                    <button type="submit" class="dropdown-item"><i class="fa-solid fa-right-from-bracket fa-fw me-2" aria-hidden="true"></i>@T["Leave this {0}", childWord]</button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</li>
+
+@if (!string.IsNullOrEmpty(Model.EmbeddedPickerUrl))
+{
+    <div class="modal fade" id="th-switcher-modal" tabindex="-1" aria-labelledby="th-switcher-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="th-switcher-title">@T["Switch {0}", childWord]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body p-0">
+                    @* The list is served by the parent in a frame of another origin, so this page can never read it. *@
+                    <iframe title="@T["Switch {0}", childWord]" data-src="@Model.EmbeddedPickerUrl" class="w-100 border-0" style="height: 70vh;" referrerpolicy="no-referrer"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script at="Foot">
+        (function () {
+            const modal = document.getElementById('th-switcher-modal');
+
+            if (!modal) {
+                return;
+            }
+
+            // The navbar is a list, so the dialog moves to the body where a dialog belongs.
+            document.body.appendChild(modal);
+
+            modal.addEventListener('show.bs.modal', () => {
+                const frame = modal.querySelector('iframe');
+
+                if (!frame.src) {
+                    frame.src = frame.dataset.src;
+                }
+            });
+        })();
+    </script>
+}

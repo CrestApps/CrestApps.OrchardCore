@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@model SubscriptionStatus
+
+@switch (Model)
+{
+    case SubscriptionStatus.Active:
+        <span class="badge bg-success">@T["Active"]</span>
+        break;
+    case SubscriptionStatus.Trialing:
+        <span class="badge bg-info text-dark">@T["Trial"]</span>
+        break;
+    case SubscriptionStatus.PastDue:
+        <span class="badge bg-warning text-dark">@T["Past due"]</span>
+        break;
+    case SubscriptionStatus.Paused:
+        <span class="badge bg-secondary">@T["Paused"]</span>
+        break;
+    case SubscriptionStatus.Canceled:
+        <span class="badge bg-dark">@T["Canceled"]</span>
+        break;
+    case SubscriptionStatus.Expired:
+        <span class="badge bg-danger">@T["Expired"]</span>
+        break;
+    case SubscriptionStatus.Incomplete:
+        <span class="badge bg-secondary">@T["Incomplete"]</span>
+        break;
+    default:
+        <span class="badge bg-secondary">@Model</span>
+        break;
+}

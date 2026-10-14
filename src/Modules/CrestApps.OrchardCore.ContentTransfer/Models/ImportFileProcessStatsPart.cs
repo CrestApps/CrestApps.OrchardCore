@@ -34,4 +34,15 @@ public sealed class ImportFileProcessStatsPart : ContentPart
     /// Total records available if the file.
     /// </summary>
     public int TotalRecords { get; set; }
+
+    /// <summary>
+    /// The row the last run that stopped responding was stuck on; 0 when no run has.
+    /// </summary>
+    public int StalledRow { get; set; }
+
+    /// <summary>
+    /// How many runs in a row got stuck on <see cref="StalledRow"/>. Once it reaches the limit the row is skipped
+    /// and recorded as an error.
+    /// </summary>
+    public int StalledRowAttempts { get; set; }
 }

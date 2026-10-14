@@ -1,0 +1,53 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductDetailsShapeViewModel
+
+@*
+    The top of a product's page: the ProductGallery shape beside the price, the highlights and the ProductActions
+    shape.
+*@
+
+@{
+    var product = Model.Product;
+    var price = product?.Price as ProductPriceDisplayViewModel;
+}
+
+@if (product is not null)
+{
+    <style asp-name="font-awesome"></style>
+    <style asp-name="product-listing"></style>
+
+    <section class="product-summary row g-4 g-lg-5 mb-4" aria-label="@T["Product summary"]">
+        <div class="col-lg-7">
+            @await DisplayAsync(product.GalleryShape)
+        </div>
+        <div class="col-lg-5">
+            <div class="product-summary-panel">
+                <div class="product-summary-price">
+                    @await DisplayAsync(product.Price)
+                    @if (price?.DiscountPercent > 0)
+                    {
+                        <span class="badge bg-danger">@T["Save {0}%", price.DiscountPercent]</span>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(product.Sku))
+                {
+                    <p class="product-summary-sku">@T["SKU {0}", product.Sku]</p>
+                }
+
+                @if (product.Highlights.Count > 0)
+                {
+                    <ul class="product-summary-highlights">
+                        @foreach (var highlight in product.Highlights)
+                        {
+                            <li>@highlight</li>
+                        }
+                    </ul>
+                }
+
+                @await DisplayAsync(product.ActionsShape)
+            </div>
+        </div>
+    </section>
+}

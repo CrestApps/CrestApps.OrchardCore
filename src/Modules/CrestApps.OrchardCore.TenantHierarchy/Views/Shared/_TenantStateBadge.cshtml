@@ -1,0 +1,19 @@
+@model OrchardCore.Environment.Shell.ShellSettings
+@using OrchardCore.Environment.Shell.Models
+
+@* The same badge as the Tenants screen: a light pill with a colored icon. *@
+@switch (Model.State)
+{
+    case TenantState.Running:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-check text-success" aria-hidden="true"></i> @T["Running"]</span>
+        break;
+    case TenantState.Disabled:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Suspended"]</span>
+        break;
+    case TenantState.Uninitialized:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-hourglass-start text-info" aria-hidden="true"></i> @T["Not set up"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal"><i class="fa-solid fa-circle-question text-muted" aria-hidden="true"></i> @Model.State</span>
+        break;
+}

@@ -1,0 +1,35 @@
+@model HierarchyAuditEventViewModel
+
+@{
+    var data = Model.Data;
+    var details = HierarchyAuditText.DescribeDetails(T, data, Model.Labels);
+    var signIn = HierarchyAuditText.DescribeSignIn(T, data.AuthenticationMethods);
+}
+
+<dl class="row mb-0">
+    @if (!string.IsNullOrEmpty(data.ChildDisplayName))
+    {
+        <dt class="col-sm-3">@Model.Labels.Child</dt>
+        <dd class="col-sm-9">@data.ChildDisplayName</dd>
+    }
+    @if (!string.IsNullOrEmpty(details))
+    {
+        <dt class="col-sm-3">@T["Details"]</dt>
+        <dd class="col-sm-9">@details</dd>
+    }
+    @if (!string.IsNullOrEmpty(signIn))
+    {
+        <dt class="col-sm-3">@T["Sign-in"]</dt>
+        <dd class="col-sm-9">@signIn</dd>
+    }
+    @if (!string.IsNullOrEmpty(data.SessionReference))
+    {
+        <dt class="col-sm-3">@T["Session"]</dt>
+        <dd class="col-sm-9"><code>@data.SessionReference</code></dd>
+    }
+    @if (!string.IsNullOrEmpty(data.IpAddress))
+    {
+        <dt class="col-sm-3">@T["IP address"]</dt>
+        <dd class="col-sm-9">@data.IpAddress</dd>
+    }
+</dl>

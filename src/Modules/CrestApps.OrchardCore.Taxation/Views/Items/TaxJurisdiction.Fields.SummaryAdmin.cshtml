@@ -1,0 +1,17 @@
+@model ShapeViewModel<TaxJurisdiction>
+
+<h5 class="mb-0">
+    @Model.Value.Name
+    <span class="badge bg-secondary">@Model.Value.Level</span>
+</h5>
+<small class="text-muted">
+    @T["Code:"] <code>@Model.Value.Code</code>
+    @if (!string.IsNullOrEmpty(Model.Value.Country))
+    {
+        <span class="ms-1">@T["Country:"] @Model.Value.Country</span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Value.Region))
+    {
+        <span class="ms-1">@T["Region:"] @Model.Value.Region</span>
+    }
+</small>

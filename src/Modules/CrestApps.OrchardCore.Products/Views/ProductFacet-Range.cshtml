@@ -1,0 +1,78 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductFacetViewModel
+
+@{
+    var id = $"facet-{Model.Key}";
+    var expanded = !Model.Collapsed || Model.HasSelection;
+    var format = string.IsNullOrWhiteSpace(Model.NumberFormat) ? "#,0.##" : Model.NumberFormat;
+    var prefix = Model.IsPrice ? Model.CurrencySymbol : null;
+    var suffix = Model.IsPrice ? null : Model.Suffix;
+    string Invariant(decimal? value) => value?.ToString("0.##", CultureInfo.InvariantCulture);
+    string Display(decimal? value) => value?.ToString(format, CultureInfo.CurrentCulture);
+}
+
+<section class="product-facet" data-facet="@Model.Key">
+    <h3 class="product-facet-heading">
+        <button class="product-facet-toggle @(expanded ? null : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id" aria-expanded="@(expanded ? "true" : "false")" aria-controls="@id">
+            <span>
+                @Model.Label
+                @if (Model.HasSelection)
+                {
+                    <span class="badge rounded-pill bg-primary ms-1">1<span class="visually-hidden"> @T["selected"]</span></span>
+                }
+            </span>
+            <span class="fa-solid fa-chevron-down product-facet-chevron" aria-hidden="true"></span>
+        </button>
+    </h3>
+    <div class="collapse @(expanded ? "show" : null)" id="@id">
+        <fieldset class="product-facet-body">
+            <legend class="visually-hidden">@Model.Label</legend>
+            @if (Model.Ranges.Count > 0)
+            {
+                <ul class="product-facet-ranges">
+                    @foreach (var range in Model.Ranges)
+                    {
+                        <li>
+                            <a href="@range.Url" class="@(range.Selected ? "active" : null)" aria-current="@(range.Selected ? "true" : null)" data-product-listing-link>@range.Label</a>
+                        </li>
+                    }
+                </ul>
+            }
+            <div class="product-facet-range">
+                <div class="input-group input-group-sm">
+                    @if (!string.IsNullOrEmpty(prefix))
+                    {
+                        <span class="input-group-text">@prefix</span>
+                    }
+                    <input type="number" class="form-control" id="@id-min" name="@(Model.Key)_min" value="@Invariant(Model.SelectedMin)" placeholder="@Display(Model.AvailableMin)" step="any" inputmode="decimal" aria-label="@T["Minimum {0}", Model.Label]" />
+                    @if (!string.IsNullOrEmpty(suffix))
+                    {
+                        <span class="input-group-text">@suffix</span>
+                    }
+                </div>
+                <span class="product-facet-range-separator text-muted" aria-hidden="true">–</span>
+                <div class="input-group input-group-sm">
+                    @if (!string.IsNullOrEmpty(prefix))
+                    {
+                        <span class="input-group-text">@prefix</span>
+                    }
+                    <input type="number" class="form-control" id="@id-max" name="@(Model.Key)_max" value="@Invariant(Model.SelectedMax)" placeholder="@Display(Model.AvailableMax)" step="any" inputmode="decimal" aria-label="@T["Maximum {0}", Model.Label]" />
+                    @if (!string.IsNullOrEmpty(suffix))
+                    {
+                        <span class="input-group-text">@suffix</span>
+                    }
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="@T["Apply"]">
+                    <span class="fa-solid fa-arrow-right" aria-hidden="true"></span>
+                    <span class="visually-hidden">@T["Apply {0}", Model.Label]</span>
+                </button>
+            </div>
+        </fieldset>
+        @if (Model.HasSelection)
+        {
+            <a href="@Model.ClearUrl" class="product-facet-clear small" data-product-listing-link>@T["Clear"]</a>
+        }
+    </div>
+</section>

@@ -90,6 +90,9 @@ jobs:
     - name: Contact Center feature activation tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj
+    - name: Tenant hierarchy integration tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj
     - name: Telephony browser tests
       if: matrix.os == 'ubuntu-latest'
       run: |

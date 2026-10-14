@@ -152,7 +152,16 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.DrainTimeoutSeconds is >= 1 and <= 300,
                 "The Contact Center feature drain timeout must be between 1 and 300 seconds.")
+            .Validate(
+                options => options.ShutdownDrainTimeoutSeconds is >= 0 and <= 60,
+                "The Contact Center shutdown drain timeout must be between 0 and 60 seconds.")
             .ValidateOnStart();
+
+        // A node that is shutting down stops offering, assigning and dialing the moment the host says so, so it
+        // does not start routing work it will not be alive to finish. A singleton, so the registration on the host's
+        // stopping token goes with the shell; activation is what makes the registration.
+        services.AddSingleton<ContactCenterShutdownDrain>();
+        services.AddScoped<IModularTenantEvents>(sp => sp.GetRequiredService<ContactCenterShutdownDrain>());
 
         services
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()

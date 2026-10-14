@@ -1,0 +1,157 @@
+@model ParentDetailViewModel
+
+@{
+    var parent = Model.Parent;
+    var settings = parent.Settings;
+    var isRunning = settings.State == OrchardCore.Environment.Shell.Models.TenantState.Running;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TenantHierarchyPlatformParent" title="@T["{0}", parent.DisplayName]">
+        <breadcrumb-item id="TenantHierarchyPlatform" action="Index" controller="Platform" area="@TenantHierarchyConstants.Features.Area" permission="@TenantHierarchyPermissions.ManageTenantHierarchy.Name">@T["Tenant Hierarchy"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<ul class="list-group mb-3">
+    <li class="list-group-item">
+        <div class="row">
+            <div class="col-lg-6 col-sm-12 title d-flex">
+                <div class="d-inline">
+                    <span class="text-break fw-semibold">@parent.DisplayName</span>
+                    <span class="badge ta-badge fw-normal"><i class="fa-solid fa-building text-info" aria-hidden="true"></i> @T["Parent"]</span>
+                    <partial name="_TenantStateBadge" model="settings" />
+                </div>
+            </div>
+            <div class="col-lg-6 col-sm-12 float-end">
+                <div class="float-end">
+                    <a class="btn btn-primary btn-sm" asp-action="EditParent" asp-route-id="@settings.Name">@T["Policy"]</a>
+                    @if (!string.IsNullOrEmpty(parent.Address))
+                    {
+                        <a class="btn btn-info btn-sm" href="@parent.Address" target="_blank" rel="noopener noreferrer">@T["View"]</a>
+                    }
+                    @if (isRunning)
+                    {
+                        <a class="btn btn-danger btn-sm" asp-action="Suspend" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend"]" data-message="@T["Suspend {0} and every running child tenant? Nobody can use them until you resume.", parent.DisplayName]">@T["Suspend"]</a>
+                    }
+                    else
+                    {
+                        <a class="btn btn-success btn-sm" asp-action="Resume" asp-route-id="@settings.Name" data-url-af="UnsafeUrl">@T["Resume"]</a>
+                    }
+                    @if (parent.Children.Count == 0)
+                    {
+                        <a class="btn btn-secondary btn-sm" asp-action="Unmake" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant again?", parent.DisplayName]">@T["Make ordinary"]</a>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <p class="mb-0"><small class="text-muted">@settings.Name</small></p>
+                @if (!string.IsNullOrEmpty(settings.GetPrimaryHost()))
+                {
+                    <p class="mb-0"><code class="text-break">@settings.GetPrimaryHost()</code></p>
+                }
+            </div>
+        </div>
+    </li>
+</ul>
+
+@foreach (var warning in parent.Warnings)
+{
+    <div class="alert alert-warning py-2"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@warning</div>
+}
+
+<ul class="list-group mb-4">
+    <li class="list-group-item text-bg-theme">
+        <div class="my-1">@T.Plural(parent.Children.Count, "1 child tenant", "{0} child tenants")</div>
+    </li>
+    @if (parent.Children.Count == 0)
+    {
+        <li class="list-group-item text-center text-muted py-4">@T["This parent has no child tenants yet."]</li>
+    }
+    @foreach (var child in parent.Children)
+    {
+        <li class="list-group-item">
+            <div class="row">
+                <div class="col-lg-6 col-sm-12 title d-flex">
+                    <div class="d-inline">
+                        <span class="text-break">@child.DisplayName</span>
+                        <partial name="_TenantStateBadge" model="child.Settings" />
+                    </div>
+                </div>
+                <div class="col-lg-6 col-sm-12 float-end">
+                    <div class="float-end d-flex gap-1">
+                        @if (!string.IsNullOrEmpty(child.Address) && child.Settings.State == OrchardCore.Environment.Shell.Models.TenantState.Running)
+                        {
+                            <a class="btn btn-info btn-sm" href="@child.Address" target="_blank" rel="noopener noreferrer">@T["View"]</a>
+                        }
+                        @if (Model.OtherParents.Count > 0)
+                        {
+                            <form asp-action="Move" asp-route-id="@settings.Name" method="post" class="d-flex gap-1" data-th-move-form>
+                                <input type="hidden" name="child" value="@child.Settings.Name" />
+                                <select name="newParent" class="form-select form-select-sm" asp-items="Model.OtherParents" aria-label="@T["Move to"]"></select>
+                                <button type="submit" class="btn btn-sm btn-secondary text-nowrap">@T["Move"]</button>
+                            </form>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <p class="mb-0"><small class="text-muted">@child.Settings.Name</small></p>
+                    @if (!string.IsNullOrEmpty(child.Settings.GetPrimaryHost()))
+                    {
+                        <p class="mb-0"><code class="text-break">@child.Settings.GetPrimaryHost()</code></p>
+                    }
+                    @foreach (var warning in child.Warnings)
+                    {
+                        <p class="mb-0 small text-warning-emphasis"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@warning</p>
+                    }
+                </div>
+            </div>
+        </li>
+    }
+</ul>
+
+@if (Model.OtherParents.Count > 0)
+{
+    <script at="Foot">
+        (function () {
+            const message = @Json.Serialize(T["Move this child tenant? Its address changes and every open session of the old parent ends."].Value);
+
+            document.querySelectorAll('[data-th-move-form]').forEach((form) => form.addEventListener('submit', (event) => {
+                if (!window.confirm(message)) {
+                    event.preventDefault();
+                }
+            }));
+        })();
+    </script>
+}
+
+<div class="card border-danger">
+    <div class="card-header text-danger fw-semibold">@T["Remove the parent and all its child tenants"]</div>
+    <div class="card-body">
+        @if (isRunning)
+        {
+            <p class="mb-0 text-muted">@T["Suspend the parent first. Removing a parent removes each child tenant, then the parent, with all their data."]</p>
+        }
+        else
+        {
+            <form asp-action="Remove" asp-route-id="@settings.Name" method="post" class="d-flex flex-wrap gap-2 align-items-center">
+                <input name="confirmName" class="form-control w-auto" placeholder="@T["Type {0} to confirm", settings.Name]" autocomplete="off" aria-label="@T["Type the tenant name to confirm"]" />
+                <button type="submit" class="btn btn-danger">@T["Remove everything"]</button>
+                <span class="small text-muted">@T["Type {0} to confirm. This cannot be undone.", settings.Name]</span>
+            </form>
+        }
+    </div>
+</div>
+
+<script at="Foot">
+    document.querySelectorAll('[data-th-confirm]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+            if (!window.confirm(button.dataset.thConfirm)) {
+                event.preventDefault();
+            }
+        });
+    });
+</script>
