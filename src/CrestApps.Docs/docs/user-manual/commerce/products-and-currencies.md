@@ -131,11 +131,11 @@ Then, on each product:
 | **SKU** | The variant's own SKU. Leave it empty to use the product's. Each variant's SKU must be different. |
 | **Price** | The variant's own price. Leave it empty to sell it at the product's price. |
 | **Compare-at price** | A *was* price for the variant. |
-| **Image** | The path of the variant's image in your media library, such as *products/red-shirt.jpg*. |
+| **Image** | Which of the product's own photos the variant shows. Add every photo to the product's images and save first, then pick one per variant. |
 
-When you change the values later, a variant keeps its SKU and prices while its combination stays; combinations you remove are dropped.
+When you change the values later, a variant keeps its SKU and prices while its combination stays; combinations you remove are dropped. When the content type gains an option, each variant carries on as the first combination that matches it: an *M* shirt becomes *M / Red* with its SKU and price, and *M / Blue* is new. When the type loses an option, the first variant of each remaining combination carries on.
 
-In listings, a product whose variants are priced differently shows **From** its lowest price, a filter on an option finds the product when any variant on sale has that value, and keyword search matches the variants' SKUs. On the product's card and page, **Add to cart** offers a **Choose** list of the variants on sale with their prices.
+In listings, a product whose variants are priced differently shows **From** its lowest price, a filter on an option finds the product when any variant on sale has that value, and keyword search matches the variants' SKUs. On the product's card and page, **Add to cart** offers one list per option, such as **Size** and **Finish**. A value that makes no variant on sale with the others picked can't be chosen. On the product's page, the price, the SKU and the photo change to the chosen variant's. Without JavaScript, a single **Choose** list of the variants on sale, with their prices, is offered instead.
 
 :::tip[Taxes on products]
 To charge tax on a product, add the **Taxation** part to the same content type. See [Taxes](taxes.md).

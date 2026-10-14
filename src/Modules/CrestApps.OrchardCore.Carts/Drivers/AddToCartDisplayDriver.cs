@@ -110,7 +110,22 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                     Price = (variant.Price ?? productPrice) is { } amount && !string.IsNullOrEmpty(product.Currency)
                         ? ProductPriceFormatter.Format(amount, product.Currency)
                         : null,
+                    Options = new Dictionary<string, string>(variant.Options, StringComparer.OrdinalIgnoreCase),
+                    ImagePath = variant.ImagePath,
                 })
+                .ToList();
+
+            // One list per option, with the values the variants on sale come in, in the order the product gives them.
+            model.Options = (variantsPart?.Options ?? [])
+                .Where(option => !string.IsNullOrEmpty(option?.Name))
+                .Select(option => new AddToCartOptionViewModel
+                {
+                    Name = option.Name,
+                    Values = (option.Values ?? [])
+                        .Where(value => variants.Any(variant => variant.Options.TryGetValue(option.Name, out var chosen) && string.Equals(chosen, value, StringComparison.OrdinalIgnoreCase)))
+                        .ToList(),
+                })
+                .Where(option => option.Values.Count > 0)
                 .ToList();
             model.MaxQuantity = defaultPrice is null
                 ? _options.MaxQuantity

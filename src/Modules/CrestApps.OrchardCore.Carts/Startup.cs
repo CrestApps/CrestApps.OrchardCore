@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Carts.Drivers;
 using CrestApps.OrchardCore.Carts.Handlers;
 using CrestApps.OrchardCore.Carts.Migrations;
+using CrestApps.OrchardCore.Carts.Services;
 using CrestApps.OrchardCore.Carts.Tasks;
 using CrestApps.OrchardCore.Carts.ViewModels;
 using CrestApps.OrchardCore.Core.Services;
@@ -12,6 +13,7 @@ using CrestApps.OrchardCore.Products.Core.Models;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -20,6 +22,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Admin.Models;
 using OrchardCore.Modules;
+using OrchardCore.ResourceManagement;
 using OrchardCore.Users.Events;
 
 namespace CrestApps.OrchardCore.Carts;
@@ -45,6 +48,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<AddToCartDisplayDriver>();
 
         services.AddDisplayDriver<Navbar, CartNavbarDisplayDriver>();
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, CartResourceManagementOptionsConfiguration>();
 
         // The cart's shapes can be overridden in Liquid as well as Razor.
         services.Configure<TemplateOptions>(options =>

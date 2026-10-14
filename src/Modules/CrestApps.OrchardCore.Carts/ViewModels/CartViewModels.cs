@@ -24,6 +24,11 @@ public class AddToCartViewModel
     public IList<AddToCartVariantViewModel> Variants { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the product's options and the values its variants on sale come in, in the product's order.
+    /// </summary>
+    public IList<AddToCartOptionViewModel> Options { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the most units that can be added at once, 1 when only one can be bought.
     /// </summary>
     public int MaxQuantity { get; set; }
@@ -73,4 +78,21 @@ public class AddToCartVariantViewModel
     public string Price { get; set; }
 
     public string Sku { get; set; }
+
+    /// <summary>
+    /// Gets or sets the variant's value for each option, by option name.
+    /// </summary>
+    public IDictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the media library path of the variant's image, one of the product's own images.
+    /// </summary>
+    public string ImagePath { get; set; }
+}
+
+public class AddToCartOptionViewModel
+{
+    public string Name { get; set; }
+
+    public IList<string> Values { get; set; } = [];
 }

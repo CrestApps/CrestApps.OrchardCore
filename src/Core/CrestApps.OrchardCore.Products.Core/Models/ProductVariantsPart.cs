@@ -127,6 +127,11 @@ public static class ProductVariants
     /// One variant per combination of option values. A combination that already has a variant keeps it, with its
     /// SKU, prices and switch; a variant whose combination is gone is dropped.
     /// </summary>
+    /// <remarks>
+    /// When the type gains an option, a variant made before it carries on as the first combination that agrees with
+    /// its values, so a size M keeps its SKU and price as M / Red. When the type loses an option, the first variant
+    /// that agrees with a combination carries on as it. Exact matches are settled first, so they are never taken.
+    /// </remarks>
     public static List<ProductVariant> Combine(IEnumerable<ProductOption> options, IEnumerable<ProductVariant> existing, Func<string> newId)
     {
         ArgumentNullException.ThrowIfNull(newId);
@@ -154,26 +159,38 @@ public static class ProductVariants
         }
 
         var previous = (existing ?? []).Where(variant => variant?.Options is not null).ToList();
-        var variants = new List<ProductVariant>();
+        var wanted = combinations.ToList();
+        var matches = new ProductVariant[wanted.Count];
 
-        foreach (var combination in combinations)
+        // Exact matches first, then a variant that agrees with a combination on the options both have.
+        foreach (var exact in new[] { true, false })
         {
-            var match = previous.FirstOrDefault(variant => SameCombination(variant.Options, combination));
-
-            if (match is not null)
+            for (var i = 0; i < wanted.Count; i++)
             {
-                match.Options = combination;
-                variants.Add(match);
-                previous.Remove(match);
+                if (matches[i] is not null)
+                {
+                    continue;
+                }
 
-                continue;
+                var match = previous.FirstOrDefault(variant => exact
+                    ? SameCombination(variant.Options, wanted[i])
+                    : Agrees(variant.Options, wanted[i]));
+
+                if (match is not null)
+                {
+                    matches[i] = match;
+                    previous.Remove(match);
+                }
             }
+        }
 
-            variants.Add(new ProductVariant
-            {
-                VariantId = newId(),
-                Options = combination,
-            });
+        var variants = new List<ProductVariant>(wanted.Count);
+
+        for (var i = 0; i < wanted.Count; i++)
+        {
+            var variant = matches[i] ?? new ProductVariant { VariantId = newId() };
+            variant.Options = wanted[i];
+            variants.Add(variant);
         }
 
         return variants;
@@ -182,4 +199,13 @@ public static class ProductVariants
     private static bool SameCombination(Dictionary<string, string> left, Dictionary<string, string> right)
         => left.Count == right.Count &&
            right.All(pair => left.TryGetValue(pair.Key, out var value) && string.Equals(value, pair.Value, StringComparison.OrdinalIgnoreCase));
+
+    // One combination's options are all among the other's, with the same values: an option was added or removed.
+    private static bool Agrees(Dictionary<string, string> left, Dictionary<string, string> right)
+    {
+        var (smaller, larger) = left.Count <= right.Count ? (left, right) : (right, left);
+
+        return smaller.Count > 0 &&
+            smaller.All(pair => larger.TryGetValue(pair.Key, out var value) && string.Equals(value, pair.Value, StringComparison.OrdinalIgnoreCase));
+    }
 }

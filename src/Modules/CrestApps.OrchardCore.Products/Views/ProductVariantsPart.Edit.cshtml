@@ -49,13 +49,28 @@
                                 <td><input asp-for="Variants[i].Sku" class="form-control form-control-sm" placeholder="@Model.ProductSku" aria-label="@T["SKU of {0}", Model.Variants[i].Title]" /></td>
                                 <td><input type="number" min="0" step="0.01" asp-for="Variants[i].Price" class="form-control form-control-sm" placeholder="@Model.ProductPrice" aria-label="@T["Price of {0}", Model.Variants[i].Title]" /></td>
                                 <td><input type="number" min="0" step="0.01" asp-for="Variants[i].CompareAtPrice" class="form-control form-control-sm" aria-label="@T["Compare-at price of {0}", Model.Variants[i].Title]" /></td>
-                                <td><input asp-for="Variants[i].ImagePath" class="form-control form-control-sm" placeholder="@T["products/red-shirt.jpg"]" aria-label="@T["Image of {0}", Model.Variants[i].Title]" /></td>
+                                <td>
+                                    @{
+                                        var imagePath = Model.Variants[i].ImagePath;
+                                    }
+                                    <select asp-for="Variants[i].ImagePath" class="form-select form-select-sm" aria-label="@T["Image of {0}", Model.Variants[i].Title]">
+                                        <option value="">@T["The product's images"]</option>
+                                        @foreach (var image in Model.Images)
+                                        {
+                                            <option value="@image" selected="@(string.Equals(image, imagePath, StringComparison.Ordinal))">@System.IO.Path.GetFileName(image)</option>
+                                        }
+                                        @if (!string.IsNullOrEmpty(imagePath) && !Model.Images.Contains(imagePath))
+                                        {
+                                            <option value="@imagePath" selected>@System.IO.Path.GetFileName(imagePath)</option>
+                                        }
+                                    </select>
+                                </td>
                             </tr>
                         }
                     </tbody>
                 </table>
             </div>
-            <span class="hint">@T["An empty SKU or price uses the product's. The image is a path in the media library. Untick Sold to stop selling a variant without losing it."]</span>
+            <span class="hint">@T["An empty SKU or price uses the product's. A variant's image is one of the product's own photos: add every photo to the product, save, then pick the one each variant shows. Untick Sold to stop selling a variant without losing it."]</span>
         }
     }
     <span asp-validation-for="Variants"></span>
