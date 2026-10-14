@@ -168,6 +168,9 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
 | `CrestApps.OrchardCore.Products` | Products | [Products](./modules/products) |
+| `CrestApps.OrchardCore.Products.Elasticsearch` | Product Search (Elasticsearch) | [Products](./modules/products#search-servers) |
+| `CrestApps.OrchardCore.Products.Lucene` | Product Search (Lucene) | [Products](./modules/products#search-servers) |
+| `CrestApps.OrchardCore.Products.AzureAI` | Product Search (Azure AI Search) | [Products](./modules/products#search-servers) |
 | `CrestApps.OrchardCore.Wizard` | Wizard | [Wizard](./modules/wizard) |
 
 ## Reporting
@@ -188,7 +191,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
-| `CrestApps.OrchardCore.Transactions.Receipts` | Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
+| `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
 
 ## Payment Providers
 

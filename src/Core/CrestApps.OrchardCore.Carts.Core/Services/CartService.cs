@@ -85,7 +85,10 @@ public sealed class CartService : ICartService
         return cart is not null && cart.ExpiresUtc >= _clock.UtcNow ? cart : null;
     }
 
-    public async Task<CartResult> AddAsync(string contentItemId, string priceId, int quantity, CancellationToken cancellationToken = default)
+    public Task<CartResult> AddAsync(string contentItemId, string priceId, int quantity, CancellationToken cancellationToken = default)
+        => AddAsync(contentItemId, priceId, variantId: null, quantity, cancellationToken);
+
+    public async Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(contentItemId))
         {
@@ -97,16 +100,19 @@ public sealed class CartService : ICartService
         var cart = await GetCurrentAsync(cancellationToken);
         var currency = cart?.Lines.Count > 0 ? cart.Currency : null;
 
-        var resolved = await ResolveAsync(contentItemId, priceId, quantity, currency, cancellationToken);
+        var resolved = await ResolveAsync(contentItemId, priceId, variantId, quantity, currency, cancellationToken);
 
         if (resolved.Problem is not null)
         {
             return CartResult.Failure(resolved.Problem, cart);
         }
 
+        variantId = resolved.Product.VariantId;
+
         var existing = cart?.Lines.FirstOrDefault(line =>
             line.ContentItemId == contentItemId &&
-            string.Equals(line.PriceId, resolved.Price.PriceId, StringComparison.Ordinal));
+            string.Equals(line.PriceId, resolved.Price.PriceId, StringComparison.Ordinal) &&
+            string.Equals(line.VariantId, variantId, StringComparison.Ordinal));
 
         var total = (existing?.Quantity ?? 0) + quantity;
 
@@ -126,7 +132,7 @@ public sealed class CartService : ICartService
         // was added.
         if (existing is not null)
         {
-            resolved = await ResolveAsync(contentItemId, priceId, total, currency, cancellationToken);
+            resolved = await ResolveAsync(contentItemId, priceId, variantId, total, currency, cancellationToken);
 
             if (resolved.Problem is not null)
             {
@@ -144,6 +150,7 @@ public sealed class CartService : ICartService
                 LineId = UniqueId.GenerateId(),
                 ContentItemId = contentItemId,
                 PriceId = resolved.Price.PriceId,
+                VariantId = variantId,
                 Quantity = quantity,
                 AddedUnitPrice = resolved.Price.UnitPrice,
                 AddedUtc = _clock.UtcNow,
@@ -179,7 +186,7 @@ public sealed class CartService : ICartService
             return CartResult.Failure(S["That item is no longer in your cart."], cart);
         }
 
-        var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, quantity, cart.Currency, cancellationToken);
+        var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, quantity, cart.Currency, cancellationToken);
 
         if (resolved.Problem is not null)
         {
@@ -281,7 +288,8 @@ public sealed class CartService : ICartService
             {
                 var line = userCart.Lines.FirstOrDefault(candidate =>
                     candidate.ContentItemId == guestLine.ContentItemId &&
-                    string.Equals(candidate.PriceId, guestLine.PriceId, StringComparison.Ordinal));
+                    string.Equals(candidate.PriceId, guestLine.PriceId, StringComparison.Ordinal) &&
+                    string.Equals(candidate.VariantId, guestLine.VariantId, StringComparison.Ordinal));
 
                 if (line is not null)
                 {
@@ -316,7 +324,7 @@ public sealed class CartService : ICartService
 
         foreach (var line in cart.Lines)
         {
-            var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.Quantity, cart.Currency, cancellationToken);
+            var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, cart.Currency, cancellationToken);
             var problem = resolved.Problem;
 
             if (problem is null && line.Quantity > resolved.MaxQuantity)
@@ -349,7 +357,7 @@ public sealed class CartService : ICartService
         };
     }
 
-    private async Task<ResolvedLine> ResolveAsync(string contentItemId, string priceId, int quantity, string currency, CancellationToken cancellationToken)
+    private async Task<ResolvedLine> ResolveAsync(string contentItemId, string priceId, string variantId, int quantity, string currency, CancellationToken cancellationToken)
     {
         var contentItem = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
 
@@ -365,16 +373,24 @@ public sealed class CartService : ICartService
             return new ResolvedLine(S["{0} is bought on its own, not through the cart.", title]) { ContentItem = contentItem, Title = title };
         }
 
-        var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, Quantity = quantity }, cancellationToken);
+        var product = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity }, cancellationToken);
 
         if (product is null)
         {
+            // A product sold in variants needs one chosen, and the one chosen must still be sold.
+            if (contentItem.TryGet<ProductVariantsPart>(out var variants) && variants.HasVariants)
+            {
+                return new ResolvedLine(string.IsNullOrEmpty(variantId)
+                    ? S["Choose the options of {0} first.", title]
+                    : S["This option of {0} is no longer available.", title]) { ContentItem = contentItem, Title = title };
+            }
+
             return new ResolvedLine(S["{0} can't be bought online.", title]) { ContentItem = contentItem, Title = title };
         }
 
         title = string.IsNullOrEmpty(product.Title) ? title : product.Title;
 
-        var price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, Quantity = quantity }, cancellationToken);
+        var price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem) { PriceId = priceId, VariantId = variantId, Quantity = quantity }, cancellationToken);
 
         if (price is null)
         {

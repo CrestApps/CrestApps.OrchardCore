@@ -67,6 +67,7 @@ public sealed class ProductSearchDocumentBuilder
             ContentItemId = contentItem.ContentItemId,
             ContentItemVersionId = contentItem.ContentItemVersionId,
             ContentType = contentItem.ContentType,
+            Culture = GetCulture(contentItem),
             Title = contentItem.DisplayText,
             Sku = product.Sku,
             Price = shownPrice,
@@ -76,6 +77,8 @@ public sealed class ProductSearchDocumentBuilder
             BillingDuration = offered?.Kind == PriceKind.Recurring ? Math.Max(1, offered.BillingDuration ?? 1) : null,
             PriceDisplay = priceDisplay,
             IsPurchasable = isPurchasable,
+            Featured = product.Featured,
+            Position = product.Position,
             PublishedUtc = contentItem.PublishedUtc,
             CreatedUtc = contentItem.CreatedUtc,
         };
@@ -91,6 +94,12 @@ public sealed class ProductSearchDocumentBuilder
         {
             Key = ProductAttributeKeys.Purchasable,
             Text = isPurchasable ? "true" : "false",
+        });
+
+        document.Attributes.Add(new ProductAttributeValue
+        {
+            Key = ProductAttributeKeys.Featured,
+            Text = product.Featured ? "true" : "false",
         });
 
         if (shownPrice.HasValue)
@@ -145,5 +154,16 @@ public sealed class ProductSearchDocumentBuilder
         }
 
         return document;
+    }
+
+    /// <summary>
+    /// The culture of a localized product, read from its stored localization part so the Products module needs no
+    /// reference to the Content Localization module.
+    /// </summary>
+    internal static string GetCulture(ContentItem contentItem)
+    {
+        var culture = ((JsonObject)contentItem.Content)["LocalizationPart"]?["Culture"];
+
+        return culture is JsonValue value && value.TryGetValue<string>(out var name) && !string.IsNullOrWhiteSpace(name) ? name : null;
     }
 }

@@ -7,6 +7,12 @@
   },
   {
     "action": "vite",
+    "name": "product-listing-editor.js",
+    "source": "Assets/js/product-listing-editor.js",
+    "dest": "wwwroot/Scripts/product-listing-editor.js"
+  },
+  {
+    "action": "vite",
     "name": "product-listing.css",
     "source": "Assets/css/product-listing.css",
     "dest": "wwwroot/Styles/product-listing.css"

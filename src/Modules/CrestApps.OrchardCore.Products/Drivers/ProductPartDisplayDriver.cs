@@ -38,6 +38,8 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             model.Sku = part.Sku;
             model.IsPurchasable = part.IsPurchasable;
             model.PriceDisplay = part.PriceDisplay;
+            model.Featured = part.Featured;
+            model.Position = part.Position;
             model.ShowPurchasable = settings.SalesMode == ProductSalesMode.PerItem;
             model.ShowPriceDisplay = settings.AllowPriceDisplayOverride;
             model.PriceRequired = part.RequiresPrice(settings);
@@ -99,6 +101,8 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
         part.Currency = normalizedCurrency;
         part.Sku = model.Sku?.Trim();
+        part.Featured = model.Featured;
+        part.Position = model.Position;
 
         return Edit(part, context);
     }

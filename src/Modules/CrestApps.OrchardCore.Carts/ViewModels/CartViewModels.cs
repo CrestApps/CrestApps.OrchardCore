@@ -19,6 +19,11 @@ public class AddToCartViewModel
     public string DefaultPriceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the variants a buyer can choose, for a product sold in variants.
+    /// </summary>
+    public IList<AddToCartVariantViewModel> Variants { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the most units that can be added at once, 1 when only one can be bought.
     /// </summary>
     public int MaxQuantity { get; set; }
@@ -51,4 +56,21 @@ public class CartLinkViewModel
     public int ItemCount { get; set; }
 
     public string Url { get; set; }
+}
+
+public class AddToCartVariantViewModel
+{
+    public string VariantId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the variant's values, such as "Red / M".
+    /// </summary>
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the variant's price, formatted, or <see langword="null"/> when it sells at the product's price.
+    /// </summary>
+    public string Price { get; set; }
+
+    public string Sku { get; set; }
 }

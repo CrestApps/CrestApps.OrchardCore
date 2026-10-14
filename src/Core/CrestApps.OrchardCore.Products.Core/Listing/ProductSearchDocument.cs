@@ -33,6 +33,12 @@ public sealed class ProductSearchDocument
     public string ContentType { get; set; }
 
     /// <summary>
+    /// Gets or sets the culture of a localized product, such as <c>fr-FR</c>, or <see langword="null"/> for a product
+    /// that is not localized and shows in every culture.
+    /// </summary>
+    public string Culture { get; set; }
+
+    /// <summary>
     /// Gets or sets the product's title.
     /// </summary>
     public string Title { get; set; }
@@ -51,6 +57,12 @@ public sealed class ProductSearchDocument
     /// Gets or sets the compare-at price, when the product has one.
     /// </summary>
     public decimal? CompareAtPrice { get; set; }
+
+    /// <summary>
+    /// Gets or sets the highest price of a product whose variants are priced differently, so a card can show
+    /// "From" the lowest. <see langword="null"/> when every price is the same.
+    /// </summary>
+    public decimal? MaxPrice { get; set; }
 
     /// <summary>
     /// Gets or sets the currency the prices are expressed in.
@@ -77,6 +89,16 @@ public sealed class ProductSearchDocument
     /// Gets or sets whether the product can be bought online.
     /// </summary>
     public bool IsPurchasable { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the merchant features the product.
+    /// </summary>
+    public bool Featured { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's place in the order the merchant arranged, or <see langword="null"/> when it has none.
+    /// </summary>
+    public int? Position { get; set; }
 
     /// <summary>
     /// Gets or sets when the product was first published.

@@ -30,13 +30,13 @@ public sealed class CachedProductSearchService : IProductSearchService
     /// </summary>
     public static readonly TimeSpan Duration = TimeSpan.FromMinutes(5);
 
-    private readonly SqlProductSearchService _inner;
+    private readonly ProductSearchRouter _inner;
     private readonly IMemoryCache _memoryCache;
     private readonly ISignal _signal;
     private readonly ShellSettings _shellSettings;
 
     public CachedProductSearchService(
-        SqlProductSearchService inner,
+        ProductSearchRouter inner,
         IMemoryCache memoryCache,
         ISignal signal,
         ShellSettings shellSettings)

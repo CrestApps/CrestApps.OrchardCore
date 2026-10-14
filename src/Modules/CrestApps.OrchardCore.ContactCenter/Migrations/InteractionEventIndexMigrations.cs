@@ -73,6 +73,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
 
         return 2;
     }
+
     /// <summary>
     /// Adds the covering index the retention purge scans. Without it every terminating batch of the drain loop
     /// is a full scan of a table that grows with traffic, which is exactly the table size retention exists for.
@@ -172,6 +173,23 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the index an event is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the whole log.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
+            .CreateIndex(
+                "IDX_InteractionEventIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 6;
     }
 
     /// <summary>

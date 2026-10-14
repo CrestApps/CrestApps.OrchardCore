@@ -49,9 +49,8 @@ The **Subscription** part has these fields:
 | **Billing cycle limit** | Optionally stop the subscription after this many billing cycles. Leave it empty to bill until the subscription is cancelled. |
 | **Free trial days** | Give the subscriber this many days free before the first cycle is billed. The payment method is still collected up front, so the trial converts without asking them to buy again. Leave it empty for no trial. |
 | **Subscription day delay** | Delay the first recurring payment by this many days after sign-up. Leave it empty or set it to 0 to start billing immediately. |
-| **Position** | Where the plan appears among your plans when a listing sorts them by **Recommended**. Lower numbers come first; plans without a position come last. |
 
-The **Product** part has the **Price**, its **Currency** (empty uses the default currency) and an optional **SKU**. See [Products and currencies](products-and-currencies.md).
+The **Product** part has the **Price**, its **Currency** (empty uses the default currency), an optional **SKU**, and **Featured** and **Position**. **Position** is where the plan appears among your plans when a listing sorts them by **Recommended**: lower numbers come first, and plans without a position come after them. See [Products and currencies](products-and-currencies.md).
 
 :::tip[Free trial or delayed start?]
 Both collect the subscriber's payment method today and start billing later. A plan in a free trial shows the status **Trial**, and the subscriber has full access during it. A trial does not use up a cycle: a plan limited to three cycles still bills three.

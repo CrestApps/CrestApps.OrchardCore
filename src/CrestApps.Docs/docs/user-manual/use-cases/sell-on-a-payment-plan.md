@@ -31,7 +31,7 @@ When it is done:
 
 | You need | Who sets it up |
 | --- | --- |
-| The features **Subscriptions - Installment Plans**, **Stripe**, **Transaction Reminders** and **Payment Receipts** | Your administrator, in **Tools > Features** |
+| The features **Subscriptions - Installment Plans**, **Stripe**, **Transaction Reminders** and **Send Payment Receipts** | Your administrator, in **Tools > Features** |
 | Stripe connected, with your keys saved | Your administrator; see [Payment providers](../commerce/payment-providers.md) |
 | The site's **Base URL** set to its public address under **Settings > General**, so the links in reminders work | Your administrator |
 | The permission **Manage installment plans and charge customers' saved cards** for whoever sets up plans | Your administrator; see [Roles and permissions](../getting-started/roles-and-permissions.md) |

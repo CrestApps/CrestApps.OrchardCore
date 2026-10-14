@@ -5,23 +5,26 @@
 <h5 class="mt-3">@T["Product listing"]</h5>
 <p class="hint">@T["Applies when this field is on a product type and the Product Listing feature is enabled."]</p>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="Filterable" />
-        <label class="form-check-label" asp-for="Filterable">@T["Filterable"]</label>
-        <span class="hint dashed">@T["Visitors can filter listings by this field."]</span>
-    </div>
-</div>
-
-@if (Model.CanSort)
+@if (!Model.IsRichText)
 {
     <div class="mb-3">
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="Sortable" />
-            <label class="form-check-label" asp-for="Sortable">@T["Sortable"]</label>
-            <span class="hint dashed">@T["Visitors can sort listings by this field."]</span>
+            <input type="checkbox" class="form-check-input" asp-for="Filterable" />
+            <label class="form-check-label" asp-for="Filterable">@T["Filterable"]</label>
+            <span class="hint dashed">@T["Visitors can filter listings by this field."]</span>
         </div>
     </div>
+
+    @if (Model.CanSort)
+    {
+        <div class="mb-3">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="Sortable" />
+                <label class="form-check-label" asp-for="Sortable">@T["Sortable"]</label>
+                <span class="hint dashed">@T["Visitors can sort listings by this field."]</span>
+            </div>
+        </div>
+    }
 }
 
 <div class="mb-3">
@@ -32,21 +35,24 @@
     </div>
 </div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="ShowOnCard" />
-        <label class="form-check-label" asp-for="ShowOnCard">@T["Show on product cards"]</label>
-        <span class="hint dashed">@T["Shown as a short chip on the product's card in the grid."]</span>
+@if (!Model.IsRichText)
+{
+    <div class="mb-3">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ShowOnCard" />
+            <label class="form-check-label" asp-for="ShowOnCard">@T["Show on product cards"]</label>
+            <span class="hint dashed">@T["Shown as a short chip on the product's card in the grid."]</span>
+        </div>
     </div>
-</div>
 
-<div class="mb-3">
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="ShowInSpecifications" />
-        <label class="form-check-label" asp-for="ShowInSpecifications">@T["Show in specifications"]</label>
-        <span class="hint dashed">@T["Shown in the specification table of list rows and the product page."]</span>
+    <div class="mb-3">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ShowInSpecifications" />
+            <label class="form-check-label" asp-for="ShowInSpecifications">@T["Show in specifications"]</label>
+            <span class="hint dashed">@T["Shown in the specification table of list rows and the product page."]</span>
+        </div>
     </div>
-</div>
+}
 
 <div class="mb-3">
     <label asp-for="Label" class="form-label">@T["Listing label"]</label>

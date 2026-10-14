@@ -4,10 +4,12 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Search;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Deployments;
 using CrestApps.OrchardCore.Products.Drivers;
 using CrestApps.OrchardCore.Products.Handlers;
+using CrestApps.OrchardCore.Products.Indexing;
 using CrestApps.OrchardCore.Products.Indexes;
 using CrestApps.OrchardCore.Products.Migrations;
 using CrestApps.OrchardCore.Products.Models;
@@ -31,6 +33,8 @@ using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
+using OrchardCore.Indexing;
+using OrchardCore.Indexing.Core;
 using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -54,7 +58,11 @@ public sealed class Startup : StartupBase
         services.AddContentPart<ProductPricePart>()
             .UseDisplayDriver<ProductPricePartDisplayDriver>();
 
+        services.AddContentPart<ProductVariantsPart>()
+            .UseDisplayDriver<ProductVariantsPartDisplayDriver>();
+
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPartSettingsDisplayDriver>();
+        services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductVariantsPartSettingsDisplayDriver>();
         services.AddScoped<IProductCurrencyProvider, CurrencyCatalogService>();
         services.AddScoped<CurrencyUsageService>();
         services.AddDisplayDriver<CurrencyEntry, CurrencyEntryDisplayDriver>();
@@ -142,13 +150,19 @@ public sealed class ListingStartup : StartupBase
         services.AddScoped<IProductAttributeValueProvider, DateFieldAttributeValueProvider>();
         services.AddScoped<IProductAttributeValueProvider, ContentPickerFieldAttributeValueProvider>();
         services.AddScoped<IProductAttributeValueProvider, TaxonomyFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, TimeFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, LinkFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, RichTextFieldAttributeValueProvider>();
+        services.AddScoped<IProductAttributeValueProvider, UserPickerFieldAttributeValueProvider>();
 
         services.AddScoped<ProductAttributeCatalog>();
         services.AddScoped<ProductSearchDocumentBuilder>();
         services.AddScoped<ProductSearchIndexer>();
         services.AddScoped<SqlProductSearchService>();
+        services.AddScoped<ProductSearchRouter>();
         services.AddScoped<IProductSearchService, CachedProductSearchService>();
         services.AddScoped<ProductListingService>();
+        services.AddScoped<IProductSearchDocumentContributor, ProductVariantsSearchDocumentContributor>();
 
         services.AddIndexProvider<ProductSearchIndexProvider>();
         services.AddScoped<IContentHandler, ProductSearchContentHandler>();
@@ -192,6 +206,23 @@ public sealed class ListingStartup : StartupBase
             options.MemberAccessStrategy.Register<ProductAttributeValue>();
             options.MemberAccessStrategy.Register<ProductListingPart>();
         });
+    }
+}
+
+/// <summary>
+/// Keeps product search indexes held by search servers (Elasticsearch, Lucene, Azure AI Search) in step with the
+/// product search records. A provider module adds the index type and the search for its server.
+/// </summary>
+[Feature(ProductConstants.Feature.Listing)]
+[RequireFeatures("OrchardCore.Indexing")]
+public sealed class ListingIndexingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ProductSearchIndexingService>();
+        services.AddScoped<IProductSearchIndexHandler, IndexProfileProductSearchIndexHandler>();
+        services.AddScoped<IDocumentIndexHandler, ProductSearchDocumentIndexHandler>();
+        services.AddIndexProfileHandler<ProductSearchIndexProfileHandler>();
     }
 }
 

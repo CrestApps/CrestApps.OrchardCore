@@ -16,6 +16,21 @@
     <input type="hidden" name="contentItemId" value="@Model.ContentItemId" />
     <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
 
+    @if (Model.Variants.Count > 0)
+    {
+        <div class="mb-2">
+            <label class="form-label small text-muted" for="@(formId)-variant">@T["Choose"]</label>
+            <select name="variantId" id="@(formId)-variant" class="form-select form-select-sm" data-product-variant>
+                @foreach (var variant in Model.Variants)
+                {
+                    <option value="@variant.VariantId" data-sku="@variant.Sku" data-price="@variant.Price">
+                        @(string.IsNullOrEmpty(variant.Price) ? variant.Title : variant.Title + " — " + variant.Price)
+                    </option>
+                }
+            </select>
+        </div>
+    }
+
     @if (Model.Prices.Count > 1)
     {
         <div class="mb-2">

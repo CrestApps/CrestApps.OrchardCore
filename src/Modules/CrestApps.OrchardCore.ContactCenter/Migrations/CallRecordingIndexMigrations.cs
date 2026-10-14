@@ -52,7 +52,14 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
 
         await CreateActivityIndexAsync();
 
-        return 3;
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex(
+                "IDX_CallRecordingIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 4;
     }
 
     /// <summary>
@@ -90,4 +97,21 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
             .CreateIndex("IDX_CallRecordingIndex_Activity", "ActivityItemId", "IsStored", "IsErased", "DocumentId"),
             collection: ContactCenterStorage.CollectionName
         );
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<CallRecordingIndex>(table => table
+            .CreateIndex(
+                "IDX_CallRecordingIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 4;
+    }
 }

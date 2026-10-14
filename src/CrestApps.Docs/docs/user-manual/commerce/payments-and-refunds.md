@@ -89,7 +89,7 @@ After you confirm, the site tells you what happened:
 
 ## What the customer is told
 
-When a refund of a payment on a transaction succeeds, and the **Payment Receipts** feature is on, the customer is sent a notice titled *Your refund of*, followed by the amount. It says the money went back to the card or account they paid with and can take a few business days to appear on their statement. Customers with an account get it through the site's notifications; guests get it by email. The transaction's **Timeline** notes that the customer was told. See [Invoices and Receipts](invoices-and-receipts.md#refund-notices).
+When a refund of a payment on a transaction succeeds, and the **Send Payment Receipts** feature is on, the customer is sent a notice titled *Your refund of*, followed by the amount. It says the money went back to the card or account they paid with and can take a few business days to appear on their statement. Customers with an account get it through the site's notifications; guests get it by email. The transaction's **Timeline** notes that the customer was told. See [Invoices and Receipts](invoices-and-receipts.md#refund-notices).
 
 A finished refund is also recorded on the transaction it gives money back for: its **Timeline** gets a **Refunded** entry with the amount and reason, its summary shows the total **Refunded**, and once everything paid has been refunded its status becomes **Refunded**. After a partial refund the transaction stays **Paid**. A refund never makes a transaction collectable again.
 

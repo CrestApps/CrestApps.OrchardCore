@@ -21,6 +21,13 @@ public sealed class ProductListingResourceManagementOptionsConfiguration : IConf
             .SetUrl("~/CrestApps.OrchardCore.Products/Scripts/product-listing.min.js", "~/CrestApps.OrchardCore.Products/Scripts/product-listing.js")
             .SetVersion("1.0.0");
 
+        // The listing editor: the filters and sorts of the picked product types, dragged into order.
+        _manifest
+            .DefineScript("product-listing-editor")
+            .SetUrl("~/CrestApps.OrchardCore.Products/Scripts/product-listing-editor.min.js", "~/CrestApps.OrchardCore.Products/Scripts/product-listing-editor.js")
+            .SetDependencies("Sortable")
+            .SetVersion("1.0.0");
+
         // The responsive filters panel and image cropping, for themes on a Bootstrap older than 5.3.
         _manifest
             .DefineStyle("product-listing")

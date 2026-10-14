@@ -38,4 +38,10 @@ public class ProductAttributeSettingsViewModel
 
     [BindNever]
     public bool IsNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the field is long text, which keyword search matches but nothing filters, sorts or shows.
+    /// </summary>
+    [BindNever]
+    public bool IsRichText { get; set; }
 }
