@@ -273,6 +273,25 @@ Before every attempt, `IDialerEligibilityService` runs and records an auditable 
 
 When an automated profile enforces the abandonment cap, the **abandoned-call message** (`SafeHarborEnabled` / `SafeHarborMessage`) must be enabled so a live party that no agent reaches hears a caller-identifying message instead of a silent drop. `CrestApps:ContactCenter:Compliance:AbandonmentRollingWindowMinutes` (default 30, range 1-1440) sets the rolling measurement window and is validated on start.
 
+### Why work is not being dispatched
+
+A supervisor who sees pending campaign records and available agents, but no calls, can read why on the **Live dashboard**. It answers from the decisions the dispatcher already makes and changes nothing.
+
+- **Agent cards** show how long an Available agent has been idle (from the agent's `IdleSinceUtc`, the same time longest-idle routing ranks by, ticking live) and the queues and campaigns the agent is signed in to. An agent who is working but signed in to none says so, because that is why nothing reaches them.
+- **Why isn't this dialing?** shows one card per queue or campaign the supervisor oversees that has work pending. It splits the pending records into *dialable now* and *held back*, and the held-back records by reason, beside how many of the signed-in agents are Available.
+
+The reasons are the ones the code applies, in the order it applies them:
+
+- The **queue** is turned off, or its business hours are closed (a stored queue; a campaign's own queue has neither).
+- The record is not waiting in the campaign's queue, so routing never sees it.
+- The **dialer profile** is turned off, the record is **scheduled for later** (with when the first becomes due), it is inside the **retry delay**, or it is **out of attempts**. These are the checks the queue gate makes before an agent is reserved, and the gate and the dashboard share one evaluator so they cannot disagree.
+- The compliance gate last suppressed the record: **do not call**, **national registry**, **outside the calling window**, **number not in service**, **no destination**, **compliance check unavailable**, or **abandonment cap reached**. These are read from the `DialSuppressed` events of the last two hours, ignoring any record dialed since.
+- When records are dialable and agents are available but nothing is assigned, the card shows what routing recorded the last time it looked: the reason, and how many agents it turned away for each reason (from the `RoutingDecisionMade` events of the last fifteen minutes).
+
+The breakdown reads each campaign's pending records, so the dashboard asks for it every thirty seconds rather than with the live poll, and every supervisor's request shares one reading for twenty seconds. A campaign with more than 2,000 pending records explains the first 2,000 by schedule order and says so. It needs the same permission and queue scope as the rest of the dashboard.
+
+The **Campaign summary** report adds *Pending right now: dialable versus held back* and *Why pending records are not dialing* when queues are enabled. They describe the present, whatever period the report covers, so they sit apart from its own *Pending* counts.
+
 ### Abandoned calls
 
 These mechanisms support the common abandoned-call rules for automated dialing (a live answer connected to an agent within two seconds, a short recorded message when it is not, and a minimum ring time). They do not by themselves make a campaign compliant; operators confirm their own obligations.

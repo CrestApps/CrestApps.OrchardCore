@@ -10,6 +10,7 @@
         ["hubUrl"] = Model.HubUrl,
         ["stateUrl"] = Model.StateUrl,
         ["engageUrl"] = Model.EngageUrl,
+        ["dispatchUrl"] = Model.DispatchUrl,
         ["interventionUrls"] = Model.InterventionUrls,
         ["antiForgeryToken"] = antiForgeryToken,
         ["strings"] = new Dictionary<string, string>
@@ -93,6 +94,35 @@
             ["cause.Latency"] = T["latency on their network path"].Value,
             ["cause.CustomerSide"] = T["the customers' lines"].Value,
             ["cause.Unknown"] = T["not determined"].Value,
+            ["idleFor"] = T["Idle"].Value,
+            ["signedInTo"] = T["Signed in to"].Value,
+            ["notSignedIn"] = T["Not signed in to any queue or campaign"].Value,
+            ["noPendingWork"] = T["No work is waiting to be dispatched."].Value,
+            ["dispatchHeadline"] = T["Pending {0}: {1} dialable now, {2} held back"].Value,
+            ["dispatchPartial"] = T["(explaining the first {0})"].Value,
+            ["dispatchNextDue"] = T["next due in {0}"].Value,
+            ["dispatchNoAgents"] = T["No agents are signed in."].Value,
+            ["dispatchAgents"] = T["{0} of {1} signed-in agents are available."].Value,
+            ["dispatchRouting"] = T["Routing found no agent {0} ago: {1}"].Value,
+            ["dispatchNoReason"] = T["no reason recorded"].Value,
+            ["dispatchCandidate"] = T["{0} agents: {1}"].Value,
+            ["dispatchWaiting"] = T["Work and available agents are both here; it is waiting for the next dispatch pass."].Value,
+            ["dispatchNoAvailable"] = T["Dialable work is waiting for an available agent."].Value,
+            ["blocker.DialableNow"] = T["Dialable now"].Value,
+            ["blocker.QueueDisabled"] = T["The queue is turned off"].Value,
+            ["blocker.BusinessHoursClosed"] = T["The queue's business hours are closed"].Value,
+            ["blocker.NotQueued"] = T["Not in the queue, so routing never sees it"].Value,
+            ["blocker.ProfileDisabled"] = T["The dialer profile is turned off"].Value,
+            ["blocker.ScheduledForLater"] = T["Scheduled for later"].Value,
+            ["blocker.RetryCoolDown"] = T["Waiting out the retry delay"].Value,
+            ["blocker.AttemptsExhausted"] = T["Out of attempts"].Value,
+            ["blocker.NoDestination"] = T["No number to dial"].Value,
+            ["blocker.DoNotCall"] = T["Do not call"].Value,
+            ["blocker.NationalDoNotCallRegistry"] = T["On the national do-not-call registry"].Value,
+            ["blocker.OutsideCallingWindow"] = T["Outside the calling window"].Value,
+            ["blocker.NumberNotInService"] = T["Number not in service"].Value,
+            ["blocker.ComplianceScreeningUnavailable"] = T["Compliance check unavailable"].Value,
+            ["blocker.AbandonmentRateExceeded"] = T["Abandonment rate cap reached"].Value,
         },
     };
 }
@@ -119,6 +149,14 @@
         <div class="cc-panel__header" id="ccDashboardQueues">@T["Queues"]</div>
         <div class="cc-panel__body">
             <div class="cc-tiles" data-cc-tiles role="status" aria-live="polite" aria-labelledby="ccDashboardQueues"></div>
+        </div>
+    </div>
+
+    @* Why pending work is or is not being handed to agents, per queue and campaign (see Endpoints/SupervisorDashboardEndpoints.Dispatch.cs). *@
+    <div class="cc-panel mb-3" data-cc-dispatch-panel>
+        <div class="cc-panel__header" id="ccDashboardDispatch">@T["Why isn't this dialing?"]</div>
+        <div class="cc-panel__body">
+            <div class="cc-dispatch" data-cc-dispatch role="status" aria-live="polite" aria-labelledby="ccDashboardDispatch"></div>
         </div>
     </div>
 

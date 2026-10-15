@@ -136,7 +136,9 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IDialerAttemptFinalizer, DialerAttemptFinalizer>()
             // A campaign record still cooling down after its last attempt, or scheduled for later, waits at the back
             // of its queue instead of having an agent reserved for it.
-            .AddScoped<IQueuedDialerWorkGate, QueuedDialerWorkGate>();
+            .AddScoped<IQueuedDialerWorkGate, QueuedDialerWorkGate>()
+            // Explains why queued work is not being handed to agents, from the decisions the dispatcher already makes.
+            .AddScoped<IDialerDispatchDiagnosticsService, DialerDispatchDiagnosticsService>();
 
         // An activity that leaves the routable set through the CRM (purged, cancelled, completed, deleted) takes its
         // queued work out of the queue, so routing never offers an agent an activity that is already finished.

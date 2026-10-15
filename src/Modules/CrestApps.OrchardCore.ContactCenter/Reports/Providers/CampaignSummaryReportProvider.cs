@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
@@ -11,18 +13,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// </summary>
 public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
 {
+    private readonly IDialerDispatchDiagnosticsService _dispatchDiagnostics;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CampaignSummaryReportProvider"/> class.
     /// </summary>
     /// <param name="reportingService">The Contact Center reporting service.</param>
     /// <param name="capabilityGuard">The guard that decides whether the producing capabilities are enabled.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="dispatchDiagnostics">The service that explains why pending records are not being dialed.</param>
     public CampaignSummaryReportProvider(
         IContactCenterReportingService reportingService,
         IContactCenterReportCapabilityGuard capabilityGuard,
-        IStringLocalizer<CampaignSummaryReportProvider> stringLocalizer)
+        IStringLocalizer<CampaignSummaryReportProvider> stringLocalizer,
+        IDialerDispatchDiagnosticsService dispatchDiagnostics)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
+        _dispatchDiagnostics = dispatchDiagnostics;
     }
 
     /// <inheritdoc/>
@@ -95,6 +102,8 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
 
         document.Add(ReportSection.ForTable(S["Campaigns"].Value, ContactCenterReportCells.ProgressColumns(S, S["Campaign"].Value), rows));
 
+        await AddDispatchSectionsAsync(document, report, cancellationToken);
+
         var noCampaignGroup = S["(No campaign group)"].Value;
         var unknownCampaignGroup = S["(Unknown campaign group)"].Value;
         var groupRows = new List<ReportRow>();
@@ -121,5 +130,90 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
             groupRows));
 
         return document;
+    }
+
+    // The report counts what is pending over the period it covers. Why those records are not being dialed is true of right
+    // now, whatever the period, so it is read live and kept apart from them.
+    private async Task AddDispatchSectionsAsync(ReportDocument document, CampaignSummaryReport report, CancellationToken cancellationToken)
+    {
+        var campaigns = report.Rows
+            .Where(row => !string.IsNullOrEmpty(row.CampaignId) && row.Counts.Pending > 0)
+            .ToArray();
+
+        if (campaigns.Length == 0)
+        {
+            return;
+        }
+
+        var diagnoses = await _dispatchDiagnostics.DiagnoseAsync(
+            campaigns.Select(row => ContactCenterConstants.CampaignQueue.CreateId(row.CampaignId)).ToArray(),
+            cancellationToken);
+
+        var summaryRows = new List<ReportRow>();
+        var reasonRows = new List<ReportRow>();
+
+        foreach (var row in campaigns)
+        {
+            var diagnosis = diagnoses.FirstOrDefault(candidate => string.Equals(candidate.CampaignId, row.CampaignId, StringComparison.Ordinal));
+
+            if (diagnosis is null || diagnosis.PendingCount == 0)
+            {
+                continue;
+            }
+
+            var name = string.IsNullOrEmpty(row.CampaignName) ? S["(Unknown campaign)"].Value : row.CampaignName;
+
+            summaryRows.Add(new ReportRow(
+            [
+                name,
+                ReportFormat.Number(diagnosis.PendingCount),
+                ReportFormat.Number(diagnosis.DialableNowCount),
+                ReportFormat.Number(diagnosis.HeldBackCount),
+            ]));
+
+            foreach (var bucket in diagnosis.Buckets)
+            {
+                reasonRows.Add(new ReportRow(
+                [
+                    name,
+                    DispatchBlockerLabels.Describe(S, bucket.Blocker),
+                    ReportFormat.Number(bucket.Count),
+                ]));
+            }
+
+            if (diagnosis.EvaluatedCount < diagnosis.PendingCount)
+            {
+                reasonRows.Add(new ReportRow(
+                [
+                    name,
+                    S["Not explained (more records than one pass reads)"].Value,
+                    ReportFormat.Number(diagnosis.PendingCount - diagnosis.EvaluatedCount),
+                ]));
+            }
+        }
+
+        if (summaryRows.Count == 0)
+        {
+            return;
+        }
+
+        document.Add(ReportSection.ForTable(
+            S["Pending right now: dialable versus held back"].Value,
+            [
+                new ReportColumn(S["Campaign"].Value),
+                new ReportColumn(S["Pending now"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Dialable now"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Held back"].Value, ReportColumnAlign.End),
+            ],
+            summaryRows));
+
+        document.Add(ReportSection.ForTable(
+            S["Why pending records are not dialing"].Value,
+            [
+                new ReportColumn(S["Campaign"].Value),
+                new ReportColumn(S["Reason"].Value),
+                new ReportColumn(S["Records"].Value, ReportColumnAlign.End),
+            ],
+            reasonRows));
     }
 }
