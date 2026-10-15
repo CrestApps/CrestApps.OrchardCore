@@ -20,6 +20,12 @@ internal sealed class HarnessShared
 
     public bool Predictive { get; }
 
+    /// <summary>
+    /// Gets or sets a value indicating whether a harness that is not predictive registers the release the host runs
+    /// when a call ends, so a test can release an ended call's routing. A predictive harness always registers it.
+    /// </summary>
+    public bool ReleasesEndedCalls { get; set; }
+
     public InMemoryOmnichannelActivities Activities { get; } = new();
 
     public FakeVoiceContactCenterCallRouter Router { get; } = new();

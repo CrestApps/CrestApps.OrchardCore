@@ -1,8 +1,10 @@
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
-/// The SIP headers that let an agent's phone standing by for an over-dialing campaign answer the leg of a call the agent
-/// was claimed for at once, instead of waiting for the platform's push about the claim to arrive.
+/// The SIP headers that tell an agent's phone a leg is the one of a call the agent holds a reservation for: a phone standing
+/// by for an over-dialing campaign answers the leg of a call the agent was claimed for at once, instead of waiting for the
+/// platform's push about the claim, and a phone that accepted a reservation answers its leg however long the customer
+/// took to pick up.
 /// </summary>
 internal static class TelnyxStandbyAnswerHeaders
 {

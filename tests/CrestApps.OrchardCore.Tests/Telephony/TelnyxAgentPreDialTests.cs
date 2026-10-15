@@ -149,6 +149,100 @@ public sealed class TelnyxAgentPreDialTests
     }
 
     [Fact]
+    public async Task PreDialAgentAsync_ParkingTheAgentOfADialedCall_TagsTheLegWithTheReservationTheAgentsPhoneAnswersOnArrival()
+    {
+        // Arrange
+        // Every phone answers a leg tagged with a reservation its agent holds, so no capability is required.
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{\"call_control_id\":\"leg-1\"}}");
+        var resolver = new Mock<ITelnyxAgentEndpointResolver>(MockBehavior.Strict);
+        resolver
+            .Setup(value => value.ResolveAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("sip:agent@sip.telnyx.com");
+        var provider = CreateProvider(handler, resolver.Object);
+
+        // Act
+        var result = await provider.PreDialAgentAsync(new ContactCenterAgentPreDialRequest
+        {
+            ReservationId = "r1",
+            ProviderCallId = "customer-1",
+            AgentUserId = "u1",
+            TimeoutSeconds = 30,
+            AnswerOnArrival = true,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("leg-1", result.ProviderLegId);
+
+        using var body = JsonDocument.Parse(handler.LastRequestBody);
+        var root = body.RootElement;
+        Assert.Equal("sip:agent@sip.telnyx.com", root.GetProperty("to").GetString());
+        Assert.Equal(30, root.GetProperty("timeout_secs").GetInt32());
+
+        var headers = root.GetProperty("custom_headers").EnumerateArray()
+            .ToDictionary(header => header.GetProperty("name").GetString(), header => header.GetProperty("value").GetString());
+        Assert.Equal("r1", headers[TelnyxConstants.StandbyReservationSipHeader]);
+        Assert.Equal("u1", headers[TelnyxConstants.StandbyAgentUserSipHeader]);
+        Assert.False(headers.ContainsKey(TelnyxConstants.OfferIdSipHeader));
+
+        var state = Encoding.UTF8.GetString(Convert.FromBase64String(root.GetProperty("client_state").GetString()));
+        Assert.True(TelnyxOutboundBridgeState.TryParse(state, out var parsed));
+        Assert.Equal(TelnyxOutboundBridgeState.ContactCenterPreDialedAgentLegIntent, parsed.Intent);
+        Assert.Equal("customer-1", parsed.PeerCallControlId);
+        Assert.True(parsed.AnswersOnArrival);
+    }
+
+    [Fact]
+    public async Task ConnectToAgentAsync_WithAParkedLegForAnAnsweredOutboundCall_AsksNothingOfTheProvider()
+    {
+        // Arrange
+        // Telnyx refuses to answer a leg it placed (422), and the parked leg is already up.
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{}}");
+        var resolver = new Mock<ITelnyxAgentEndpointResolver>(MockBehavior.Strict);
+        var provider = CreateProvider(handler, resolver.Object);
+
+        // Act
+        var result = await provider.ConnectToAgentAsync(new ContactCenterConnectRequest
+        {
+            ProviderCallId = "customer-1",
+            AgentUserId = "u1",
+            PreDialedAgentLegId = "leg-1",
+            CallerAnswered = true,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("leg-1", result.ProviderLegId);
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task ConnectToAgentAsync_ForAnAnsweredOutboundCall_RingsTheAgentWithoutAnsweringTheCustomersLeg()
+    {
+        // Arrange
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{\"call_control_id\":\"agent-leg-1\"}}");
+        var resolver = new Mock<ITelnyxAgentEndpointResolver>();
+        resolver
+            .Setup(value => value.ResolveAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("sip:agent@sip.telnyx.com");
+        var provider = CreateProvider(handler, resolver.Object);
+
+        // Act
+        var result = await provider.ConnectToAgentAsync(new ContactCenterConnectRequest
+        {
+            ProviderCallId = "customer-1",
+            AgentUserId = "u1",
+            CallerAnswered = true,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert: only the agent's leg is placed.
+        Assert.True(result.Succeeded);
+        Assert.Equal("agent-leg-1", result.ProviderLegId);
+        var request = Assert.Single(handler.Requests);
+        Assert.DoesNotContain("/actions/answer", request.RequestUri.AbsolutePath, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task BridgePreDialedAgentAsync_StopsTheCallersHoldMusicOnceTheAgentIsJoined()
     {
         // Arrange

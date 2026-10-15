@@ -182,12 +182,11 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom5Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
-            .CreateIndex(
-                "IDX_InteractionEventIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            "IDX_InteractionEventIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 6;
     }

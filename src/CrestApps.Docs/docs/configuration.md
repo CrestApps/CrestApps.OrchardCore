@@ -1193,14 +1193,17 @@ See [Feature lifecycle contract](contact-center/production-support.md#feature-li
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:Coordination` |
-| **Controls** | Lock waits and leases for inbound calls, assignments and reservations, and agent pre-dial timing |
+| **Controls** | Lock waits and leases for inbound calls, assignments and reservations, agent pre-dial timing, and the agent line held while a dialed customer rings |
 
 Keys: `InboundLockTimeout` (default `00:00:10`), `InboundLockExpiration` (`00:01:00`),
 `AssignmentLockTimeout` (`00:00:10`), `AssignmentLockExpiration` (`00:00:30`), `ReservationLockTimeout`
 (`00:00:10`), `ReservationLockExpiration` (`00:00:30`), `AgentPreDialEnabled` (`true`),
-`AgentPreDialRingGrace` (`00:00:05`), `AgentPreDialMinimumOfferRemaining` (`00:00:02`), `ReclaimLockWait`
+`AgentPreDialRingGrace` (`00:00:05`), `AgentPreDialMinimumOfferRemaining` (`00:00:02`),
+`DialerAgentParkingEnabled` (`true`), `DialerAgentParkWindow` (`00:10:00`), `ReclaimLockWait`
 (`00:00:00.050`), `ExpiryPageSize` (`100`), `QueuedWorkSyncLease` (`00:00:02`),
-`QueuedWorkSyncFallbackInterval` (`00:00:30`).
+`QueuedWorkSyncFallbackInterval` (`00:00:30`). `DialerAgentParkingEnabled` rings a reserved agent while the dialed
+customer is still ringing, so the answer only joins the two (see
+[Answer to agent time](user-manual/dialer-profiles.md#answer-to-agent-time)).
 
 ```json
 {

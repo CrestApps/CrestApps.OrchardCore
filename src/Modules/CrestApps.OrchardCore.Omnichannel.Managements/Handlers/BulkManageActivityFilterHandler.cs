@@ -97,6 +97,13 @@ public sealed class BulkManageActivityFilterHandler : IBulkManageActivityFilterH
             builder.WhereAnd($"{col} = @CampaignId");
         }
 
+        if (!string.IsNullOrEmpty(filter.DialerProfileId))
+        {
+            var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.DialerProfileId))}";
+            builder.Parameters["@DialerProfileId"] = filter.DialerProfileId;
+            builder.WhereAnd($"{col} = @DialerProfileId");
+        }
+
         if (filter.AssignedToUserIds is { Length: > 0 })
         {
             var col = $"{dialect.QuoteForAliasName(actAlias)}.{dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.AssignedToId))}";

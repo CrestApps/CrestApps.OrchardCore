@@ -11,7 +11,7 @@
  * the "contact-center-realtime" helper (which itself pulls in "telephony-client" for escapeHtml/formatDuration).
  */
 import { coalesceRefresh } from './shared/coalesced-refresh.js';
-import { presenceLabel } from './shared/agent-presence.js';
+import { agentStatusLabel, dialPhaseHint, dialPhaseLabel, normalizeDialPhase } from './shared/agent-presence.js';
 import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 
 (function (window, document) {
@@ -294,7 +294,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                     autoOpenedWorkId = offer.reservationId;
                     collapsed = false;
                 }
-            } else if (!offer && !active) {
+            } else if (!offer && !active && !(state && state.pendingDial)) {
                 autoOpenedWorkId = null;
                 collapsed = true;
             } else if (!liveCall && autoOpenedWorkId !== null) {
@@ -392,11 +392,12 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         }
 
         // Read the same way on every agent screen (see shared/agent-presence.js): a state's own name, a break by its
-        // reason, and never a reason kept for a break that has not started yet.
+        // reason, never a reason kept for a break that has not started yet, and -- while the dialer is placing a call for
+        // the agent -- what it is doing ("Dialing…", "Screening…") rather than "On a call".
         function presenceText() {
             var current = (state && state.presence) || {};
 
-            return presenceLabel(current, config.presenceLabels);
+            return agentStatusLabel(current, state && state.pendingDial, config.presenceLabels);
         }
 
         // What a live test reads to follow the bar's call card: every push that says the agent's call moved, and every
@@ -408,6 +409,21 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
         }
 
         var loggedActiveSignature = null;
+        var loggedPendingDialSignature = null;
+
+        // Every time the dialer's progress on a call placed for the agent changes what the bar shows.
+        function logPendingDialChange(pendingDial) {
+            var signature = pendingDial ? pendingDial.interactionId + ':' + normalizeDialPhase(pendingDial) : 'none';
+
+            if (signature === loggedPendingDialSignature) {
+                return;
+            }
+
+            loggedPendingDialSignature = signature;
+            diagnostic('pending-dial-shown', pendingDial
+                ? { interactionId: pendingDial.interactionId, phase: normalizeDialPhase(pendingDial) }
+                : { interactionId: null });
+        }
 
         function logActiveChange(active) {
             var signature = active ? active.interactionId + ':' + active.status : 'none';
@@ -431,12 +447,14 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             var reason = state.presence && state.presence.reason;
             var offer = state.offer;
             var active = state.activeInteraction;
+            var pendingDial = state.pendingDial;
 
             var signature = [
                 status,
                 reason || '',
                 offer ? offer.reservationId : '',
-                active ? active.interactionId + ':' + active.status : ''
+                active ? active.interactionId + ':' + active.status : '',
+                pendingDial ? pendingDial.interactionId + ':' + normalizeDialPhase(pendingDial) : ''
             ].join('|');
 
             if (signature === activeSignature) {
@@ -445,6 +463,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
 
             activeSignature = signature;
             logActiveChange(active);
+            logPendingDialChange(pendingDial);
 
             // The bar stacks vertically: a compact top row carries the read-only status chip and the connection
             // tail (headphone), and the work context — the ringing offer, active call, or wrap-up — expands as a
@@ -455,7 +474,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                     renderPresence(status) +
                     renderTail() +
                 '</div>' +
-                '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active) + '</div>';
+                '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active, pendingDial) + '</div>';
 
             bindEvents();
         }
@@ -471,7 +490,7 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             '</div>';
         }
 
-        function renderContext(offer, active) {
+        function renderContext(offer, active, pendingDial) {
             if (offer) {
                 return renderOffer(offer);
             }
@@ -481,6 +500,10 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             // "Complete activity" prompt after the call ends.
             if (active && !(isEnded(active) && !active.activityItemId)) {
                 return renderActive(active);
+            }
+
+            if (pendingDial && normalizeDialPhase(pendingDial)) {
+                return renderPendingDial(pendingDial);
             }
 
             // Idle renders nothing so the bar shrinks to the status chip; a call/assignment expands it again.
@@ -581,6 +604,31 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 '</div>' +
                 '<div class="cc-bar__offer-details">' + rows + '</div>' +
                 (actions ? '<div class="cc-bar__offer-actions">' + actions + '</div>' : '') +
+            '</div>';
+        }
+
+        // A call the dialer is placing for the agent, before they are on it: who is being called, what the dialer is
+        // doing, and how long it has been at it. There is nothing to act on yet -- the record opens, and the card
+        // becomes the call, once the agent is connected -- so it has no buttons.
+        function renderPendingDial(pendingDial) {
+            var contactRaw = pendingDial.customerLabel || pendingDial.customerAddress || '';
+            var contact = contactRaw
+                ? (/[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw))
+                : label('unknownCaller', 'Unknown caller');
+            var number = pendingDial.customerAddress ? formatPhone(pendingDial.customerAddress) : '';
+            var phase = normalizeDialPhase(pendingDial);
+            var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+
+            var rows = detailRow(label('contact', 'Contact'), contact) +
+                (number && number !== contact ? detailRow(label('number', 'Number'), number) : '') +
+                (pendingDial.queueName ? detailRow(label('campaign', 'Campaign'), pendingDial.queueName) : '');
+
+            return '<div class="cc-bar__offer cc-bar__pending-dial is-expanded is-' + escapeHtml(phase.toLowerCase()) + '" data-cc-pending-dial="' + escapeHtml(phase) + '">' +
+                '<div class="cc-bar__offer-head">' + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) +
+                    '<span class="cc-bar__countdown" data-cc-dial-time></span>' +
+                '</div>' +
+                (hint ? '<div class="cc-bar__pending-hint">' + escapeHtml(hint) + '</div>' : '') +
+                '<div class="cc-bar__offer-details">' + rows + '</div>' +
             '</div>';
         }
 
@@ -735,6 +783,15 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 }
             }
 
+            if (state.pendingDial && !state.activeInteraction) {
+                var dialTime = inner.querySelector('[data-cc-dial-time]');
+                var dialedSince = parseUtc(state.pendingDial.startedUtc);
+
+                if (dialTime && dialedSince) {
+                    dialTime.textContent = formatDuration(Math.max(0, (serverNow() - dialedSince) / 1000));
+                }
+            }
+
             if (state.activeInteraction && !isEnded(state.activeInteraction)) {
                 var talk = inner.querySelector('[data-cc-talk-time]');
                 var since = parseUtc(state.activeInteraction.answeredUtc) || parseUtc(state.activeInteraction.startedUtc);
@@ -811,7 +868,8 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                         interactionId: notification.interactionId,
                         eventType: notification.eventType,
                         direction: notification.direction,
-                        status: notification.status
+                        status: notification.status,
+                        dialPhase: notification.dialPhase
                     } : {});
 
                     // The agent was just connected to a call the dialer placed: that, not the dial, is when its record

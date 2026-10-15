@@ -326,12 +326,11 @@ internal sealed class QueueItemIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom5Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
-            .CreateIndex(
-                "IDX_QueueItemIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(
+            SchemaBuilder,
+            "IDX_QueueItemIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 6;
     }

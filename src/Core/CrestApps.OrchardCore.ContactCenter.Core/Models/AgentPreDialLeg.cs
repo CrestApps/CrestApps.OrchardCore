@@ -70,4 +70,12 @@ public sealed class AgentPreDialLeg
     /// Gets or sets when the leg was joined to the caller. Once set the leg is simply the agent's leg of the call.
     /// </summary>
     public DateTime? BridgedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the leg was rung for a call the dialer placed for an agent who already
+    /// holds its reservation. The agent's device answers such a leg at once, and it waits, parked, until the customer
+    /// answers. Until then it is only a head start: a parked leg that ends before the customer answers fails nothing,
+    /// and the answer connects the agent the ordinary way.
+    /// </summary>
+    public bool ParkedForDialedCall { get; set; }
 }

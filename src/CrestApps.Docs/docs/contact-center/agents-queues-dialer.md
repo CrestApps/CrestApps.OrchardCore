@@ -121,7 +121,7 @@ Routing is strategy-based. The strategy chain first rejects agents that do not h
 
 Each queue selects a primary **routing strategy** that decides which available, eligible agent receives the next item:
 
-- **Longest idle** (default) — offers work to the agent who has been available the longest.
+- **Longest idle** (default) — offers work to the agent who has been available the longest, by the agent's `IdleSinceUtc`. Every state change keeps it current, through `IAgentStateTransitionService`: the time is held while an offer rings or a call is up, and cleared by wrap-up, a break or sign-out. An agent coming back to Available from an offer or a call starts again at the back of the line, however they came back (after wrap-up, a disposition saved during the call, a failed agent leg, recovery). The one exception is work that never reached the agent: a caller who hung up while the offer rang (`Canceled`), a dial routing took back before placing it (`Compensated`), or a campaign call that ended before the agent was joined (no answer, busy, a machine). Those writers set `AgentStateChangeContext.KeepsIdlePlace`, and the agent keeps their place. An agent who declined an offer or let it ring out goes to the back. Campaign queues always route by longest idle, so this is also how Power, Progressive and Predictive pick the agent for each call.
 - **Round robin** — distributes work fairly by offering to the agent who least recently received an assignment (tracked on the agent's `LastAssignedUtc`, stamped when a reservation is created).
 - **Least busy** — offers work to the agent currently handling the fewest active interactions.
 

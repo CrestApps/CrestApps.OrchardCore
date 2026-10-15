@@ -144,6 +144,21 @@ With Power, Progressive and Predictive dialing, the customer is dialed first and
 
 These settings support the common abandoned-call rules for automated dialing. Confirm which rules apply to your calls; the settings do not make a campaign compliant on their own.
 
+### Answer to agent time
+
+When a call is placed for an agent who is already reserved for it (Preview, Power, Progressive, and Predictive with one call per reserved agent), the agent's soft phone is rung while the customer's phone is still ringing. The soft phone answers at once, without a click, and the agent hears silence until the customer answers. The agent's line is then joined to the customer, which takes well under a second, so the person who answers hears the agent almost at once.
+
+- **Without answering-machine screening**, the agent is joined as soon as the customer answers.
+- **With answering-machine screening**, the agent is joined as soon as the provider says a person answered. The two seconds are measured from that verdict, not from the answer: the person spends the screening time saying hello, and the agent never hears a voicemail greeting.
+- **When a machine answers, nobody answers, or the customer hangs up first**, the agent's line is hung up. The agent goes straight back to Ready, with no wrap-up and no record opened.
+- **When the agent's line drops before the customer answers** (the soft phone was closed, the network dropped), nothing is lost: the answer rings the agent the usual way. That call may take longer than two seconds to connect and count as abandoned.
+
+The application log shows the time for every connected call, for example `connected to an agent 0.4 seconds after the answer, within the abandonment threshold`. A call connected later than two seconds is logged as abandoned.
+
+:::note[Telnyx]
+Holding the agent's line while the customer rings needs the Telnyx soft phone to be open and registered when the call is placed. Your administrator can turn this off with `CrestApps:ContactCenter:Coordination:DialerAgentParkingEnabled`, which rings the agent only once the customer answers, as before.
+:::
+
 ### The abandoned-call message
 
 When the agent cannot be connected, the person hears the profile's **Abandoned call message** straight away, and the call ends when the message has been spoken. If the message is not on, the call is hung up without a word.

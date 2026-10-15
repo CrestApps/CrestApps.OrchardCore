@@ -58,4 +58,10 @@ public sealed class ProviderAnswerCommandRequest
     /// provider's own default.
     /// </summary>
     public int AgentLegTimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the caller's leg is already answered: an outbound call the customer
+    /// picked up, which only needs its agent connected.
+    /// </summary>
+    public bool CallerAnswered { get; set; }
 }

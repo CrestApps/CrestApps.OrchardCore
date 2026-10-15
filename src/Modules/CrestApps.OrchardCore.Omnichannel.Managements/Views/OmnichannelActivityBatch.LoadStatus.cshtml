@@ -1,0 +1,31 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityBatch>
+
+@{
+    var batch = Model.Value;
+    var isRunning = batch.Status is OmnichannelActivityBatchStatus.Started or OmnichannelActivityBatchStatus.Loading;
+}
+
+@if (isRunning)
+{
+    <div class="text-muted small">
+        @T["Loading: {0} activities loaded so far.", (batch.TotalLoaded ?? 0).ToString("N0")]
+        @if (batch.LoadHeartbeatUtc.HasValue)
+        {
+            <span>@T["Last progress"] @await DisplayAsync(await New.Timespan(Utc: batch.LoadHeartbeatUtc.Value)).</span>
+        }
+        @if (batch.LoadResumeCount > 0)
+        {
+            <span>@T.Plural(batch.LoadResumeCount, "Resumed once after it stopped.", "Resumed {0} times after it stopped.")</span>
+        }
+    </div>
+}
+else if (!string.IsNullOrEmpty(batch.LoadError))
+{
+    <div class="text-danger small">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @batch.LoadError
+    </div>
+}

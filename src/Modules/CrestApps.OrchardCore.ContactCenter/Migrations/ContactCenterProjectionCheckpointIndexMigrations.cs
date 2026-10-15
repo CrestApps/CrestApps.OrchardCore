@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -65,12 +66,11 @@ internal sealed class ContactCenterProjectionCheckpointIndexMigrations : DataMig
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProjectionCheckpointIndex>(table => table
-            .CreateIndex(
-                "IDX_ContactCenterProjectionCheckpointIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContactCenterProjectionCheckpointIndex>(
+            SchemaBuilder,
+            "IDX_ContactCenterProjectionCheckpointIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 2;
     }

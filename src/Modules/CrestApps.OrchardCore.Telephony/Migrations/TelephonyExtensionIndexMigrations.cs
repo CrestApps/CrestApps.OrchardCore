@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telephony.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
 
@@ -46,11 +47,11 @@ internal sealed class TelephonyExtensionIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<TelephonyExtensionIndex>(table => table
-            .CreateIndex(
-                "IDX_TelephonyExtensionIndex_ItemId",
-                "ItemId",
-                "DocumentId"));
+        await IndexTableIndexCreation.CreateIfMissingAsync<TelephonyExtensionIndex>(
+            SchemaBuilder,
+            "IDX_TelephonyExtensionIndex_ItemId",
+            null,
+            "ItemId", "DocumentId");
 
         return 2;
     }

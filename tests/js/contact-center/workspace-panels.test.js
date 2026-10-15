@@ -50,6 +50,26 @@ describe('activeInteractionSignature', () => {
         expect(activeInteractionSignature(undefined)).toBe(NO_ACTIVE_INTERACTION);
     });
 
+    // A power dial's card moves from dialing to screening to connecting without the agent being on the call; each step
+    // has to redraw it.
+    it('redraws the card for a dial the agent is held for as it moves on', () => {
+        const dialing = activeInteractionSignature(null, { interactionId: 'i1', phase: 'Dialing' });
+        const screening = activeInteractionSignature(null, { interactionId: 'i1', phase: 'Screening' });
+
+        expect(dialing).not.toBe(NO_ACTIVE_INTERACTION);
+        expect(screening).not.toBe(dialing);
+    });
+
+    it('lets the call the agent is on win over a dial', () => {
+        const call = { interactionId: 'i1', status: 'Connected' };
+
+        expect(activeInteractionSignature(call, { interactionId: 'i1', phase: 'Connecting' })).toBe(activeInteractionSignature(call));
+    });
+
+    it('names the empty card for a dial with no phase', () => {
+        expect(activeInteractionSignature(null, { interactionId: 'i1', phase: '' })).toBe(NO_ACTIVE_INTERACTION);
+    });
+
     it('changes with the status and the recording state', () => {
         const base = { interactionId: 'i-1', status: 'Connected', recordingState: 'Active' };
 

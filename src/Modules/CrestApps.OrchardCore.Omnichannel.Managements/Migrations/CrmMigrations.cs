@@ -1,5 +1,4 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -222,33 +221,15 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         return 4;
     }
 
-    // The import history belongs to the content transfer feature, which a tenant may never have enabled; without its
-    // table there are no past imports to record.
+    // The imports already made are recorded on their leads by LeadImportBackfillBackgroundTask, after activation:
+    // recorded here, a large tenant's backfill outlived the command timeout while the tenant was starting, and the
+    // version was recorded anyway, so the imports were never recorded at all.
     private async Task EnsureLeadImportIndexAsync()
     {
         if (!await IndexTableExistsAsync<LeadImportIndex>(null))
         {
             await CreateLeadImportIndexAsync(SchemaBuilder);
         }
-
-        if (await IndexTableExistsAsync<ContentTransferEntryIndex>(null))
-        {
-            ShellScope.AddDeferredTask(RecordPastImportsAsync);
-        }
-    }
-
-    private static async Task RecordPastImportsAsync(ShellScope scope)
-    {
-        var definitions = await scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>().ListTypeDefinitionsAsync();
-        var leadTypes = definitions
-            .Where(definition => Core.Services.OmnichannelRecordKinds.HasPart(definition, OmnichannelConstants.ContentParts.Lead))
-            .Select(definition => definition.Name)
-            .ToArray();
-
-        await LeadImportBackfill.RunAsync(
-            scope.ServiceProvider.GetRequiredService<IStore>(),
-            leadTypes,
-            scope.ServiceProvider.GetRequiredService<ILogger<CrmMigrations>>());
     }
 
     // Creates whichever index table is missing. Items saved while it was missing have no index row, so they are

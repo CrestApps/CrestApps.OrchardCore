@@ -61,6 +61,32 @@
 		Training: ["training", "Training"],
 		AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
 	};
+	var DIAL_PHASE_NAMES = [
+		"None",
+		"Dialing",
+		"Screening",
+		"Connecting"
+	];
+	var DIAL_PHASE_LABELS = {
+		Dialing: [
+			"dialPhaseDialing",
+			"Dialing…",
+			"dialPhaseDialingHint",
+			"Calling the customer. You will be connected when they answer."
+		],
+		Screening: [
+			"dialPhaseScreening",
+			"Screening…",
+			"dialPhaseScreeningHint",
+			"The call was answered. Checking for an answering machine before connecting you."
+		],
+		Connecting: [
+			"dialPhaseConnecting",
+			"Connecting…",
+			"dialPhaseConnectingHint",
+			"A person answered. Connecting you now."
+		]
+	};
 	var REASONED_STATES = {
 		Break: true,
 		Away: true,
@@ -90,6 +116,26 @@
 		if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
 		var entry = STATUS_LABELS[status];
 		return entry ? text$1(labels, entry[0], entry[1]) : status;
+	}
+	function normalizeDialPhase(pendingDial) {
+		var value = pendingDial && pendingDial.phase;
+		if (typeof value === "number") value = DIAL_PHASE_NAMES[value];
+		else if (typeof value === "string" && /^\d+$/.test(value)) value = DIAL_PHASE_NAMES[Number(value)];
+		return typeof value === "string" && DIAL_PHASE_LABELS[value] ? value : "";
+	}
+	function dialPhaseLabel(pendingDial, labels) {
+		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
+		return entry ? text$1(labels, entry[0], entry[1]) : "";
+	}
+	function dialPhaseHint(pendingDial, labels) {
+		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
+		return entry ? text$1(labels, entry[2], entry[3]) : "";
+	}
+	function agentStatusLabel(presence, pendingDial, labels) {
+		var phase = dialPhaseLabel(pendingDial, labels);
+		var status = normalizePresenceStatus((presence || {}).status);
+		if (phase && (status === "Reserved" || status === "Busy")) return phase;
+		return presenceLabel(presence, labels);
 	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
@@ -308,7 +354,7 @@
 						autoOpenedWorkId = offer.reservationId;
 						collapsed = false;
 					}
-				} else if (!offer && !active) {
+				} else if (!offer && !active && !(state && state.pendingDial)) {
 					autoOpenedWorkId = null;
 					collapsed = true;
 				} else if (!liveCall && autoOpenedWorkId !== null) {
@@ -368,12 +414,22 @@
 				return state && state.presence && state.presence.status || "Offline";
 			}
 			function presenceText() {
-				return presenceLabel(state && state.presence || {}, config.presenceLabels);
+				return agentStatusLabel(state && state.presence || {}, state && state.pendingDial, config.presenceLabels);
 			}
 			function diagnostic(code, details) {
 				if (window.console && typeof window.console.info === "function") window.console.info("[cc-agent-bar] " + code, details || {});
 			}
 			var loggedActiveSignature = null;
+			var loggedPendingDialSignature = null;
+			function logPendingDialChange(pendingDial) {
+				var signature = pendingDial ? pendingDial.interactionId + ":" + normalizeDialPhase(pendingDial) : "none";
+				if (signature === loggedPendingDialSignature) return;
+				loggedPendingDialSignature = signature;
+				diagnostic("pending-dial-shown", pendingDial ? {
+					interactionId: pendingDial.interactionId,
+					phase: normalizeDialPhase(pendingDial)
+				} : { interactionId: null });
+			}
 			function logActiveChange(active) {
 				var signature = active ? active.interactionId + ":" + active.status : "none";
 				if (signature === loggedActiveSignature) return;
@@ -390,24 +446,28 @@
 				var reason = state.presence && state.presence.reason;
 				var offer = state.offer;
 				var active = state.activeInteraction;
+				var pendingDial = state.pendingDial;
 				var signature = [
 					status,
 					reason || "",
 					offer ? offer.reservationId : "",
-					active ? active.interactionId + ":" + active.status : ""
+					active ? active.interactionId + ":" + active.status : "",
+					pendingDial ? pendingDial.interactionId + ":" + normalizeDialPhase(pendingDial) : ""
 				].join("|");
 				if (signature === activeSignature) return;
 				activeSignature = signature;
 				logActiveChange(active);
-				inner.innerHTML = "<div class=\"cc-agent-bar__top\">" + renderPresence(status) + renderTail() + "</div><div class=\"cc-bar__context\" data-cc-context>" + renderContext(offer, active) + "</div>";
+				logPendingDialChange(pendingDial);
+				inner.innerHTML = "<div class=\"cc-agent-bar__top\">" + renderPresence(status) + renderTail() + "</div><div class=\"cc-bar__context\" data-cc-context>" + renderContext(offer, active, pendingDial) + "</div>";
 				bindEvents();
 			}
 			function renderPresence(status) {
 				return "<div class=\"cc-bar__presence\" data-cc-presence><span class=\"cc-bar__presence-chip\" title=\"" + escapeHtml(label("presenceReadonly", "Change your status from the soft phone")) + "\"><span class=\"cc-bar__dot is-" + escapeHtml(status.toLowerCase()) + "\"></span><span class=\"cc-bar__presence-label\">" + escapeHtml(presenceText()) + "</span></span></div>";
 			}
-			function renderContext(offer, active) {
+			function renderContext(offer, active, pendingDial) {
 				if (offer) return renderOffer(offer);
 				if (active && !(isEnded(active) && !active.activityItemId)) return renderActive(active);
+				if (pendingDial && normalizeDialPhase(pendingDial)) return renderPendingDial(pendingDial);
 				return "";
 			}
 			function renderOffer(offer) {
@@ -444,6 +504,15 @@
 				var activityButton = active.activityItemId ? "<button type=\"button\" class=\"btn btn-primary btn-sm\" data-cc-open-activity=\"" + escapeHtml(active.activityItemId) + "\"><i class=\"fa-solid fa-up-right-from-square\" aria-hidden=\"true\"></i> " + escapeHtml(ended ? label("completeActivity", "Complete activity") : label("openActivity", "Open activity")) + "</button>" : "";
 				var actions = (active.contactUrl ? "<a class=\"btn btn-outline-secondary btn-sm\" href=\"" + escapeHtml(active.contactUrl) + "\" target=\"_blank\" rel=\"noopener\"><i class=\"fa-solid fa-address-card\" aria-hidden=\"true\"></i> " + escapeHtml(label("openContact", "Customer record")) + "</a>" : "") + activityButton;
 				return "<div class=\"cc-bar__offer cc-bar__active is-expanded" + (ended ? " is-ended" : " is-connected") + "\" data-cc-active><div class=\"cc-bar__offer-head\">" + escapeHtml(heading) + (ended ? "" : "<span class=\"cc-bar__countdown\" data-cc-talk-time>0:00</span>") + "</div><div class=\"cc-bar__offer-details\">" + rows + "</div>" + (actions ? "<div class=\"cc-bar__offer-actions\">" + actions + "</div>" : "") + "</div>";
+			}
+			function renderPendingDial(pendingDial) {
+				var contactRaw = pendingDial.customerLabel || pendingDial.customerAddress || "";
+				var contact = contactRaw ? /[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw) : label("unknownCaller", "Unknown caller");
+				var number = pendingDial.customerAddress ? formatPhone(pendingDial.customerAddress) : "";
+				var phase = normalizeDialPhase(pendingDial);
+				var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+				var rows = detailRow(label("contact", "Contact"), contact) + (number && number !== contact ? detailRow(label("number", "Number"), number) : "") + (pendingDial.queueName ? detailRow(label("campaign", "Campaign"), pendingDial.queueName) : "");
+				return "<div class=\"cc-bar__offer cc-bar__pending-dial is-expanded is-" + escapeHtml(phase.toLowerCase()) + "\" data-cc-pending-dial=\"" + escapeHtml(phase) + "\"><div class=\"cc-bar__offer-head\">" + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + "<span class=\"cc-bar__countdown\" data-cc-dial-time></span></div>" + (hint ? "<div class=\"cc-bar__pending-hint\">" + escapeHtml(hint) + "</div>" : "") + "<div class=\"cc-bar__offer-details\">" + rows + "</div></div>";
 			}
 			function renderTail() {
 				var collapseTitle = label("collapseBar", "Hide the Contact Center bar");
@@ -556,6 +625,11 @@
 						countdown.textContent = remaining !== null && remaining >= 0 ? " · " + label("respondIn", "Respond in") + " " + remaining + "s" : "";
 					}
 				}
+				if (state.pendingDial && !state.activeInteraction) {
+					var dialTime = inner.querySelector("[data-cc-dial-time]");
+					var dialedSince = parseUtc(state.pendingDial.startedUtc);
+					if (dialTime && dialedSince) dialTime.textContent = formatDuration(Math.max(0, (serverNow() - dialedSince) / 1e3));
+				}
 				if (state.activeInteraction && !isEnded(state.activeInteraction)) {
 					var talk = inner.querySelector("[data-cc-talk-time]");
 					var since = parseUtc(state.activeInteraction.answeredUtc) || parseUtc(state.activeInteraction.startedUtc);
@@ -605,7 +679,8 @@
 						interactionId: notification.interactionId,
 						eventType: notification.eventType,
 						direction: notification.direction,
-						status: notification.status
+						status: notification.status,
+						dialPhase: notification.dialPhase
 					} : {});
 					if (notification && notification.autoOpenActivity && notification.activityItemId && notification.activityItemId !== lastPoppedActivityId) popActivity(notification.activityItemId, true);
 					refresh();

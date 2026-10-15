@@ -35,4 +35,21 @@ public sealed class ActivityBatchLoadContext
     /// Gets the username of the user that initiated the load.
     /// </summary>
     public string LoaderUserName { get; }
+
+    /// <summary>
+    /// Gets a value indicating whether the load carries on from <see cref="OmnichannelActivityBatch.LoadCursor"/> with
+    /// the counts it had, because an earlier run of it stopped part-way.
+    /// </summary>
+    public bool IsResume { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the load only counts what it would do: it applies every filter and fills in the
+    /// batch's counts, but creates, queues and saves nothing.
+    /// </summary>
+    public bool IsPreview { get; init; }
+
+    /// <summary>
+    /// Gets or sets why the load stopped without loading, when it did, in words the operator can act on.
+    /// </summary>
+    public string StopReason { get; set; }
 }
