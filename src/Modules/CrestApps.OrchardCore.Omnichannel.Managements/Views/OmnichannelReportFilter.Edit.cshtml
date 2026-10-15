@@ -35,7 +35,7 @@
 </div>
 <div class="col p-1">
     <label class="form-label" asp-for="DispositionIds">@T["Disposition"]</label>
-    <select asp-for="DispositionIds" asp-items="Model.Dispositions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-header="@T["Select dispositions"]" data-selected-text-format="count > 2" data-count-selected-text="@T["{0} dispositions selected"]" title="@T["All dispositions"]"></select>
+    <select asp-for="DispositionIds" asp-items="Model.Dispositions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-header="@T["Select dispositions"]" data-selected-text-format="count > 2" data-count-selected-text="@T["{0} dispositions selected", "{0}"]" title="@T["All dispositions"]"></select>
 </div>
 @if (Model.ShowPage)
 {
