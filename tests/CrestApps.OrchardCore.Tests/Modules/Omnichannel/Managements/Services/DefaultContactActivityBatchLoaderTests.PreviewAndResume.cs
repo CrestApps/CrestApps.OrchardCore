@@ -62,6 +62,53 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
         }
     }
 
+    // The count shown before a load must leave out a contact who asked not to be called, as the load does, and count
+    // them in once "Include do-not-call" is ticked: a count that disagrees with the load is worse than none.
+    [Theory]
+    [InlineData(false, 1, 1)]
+    [InlineData(true, 2, 0)]
+    public async Task LoadAsync_WhenPreviewing_CountsDoNotCallContactsOnlyWhenIncluded(bool includeDoNotCall, int expectedLoaded, int expectedOptedOut)
+    {
+        // Arrange
+        var databasePath = DatabasePath($"preview-do-not-call-{includeDoNotCall}");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15553330101", cellNationalNumber: "5553330101", doNotCall: true);
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15553330102", cellNationalNumber: "5553330102");
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Automatic, OmnichannelConstants.Channels.Phone);
+            batch.IncludeDoNoCalls = includeDoNotCall;
+            batch.Status = OmnichannelActivityBatchStatus.New;
+
+            // Act
+            await using (var session = store.CreateSession())
+            {
+                var loader = CreateLoader(session, store, connectionString, batch.Source);
+                var context = new ActivityBatchLoadContext(batch, LoaderId, LoaderUserName) { IsPreview = true };
+
+                await loader.LoadAsync(context, TestContext.Current.CancellationToken);
+                await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            // Assert
+            Assert.Equal(2, batch.TotalMatched);
+            Assert.Equal(expectedLoaded, batch.TotalLoaded);
+            Assert.Equal(expectedOptedOut, batch.TotalSkippedAsOptedOut);
+            Assert.Empty(await ListLoadedActivitiesAsync(store));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     // A load cut off by a restart used to stay "Loading" for good. Resumed, it carries on after the last record it
     // committed and keeps its counts, so nobody it already loaded is loaded twice.
     [Fact]

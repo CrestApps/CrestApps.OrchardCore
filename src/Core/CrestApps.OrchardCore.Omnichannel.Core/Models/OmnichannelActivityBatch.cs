@@ -434,6 +434,13 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             LastActivitySubjectContentType = LastActivitySubjectContentType,
             LastActivityDispositionId = LastActivityDispositionId,
             LastActivityAttempts = LastActivityAttempts,
+            LoadError = LoadError,
+            LoadStartedUtc = LoadStartedUtc,
+            LoadStartedById = LoadStartedById,
+            LoadStartedByUsername = LoadStartedByUsername,
+            LoadHeartbeatUtc = LoadHeartbeatUtc,
+            LoadCursor = LoadCursor,
+            LoadResumeCount = LoadResumeCount,
             // Everything a driver stores with Put lives here; a clone without it drops those settings on every save.
             Properties = Properties is null
                 ? null
