@@ -343,7 +343,9 @@ public sealed class ContactCenterBridgedLegHangupTests
                 clock.Object,
                 NullLogger<ContactCenterAgentLegFailureService>.Instance,
             new Mock<IAgentPresenceManager>().Object,
-            Mock.Of<IDialerAbandonmentTracker>());
+            Mock.Of<IDialerAbandonmentTracker>(),
+            Mock.Of<IActivityReservationManager>(),
+            Mock.Of<IActivityReservationService>());
         }
 
         public ContactCenterAgentLegFailureService Service { get; }

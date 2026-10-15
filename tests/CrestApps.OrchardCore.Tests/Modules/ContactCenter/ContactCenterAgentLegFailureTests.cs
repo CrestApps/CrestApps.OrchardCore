@@ -83,7 +83,9 @@ public sealed class ContactCenterAgentLegFailureTests
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance,
             new Mock<IAgentPresenceManager>().Object,
-            Mock.Of<IDialerAbandonmentTracker>());
+            Mock.Of<IDialerAbandonmentTracker>(),
+            Mock.Of<IActivityReservationManager>(),
+            Mock.Of<IActivityReservationService>());
 
         // Act
         var failed = await service.FailAsync("Telnyx", "call-1", HangupCause.Rejected, TestContext.Current.CancellationToken);
@@ -148,7 +150,9 @@ public sealed class ContactCenterAgentLegFailureTests
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance,
             presenceManager.Object,
-            Mock.Of<IDialerAbandonmentTracker>());
+            Mock.Of<IDialerAbandonmentTracker>(),
+            Mock.Of<IActivityReservationManager>(),
+            Mock.Of<IActivityReservationService>());
 
         // Act
         var failed = await service.FailAsync("Telnyx", "call-1", HangupCause.Busy, TestContext.Current.CancellationToken);
@@ -195,7 +199,9 @@ public sealed class ContactCenterAgentLegFailureTests
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance,
             new Mock<IAgentPresenceManager>().Object,
-            Mock.Of<IDialerAbandonmentTracker>());
+            Mock.Of<IDialerAbandonmentTracker>(),
+            Mock.Of<IActivityReservationManager>(),
+            Mock.Of<IActivityReservationService>());
 
         // Act
         var failed = await service.FailAsync("Telnyx", "call-1", HangupCause.Rejected, TestContext.Current.CancellationToken);
@@ -368,7 +374,9 @@ public sealed class ContactCenterAgentLegFailureTests
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance,
             new Mock<IAgentPresenceManager>().Object,
-            Mock.Of<IDialerAbandonmentTracker>());
+            Mock.Of<IDialerAbandonmentTracker>(),
+            Mock.Of<IActivityReservationManager>(),
+            Mock.Of<IActivityReservationService>());
 
         // Act
         var advanced = await service.RecordAnsweredAsync("Telnyx", "call-1", "agent-leg-1", TestContext.Current.CancellationToken);

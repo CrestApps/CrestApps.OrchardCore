@@ -88,6 +88,8 @@ When routing picks you for a call, an offer card appears in **My workspace** and
 
 If you do nothing, the offer ends with the countdown and the queue's **Unanswered offer action** applies: the call is offered to the next agent (the default), sent to voicemail, or ended. See [Queues](queues.md). A call to your personal line that you decline or do not answer goes to your voicemail when the line is set to send unanswered calls to voicemail.
 
+If you accept but your soft phone cannot be reached (for example, its connection to the phone service dropped while the workspace stayed connected), the caller is not lost: the queue's **Unanswered offer action** applies as if nobody had answered, and your state changes to **Away** with the reason *Phone unreachable* so no other call is sent to the phone. Check your soft phone, then set yourself **Available** again.
+
 :::tip
 If you refresh the page while an offer is ringing, the offer comes back, so you can still answer it.
 :::
