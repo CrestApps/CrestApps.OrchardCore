@@ -46,6 +46,11 @@ public sealed class Startup : StartupBase
         // once cannot end each other.
         services.TryAddScoped<IVoiceCallEndTurn, VoiceCallEndTurn>();
 
+        // The provider's word that a machine answered reaches the node on a webhook request of its own, while a live
+        // session holds the call in another. A tenant singleton is what both requests can see; it holds the live
+        // calls only, and forgets each as it ends.
+        services.AddSingleton<IAnsweringMachineSignals, AnsweringMachineSignals>();
+
         // The AI usage report's per-call summaries. The tracker outlives requests, because a turn-based call's
         // measurements span many of them; the store is the analytics feature's, and records nothing without it.
         services.AddSingleton<IAIVoiceSessionTracker, AIVoiceSessionTracker>();

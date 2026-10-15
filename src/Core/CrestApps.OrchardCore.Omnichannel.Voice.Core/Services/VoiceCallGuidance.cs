@@ -57,6 +57,25 @@ internal static class VoiceCallGuidance
     public const string EndingTheCallSection = "## Ending the call\n\n" + EndingTheCall;
 
     /// <summary>
+    /// What the model is told when the call was answered by voicemail or an answering machine and the time has come
+    /// to leave the message.
+    /// </summary>
+    /// <remarks>
+    /// Shared by both ways of holding a call, so the two leave the same kind of message. A turn-based call puts it to
+    /// the model as the turn it answers; a live session asks for one response under its own instructions, so the
+    /// message comes in the persona, voice and language the call has been held in -- which is why it is worded for
+    /// whatever language that is, and never names one. It forbids questions outright: a question left on a recording
+    /// is never answered, and is the surest sign the model carried on the conversation instead of leaving a message.
+    /// Live, it asked the voicemail whether the customer wanted a new or used vehicle.
+    /// </remarks>
+    public const string LeavingAVoicemail =
+        "This call went to voicemail and it is now recording; anything the customer seemed to say before this was " +
+        "its recorded greeting, not the customer. Say only the voicemail message to leave, in one to three short " +
+        "sentences: greet the customer by name if you know it, say who you are and why you called, and say you will " +
+        "try them again. Leave it in the language you have been speaking on this call. It is a recording, so do not " +
+        "ask any questions, do not wait for a reply, and say nothing else.";
+
+    /// <summary>
     /// The heading <see cref="RecordingDisclosure(string)"/> is given in a live session's instructions.
     /// </summary>
     public const string RecordingDisclosureHeading = "## Telling the customer the call is recorded";

@@ -60,6 +60,12 @@ While the conversation runs:
 
 Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
 
+### When a voicemail answers
+
+When a voicemail or answering machine answers, the AI does not talk to the recording. It lets the greeting and the tone finish, leaves one short message (who is calling, why, and that it will try again, with no questions) and hangs up. On a profile that holds the call as a live conversation, the message is spoken in the same voice and the same language as the rest of the call. The activity is completed with the disposition for the *Answering machine* outcome when the subject flow has one (see [Dispositions](dispositions.md#outcomes)), and its notes say the call reached voicemail and left a message.
+
+The AI is told who answered by your phone system's **Answering machine detection** setting (see [Telephony settings](telephony-settings.md)). With it off, the AI has to recognise the greeting for what it is before it leaves its message, so turn detection on for campaigns that reach many voicemails.
+
 ## Let the AI answer incoming calls
 
 An automatic load is for conversations the AI starts. To have an AI profile **answer** the calls customers make to one of your numbers, set it on the number's **inbound entry point**, not on a queue. A queue only holds callers for people.
