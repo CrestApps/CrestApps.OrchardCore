@@ -48,6 +48,15 @@ public class ModelParameterEditorViewModel
     public string SettingKeyPrefix { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether each parameter renders its label above its input, as the chat
+    /// interaction settings panel does. When <see langword="false"/>, the default, each parameter renders as an
+    /// admin editor row (<c>ocat-wrapper</c>) so it lines up with the deployment picker on the AI profile and
+    /// profile template editors.
+    /// </summary>
+    [BindNever]
+    public bool UseStackedLayout { get; set; }
+
+    /// <summary>
     /// Gets or sets every registered model parameter along with the value currently selected.
     /// </summary>
     [BindNever]
