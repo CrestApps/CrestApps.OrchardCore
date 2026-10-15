@@ -11,7 +11,6 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -131,7 +130,7 @@ public sealed class TelnyxDialerScreeningDialBodyTests
             CreateApiClient(handler),
             new Mock<ITelnyxAgentCredentialStore>().Object,
             new Mock<ITelnyxAgentEndpointResolver>().Object,
-            new Mock<IClock>().Object,
+            new StubClock(),
             NullLogger<TelnyxTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<TelnyxTelephonyProvider>(),
             new TestOptionsMonitor<TelnyxOptions>(CreateOptions()));
@@ -152,7 +151,7 @@ public sealed class TelnyxDialerScreeningDialBodyTests
             new Mock<ITelnyxAgentCredentialStore>().Object,
             new Mock<ITelnyxAgentEndpointResolver>().Object,
             CreateApiClient(handler),
-            new Mock<IClock>().Object,
+            new StubClock(),
             NullLogger<TelnyxContactCenterVoiceProvider>.Instance,
             new TestOptionsMonitor<TelnyxOptions>(CreateOptions()),
             localizer.Object);
