@@ -45,6 +45,17 @@ var STATUS_LABELS = {
     AfterHoursUnavailable: ['afterHoursUnavailable', 'After-hours unavailable']
 };
 
+// Where a call the dialer placed for a held agent stands, in DialAttemptPhase order, for a client that ever receives
+// the numeric form.
+var DIAL_PHASE_NAMES = ['None', 'Dialing', 'Screening', 'Connecting'];
+
+// The label key and English fallback of each phase, and of the line that tells the agent what is happening.
+var DIAL_PHASE_LABELS = {
+    Dialing: ['dialPhaseDialing', 'Dialing…', 'dialPhaseDialingHint', 'Calling the customer. You will be connected when they answer.'],
+    Screening: ['dialPhaseScreening', 'Screening…', 'dialPhaseScreeningHint', 'The call was answered. Checking for an answering machine before connecting you.'],
+    Connecting: ['dialPhaseConnecting', 'Connecting…', 'dialPhaseConnectingHint', 'A person answered. Connecting you now.']
+};
+
 // The not-ready states an agent chooses with a reason. Only these show it: a reason left on the profile while the
 // agent is reserved, on a call or in wrap-up belongs to a break still waiting to start, not to the current state.
 var REASONED_STATES = {
@@ -103,6 +114,49 @@ export function presenceLabel(presence, labels) {
     var entry = STATUS_LABELS[status];
 
     return entry ? text(labels, entry[0], entry[1]) : status;
+}
+
+// The phase of a call the dialer is placing for the agent (state.pendingDial), or '' when there is none.
+export function normalizeDialPhase(pendingDial) {
+    var value = pendingDial && pendingDial.phase;
+
+    if (typeof value === 'number') {
+        value = DIAL_PHASE_NAMES[value];
+    } else if (typeof value === 'string' && /^\d+$/.test(value)) {
+        value = DIAL_PHASE_NAMES[Number(value)];
+    }
+
+    return typeof value === 'string' && DIAL_PHASE_LABELS[value] ? value : '';
+}
+
+// What the call the dialer is placing for the agent reads as -- "Dialing…", "Screening…", "Connecting…" -- or ''.
+export function dialPhaseLabel(pendingDial, labels) {
+    var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
+
+    return entry ? text(labels, entry[0], entry[1]) : '';
+}
+
+// The line under it that tells the agent what is happening and whether to wait, or ''.
+export function dialPhaseHint(pendingDial, labels) {
+    var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
+
+    return entry ? text(labels, entry[2], entry[3]) : '';
+}
+
+// The agent's status as their screens show it. A power, progressive or predictive dial reserves the agent and holds
+// them Busy from the moment the dial is placed, so "On a call" showed while the customer was only ringing, or while
+// their answer was screened for a machine -- and an agent who saw it took it that they were already on the call. While
+// the dialer is placing a call for them the status says what it is doing instead; "On a call" waits for the agent to
+// be connected. presence: { status, reason, requestedStatus }; pendingDial: { phase } or null.
+export function agentStatusLabel(presence, pendingDial, labels) {
+    var phase = dialPhaseLabel(pendingDial, labels);
+    var status = normalizePresenceStatus((presence || {}).status);
+
+    if (phase && (status === 'Reserved' || status === 'Busy')) {
+        return phase;
+    }
+
+    return presenceLabel(presence, labels);
 }
 
 // What a break still waiting for the current work to end says, or '' when none is waiting.

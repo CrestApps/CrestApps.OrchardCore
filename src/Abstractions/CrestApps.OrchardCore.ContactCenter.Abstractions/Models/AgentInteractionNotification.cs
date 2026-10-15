@@ -42,6 +42,13 @@ public sealed class AgentInteractionNotification
     public string Direction { get; set; }
 
     /// <summary>
+    /// Gets or sets where a call the dialer placed for the agent stands before the agent is connected to it, or
+    /// <see cref="DialAttemptPhase.None"/>. A dialer call reads as connected the moment the customer answers, while the
+    /// agent may still be held for the answering-machine verdict; this says which.
+    /// </summary>
+    public DialAttemptPhase DialPhase { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the CRM activity the interaction is for, when it has one.
     /// </summary>
     public string ActivityItemId { get; set; }

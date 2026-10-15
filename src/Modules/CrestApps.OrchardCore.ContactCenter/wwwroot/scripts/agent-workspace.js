@@ -8,8 +8,8 @@
 	function escape(value) {
 		return String(value === null || value === void 0 ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 	}
-	function activeInteractionSignature(active) {
-		if (!active) return NO_ACTIVE_INTERACTION;
+	function activeInteractionSignature(active, pendingDial) {
+		if (!active) return pendingDial && pendingDial.interactionId && pendingDial.phase ? "dial:" + pendingDial.interactionId + ":" + pendingDial.phase : NO_ACTIVE_INTERACTION;
 		return [
 			active.interactionId,
 			active.status,
@@ -113,6 +113,32 @@
 		Training: ["training", "Training"],
 		AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
 	};
+	var DIAL_PHASE_NAMES = [
+		"None",
+		"Dialing",
+		"Screening",
+		"Connecting"
+	];
+	var DIAL_PHASE_LABELS = {
+		Dialing: [
+			"dialPhaseDialing",
+			"Dialing…",
+			"dialPhaseDialingHint",
+			"Calling the customer. You will be connected when they answer."
+		],
+		Screening: [
+			"dialPhaseScreening",
+			"Screening…",
+			"dialPhaseScreeningHint",
+			"The call was answered. Checking for an answering machine before connecting you."
+		],
+		Connecting: [
+			"dialPhaseConnecting",
+			"Connecting…",
+			"dialPhaseConnectingHint",
+			"A person answered. Connecting you now."
+		]
+	};
 	var REASONED_STATES = {
 		Break: true,
 		Away: true,
@@ -147,6 +173,26 @@
 		if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
 		var entry = STATUS_LABELS[status];
 		return entry ? text$1(labels, entry[0], entry[1]) : status;
+	}
+	function normalizeDialPhase(pendingDial) {
+		var value = pendingDial && pendingDial.phase;
+		if (typeof value === "number") value = DIAL_PHASE_NAMES[value];
+		else if (typeof value === "string" && /^\d+$/.test(value)) value = DIAL_PHASE_NAMES[Number(value)];
+		return typeof value === "string" && DIAL_PHASE_LABELS[value] ? value : "";
+	}
+	function dialPhaseLabel(pendingDial, labels) {
+		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
+		return entry ? text$1(labels, entry[0], entry[1]) : "";
+	}
+	function dialPhaseHint(pendingDial, labels) {
+		var entry = DIAL_PHASE_LABELS[normalizeDialPhase(pendingDial)];
+		return entry ? text$1(labels, entry[2], entry[3]) : "";
+	}
+	function agentStatusLabel(presence, pendingDial, labels) {
+		var phase = dialPhaseLabel(pendingDial, labels);
+		var status = normalizePresenceStatus((presence || {}).status);
+		if (phase && (status === "Reserved" || status === "Busy")) return phase;
+		return presenceLabel(presence, labels);
 	}
 	function pendingPresenceLabel(presence, labels) {
 		presence = presence || {};
@@ -266,11 +312,15 @@
 		function diagnostic(code, details) {
 			if (window.console && typeof window.console.info === "function") window.console.info("[cc-workspace] " + code, details || {});
 		}
-		function describeActive(active) {
-			return active ? {
+		function describeActive(active, pendingDial) {
+			if (active) return {
 				interactionId: active.interactionId,
 				direction: active.direction,
 				status: active.status
+			};
+			return pendingDial ? {
+				interactionId: pendingDial.interactionId,
+				dialPhase: normalizeDialPhase(pendingDial)
 			} : { interactionId: null };
 		}
 		function init(root) {
@@ -345,7 +395,7 @@
 				if (!refs.presenceLabel || !state) return;
 				var current = state.presence || {};
 				var status = normalizePresenceStatus(current.status) || "Offline";
-				var label = presenceLabel(current, config.presenceLabels);
+				var label = agentStatusLabel(current, state.pendingDial, config.presenceLabels);
 				var pending = pendingPresenceLabel(current, config.presenceLabels);
 				refs.presenceLabel.textContent = pending ? label + " · " + pending : label;
 				if (refs.presenceMenu) {
@@ -396,8 +446,16 @@
 			function renderActive() {
 				if (!refs.active || !state) return;
 				var active = state.activeInteraction;
-				if (!activeChanged(activeInteractionSignature(active))) return;
-				diagnostic("active-interaction-shown", describeActive(active));
+				var pendingDial = !active && normalizeDialPhase(state.pendingDial) ? state.pendingDial : null;
+				if (!activeChanged(activeInteractionSignature(active, pendingDial && {
+					interactionId: pendingDial.interactionId,
+					phase: normalizeDialPhase(pendingDial)
+				}))) return;
+				diagnostic("active-interaction-shown", describeActive(active, pendingDial));
+				if (pendingDial) {
+					refs.active.innerHTML = pendingDialHtml(pendingDial);
+					return;
+				}
 				if (!active) {
 					refs.active.innerHTML = emptyStateHtml({
 						icon: "fa-solid fa-headset",
@@ -414,6 +472,11 @@
 				var secureCaptureButton = config.canInitiateSecureCapture === true ? "<button type=\"button\" class=\"btn btn-sm btn-outline-primary\" data-cc-secure-capture=\"begin\" data-cc-interaction-id=\"" + escapeHtml(active.interactionId) + "\"><i class=\"fa-solid fa-shield-halved\"></i> " + escapeHtml(label("secureCapture", "Collect data securely")) + "</button>" : "";
 				var disclosureBlock = active.recordingDisclosure && config.recordingDisclosedUrl ? "<div class=\"alert alert-warning cc-active__disclosure\" role=\"status\" data-cc-recording-disclosure><div class=\"fw-semibold\"><i class=\"fa-solid fa-microphone-lines\" aria-hidden=\"true\"></i> " + escapeHtml(label("recordingDisclosureTitle", "Tell the customer the call is recorded")) + "</div><blockquote class=\"my-2 fst-italic\">" + escapeHtml(active.recordingDisclosure) + "</blockquote><div class=\"d-flex align-items-center gap-2 flex-wrap\"><button type=\"button\" class=\"btn btn-sm btn-warning\" data-cc-recording-disclosed data-cc-interaction-id=\"" + escapeHtml(active.interactionId) + "\"><i class=\"fa-solid fa-check\" aria-hidden=\"true\"></i> " + escapeHtml(label("recordingDisclosed", "I told the customer")) + "</button><span class=\"small\">" + escapeHtml(label("recordingDisclosureHint", "Read this out word for word, then confirm.")) + "</span></div></div>" : "";
 				refs.active.innerHTML = "<div class=\"cc-active\"><div class=\"cc-active__headline\"><span class=\"cc-active__dir\"><i class=\"fa-solid " + (inbound ? "fa-arrow-down-left" : "fa-arrow-up-right") + "\"></i></span><div><div class=\"cc-active__customer\">" + escapeHtml(active.customerLabel || active.customerAddress || label("unknownCaller", "Unknown caller")) + "</div><div class=\"cc-active__sub\">" + escapeHtml(inbound ? label("inbound", "Inbound") : label("outbound", "Outbound")) + (active.queueName ? " &middot; " + escapeHtml(active.queueName) : "") + (active.customerAddress ? " &middot; " + escapeHtml(active.customerAddress) : "") + "</div></div></div>" + (recordingBadge ? "<div class=\"cc-active__recording\">" + recordingBadge + "</div>" : "") + disclosureBlock + "<div class=\"cc-active__stats\"><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("status", "Status")) + "</div><div class=\"cc-stat__value\">" + escapeHtml(active.status) + "</div></div><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("talkTime", "Talk time")) + "</div><div class=\"cc-stat__value\" data-cc-talk-time aria-hidden=\"true\">0:00</div></div></div><div class=\"cc-active__actions\">" + (active.contactUrl ? "<a class=\"btn btn-sm btn-outline-secondary\" href=\"" + escapeHtml(active.contactUrl) + "\" target=\"_blank\" rel=\"noopener\"><i class=\"fa-solid fa-up-right-from-square\"></i> " + escapeHtml(label("openContact", "Open customer record")) + "</a>" : "") + secureButton + secureCaptureButton + (active.completeUrl ? "<a class=\"btn btn-sm btn-primary\" href=\"" + escapeHtml(active.completeUrl) + "\"><i class=\"fa-solid fa-check\"></i> " + escapeHtml(label("completeWork", "Complete activity")) + "</a>" : "") + "</div></div>";
+			}
+			function pendingDialHtml(pendingDial) {
+				var phase = normalizeDialPhase(pendingDial);
+				var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+				return "<div class=\"cc-active cc-active--pending is-" + escapeHtml(phase.toLowerCase()) + "\" data-cc-pending-dial=\"" + escapeHtml(phase) + "\"><div class=\"cc-active__headline\"><span class=\"cc-active__dir\"><i class=\"fa-solid fa-phone-volume\" aria-hidden=\"true\"></i></span><div><div class=\"cc-active__customer\">" + escapeHtml(pendingDial.customerLabel || pendingDial.customerAddress || label("unknownCaller", "Unknown caller")) + "</div><div class=\"cc-active__sub\">" + escapeHtml(label("outbound", "Outbound")) + (pendingDial.queueName ? " &middot; " + escapeHtml(pendingDial.queueName) : "") + (pendingDial.customerAddress ? " &middot; " + escapeHtml(pendingDial.customerAddress) : "") + "</div></div></div><div class=\"cc-active__stats\"><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("status", "Status")) + "</div><div class=\"cc-stat__value\" data-cc-dial-phase>" + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + "</div></div></div>" + (hint ? "<div class=\"cc-active__pending-hint\">" + escapeHtml(hint) + "</div>" : "") + "</div>";
 			}
 			function formatCustomer(value) {
 				var format = window.telephonyClient && window.telephonyClient.formatPhoneNumber;
@@ -713,7 +776,8 @@
 						interactionId: notification.interactionId,
 						eventType: notification.eventType,
 						direction: notification.direction,
-						status: notification.status
+						status: notification.status,
+						dialPhase: notification.dialPhase
 					} : {});
 					if (notification && notification.autoOpenActivity && notification.activityItemId && config.completeActivityUrlTemplate && openedActivityId !== notification.activityItemId) {
 						var openUrl = resolveSafeSameOriginUrl(config.completeActivityUrlTemplate.replace("__activityId__", encodeURIComponent(notification.activityItemId)));

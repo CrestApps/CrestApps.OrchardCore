@@ -356,6 +356,33 @@ public sealed class DialProviderCommandTypeExecutorTests
         Assert.Equal(_now, harness.Interaction.StartedUtc);
     }
 
+    // The agent's screens read "Screening…" from the interaction while an answered call waits for the machine verdict,
+    // so a dial the provider screens says so on the interaction, and one it does not screen does not.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProjectSuccessAsync_MarksTheInteraction_OnlyWhenTheProviderScreensTheAnswer(bool screened)
+    {
+        // Arrange
+        var harness = CreateHarness();
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+        };
+
+        if (screened)
+        {
+            result.Metadata[ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested] = bool.TrueString;
+        }
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(screened, DialerCallMetadata.IsAnswerDetectionRequested(harness.Interaction));
+    }
+
     [Fact]
     public async Task ProjectSuccessAsync_SetsActivityStatusToDialing()
     {

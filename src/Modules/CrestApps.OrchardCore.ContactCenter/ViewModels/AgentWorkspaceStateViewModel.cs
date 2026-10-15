@@ -57,6 +57,13 @@ public sealed class AgentWorkspaceStateViewModel
     /// </summary>
     public WorkspaceActiveInteractionViewModel ActiveInteraction { get; set; }
 
+    /// <summary>
+    /// Gets or sets the call the dialer is placing for the agent before they are connected to it, or
+    /// <see langword="null"/> when there is none. It is never also the <see cref="ActiveInteraction"/>.
+    /// </summary>
+    public WorkspacePendingDialViewModel PendingDial { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent's most recent interactions.
     /// </summary>
     public IList<WorkspaceHistoryEntryViewModel> RecentHistory { get; set; } = [];

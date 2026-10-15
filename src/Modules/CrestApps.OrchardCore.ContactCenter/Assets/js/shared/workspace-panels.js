@@ -22,10 +22,14 @@ function escape(value) {
         .replace(/'/g, '&#39;');
 }
 
-// Everything the active-interaction card shows that can change while it is on screen.
-export function activeInteractionSignature(active) {
+// Everything the active-interaction card shows that can change while it is on screen. With no interaction the agent
+// is on, the card shows the call the dialer is placing for them, if any (pendingDial: { interactionId, phase }), and
+// redraws as it moves from dialing to screening to connecting.
+export function activeInteractionSignature(active, pendingDial) {
     if (!active) {
-        return NO_ACTIVE_INTERACTION;
+        return pendingDial && pendingDial.interactionId && pendingDial.phase
+            ? 'dial:' + pendingDial.interactionId + ':' + pendingDial.phase
+            : NO_ACTIVE_INTERACTION;
     }
 
     return [

@@ -37,6 +37,14 @@ public static class AgentPresenceLabels
             ["meeting"] = T["Meeting"].Value,
             ["training"] = T["Training"].Value,
             ["afterHoursUnavailable"] = T["After-hours unavailable"].Value,
+
+            // While the dialer places a call for the agent, the status says what it is doing rather than "On a call".
+            ["dialPhaseDialing"] = T["Dialing…"].Value,
+            ["dialPhaseDialingHint"] = T["Calling the customer. You will be connected when they answer."].Value,
+            ["dialPhaseScreening"] = T["Screening…"].Value,
+            ["dialPhaseScreeningHint"] = T["The call was answered. Checking for an answering machine before connecting you."].Value,
+            ["dialPhaseConnecting"] = T["Connecting…"].Value,
+            ["dialPhaseConnectingHint"] = T["A person answered. Connecting you now."].Value,
         };
     }
 

@@ -217,6 +217,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             EventType = interactionEvent.EventType,
             Status = interaction.Status.ToString(),
             Direction = interaction.Direction.ToString(),
+            DialPhase = DialerCallMetadata.GetAttemptPhase(interaction),
             ActivityItemId = interaction.ActivityItemId,
             AutoOpenActivity = await IsPacedDialAgentJoinedAsync(interactionEvent, interaction, activityManager, cancellationToken),
             ServerTimeUtc = _clock.UtcNow,
@@ -225,12 +226,13 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Pushed InteractionChanged to agent '{AgentId}' for {EventType}: interaction '{InteractionId}' is {Direction} {Status}.",
+                "Pushed InteractionChanged to agent '{AgentId}' for {EventType}: interaction '{InteractionId}' is {Direction} {Status} (dial phase {DialPhase}).",
                 agent.ItemId.SanitizeLogValue(),
                 interactionEvent.EventType,
                 interaction.ItemId.SanitizeLogValue(),
                 interaction.Direction,
-                interaction.Status);
+                interaction.Status,
+                DialerCallMetadata.GetAttemptPhase(interaction));
         }
     }
 

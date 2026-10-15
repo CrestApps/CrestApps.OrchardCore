@@ -322,6 +322,16 @@
     font-size: 1.1rem;
 }
 
+// A call the dialer is placing for the agent, before they are connected to it.
+.cc-active--pending .cc-active__dir {
+    color: var(--cc-accent);
+}
+
+.cc-active__pending-hint {
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.9rem;
+}
+
 .cc-active__customer {
     font-size: 1.25rem;
     font-weight: 700;
