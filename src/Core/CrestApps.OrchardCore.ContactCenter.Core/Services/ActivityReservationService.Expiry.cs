@@ -13,7 +13,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// What becomes of an offer nobody answered: the sweep that finds reservations past their deadline, and the
 /// release that decides where each of those callers goes next — back into the queue, to the agent's voicemail,
-/// or out of the queue entirely — and puts the agent back to work.
+/// or out of the queue entirely — and puts the agent back to work. The same release moves on the caller whose
+/// agent accepted but could not be reached.
 /// </summary>
 /// <remarks>
 /// Split from the reservation lifecycle it shares a class with. Reserving, accepting and rejecting are things a
@@ -175,13 +176,25 @@ public sealed partial class ActivityReservationService
         return (DeadlineOutcome.Expired, reservation.ExpiresUtc);
     }
 
+    /// <summary>
+    /// Releases an offer the agent did not take, or could not be reached for, and decides where its caller goes next.
+    /// </summary>
+    /// <param name="reservation">The reservation being released.</param>
+    /// <param name="status">The terminal status the reservation takes.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <param name="sendToVoicemail">Whether the agent chose voicemail for the caller, whatever the queue would do.</param>
+    /// <param name="agentUnreachable">Whether the agent accepted the offer but the leg rung to their phone failed: the
+    /// queue's unanswered-offer action applies as it does to an offer that rang out, and the agent is set Away rather
+    /// than returned to work.</param>
     private async Task ReleaseAsync(
         ActivityReservation reservation,
         ReservationStatus status,
         CancellationToken cancellationToken,
-        bool sendToVoicemail = false)
+        bool sendToVoicemail = false,
+        bool agentUnreachable = false)
     {
         var now = _clock.UtcNow;
+        var wasAccepted = reservation.Status == ReservationStatus.Accepted;
         reservation.TransitionTo(status);
 
         // This is the age settled reservations are purged by. Without it the row is never selected by retention.
@@ -239,7 +252,7 @@ public sealed partial class ActivityReservationService
         var directVoicemailEnabled = isDirect && IsDirectVoicemailEnabled(interaction);
         var configuredUnansweredAction = sendToVoicemail
             ? UnansweredOfferAction.Voicemail
-            : ResolveUnansweredAction(isDirect, directVoicemailEnabled, status, queue);
+            : ResolveUnansweredAction(isDirect, directVoicemailEnabled, status, queue, agentUnreachable);
         var unansweredAction = configuredUnansweredAction;
         ProviderCommandRegistration providerCommand = null;
 
@@ -312,9 +325,18 @@ public sealed partial class ActivityReservationService
             }
         }
 
+        var agentPreviousStatus = agent?.PresenceStatus ?? AgentPresenceStatus.Offline;
+
         if (agent is not null)
         {
-            await ReleaseAgentStateAsync(agent, reservation, ResolveReleaseReason(status), interaction?.ItemId, now, cancellationToken);
+            if (agentUnreachable)
+            {
+                await SetUnreachableAgentAwayAsync(agent, reservation, interaction?.ItemId, now, cancellationToken);
+            }
+            else
+            {
+                await ReleaseAgentStateAsync(agent, reservation, ResolveReleaseReason(status), interaction?.ItemId, now, cancellationToken);
+            }
 
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
@@ -329,6 +351,14 @@ public sealed partial class ActivityReservationService
             workState.ReservedByUsername = null;
             workState.ReservedUtc = null;
             workState.ReservationExpiresUtc = null;
+
+            // An accepted offer had become an assignment; the caller is nobody's again.
+            if (wasAccepted)
+            {
+                workState.AssignedToId = null;
+                workState.AssignedToUsername = null;
+                workState.AssignedToUtc = null;
+            }
         }, cancellationToken);
 
         if (!requeue)
@@ -380,15 +410,24 @@ public sealed partial class ActivityReservationService
 
         await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, agent, ContactCenterActor.System, now, cancellationToken);
 
+        if (agentUnreachable && agent is not null)
+        {
+            await PublishPresenceChangedAsync(agent, agentPreviousStatus, now, cancellationToken);
+        }
+
         // A decline is recorded by whoever took it, with the agent as the actor; an expiry names what became of the
-        // caller, and a withdrawal says the platform took the offer back.
-        await RecordOfferSettledAsync(
-            reservation,
-            interaction,
-            agent,
-            now,
-            status == ReservationStatus.Expired ? configuredUnansweredAction.ToString() : CallLifecycleReasons.Withdrawn,
-            cancellationToken);
+        // caller, and a withdrawal says the platform took the offer back. An accepted offer was already settled when
+        // the agent took it, so releasing it records nothing more.
+        if (!wasAccepted)
+        {
+            await RecordOfferSettledAsync(
+                reservation,
+                interaction,
+                agent,
+                now,
+                status == ReservationStatus.Expired ? configuredUnansweredAction.ToString() : CallLifecycleReasons.Withdrawn,
+                cancellationToken);
+        }
 
         if (providerCommand is not null)
         {
@@ -429,16 +468,21 @@ public sealed partial class ActivityReservationService
         Settled,
     }
 
+    /// <summary>
+    /// Resolves what becomes of the caller. The queue's unanswered-offer action applies to an offer that rang out,
+    /// and to one the agent accepted but could not be reached for, which left the caller waiting the same way.
+    /// </summary>
     private static UnansweredOfferAction ResolveUnansweredAction(
         bool isDirect,
         bool directVoicemailEnabled,
         ReservationStatus status,
-        ActivityQueue queue)
+        ActivityQueue queue,
+        bool agentUnreachable)
         => isDirect
             ? directVoicemailEnabled && status is ReservationStatus.Expired or ReservationStatus.Rejected
                 ? UnansweredOfferAction.Voicemail
                 : UnansweredOfferAction.Requeue
-            : status == ReservationStatus.Expired
+            : status == ReservationStatus.Expired || agentUnreachable
                 ? queue?.UnansweredOfferAction ?? UnansweredOfferAction.Requeue
                 : UnansweredOfferAction.Requeue;
 

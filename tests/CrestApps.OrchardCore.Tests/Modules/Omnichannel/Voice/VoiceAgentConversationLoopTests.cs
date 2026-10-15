@@ -1351,6 +1351,8 @@ public sealed partial class VoiceAgentConversationLoopTests
             CompletionRunner = new RecordingCompletionRunner();
             AbandonmentHandler = new RecordingAbandonmentHandler();
 
+            AnsweringMachine = new AnsweringMachineSignals(Clock);
+
             Loop = new VoiceAgentConversationLoop(
                 activityStore.Object,
                 sessionManager.Object,
@@ -1358,6 +1360,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 completionService.Object,
                 handoffTurn,
                 endCallTurn,
+                AnsweringMachine,
                 CompletionRunner,
                 [AbandonmentHandler],
                 [CallObserver],
@@ -1393,6 +1396,11 @@ public sealed partial class VoiceAgentConversationLoopTests
         public FakeVoiceAgentMediaProvider Media { get; } = new();
 
         public RecordingRealtimeRunner Realtime { get; } = new();
+
+        /// <summary>
+        /// The provider's answering-machine reports, carried from the webhook that receives them to the live session.
+        /// </summary>
+        public AnsweringMachineSignals AnsweringMachine { get; }
 
         /// <summary>
         /// What a node that is shutting down waits on, so a test can see whether the call was held and stop the node.

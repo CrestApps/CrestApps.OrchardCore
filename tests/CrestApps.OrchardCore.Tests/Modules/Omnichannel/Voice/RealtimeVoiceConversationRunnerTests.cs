@@ -1342,7 +1342,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 .Returns(Task.CompletedTask);
 
             var clock = new Mock<IClock>();
-            clock.SetupGet(x => x.UtcNow).Returns(Now);
+            clock.SetupGet(x => x.UtcNow).Returns(() => UtcNow);
 
             Runner = new RealtimeVoiceConversationRunner(
                 Orchestrator,
@@ -1422,6 +1422,46 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public bool ReachedVoicemail { get; set; }
 
         /// <summary>
+        /// The instant the harness clock reports right now, which a test moves forward to put time between the
+        /// moments of a call. Starts at <see cref="Now"/>.
+        /// </summary>
+        public DateTime UtcNow { get; set; } = Now;
+
+        /// <summary>
+        /// The token the loop passes when the provider reports that a machine answered.
+        /// </summary>
+        public CancellationToken AnsweredByMachine { get; set; }
+
+        /// <summary>
+        /// The token the loop passes when the provider hears the machine's greeting end.
+        /// </summary>
+        public CancellationToken MachineGreetingEnded { get; set; }
+
+        /// <summary>
+        /// What the loop passes to end the call on voicemail once the session has left its message.
+        /// </summary>
+        public Action EndCallOnVoicemail { get; set; }
+
+        /// <summary>
+        /// The real end-call turn the call's decisions are recorded on, once a test asks for one.
+        /// </summary>
+        public VoiceCallEndTurn EndCallTurn { get; private set; }
+
+        /// <summary>
+        /// Wires the end-call decisions to a real end-call turn, the way the loop does, so a test can read what the
+        /// session recorded on it rather than feeding it tokens of its own.
+        /// </summary>
+        public VoiceCallEndTurn UseEndCallTurn()
+        {
+            EndCallTurn = new VoiceCallEndTurn();
+            EndCallRequested = EndCallTurn.EndCallRequestedToken;
+            EndCallRequests = () => EndCallTurn.RequestCount;
+            EndCallOnVoicemail = () => EndCallTurn.RequestEndCall(VoiceAgentConversationLoop.VoicemailMessageLeftReason, reachedVoicemail: true);
+
+            return EndCallTurn;
+        }
+
+        /// <summary>
         /// How many times the model has asked to end the call, as the loop reports it from the end-call turn.
         /// </summary>
         public Func<int> EndCallRequests { get; set; }
@@ -1461,8 +1501,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 HandoffRequested = HandoffRequested,
                 EndCallRequested = EndCallRequested,
                 NodeStopping = NodeStopping,
-                ReachedVoicemail = () => ReachedVoicemail,
+                ReachedVoicemail = () => ReachedVoicemail || EndCallTurn?.ReachedVoicemail == true,
                 EndCallRequests = EndCallRequests,
+                AnsweredByMachine = AnsweredByMachine,
+                MachineGreetingEnded = MachineGreetingEnded,
+                EndCallOnVoicemail = EndCallOnVoicemail,
                 HandoffInstructions = HandoffInstructions,
                 ContactName = ContactName,
                 RecordingDisclosure = RecordingDisclosure,

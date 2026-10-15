@@ -73,9 +73,21 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         }
 
         // A voicemail is recorded with a recording client_state naming its interaction: the caller's leg ends with the
-        // message, so nothing else needs the leg's own state afterwards.
+        // message, so only a call recording already running on the leg still needs telling apart from it.
         if (TelnyxRecordingClientState.TryParse(callEvent.ClientState, out var recordingState))
         {
+            // Telnyx stamps a command's client_state on every later webhook of the call, so an automated voice agent's
+            // call that fell to voicemail delivers its own recording with the voicemail's state. A call is recorded on
+            // two channels and a voicemail on one: a two-channel recording on a leg whose call recording is still
+            // running is that call recording, filed as the conversation rather than as the message.
+            if (recordingState.IsVoicemail &&
+                _callRecordingCatalog is not null &&
+                string.Equals(callEvent.RecordingChannels, TelnyxConstants.Recording.CallChannels, StringComparison.OrdinalIgnoreCase) &&
+                await _callRecordingCatalog.FindRunningAsync(callEvent.CallControlId, cancellationToken) is { } runningCall)
+            {
+                return await EnqueueCallRecordingAsync(callEvent, runningCall, cancellationToken);
+            }
+
             var voicemailInteraction = await _interactionManager.FindByIdAsync(recordingState.InteractionId, cancellationToken);
 
             return voicemailInteraction is not null &&

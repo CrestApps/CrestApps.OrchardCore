@@ -164,4 +164,7 @@ public static class AgentReleaseReasons
 
     /// <summary>Routing undid a reservation it could not complete, such as a dial that failed.</summary>
     public const string Compensated = "Compensated";
+
+    /// <summary>The agent accepted the offer, but the leg rung to their phone was refused or never answered.</summary>
+    public const string Unreachable = "Unreachable";
 }
