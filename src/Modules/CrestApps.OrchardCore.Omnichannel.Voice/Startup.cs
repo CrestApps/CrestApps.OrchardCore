@@ -37,10 +37,12 @@ public sealed class Startup : StartupBase
 
         // A live conversation runs in this process, so when the node begins to stop each one is ended and its
         // caller handed on, rather than left on a line that falls silent. A singleton, so the registration on the
-        // host's stopping token goes with the shell; activation is what makes it.
+        // host's stopping token goes with the shell; activation is what makes it. Its tenant-events side is a
+        // singleton too: a scope disposes what a scoped factory returns, so the activation scope would dispose the
+        // signal every answered call reads.
         services.AddSingleton<AIVoiceCallShutdown>();
         services.AddSingleton<IAIVoiceCallShutdown>(serviceProvider => serviceProvider.GetRequiredService<AIVoiceCallShutdown>());
-        services.AddScoped<IModularTenantEvents>(serviceProvider => serviceProvider.GetRequiredService<AIVoiceCallShutdown>());
+        services.AddSingleton<IModularTenantEvents>(serviceProvider => serviceProvider.GetRequiredService<AIVoiceCallShutdown>());
 
         // One per call, so the tool and the session holding the line share an instance and two calls running at
         // once cannot end each other.
