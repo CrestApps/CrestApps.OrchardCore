@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
@@ -22,7 +23,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
 {
     private readonly TelnyxApiClient _apiClient;
-    private readonly IVoiceMediaItemManager _voiceMediaItemManager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
     private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly TelnyxHangUpAfterSpeechRegistry _hangUpAfterSpeech;
     private readonly ILogger _logger;
@@ -31,19 +32,19 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     /// Initializes a new instance of the <see cref="TelnyxQueueTreatmentProvider"/> class.
     /// </summary>
     /// <param name="apiClient">The typed Telnyx client.</param>
-    /// <param name="voiceMediaItemManager">The voice media catalog, used to resolve a clip to its provider name.</param>
+    /// <param name="voiceMediaProvisioning">Resolves a clip to the name Telnyx plays it by, giving Telnyx a copy when it has none.</param>
     /// <param name="options">The tenant's Telnyx options, for the voice and language prompts are spoken in.</param>
     /// <param name="hangUpAfterSpeech">Where a leg to be hung up after its last message is remembered.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxQueueTreatmentProvider(
         TelnyxApiClient apiClient,
-        IVoiceMediaItemManager voiceMediaItemManager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
         IOptionsMonitor<TelnyxOptions> options,
         TelnyxHangUpAfterSpeechRegistry hangUpAfterSpeech,
         ILogger<TelnyxQueueTreatmentProvider> logger)
     {
         _apiClient = apiClient;
-        _voiceMediaItemManager = voiceMediaItemManager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
         _options = options;
         _hangUpAfterSpeech = hangUpAfterSpeech;
         _logger = logger;
@@ -217,7 +218,9 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     /// The queue stores the identifier of a clip in the voice media catalog, and that identifier means nothing to
     /// the provider — the clip is held under a name Telnyx assigned when it was uploaded. Passing the catalog id
     /// straight through was refused by Telnyx and produced silence on the line with nothing logged above debug,
-    /// so the queue looked correctly configured and the caller heard nothing.
+    /// so the queue looked correctly configured and the caller heard nothing. Telnyx is given a copy of the clip
+    /// from the platform's master copy when it has none, so a clip uploaded while another provider was in use, or
+    /// one Telnyx has since lost, still plays.
     /// <para>
     /// A value that is already a URL is passed through, so a queue can still point at externally hosted audio
     /// without going through the catalog.
@@ -233,9 +236,9 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
             return mediaId;
         }
 
-        var item = await _voiceMediaItemManager.FindByIdAsync(mediaId, cancellationToken);
+        var resolution = await _voiceMediaProvisioning.ResolveAsync(mediaId, TelnyxConstants.ProviderTechnicalName, cancellationToken);
 
-        if (item is null)
+        if (resolution.Item is null)
         {
             _logger.LogWarning(
                 "Queue hold music refers to voice media '{MediaId}', which is not in the catalog; the caller waits in silence.",
@@ -244,16 +247,25 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(item.MediaReference))
+        if (string.IsNullOrWhiteSpace(resolution.Reference))
         {
-            _logger.LogWarning(
-                "Voice media '{MediaId}' has no provider reference, so it was never stored on the provider; the caller waits in silence.",
-                mediaId.SanitizeLogValue());
+            if (resolution.Status == VoiceMediaProvisioningStatus.NoAudio)
+            {
+                _logger.LogWarning(
+                    "Voice media '{MediaId}' has no master copy and Telnyx holds no copy of it; upload the clip again. The caller waits in silence.",
+                    mediaId.SanitizeLogValue());
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Voice media '{MediaId}' could not be delivered to Telnyx from its master copy; the caller waits in silence.",
+                    mediaId.SanitizeLogValue());
+            }
 
             return null;
         }
 
-        return item.MediaReference;
+        return resolution.Reference;
     }
 
     private void Report(bool succeeded, string action, string providerCallId)

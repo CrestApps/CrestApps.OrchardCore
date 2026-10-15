@@ -25,29 +25,35 @@ public class VoiceMediaItemViewModel
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the audio file being uploaded to the telephony provider's media storage. Optional on edit, where
-    /// omitting it keeps the existing clip.
+    /// Gets or sets the audio file being uploaded. It is kept as the clip's master copy and sent to the telephony
+    /// provider. Optional on edit, where omitting it keeps the existing clip.
     /// </summary>
     public IFormFile Audio { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the entry already references provider-hosted audio.
+    /// Gets or sets a value indicating whether the entry has audio: a master copy, a provider's copy, or both.
     /// </summary>
     public bool HasMedia { get; set; }
 
     /// <summary>
-    /// Gets or sets the technical name of the telephony provider that currently hosts the clip.
+    /// Gets or sets a value indicating whether the platform keeps a master copy of the audio. Without one the clip
+    /// exists only at the provider it was uploaded to and has to be uploaded again to be protected.
     /// </summary>
-    public string ProviderName { get; set; }
+    public bool HasMasterCopy { get; set; }
 
     /// <summary>
-    /// Gets or sets the audio format of the currently hosted clip (for example <c>mp3</c> or <c>wav</c>).
+    /// Gets or sets the technical names of the telephony providers that hold a copy of the clip.
+    /// </summary>
+    public IList<string> ProviderNames { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the audio format of the clip (for example <c>mp3</c> or <c>wav</c>).
     /// </summary>
     public string Format { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether a telephony provider capable of hosting media is configured, which
-    /// determines whether audio can be uploaded.
+    /// Gets or sets a value indicating whether audio can be uploaded: a media store keeps master copies, a
+    /// telephony provider capable of hosting media is configured, or both.
     /// </summary>
     public bool CanUpload { get; set; }
 }

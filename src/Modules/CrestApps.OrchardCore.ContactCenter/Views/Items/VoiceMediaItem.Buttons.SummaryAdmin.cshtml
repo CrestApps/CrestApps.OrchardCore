@@ -6,6 +6,14 @@
 <a asp-action="Edit"
    asp-route-id="@Model.Value.ItemId"
    class="btn btn-primary btn-sm">@T["Edit"]</a>
+@if (!string.IsNullOrWhiteSpace(Model.Value.MasterStorageReference))
+{
+    <a asp-action="Resync"
+       asp-route-id="@Model.Value.ItemId"
+       class="btn btn-secondary btn-sm"
+       title="@T["Check that every enabled phone provider holds this clip, and send it to any that does not."]"
+       data-url-af="UnsafeUrl">@T["Re-sync media"]</a>
+}
 <a asp-action="Delete"
    asp-route-id="@Model.Value.ItemId"
    class="btn btn-danger btn-sm"

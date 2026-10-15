@@ -82,7 +82,7 @@ internal static class TelnyxContactCenterProviderFactory
 
         return new TelnyxQueueTreatmentProvider(
             apiClient,
-            new Mock<IVoiceMediaItemManager>().Object,
+            new Mock<IVoiceMediaProvisioningService>().Object,
             monitor.Object,
             new TelnyxHangUpAfterSpeechRegistry(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()))),
             NullLogger<TelnyxQueueTreatmentProvider>.Instance);
