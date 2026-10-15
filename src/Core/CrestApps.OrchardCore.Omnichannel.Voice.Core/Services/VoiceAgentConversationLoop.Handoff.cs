@@ -188,6 +188,7 @@ public sealed partial class VoiceAgentConversationLoop
                 HandoffRequested = handoffRequested,
                 EndCallRequested = endCallRequested,
                 EndCallReason = _endCallTurn.Reason,
+                ReachedVoicemail = _endCallTurn.ReachedVoicemail,
                 SessionLost = sessionLost,
                 SessionEndedUtc = sessionEndedUtc,
             });
@@ -267,6 +268,13 @@ public sealed partial class VoiceAgentConversationLoop
             await TakeOverAfterALostSessionAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, cancellationToken);
 
             return;
+        }
+
+        // The message was left on a machine, so the activity says so, as a turn-based call's does. Read off the
+        // transcript alone, a greeting the session transcribed in two parts would count as a conversation.
+        if (completion.ReachedVoicemail)
+        {
+            await MarkVoicemailMessageLeftAsync(activity, cancellationToken);
         }
 
         // The conversation finished and the call is still up, so somebody has to end it. The session already

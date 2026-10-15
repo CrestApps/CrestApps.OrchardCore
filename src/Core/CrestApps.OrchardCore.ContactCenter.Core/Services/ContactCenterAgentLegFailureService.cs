@@ -20,13 +20,17 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IDialerAbandonmentTracker _abandonmentTracker;
+    private readonly IActivityReservationManager _reservationManager;
+    private readonly IActivityReservationService _reservationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterAgentLegFailureService"/> class.
     /// </summary>
     /// <remarks>
     /// The abandonment tracker plays an automated dialer profile's abandoned-call message to a person whose agent never
-    /// connected, and records an agent who connected too late.
+    /// connected, and records an agent who connected too late. The reservation manager and service find and release
+    /// the accepted offer of an inbound caller in a queue, whose fate is the queue's unanswered-offer action rather
+    /// than a failed call.
     /// </remarks>
     public ContactCenterAgentLegFailureService(
         IInteractionManager interactionManager,
@@ -37,10 +41,14 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         IClock clock,
         ILogger<ContactCenterAgentLegFailureService> logger,
         IAgentPresenceManager presenceManager,
-        IDialerAbandonmentTracker abandonmentTracker)
+        IDialerAbandonmentTracker abandonmentTracker,
+        IActivityReservationManager reservationManager,
+        IActivityReservationService reservationService)
     {
         _presenceManager = presenceManager;
         _abandonmentTracker = abandonmentTracker;
+        _reservationManager = reservationManager;
+        _reservationService = reservationService;
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _clock = clock;
@@ -81,6 +89,14 @@ public sealed partial class ContactCenterAgentLegFailureService : IContactCenter
         if (interaction is null || interaction.IsSettled)
         {
             return false;
+        }
+
+        // An inbound caller a queue offered is the queue's to decide for. Settling their call as failed hung up on a
+        // caller who rang in and waited, and left the agent whose phone could not ring Available for the next caller;
+        // the queue's unanswered-offer action applies instead, and the agent is set Away.
+        if (IsQueuedInboundCaller(interaction))
+        {
+            return await ReleaseQueuedCallerAsync(interaction, providerName, peerProviderCallId, hangupCause, cancellationToken);
         }
 
         // A person who answered an automated dialer call is listening to silence while the agent never arrives. The

@@ -115,6 +115,32 @@ public sealed class RealtimeVoiceConversationContext
     public Action CustomerAnswered { get; set; }
 
     /// <summary>
+    /// Gets or sets a token that is cancelled when the telephony provider reports that a voicemail or answering
+    /// machine answered the call.
+    /// </summary>
+    /// <remarks>
+    /// The report arrives on a webhook request of its own while the session holds the call in another, so it is
+    /// carried here through <see cref="IAnsweringMachineSignals"/>. Once it fires the session stops conversing: what
+    /// the model says to the greeting is kept off the line, one message is left once the greeting is over, and the
+    /// call is ended through <see cref="EndCallOnVoicemail"/>. Left unset, a machine is treated like anybody else who
+    /// answers, and only the model can notice it.
+    /// </remarks>
+    public CancellationToken AnsweredByMachine { get; set; }
+
+    /// <summary>
+    /// Gets or sets a token that is cancelled when the provider hears the machine's greeting end, which is the moment
+    /// to leave the message. Left unset, or never fired, the message is left once the line has been quiet for a moment.
+    /// </summary>
+    public CancellationToken MachineGreetingEnded { get; set; }
+
+    /// <summary>
+    /// Gets or sets what is told when the session has left its message on the machine, or has given up on one, so
+    /// the call is ended exactly as the end-call tool ends it with voicemail reported: <see cref="EndCallRequested"/>
+    /// fires and <see cref="ReachedVoicemail"/> reads <see langword="true"/>.
+    /// </summary>
+    public Action EndCallOnVoicemail { get; set; }
+
+    /// <summary>
     /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
     /// <see langword="null"/> when this call has nowhere to hand them.
     /// </summary>

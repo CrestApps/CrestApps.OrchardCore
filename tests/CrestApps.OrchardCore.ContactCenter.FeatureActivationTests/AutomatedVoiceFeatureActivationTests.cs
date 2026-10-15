@@ -75,6 +75,34 @@ public sealed class AutomatedVoiceFeatureActivationTests
     }
 
     [Fact]
+    public async Task AfterActivation_TheShutdownSignalIsStillReadable()
+    {
+        // Arrange
+        // Every AI call reads the shutdown signal when it is answered. Activation resolves the tenant's event
+        // handlers in a scope of its own, and the signal must outlive that scope: otherwise every call answered
+        // after the tenant starts throws, and the person called hears silence.
+        var profile = new ContactCenterTenantProfile
+        {
+            Id = "automated-voice-shutdown",
+            ProviderProfile = "none",
+            Features =
+            [
+                OmnichannelVoiceConstants.Feature.Area,
+            ],
+        };
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+        var tenant = await host.CreateTenantAsync(profile);
+        await host.ActivateTenantAsync(tenant);
+
+        // Act
+        var exception = await host.ExecuteInTenantScopeAsync(tenant, services =>
+            Task.FromResult(Record.Exception(() => services.GetRequiredService<IAIVoiceCallShutdown>().Stopping.IsCancellationRequested)));
+
+        // Assert
+        Assert.Null(exception);
+    }
+
+    [Fact]
     public async Task TheMediaResolver_ComesFromTelephony_NotFromAnyProvider()
     {
         // Arrange

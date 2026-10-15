@@ -56,11 +56,9 @@ public sealed class TelnyxAiVoiceRecordingHandler : ITelnyxAiVoiceEventHandler
             return;
         }
 
-        // Telnyx calls a leg the caller placed "incoming"; the customer is whoever is not the platform's number.
-        var isInbound = string.Equals(callEvent.Direction?.Trim(), "incoming", StringComparison.OrdinalIgnoreCase);
+        var (isInbound, customerNumber) = ResolveCustomer(callEvent, state);
         var callControlId = callEvent.CallControlId;
         var activityId = state.ActivityId;
-        var customerNumber = isInbound ? callEvent.From : callEvent.To;
 
         var scope = await _shellHost.GetScopeAsync(_shellSettings);
 
@@ -68,6 +66,25 @@ public sealed class TelnyxAiVoiceRecordingHandler : ITelnyxAiVoiceEventHandler
         // on SQLite a YesSql call never does -- the conversation would wait for the recording after all. Not tied to
         // the request's token either: the recording outlives the webhook that started it.
         _ = Task.Run(() => RecordInOwnScopeAsync(scope, callControlId, activityId, customerNumber, isInbound), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Tells whether the AI voice leg is a call the customer placed, and which number is the customer's.
+    /// </summary>
+    /// <remarks>
+    /// Telnyx calls a leg the caller placed "incoming", but says so on <c>call.initiated</c> only: <c>call.answered</c>
+    /// carries no direction, so an entry point's AI call is marked inbound in its state. The customer is whoever is not
+    /// the platform's number.
+    /// </remarks>
+    /// <param name="callEvent">The answered event.</param>
+    /// <param name="state">The AI voice leg's state.</param>
+    /// <returns>Whether the call is inbound, and the customer's number.</returns>
+    internal static (bool IsInbound, string CustomerNumber) ResolveCustomer(TelnyxCallEvent callEvent, TelnyxOutboundBridgeState state)
+    {
+        var isInbound = state.Inbound == true ||
+            string.Equals(callEvent.Direction?.Trim(), "incoming", StringComparison.OrdinalIgnoreCase);
+
+        return (isInbound, isInbound ? callEvent.From : callEvent.To);
     }
 
     private async Task RecordInOwnScopeAsync(

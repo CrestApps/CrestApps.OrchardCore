@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,15 +17,25 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
 {
     private readonly TelnyxApiClient _apiClient;
     private readonly TelnyxOptions _options;
+    private readonly ICallRecordingCatalog _callRecordingCatalog;
     private readonly ILogger<TelnyxVoicemailRecordingStarter> _logger;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TelnyxVoicemailRecordingStarter"/> class.
+    /// </summary>
+    /// <param name="apiClient">The Telnyx Call Control client.</param>
+    /// <param name="options">The tenant's Telnyx options.</param>
+    /// <param name="callRecordingCatalogs">The call recordings catalog, when the Call Recording feature is enabled.</param>
+    /// <param name="logger">The logger.</param>
     public TelnyxVoicemailRecordingStarter(
         TelnyxApiClient apiClient,
         IOptionsMonitor<TelnyxOptions> options,
+        IEnumerable<ICallRecordingCatalog> callRecordingCatalogs,
         ILogger<TelnyxVoicemailRecordingStarter> logger)
     {
         _apiClient = apiClient;
         _options = options.CurrentValue;
+        _callRecordingCatalog = callRecordingCatalogs.FirstOrDefault();
         _logger = logger;
     }
 
@@ -58,6 +69,8 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
 
         try
         {
+            await StopRunningCallRecordingAsync(callControlId, cancellationToken);
+
             var response = await _apiClient.PostCallActionAsync(callControlId, "record_start", body, cancellationToken);
 
             if (!response.Succeeded)
@@ -103,4 +116,25 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
         }
     }
 
+    // A call already being recorded (an automated voice agent's call whose hand-off fell to voicemail) is stopped
+    // first, so Telnyx saves the conversation as a recording of its own before the message begins. Started on top of
+    // it, the voicemail's recording took the conversation's place, and the call was left without its recording.
+    private async Task StopRunningCallRecordingAsync(string callControlId, CancellationToken cancellationToken)
+    {
+        if (_callRecordingCatalog is null ||
+            await _callRecordingCatalog.FindRunningAsync(callControlId, cancellationToken) is null)
+        {
+            return;
+        }
+
+        var response = await _apiClient.PostCallActionAsync(callControlId, "record_stop", new Dictionary<string, object>(), cancellationToken);
+
+        if (!response.Succeeded && _logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Telnyx did not stop the call recording on {CallControlId} before the voicemail ({StatusCode}); the voicemail is recorded anyway.",
+                callControlId.SanitizeLogValue(),
+                response.StatusCode);
+        }
+    }
 }

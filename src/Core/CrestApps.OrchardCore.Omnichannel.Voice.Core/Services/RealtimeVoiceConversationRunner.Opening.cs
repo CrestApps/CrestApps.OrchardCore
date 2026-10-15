@@ -59,4 +59,52 @@ public sealed partial class RealtimeVoiceConversationRunner
             await ApplyTelephonyTurnDetectionAsync(conversation, cancellationToken);
         }
     }
+
+    /// <summary>
+    /// Tells the session it is on a telephone, not a headset.
+    /// </summary>
+    /// <remarks>
+    /// The provider's default turn detection assumes clean, close-mic audio. A call is 8 kHz, companded, and
+    /// carries line noise and whatever leaks back from the far end's earpiece — so on the defaults the model
+    /// decides the caller has started and stopped talking when they have done neither. Live calls showed it
+    /// answering phantom turns ("Thank you." transcribed before anyone had spoken), transcribing the same
+    /// utterance twice, and restarting its own question mid-sentence — which reads as the assistant talking to
+    /// itself and never letting the caller speak.
+    /// <para>
+    /// Interruption stays on while a person is on the line: being talked over is the other half of sounding like a
+    /// machine. It is turned off once the provider has said a machine answered, so the tone does not cut the
+    /// voicemail message short (see the Voicemail partial).
+    /// </para>
+    /// <para>
+    /// What this can and cannot change depends on the detector the session runs, and that is the tenant's
+    /// realtime transport setting, not ours. Under the default (<c>semantic_vad</c>, eagerness <c>auto</c>) the
+    /// Core conversation re-sends the semantic detector and <em>ignores</em> the silence and threshold passed here —
+    /// semantic detection has neither. They only take effect on a tenant configured for <c>server_vad</c>. So on a
+    /// default tenant this call keeps interruption on and nothing else; the phantom turns the comments above
+    /// describe are held back by <see cref="CallerEchoGuard"/> before the audio reaches the detector at all.
+    /// </para>
+    /// </remarks>
+    private async Task ApplyTelephonyTurnDetectionAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // The detector type is left as the session already has it: the valid values belong to the provider,
+            // and naming one here would be a guess that fails closed on a live call. Core offers no way to set
+            // semantic eagerness or input noise reduction from here, which is why neither is tuned.
+            // Interruption is off once a machine has answered: nothing on a recording is somebody talking over the
+            // assistant, and its tone must not cut the one message short. See the Voicemail partial.
+            await conversation.UpdateTurnDetectionAsync(
+                allowInterruption: !OnAMachine(),
+                silenceDurationMs: TelephonySilenceDurationMilliseconds,
+                vadThreshold: TelephonyVadThreshold,
+                turnDetectionType: null,
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            // Tuning is an improvement, not a precondition. A provider that will not accept it still carries
+            // the call on its defaults.
+            _logger.LogWarning(ex, "Could not apply telephony turn detection to a realtime voice session; the provider defaults stay in effect.");
+        }
+    }
 }

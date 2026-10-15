@@ -30,13 +30,16 @@ public sealed partial class VoiceAgentConversationLoop
     internal static readonly TimeSpan VoicemailToneWait = TimeSpan.FromSeconds(3);
 
     /// <summary>
-    /// What the model is told when the time has come to leave the message.
+    /// What the model is told when the time has come to leave the message: the instruction both ways of holding a
+    /// call share (see <see cref="VoiceCallGuidance.LeavingAVoicemail"/>), put to a turn-based model as the turn it
+    /// answers and marked as not being the customer's.
     /// </summary>
-    internal const string LeavingAVoicemail =
-        "[Not the customer] This call went to voicemail and it is now recording; any customer lines before this are " +
-        "its recorded greeting. Reply with only the voicemail message to leave, in one to three short sentences: greet the " +
-        "customer by name if you know it, say who you are and why you called, and say you will try them again. It is " +
-        "a recording, so do not ask any questions.";
+    internal const string LeavingAVoicemail = "[Not the customer] " + VoiceCallGuidance.LeavingAVoicemail;
+
+    /// <summary>
+    /// The reason recorded on the end-call turn when a live session has left its message on a machine.
+    /// </summary>
+    internal const string VoicemailMessageLeftReason = "The call was answered by voicemail and a message was left on it.";
 
     /// <summary>
     /// The message left when the model produces none.
@@ -120,6 +123,11 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
+        // Told first to the live session that may be holding this call in another request, which reads the activity
+        // marked below only once the call is over: see IAnsweringMachineSignals. The turn-based loop reads the mark
+        // on its next turn and needs nothing more.
+        _answeringMachineSignals.MachineDetected(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         if (activity is null || activity.Status.IsTerminal() || activity.TryGet<VoicemailReached>(out _))
@@ -144,6 +152,9 @@ public sealed partial class VoiceAgentConversationLoop
     // already listening is on the short voicemail watch, whose silence leaves it.
     private async Task OnMachineGreetingEndedAsync(VoiceAgentEvent voiceEvent, CancellationToken cancellationToken)
     {
+        // A live session leaves its message the moment it hears this, so it is told before anything is read.
+        _answeringMachineSignals.GreetingEnded(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         if (activity is null ||
@@ -182,6 +193,34 @@ public sealed partial class VoiceAgentConversationLoop
         await LeaveVoicemailAsync(media, voiceEvent.ProviderCallId, activity, voicemail, profile, session, cancellationToken);
 
         return true;
+    }
+
+    /// <summary>
+    /// Records on the activity that the message was left, once a live session has left it.
+    /// </summary>
+    /// <remarks>
+    /// A turn-based call records this as it speaks the message. A live session's message is spoken by the model, and
+    /// the only record of it is the end-call turn, which is read as the session ends; so it is written here, as the
+    /// call is finished. Without it the conclusion has to read the voicemail off the transcript, and a greeting the
+    /// session transcribed in two parts reads as two turns of conversation.
+    /// </remarks>
+    /// <param name="activity">The call's activity.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task MarkVoicemailMessageLeftAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (!activity.TryGet<VoicemailReached>(out var voicemail))
+        {
+            voicemail = new VoicemailReached();
+        }
+
+        if (voicemail.MessageLeft)
+        {
+            return;
+        }
+
+        voicemail.MessageLeft = true;
+        activity.Put(voicemail);
+        await _activityStore.UpdateAsync(activity, cancellationToken);
     }
 
     // Forgets the claim once the call is over, so the set holds only calls that are still up.

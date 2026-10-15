@@ -66,6 +66,7 @@ public static class TelnyxCallEventParser
                 SipHangupCause = ReadString(payload, "sip_hangup_cause"),
                 CallQualityStats = ReadCallQualityStats(payload),
                 RecordingId = ReadString(payload, "recording_id"),
+                RecordingChannels = ReadString(payload, "channels"),
                 RecordingStartedUtc = ReadDateTime(payload, "recording_started_at"),
                 RecordingEndedUtc = ReadDateTime(payload, "recording_ended_at"),
                 TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
