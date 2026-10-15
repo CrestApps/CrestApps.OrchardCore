@@ -621,7 +621,7 @@ The mutation is also allowed to decline after seeing the fresh version. That is 
 
 When the AI profile driving an automated call names a realtime deployment, and the **Contact Center Voice Media** feature is enabled, the call is held as a live speech-to-speech session instead of the turn-based transcribe-complete-synthesize loop. The caller's audio reaches the model as it arrives and the model's voice goes back as it is produced, so it can answer while they are still finishing and hear them if they interrupt. Everything downstream is unchanged, because both paths write the same transcript.
 
-Six things about that session are decided here rather than by the provider's defaults.
+Seven things about that session are decided here rather than by the provider's defaults.
 
 ### The line is band-limited in both directions
 
@@ -672,6 +672,21 @@ It is a short grace rather than an instant cut, because the model announces the 
 ### Optional room ambience
 
 A call can carry a quiet background bed — faint room tone and the sound of an agent typing — chosen per campaign on the activity batch and snapshotted onto each activity. Perfect silence between sentences is a strong tell that nobody is there. The bed is synthesized rather than looped, because a loop has its own tell: on a long call the caller starts to hear the seam. It is off by default, since it is audible on the call and an operator should opt into it rather than discover it.
+
+### A voicemail is left one message, in the session's own voice
+
+A recording sounds exactly like somebody picking up, and a model talks to it as to a person. Live, the message a customer's voicemail kept was the end of the assistant's opening line ("...is now a good time to talk?") and no message at all: the provider's answering-machine detection had reported the machine on a webhook request of its own and marked the activity, but the session holding the call inside the "call answered" request never learned of it.
+
+The provider's report now reaches the session through `IAnsweringMachineSignals`, keyed by provider and call: the conversation loop publishes the machine detection (`call.machine.detection.ended` or `call.machine.premium.detection.ended` on Telnyx, with the **Answering machine detection** setting on) and the end of its greeting (`call.machine.premium.greeting.ended`), and the session watches both while it holds the line. Once a machine is reported the call stops being a conversation:
+
+1. The model's replies to the greeting are kept off the line and out of the transcript, whatever is queued at the carrier is discarded, and the detector is re-applied with interruption off so the tone cannot cut the message short.
+2. The greeting is given until the provider hears it end, or the line has been quiet for 3 seconds measured from the last the machine was heard (its speech reported by the provider, or its voice on the line), or 30 seconds have passed since the report.
+3. The model is asked for one response with the same voicemail instruction the turn-based loop uses, under the session's own instructions, so the message comes in the profile's persona, in the campaign's voice and in the language the call has been held in. The message is the one line the machine hears; a model that produces none after two requests is given up on.
+4. Once the message has played, the call is ended exactly as the end-call tool ends it with voicemail reported: no moment is left for an answer, nothing said afterwards reaches the recording, the activity records the message as left, the session's usage summary is written with the *Voicemail* outcome, and the call is concluded as having reached voicemail (the *Answering machine* disposition where the subject flow has one). Noise after the message, which a person's words would take the call back with, is ignored on a machine.
+
+The signals are held in memory on the node that holds the session, which is the node the provider's later webhooks for that call must reach anyway for the live media to work (see the affinity note on the Voice Media stream above). A detection delivered to another node is not seen by the session; the activity is still marked, and the call is still concluded as a voicemail from that mark. Each call's signals are dropped when it hangs up and when the session holding it ends, and a call whose hangup was never reported is dropped after four hours.
+
+With detection off, a live session recognises a voicemail only when the model does: it leaves its message and calls the end-call tool with `voicemail` set. The turn-based loop is unchanged: it still recognises a greeting from its transcript or from a line nobody speaks on, and speaks its message through the provider's text-to-speech.
 
 ## Related guides
 

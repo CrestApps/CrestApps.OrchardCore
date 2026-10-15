@@ -54,6 +54,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public bool HandoffRequested { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+        public bool ReachedVoicemail { get; set; }
         public System.DateTime? SessionEndedUtc { get; set; }
         public bool SessionLost { get; set; }
     }
@@ -122,6 +123,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
 {
+    public sealed class AnsweringMachineSignal
+    {
+        public System.Threading.CancellationToken GreetingEnded { get; }
+        public System.Threading.CancellationToken MachineDetected { get; }
+    }
     public sealed class CallAmbience
     {
         public CallAmbience(int sampleRate, bool includeTyping = true, int? seed = default) { }
@@ -142,6 +148,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionMeasurements EndTurnBased(string activityId, System.DateTime endedUtc);
         System.Threading.Tasks.Task RecordAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionDraft draft);
         void TurnBasedSpeech(string activityId, bool started, System.DateTime occurredUtc);
+    }
+    public interface IAnsweringMachineSignals
+    {
+        void Forget(string providerName, string providerCallId);
+        void GreetingEnded(string providerName, string providerCallId);
+        void MachineDetected(string providerName, string providerCallId);
+        CrestApps.OrchardCore.Omnichannel.Voice.Services.AnsweringMachineSignal Watch(string providerName, string providerCallId);
     }
     public interface IRealtimeCallCompletionRunner
     {
@@ -199,15 +212,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public RealtimeVoiceConversationContext() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public System.Threading.CancellationToken AnsweredByMachine { get; set; }
         public System.Action<string> AssistantSaid { get; set; }
         public string ContactName { get; set; }
         public System.Action CustomerAnswered { get; set; }
+        public System.Action EndCallOnVoicemail { get; set; }
         public System.Threading.CancellationToken EndCallRequested { get; set; }
         public System.Func<int> EndCallRequests { get; set; }
         public bool EndedByShutdown { get; set; }
         public string HandoffInstructions { get; set; }
         public System.Threading.CancellationToken HandoffRequested { get; set; }
         public string InteractionId { get; set; }
+        public System.Threading.CancellationToken MachineGreetingEnded { get; set; }
         public System.Threading.CancellationToken NodeStopping { get; set; }
         public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
         public string ProviderCallId { get; set; }
@@ -245,6 +261,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.Core.AI.Completions.IAICompletionService completionService,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.IAnsweringMachineSignals answeringMachineSignals,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IAutomatedVoiceCallObserver> callObservers,

@@ -60,4 +60,19 @@ public sealed class VoiceCallGuidanceTests
     {
         Assert.Null(VoiceCallGuidance.RecordingDisclosure(disclosure));
     }
+
+    [Fact]
+    public void TheVoicemailMessage_IsOneShortMessageWithNoQuestions_InTheLanguageOfTheCall()
+    {
+        // Live, the model asked the voicemail whether the customer wanted a new or used vehicle. A live session leaves
+        // the message in its own voice, so the instruction names no language and leaves it in the call's.
+        Assert.Contains("one to three short sentences", VoiceCallGuidance.LeavingAVoicemail, StringComparison.Ordinal);
+        Assert.Contains("do not ask any questions", VoiceCallGuidance.LeavingAVoicemail, StringComparison.Ordinal);
+        Assert.Contains("say you will try them again", VoiceCallGuidance.LeavingAVoicemail, StringComparison.Ordinal);
+        Assert.Contains("in the language you have been speaking on this call", VoiceCallGuidance.LeavingAVoicemail, StringComparison.Ordinal);
+        Assert.DoesNotContain("English", VoiceCallGuidance.LeavingAVoicemail, StringComparison.Ordinal);
+
+        // And it is the one instruction both ways of holding a call share.
+        Assert.EndsWith(VoiceCallGuidance.LeavingAVoicemail, VoiceAgentConversationLoop.LeavingAVoicemail, StringComparison.Ordinal);
+    }
 }
