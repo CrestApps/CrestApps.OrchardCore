@@ -174,19 +174,8 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
         // The copies this upload replaced are deleted once the entry is saved, and the new copies are deleted
         // instead when it is not: the reconciliation runs after the request's unit of work, so neither a failed save
         // nor a refused form leaves the stored entry pointing at audio that is gone.
-        ShellScope.AddDeferredTask(scope => ReconcileReplacedAudioAsync(scope, item.ItemId, Snapshot(item), result.Replaced));
+        ShellScope.AddDeferredTask(scope => ReconcileReplacedAudioAsync(scope, item.ItemId, VoiceMediaAssetCopies.Snapshot(item), result.Replaced));
     }
-
-    private static VoiceMediaAsset Snapshot(VoiceMediaItem media)
-        => new()
-        {
-            MasterStorageReference = media.MasterStorageReference,
-            ContentType = media.ContentType,
-            Format = media.Format,
-            ProviderReferences = media.ProviderReferences is null
-                ? new Dictionary<string, string>()
-                : new Dictionary<string, string>(media.ProviderReferences),
-        };
 
     private static async Task ReconcileReplacedAudioAsync(ShellScope scope, string itemId, VoiceMediaAsset uploaded, IVoiceMediaAsset replaced)
     {
@@ -198,7 +187,7 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
             var store = scope.ServiceProvider.GetRequiredService<IVoiceMediaItemStore>();
             var stored = string.IsNullOrEmpty(itemId) ? null : await store.FindByIdAsync(itemId);
 
-            if (stored is not null && HoldsSameAudio(stored, uploaded))
+            if (VoiceMediaAssetCopies.HoldsSameAudio(stored, uploaded))
             {
                 if (replaced is not null)
                 {
@@ -215,17 +204,5 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
         {
             logger.LogWarning(ex, "Failed to delete the voice media audio replaced by an upload to the entry {ItemId}.", itemId.SanitizeLogValue());
         }
-    }
-
-    private static bool HoldsSameAudio(VoiceMediaItem stored, VoiceMediaAsset uploaded)
-    {
-        if (!string.IsNullOrEmpty(uploaded.MasterStorageReference))
-        {
-            return string.Equals(stored.MasterStorageReference, uploaded.MasterStorageReference, StringComparison.Ordinal);
-        }
-
-        return uploaded.ProviderReferences is { Count: > 0 }
-            && stored.ProviderReferences is not null
-            && uploaded.ProviderReferences.All(copy => stored.ProviderReferences.TryGetValue(copy.Key, out var reference) && string.Equals(reference, copy.Value, StringComparison.Ordinal));
     }
 }

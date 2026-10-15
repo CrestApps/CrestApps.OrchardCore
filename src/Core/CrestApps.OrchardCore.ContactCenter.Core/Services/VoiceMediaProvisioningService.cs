@@ -23,6 +23,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
     private readonly IRecordingMediaStore _mediaStore;
     private readonly IVoiceMediaProvisioner[] _provisioners;
     private readonly IVoiceMediaAvailabilityCache _availability;
+    private readonly IVoiceMediaUploadCoordinator _uploads;
+    private readonly IVoiceMediaCopyRecorder _copyRecorder;
     private readonly IOptionsSnapshot<TelephonySettings> _telephonySettings;
     private readonly ILogger _logger;
 
@@ -37,6 +39,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
     /// <param name="mediaStores">The media store master copies are kept in, when the Telephony feature registers one.</param>
     /// <param name="provisioners">The provisioners of the enabled providers that host media.</param>
     /// <param name="availability">The memory of the copies providers have confirmed they hold.</param>
+    /// <param name="uploads">The coordinator that runs one upload per clip and provider at a time.</param>
+    /// <param name="copyRecorder">Records a copy made for a library entry on that entry after the caller's unit of work commits.</param>
     /// <param name="telephonySettings">The tenant telephony settings naming the default provider.</param>
     /// <param name="logger">The logger.</param>
     public VoiceMediaProvisioningService(
@@ -44,6 +48,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
         IEnumerable<IRecordingMediaStore> mediaStores,
         IEnumerable<IVoiceMediaProvisioner> provisioners,
         IVoiceMediaAvailabilityCache availability,
+        IVoiceMediaUploadCoordinator uploads,
+        IVoiceMediaCopyRecorder copyRecorder,
         IOptionsSnapshot<TelephonySettings> telephonySettings,
         ILogger<VoiceMediaProvisioningService> logger)
     {
@@ -51,6 +57,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
         _mediaStore = mediaStores.FirstOrDefault();
         _provisioners = provisioners.ToArray();
         _availability = availability;
+        _uploads = uploads;
+        _copyRecorder = copyRecorder;
         _telephonySettings = telephonySettings;
         _logger = logger;
     }
@@ -76,7 +84,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
             return new VoiceMediaStoreResult();
         }
 
-        var replaced = Snapshot(media);
+        var replaced = VoiceMediaAssetCopies.HasAnyCopy(media) ? VoiceMediaAssetCopies.Snapshot(media) : null;
 
         // The store and the provider both read the audio from the start, so a stream that cannot be rewound is
         // buffered once rather than read twice.
@@ -223,7 +231,12 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
             }
         }
 
-        var reference = await UploadFromMasterAsync(media, provisioner, cancellationToken);
+        // Calls that need the clip at the same moment make one copy between them rather than one each.
+        var reference = await _uploads.UploadOnceAsync(
+            provisioner.ProviderTechnicalName,
+            media.MasterStorageReference,
+            token => UploadFromMasterAsync(media, provisioner, token),
+            cancellationToken);
 
         if (reference is null)
         {
@@ -263,14 +276,11 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
         var result = await EnsureProvisionedAsync(item, providerName, cancellationToken);
 
-        // Storing the entry inside the caller's unit of work is safe here: a library entry is written only when an
-        // operator edits it, and its store does not check document versions, so this write cannot collide with a
-        // concurrent one and fail the call the way a write to an agent profile, whose presence changes constantly,
-        // could. The agent greeting path records its copy in a deferred task for that reason.
+        // The copy is recorded on the entry after the caller's unit of work, not in it: a write here would silently
+        // overwrite an operator's edit made while the upload ran, and could restore a master copy that edit replaced.
         if (result.Changed)
         {
-            MirrorLegacyReference(item, result.ProviderName, result.Reference);
-            await _store.UpdateAsync(item, cancellationToken);
+            _copyRecorder.RecordLibraryCopy(item.ItemId, item.MasterStorageReference, result.ProviderName, result.Reference);
         }
 
         return new VoiceMediaResolution
@@ -279,6 +289,38 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
             Reference = result.Reference,
             Status = result.Status,
         };
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> VerifyProviderCopyAsync(string providerName, string mediaReference, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerName);
+
+        if (string.IsNullOrWhiteSpace(mediaReference))
+        {
+            return false;
+        }
+
+        var provisioner = FindProvisioner(providerName);
+
+        if (provisioner is null)
+        {
+            return false;
+        }
+
+        if (_availability.IsKnownAvailable(provisioner.ProviderTechnicalName, mediaReference))
+        {
+            return true;
+        }
+
+        if (await provisioner.GetAvailabilityAsync(mediaReference, cancellationToken) != VoiceMediaAvailability.Available)
+        {
+            return false;
+        }
+
+        _availability.MarkAvailable(provisioner.ProviderTechnicalName, mediaReference);
+
+        return true;
     }
 
     /// <inheritdoc/>
@@ -578,26 +620,6 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
         item.ProviderName = providerName;
         item.MediaReference = reference;
-    }
-
-    private static VoiceMediaAsset Snapshot(IVoiceMediaAsset media)
-    {
-        var hasCopies = media.ProviderReferences is { Count: > 0 };
-
-        if (string.IsNullOrWhiteSpace(media.MasterStorageReference) && !hasCopies)
-        {
-            return null;
-        }
-
-        return new VoiceMediaAsset
-        {
-            MasterStorageReference = media.MasterStorageReference,
-            ContentType = media.ContentType,
-            Format = media.Format,
-            ProviderReferences = hasCopies
-                ? new Dictionary<string, string>(media.ProviderReferences)
-                : new Dictionary<string, string>(),
-        };
     }
 
     private static string ResolveContentType(IVoiceMediaAsset media)

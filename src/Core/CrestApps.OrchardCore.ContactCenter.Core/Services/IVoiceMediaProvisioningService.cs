@@ -54,8 +54,22 @@ public interface IVoiceMediaProvisioningService
     Task<VoiceMediaProvisioningResult> EnsureProvisionedAsync(IVoiceMediaAsset media, string providerName, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Resolves what the named provider is to play for a voice media library entry: loads the entry, makes sure the
-    /// provider holds a copy as <see cref="EnsureProvisionedAsync"/> does, and stores the entry when a copy was made.
+    /// Reports whether the named provider holds a copy under a reference whose provider is not recorded, such as a
+    /// greeting uploaded before master copies were kept. The copy is never handed to a provider on the strength of
+    /// the reference alone: the provider is asked, its confirmation is remembered for the window of
+    /// <see cref="IVoiceMediaAvailabilityCache"/>, and a provider that cannot be asked, or does not hold the copy,
+    /// gets nothing.
+    /// </summary>
+    /// <param name="providerName">The technical name of the provider that is to play the clip.</param>
+    /// <param name="mediaReference">The reference to check.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the provider confirmed it holds the copy.</returns>
+    Task<bool> VerifyProviderCopyAsync(string providerName, string mediaReference, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Resolves what the named provider is to play for a voice media library entry: loads the entry and makes sure
+    /// the provider holds a copy as <see cref="EnsureProvisionedAsync"/> does. A copy made here is recorded on the
+    /// entry by <see cref="IVoiceMediaCopyRecorder"/> after the caller's unit of work commits, not inside it.
     /// </summary>
     /// <param name="mediaId">The library entry identifier.</param>
     /// <param name="providerName">The technical name of the provider that is to play the clip.</param>

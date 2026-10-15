@@ -36,7 +36,10 @@ public interface IVoiceMediaProvisioner
 
     /// <summary>
     /// Asks the provider whether it still holds a previously uploaded clip, so a copy that was deleted or expired at
-    /// the provider can be uploaded again from the platform's master copy before a caller is left in silence.
+    /// the provider can be uploaded again from the platform's master copy before a caller is left in silence. The
+    /// default answers <see cref="VoiceMediaAvailability.Unknown"/>, which keeps the copy the platform has recorded,
+    /// so an implementation written before this member existed keeps working; a provider that can be asked overrides
+    /// it so a lost copy is made again.
     /// </summary>
     /// <param name="mediaReference">The provider reference returned from <see cref="UploadAsync"/>.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
@@ -44,7 +47,8 @@ public interface IVoiceMediaProvisioner
     /// <see cref="VoiceMediaAvailability.Available"/> or <see cref="VoiceMediaAvailability.Missing"/> when the
     /// provider answered, and <see cref="VoiceMediaAvailability.Unknown"/> when it could not be asked.
     /// </returns>
-    Task<VoiceMediaAvailability> GetAvailabilityAsync(string mediaReference, CancellationToken cancellationToken = default);
+    Task<VoiceMediaAvailability> GetAvailabilityAsync(string mediaReference, CancellationToken cancellationToken = default)
+        => Task.FromResult(VoiceMediaAvailability.Unknown);
 
     /// <summary>
     /// Deletes a previously uploaded clip from the provider's media storage. Deletion is best-effort and idempotent:

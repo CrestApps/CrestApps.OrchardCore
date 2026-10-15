@@ -38,10 +38,12 @@ public sealed class VoiceMediaItemStore : DocumentCatalog<VoiceMediaItem, VoiceM
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        return await Session.Query<VoiceMediaItem, VoiceMediaItemIndex>(
+        var item = await Session.Query<VoiceMediaItem, VoiceMediaItemIndex>(
             index => index.Name == name,
             collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
+
+        return await LoadedAsync(item);
     }
 
     /// <inheritdoc/>
@@ -52,6 +54,6 @@ public sealed class VoiceMediaItemStore : DocumentCatalog<VoiceMediaItem, VoiceM
             .OrderBy(index => index.Name)
             .ListAsync(cancellationToken);
 
-        return items.ToArray();
+        return await LoadedAsync(items);
     }
 }

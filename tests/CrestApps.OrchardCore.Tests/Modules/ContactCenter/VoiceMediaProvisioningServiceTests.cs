@@ -500,9 +500,11 @@ public sealed class VoiceMediaProvisioningServiceTests
     }
 
     [Fact]
-    public async Task ResolveAsync_LoadsTheEntry_StoresItWhenACopyWasMade_AndKeepsTheOldMembersInStep()
+    public async Task ResolveAsync_LoadsTheEntry_AndHandsACopyItMadeToTheRecorder_RatherThanStoringTheEntryItself()
     {
         // Arrange
+        // A write here would run inside the call's unit of work and silently overwrite an operator's edit made while
+        // the upload ran, so the copy is recorded afterwards, against the master it was made from.
         var mediaStore = new FakeMediaStore();
         var masterReference = mediaStore.Add(_audio);
         var other = new FakeProvisioner(OtherProvider);
@@ -515,11 +517,12 @@ public sealed class VoiceMediaProvisioningServiceTests
             ProviderReferences = new Dictionary<string, string> { [Telnyx] = "telnyx-copy" },
         };
 
-        var store = new Mock<IVoiceMediaItemStore>();
+        var store = new Mock<IVoiceMediaItemStore>(MockBehavior.Strict);
         store.Setup(value => value.FindByIdAsync("media-1", It.IsAny<CancellationToken>())).ReturnsAsync(item);
-        store.Setup(value => value.UpdateAsync(item, It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
+        var copyRecorder = new Mock<IVoiceMediaCopyRecorder>(MockBehavior.Strict);
+        copyRecorder.Setup(recorder => recorder.RecordLibraryCopy("media-1", masterReference, OtherProvider, It.IsAny<string>()));
 
-        var service = CreateService(mediaStore, [other], store);
+        var service = CreateService(mediaStore, [other], store, copyRecorder: copyRecorder);
 
         // Act
         var resolution = await service.ResolveAsync("media-1", OtherProvider, TestContext.Current.CancellationToken);
@@ -529,15 +532,12 @@ public sealed class VoiceMediaProvisioningServiceTests
         Assert.Same(item, resolution.Item);
         Assert.Equal(upload.Reference, resolution.Reference);
         Assert.Equal(VoiceMediaProvisioningStatus.Provisioned, resolution.Status);
-        store.Verify(value => value.UpdateAsync(item, It.IsAny<CancellationToken>()), Times.Once);
-
-        // A reader of the single-copy members from before finds the copy a provider was last given.
-        Assert.Equal(OtherProvider, item.ProviderName);
-        Assert.Equal(upload.Reference, item.MediaReference);
+        copyRecorder.Verify(recorder => recorder.RecordLibraryCopy("media-1", masterReference, OtherProvider, upload.Reference), Times.Once);
+        store.Verify(value => value.UpdateAsync(It.IsAny<VoiceMediaItem>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task ResolveAsync_WhenNothingWasUploaded_DoesNotStoreTheEntry()
+    public async Task ResolveAsync_WhenNothingWasUploaded_RecordsNothing()
     {
         // Arrange
         var mediaStore = new FakeMediaStore();
@@ -552,15 +552,91 @@ public sealed class VoiceMediaProvisioningServiceTests
 
         var store = new Mock<IVoiceMediaItemStore>(MockBehavior.Strict);
         store.Setup(value => value.FindByIdAsync("media-1", It.IsAny<CancellationToken>())).ReturnsAsync(item);
+        var copyRecorder = new Mock<IVoiceMediaCopyRecorder>(MockBehavior.Strict);
 
-        var service = CreateService(mediaStore, [telnyx], store);
+        var service = CreateService(mediaStore, [telnyx], store, copyRecorder: copyRecorder);
 
         // Act
         var resolution = await service.ResolveAsync("media-1", Telnyx, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("telnyx-copy", resolution.Reference);
+        copyRecorder.VerifyNoOtherCalls();
         store.Verify(value => value.UpdateAsync(It.IsAny<VoiceMediaItem>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task EnsureProvisionedAsync_WhenTwoCallsNeedTheClipAtOnce_UploadsItOnce()
+    {
+        // Arrange
+        // Right after a change of provider every concurrent call finds the provider without a copy. One upload serves
+        // them all; the others wait for it and play the same copy, so nothing is left at the provider unreferenced.
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var other = new FakeProvisioner(OtherProvider);
+        var uploadStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var releaseUpload = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        other.BeforeUpload = async () =>
+        {
+            uploadStarted.TrySetResult();
+            await releaseUpload.Task;
+        };
+        var service = CreateService(mediaStore, [other]);
+
+        // Two calls, each with its own copy of the entry, as two scopes would have.
+        var first = new VoiceMediaItem { ItemId = "media-1", MasterStorageReference = masterReference };
+        var second = new VoiceMediaItem { ItemId = "media-1", MasterStorageReference = masterReference };
+
+        // Act
+        var firstCall = service.EnsureProvisionedAsync(first, OtherProvider, TestContext.Current.CancellationToken);
+        await uploadStarted.Task;
+        var secondCall = service.EnsureProvisionedAsync(second, OtherProvider, TestContext.Current.CancellationToken);
+        releaseUpload.SetResult();
+        var results = await Task.WhenAll(firstCall, secondCall);
+
+        // Assert
+        var upload = Assert.Single(other.Uploads);
+        Assert.All(results, result => Assert.Equal(upload.Reference, result.Reference));
+        Assert.All(results, result => Assert.True(result.Changed));
+        Assert.Equal(upload.Reference, first.ProviderReferences[OtherProvider]);
+        Assert.Equal(upload.Reference, second.ProviderReferences[OtherProvider]);
+    }
+
+    [Fact]
+    public async Task VerifyProviderCopyAsync_HandsOverAReferenceOnlyOnceTheProviderConfirmsIt_AndRemembersTheAnswer()
+    {
+        // Arrange
+        var telnyx = new FakeProvisioner(Telnyx) { Availability = reference => reference == "held" ? VoiceMediaAvailability.Available : VoiceMediaAvailability.Missing };
+        var service = CreateService(new FakeMediaStore(), [telnyx]);
+
+        // Act
+        var held = await service.VerifyProviderCopyAsync(Telnyx, "held", TestContext.Current.CancellationToken);
+        var heldAgain = await service.VerifyProviderCopyAsync(Telnyx, "held", TestContext.Current.CancellationToken);
+        var gone = await service.VerifyProviderCopyAsync(Telnyx, "gone", TestContext.Current.CancellationToken);
+        var nobodyToAsk = await service.VerifyProviderCopyAsync(OtherProvider, "held", TestContext.Current.CancellationToken);
+        var nothing = await service.VerifyProviderCopyAsync(Telnyx, null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(held);
+        Assert.True(heldAgain);
+        Assert.False(gone);
+        Assert.False(nobodyToAsk);
+        Assert.False(nothing);
+        Assert.Equal(new[] { "held", "gone" }, telnyx.AvailabilityChecks);
+    }
+
+    [Fact]
+    public async Task VerifyProviderCopyAsync_DoesNotTrustAnAnswerItDidNotGet()
+    {
+        // Arrange
+        var telnyx = new FakeProvisioner(Telnyx) { Availability = _ => VoiceMediaAvailability.Unknown };
+        var service = CreateService(new FakeMediaStore(), [telnyx]);
+
+        // Act
+        var verified = await service.VerifyProviderCopyAsync(Telnyx, "maybe", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(verified);
     }
 
     [Fact]
@@ -714,16 +790,20 @@ public sealed class VoiceMediaProvisioningServiceTests
         Mock<IVoiceMediaItemStore> store = null,
         string defaultProviderName = null,
         IVoiceMediaAvailabilityCache cache = null,
-        IClock clock = null)
+        IClock clock = null,
+        Mock<IVoiceMediaCopyRecorder> copyRecorder = null)
     {
         var settings = new Mock<IOptionsSnapshot<TelephonySettings>>();
         settings.SetupGet(value => value.Value).Returns(new TelephonySettings { DefaultProviderName = defaultProviderName });
+        clock ??= new MovableClock();
 
         return new VoiceMediaProvisioningService(
             (store ?? new Mock<IVoiceMediaItemStore>()).Object,
             mediaStore is null ? Array.Empty<IRecordingMediaStore>() : new[] { mediaStore },
             provisioners,
-            cache ?? new VoiceMediaAvailabilityCache(clock ?? new MovableClock()),
+            cache ?? new VoiceMediaAvailabilityCache(clock),
+            new VoiceMediaUploadCoordinator(clock),
+            (copyRecorder ?? new Mock<IVoiceMediaCopyRecorder>()).Object,
             settings.Object,
             NullLogger<VoiceMediaProvisioningService>.Instance);
     }
@@ -798,6 +878,8 @@ public sealed class VoiceMediaProvisioningServiceTests
 
         public Func<string, VoiceMediaAvailability> Availability { get; init; } = _ => VoiceMediaAvailability.Available;
 
+        public Func<Task> BeforeUpload { get; set; }
+
         public List<(byte[] Content, string ContentType, string NamePrefix, string Reference)> Uploads { get; } = [];
 
         public List<string> AvailabilityChecks { get; } = [];
@@ -809,6 +891,11 @@ public sealed class VoiceMediaProvisioningServiceTests
             if (RefuseUploads)
             {
                 return null;
+            }
+
+            if (BeforeUpload is not null)
+            {
+                await BeforeUpload();
             }
 
             using var buffer = new MemoryStream();

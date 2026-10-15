@@ -16,7 +16,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
 /// An agent's recorded greeting follows the same path as a library clip: the platform keeps the master copy, the
-/// active provider is given a copy, and the copies the new recording replaces are removed.
+/// active provider is given a copy, and the copies the new recording replaces are removed only once the save has
+/// committed, because the profile is written constantly by presence changes and a save can still fail at commit.
 /// </summary>
 public sealed class MyVoicemailGreetingControllerTests
 {
@@ -61,43 +62,87 @@ public sealed class MyVoicemailGreetingControllerTests
         Assert.Equal("cc-vm-greeting-new", agent.VoicemailGreetingMediaName);
         Assert.Null(agent.VoicemailGreetingMediaUrl);
         harness.Agents.Verify(manager => manager.UpdateAsync(agent, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Once);
-        harness.Provisioning.Verify(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task SaveAudio_RemovesEveryCopyOfTheGreetingItReplaces_IncludingOneFromBeforeMasterCopiesWereKept()
+    public async Task SaveAudio_DeletesNothingItself_AndLeavesTheReplacedCopiesToTheDeferredBookkeeping()
     {
         // Arrange
+        // UpdateAsync only stages the write; it commits at the end of the request and can fail there. Deleting the
+        // old copies now would leave a profile that still references them, with the master gone for good.
         var agent = new AgentProfile
         {
             ItemId = "agent-1",
             UserId = UserId,
             VoicemailGreetingMediaName = "cc-vm-greeting-legacy",
+            VoicemailGreetingMedia = new VoiceMediaAsset
+            {
+                MasterStorageReference = "voice-media-old",
+                ProviderReferences = new Dictionary<string, string> { ["Telnyx"] = "cc-vm-greeting-legacy" },
+            },
         };
         var harness = CreateHarness(agent);
 
         harness.Provisioning
             .Setup(service => service.StoreAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new VoiceMediaStoreResult
+            .Returns((IVoiceMediaAsset media, Stream _, string _, string _, string _, CancellationToken _) =>
             {
-                MasterStored = true,
-                ProviderName = "Telnyx",
-                ProviderReference = "cc-vm-greeting-new",
+                media.MasterStorageReference = "voice-media-new";
+                media.ProviderReferences = new Dictionary<string, string> { ["Telnyx"] = "cc-vm-greeting-new" };
+
+                return Task.FromResult(new VoiceMediaStoreResult
+                {
+                    MasterStored = true,
+                    ProviderName = "Telnyx",
+                    ProviderReference = "cc-vm-greeting-new",
+                });
             });
 
-        IVoiceMediaAsset deleted = null;
-        harness.Provisioning
-            .Setup(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()))
-            .Callback((IVoiceMediaAsset media, CancellationToken _) => deleted = media)
-            .Returns(Task.CompletedTask);
+        VoiceMediaAsset scheduledSaved = null;
+        VoiceMediaAsset scheduledReplaced = null;
+        harness.CopyRecorder
+            .Setup(recorder => recorder.ReleaseReplacedGreetingCopies("agent-1", It.IsAny<VoiceMediaAsset>(), It.IsAny<VoiceMediaAsset>()))
+            .Callback((string _, VoiceMediaAsset saved, VoiceMediaAsset replaced) =>
+            {
+                scheduledSaved = saved;
+                scheduledReplaced = replaced;
+            });
 
         // Act
         await harness.Controller.SaveAudio(CreateAudio("greeting.webm", "audio/webm"));
 
         // Assert
-        Assert.NotNull(deleted);
-        Assert.Equal("cc-vm-greeting-legacy", deleted.ProviderReferences["Telnyx"]);
-        Assert.Equal("cc-vm-greeting-new", agent.VoicemailGreetingMediaName);
+        harness.Provisioning.Verify(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.CopyRecorder.Verify(recorder => recorder.ReleaseReplacedGreetingCopies("agent-1", It.IsAny<VoiceMediaAsset>(), It.IsAny<VoiceMediaAsset>()), Times.Once);
+        Assert.Equal("voice-media-new", scheduledSaved.MasterStorageReference);
+        Assert.Equal("cc-vm-greeting-new", scheduledSaved.ProviderReferences["Telnyx"]);
+        Assert.Equal("voice-media-old", scheduledReplaced.MasterStorageReference);
+        Assert.Equal("cc-vm-greeting-legacy", scheduledReplaced.ProviderReferences["Telnyx"]);
+    }
+
+    [Fact]
+    public async Task SaveAudio_SchedulesTheBookkeepingEvenWhenNothingWasReplaced_SoALostSaveIsCleanedUp()
+    {
+        // Arrange
+        var agent = new AgentProfile { ItemId = "agent-1", UserId = UserId };
+        var harness = CreateHarness(agent);
+
+        harness.Provisioning
+            .Setup(service => service.StoreAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((IVoiceMediaAsset media, Stream _, string _, string _, string _, CancellationToken _) =>
+            {
+                media.MasterStorageReference = "voice-media-new";
+
+                return Task.FromResult(new VoiceMediaStoreResult { MasterStored = true, ProviderName = "Telnyx", ProviderUploadFailed = true });
+            });
+
+        // Act
+        await harness.Controller.SaveAudio(CreateAudio("greeting.webm", "audio/webm"));
+
+        // Assert
+        harness.CopyRecorder.Verify(
+            recorder => recorder.ReleaseReplacedGreetingCopies("agent-1", It.Is<VoiceMediaAsset>(saved => saved.MasterStorageReference == "voice-media-new"), null),
+            Times.Once);
     }
 
     [Fact]
@@ -120,10 +165,11 @@ public sealed class MyVoicemailGreetingControllerTests
         Assert.Equal("cc-vm-greeting-old", agent.VoicemailGreetingMediaName);
         Assert.Null(agent.VoicemailGreetingMedia);
         harness.Agents.Verify(manager => manager.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.CopyRecorder.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task Clear_RemovesTheMasterCopyAndEveryProviderCopy()
+    public async Task Clear_RemovesTheGreeting_AndLeavesItsCopiesToTheDeferredBookkeeping()
     {
         // Arrange
         var greeting = new VoiceMediaAsset
@@ -140,11 +186,10 @@ public sealed class MyVoicemailGreetingControllerTests
         };
         var harness = CreateHarness(agent);
 
-        IVoiceMediaAsset deleted = null;
-        harness.Provisioning
-            .Setup(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()))
-            .Callback((IVoiceMediaAsset media, CancellationToken _) => deleted = media)
-            .Returns(Task.CompletedTask);
+        VoiceMediaAsset scheduledRemoved = null;
+        harness.CopyRecorder
+            .Setup(recorder => recorder.ReleaseReplacedGreetingCopies("agent-1", null, It.IsAny<VoiceMediaAsset>()))
+            .Callback((string _, VoiceMediaAsset _, VoiceMediaAsset removed) => scheduledRemoved = removed);
 
         // Act
         var result = await harness.Controller.Clear();
@@ -153,9 +198,23 @@ public sealed class MyVoicemailGreetingControllerTests
         Assert.IsType<RedirectToActionResult>(result);
         Assert.Null(agent.VoicemailGreetingMedia);
         Assert.Null(agent.VoicemailGreetingMediaName);
-        Assert.NotNull(deleted);
-        Assert.Equal("voice-media-greeting", deleted.MasterStorageReference);
-        Assert.Equal("cc-vm-greeting-1", Assert.Single(deleted.ProviderReferences).Value);
+        harness.Provisioning.Verify(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.NotNull(scheduledRemoved);
+        Assert.Equal("voice-media-greeting", scheduledRemoved.MasterStorageReference);
+        Assert.Equal("cc-vm-greeting-1", Assert.Single(scheduledRemoved.ProviderReferences).Value);
+    }
+
+    [Fact]
+    public async Task Clear_WithNoGreeting_SchedulesNothing()
+    {
+        // Arrange
+        var harness = CreateHarness(new AgentProfile { ItemId = "agent-1", UserId = UserId });
+
+        // Act
+        await harness.Controller.Clear();
+
+        // Assert
+        harness.CopyRecorder.VerifyNoOtherCalls();
     }
 
     [Fact]
@@ -172,6 +231,53 @@ public sealed class MyVoicemailGreetingControllerTests
         var model = Assert.IsType<MyVoicemailGreetingViewModel>(Assert.IsType<ViewResult>(result).Model);
         Assert.True(model.HasAudioGreeting);
         Assert.True(model.IsProviderCopyOnly);
+    }
+
+    [Fact]
+    public async Task Index_FlagsAGreetingStoredWhileNoMasterCopyCouldBeKept()
+    {
+        // Arrange
+        // The master write failed and only the provider's copy exists: the greeting plays, but it is as exposed as one
+        // recorded before master copies were kept, and the agent is told to record it again.
+        var agent = new AgentProfile
+        {
+            ItemId = "agent-1",
+            UserId = UserId,
+            VoicemailGreetingMedia = new VoiceMediaAsset
+            {
+                ProviderReferences = new Dictionary<string, string> { ["Telnyx"] = "cc-vm-greeting-1" },
+            },
+        };
+        var harness = CreateHarness(agent);
+
+        // Act
+        var result = await harness.Controller.Index();
+
+        // Assert
+        var model = Assert.IsType<MyVoicemailGreetingViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.HasAudioGreeting);
+        Assert.True(model.IsProviderCopyOnly);
+    }
+
+    [Fact]
+    public async Task Index_DoesNotFlagAGreetingWithAMasterCopy()
+    {
+        // Arrange
+        var agent = new AgentProfile
+        {
+            ItemId = "agent-1",
+            UserId = UserId,
+            VoicemailGreetingMedia = new VoiceMediaAsset { MasterStorageReference = "voice-media-greeting" },
+        };
+        var harness = CreateHarness(agent);
+
+        // Act
+        var result = await harness.Controller.Index();
+
+        // Assert
+        var model = Assert.IsType<MyVoicemailGreetingViewModel>(Assert.IsType<ViewResult>(result).Model);
+        Assert.True(model.HasAudioGreeting);
+        Assert.False(model.IsProviderCopyOnly);
     }
 
     private static FormFile CreateAudio(string fileName, string contentType)
@@ -197,9 +303,12 @@ public sealed class MyVoicemailGreetingControllerTests
         provisioning.SetupGet(service => service.CanUpload).Returns(true);
         provisioning.SetupGet(service => service.ActiveProviderName).Returns("Telnyx");
 
+        var copyRecorder = new Mock<IVoiceMediaCopyRecorder>();
+
         var controller = new MyVoicemailGreetingController(
             agents.Object,
             provisioning.Object,
+            copyRecorder.Object,
             new AllowingAuthorizationService(),
             Mock.Of<IClock>(),
             Mock.Of<INotifier>(),
@@ -215,13 +324,14 @@ public sealed class MyVoicemailGreetingControllerTests
             },
         };
 
-        return new Harness(controller, agents, provisioning);
+        return new Harness(controller, agents, provisioning, copyRecorder);
     }
 
     private sealed record Harness(
         MyVoicemailGreetingController Controller,
         Mock<IAgentProfileManager> Agents,
-        Mock<IVoiceMediaProvisioningService> Provisioning);
+        Mock<IVoiceMediaProvisioningService> Provisioning,
+        Mock<IVoiceMediaCopyRecorder> CopyRecorder);
 
     private sealed class AllowingAuthorizationService : IAuthorizationService
     {

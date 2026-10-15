@@ -47,6 +47,7 @@ public sealed class MyVoicemailGreetingController : Controller
 
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
+    private readonly IVoiceMediaCopyRecorder _copyRecorder;
     private readonly IAuthorizationService _authorizationService;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -56,6 +57,7 @@ public sealed class MyVoicemailGreetingController : Controller
     public MyVoicemailGreetingController(
         IAgentProfileManager agentProfileManager,
         IVoiceMediaProvisioningService voiceMediaProvisioning,
+        IVoiceMediaCopyRecorder copyRecorder,
         IAuthorizationService authorizationService,
         IClock clock,
         INotifier notifier,
@@ -64,6 +66,7 @@ public sealed class MyVoicemailGreetingController : Controller
     {
         _agentProfileManager = agentProfileManager;
         _voiceMediaProvisioning = voiceMediaProvisioning;
+        _copyRecorder = copyRecorder;
         _authorizationService = authorizationService;
         _clock = clock;
         _notifier = notifier;
@@ -81,14 +84,16 @@ public sealed class MyVoicemailGreetingController : Controller
             return Forbid();
         }
 
-        var hasMasterCopy = agent.VoicemailGreetingMedia is not null;
+        // A greeting stored while no master copy could be kept has provider copies only; it plays, but it is as
+        // exposed as one recorded before master copies existed, and is flagged the same way.
+        var hasMasterCopy = !string.IsNullOrEmpty(agent.VoicemailGreetingMedia?.MasterStorageReference);
+        var hasProviderCopy = agent.VoicemailGreetingMedia?.ProviderReferences is { Count: > 0 } ||
+            !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName);
 
         return View(new MyVoicemailGreetingViewModel
         {
-            HasAudioGreeting = hasMasterCopy ||
-                !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName) ||
-                !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaUrl),
-            IsProviderCopyOnly = !hasMasterCopy && !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName),
+            HasAudioGreeting = hasMasterCopy || hasProviderCopy || !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaUrl),
+            IsProviderCopyOnly = !hasMasterCopy && hasProviderCopy,
         });
     }
 
@@ -136,8 +141,11 @@ public sealed class MyVoicemailGreetingController : Controller
             return StatusCode(StatusCodes.Status502BadGateway, S["The greeting could not be uploaded. Please try again."].Value);
         }
 
-        // Swap in the new greeting, then best-effort delete the copies it replaces so they do not linger. The
-        // provider's copy name follows the copy the active provider was just given, for readers of that member.
+        // Swap in the new greeting. The copies it replaces are deleted only once this save has committed, and the new
+        // copies are deleted instead when it has not: the profile is concurrency-checked and written constantly by
+        // presence changes, so a save staged here can still fail at commit, and a master copy deleted before that is
+        // gone for good. The provider's copy name follows the copy the active provider was just given, for readers of
+        // that member.
         var replaced = CaptureGreetingCopies(agent, result.ProviderReference);
 
         agent.VoicemailGreetingMedia = media;
@@ -146,10 +154,7 @@ public sealed class MyVoicemailGreetingController : Controller
 
         await _agentProfileManager.UpdateAsync(agent);
 
-        if (replaced is not null)
-        {
-            await _voiceMediaProvisioning.DeleteEverywhereAsync(replaced, HttpContext.RequestAborted);
-        }
+        _copyRecorder.ReleaseReplacedGreetingCopies(agent.ItemId, VoiceMediaAssetCopies.Snapshot(media), replaced);
 
         if (result.ProviderUploadFailed)
         {
@@ -182,9 +187,11 @@ public sealed class MyVoicemailGreetingController : Controller
 
         await _agentProfileManager.UpdateAsync(agent);
 
+        // Deleted once the removal has committed, for the same reason as above: a removal that fails at commit leaves
+        // the profile referencing the greeting, which must then still exist.
         if (removed is not null)
         {
-            await _voiceMediaProvisioning.DeleteEverywhereAsync(removed, HttpContext.RequestAborted);
+            _copyRecorder.ReleaseReplacedGreetingCopies(agent.ItemId, saved: null, removed);
         }
 
         await _notifier.SuccessAsync(H["Your recorded greeting was removed. Callers will hear the default greeting."]);
@@ -196,17 +203,9 @@ public sealed class MyVoicemailGreetingController : Controller
     // greeting recorded before master copies were kept left at the provider uploads go to. Null when there is none.
     private VoiceMediaAsset CaptureGreetingCopies(AgentProfile agent, string keepReference)
     {
-        var current = agent.VoicemailGreetingMedia;
-
-        var copies = new VoiceMediaAsset
-        {
-            MasterStorageReference = current?.MasterStorageReference,
-            ContentType = current?.ContentType,
-            Format = current?.Format,
-            ProviderReferences = current?.ProviderReferences is null
-                ? new Dictionary<string, string>()
-                : new Dictionary<string, string>(current.ProviderReferences),
-        };
+        var copies = agent.VoicemailGreetingMedia is null
+            ? new VoiceMediaAsset()
+            : VoiceMediaAssetCopies.Snapshot(agent.VoicemailGreetingMedia);
 
         var legacyName = agent.VoicemailGreetingMediaName;
         var activeProvider = _voiceMediaProvisioning.ActiveProviderName;
@@ -219,12 +218,7 @@ public sealed class MyVoicemailGreetingController : Controller
             copies.ProviderReferences.TryAdd(activeProvider, legacyName);
         }
 
-        if (string.IsNullOrWhiteSpace(copies.MasterStorageReference) && copies.ProviderReferences.Count == 0)
-        {
-            return null;
-        }
-
-        return copies;
+        return VoiceMediaAssetCopies.HasAnyCopy(copies) ? copies : null;
     }
 
     // The signed-in user's own agent profile, or null when they may not work as an agent. Every action goes through

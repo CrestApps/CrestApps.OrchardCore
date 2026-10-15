@@ -17,7 +17,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
     /// <param name="interactionManager">The interaction manager used to validate and project linked interactions.</param>
     /// <param name="agentProfileManager">The agent profile manager the recipient agent's voicemail greeting is read from.</param>
     /// <param name="voiceMediaProvisioning">The service that gives the call's provider a copy of the recipient agent's recorded greeting.</param>
-    /// <param name="greetingCopyRecorder">Records a greeting copy the provider was given on the agent's profile, outside this command's unit of work.</param>
+    /// <param name="copyRecorder">Records a greeting copy the provider was given on the agent's profile, outside this command's unit of work.</param>
     /// <param name="queueService">The queue service used to restore live work after a definitive action failure.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
@@ -29,7 +29,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
         IInteractionManager interactionManager,
         IAgentProfileManager agentProfileManager,
         IVoiceMediaProvisioningService voiceMediaProvisioning,
-        IVoicemailGreetingCopyRecorder greetingCopyRecorder,
+        IVoiceMediaCopyRecorder copyRecorder,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -41,7 +41,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
             interactionManager,
             agentProfileManager,
             voiceMediaProvisioning,
-            greetingCopyRecorder,
+            copyRecorder,
             queueService,
             workStateService,
             activityWriter,
