@@ -22,7 +22,7 @@
 				reservedMap = {};
 			}
 			function selectedSource() {
-				return sourceSelect ? sourceSelect.value : "";
+				return sourceSelect ? sourceSelect.value : list.dataset.source || "";
 			}
 			function reservedNames() {
 				return (reservedMap[selectedSource()] || []).map(function(name) {
