@@ -29,6 +29,7 @@ public sealed class ContactCenterCoordinationOptionsValidator : IValidateOptions
         RequirePositive(failures, options.ReclaimLockWait, nameof(options.ReclaimLockWait));
         RequirePositive(failures, options.QueuedWorkSyncLease, nameof(options.QueuedWorkSyncLease));
         RequirePositive(failures, options.QueuedWorkSyncFallbackInterval, nameof(options.QueuedWorkSyncFallbackInterval));
+        RequirePositive(failures, options.DialerAgentParkWindow, nameof(options.DialerAgentParkWindow));
 
         RequireLeaseExceedsWait(failures, options.InboundLockExpiration, options.InboundLockTimeout, nameof(options.InboundLockExpiration), nameof(options.InboundLockTimeout));
         RequireLeaseExceedsWait(failures, options.AssignmentLockExpiration, options.AssignmentLockTimeout, nameof(options.AssignmentLockExpiration), nameof(options.AssignmentLockTimeout));

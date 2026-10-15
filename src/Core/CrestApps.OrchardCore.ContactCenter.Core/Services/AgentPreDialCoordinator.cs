@@ -28,7 +28,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// this agent's to take is hung up and never joined.
 /// </para>
 /// </remarks>
-public sealed class AgentPreDialCoordinator : IAgentPreDialCoordinator
+public sealed partial class AgentPreDialCoordinator : IAgentPreDialCoordinator
 {
     // How long the state outlives the leg's own ring window, so a late webhook still finds the leg it describes
     // (and is recognized as stale) rather than being mistaken for a leg nobody rang.
@@ -346,6 +346,7 @@ public sealed class AgentPreDialCoordinator : IAgentPreDialCoordinator
                 }
                 else
                 {
+                    // Also a parked leg the agent's device answered on arrival: it waits for the customer to answer.
                     await SaveAsync(leg, cancellationToken);
                 }
 
@@ -392,6 +393,22 @@ public sealed class AgentPreDialCoordinator : IAgentPreDialCoordinator
         if (leg.BridgedUtc.HasValue)
         {
             // The agent's leg of a conversation that took place; its end is the call's own business.
+            return;
+        }
+
+        if (leg.ParkedForDialedCall && !leg.CallerReadyUtc.HasValue)
+        {
+            // A parked leg is only a head start. Lost before the customer answered, it fails nothing: the answer finds no
+            // parked leg and rings the agent the ordinary way.
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "The parked agent leg '{AgentLegId}' of reservation '{ReservationId}' ended before the customer answered ({HangupCause}); the answer will ring the agent.",
+                    agentLegId.SanitizeLogValue(),
+                    reservationId.SanitizeLogValue(),
+                    cause);
+            }
+
             return;
         }
 
@@ -467,9 +484,12 @@ public sealed class AgentPreDialCoordinator : IAgentPreDialCoordinator
             ProviderCallId = leg.ProviderCallId,
             AgentId = leg.AgentId,
             AgentUserId = leg.AgentUserId,
-            TimeoutSeconds = (int)Math.Ceiling(remaining.TotalSeconds),
+            TimeoutSeconds = leg.ParkedForDialedCall
+                ? ParkedLegRingSeconds
+                : (int)Math.Ceiling(remaining.TotalSeconds),
             AgentEndpoint = agentEndpoint,
             ReplacesAgentLegId = failedAgentLegId,
+            AnswerOnArrival = leg.ParkedForDialedCall,
         }, cancellationToken);
 
         if (result is null || !result.Succeeded || string.IsNullOrWhiteSpace(result.ProviderLegId))

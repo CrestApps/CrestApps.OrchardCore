@@ -64,6 +64,12 @@ public sealed class ContactCenterConnectRequest
     public int AgentLegTimeoutSeconds { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the caller's leg is already answered: an outbound call the customer
+    /// picked up. The provider then only connects the agent, and never asks to answer a leg it placed itself.
+    /// </summary>
+    public bool CallerAnswered { get; set; }
+
+    /// <summary>
     /// Gets or sets provider-specific metadata for the connect request.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();

@@ -181,6 +181,21 @@ public sealed partial class ProviderVoiceEventService
             return;
         }
 
+        var reservationId = DialerCallMetadata.GetReservationId(interaction);
+
+        // The agent's leg was rung while the customer rang, and is answered and parked: the answer only joins the two, a
+        // bridge away, where ringing the agent now took seconds of the two the person who answered may be kept waiting.
+        var parkedLeg = await TakeParkedAgentLegAsync(reservationId, cancellationToken);
+
+        if (parkedLeg is not null && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Joining parked agent leg '{AgentLegId}' to answered outbound call '{ProviderCallId}' (interaction '{InteractionId}').",
+                parkedLeg.AgentLegId.SanitizeLogValue(),
+                session.ProviderCallId.SanitizeLogValue(),
+                interaction.ItemId.SanitizeLogValue());
+        }
+
         // The agent's leg is tagged with the reservation the agent accepted when the call was placed, so their phone
         // answers it as the leg of that call and shows it as that call. Matched only by a short arm set at the accept,
         // a customer who took longer to answer than the arm lasted had the leg ring as an unsolicited call: a second
@@ -193,8 +208,9 @@ public sealed partial class ProviderVoiceEventService
             session.AgentId,
             agent.UserId,
             reservationId: null,
-            standbyReservationId: DialerCallMetadata.GetReservationId(interaction),
+            standbyReservationId: reservationId,
             agentLegTimeoutSeconds: 0,
+            preDialedAgentLegId: parkedLeg?.AgentLegId,
             cancellationToken);
 
         _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
@@ -241,6 +257,52 @@ public sealed partial class ProviderVoiceEventService
         }
 
         ScheduleHangup(session, interaction, "it was answered by a machine");
+
+        // The agent's leg parked for the call goes at once, not when the call's end comes back: nobody is joined to it.
+        ScheduleParkedAgentLegRelease(interaction);
+    }
+
+    private async Task<AgentPreDialLeg> TakeParkedAgentLegAsync(string reservationId, CancellationToken cancellationToken)
+    {
+        if (_preDialCoordinator is null || string.IsNullOrEmpty(reservationId))
+        {
+            return null;
+        }
+
+        try
+        {
+            return await _preDialCoordinator.Value.TakeParkedLegAsync(reservationId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // The answer still connects the agent, by ringing them.
+            _logger.LogWarning(ex, "Could not read the parked agent leg of reservation '{ReservationId}'.", reservationId.SanitizeLogValue());
+
+            return null;
+        }
+    }
+
+    // Hangs up the agent leg parked for a dialed call once this delivery commits, unless it was joined to the customer.
+    private void ScheduleParkedAgentLegRelease(Interaction interaction)
+    {
+        if (_preDialCoordinator is null || interaction.Direction != InteractionDirection.Outbound)
+        {
+            return;
+        }
+
+        var reservationId = DialerCallMetadata.GetReservationId(interaction);
+
+        if (string.IsNullOrEmpty(reservationId))
+        {
+            return;
+        }
+
+        _scopeExecutor.ScheduleAfterCommit<IAgentPreDialCoordinator>(coordinator =>
+            coordinator.ReleaseAsync(reservationId, CancellationToken.None));
     }
 
     // Hangs up the answered call once this delivery commits, so what caused the hangup is on record before the hangup

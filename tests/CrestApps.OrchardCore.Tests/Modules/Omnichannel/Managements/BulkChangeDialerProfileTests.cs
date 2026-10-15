@@ -33,6 +33,7 @@ public sealed class BulkChangeDialerProfileTests
 {
     private const string CampaignId = "campaign-1";
     private const string PowerProfileId = "power-profile";
+    private const string OtherCampaignId = "campaign-2";
 
     [Fact]
     public async Task BulkChangeDialerProfileAsync_WhenTheRecordWasLoadedByHand_QueuesItOnItsCampaignUnderTheNewProfile()
@@ -137,6 +138,139 @@ public sealed class BulkChangeDialerProfileTests
             Times.Once);
     }
 
+    // Picking a campaign with the dialer profile moves the records to it, so records that never had a campaign can be
+    // queued in one step instead of being refused.
+    [Fact]
+    public async Task BulkChangeDialerProfileAsync_WhenACampaignIsPicked_MovesTheRecordsToItAndQueuesThemThere()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", campaignId: null);
+
+        // Act
+        var processed = await harness.Controller.BulkChangeDialerProfileAsync([activity], PowerProfileId, OtherCampaignId);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(OtherCampaignId, activity.CampaignId);
+        harness.Dialer.Verify(
+            dialer => dialer.EnqueueAsync("activity-1", OtherCampaignId, It.IsAny<ActivityDialerProfileDescriptor>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // A record the dialer took while it was being moved is on a call: it stays where it is rather than being pulled away.
+    [Fact]
+    public async Task BulkChangeDialerProfileAsync_WhenTheDialerTakesTheRecordDuringTheMove_LeavesItAlone()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        harness.Dialer
+            .Setup(dialer => dialer.MoveToCampaignAsync("activity-1", OtherCampaignId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ActivityDialerCampaignMoveResult.InFlight);
+
+        // Act
+        var processed = await harness.Controller.BulkChangeDialerProfileAsync([activity], PowerProfileId, OtherCampaignId);
+
+        // Assert
+        Assert.Equal(0, processed);
+        Assert.Equal(CampaignId, activity.CampaignId);
+        harness.AssertNotQueued();
+    }
+
+    [Fact]
+    public async Task BulkChangeCampaignAsync_WhenTheRecordWaitsForTheDialer_MovesItsPlaceInTheDialerToo()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        activity.DialerProfileId = PowerProfileId;
+        activity.Source = ActivitySources.PowerDial;
+
+        // Act
+        var processed = await harness.Controller.BulkChangeCampaignAsync([activity], OtherCampaignId);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Equal(OtherCampaignId, activity.CampaignId);
+        harness.Dialer.Verify(
+            dialer => dialer.MoveToCampaignAsync("activity-1", OtherCampaignId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task BulkChangeCampaignAsync_WhenTheRecordIsNotDialerWork_OnlyChangesItsCampaign()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+
+        // Act
+        var processed = await harness.Controller.BulkChangeCampaignAsync([activity], targetCampaignId: null);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.Null(activity.CampaignId);
+        harness.Dialer.Verify(
+            dialer => dialer.MoveToCampaignAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // The dialer queues work on its campaign, so dialer work cannot be moved to no campaign at all.
+    [Fact]
+    public async Task BulkChangeCampaignAsync_WhenDialerWorkIsMovedToNoCampaign_LeavesItUnchanged()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        activity.DialerProfileId = PowerProfileId;
+
+        // Act
+        var processed = await harness.Controller.BulkChangeCampaignAsync([activity], targetCampaignId: null);
+
+        // Assert
+        Assert.Equal(0, processed);
+        Assert.Equal(CampaignId, activity.CampaignId);
+    }
+
+    // A campaign's waiting records must all use one dialer profile, and records arriving under several would break it.
+    [Fact]
+    public async Task BulkChangeCampaignAsync_WhenTheRecordsUseDifferentDialerProfiles_LeavesThemUnchanged()
+    {
+        // Arrange
+        var harness = new Harness();
+        var power = harness.AddActivity("activity-1", CampaignId);
+        power.DialerProfileId = PowerProfileId;
+        var preview = harness.AddActivity("activity-2", CampaignId);
+        preview.DialerProfileId = "preview-profile";
+
+        // Act
+        var processed = await harness.Controller.BulkChangeCampaignAsync([power, preview], OtherCampaignId);
+
+        // Assert
+        Assert.Equal(0, processed);
+        Assert.Equal(CampaignId, power.CampaignId);
+        Assert.Equal(CampaignId, preview.CampaignId);
+    }
+
+    [Fact]
+    public async Task BulkChangeCampaignAsync_WhenTheTargetCampaignHasRecordsWaitingUnderAnotherProfile_LeavesTheRecordsUnchanged()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = harness.AddActivity("activity-1", CampaignId);
+        activity.DialerProfileId = PowerProfileId;
+        harness.WaitingRecords.Add(new ActivityDialerWaitingRecord { ActivityId = "waiting-elsewhere", ProfileId = "preview-profile" });
+        harness.WaitingRecordCampaigns["waiting-elsewhere"] = OtherCampaignId;
+
+        // Act
+        var processed = await harness.Controller.BulkChangeCampaignAsync([activity], OtherCampaignId);
+
+        // Assert
+        Assert.Equal(0, processed);
+        Assert.Equal(CampaignId, activity.CampaignId);
+    }
+
     private sealed class Harness
     {
         private readonly Mock<IOmnichannelActivityManager> _activityManager = new();
@@ -156,8 +290,8 @@ public sealed class BulkChangeDialerProfileTests
                     ActivitySource = profileId == PowerProfileId ? ActivitySources.PowerDial : ActivitySources.PreviewDial,
                 });
             Dialer
-                .Setup(dialer => dialer.GetWaitingRecordsAsync(CampaignId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => WaitingRecords);
+                .Setup(dialer => dialer.GetWaitingRecordsAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string campaignId, CancellationToken _) => WaitingRecords.Where(record => WaitingRecordCampaigns.GetValueOrDefault(record.ActivityId, CampaignId) == campaignId).ToArray());
 
             var htmlLocalizer = new Mock<IHtmlLocalizer<ActivitiesController>>();
             htmlLocalizer
@@ -207,6 +341,9 @@ public sealed class BulkChangeDialerProfileTests
         public Mock<INotifier> Notifier { get; } = new();
 
         public List<ActivityDialerWaitingRecord> WaitingRecords { get; } = [];
+
+        // The campaign each waiting record waits in, when it is not the default campaign.
+        public Dictionary<string, string> WaitingRecordCampaigns { get; } = new(StringComparer.Ordinal);
 
         public OmnichannelActivity AddActivity(string activityId, string campaignId)
         {

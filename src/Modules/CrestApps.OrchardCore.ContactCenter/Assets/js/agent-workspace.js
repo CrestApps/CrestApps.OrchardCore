@@ -15,10 +15,13 @@ import {
 } from './shared/workspace-panels.js';
 import { coalesceRefresh } from './shared/coalesced-refresh.js';
 import {
+    agentStatusLabel,
     breakChoiceLabel,
+    dialPhaseHint,
+    dialPhaseLabel,
+    normalizeDialPhase,
     normalizePresenceStatus,
     pendingPresenceLabel,
-    presenceLabel,
 } from './shared/agent-presence.js';
 import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
 
@@ -105,9 +108,13 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
     }
 
     // Everything but the id and status is left out of the log line, so a number or a name never lands in it.
-    function describeActive(active) {
-        return active
-            ? { interactionId: active.interactionId, direction: active.direction, status: active.status }
+    function describeActive(active, pendingDial) {
+        if (active) {
+            return { interactionId: active.interactionId, direction: active.direction, status: active.status };
+        }
+
+        return pendingDial
+            ? { interactionId: pendingDial.interactionId, dialPhase: normalizeDialPhase(pendingDial) }
             : { interactionId: null };
     }
 
@@ -207,10 +214,11 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                 return;
             }
 
-            // Read the same way on every agent screen (see shared/agent-presence.js).
+            // Read the same way on every agent screen (see shared/agent-presence.js): while the dialer is placing a call
+            // for the agent, what it is doing rather than "On a call".
             var current = state.presence || {};
             var status = normalizePresenceStatus(current.status) || 'Offline';
-            var label = presenceLabel(current, config.presenceLabels);
+            var label = agentStatusLabel(current, state.pendingDial, config.presenceLabels);
             var pending = pendingPresenceLabel(current, config.presenceLabels);
             refs.presenceLabel.textContent = pending ? label + ' · ' + pending : label;
 
@@ -302,14 +310,21 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
             }
 
             var active = state.activeInteraction;
+            var pendingDial = !active && normalizeDialPhase(state.pendingDial) ? state.pendingDial : null;
 
             // The first state always draws, so a workspace opened with nothing to do shows the empty card rather
             // than a blank one (see shared/workspace-panels.js).
-            if (!activeChanged(activeInteractionSignature(active))) {
+            if (!activeChanged(activeInteractionSignature(active, pendingDial && { interactionId: pendingDial.interactionId, phase: normalizeDialPhase(pendingDial) }))) {
                 return;
             }
 
-            diagnostic('active-interaction-shown', describeActive(active));
+            diagnostic('active-interaction-shown', describeActive(active, pendingDial));
+
+            if (pendingDial) {
+                refs.active.innerHTML = pendingDialHtml(pendingDial);
+
+                return;
+            }
 
             if (!active) {
                 refs.active.innerHTML = emptyStateHtml({
@@ -384,6 +399,32 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                         (active.completeUrl ? '<a class="btn btn-sm btn-primary" href="' + escapeHtml(active.completeUrl) + '"><i class="fa-solid fa-check"></i> ' + escapeHtml(label('completeWork', 'Complete activity')) + '</a>' : '') +
                     '</div>' +
                 '</div>';
+        }
+
+        // A call the dialer is placing for the agent, before they are on it: who is being called and what the dialer is
+        // doing. Nothing on it is the agent's to act on yet, so it has no actions; it becomes the call once they are
+        // connected.
+        function pendingDialHtml(pendingDial) {
+            var phase = normalizeDialPhase(pendingDial);
+            var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+
+            return '<div class="cc-active cc-active--pending is-' + escapeHtml(phase.toLowerCase()) + '" data-cc-pending-dial="' + escapeHtml(phase) + '">' +
+                '<div class="cc-active__headline">' +
+                    '<span class="cc-active__dir"><i class="fa-solid fa-phone-volume" aria-hidden="true"></i></span>' +
+                    '<div>' +
+                        '<div class="cc-active__customer">' + escapeHtml(pendingDial.customerLabel || pendingDial.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' +
+                        '<div class="cc-active__sub">' +
+                            escapeHtml(label('outbound', 'Outbound')) +
+                            (pendingDial.queueName ? ' &middot; ' + escapeHtml(pendingDial.queueName) : '') +
+                            (pendingDial.customerAddress ? ' &middot; ' + escapeHtml(pendingDial.customerAddress) : '') +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="cc-active__stats">' +
+                    '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value" data-cc-dial-phase>' + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + '</div></div>' +
+                '</div>' +
+                (hint ? '<div class="cc-active__pending-hint">' + escapeHtml(hint) + '</div>' : '') +
+            '</div>';
         }
 
         // The number as a person would read it out. The formatter is shared with the soft phone rather than
@@ -861,7 +902,8 @@ import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actio
                         interactionId: notification.interactionId,
                         eventType: notification.eventType,
                         direction: notification.direction,
-                        status: notification.status
+                        status: notification.status,
+                        dialPhase: notification.dialPhase
                     } : {});
 
                     // The agent was just connected to a call the dialer placed: open its record now. Before this the

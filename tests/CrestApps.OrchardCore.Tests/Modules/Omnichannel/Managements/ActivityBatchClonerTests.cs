@@ -33,6 +33,13 @@ public sealed class ActivityBatchClonerTests
         nameof(OmnichannelActivityBatch.TotalSkippedByLimit),
         nameof(OmnichannelActivityBatch.TotalSkippedAsConverted),
         nameof(OmnichannelActivityBatch.TotalSkippedAsExistingContact),
+        nameof(OmnichannelActivityBatch.LoadError),
+        nameof(OmnichannelActivityBatch.LoadStartedUtc),
+        nameof(OmnichannelActivityBatch.LoadStartedById),
+        nameof(OmnichannelActivityBatch.LoadStartedByUsername),
+        nameof(OmnichannelActivityBatch.LoadHeartbeatUtc),
+        nameof(OmnichannelActivityBatch.LoadCursor),
+        nameof(OmnichannelActivityBatch.LoadResumeCount),
         nameof(OmnichannelActivityBatch.Properties),
     ];
 
@@ -119,6 +126,28 @@ public sealed class ActivityBatchClonerTests
         Assert.Equal(0, copy.TotalSkippedByLimit);
         Assert.Equal(0, copy.TotalSkippedAsConverted);
         Assert.Equal(0, copy.TotalSkippedAsExistingContact);
+        Assert.Null(copy.LoadError);
+        Assert.Null(copy.LoadStartedUtc);
+        Assert.Null(copy.LoadStartedById);
+        Assert.Null(copy.LoadStartedByUsername);
+        Assert.Null(copy.LoadHeartbeatUtc);
+        Assert.Null(copy.LoadCursor);
+        Assert.Equal(0, copy.LoadResumeCount);
+    }
+
+    // Clone is also how a saved load is counted without touching it, so it is a faithful copy, load progress included;
+    // only the copy a person makes of a load starts it afresh.
+    [Fact]
+    public void Clone_CopiesEveryProperty()
+    {
+        var source = LoadedSource();
+
+        var clone = source.Clone();
+
+        foreach (var property in SettableProperties().Where(property => property.Name != nameof(OmnichannelActivityBatch.Properties)))
+        {
+            Assert.Equal(property.GetValue(source), property.GetValue(clone));
+        }
     }
 
     [Fact]

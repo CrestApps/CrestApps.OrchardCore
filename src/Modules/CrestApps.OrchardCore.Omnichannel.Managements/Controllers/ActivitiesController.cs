@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -1313,7 +1314,8 @@ public sealed class ActivitiesController : Controller
         BulkManageActivitiesViewModel viewModel,
         PagerParameters pagerParameters,
         [FromServices] IDisplayManager<BulkManageActivityFilter> filterDisplayManager,
-        [FromServices] IOptions<ActivitySourceOptions> activitySourceOptions)
+        [FromServices] IOptions<ActivitySourceOptions> activitySourceOptions,
+        [FromServices] ICatalogManager<OmnichannelCampaign> campaignManager)
     {
         var requiredPermission = viewModel.BulkAction == BulkActivityAction.Purge
             ? OmnichannelConstants.Permissions.PurgeActivity
@@ -1359,6 +1361,20 @@ public sealed class ActivitiesController : Controller
             return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
         }
 
+        var targetCampaignId = viewModel.BulkAction switch
+        {
+            BulkActivityAction.ChangeCampaign => NormalizeId(viewModel.NewCampaignId),
+            BulkActivityAction.ChangeDialerProfile => NormalizeId(viewModel.NewDialerCampaignId),
+            _ => null,
+        };
+
+        if (targetCampaignId is not null && await campaignManager.FindByIdAsync(targetCampaignId) is null)
+        {
+            await _notifier.WarningAsync(H["The selected campaign no longer exists. Choose another one."]);
+
+            return RedirectToAction(nameof(ManageActivities), filter.RouteValues);
+        }
+
         List<OmnichannelActivity> activities;
 
         if (applyToAllMatching)
@@ -1378,6 +1394,15 @@ public sealed class ActivitiesController : Controller
                     activities.Add(activity);
                 }
             }
+        }
+
+        // Work the dialer is dialing, ringing an agent with, or an agent is on a call for belongs to that call until it
+        // ends: purging, reassigning or requeueing it would pull the record out from under a live customer.
+        var inFlightCount = await RemoveDialerWorkInFlightAsync(activities);
+
+        if (inFlightCount > 0)
+        {
+            await _notifier.WarningAsync(H["{0} activities were left unchanged because the dialer is dialing them or an agent is on their call right now. Try again once those calls end.", inFlightCount]);
         }
 
         if (activities.Count == 0)
@@ -1432,7 +1457,11 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.ChangeDialerProfile:
-                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId);
+                processedCount = await BulkChangeDialerProfileAsync(activities, viewModel.NewDialerProfileId, targetCampaignId);
+                break;
+
+            case BulkActivityAction.ChangeCampaign:
+                processedCount = await BulkChangeCampaignAsync(activities, targetCampaignId);
                 break;
         }
 
@@ -1696,7 +1725,8 @@ public sealed class ActivitiesController : Controller
 
     internal async Task<int> BulkChangeDialerProfileAsync(
         List<OmnichannelActivity> activities,
-        string dialerProfileId)
+        string dialerProfileId,
+        string targetCampaignId = null)
     {
         if (string.IsNullOrWhiteSpace(dialerProfileId))
         {
@@ -1717,20 +1747,24 @@ public sealed class ActivitiesController : Controller
             return 0;
         }
 
+        // A campaign picked with the profile moves every record to it; otherwise each keeps its own.
+        string CampaignOf(OmnichannelActivity activity)
+            => targetCampaignId ?? NormalizeId(activity.CampaignId);
+
         // Dialer work waits on its campaign's queue, which is what agents sign in to, so a record without a campaign
         // cannot be dialed. It used to be relabeled with the dialer's source anyway and then sat where nothing found it.
-        var withoutCampaignCount = activities.Count(activity => string.IsNullOrWhiteSpace(activity.CampaignId));
+        var withoutCampaignCount = activities.Count(activity => CampaignOf(activity) is null);
 
         if (withoutCampaignCount > 0)
         {
-            await _notifier.WarningAsync(H["{0} activities have no campaign, so they cannot be dialed and were left unchanged. Set their campaign first.", withoutCampaignCount]);
+            await _notifier.WarningAsync(H["{0} activities have no campaign, so they cannot be dialed and were left unchanged. Pick a campaign with the dialer profile, or set their campaign first.", withoutCampaignCount]);
         }
 
         var processedCount = 0;
 
         foreach (var campaignActivities in activities
-            .Where(activity => !string.IsNullOrWhiteSpace(activity.CampaignId))
-            .GroupBy(activity => activity.CampaignId, StringComparer.Ordinal))
+            .Where(activity => CampaignOf(activity) is not null)
+            .GroupBy(CampaignOf, StringComparer.Ordinal))
         {
             var activityIds = campaignActivities
                 .Select(activity => activity.ItemId)
@@ -1761,7 +1795,28 @@ public sealed class ActivitiesController : Controller
                     continue;
                 }
 
-                // The profile no longer owns a campaign; changing the dialer profile keeps the activity's own campaign.
+                var campaignId = campaignActivities.Key;
+
+                // A record waiting in another campaign's dialer queue moves with it. One the dialer took in the meantime
+                // stays where it is: it is on a call now, and its follow-ups can be moved once it ends.
+                if (!string.Equals(activity.CampaignId, campaignId, StringComparison.Ordinal))
+                {
+                    if (await dialerContributor.MoveToCampaignAsync(activity.ItemId, campaignId, HttpContext.RequestAborted) == ActivityDialerCampaignMoveResult.InFlight)
+                    {
+                        continue;
+                    }
+
+                    // A move commits the unit of work, so the activity is read again as that commit left it.
+                    activity = await _omnichannelActivityManager.FindByIdAsync(activityId);
+
+                    if (!IsBulkManageableActivity(activity))
+                    {
+                        continue;
+                    }
+                }
+
+                // The profile does not own a campaign: the activity keeps its own unless one was picked with the profile.
+                activity.CampaignId = campaignId;
                 activity.Source = profile.ActivitySource;
                 activity.DialerProfileId = profile.ProfileId;
                 activity.InteractionType = ActivityInteractionType.Manual;
@@ -1785,6 +1840,139 @@ public sealed class ActivitiesController : Controller
 
         return processedCount;
     }
+
+    internal async Task<int> BulkChangeCampaignAsync(
+        List<OmnichannelActivity> activities,
+        string targetCampaignId)
+    {
+        var dialerContributor = _dialerContributors.FirstOrDefault();
+
+        // Dialer work is the work tagged with a dialer profile: it waits on its campaign's queue, so its campaign moves
+        // its place in the dialer too.
+        var dialerActivities = activities
+            .Where(activity => !string.IsNullOrWhiteSpace(activity.DialerProfileId))
+            .ToList();
+
+        var refusedIds = new HashSet<string>(StringComparer.Ordinal);
+
+        if (dialerActivities.Count > 0)
+        {
+            if (targetCampaignId is null)
+            {
+                await _notifier.WarningAsync(H["{0} dialer activities were left unchanged: the dialer needs a campaign to queue them on, so they cannot be moved to no campaign.", dialerActivities.Count]);
+                refusedIds.UnionWith(dialerActivities.Select(activity => activity.ItemId));
+            }
+            else if (dialerContributor is not null)
+            {
+                var profileIds = dialerActivities
+                    .Select(activity => activity.DialerProfileId.Trim())
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+
+                if (profileIds.Length > 1)
+                {
+                    // A campaign's waiting records must all use one dialer profile, and these would arrive with several.
+                    await _notifier.WarningAsync(H["{0} dialer activities were left unchanged: they use {1} different dialer profiles, and a campaign's waiting records must all use one. Move one profile's records at a time, or change their dialer profile with the campaign.", dialerActivities.Count, profileIds.Length]);
+                    refusedIds.UnionWith(dialerActivities.Select(activity => activity.ItemId));
+                }
+                else
+                {
+                    var conflicts = await DialerCampaignProfileGuard.FindConflictsAsync(
+                        dialerContributor,
+                        targetCampaignId,
+                        profileIds[0],
+                        dialerActivities.Select(activity => activity.ItemId).ToHashSet(StringComparer.Ordinal),
+                        HttpContext.RequestAborted);
+
+                    if (conflicts.Count > 0)
+                    {
+                        await _notifier.WarningAsync(H["{0} dialer activities were left unchanged: the campaign already has records waiting under {1}. A campaign's waiting records must all use one dialer profile, so include those records in the change or pick another campaign.", dialerActivities.Count, DialerCampaignProfileGuard.Describe(conflicts)]);
+                        refusedIds.UnionWith(dialerActivities.Select(activity => activity.ItemId));
+                    }
+                }
+            }
+        }
+
+        var activityIds = activities
+            .Where(activity => !refusedIds.Contains(activity.ItemId))
+            .Select(activity => activity.ItemId)
+            .ToArray();
+
+        var processedCount = 0;
+        var leftOnCallCount = 0;
+
+        foreach (var activityId in activityIds)
+        {
+            // Moving a waiting record commits the unit of work, and a committed session no longer tracks what it loaded
+            // before, so saving an activity read earlier would store a second copy. Each is read as the last commit left it.
+            var activity = await _omnichannelActivityManager.FindByIdAsync(activityId);
+
+            if (!IsBulkManageableActivity(activity) ||
+                string.Equals(NormalizeId(activity.CampaignId), targetCampaignId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (dialerContributor is not null &&
+                targetCampaignId is not null &&
+                !string.IsNullOrWhiteSpace(activity.DialerProfileId))
+            {
+                var moved = await dialerContributor.MoveToCampaignAsync(activity.ItemId, targetCampaignId, HttpContext.RequestAborted);
+
+                if (moved == ActivityDialerCampaignMoveResult.InFlight)
+                {
+                    leftOnCallCount++;
+
+                    continue;
+                }
+
+                if (moved == ActivityDialerCampaignMoveResult.Moved)
+                {
+                    activity = await _omnichannelActivityManager.FindByIdAsync(activityId);
+
+                    if (activity is null)
+                    {
+                        continue;
+                    }
+                }
+            }
+
+            activity.CampaignId = targetCampaignId;
+
+            await _omnichannelActivityManager.UpdateAsync(activity);
+            processedCount++;
+        }
+
+        if (leftOnCallCount > 0)
+        {
+            await _notifier.WarningAsync(H["{0} activities were left in their campaign because the dialer took them while they were being moved.", leftOnCallCount]);
+        }
+
+        return processedCount;
+    }
+
+    private async Task<int> RemoveDialerWorkInFlightAsync(List<OmnichannelActivity> activities)
+    {
+        var dialerContributor = _dialerContributors.FirstOrDefault();
+
+        if (dialerContributor is null || activities.Count == 0)
+        {
+            return 0;
+        }
+
+        // The dialer's own queue says what it is working; the activity's copy of its assignment can lag behind, and
+        // trusting it could keep a record stuck in a stale state out of reach of the very action that clears it.
+        var inFlight = await dialerContributor.GetActivitiesInFlightAsync(
+            activities.Select(activity => activity.ItemId),
+            HttpContext.RequestAborted);
+
+        return inFlight.Count == 0
+            ? 0
+            : activities.RemoveAll(activity => inFlight.Contains(activity.ItemId));
+    }
+
+    private static string NormalizeId(string id)
+        => string.IsNullOrWhiteSpace(id) ? null : id.Trim();
 
     private static bool IsBulkManageableActivity(OmnichannelActivity activity)
     {

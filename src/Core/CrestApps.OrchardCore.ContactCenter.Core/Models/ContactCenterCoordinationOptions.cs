@@ -61,6 +61,21 @@ public sealed class ContactCenterCoordinationOptions
     public TimeSpan AgentPreDialMinimumOfferRemaining { get; set; } = TimeSpan.FromSeconds(2);
 
     /// <summary>
+    /// Gets or sets a value indicating whether a call the dialer places for an agent who already holds its reservation
+    /// (Preview, Power, Progressive, and Predictive without over-dialing) rings that agent's device while the customer's
+    /// phone is still ringing. The agent's device answers the leg at once and it waits, parked, so the customer's answer
+    /// (or the verdict that a person answered) only has to join the two, well inside the two seconds an automated call
+    /// has to reach its agent. Turning this off rings the agent once the customer answers, as before.
+    /// </summary>
+    public bool DialerAgentParkingEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how long a parked agent leg is tracked. It must outlast the longest a dialed customer can ring, plus
+    /// the answering-machine verdict; a leg still parked when it lapses is joined to nobody.
+    /// </summary>
+    public TimeSpan DialerAgentParkWindow { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
     /// Gets or sets the short wait the latency-sensitive reclaim path uses.
     /// </summary>
     /// <remarks>

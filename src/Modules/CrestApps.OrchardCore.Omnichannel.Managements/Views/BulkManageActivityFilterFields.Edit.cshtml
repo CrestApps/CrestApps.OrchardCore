@@ -102,6 +102,14 @@
             <select asp-for="CampaignId" asp-items="Model.Campaigns" class="form-select form-select-sm"></select>
         </div>
 
+        @if (Model.DialerProfiles.Any())
+        {
+            <div class="col-lg-3">
+                <label asp-for="DialerProfileId" class="form-label form-label-sm mb-1">@T["Dialer profile"]</label>
+                <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select form-select-sm"></select>
+            </div>
+        }
+
         <div class="col-lg-3">
             <label asp-for="UrgencyLevel" class="form-label form-label-sm mb-1">@T["Urgency level"]</label>
             <select asp-for="UrgencyLevel" asp-items="Model.UrgencyLevels" class="form-select form-select-sm"></select>
