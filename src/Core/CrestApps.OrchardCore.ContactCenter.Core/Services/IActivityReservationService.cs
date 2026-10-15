@@ -62,6 +62,27 @@ public interface IActivityReservationService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Releases an accepted reservation whose agent could not be reached: the agent took the offer, but the leg rung to
+    /// their phone was refused or never answered, so the caller is still waiting with nobody on the way. The caller
+    /// gets what the queue does with an offer nobody answers (its unanswered-offer action: back to the queue, to
+    /// voicemail, or rejected), as an expired offer does, and the agent is set Away rather than returned to work, so
+    /// the next caller is not offered to a phone that cannot ring.
+    /// </summary>
+    /// <remarks>
+    /// Only an inbound caller in a regular queue is released this way. A direct-to-agent (personal line) reservation
+    /// and a campaign queue's reservation are left alone, and so is a reservation that is not accepted: one still
+    /// ringing rings out on its own, and one already settled was decided by whatever settled it, so a redelivered
+    /// failure releases the caller once.
+    /// </remarks>
+    /// <param name="reservationId">The reservation identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The released reservation, or <see langword="null"/> when it was not found, is not an accepted
+    /// reservation in a regular queue, or is held by another transition.</returns>
+    /// <exception cref="YesSql.ConcurrencyException">Another transition changed the reservation, the agent or the
+    /// call first.</exception>
+    Task<ActivityReservation> ReleaseUnreachableAgentAsync(string reservationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Expires every pending reservation that has passed its timeout and returns items to their queues.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
