@@ -13,6 +13,11 @@
     var reservedMap = System.Text.Json.JsonSerializer.Serialize(
         capabilities.ToDictionary(entry => entry.Key, entry => entry.Value.ReservedNames ?? []));
 
+    // The editor has no source picker, so it names the one source it serves for the script to filter by.
+    var editedSource = capabilities.Count == 1
+        ? capabilities.Keys.First()
+        : string.Empty;
+
     var namePrefix = string.IsNullOrEmpty(ViewData.TemplateInfo.HtmlFieldPrefix) ? string.Empty : ViewData.TemplateInfo.HtmlFieldPrefix + ".";
 }
 
@@ -38,7 +43,7 @@
         @Html.ValidationMessage("Parameters")
     </div>
 
-    <div id="parametersList" data-reserved-map="@reservedMap">
+    <div id="parametersList" data-reserved-map="@reservedMap" data-source="@editedSource">
         @for (var i = 0; i < Model.Parameters.Count; i++)
         {
             var parameter = Model.Parameters[i];

@@ -101,5 +101,6 @@ public sealed class ToolInstancesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionToolInstancesDisplayDriver>();
+        services.AddScoped<IChatInteractionSettingsHandler, ChatInteractionToolInstancesSettingsHandler>();
     }
 }
