@@ -875,10 +875,13 @@ public sealed class AdminController : Controller, IUpdateModel
                     continue;
                 }
 
-                statsPart.ErrorMessages.TryGetValue(rowIndex, out var errorMessage);
+                if (!statsPart.ErrorMessages.TryGetValue(rowIndex, out var errorMessage))
+                {
+                    errorMessage = S["The row failed to import. Error details are kept for the first {0} failed rows only.", ImportFileProcessStatsPart.MaxStoredErrorMessages];
+                }
 
                 var values = rowValues.ToList();
-                values.Add(errorMessage ?? string.Empty);
+                values.Add(errorMessage);
                 writer.WriteRow(values);
                 rowIndex++;
             }

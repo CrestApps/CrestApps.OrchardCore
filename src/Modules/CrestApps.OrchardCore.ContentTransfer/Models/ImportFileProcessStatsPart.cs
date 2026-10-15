@@ -5,6 +5,13 @@ namespace CrestApps.OrchardCore.ContentTransfer.Models;
 public sealed class ImportFileProcessStatsPart : ContentPart
 {
     /// <summary>
+    /// The most rows that keep their error message. The part is saved with the entry after every batch, so a file
+    /// where most rows fail would otherwise rewrite every message each time; <see cref="Errors"/> still lists every
+    /// failed row.
+    /// </summary>
+    public const int MaxStoredErrorMessages = 1000;
+
+    /// <summary>
     /// Current row being processed.
     /// </summary>
     public int CurrentRow { get; set; }
@@ -26,7 +33,7 @@ public sealed class ImportFileProcessStatsPart : ContentPart
     public HashSet<int> Errors { get; set; }
 
     /// <summary>
-    /// The error message for each failed row.
+    /// The error message for each failed row, kept for at most <see cref="MaxStoredErrorMessages"/> rows.
     /// </summary>
     public Dictionary<int, string> ErrorMessages { get; set; }
 

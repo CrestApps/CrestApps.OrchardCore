@@ -19,11 +19,17 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
     public IContentTransferFileWriter CreateWriter(Stream stream, string sheetName)
         => new ExcelFileWriter(stream, sheetName);
 
+    /// <summary>
+    /// Reads the first worksheet with <see cref="OpenXmlReader"/> so only one row is held in memory at a time. The row
+    /// count is taken in one pass when the reader opens and every <see cref="ReadRows"/> call streams the sheet again.
+    /// </summary>
     private sealed class ExcelFileReader : IContentTransferFileReader
     {
+        private const string NoDataMessage = "Unable to find a tab in the file that contains data.";
+
         private readonly SpreadsheetDocument _document;
-        private readonly SharedStringTable _sharedStringTable;
-        private readonly SheetData _sheetData;
+        private readonly WorksheetPart _worksheetPart;
+        private readonly List<string> _sharedStrings;
         private readonly List<string> _columnNames;
         private readonly int _rowCount;
 
@@ -34,17 +40,17 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
                 ?? throw new InvalidOperationException("Unable to read the uploaded file.");
 
             var firstSheet = workbookPart.Workbook.Descendants<Sheet>().FirstOrDefault()
-                ?? throw new InvalidOperationException("Unable to find a tab in the file that contains data.");
+                ?? throw new InvalidOperationException(NoDataMessage);
 
-            var worksheetPart = (WorksheetPart)workbookPart.GetPartById(firstSheet.Id);
-            _sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>()
-                ?? throw new InvalidOperationException("Unable to find a tab in the file that contains data.");
+            _worksheetPart = (WorksheetPart)workbookPart.GetPartById(firstSheet.Id);
+            _sharedStrings = ReadSharedStrings(workbookPart.GetPartsOfType<SharedStringTablePart>().FirstOrDefault());
 
-            _sharedStringTable = workbookPart.GetPartsOfType<SharedStringTablePart>()
-                .FirstOrDefault()?.SharedStringTable;
-
-            var headerRow = _sheetData.Elements<Row>().FirstOrDefault()
-                ?? throw new InvalidOperationException("Unable to find a tab in the file that contains data.");
+            Row headerRow;
+            using (var reader = OpenXmlReader.Create(_worksheetPart))
+            {
+                headerRow = ReadRowElements(reader).FirstOrDefault()
+                    ?? throw new InvalidOperationException(NoDataMessage);
+            }
 
             var columnNames = new List<string>();
             foreach (var cell in headerRow.Descendants<Cell>())
@@ -66,7 +72,7 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
             }
 
             _columnNames = columnNames;
-            _rowCount = Math.Max(_sheetData.Elements<Row>().Count() - 1, 0);
+            _rowCount = Math.Max(CountRows(_worksheetPart) - 1, 0);
         }
 
         public IReadOnlyList<string> GetColumnNames() => _columnNames;
@@ -77,7 +83,9 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
         {
             var columnCount = _columnNames.Count;
 
-            foreach (var sheetRow in _sheetData.Elements<Row>().Skip(1))
+            using var reader = OpenXmlReader.Create(_worksheetPart);
+
+            foreach (var sheetRow in ReadRowElements(reader).Skip(1))
             {
                 var values = new string[columnCount];
 
@@ -100,14 +108,105 @@ public sealed class ExcelContentTransferFileFormatProvider : IContentTransferFil
             _document.Dispose();
         }
 
+        private static List<string> ReadSharedStrings(SharedStringTablePart sharedStringTablePart)
+        {
+            if (sharedStringTablePart == null)
+            {
+                return null;
+            }
+
+            var sharedStrings = new List<string>();
+
+            using var reader = OpenXmlReader.Create(sharedStringTablePart);
+
+            while (reader.Read())
+            {
+                if (reader.ElementType == typeof(SharedStringItem) && reader.IsStartElement)
+                {
+                    // Loading one item keeps the text identical to the item's InnerText, rich-text runs included.
+                    sharedStrings.Add(reader.LoadCurrentElement().InnerText);
+                }
+            }
+
+            return sharedStrings;
+        }
+
+        /// <summary>
+        /// Loads the direct child rows of the sheet data one at a time, matching <c>SheetData.Elements&lt;Row&gt;()</c>.
+        /// </summary>
+        private static IEnumerable<Row> ReadRowElements(OpenXmlReader reader)
+        {
+            if (!MoveToSheetDataFirstChild(reader))
+            {
+                yield break;
+            }
+
+            while (!reader.EOF)
+            {
+                if (reader.ElementType == typeof(SheetData) && reader.IsEndElement)
+                {
+                    yield break;
+                }
+
+                if (reader.ElementType == typeof(Row) && reader.IsStartElement)
+                {
+                    // Loading the row leaves the reader on the node that follows it, so the loop must not step again.
+                    yield return (Row)reader.LoadCurrentElement();
+
+                    continue;
+                }
+
+                if (!reader.ReadNextSibling())
+                {
+                    yield break;
+                }
+            }
+        }
+
+        private static int CountRows(WorksheetPart worksheetPart)
+        {
+            using var reader = OpenXmlReader.Create(worksheetPart);
+
+            if (!MoveToSheetDataFirstChild(reader))
+            {
+                return 0;
+            }
+
+            var count = 0;
+
+            do
+            {
+                if (reader.ElementType == typeof(Row) && reader.IsStartElement)
+                {
+                    count++;
+                }
+            }
+            while (reader.ReadNextSibling());
+
+            return count;
+        }
+
+        private static bool MoveToSheetDataFirstChild(OpenXmlReader reader)
+        {
+            while (reader.Read())
+            {
+                if (reader.ElementType == typeof(SheetData) && reader.IsStartElement)
+                {
+                    return reader.ReadFirstChild();
+                }
+            }
+
+            return false;
+        }
+
         private string GetCellValue(Cell cell)
         {
             if (cell.DataType != null && cell.DataType.Value == CellValues.SharedString
-                && _sharedStringTable != null)
+                && _sharedStrings != null)
             {
                 if (int.TryParse(cell.InnerText, out var index))
                 {
-                    return _sharedStringTable.ElementAt(index).InnerText;
+                    return _sharedStrings[index];
                 }
             }
 
