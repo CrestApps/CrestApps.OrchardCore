@@ -83,10 +83,11 @@ Two events carry what a follow-up needs, such as a text message to a customer th
 
 When the dialer dispositions a call, what happens next is up to the disposition. There are two ways to have the dialer call the contact again:
 
-- **In the subject flow (no workflow).** Wire **Try Again** to the disposition, for example *No answer*. The next attempt is created as a new activity and put back in the same campaign with the same dialer profile, due no sooner than the profile's retry delay. No attempt is created past the profile's **Max attempts**.
+- **In the subject flow (no workflow).** Wire **Try Again** to the disposition, for example *No answer*. The next attempt is created as a new activity and put back in the same campaign with the same dialer profile, due no sooner than the profile's retry delay. No attempt is created past the action's **Maximum attempts**, or past the profile's **Max attempts** when the action leaves it empty.
+- **Neither.** When the subject has no disposition for how the call ended, the dialer retries a call that rang out, was busy, reached a machine or was dropped, up to the profile's **Max attempts**. See [Retries and the attempt limit](dialer-profiles.md#retries-and-the-attempt-limit).
 - **In a workflow.** Use the **Schedule Dialer Retry** task. It does the same, but the workflow decides when: set **Delay in minutes** (empty uses the profile's retry delay, and a shorter delay is raised to it). It ends with **Scheduled** (the next activity is in `{{ Workflow.Output.NextActivityItemId }}`), **Exhausted** when no attempt is left, or **Failed**.
 
-Use one or the other for the same disposition, or the contact gets two follow-up activities.
+Use one or the other for the same disposition, or the contact gets two follow-up activities. A **Schedule Dialer Retry** that runs after the dialer already retried the call on its own finds that attempt and does not create another.
 
 1. Create a workflow and add the **Contact Center Event** event with the event type **Activity disposition applied**.
 2. Add an **If/Else** task with the condition `input("Data").DialerOutcome == "Busy" && input("Data").RemainingAttempts > 0`, and connect the event's **Matched** outcome to it.

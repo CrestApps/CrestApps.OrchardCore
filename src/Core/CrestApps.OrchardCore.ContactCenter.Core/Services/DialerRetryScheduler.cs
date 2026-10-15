@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -15,9 +16,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class DialerRetryScheduler : IDialerRetryScheduler
 {
     /// <summary>
-    /// What a follow-up created by this scheduler reports as its creator.
+    /// What a follow-up created by this scheduler for a workflow reports as its creator.
     /// </summary>
     public const string CreatedBy = "Workflow";
+
+    /// <summary>
+    /// What a follow-up the dialer created itself, for an outcome the subject's flow has no rule for, reports as its
+    /// creator.
+    /// </summary>
+    public const string CreatedByDialer = "Dialer";
 
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
@@ -44,7 +51,18 @@ public sealed class DialerRetryScheduler : IDialerRetryScheduler
     }
 
     /// <inheritdoc/>
-    public async Task<DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, CancellationToken cancellationToken = default)
+    public Task<DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, CancellationToken cancellationToken = default)
+        => ScheduleAsync(activityItemId, delayMinutes, CreatedBy, cancellationToken);
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// No delay is asked for: the dialer profile's retry delay, which the follow-up handler applies, is the wait. The
+    /// handler also refuses the attempt past the profile's Max attempts, since no maximum of the subject's own applies.
+    /// </remarks>
+    public Task<DialerRetryScheduleResult> ScheduleUnhandledOutcomeRetryAsync(string activityItemId, CancellationToken cancellationToken = default)
+        => ScheduleAsync(activityItemId, delayMinutes: null, CreatedByDialer, cancellationToken);
+
+    private async Task<DialerRetryScheduleResult> ScheduleAsync(string activityItemId, int? delayMinutes, string createdBy, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(activityItemId))
         {
@@ -68,6 +86,30 @@ public sealed class DialerRetryScheduler : IDialerRetryScheduler
             return NotRetryable("The activity has not finished.");
         }
 
+        // The dialer retries a record its flow has no rule for, and a workflow may ask too when the same call ends: the
+        // first request schedules the next attempt, and a later one finds it rather than dialing the contact twice.
+        if (activity.TryGet<DialerRetryRecord>(out var scheduled) && !string.IsNullOrEmpty(scheduled.NextActivityItemId))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Attempt {AttemptNumber} ('{NextActivityId}') of dialer activity '{ActivityId}' was already scheduled by {ScheduledBy}; the request from {CreatedBy} did not schedule another.",
+                    scheduled.AttemptNumber,
+                    scheduled.NextActivityItemId.SanitizeLogValue(),
+                    activity.ItemId.SanitizeLogValue(),
+                    scheduled.CreatedBy.SanitizeLogValue(),
+                    createdBy);
+            }
+
+            return new DialerRetryScheduleResult
+            {
+                Status = DialerRetryScheduleStatus.Scheduled,
+                NextActivityItemId = scheduled.NextActivityItemId,
+                AttemptNumber = scheduled.AttemptNumber,
+                DueUtc = scheduled.DueUtc,
+            };
+        }
+
         var now = _clock.UtcNow;
         var nextAttempt = OmnichannelActivityFollowUps.CreateNextAttempt(activity, now);
         nextAttempt.ScheduledUtc = now.AddMinutes(Math.Max(0, delayMinutes ?? 0));
@@ -76,7 +118,8 @@ public sealed class DialerRetryScheduler : IDialerRetryScheduler
         {
             PreviousActivity = activity,
             FollowUpActivity = nextAttempt,
-            CreatedBy = CreatedBy,
+            CreatedBy = createdBy,
+            HasChosenSchedule = delayMinutes.HasValue,
         };
 
         foreach (var handler in _followUpHandlers)
@@ -89,7 +132,8 @@ public sealed class DialerRetryScheduler : IDialerRetryScheduler
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "A workflow asked to try dialer activity '{ActivityId}' again, but no attempt was created: {Reason}",
+                    "{CreatedBy} asked to try dialer activity '{ActivityId}' again, but no attempt was created: {Reason}",
+                    createdBy,
                     activity.ItemId.SanitizeLogValue(),
                     context.CancelReason.SanitizeLogValue());
             }
@@ -103,10 +147,21 @@ public sealed class DialerRetryScheduler : IDialerRetryScheduler
 
         await _activityManager.CreateAsync(nextAttempt, cancellationToken: cancellationToken);
 
+        activity.Put(new DialerRetryRecord
+        {
+            NextActivityItemId = nextAttempt.ItemId,
+            AttemptNumber = nextAttempt.Attempts,
+            DueUtc = nextAttempt.ScheduledUtc,
+            CreatedBy = createdBy,
+        });
+
+        await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "A workflow scheduled attempt {AttemptNumber} ('{NextActivityId}') of dialer activity '{ActivityId}', due {DueUtc:O}.",
+                "{CreatedBy} scheduled attempt {AttemptNumber} ('{NextActivityId}') of dialer activity '{ActivityId}', due {DueUtc:O}.",
+                createdBy,
                 nextAttempt.Attempts,
                 nextAttempt.ItemId.SanitizeLogValue(),
                 activity.ItemId.SanitizeLogValue(),

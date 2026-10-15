@@ -73,8 +73,8 @@ The dialer still looks at every campaign once a minute as well, whatever else is
    | Field | Modes | What it does |
    | --- | --- | --- |
    | **Calls per agent** | Power, Predictive | Calls started each time the dialer looks at the campaign (see [When calls are placed](#when-calls-are-placed)), 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
-   | **Max attempts** | Power, Progressive, Predictive | How many attempts one contact may get, counting the first call and every follow-up activity created to try again. Default 3. |
-   | **Retry delay (minutes)** | Power, Progressive, Predictive | The shortest wait after an attempt before the next attempt is dialed. Default 60. |
+   | **Max attempts** | Power, Progressive, Predictive | The fallback limit on how many attempts one contact may get, counting the first call and every follow-up activity created to try again. It applies when the subject flow sets no maximum of its own; see [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 3. |
+   | **Retry delay (minutes)** | Power, Progressive, Predictive | The wait after an attempt before the next attempt is dialed when the subject flow does not say when, and the shortest wait when it does. See [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 60. |
    | **Ring time (seconds)** | Power, Progressive, Predictive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |
    | **Screen out answering machines** | Power, Progressive, Predictive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
@@ -218,7 +218,22 @@ The agent receives a call only when it is something they can act on: a customer 
 
 A number not in service is also added to [Numbers Not In Service](numbers-not-in-service.md) and never dialed again. With answering-machine screening off, a call a voicemail answers is connected to the agent like any answered call, and is theirs to disposition. In Preview mode the agent clicks **Dial**, so they see the call ring; if it ends before they are connected, the dialer dispositions it the same way and the agent goes back to Ready.
 
-The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay, and it is not created once **Max attempts** is used. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again).
+The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again).
+
+### Retries and the attempt limit
+
+The subject flow decides first, and the dialer profile's **Max attempts** is the fallback:
+
+| The subject flow | What happens |
+| --- | --- |
+| Has a disposition for how the call ended, and its **Try Again** sets **Maximum attempts** | The contact is tried up to that maximum. The profile's **Max attempts** does not apply. |
+| Has a disposition for how the call ended, and its **Try Again** leaves **Maximum attempts** empty | The contact is tried up to the profile's **Max attempts**. |
+| Has a disposition for how the call ended, with no **Try Again** | The contact is not called again: the flow decided. |
+| Has no disposition for how the call ended (for example, nothing has the *No answer* outcome) | The dialer dispositions the call with the matching outcome, such as *No answer*, and calls the contact again after the retry delay, up to the profile's **Max attempts**. |
+
+When the next attempt is dialed follows the same order. A date picked when the call is dispositioned, or the **Try Again** action's **Default schedule hours**, sets it. When neither is set, as when the dialer dispositions a call on its own, the next attempt is dialed after the profile's **Retry delay**. No attempt is dialed sooner than the **Retry delay**.
+
+The dialer retries this way only calls that rang out, were busy, reached a machine, or were answered and dropped before an agent joined. A call the network failed or the far end rejected, and a number not in service, are dispositioned but not retried. Attempts count across the follow-ups for one contact, so a limit of 3 means the first call and two more.
 
 Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called.
 

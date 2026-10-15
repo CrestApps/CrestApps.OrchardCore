@@ -155,6 +155,10 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
                 Activity = activity,
                 Outcome = DialerTerminalReasons.ToDispositionOutcome(request.Outcome),
                 FallbackOutcome = DispositionOutcome.NoAnswer,
+
+                // A flow with no rule for how the call ended no longer borrows the disposition its "Try again" is wired
+                // to: the call is dispositioned for what happened, and the dialer retries it under its profile below.
+                PreferRetriedDisposition = false,
                 TerminalReasonCode = string.IsNullOrEmpty(request.TerminalReasonCode)
                     ? DialerTerminalReasons.ForOutcome(request.Outcome)
                     : request.TerminalReasonCode,
@@ -181,6 +185,8 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
 
         await RemoveWaitingQueueItemAsync(activity.ItemId, cancellationToken);
 
+        await RetryWhenTheFlowHasNoRuleAsync(request, activity, result, cancellationToken);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -197,6 +203,51 @@ public sealed class DialerAttemptFinalizer : IDialerAttemptFinalizer
 
         return DialerAttemptFinalizationResult.Dispositioned;
     }
+
+    // The dialer profile's Max attempts is the fallback for a call that ended in a way the subject's flow has no rule
+    // for: the flow is not asked to retry it, so the dialer does, up to the profile's limit. A flow that has a rule for
+    // the outcome decides itself, through its own actions and their maximum. Only the endings a later call might get
+    // past are retried; a rejected or failed call, a dead number and a record that has used every attempt are not.
+    private async Task RetryWhenTheFlowHasNoRuleAsync(
+        DialerAttemptFinalizationRequest request,
+        OmnichannelActivity activity,
+        ActivityDispositionResult result,
+        CancellationToken cancellationToken)
+    {
+        if (result.HandledBySubjectFlow ||
+            !IsRetriedWhenUnhandled(request.Outcome) ||
+            string.Equals(request.TerminalReasonCode, DialerTerminalReasons.MaxAttemptsReached, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var scheduler = _serviceProvider.GetService<IDialerRetryScheduler>();
+
+        if (scheduler is null)
+        {
+            return;
+        }
+
+        var retry = await scheduler.ScheduleUnhandledOutcomeRetryAsync(activity.ItemId, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The subject of dialer activity '{ActivityId}' has no rule for a call that ended as {Outcome}, so the dialer profile decides: {RetryStatus} (attempt {AttemptNumber}, due {DueUtc:O}). {Reason}",
+                activity.ItemId.SanitizeLogValue(),
+                request.Outcome,
+                retry.Status,
+                retry.AttemptNumber,
+                retry.DueUtc,
+                retry.Reason.SanitizeLogValue());
+        }
+    }
+
+    internal static bool IsRetriedWhenUnhandled(string outcome)
+        => outcome is DialerAttemptOutcomes.NoAnswer or
+            DialerAttemptOutcomes.Busy or
+            DialerAttemptOutcomes.AnsweringMachine or
+            DialerAttemptOutcomes.Disconnected;
 
     /// <summary>
     /// Completes an activity that has used every attempt its dialer profile allows, with the disposition for how its
