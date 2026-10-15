@@ -33,6 +33,25 @@ public interface IAgentPreDialCoordinator
     Task<AgentPreDialLeg> GetForAcceptAsync(string reservationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Rings the reserved agent's device for a call the dialer just placed, while the customer's phone is still
+    /// ringing. The agent's device answers the leg at once and it waits, parked, until the customer answers. Doing
+    /// nothing is always safe: the answer then rings the agent the ordinary way.
+    /// </summary>
+    /// <param name="interactionId">The interaction of the placed call.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the call has a parked agent leg.</returns>
+    Task<bool> ParkForDialedCallAsync(string interactionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the parked agent leg the answered call is to join, and closes the call to parking: a park still to come
+    /// finds the answer has gone ahead without it and rings nothing, so the agent is never rung twice.
+    /// </summary>
+    /// <param name="reservationId">The reservation the agent holds the call under.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The parked leg, or <see langword="null"/> when the answer is to ring the agent the ordinary way.</returns>
+    Task<AgentPreDialLeg> TakeParkedLegAsync(string reservationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Records that the accepted offer's caller leg is ready, and joins the agent leg when it is already answered.
     /// </summary>
     /// <param name="reservationId">The offer (reservation) identifier.</param>

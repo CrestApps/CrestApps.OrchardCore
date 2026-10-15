@@ -500,6 +500,41 @@ public sealed class AnswerProviderCommandTypeExecutorTests
     }
 
     [Fact]
+    public async Task ExecuteAsync_ForTheAgentLegParkedForADialedCall_JoinsItUnderTheReservationTheAgentHoldsTheCallUnder()
+    {
+        // Arrange
+        // A dialed call's connect accepts no offer: the leg is tracked under the reservation it is tagged with.
+        var harness = new Harness();
+        harness.SetupProviderResult(new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderLegId = "parked-leg-1",
+            ProviderLegState = VoiceCallState.Dialing,
+        });
+        var coordinator = new Mock<IAgentPreDialCoordinator>();
+        coordinator
+            .Setup(value => value.OnCallerReadyAsync("dialer-reservation-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        harness.PreDialCoordinators.Add(coordinator.Object);
+        var request = CreateRequest();
+        request.PreDialedAgentLegId = "parked-leg-1";
+        request.StandbyReservationId = "dialer-reservation-1";
+        request.CallerAnswered = true;
+        var command = CreateCommand(request);
+        command.ReservationId = null;
+        var executor = harness.CreateExecutor();
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(), TestContext.Current.CancellationToken);
+
+        // Assert: joined, and the provider told the customer's leg is already answered.
+        Assert.Equal(VoiceCallState.Connected, result.ProviderLegState);
+        Assert.True(harness.LastConnectRequest!.CallerAnswered);
+        coordinator.Verify(value => value.OnCallerReadyAsync("dialer-reservation-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_WhenTheAgentWasNotPreDialed_NeverAsksToJoinALeg()
     {
         // Arrange

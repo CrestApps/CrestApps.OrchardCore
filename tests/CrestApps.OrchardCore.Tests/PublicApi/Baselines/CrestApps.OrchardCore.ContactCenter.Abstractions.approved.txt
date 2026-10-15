@@ -664,6 +664,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string AgentEndpoint { get; set; }
         public string AgentId { get; set; }
         public string AgentUserId { get; set; }
+        public bool AnswerOnArrival { get; set; }
         public string InteractionId { get; set; }
         public string ProviderCallId { get; set; }
         public string ReplacesAgentLegId { get; set; }
@@ -688,6 +689,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string AgentId { get; set; }
         public int AgentLegTimeoutSeconds { get; set; }
         public string AgentUserId { get; set; }
+        public bool CallerAnswered { get; set; }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string PreDialedAgentLegId { get; set; }

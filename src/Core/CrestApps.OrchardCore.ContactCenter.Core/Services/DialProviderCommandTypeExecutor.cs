@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -33,6 +34,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
     private readonly IDialDestinationPolicy _destinationPolicy;
     private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IEnumerable<IPredictiveSystemDialAuthorizer> _systemDialAuthorizers;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -50,6 +52,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
     /// <param name="auditRecorder">The recorder that writes each dial started or failed to the audit log.</param>
     /// <param name="logger">The logger used to surface why an outbound dial was rejected by the provider.</param>
     /// <param name="systemDialAuthorizers">The authorizers that vouch for a campaign dial placed without an agent; with none, such a dial is refused.</param>
+    /// <param name="scopeExecutor">The executor that parks the reserved agent's leg once the placed call is on record.</param>
     public DialProviderCommandTypeExecutor(
         IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
         IVoiceContactCenterCallRouter voiceCallRouter,
@@ -61,7 +64,8 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
         IDialDestinationPolicy destinationPolicy,
         IContactCenterAuditRecorder auditRecorder,
         ILogger<DialProviderCommandTypeExecutor> logger,
-        IEnumerable<IPredictiveSystemDialAuthorizer> systemDialAuthorizers)
+        IEnumerable<IPredictiveSystemDialAuthorizer> systemDialAuthorizers,
+        IContactCenterScopeExecutor scopeExecutor)
     {
         _dispatchValidators = dispatchValidators;
         _voiceCallRouter = voiceCallRouter;
@@ -72,6 +76,7 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
         _destinationPolicy = destinationPolicy;
         _auditRecorder = auditRecorder;
         _systemDialAuthorizers = systemDialAuthorizers;
+        _scopeExecutor = scopeExecutor;
         _clock = clock;
         _logger = logger;
     }
@@ -240,7 +245,26 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
         if (!sessionConflict)
         {
             await RecordDialStartedAsync(command, result, dialedInteraction, ownedSession, cancellationToken);
+            ScheduleAgentPark(dialedInteraction);
         }
+    }
+
+    // A call placed for an agent who already holds its reservation rings that agent while the customer rings, so the
+    // answer only has to join the two. It runs once the placed call is on record, which is what the park reads.
+    private void ScheduleAgentPark(Interaction interaction)
+    {
+        if (interaction is null ||
+            string.IsNullOrEmpty(interaction.AgentId) ||
+            string.IsNullOrEmpty(DialerCallMetadata.GetReservationId(interaction)))
+        {
+            return;
+        }
+
+        var interactionId = interaction.ItemId;
+
+        // Resolved when it runs: a host without the coordinator places the call as before.
+        _scopeExecutor.ScheduleAfterCommit<IServiceProvider>(services =>
+            services.GetService<IAgentPreDialCoordinator>()?.ParkForDialedCallAsync(interactionId, CancellationToken.None) ?? Task.CompletedTask);
     }
 
     /// <inheritdoc/>

@@ -182,11 +182,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             return false;
         }
 
-        // Only a phone that said it can hold an offer's leg is rung early, the second time as much as the first.
+        // Only a phone that said it can hold an offer's leg is rung early for an offer, the second time as much as the
+        // first. A leg parked for a dialed call is answered on arrival, which every phone does.
         var redelivery = await ResolveRingAgainAsync(
             callEvent,
             state.RingUserId,
-            TelephonyConstants.SoftPhoneClientCapabilities.HeldOfferLeg,
+            state.AnswersOnArrival == true ? null : TelephonyConstants.SoftPhoneClientCapabilities.HeldOfferLeg,
             "pre-dialed Contact Center agent",
             cancellationToken);
 

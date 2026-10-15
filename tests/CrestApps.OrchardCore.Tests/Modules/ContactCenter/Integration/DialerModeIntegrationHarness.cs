@@ -141,7 +141,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// <summary>
     /// The provider reports a machine answered the screened call of the activity.
     /// </summary>
-    public async Task RaiseMachineAnswerAsync(string activityId)
+    public Task RaiseMachineAnswerAsync(string activityId)
+        => RaiseAnswerVerdictAsync(activityId, AnswerClassification.Machine);
+
+    /// <summary>
+    /// The provider reports who answered the screened call of the activity.
+    /// </summary>
+    public async Task RaiseAnswerVerdictAsync(string activityId, AnswerClassification classification)
     {
         var interaction = await FindInteractionByActivityAsync(activityId);
 
@@ -150,9 +156,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             ProviderName = ProviderName,
             ProviderCallId = interaction.ProviderInteractionId,
             State = VoiceCallState.Connected,
-            AnswerClassification = AnswerClassification.Machine,
+            AnswerClassification = classification,
             OccurredUtc = _clock.UtcNow,
-            IdempotencyKey = $"{interaction.ProviderInteractionId}:machine",
+            IdempotencyKey = $"{interaction.ProviderInteractionId}:{classification.ToString().ToLowerInvariant()}",
         }, TestContext.Current.CancellationToken);
 
         await DrainAsync();
@@ -272,7 +278,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// handlers run, so <see cref="ReleaseEndedCallAsync"/> can drive it. Off by default: without it an agent whose call
     /// ended without them stays Busy until recovery, which is what the stuck-Busy tests rely on.
     /// </param>
-    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false, bool predictive = false, bool releasesEndedCalls = false)
+    /// <param name="configure">Adds or replaces services of the harness, as a feature the host enables would.</param>
+    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false, bool predictive = false, bool releasesEndedCalls = false, Action<IServiceCollection> configure = null)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"cc-dialer-integration-{Guid.NewGuid():N}.db");
         var connectionString = busyTimeoutSeconds.HasValue
@@ -303,7 +310,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         var session = store.CreateSession();
         var clock = new TestClock();
         var shared = new HarnessShared(predictive) { ReleasesEndedCalls = releasesEndedCalls };
-        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory, shared);
+        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory, shared, configure);
 
         // Late-bind the harness scope executor and command processor to the built container so their deferred
         // work can resolve the real services.

@@ -37,14 +37,18 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             return Failure("pre_dial_invalid", "An offer, a caller call id and an agent are required to pre-dial the agent.");
         }
 
-        // Only a browser that said it can hold an offer's leg is rung early. One that cannot would ring it as a second
-        // incoming call on top of the offer, or answer it on arrival and put the agent on a silent line. A leg rung again
-        // after the first was refused names the endpoint it resolved the same way.
+        // Only a browser that said it can hold an offer's leg is rung early for an offer. One that cannot would ring it as
+        // a second incoming call on top of the offer, or answer it on arrival and put the agent on a silent line. A leg
+        // parked for a dialed call is answered on arrival, which is what every phone does with a leg tagged with the
+        // reservation its agent holds. A leg rung again after the first was refused names the endpoint it resolved the
+        // same way.
         var agentEndpoint = string.IsNullOrWhiteSpace(request.AgentEndpoint)
-            ? await _agentEndpointResolver.ResolveAsync(
-                request.AgentUserId,
-                TelephonyConstants.SoftPhoneClientCapabilities.HeldOfferLeg,
-                cancellationToken)
+            ? request.AnswerOnArrival
+                ? await _agentEndpointResolver.ResolveAsync(request.AgentUserId, cancellationToken)
+                : await _agentEndpointResolver.ResolveAsync(
+                    request.AgentUserId,
+                    TelephonyConstants.SoftPhoneClientCapabilities.HeldOfferLeg,
+                    cancellationToken)
             : request.AgentEndpoint.Trim();
 
         if (string.IsNullOrWhiteSpace(agentEndpoint))
@@ -65,6 +69,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider
                 ReservationId = reservationId,
                 RingUserId = request.AgentUserId,
                 Redelivered = string.IsNullOrWhiteSpace(request.ReplacesAgentLegId) ? null : true,
+                AnswersOnArrival = request.AnswerOnArrival ? true : null,
             }.ToClientStateJson(),
 
             // The leg rings for as long as its offer does, so one nobody answers ends with the offer on its own.
@@ -72,16 +77,19 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             TimeoutSeconds = request.TimeoutSeconds > 0 ? Math.Clamp(request.TimeoutSeconds, 5, 600) : null,
         };
 
-        // The offer id also rides in a SIP header, which the browser SDK exposes on the incoming call alongside the
-        // client state. Either is enough for the browser to tie the leg to the offer it is showing.
-        originate.AdditionalFields["custom_headers"] = new[]
-        {
-            new Dictionary<string, string>(StringComparer.Ordinal)
+        // A leg parked for a dialed call carries the reservation its agent accepted and the agent's user, the tag the
+        // agent's phone answers on arrival. An offer's leg carries the offer id instead, in a SIP header the browser SDK
+        // exposes on the incoming call alongside the client state; either is enough to tie the leg to the offer shown.
+        originate.AdditionalFields["custom_headers"] = request.AnswerOnArrival
+            ? TelnyxStandbyAnswerHeaders.Create(reservationId, request.AgentUserId)
+            : new[]
             {
-                ["name"] = TelnyxConstants.OfferIdSipHeader,
-                ["value"] = reservationId,
-            },
-        };
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["name"] = TelnyxConstants.OfferIdSipHeader,
+                    ["value"] = reservationId,
+                },
+            };
 
         try
         {
@@ -203,6 +211,13 @@ public sealed partial class TelnyxContactCenterVoiceProvider
     {
         var callerCallControlId = request.ProviderCallId.Trim();
 
+        if (request.CallerAnswered)
+        {
+            // An outbound call the customer picked up: Telnyx refuses to answer a leg it placed (422), so nothing is
+            // asked of it. The leg is joined once the Contact Center sees both halves ready.
+            return PreDialedAgentConnectResult(request, callerCallControlId);
+        }
+
         try
         {
             // Telnyx refuses to bridge a leg that is not answered, so the caller is answered before the agent leg is
@@ -225,7 +240,11 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             _logger.LogWarning(ex, "An error occurred while answering the caller leg before joining a pre-dialed agent leg.");
         }
 
-        return new ContactCenterVoiceProviderResult
+        return PreDialedAgentConnectResult(request, callerCallControlId);
+    }
+
+    private ContactCenterVoiceProviderResult PreDialedAgentConnectResult(ContactCenterConnectRequest request, string callerCallControlId)
+        => new()
         {
             Succeeded = true,
             ProviderName = TechnicalName,
@@ -236,7 +255,6 @@ public sealed partial class TelnyxContactCenterVoiceProvider
             // answered once it knows.
             ProviderLegState = VoiceCallState.Dialing,
         };
-    }
 
     private async Task StopCallerPlaybackAsync(string callerCallControlId, CancellationToken cancellationToken)
     {

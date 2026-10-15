@@ -49,4 +49,12 @@ public sealed class ContactCenterAgentPreDialRequest
     /// being rung again where it registered since.
     /// </summary>
     public string ReplacesAgentLegId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the agent's client answers the leg as soon as it arrives, rather than
+    /// holding it until the agent accepts an offer. A call the dialer placed for an agent who already holds its
+    /// reservation rings the agent while the customer is still ringing: the agent's client answers that leg at once,
+    /// and it waits, answered, until the customer answers and the leg is joined to them, or is hung up when nobody does.
+    /// </summary>
+    public bool AnswerOnArrival { get; set; }
 }
