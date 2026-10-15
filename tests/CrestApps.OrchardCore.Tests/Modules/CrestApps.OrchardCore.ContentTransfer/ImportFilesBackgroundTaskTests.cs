@@ -1,5 +1,6 @@
 using System.Data;
 using CrestApps.OrchardCore.BackgroundWork;
+using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.ContentTransfer.BackgroundTasks;
 using CrestApps.OrchardCore.ContentTransfer.Models;
 using OrchardCore.ContentManagement;
@@ -8,6 +9,53 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContentTransfer;
 
 public sealed class ImportFilesBackgroundTaskTests
 {
+    [Fact]
+    public async Task FilterPendingRowsAsync_PreparesTheFiltersOncePerBatch_AndKeepsOnlyTheRowsTheyAccept()
+    {
+        // Arrange
+        // The batch hook was never called, so the duplicate check read every stored number up front instead of the
+        // numbers of each batch, which ran a large import out of memory.
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("Phone");
+
+        var entry = new ContentTransferEntry();
+        var progressPart = new ImportFileProcessStatsPart { Errors = [], ErrorMessages = [] };
+        var pendingRows = Enumerable.Range(1, 3)
+            .Select(rowIndex =>
+            {
+                var row = dataTable.NewRow();
+                row["Phone"] = $"555-000-000{rowIndex}";
+
+                return new ContentImportRowFilterContext { Row = row, Columns = dataTable.Columns, Entry = entry, RowIndex = rowIndex };
+            })
+            .ToList();
+
+        var filter = new SkipRowFilter(skippedRowIndex: 2);
+        var newRecords = new Dictionary<int, DataRow>();
+        var existingRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
+
+        // Act
+        await ImportFilesBackgroundTask.FilterPendingRowsAsync(
+            pendingRows,
+            [filter],
+            contentTypeDefinition: null,
+            entry,
+            progressPart,
+            indexOfKeyColumn: -1,
+            newRecords,
+            existingRows,
+            monitor: null,
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, filter.PrepareCount);
+        Assert.Equal([1, 2, 3], filter.PreparedRowIndexes);
+        Assert.Equal([1, 3], newRecords.Keys.Order());
+        Assert.Empty(existingRows);
+        Assert.Empty(pendingRows);
+        Assert.Equal("Skipped by the test filter.", progressPart.ErrorMessages[2]);
+    }
+
     [Fact]
     public void GetImportContentItemId_ShouldReturnContentItemId()
     {
@@ -97,5 +145,35 @@ public sealed class ImportFilesBackgroundTaskTests
         Assert.True(ImportFilesBackgroundTask.MaxRunDuration + BackgroundWorkPacer.GateWaitLimit + TimeSpan.FromMinutes(5) <= limits.RunTimeout);
         Assert.True(limits.SlowRowThreshold < limits.RowTimeout);
         Assert.True(limits.RowTimeout < limits.RunTimeout);
+    }
+
+    private sealed class SkipRowFilter(int skippedRowIndex) : IContentImportRowFilter
+    {
+        public int PrepareCount { get; private set; }
+
+        public List<int> PreparedRowIndexes { get; } = [];
+
+        public Task<bool> InitializeAsync(ContentImportRowFilterInitContext context)
+            => Task.FromResult(true);
+
+        public Task PrepareBatchAsync(ContentImportRowFilterBatchContext context)
+        {
+            PrepareCount++;
+            PreparedRowIndexes.AddRange(context.Rows.Select(row => row.RowIndex));
+
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> ShouldSkipRowAsync(ContentImportRowFilterContext context)
+        {
+            if (context.RowIndex != skippedRowIndex)
+            {
+                return Task.FromResult(false);
+            }
+
+            context.SkipReason = "Skipped by the test filter.";
+
+            return Task.FromResult(true);
+        }
     }
 }
