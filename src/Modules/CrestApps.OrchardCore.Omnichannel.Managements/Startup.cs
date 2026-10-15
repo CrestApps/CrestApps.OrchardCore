@@ -201,6 +201,7 @@ public sealed class ReportsStartup : StartupBase
             .AddScoped<IReport, ActivitySummaryReportProvider>()
             .AddScoped<IReport, CampaignPerformanceReportProvider>()
             .AddScoped<IReport, DispositionBreakdownReportProvider>()
+            .AddScoped<IReport, DialerCallDetailReportProvider>()
             .AddScoped<IReport, HandoffContainmentReportProvider>();
         services.AddDisplayDriver<ReportFilter, OmnichannelReportFilterDisplayDriver>();
 
