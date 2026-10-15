@@ -3200,6 +3200,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch
 {
+    public sealed class DispatchActivityGroup
+    {
+        public DispatchActivityGroup() { }
+        public string Channel { get; set; }
+        public int Count { get; set; }
+        public string InteractionType { get; set; }
+        public string Source { get; set; }
+    }
     public enum DispatchBlocker
     {
         DialableNow = 0,
@@ -3231,6 +3239,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch
         public int AgentCount { get; set; }
         public string Reason { get; set; }
     }
+    public enum DispatchPacing
+    {
+        NothingWaiting = 0,
+        Paced = 1,
+        ProfileDisabled = 2,
+        AgentDriven = 3,
+        ProfileMissing = 4,
+    }
+    public sealed class DispatchProfileStamp
+    {
+        public DispatchProfileStamp() { }
+        public bool? Enabled { get; set; }
+        public int ItemCount { get; set; }
+        public string Mode { get; set; }
+        public string ProfileId { get; set; }
+        public string ProfileName { get; set; }
+    }
     public sealed class DispatchRoutingFinding
     {
         public DispatchRoutingFinding() { }
@@ -3242,15 +3267,23 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch
     public sealed class QueueDispatchDiagnostics
     {
         public QueueDispatchDiagnostics() { }
+        public int ActivitiesWithoutProfileCount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchActivityGroup> ActivityMix { get; set; }
+        public int AssignedItemCount { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchBucket> Buckets { get; set; }
         public string CampaignId { get; set; }
         public int DialableNowCount { get; set; }
         public int EvaluatedCount { get; set; }
         public int HeldBackCount { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchPacing Pacing { get; set; }
         public int PendingCount { get; set; }
+        public int ProfileMismatchCount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchProfileStamp> ProfileStamps { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchBlocker? QueueBlocker { get; set; }
         public string QueueId { get; set; }
+        public int ReservedItemCount { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchRoutingFinding RoutingFinding { get; set; }
+        public int WaitingItemCount { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports

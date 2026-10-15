@@ -174,6 +174,28 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
             PendingCount = await pending.CountAsync(cancellationToken),
         };
 
+        var profiles = new Dictionary<string, DialerProfile>(StringComparer.Ordinal);
+        var waitingItems = await _queueItemManager.GetWaitingAsync(queueId, cancellationToken);
+
+        diagnostics.WaitingItemCount = waitingItems.Count;
+        diagnostics.ReservedItemCount = await CountItemsAsync(queueId, QueueItemStatus.Reserved, cancellationToken);
+        diagnostics.AssignedItemCount = await CountItemsAsync(queueId, QueueItemStatus.Assigned, cancellationToken);
+
+        foreach (var profileId in waitingItems.Select(item => item.DialerProfileId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
+        {
+            await ReadProfileAsync(profiles, profileId, cancellationToken);
+        }
+
+        diagnostics.ProfileStamps = DispatchQueueLoadSummary.Stamps(waitingItems, id => profiles.GetValueOrDefault(id));
+
+        var head = waitingItems.Count == 0
+            ? null
+            : await _queueItemManager.FindNextWaitingAsync(CampaignRoutingQueue.Create(queueId), now, cancellationToken);
+
+        diagnostics.Pacing = DispatchQueueLoadSummary.Pacing(
+            head,
+            head is null || string.IsNullOrEmpty(head.DialerProfileId) ? null : profiles.GetValueOrDefault(head.DialerProfileId));
+
         if (diagnostics.PendingCount == 0)
         {
             return diagnostics;
@@ -182,16 +204,22 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         var records = (await pending.OrderBy(index => index.ScheduledUtc).Take(MaxEvaluatedRecords).ListAsync(cancellationToken)).ToArray();
         var recordIds = records.Select(index => index.ItemId).ToArray();
 
-        var waiting = (await _queueItemManager.GetWaitingAsync(queueId, cancellationToken))
+        var waiting = waitingItems
             .Where(item => !string.IsNullOrEmpty(item.ActivityItemId))
             .GroupBy(item => item.ActivityItemId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+        var pendingRecords = records
+            .Select(index => new PendingRecord(index.ItemId, index.Source, index.InteractionType.ToString(), index.Channel, index.DialerProfileId))
+            .ToArray();
+
+        diagnostics.ActivityMix = DispatchQueueLoadSummary.Mix(pendingRecords);
+        (diagnostics.ProfileMismatchCount, diagnostics.ActivitiesWithoutProfileCount) = DispatchQueueLoadSummary.Compare(waiting, pendingRecords);
 
         var activities = await LoadActivitiesAsync(recordIds, cancellationToken);
         var workStates = await LoadWorkStatesAsync(recordIds, cancellationToken);
         var lastInteractions = await LoadLastInteractionsAsync(recordIds, cancellationToken);
         var suppressions = await LoadSuppressionsAsync(recordIds, now, cancellationToken);
-        var profiles = new Dictionary<string, DialerProfile>(StringComparer.Ordinal);
         var buckets = new Dictionary<DispatchBlocker, DispatchBucket>();
 
         foreach (var record in records)
@@ -209,10 +237,9 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
             var profileId = queueItem?.DialerProfileId ?? record.DialerProfileId;
             DialerProfile profile = null;
 
-            if (!string.IsNullOrEmpty(profileId) && !QueueCallbackDialerProfile.IsCallbackProfile(profileId) && !profiles.TryGetValue(profileId, out profile))
+            if (!string.IsNullOrEmpty(profileId) && !QueueCallbackDialerProfile.IsCallbackProfile(profileId))
             {
-                profile = await _profileReader.FindByIdAsync(profileId, cancellationToken);
-                profiles[profileId] = profile;
+                profile = await ReadProfileAsync(profiles, profileId, cancellationToken);
             }
 
             var (blocker, dueUtc) = Evaluate(queueItem, profile, activity, workState, lastInteraction, suppression, now);
@@ -243,6 +270,28 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
         return diagnostics;
     }
+
+    private async Task<DialerProfile> ReadProfileAsync(Dictionary<string, DialerProfile> profiles, string profileId, CancellationToken cancellationToken)
+    {
+        if (QueueCallbackDialerProfile.IsCallbackProfile(profileId))
+        {
+            return null;
+        }
+
+        if (!profiles.TryGetValue(profileId, out var profile))
+        {
+            profile = await _profileReader.FindByIdAsync(profileId, cancellationToken);
+            profiles[profileId] = profile;
+        }
+
+        return profile;
+    }
+
+    private async Task<int> CountItemsAsync(string queueId, QueueItemStatus status, CancellationToken cancellationToken)
+        => await _session.QueryIndex<QueueItemIndex>(
+            index => index.QueueId == queueId && index.Status == status,
+            collection: ContactCenterStorage.CollectionName)
+            .CountAsync(cancellationToken);
 
     internal static (DispatchBlocker Blocker, DateTime? DueUtc) Evaluate(
         QueueItem queueItem,

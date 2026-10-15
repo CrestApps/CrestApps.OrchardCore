@@ -493,8 +493,11 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
         function dispatchCard(queue, reference) {
             var cls = 'cc-dispatch__card';
+            var pacingStuck = queue.pacing === 'ProfileDisabled' || queue.pacing === 'ProfileMissing';
             var stalled = !!queue.queueBlocker ||
                 !!queue.routing ||
+                pacingStuck ||
+                queue.profileMismatchCount > 0 ||
                 (queue.dialableNowCount > 0 && queue.availableAgentCount === 0);
 
             if (stalled) {
@@ -552,12 +555,70 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                 notes.push(label('dispatchNoAvailable', 'Dialable work is waiting for an available agent.'));
             }
 
+            var loaded = loadedLines(queue);
+
             return '<div class="' + cls + '">' +
                 '<div class="cc-dispatch__name">' + escapeHtml(queue.name) + '</div>' +
                 '<div class="cc-dispatch__headline">' + escapeHtml(headline) + '</div>' +
                 '<ul class="cc-dispatch__list">' + items + '</ul>' +
+                (loaded.length ? '<div class="cc-dispatch__note">' + loaded.map(escapeHtml).join('<br />') + '</div>' : '') +
                 '<div class="cc-dispatch__note">' + notes.map(escapeHtml).join('<br />') + '</div>' +
                 '</div>';
+        }
+
+        // What is loaded in a campaign's queue: its items by state, how it is paced, the dialer profiles its items are stamped
+        // with, what kind of work is pending, and where the stamp and the activity disagree.
+        function loadedLines(queue) {
+            if (!queue.campaignId) {
+                return [];
+            }
+
+            var lines = [format(
+                label('loadedItems', 'Queue items: {0} waiting, {1} reserved, {2} assigned'),
+                queue.waitingItemCount,
+                queue.reservedItemCount,
+                queue.assignedItemCount)];
+
+            if (queue.pacing && queue.pacing !== 'NothingWaiting') {
+                lines.push(label('pacing.' + queue.pacing, queue.pacing));
+            }
+
+            (queue.profileStamps || []).forEach(function (stamp) {
+                var text;
+
+                if (!stamp.profileId) {
+                    text = label('stampNone', 'No dialer profile stamped');
+                } else if (stamp.name) {
+                    text = format(
+                        label('stampProfile', '{0} ({1}, {2})'),
+                        stamp.name,
+                        stamp.mode,
+                        stamp.enabled ? label('profileOn', 'turned on') : label('profileOff', 'turned off'));
+                } else {
+                    text = label('stampUnreadable', 'A dialer profile that cannot be read');
+                }
+
+                lines.push(format(label('stampLine', 'Stamped: {0}: {1}'), text, stamp.itemCount));
+            });
+
+            (queue.activityMix || []).slice(0, 4).forEach(function (group) {
+                lines.push(format(
+                    label('mixLine', 'Pending {0} / {1} / {2}: {3}'),
+                    group.source || '-',
+                    group.interactionType || '-',
+                    group.channel || '-',
+                    group.count));
+            });
+
+            if (queue.profileMismatchCount > 0) {
+                lines.push(format(label('mismatch', '{0} queue items are stamped with a different dialer profile than their activity'), queue.profileMismatchCount));
+            }
+
+            if (queue.activitiesWithoutProfileCount > 0) {
+                lines.push(format(label('noOwnProfile', '{0} pending activities carry no dialer profile of their own'), queue.activitiesWithoutProfileCount));
+            }
+
+            return lines;
         }
 
         function refreshDispatch() {

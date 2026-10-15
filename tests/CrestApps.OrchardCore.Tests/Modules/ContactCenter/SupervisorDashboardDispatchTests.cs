@@ -167,6 +167,48 @@ public sealed class SupervisorDashboardDispatchTests
         Assert.Equal(3, reason.AgentCount);
     }
 
+    // Live: hundreds of items waited in a queue stamped with a turned-off profile. A queue with items waiting is explained
+    // even when none of its activities counts as pending.
+    [Fact]
+    public async Task DispatchPoll_ACampaignQueueWithItemsWaitingAndNothingPending_IsStillExplained_WithWhatIsLoaded()
+    {
+        // Arrange
+        var probe = new DispatchProbe();
+        probe.AddCampaign("renewals", "Renewals");
+        probe.Authorize(_renewalsQueue);
+        probe.Diagnose(new QueueDispatchDiagnostics
+        {
+            QueueId = _renewalsQueue,
+            CampaignId = "renewals",
+            WaitingItemCount = 762,
+            ReservedItemCount = 1,
+            AssignedItemCount = 2,
+            Pacing = DispatchPacing.ProfileDisabled,
+            ProfileMismatchCount = 12,
+            ActivitiesWithoutProfileCount = 12,
+            ProfileStamps = [new DispatchProfileStamp { ProfileId = "preview-1", ProfileName = "Preview", Mode = "Preview", Enabled = false, ItemCount = 762 }],
+            ActivityMix = [new DispatchActivityGroup { Source = "Dialer", InteractionType = "Automated", Channel = "Phone", Count = 12 }],
+        });
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        var row = Assert.Single(model.Queues);
+        Assert.Equal(762, row.WaitingItemCount);
+        Assert.Equal(1, row.ReservedItemCount);
+        Assert.Equal(2, row.AssignedItemCount);
+        Assert.Equal("ProfileDisabled", row.Pacing);
+        Assert.Equal(12, row.ProfileMismatchCount);
+        Assert.Equal(12, row.ActivitiesWithoutProfileCount);
+        var stamp = Assert.Single(row.ProfileStamps);
+        Assert.Equal("Preview", stamp.Name);
+        Assert.False(stamp.Enabled);
+        Assert.Equal(762, stamp.ItemCount);
+        var group = Assert.Single(row.ActivityMix);
+        Assert.Equal(("Dialer", "Automated", "Phone", 12), (group.Source, group.InteractionType, group.Channel, group.Count));
+    }
+
     // The breakdown reads a campaign's whole pending inventory; a supervisor's polls share one reading.
     [Fact]
     public async Task DispatchPoll_ASecondPollSoonAfterTheFirst_DoesNotDiagnoseAgain()

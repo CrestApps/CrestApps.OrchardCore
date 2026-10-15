@@ -59,6 +59,46 @@ public sealed class SupervisorDispatchViewModel
     public int HeldBackCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of queue items waiting in the queue.
+    /// </summary>
+    public int WaitingItemCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of queue items reserved for an agent and awaiting acceptance.
+    /// </summary>
+    public int ReservedItemCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of queue items assigned to an agent.
+    /// </summary>
+    public int AssignedItemCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of how the queue is paced, from the dialer profile stamped on its head item.
+    /// </summary>
+    public string Pacing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialer profiles stamped on the waiting items.
+    /// </summary>
+    public IList<SupervisorDispatchProfileViewModel> ProfileStamps { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the pending activities grouped by source, interaction type and channel.
+    /// </summary>
+    public IList<SupervisorDispatchActivityGroupViewModel> ActivityMix { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the number of waiting items stamped with a dialer profile other than their activity's own.
+    /// </summary>
+    public int ProfileMismatchCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of pending activities that carry no dialer profile of their own.
+    /// </summary>
+    public int ActivitiesWithoutProfileCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of agents signed in to the queue or campaign.
     /// </summary>
     public int SignedInAgentCount { get; set; }
@@ -83,6 +123,63 @@ public sealed class SupervisorDispatchViewModel
     /// it has not failed lately.
     /// </summary>
     public SupervisorDispatchRoutingViewModel Routing { get; set; }
+}
+
+/// <summary>
+/// A dialer profile stamped on waiting queue items.
+/// </summary>
+public sealed class SupervisorDispatchProfileViewModel
+{
+    /// <summary>
+    /// Gets or sets the profile identifier, or <see langword="null"/> for items stamped with none.
+    /// </summary>
+    public string ProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the profile name, or <see langword="null"/> when it cannot be read.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialing mode name, or <see langword="null"/> when the profile cannot be read.
+    /// </summary>
+    public string Mode { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the profile is turned on, or <see langword="null"/> when it cannot be read.
+    /// </summary>
+    public bool? Enabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of waiting items stamped with the profile.
+    /// </summary>
+    public int ItemCount { get; set; }
+}
+
+/// <summary>
+/// Pending activities that share a source, interaction type and channel.
+/// </summary>
+public sealed class SupervisorDispatchActivityGroupViewModel
+{
+    /// <summary>
+    /// Gets or sets the activity source.
+    /// </summary>
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type name.
+    /// </summary>
+    public string InteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the channel.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of pending activities.
+    /// </summary>
+    public int Count { get; set; }
 }
 
 /// <summary>

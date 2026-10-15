@@ -94,8 +94,8 @@ internal static partial class SupervisorDashboardEndpoints
 
         foreach (var diagnosis in diagnoses)
         {
-            // Nothing pending is nothing to explain.
-            if (diagnosis.PendingCount == 0)
+            // Nothing pending and nothing waiting is nothing to explain.
+            if (diagnosis.PendingCount == 0 && diagnosis.WaitingItemCount == 0)
             {
                 continue;
             }
@@ -177,6 +177,31 @@ internal static partial class SupervisorDashboardEndpoints
             SignedInAgentCount = signedInAgentCount,
             AvailableAgentCount = availableAgentCount,
             QueueBlocker = diagnosis.QueueBlocker?.ToString(),
+            WaitingItemCount = diagnosis.WaitingItemCount,
+            ReservedItemCount = diagnosis.ReservedItemCount,
+            AssignedItemCount = diagnosis.AssignedItemCount,
+            Pacing = diagnosis.CampaignId is null ? null : diagnosis.Pacing.ToString(),
+            ProfileMismatchCount = diagnosis.ProfileMismatchCount,
+            ActivitiesWithoutProfileCount = diagnosis.ActivitiesWithoutProfileCount,
+            ProfileStamps = diagnosis.ProfileStamps
+                .Select(stamp => new SupervisorDispatchProfileViewModel
+                {
+                    ProfileId = stamp.ProfileId,
+                    Name = stamp.ProfileName,
+                    Mode = stamp.Mode,
+                    Enabled = stamp.Enabled,
+                    ItemCount = stamp.ItemCount,
+                })
+                .ToList(),
+            ActivityMix = diagnosis.ActivityMix
+                .Select(group => new SupervisorDispatchActivityGroupViewModel
+                {
+                    Source = group.Source,
+                    InteractionType = group.InteractionType,
+                    Channel = group.Channel,
+                    Count = group.Count,
+                })
+                .ToList(),
             Buckets = diagnosis.Buckets
                 .Select(bucket => new SupervisorDispatchBucketViewModel
                 {

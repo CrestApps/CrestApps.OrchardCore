@@ -22,6 +22,49 @@ public sealed class QueueDispatchDiagnostics
     public int PendingCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of queue items waiting in the queue, whatever their activity's state.
+    /// </summary>
+    public int WaitingItemCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of queue items reserved for an agent and awaiting acceptance.
+    /// </summary>
+    public int ReservedItemCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of queue items assigned to an agent.
+    /// </summary>
+    public int AssignedItemCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the queue is paced, from the dialer profile stamped on its head item. It is meaningful for a
+    /// campaign's queue only.
+    /// </summary>
+    public DispatchPacing Pacing { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialer profiles stamped on the waiting items, most items first.
+    /// </summary>
+    public IList<DispatchProfileStamp> ProfileStamps { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the evaluated pending activities grouped by source, interaction type and channel, largest first.
+    /// </summary>
+    public IList<DispatchActivityGroup> ActivityMix { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the number of evaluated waiting items whose stamped dialer profile differs from the one their activity
+    /// carries. The queue gate trusts the stamp, so a disagreement means the activity is dialed under a profile it was not
+    /// given.
+    /// </summary>
+    public int ProfileMismatchCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of evaluated pending activities that carry no dialer profile of their own.
+    /// </summary>
+    public int ActivitiesWithoutProfileCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of pending records the buckets account for. It is lower than <see cref="PendingCount"/>
     /// when the queue holds more records than one pass reads.
     /// </summary>
