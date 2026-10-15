@@ -81,6 +81,12 @@ public sealed class TelnyxCallEvent
     public string RecordingId { get; set; }
 
     /// <summary>
+    /// Gets or sets how many channels the recording has, <c>single</c> or <c>dual</c>, when the event is a
+    /// <c>call.recording.saved</c>.
+    /// </summary>
+    public string RecordingChannels { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the recording started, when the event is a <c>call.recording.saved</c>.
     /// </summary>
     public DateTime? RecordingStartedUtc { get; set; }
