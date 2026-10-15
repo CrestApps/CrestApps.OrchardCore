@@ -23,6 +23,9 @@ public sealed class OmnichannelContactImportRowFilterTests
     private readonly Mock<ISite> _site = new();
     private readonly DncRegistrySettings _settings = new();
 
+    // The numbers stored in the tenant, with the records that hold each, as the lookups answer them.
+    private Dictionary<string, string[]> _storedOwners = new(StringComparer.OrdinalIgnoreCase);
+
     public OmnichannelContactImportRowFilterTests()
     {
         _site.Setup(x => x.GetOrCreate<DncRegistrySettings>())
@@ -36,12 +39,11 @@ public sealed class OmnichannelContactImportRowFilterTests
                 It.IsAny<IReadOnlyCollection<string>>(),
                 It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (IReadOnlyCollection<string> keys, Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> _, CancellationToken cancellationToken) =>
+            .Returns(async (IReadOnlyCollection<string> keys, Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> _, CancellationToken _) =>
             {
-                var owners = await _duplicateLookupService.Object.GetAllExistingNormalizedPhoneNumberOwnersAsync(cancellationToken)
-                    ?? new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+                await Task.Yield();
 
-                return owners
+                return _storedOwners
                     .Where(pair => keys.Contains(pair.Key, StringComparer.OrdinalIgnoreCase))
                     .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
             });
@@ -68,8 +70,8 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         // Assert
         Assert.True(initialized);
-        _duplicateLookupService.Verify(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(It.IsAny<CancellationToken>()), Times.Never);
-        _duplicateLookupService.Verify(x => x.GetExistingNormalizedPhoneNumberOwnersAsync(
+        _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
+            It.IsAny<IReadOnlyCollection<string>>(),
             It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -84,11 +86,10 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["5553334444"] = ["existing-contact"],
-            });
+            };
 
         Assert.True(await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -135,12 +136,10 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["5553334444"] = ["existing-contact"],
-            });
+            };
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -296,7 +295,9 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.True(await filter.ShouldSkipRowAsync(rowContext));
         Assert.Contains("is registered on a national do-not-call registry", rowContext.SkipReason);
 
-        _duplicateLookupService.Verify(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
+        _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
+            It.IsAny<IReadOnlyCollection<string>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -310,12 +311,10 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["5551112222"] = ["existing-contact"],
-            });
+            };
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -354,14 +353,12 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["5551112222"] = ["existing-contact-1"],
                 ["5553334444"] = ["existing-contact-2"],
                 ["5556667777"] = ["existing-contact-3"],
-            });
+            };
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -397,12 +394,10 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["7024993350"] = ["4eb8n2j6ffk0q6dg9jevfavb5y"],
-            });
+            };
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -432,9 +427,7 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase));
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -470,9 +463,7 @@ public sealed class OmnichannelContactImportRowFilterTests
             IgnoreDuplicateByPhoneNumber = true,
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase));
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {
@@ -585,12 +576,10 @@ public sealed class OmnichannelContactImportRowFilterTests
             SelectedRegistryKeys = ["local-dnc"],
         });
 
-        _duplicateLookupService.Setup(x => x.GetAllExistingNormalizedPhoneNumberOwnersAsync(
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        _storedOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
                 ["7024993350"] = ["4eb8n2j6ffk0q6dg9jevfavb5y"],
-            });
+            };
 
         var initialized = await filter.InitializeAsync(new ContentImportRowFilterInitContext
         {

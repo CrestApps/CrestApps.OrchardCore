@@ -55,6 +55,49 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
         });
     }
 
+    [Theory]
+    [InlineData(1, 1)]
+    [InlineData(OmnichannelContactDuplicateLookupService.LookupChunkSize, 1)]
+    [InlineData(OmnichannelContactDuplicateLookupService.LookupChunkSize + 1, 2)]
+    [InlineData(5_000, 10)]
+    public async Task GetPhoneNumberOwnersAsync_SplitsTheKeysSoNoQueryPassesTheParameterLimit(int keyCount, int expectedQueries)
+    {
+        // Arrange
+        // SQL Server refuses a command with more than 2,100 parameters. An import batch larger than the limit allows
+        // must be looked up in several queries rather than fail.
+        var queries = 0;
+        var indexQuery = new Mock<IQueryIndex<OmnichannelContactIndex>>();
+        indexQuery
+            .Setup(query => query.Where(It.IsAny<Expression<Func<OmnichannelContactIndex, bool>>>()))
+            .Callback(() => queries++)
+            .Returns(indexQuery.Object);
+        indexQuery
+            .Setup(query => query.ListAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var rootQuery = new Mock<IQuery>();
+        rootQuery
+            .Setup(query => query.ForIndex<OmnichannelContactIndex>())
+            .Returns(indexQuery.Object);
+
+        var session = new Mock<ISession>();
+        session
+            .Setup(currentSession => currentSession.Query(null))
+            .Returns(rootQuery.Object);
+
+        var service = new OmnichannelContactDuplicateLookupService(session.Object, new DefaultPhoneNumberService());
+        var keys = Enumerable.Range(0, keyCount).Select(i => $"+1702{i:D7}").ToArray();
+
+        // Act
+        await service.GetPhoneNumberOwnersAsync(keys, include: null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expectedQueries, queries);
+        Assert.True(
+            (OmnichannelContactDuplicateLookupService.LookupChunkSize * OmnichannelContactDuplicateLookupService.ComparedNumberColumns) + 1 <= 2_100,
+            "One lookup query must bind fewer parameters than SQL Server accepts.");
+    }
+
     [Fact]
     public void AddLegacyMatches_ShouldMatchInputAgainstLegacyPhoneValues()
     {

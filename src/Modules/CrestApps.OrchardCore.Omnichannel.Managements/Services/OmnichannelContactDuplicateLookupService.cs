@@ -11,7 +11,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </summary>
 public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelContactDuplicateLookupService
 {
-    private const int LookupChunkSize = 400;
+    // SQL Server refuses a command with more than 2,100 parameters, and every value in an IN list is one. A lookup
+    // names its keys once for each of the indexed number columns it compares, so a command binds the keys of one
+    // chunk that many times, plus the published flag. However large an import batch is, its keys are split into
+    // chunks that stay inside the limit.
+    internal const int MaxParametersPerCommand = 2_000;
+
+    internal const int ComparedNumberColumns = 4;
+
+    internal const int LookupChunkSize = MaxParametersPerCommand / ComparedNumberColumns;
 
     private readonly ISession _session;
     private readonly IPhoneNumberService _phoneNumberService;
@@ -47,14 +55,21 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         }
 
         var existingPhoneNumbers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var cellPhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.Published &&
-                    index.NormalizedPrimaryCellPhoneNumber.IsIn(normalizedPhoneNumbers))
-            .ListAsync(cancellationToken);
-        var homePhoneMatches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.Published &&
-                    index.NormalizedPrimaryHomePhoneNumber.IsIn(normalizedPhoneNumbers))
-            .ListAsync(cancellationToken);
+        var cellPhoneMatches = new List<OmnichannelContactIndex>();
+        var homePhoneMatches = new List<OmnichannelContactIndex>();
+
+        // Each query compares one column, so a chunk may name as many numbers as one command binds.
+        foreach (var chunk in normalizedPhoneNumbers.Chunk(MaxParametersPerCommand))
+        {
+            cellPhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
+                    index => index.Published &&
+                        index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+            homePhoneMatches.AddRange(await _session.QueryIndex<OmnichannelContactIndex>(
+                    index => index.Published &&
+                        index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken));
+        }
 
         foreach (var match in cellPhoneMatches)
         {
@@ -84,49 +99,6 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
     }
 
     /// <inheritdoc />
-    public async Task<HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(CancellationToken cancellationToken)
-    {
-        var owners = await GetAllExistingNormalizedPhoneNumberOwnersAsync(cancellationToken);
-
-        return owners.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
-    public Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken)
-        => GetExistingNormalizedPhoneNumberOwnersAsync(null, cancellationToken);
-
-    /// <inheritdoc />
-    public async Task<Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(
-        Func<OmnichannelContactIndex, bool> include,
-        CancellationToken cancellationToken)
-    {
-        var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-        var publishedIndexes = await _session.QueryIndex<OmnichannelContactIndex>(index => index.Published)
-            .ListAsync(cancellationToken);
-
-        if (!publishedIndexes.Any())
-        {
-            return [];
-        }
-
-        foreach (var index in publishedIndexes)
-        {
-            if (include is not null && !include(index))
-            {
-                continue;
-            }
-
-            AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryCellPhoneNumber, index.PrimaryCellPhoneNumber);
-            AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryHomePhoneNumber, index.PrimaryHomePhoneNumber);
-        }
-
-        return phoneOwners.ToDictionary(
-            pair => pair.Key,
-            pair => pair.Value.ToArray(),
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    /// <inheritdoc />
     public async Task<Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(
         IReadOnlyCollection<string> phoneNumberKeys,
         Func<OmnichannelContactIndex, bool> include,
@@ -148,8 +120,7 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
         var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
         var seenDocuments = new HashSet<long>();
 
-        // The keys are compared with the four indexed number columns. Each chunk keeps the four lists of query
-        // parameters under the two thousand one hundred SQL Server accepts in one command.
+        // One query per chunk; see MaxParametersPerCommand.
         foreach (var chunk in keys.Chunk(LookupChunkSize))
         {
             var matches = await _session.QueryIndex<OmnichannelContactIndex>(index =>

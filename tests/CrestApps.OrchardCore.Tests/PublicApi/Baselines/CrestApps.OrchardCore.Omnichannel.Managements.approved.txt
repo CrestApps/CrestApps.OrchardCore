@@ -1035,9 +1035,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public interface IOmnichannelContactDuplicateLookupService
     {
-        System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken);
     }
@@ -1098,9 +1095,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     public sealed class OmnichannelContactDuplicateLookupService : CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService
     {
         public OmnichannelContactDuplicateLookupService(YesSql.ISession session, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken) { }
     }
