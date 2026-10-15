@@ -104,16 +104,19 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         ArgumentNullException.ThrowIfNull(context);
 
         var batch = context.Batch;
+        var preview = context.IsPreview;
 
         // Whatever the previous load of this batch found belongs to that load. Cleared here as well as by the
-        // coordinator, because a loader can be run without it and would otherwise add its counts to stale ones.
-        batch.ResetLoadCounts();
+        // coordinator, because a loader can be run without it and would otherwise add its counts to stale ones. A
+        // resumed load keeps the counts its earlier run committed, because it carries on from where that run stopped.
+        if (!context.IsResume)
+        {
+            batch.ResetLoadCounts();
+        }
 
         if (!TryGetActivityBatchSource(batch.Source, _sourceOptions, out var sourceEntry))
         {
-            batch.Status = OmnichannelActivityBatchStatus.New;
-
-            await _catalog.UpdateAsync(batch, cancellationToken);
+            await StopAsync(context, "The source of this activity load is no longer available.", cancellationToken);
 
             _logger.LogError("No valid activity batch source was found for the batch with ID '{BatchId}' and source '{Source}'.", batch.ItemId, batch.Source);
             return;
@@ -122,15 +125,13 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         await using var readonlySession = _session.Store.CreateSession(withTracking: false);
 
         var requiresUserAssignment = sourceEntry.RequiresUserAssignment;
-        var users = requiresUserAssignment
+        var users = requiresUserAssignment && batch.UserIds is { Length: > 0 }
             ? (await readonlySession.Query<User, UserIndex>(x => x.IsEnabled && x.UserId.IsIn(batch.UserIds)).ListAsync(cancellationToken)).ToArray()
             : [];
 
-        if (requiresUserAssignment && users.Length == 0)
+        if (requiresUserAssignment && users.Length == 0 && !preview)
         {
-            batch.Status = OmnichannelActivityBatchStatus.New;
-
-            await _catalog.UpdateAsync(batch, cancellationToken);
+            await StopAsync(context, "None of the users picked to receive the activities is enabled. Pick at least one enabled user.", cancellationToken);
 
             _logger.LogError("No valid users were found to assign the activities for the batch with ID '{BatchId}'.", batch.ItemId);
             return;
@@ -140,9 +141,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
         if (flowSettings is null)
         {
-            batch.Status = OmnichannelActivityBatchStatus.New;
-
-            await _catalog.UpdateAsync(batch, cancellationToken);
+            await StopAsync(context, "The subject of this activity load has no subject flow configured. Configure its subject flow first.", cancellationToken);
 
             _logger.LogError("Configured subject flow settings are required before loading the batch with ID '{BatchId}' for subject '{SubjectContentType}'.", batch.ItemId, batch.SubjectContentType);
             return;
@@ -150,14 +149,13 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
         ActivityDialerProfileDescriptor dialerProfile = null;
         var dialerContributor = _dialerContributors.FirstOrDefault();
+        var isDialerLoad = string.Equals(sourceEntry.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
 
-        if (string.Equals(sourceEntry.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))
+        if (isDialerLoad && !preview)
         {
             if (string.IsNullOrWhiteSpace(batch.DialerProfileId))
             {
-                batch.Status = OmnichannelActivityBatchStatus.New;
-
-                await _catalog.UpdateAsync(batch, cancellationToken);
+                await StopAsync(context, "A dialer load needs a dialer profile. Pick one on the activity load.", cancellationToken);
 
                 _logger.LogError("A dialer profile is required before loading the dialer batch with ID '{BatchId}'.", batch.ItemId);
                 return;
@@ -165,9 +163,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (dialerContributor is null)
             {
-                batch.Status = OmnichannelActivityBatchStatus.New;
-
-                await _catalog.UpdateAsync(batch, cancellationToken);
+                await StopAsync(context, "The Contact Center dialer is not enabled, so a dialer load cannot be queued for dialing.", cancellationToken);
 
                 _logger.LogError("The Contact Center dialer services are not available for the dialer batch with ID '{BatchId}'.", batch.ItemId);
                 return;
@@ -177,9 +173,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (dialerProfile is null)
             {
-                batch.Status = OmnichannelActivityBatchStatus.New;
-
-                await _catalog.UpdateAsync(batch, cancellationToken);
+                await StopAsync(context, "The dialer profile of this activity load no longer exists. Pick another one.", cancellationToken);
 
                 _logger.LogError("Unable to find the dialer profile '{DialerProfileId}' for the dialer batch with ID '{BatchId}'.", batch.DialerProfileId, batch.ItemId);
                 return;
@@ -191,9 +185,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             // can still reach it.
             if (string.IsNullOrWhiteSpace(batch.CampaignId) && string.IsNullOrWhiteSpace(flowSettings.CampaignId))
             {
-                batch.Status = OmnichannelActivityBatchStatus.New;
-
-                await _catalog.UpdateAsync(batch, cancellationToken);
+                await StopAsync(context, "This dialer load has no campaign and its subject has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the activity load or set a default campaign on the subject.", cancellationToken);
 
                 _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because it has no campaign and its subject '{SubjectContentType}' has no default campaign, so its activities could not be queued for dialing. Choose a campaign on the activity load or set a default campaign on the subject.", batch.ItemId, batch.SubjectContentType);
                 return;
@@ -210,16 +202,14 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
             if (conflicts.Count > 0)
             {
-                batch.Status = OmnichannelActivityBatchStatus.New;
-
-                await _catalog.UpdateAsync(batch, cancellationToken);
+                await StopAsync(context, $"This dialer load's campaign already has records waiting under the dialer profiles {DialerCampaignProfileGuard.Describe(conflicts)}, and a campaign's waiting records must all use one dialer profile. Load it with that profile, into another campaign, or once those records are worked.", cancellationToken);
 
                 _logger.LogWarning("The dialer batch with ID '{BatchId}' was not loaded because its campaign '{CampaignId}' already has records waiting under the dialer profiles {Profiles}, and a campaign's waiting records must all use one dialer profile. Load it with that profile, into another campaign, or once those records are worked.", batch.ItemId, dialerCampaignId, DialerCampaignProfileGuard.Describe(conflicts));
                 return;
             }
         }
 
-        long documentId = 0;
+        long documentId = context.IsResume ? batch.LoadCursor ?? 0 : 0;
 
         DateTime? leadCreatedFrom = batch.LeadCreatedFrom.HasValue
             ? await _localClock.ConvertToUtcAsync(batch.LeadCreatedFrom.Value)
@@ -234,7 +224,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
         var hasPhoneFilter = !string.IsNullOrEmpty(batch.PhoneNumber);
         var hasTimeZoneFilter = batch.TimeZoneIds is { Length: > 0 };
-        var hasLastActivityFilter = !string.IsNullOrEmpty(batch.LastActivitySubjectContentType);
+        var hasLastActivityAttempts = ActivityAttemptRange.TryParse(batch.LastActivityAttempts, out var lastActivityAttempts);
+        var hasLastActivityFilter = !string.IsNullOrEmpty(batch.LastActivitySubjectContentType) || hasLastActivityAttempts;
 
         // A load of leads narrows the list by the lead filters, and keeps closed leads out unless their status is picked.
         var leadTypes = _contactTypeProvider is null
@@ -309,6 +300,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 var subjectCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.SubjectContentType));
                 var dispositionCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.DispositionId));
                 var completedCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.CompletedUtc));
+                var attemptsCol = dialect.QuoteForColumnName(nameof(OmnichannelActivityIndex.Attempts));
 
                 var completedStatus = (int)ActivityStatus.Completed;
 
@@ -317,7 +309,6 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 var sql = $@"SELECT DISTINCT a.{contactCol}
                             FROM {activityTable} a
                             WHERE a.{statusCol} = @CompletedStatus
-                              AND a.{subjectCol} = @Subject
                               AND a.{completedCol} = (
                                   SELECT MAX(a2.{completedCol})
                                   FROM {activityTable} a2
@@ -327,12 +318,32 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 var parameters = new DynamicParameters();
                 parameters.Add("@CompletedStatus", completedStatus);
-                parameters.Add("@Subject", batch.LastActivitySubjectContentType);
 
-                if (!string.IsNullOrEmpty(batch.LastActivityDispositionId))
+                if (!string.IsNullOrEmpty(batch.LastActivitySubjectContentType))
                 {
-                    sql += $"\n  AND a.{dispositionCol} = @Disposition";
-                    parameters.Add("@Disposition", batch.LastActivityDispositionId);
+                    sql += $"\n  AND a.{subjectCol} = @Subject";
+                    parameters.Add("@Subject", batch.LastActivitySubjectContentType);
+
+                    // A disposition belongs to a subject's flow, so it narrows the last activity only with its subject.
+                    if (!string.IsNullOrEmpty(batch.LastActivityDispositionId))
+                    {
+                        sql += $"\n  AND a.{dispositionCol} = @Disposition";
+                        parameters.Add("@Disposition", batch.LastActivityDispositionId);
+                    }
+                }
+
+                // The attempt the last activity was on: the count runs across a contact's chain of follow-ups, so "4+"
+                // finds the records whose latest call or message was their fourth try or later.
+                if (lastActivityAttempts.Minimum is { } minimumAttempts)
+                {
+                    sql += $"\n  AND a.{attemptsCol} >= @MinimumAttempts";
+                    parameters.Add("@MinimumAttempts", minimumAttempts);
+                }
+
+                if (lastActivityAttempts.Maximum is { } maximumAttempts)
+                {
+                    sql += $"\n  AND a.{attemptsCol} <= @MaximumAttempts";
+                    parameters.Add("@MaximumAttempts", maximumAttempts);
                 }
 
                 await using var sqlConnection = _dbConnectionAccessor.CreateConnection();
@@ -380,7 +391,13 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                         hasLastActivityFilter);
                 }
 
+                if (preview)
+                {
+                    return;
+                }
+
                 batch.Status = OmnichannelActivityBatchStatus.Loaded;
+                batch.LoadCursor = null;
 
                 await _catalog.UpdateAsync(batch, cancellationToken);
                 await _session.SaveChangesAsync(cancellationToken);
@@ -530,16 +547,19 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     continue;
                 }
 
-                var user = requiresUserAssignment
+                var user = requiresUserAssignment && users.Length > 0
                     ? users[activityCounter++ % users.Length]
                     : null;
 
-                var activity = await _activityManager.NewAsync(cancellationToken: cancellationToken);
+                // A preview only needs somewhere to work out the record's channel and address; it is never stored.
+                var activity = preview
+                    ? new OmnichannelActivity()
+                    : await _activityManager.NewAsync(cancellationToken: cancellationToken);
                 var activitySource = sourceEntry.Source;
                 var channel = string.IsNullOrWhiteSpace(batch.Channel) ? flowSettings.Channel : batch.Channel;
                 // A dialer load's address is the number its calls show, so it is the one picked on the load or none: the
                 // subject flow's address is the number an automated subject answers on, not one to call customers from.
-                var channelEndpointId = dialerProfile is not null
+                var channelEndpointId = isDialerLoad
                     ? batch.ChannelEndpointId
                     : string.IsNullOrWhiteSpace(batch.ChannelEndpointId) ? flowSettings.ChannelEndpointId : batch.ChannelEndpointId;
                 var campaignId = string.IsNullOrWhiteSpace(batch.CampaignId) ? flowSettings.CampaignId : batch.CampaignId;
@@ -548,11 +568,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     : ActivityInteractionType.Manual;
                 var automatedSettings = OmnichannelAutomationHelper.ResolveActivitySettings(batch, flowSettings);
 
-                if (dialerProfile is not null)
+                if (isDialerLoad)
                 {
                     // The campaign comes from the batch (resolved above); the profile only decides how the
                     // contacts are dialed, so it no longer overrides which campaign they belong to.
-                    activitySource = dialerProfile.ActivitySource;
+                    activitySource = dialerProfile?.ActivitySource ?? activitySource;
                     interactionType = ActivityInteractionType.Manual;
                     channel = OmnichannelConstants.Channels.Phone;
                     automatedSettings.AIProfileId = null;
@@ -686,6 +706,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 batch.TotalLoaded++;
 
+                if (preview)
+                {
+                    continue;
+                }
+
                 await _activityManager.CreateAsync(activity, cancellationToken);
                 await _session.SaveAsync(activity, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 
@@ -693,7 +718,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 {
                     // Queueing for the dialer commits the unit of work, and a committed session no longer tracks what
                     // it loaded before: the batch saved after it would be stored as a second document. The batch goes
-                    // into this commit, and is read again as the commit left it.
+                    // into this commit, and is read again as the commit left it. It carries this record as the
+                    // cursor, so a load cut off after this commit resumes after the record instead of loading it again.
+                    batch.LoadCursor = contact.Id;
+                    batch.LoadHeartbeatUtc = _clock.UtcNow;
+
                     await _catalog.UpdateAsync(batch, cancellationToken);
 
                     await dialerContributor.EnqueueAsync(
@@ -706,14 +735,34 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 }
             }
 
+            if (preview)
+            {
+                continue;
+            }
+
+            batch.LoadCursor = documentId;
+            batch.LoadHeartbeatUtc = _clock.UtcNow;
+
             await _catalog.UpdateAsync(batch, cancellationToken);
 
-            // Flush the session to release memory.
-            await _session.FlushAsync(cancellationToken);
+            // Each page is committed with the cursor after it. A load cut off by a restart used to lose everything it
+            // had not committed and stay "Loading" for good; now it resumes after its last committed page, never
+            // loading a record twice, and the heartbeat committed here is what tells a stalled load from a slow one.
+            // A committed session no longer tracks what it loaded before, so the batch is read again as it was left.
+            await _session.SaveChangesAsync(cancellationToken);
+
+            batch = await _catalog.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
+        }
+
+        if (preview)
+        {
+            return;
         }
 
         // Complete the batch loading.
         batch.Status = OmnichannelActivityBatchStatus.Loaded;
+        batch.LoadCursor = null;
+        batch.LoadError = null;
 
         await _catalog.UpdateAsync(batch, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
@@ -737,6 +786,30 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 batch.TotalSkippedAsNotInService,
                 batch.TotalSkippedByLimit);
         }
+    }
+
+    /// <summary>
+    /// Stops the load without loading and says why: on the batch, which goes back to <see cref="OmnichannelActivityBatchStatus.New"/>
+    /// so it can be corrected and loaded again, or only on the context when the load is a preview.
+    /// </summary>
+    /// <param name="context">The load context.</param>
+    /// <param name="reason">Why the load stopped, in words the operator can act on.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    protected async Task StopAsync(ActivityBatchLoadContext context, string reason, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        context.StopReason = reason;
+
+        if (context.IsPreview)
+        {
+            return;
+        }
+
+        context.Batch.Status = OmnichannelActivityBatchStatus.New;
+        context.Batch.LoadError = reason;
+
+        await _catalog.UpdateAsync(context.Batch, cancellationToken);
     }
 
     /// <summary>

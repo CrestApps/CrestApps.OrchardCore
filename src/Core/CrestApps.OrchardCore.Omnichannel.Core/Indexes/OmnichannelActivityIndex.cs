@@ -59,6 +59,11 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the dialer profile the activity is dialed under, if any.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the subject content type.
     /// </summary>
     public string SubjectContentType { get; set; }

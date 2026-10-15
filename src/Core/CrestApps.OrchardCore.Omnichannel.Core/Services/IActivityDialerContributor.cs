@@ -50,4 +50,28 @@ public interface IActivityDialerContributor
         string campaignId,
         ActivityDialerProfileDescriptor profile,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves an activity waiting in a campaign's dialer queue to another campaign's queue, keeping the dialer profile
+    /// it is queued under. Work the dialer is dialing, or an agent already has, is left where it is.
+    /// </summary>
+    /// <param name="activityId">The activity identifier.</param>
+    /// <param name="campaignId">The campaign whose queue the activity should wait in.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>What happened to the activity's place in the dialer.</returns>
+    Task<ActivityDialerCampaignMoveResult> MoveToCampaignAsync(
+        string activityId,
+        string campaignId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the activities, of those given, that the dialer is working right now: being dialed, ringing an agent,
+    /// or on a call an agent took. Changing such an activity under the dialer would pull it out from under a live call.
+    /// </summary>
+    /// <param name="activityIds">The activity identifiers to check.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The identifiers of the activities the dialer is working.</returns>
+    Task<IReadOnlySet<string>> GetActivitiesInFlightAsync(
+        IEnumerable<string> activityIds,
+        CancellationToken cancellationToken = default);
 }

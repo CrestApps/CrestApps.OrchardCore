@@ -2,6 +2,8 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Sources;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps;
@@ -14,15 +16,16 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Recipes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
-using OrchardCore.Contents.Services;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.ContentTypes.Events;
+using OrchardCore.Contents.Services;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -170,6 +173,9 @@ public sealed class CrmContentTransferStartup : StartupBase
         services.AddScoped<IContentImportHandler, AccountContentImportHandler>();
         services.AddScoped<IContentImportHandler, LeadExportFilterHandler>();
         services.AddDisplayDriver<ExportRequest, LeadExportOptionsDisplayDriver>();
+
+        // Only a tenant with the import feature has past imports to record on their leads.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, LeadImportBackfillBackgroundTask>());
     }
 }
 

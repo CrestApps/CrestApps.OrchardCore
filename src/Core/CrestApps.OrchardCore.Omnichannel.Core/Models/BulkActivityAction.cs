@@ -54,4 +54,9 @@ public enum BulkActivityAction
     /// Apply a dialer profile to the selected activities.
     /// </summary>
     ChangeDialerProfile,
+
+    /// <summary>
+    /// Move the selected activities to another campaign, moving their place in the dialer with them.
+    /// </summary>
+    ChangeCampaign,
 }

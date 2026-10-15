@@ -39,6 +39,10 @@
                         <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeSubject)" data-title="@T["Change subject"]">@T["Change Subject"]</a></li>
                         <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ClearAssignment)" data-title="@T["Clear assignment"]">@T["Clear Assignment"]</a></li>
                         <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeSource)" data-title="@T["Change activity source"]">@T["Change Source"]</a></li>
+                        @if (Model.CampaignOptions.Count() > 1)
+                        {
+                            <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeCampaign)" data-title="@T["Change campaign"]">@T["Change Campaign"]</a></li>
+                        }
                         @if (Model.DialerProfileOptions.Count() > 1)
                         {
                             <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeDialerProfile)" data-title="@T["Change dialer profile"]">@T["Change Dialer Profile"]</a></li>
@@ -176,7 +180,35 @@
                         }
                     </select>
                     <div class="form-text">
-                        @T["Applying a dialer profile sets the activity source to that profile's dialing mode, makes the activities agent-handled calls, and queues them for the dialer on their current campaign. Each activity keeps its campaign, which must not already have records waiting under another dialer profile. Their assignment is cleared: the dialer offers each one to whichever agent signed in to the campaign is free."]
+                        @T["Applying a dialer profile sets the activity source to that profile's dialing mode, makes the activities agent-handled calls, and queues them for the dialer on their campaign. Their assignment is cleared: the dialer offers each one to whichever agent signed in to the campaign is free."]
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">@T["Campaign"]</label>
+                    <select name="NewDialerCampaignId" class="form-select">
+                        @foreach (var campaign in Model.DialerCampaignOptions)
+                        {
+                            <option value="@campaign.Value">@campaign.Text</option>
+                        }
+                    </select>
+                    <div class="form-text">
+                        @T["Keep each activity's current campaign, or move them all to another one. The dialer needs a campaign, so activities with none are only queued when a campaign is picked here. The campaign must not already have records waiting under another dialer profile."]
+                    </div>
+                </div>
+            </div>
+
+            @* Change Campaign Parameters *@
+            <div id="params-ChangeCampaign" class="bulk-action-param d-none">
+                <div class="mb-3">
+                    <label class="form-label">@T["Campaign"]</label>
+                    <select name="NewCampaignId" class="form-select">
+                        @foreach (var campaign in Model.CampaignOptions)
+                        {
+                            <option value="@campaign.Value">@campaign.Text</option>
+                        }
+                    </select>
+                    <div class="form-text">
+                        @T["Moves the activities to this campaign. Activities waiting for the dialer move to the new campaign's dialer queue and keep their dialer profile, so the campaign must not already have records waiting under another profile. Dialer activities need a campaign, so they cannot be moved to no campaign. Follow-ups created from these activities stay in the new campaign."]
                     </div>
                 </div>
             </div>
