@@ -440,6 +440,26 @@ public sealed class DialerAttemptServiceTests
         VerifyNoOutboundRouting(voiceCallRouter);
     }
 
+    // With screening off the agent is connected the moment anything answers, a voicemail included; with it on, the
+    // provider is asked who answered before the agent hears the call.
+    [Theory]
+    [InlineData(DialerAnsweringMachineDetection.Standard, "standard")]
+    [InlineData(DialerAnsweringMachineDetection.Premium, "premium")]
+    [InlineData(DialerAnsweringMachineDetection.Disabled, null)]
+    public async Task TryDialAsync_AsksTheProviderWhoAnswered_OnlyWhenTheProfileScreensForMachines(DialerAnsweringMachineDetection detection, string? expected)
+    {
+        // Arrange
+        var profile = CreateProfile();
+        profile.AnsweringMachineDetection = detection;
+
+        // Act
+        var request = await DialAndCaptureRequestAsync(profile, new NoOutboundLineResolver());
+
+        // Assert
+        request.Metadata.TryGetValue(global::CrestApps.OrchardCore.Telephony.TelephonyConstants.RequestMetadata.AnsweringMachineDetection, out var requested);
+        Assert.Equal(expected, requested);
+    }
+
     [Fact]
     public async Task TryDialAsync_WhenAgentHasOutboundLine_PresentsTheLineInsteadOfTheProfileCallerId()
     {

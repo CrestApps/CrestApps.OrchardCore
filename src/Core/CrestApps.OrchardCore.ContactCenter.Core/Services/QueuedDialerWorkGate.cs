@@ -102,7 +102,7 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
         var nextAttempt = ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
         var lastInteraction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
 
-        if (nextAttempt > profile.MaxAttempts)
+        if (nextAttempt > DialerAttemptLimit.Resolve(activity, profile))
         {
             return await TakeOutExhaustedAsync(queueItem, activity, lastInteraction, nextAttempt, profile, cancellationToken);
         }
@@ -169,11 +169,11 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Took campaign record '{ActivityId}' out of queue '{QueueId}' without reserving an agent: attempt {AttemptNumber} would exceed the {MaxAttempts} attempts dialer profile '{Profile}' allows.",
+                "Took campaign record '{ActivityId}' out of queue '{QueueId}' without reserving an agent: attempt {AttemptNumber} would exceed the {MaxAttempts} attempts allowed (dialer profile '{Profile}', or the subject's own maximum).",
                 activity.ItemId.SanitizeLogValue(),
                 queueItem.QueueId.SanitizeLogValue(),
                 nextAttempt,
-                profile.MaxAttempts,
+                DialerAttemptLimit.Resolve(activity, profile),
                 profile.Name);
         }
 

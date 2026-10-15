@@ -97,19 +97,25 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
             return;
         }
 
-        if (followUp.Attempts > profile.MaxAttempts)
+        // The subject flow's own maximum, when the action set one, is the limit; the profile's is the fallback.
+        followUp.MaxAttempts = context.MaxAttempts is > 0 ? context.MaxAttempts : null;
+        var maxAttempts = DialerAttemptLimit.Resolve(followUp, profile);
+
+        if (followUp.Attempts > maxAttempts)
         {
             context.Cancel = true;
-            context.CancelReason = $"attempt {followUp.Attempts} would exceed the {profile.MaxAttempts} attempts dialer profile '{profile.Name}' allows.";
+            context.CancelReason = followUp.MaxAttempts.HasValue
+                ? $"attempt {followUp.Attempts} would exceed the {maxAttempts} attempts the subject's action allows."
+                : $"attempt {followUp.Attempts} would exceed the {maxAttempts} attempts dialer profile '{profile.Name}' allows.";
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation(
-                    "Did not create attempt {AttemptNumber} of dialer activity '{ActivityId}': dialer profile '{Profile}' allows {MaxAttempts} attempts.",
+                    "Did not create attempt {AttemptNumber} of dialer activity '{ActivityId}': {LimitSource} allows {MaxAttempts} attempts.",
                     followUp.Attempts,
                     previous.ItemId.SanitizeLogValue(),
-                    profile.Name,
-                    profile.MaxAttempts);
+                    followUp.MaxAttempts.HasValue ? "the subject's action" : $"dialer profile '{profile.Name}'",
+                    maxAttempts);
             }
 
             return;
@@ -117,7 +123,10 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
 
         var earliestUtc = (previous.CompletedUtc ?? _clock.UtcNow).AddMinutes(Math.Max(0, profile.RetryDelayMinutes));
 
-        if (followUp.ScheduledUtc < earliestUtc)
+        // The subject flow decides when, if it said: a date the person picked, or the action's default schedule hours.
+        // When it said nothing, the profile's retry delay is the wait rather than a placeholder nobody chose, and it is
+        // never dialed sooner than the delay either way.
+        if (!context.HasChosenSchedule || followUp.ScheduledUtc < earliestUtc)
         {
             followUp.ScheduledUtc = earliestUtc;
         }
@@ -151,7 +160,7 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
             _logger.LogInformation(
                 "Queued attempt {AttemptNumber} of {MaxAttempts} ('{FollowUpId}') of dialer activity '{ActivityId}' in queue '{QueueId}' with dialer profile '{DialerProfileId}', due {DueUtc:O}; created by {CreatedBy}; an agent reserved for it: {RequiresReservedAgent}.",
                 followUp.Attempts,
-                profile.MaxAttempts,
+                maxAttempts,
                 activityItemId.SanitizeLogValue(),
                 previous.ItemId.SanitizeLogValue(),
                 queueId.SanitizeLogValue(),
