@@ -28,10 +28,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// dialed in turn; once a cycle places nothing it waits for the next event or the minute dialer pacing task. Each cycle
 /// applies the profile's own limits, so this changes when a campaign is paced, never how hard.
 /// </para>
+/// <para>
+/// The minute dialer pacing task re-arms every campaign through <see cref="RequestBackstop(string)"/>, which does not
+/// merge into a pending request. A request is pending from when it is armed until its run starts; if the deadline
+/// scheduler drops the armed run before it starts (the shell scope could not be opened, the scheduler was being disposed),
+/// the pending mark would otherwise merge every later request into a run that never comes, and the campaign would stop
+/// dialing without an error. The backstop replaces the armed run, so that can last a minute at most, and a mark it finds
+/// older than any armed run should live is logged as a warning.
+/// </para>
 /// </remarks>
 internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 {
-    private readonly ConcurrentDictionary<string, byte> _pending = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, DateTime> _pending = new(StringComparer.Ordinal);
     private readonly IContactCenterDeadlineScheduler _deadlineScheduler;
     private readonly IClock _clock;
     private readonly ContactCenterDialerPacingOptions _options;
@@ -89,6 +97,38 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
     public void RequestRetry(string queueId)
         => Request(queueId, _options.LockRetryDelay);
 
+    /// <inheritdoc/>
+    public void RequestBackstop(string queueId)
+    {
+        if (!ContactCenterConstants.IsCampaignQueue(queueId))
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        // An armed run starts within the debounce or the lock retry delay; one pending far longer was dropped before it
+        // started, and until now every request for the queue was merged into it.
+        if (_pending.TryGetValue(queueId, out var pendingSince) && now - pendingSince > StalePendingAge)
+        {
+            _logger.LogWarning(
+                "The armed pacing run of queue '{QueueId}' never started; it had been pending for {PendingAge}. The minute backstop re-armed it.",
+                queueId.SanitizeLogValue(),
+                now - pendingSince);
+        }
+
+        // Always armed afresh: scheduling under the same key replaces any run already armed, so this never paces the queue
+        // twice, and the pacing lock keeps it from overlapping a run already under way.
+        _pending[queueId] = now;
+        Arm(queueId, now.Add(_options.Debounce));
+    }
+
+    /// <summary>
+    /// Gets how long a request may stay pending before the backstop treats its run as dropped.
+    /// </summary>
+    internal TimeSpan StalePendingAge
+        => _options.LockExpiration + _options.Debounce;
+
     private void Request(string queueId, TimeSpan delay)
     {
         if (!ContactCenterConstants.IsCampaignQueue(queueId))
@@ -96,14 +136,19 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             return;
         }
 
+        var now = _clock.UtcNow;
+
         // Merged into the run already armed: pushing it back on every event would let a busy queue starve.
-        if (!_pending.TryAdd(queueId, 0))
+        if (!_pending.TryAdd(queueId, now))
         {
             return;
         }
 
-        _deadlineScheduler.Schedule(GetDeadlineKey(queueId), _clock.UtcNow.Add(delay), (services, cancellationToken) => RunAsync(services, queueId, cancellationToken));
+        Arm(queueId, now.Add(delay));
     }
+
+    private void Arm(string queueId, DateTime dueUtc)
+        => _deadlineScheduler.Schedule(GetDeadlineKey(queueId), dueUtc, (services, cancellationToken) => RunAsync(services, queueId, cancellationToken));
 
     /// <summary>
     /// Runs one pacing cycle of the queue on the given scope.

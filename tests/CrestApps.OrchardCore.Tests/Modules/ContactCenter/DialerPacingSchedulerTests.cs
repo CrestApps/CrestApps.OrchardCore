@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -417,8 +418,132 @@ public sealed class DialerPacingSchedulerTests
         }
     }
 
-    private static DialerPacingScheduler CreateScheduler(IContactCenterDeadlineScheduler deadlines, TestClock clock)
-        => new(deadlines, clock, Options.Create(_options), NullLogger<DialerPacingScheduler>.Instance);
+    [Fact]
+    public async Task ARunDroppedBeforeItStarted_IsReArmedByTheBackstop_SoTheCampaignKeepsDialing()
+    {
+        // Arrange: the first time a run falls due its shell scope cannot be opened, so the deadline scheduler logs and drops
+        // it before the run starts and clears the queue's pending mark.
+        var clock = new TestClock();
+        var time = new ManualTimeProvider(clock);
+        var fixture = new RunFixture();
+        var scopeFails = true;
+        using var deadlines = new ContactCenterDeadlineScheduler(
+            clock,
+            time,
+            work =>
+            {
+                if (scopeFails)
+                {
+                    scopeFails = false;
+
+                    throw new InvalidOperationException("The shell scope could not be opened.");
+                }
+
+                return work(fixture.BuildServices());
+            },
+            NullLogger.Instance);
+        var scheduler = CreateScheduler(deadlines, clock);
+        var cycles = 0;
+        fixture.DialerService
+            .Setup(service => service.RunCycleAsync(fixture.Profile, _campaignQueue, It.IsAny<CancellationToken>()))
+            .Callback(() => cycles++)
+            .ReturnsAsync(0);
+
+        // Act + Assert: the dropped run leaves its mark, and every event after it merges into a run that never comes.
+        scheduler.Request(_campaignQueue);
+        await time.AdvanceAsync(TimeSpan.FromSeconds(1), deadlines.WhenIdleAsync);
+        Assert.Equal(0, cycles);
+
+        scheduler.Request(_campaignQueue);
+        Assert.Equal(0, deadlines.Count);
+        await time.AdvanceAsync(TimeSpan.FromSeconds(30), deadlines.WhenIdleAsync);
+        Assert.Equal(0, cycles);
+
+        // The minute task's backstop does not merge into the mark: it arms the run again, and the campaign is paced.
+        scheduler.RequestBackstop(_campaignQueue);
+        await time.AdvanceAsync(TimeSpan.FromSeconds(1), deadlines.WhenIdleAsync);
+        Assert.Equal(1, cycles);
+
+        // And events pace it again from then on.
+        scheduler.Request(_campaignQueue);
+        await time.AdvanceAsync(TimeSpan.FromSeconds(1), deadlines.WhenIdleAsync);
+        Assert.Equal(2, cycles);
+    }
+
+    [Fact]
+    public async Task TheBackstop_WhileARequestIsPending_PacesTheCampaignOnce()
+    {
+        // Arrange
+        var clock = new TestClock();
+        var time = new ManualTimeProvider(clock);
+        var fixture = new RunFixture();
+        using var deadlines = new ContactCenterDeadlineScheduler(clock, time, work => work(fixture.BuildServices()), NullLogger.Instance);
+        var scheduler = CreateScheduler(deadlines, clock);
+        var cycles = 0;
+        fixture.DialerService
+            .Setup(service => service.RunCycleAsync(fixture.Profile, _campaignQueue, It.IsAny<CancellationToken>()))
+            .Callback(() => cycles++)
+            .ReturnsAsync(0);
+
+        // Act: an agent frees up, and the minute task's backstop runs before the debounce is over.
+        scheduler.Request(_campaignQueue);
+        await time.AdvanceAsync(TimeSpan.FromMilliseconds(100), deadlines.WhenIdleAsync);
+        scheduler.RequestBackstop(_campaignQueue);
+        await time.AdvanceAsync(TimeSpan.FromSeconds(5), deadlines.WhenIdleAsync);
+
+        // Assert: the backstop replaced the armed run rather than adding a second one.
+        Assert.Equal(1, cycles);
+        Assert.Equal(0, deadlines.Count);
+    }
+
+    [Fact]
+    public void TheBackstop_WarnsWhenTheArmedRunNeverStarted_ButNotForARequestStillInItsDebounce()
+    {
+        // Arrange: a run armed on a deadline scheduler that never runs it.
+        var clock = new TestClock();
+        var logger = new RecordingLogger();
+        var scheduler = CreateScheduler(new DueRecordingDeadlineScheduler(), clock, logger);
+
+        // Act
+        scheduler.Request(_campaignQueue);
+        scheduler.RequestBackstop(_campaignQueue);
+        var warningsWhileFresh = logger.Warnings.Count;
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        scheduler.RequestBackstop(_campaignQueue);
+
+        // Assert
+        Assert.Equal(0, warningsWhileFresh);
+        var warning = Assert.Single(logger.Warnings);
+        Assert.Contains(_campaignQueue, warning, StringComparison.Ordinal);
+        Assert.Contains("never started", warning, StringComparison.Ordinal);
+        Assert.Contains("00:01:00", warning, StringComparison.Ordinal);
+    }
+
+    private static DialerPacingScheduler CreateScheduler(IContactCenterDeadlineScheduler deadlines, TestClock clock, ILogger<DialerPacingScheduler> logger = null)
+        => new(deadlines, clock, Options.Create(_options), logger ?? NullLogger<DialerPacingScheduler>.Instance);
+
+    /// <summary>
+    /// Keeps the formatted text of every warning.
+    /// </summary>
+    private sealed class RecordingLogger : ILogger<DialerPacingScheduler>
+    {
+        public List<string> Warnings { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            if (logLevel == LogLevel.Warning)
+            {
+                Warnings.Add(formatter(state, exception));
+            }
+        }
+    }
 
     /// <summary>
     /// The scoped services a run reads: a campaign whose waiting work was loaded under a Power profile.

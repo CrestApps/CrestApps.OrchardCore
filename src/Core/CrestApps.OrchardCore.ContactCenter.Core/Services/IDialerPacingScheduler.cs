@@ -8,8 +8,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// A tenant singleton over <see cref="IContactCenterDeadlineScheduler"/>. A request is debounced per queue, and requests
 /// that arrive while one is pending are merged into it. The run takes the campaign's pacing lock and runs the same cycle
 /// the minute dialer pacing task asks for, on a scope of its own, so the profile's pacing applies unchanged. It is an
-/// accelerator only: the minute task requests every campaign with waiting work again, and the lock keeps two nodes from
-/// pacing the same campaign at once.
+/// accelerator only: the minute task re-arms every campaign with waiting work unconditionally, and the lock keeps two
+/// nodes from pacing the same campaign at once.
 /// </remarks>
 public interface IDialerPacingScheduler
 {
@@ -25,4 +25,12 @@ public interface IDialerPacingScheduler
     /// </summary>
     /// <param name="queueId">The campaign queue.</param>
     void RequestRetry(string queueId);
+
+    /// <summary>
+    /// Arms the campaign queue to be paced shortly, replacing any run already armed for it rather than merging into it. The
+    /// minute dialer pacing task calls this for every campaign with waiting work, so a run that was armed but dropped before
+    /// it started cannot keep the campaign from being paced for longer than a minute.
+    /// </summary>
+    /// <param name="queueId">The campaign queue.</param>
+    void RequestBackstop(string queueId);
 }

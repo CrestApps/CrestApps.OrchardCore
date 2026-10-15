@@ -62,7 +62,7 @@ So when numbers keep going unanswered, the next number is dialed right after the
 
 Each look follows the profile's own limits exactly: **Calls per agent**, the Progressive limit, and the Predictive abandonment rules. Only how soon the dialer looks changes, not how many calls it places.
 
-The dialer still looks at every campaign once a minute as well. That is a safety net: if a change is missed, for example while the site restarts, the campaign is dialed again within a minute.
+The dialer still looks at every campaign once a minute as well, whatever else is going on. That is a safety net: if a change is missed, for example while the site restarts, the campaign is dialed again within a minute.
 
 ## Create a profile
 

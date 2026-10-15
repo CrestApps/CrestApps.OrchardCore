@@ -42,8 +42,9 @@ public sealed class DialerPacingBackgroundTaskTests
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert: the minute task is the backstop; each queue is paced by its own run, under its own pacing lock.
-        pacingScheduler.Verify(scheduler => scheduler.Request(_queue1), Times.Once);
-        pacingScheduler.Verify(scheduler => scheduler.Request(_queue2), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue1), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue2), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.Request(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public sealed class DialerPacingBackgroundTaskTests
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert
-        pacingScheduler.Verify(scheduler => scheduler.Request(It.IsAny<string>()), Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -82,7 +83,7 @@ public sealed class DialerPacingBackgroundTaskTests
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert
-        pacingScheduler.Verify(scheduler => scheduler.Request(It.IsAny<string>()), Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -107,7 +108,7 @@ public sealed class DialerPacingBackgroundTaskTests
         queueItemStore.Verify(
             store => store.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()),
             Times.Never);
-        pacingScheduler.Verify(scheduler => scheduler.Request(It.IsAny<string>()), Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -134,7 +135,7 @@ public sealed class DialerPacingBackgroundTaskTests
 
         var pacingScheduler = new Mock<IDialerPacingScheduler>();
         pacingScheduler
-            .Setup(scheduler => scheduler.Request(_queue1))
+            .Setup(scheduler => scheduler.RequestBackstop(_queue1))
             .Callback(() => current = current.AddMilliseconds(100_000));
 
         await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock);
@@ -143,8 +144,8 @@ public sealed class DialerPacingBackgroundTaskTests
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert
-        pacingScheduler.Verify(scheduler => scheduler.Request(_queue1), Times.Once);
-        pacingScheduler.Verify(scheduler => scheduler.Request(_queue2), Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue1), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue2), Times.Never);
     }
 
     [Fact]

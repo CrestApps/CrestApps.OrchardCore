@@ -4976,6 +4976,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IDialerPacingScheduler
     {
         void Request(string queueId);
+        void RequestBackstop(string queueId);
         void RequestRetry(string queueId);
     }
     public interface IDialerPacingStatisticsProvider

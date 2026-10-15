@@ -15,7 +15,8 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 /// did not reach an agent ends, records are loaded -- by <see cref="IDialerPacingScheduler"/> and, for over-dialing
 /// Predictive campaigns, <see cref="IPredictivePacingScheduler"/>. Both pace a queue on a scope of its own under the
 /// queue's pacing lock. This task re-arms them every minute, so a queue whose event was lost, or that was last paced on
-/// a node that stopped, is still paced.
+/// a node that stopped, is still paced. Reserve-then-dial campaigns are re-armed unconditionally
+/// (<see cref="IDialerPacingScheduler.RequestBackstop(string)"/>), never merged into a request already pending.
 /// </para>
 /// <para>
 /// Each run is bounded by a wall-clock budget enforced both by a between-queue deadline check and a hard
@@ -174,9 +175,11 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                     continue;
                 }
 
+                // Re-armed unconditionally rather than merged into a pending request, so a run that was armed but dropped
+                // before it started cannot leave the campaign undialed past this tick.
                 if (DialerPacingScheduler.IsPacedHere(profile))
                 {
-                    dialerPacingScheduler.Request(queueId);
+                    dialerPacingScheduler.RequestBackstop(queueId);
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
