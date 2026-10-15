@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -63,12 +64,11 @@ internal sealed class CadenceIndexMigrations : OmnichannelIndexMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<CadenceIndex>(table => table
-            .CreateIndex(
-                "IDX_CadenceIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: OmnichannelConstants.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<CadenceIndex>(
+            SchemaBuilder,
+            "IDX_CadenceIndex_ItemId",
+            OmnichannelConstants.CollectionName,
+            "ItemId", "DocumentId");
 
         return 2;
     }

@@ -1,11 +1,12 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 
@@ -225,26 +226,23 @@ internal sealed class MessagingMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<MessageTemplateIndex>(table => table
-            .CreateIndex(
-                "IDX_MessageTemplateIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: MessagingStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessageTemplateIndex>(
+            SchemaBuilder,
+            "IDX_MessageTemplateIndex_ItemId",
+            MessagingStorage.CollectionName,
+            "ItemId", "DocumentId");
 
-        await SchemaBuilder.AlterIndexTableAsync<MessagingBroadcastIndex>(table => table
-            .CreateIndex(
-                "IDX_MessagingBroadcastIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: MessagingStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingBroadcastIndex>(
+            SchemaBuilder,
+            "IDX_MessagingBroadcastIndex_ItemId",
+            MessagingStorage.CollectionName,
+            "ItemId", "DocumentId");
 
-        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
-            .CreateIndex(
-                "IDX_MessagingConversationIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: MessagingStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_ItemId",
+            MessagingStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 2;
     }

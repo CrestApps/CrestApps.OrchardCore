@@ -17,6 +17,14 @@
  * dropped still answers a tagged leg for a few seconds. A leg answered or seen on standby is remembered for a minute: the
  * push about its claim arriving afterwards must not arm the phone to answer whatever leg comes next.
  *
+ * A call placed for an agent already reserved for it -- Power, Progressive, Preview -- is accepted when it is placed,
+ * and its agent leg rings only once the customer answers: after the customer's ring time, and after the verdict when
+ * answering machines are screened. The phone hears of the accept at once, and the short arm it sets for it lapsed while
+ * the customer rang, so the leg rang as an unsolicited call: a second line, answered by hand, and no customer on it.
+ * That leg is tagged the same way, with the accepted reservation, and the phone remembers the reservations it heard
+ * accepted for its own user for as long as such a call can take to be answered. A tagged leg naming one of them and its
+ * own user is answered at once, once, whether or not the phone stands by.
+ *
  * Part of the soft phone: an ES module that imports the header and destination-leg readers of offer-leg.js and
  * auto-answer.js. The soft phone and the Contact Center soft phone import it, and the unit tests import it directly.
  */
@@ -33,8 +41,12 @@ export var STANDBY_GRACE_MS = 5000;
 // How long a tagged leg is remembered once seen.
 export var STANDBY_LEG_MEMORY_MS = 60000;
 
+// How long a reservation accepted for this phone's user is remembered: a paced call rings the customer for up to a
+// minute, and answering-machine screening adds a few seconds more, before the agent's leg is rung.
+export var ACCEPTED_RESERVATION_MEMORY_MS = 600000;
+
 export function createPredictiveStandby() {
-    return { armed: false, until: 0, userId: '', legs: {} };
+    return { armed: false, until: 0, userId: '', legs: {}, accepted: {} };
 }
 
 // Whether the agent should stand by: Available, and signed in to at least one campaign. Only a campaign can claim the
@@ -115,6 +127,68 @@ export function wasStandbyLegSeen(standby, reservationId, now) {
     }
 
     return now - standby.legs[reservationId] <= STANDBY_LEG_MEMORY_MS;
+}
+
+function forgetOldAcceptedReservations(standby, now) {
+    Object.keys(standby.accepted).forEach(function (id) {
+        if (now - standby.accepted[id].at > ACCEPTED_RESERVATION_MEMORY_MS) {
+            delete standby.accepted[id];
+        }
+    });
+}
+
+// Remembers that a reservation was accepted for `userId`, this phone's user: the leg of the call placed under it may
+// ring long after the accept.
+export function noteAcceptedReservation(standby, reservationId, userId, now) {
+    if (!standby || !reservationId || !userId) {
+        return;
+    }
+
+    if (!standby.accepted) {
+        standby.accepted = {};
+    }
+
+    forgetOldAcceptedReservations(standby, now);
+    standby.accepted[reservationId] = { at: now, userId: String(userId) };
+}
+
+// Forgets an accepted reservation: its leg arrived, or what it was accepted for is over.
+export function forgetAcceptedReservation(standby, reservationId) {
+    if (standby && standby.accepted && reservationId) {
+        delete standby.accepted[reservationId];
+    }
+}
+
+// Decides whether an incoming leg is the leg of a call placed under a reservation this phone heard accepted for its own
+// user. Returns the reservation id when it is, and forgets the reservation (its one leg has arrived); '' otherwise.
+//   leg - the incoming leg's options: { customHeaders | custom_headers, clientState, transferLeg }.
+export function shouldAnswerAcceptedReservationLeg(standby, leg, now) {
+    if (!standby || !standby.accepted || !leg) {
+        return '';
+    }
+
+    // Somebody's call to this phone, or a call handed over, rings whatever it carries.
+    if (leg.transferLeg || (typeof isDestinationLeg === 'function' && isDestinationLeg(leg))) {
+        return '';
+    }
+
+    var tag = readStandbyLegTag(leg);
+
+    if (!tag.reservationId || !tag.agentUserId) {
+        return '';
+    }
+
+    forgetOldAcceptedReservations(standby, now);
+
+    var accepted = standby.accepted[tag.reservationId];
+
+    if (!accepted || accepted.userId !== tag.agentUserId) {
+        return '';
+    }
+
+    delete standby.accepted[tag.reservationId];
+
+    return tag.reservationId;
 }
 
 // Decides whether an incoming leg is answered on standby. Returns the claim's reservation id when it is, '' when the

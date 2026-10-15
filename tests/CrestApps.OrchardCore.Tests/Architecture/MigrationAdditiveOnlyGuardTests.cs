@@ -744,6 +744,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "ce8c16f0d73c749b",
             "Deferred backfill that runs after the outbox index migration commits. It reads the outbound messages of the last two days through YesSql's typed query (a SELECT on the omnichannel message index) and saves the queued ones again so the outbox index maps them. It reads and rewrites documents only; it creates, alters and drops no schema object."),
         new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexTableIndexCreation.cs",
+            "IndexTableIndexCreation",
+            "ExistsAsync",
+            "0fd9dcb84ea12ee4",
+            "Read-only index existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.indexes, pg_indexes, information_schema.statistics, sqlite_master), so it cannot create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",

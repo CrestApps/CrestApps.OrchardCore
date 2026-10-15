@@ -69,6 +69,12 @@ public static class DialerCallMetadata
     public const string AgentClaimedUtcKey = "dialer_agent_claimed_utc";
 
     /// <summary>
+    /// The key of the reservation the agent holds a call placed for them under. The agent's phone learned of it when the
+    /// reservation was accepted, so the agent's leg is tagged with it and the phone knows the leg is its own.
+    /// </summary>
+    public const string ReservationIdKey = "dialer_reservation_id";
+
+    /// <summary>
     /// Records that the call is placed without a reserved agent, so an agent is picked only when a person answers.
     /// </summary>
     /// <param name="interaction">The interaction of the call.</param>
@@ -78,6 +84,28 @@ public static class DialerCallMetadata
 
         interaction.TechnicalMetadata[PacingModelKey] = OverDialPacingModel;
     }
+
+    /// <summary>
+    /// Records the reservation the agent holds the call under, for a call placed for an agent already reserved for it.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    /// <param name="reservationId">The agent's reservation, or <see langword="null"/> for a call placed without one.</param>
+    public static void StampReservation(Interaction interaction, string reservationId)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        if (!string.IsNullOrWhiteSpace(reservationId))
+        {
+            interaction.TechnicalMetadata[ReservationIdKey] = reservationId.Trim();
+        }
+    }
+
+    /// <summary>
+    /// The reservation the agent holds the call under, or <see langword="null"/> for a call placed without one.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static string GetReservationId(Interaction interaction)
+        => Read(interaction, ReservationIdKey);
 
     /// <summary>
     /// Whether the call is a campaign dial an over-dialing Predictive profile placed without a reserved agent.
