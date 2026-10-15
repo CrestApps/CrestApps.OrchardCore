@@ -878,12 +878,19 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         }
     }
 
-    private static void AddRowError(ImportFileProcessStatsPart progressPart, int rowIndex, string errorMessage)
+    internal static void AddRowError(ImportFileProcessStatsPart progressPart, int rowIndex, string errorMessage)
     {
         progressPart.Errors ??= [];
         progressPart.ErrorMessages ??= [];
 
         progressPart.Errors.Add(rowIndex);
+
+        if (progressPart.ErrorMessages.Count >= ImportFileProcessStatsPart.MaxStoredErrorMessages
+            && !progressPart.ErrorMessages.ContainsKey(rowIndex))
+        {
+            return;
+        }
+
         progressPart.ErrorMessages[rowIndex] = string.IsNullOrWhiteSpace(errorMessage)
             ? "The row failed to import."
             : errorMessage;

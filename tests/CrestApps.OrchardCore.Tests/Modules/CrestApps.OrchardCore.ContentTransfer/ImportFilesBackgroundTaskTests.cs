@@ -43,6 +43,39 @@ public sealed class ImportFilesBackgroundTaskTests
     }
 
     [Fact]
+    public void AddRowError_KeepsEveryFailedRow_ButCapsStoredMessages()
+    {
+        var progressPart = new ImportFileProcessStatsPart();
+        var failedRows = ImportFileProcessStatsPart.MaxStoredErrorMessages + 250;
+
+        for (var rowIndex = 1; rowIndex <= failedRows; rowIndex++)
+        {
+            ImportFilesBackgroundTask.AddRowError(progressPart, rowIndex, $"Row {rowIndex} failed.");
+        }
+
+        Assert.Equal(failedRows, progressPart.Errors.Count);
+        Assert.Equal(ImportFileProcessStatsPart.MaxStoredErrorMessages, progressPart.ErrorMessages.Count);
+        Assert.Equal("Row 1 failed.", progressPart.ErrorMessages[1]);
+        Assert.False(progressPart.ErrorMessages.ContainsKey(failedRows));
+    }
+
+    [Fact]
+    public void AddRowError_UpdatesAStoredMessage_AfterTheCapIsReached()
+    {
+        var progressPart = new ImportFileProcessStatsPart();
+
+        for (var rowIndex = 1; rowIndex <= ImportFileProcessStatsPart.MaxStoredErrorMessages; rowIndex++)
+        {
+            ImportFilesBackgroundTask.AddRowError(progressPart, rowIndex, "First attempt.");
+        }
+
+        // A resumed run that fails a row again replaces its message rather than being refused by the cap.
+        ImportFilesBackgroundTask.AddRowError(progressPart, 1, "Second attempt.");
+
+        Assert.Equal("Second attempt.", progressPart.ErrorMessages[1]);
+    }
+
+    [Fact]
     public void RecordStalledRow_CountsRunsStuckOnTheSameRow()
     {
         var progressPart = new ImportFileProcessStatsPart();
