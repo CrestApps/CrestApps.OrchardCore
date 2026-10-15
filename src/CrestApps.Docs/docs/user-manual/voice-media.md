@@ -43,7 +43,7 @@ Each clip in the list shows what is stored for it:
 
 | Badge | Meaning |
 | --- | --- |
-| **Master copy** | The platform holds the audio. The clip plays on any phone provider, and a provider that loses its copy is sent a new one the next time a caller needs it. |
+| **Master copy** | The platform holds the audio. The clip plays on any phone provider, and a provider that loses its copy is sent a new one automatically, within about ten minutes. |
 | **Provider copy only** | The clip was uploaded before the platform kept master copies, so it exists only at the provider it was uploaded to. It keeps playing there, but it cannot be checked or sent to another provider. |
 | **No audio** | The clip has no audio yet. |
 
@@ -60,7 +60,7 @@ The clip now has a master copy, and queues and IVR menus that use it are unchang
 
 ## Re-sync a clip with the phone provider
 
-Click **Re-sync media** on a clip to check that every enabled phone provider still holds it, and to send it to any provider that does not. Use it after you change provider, or when the provider has deleted a clip. You see a message for each provider: that it already held the clip, that it received a copy, or that it did not accept one.
+Click **Re-sync media** on a clip to check that every enabled phone provider still holds it, and to send it to any provider that does not. Use it after you change provider, or when the provider has deleted a clip and you do not want to wait for the clip to be sent again on its own. You see a message for each provider: that it already held the clip, that it received a copy, or that it did not accept one.
 
 The button appears only on clips with a master copy. A clip with no master copy has nothing to send; upload its audio again instead.
 

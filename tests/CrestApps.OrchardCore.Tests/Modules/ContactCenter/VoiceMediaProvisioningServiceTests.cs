@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -183,7 +184,197 @@ public sealed class VoiceMediaProvisioningServiceTests
         Assert.Equal(VoiceMediaProvisioningStatus.Provisioned, second.Status);
         Assert.Equal(upload.Reference, second.Reference);
         Assert.False(second.Changed);
-        Assert.Equal(new[] { upload.Reference }, other.AvailabilityChecks);
+
+        // The copy was just made, so the provider is not asked whether it holds it.
+        Assert.Empty(other.AvailabilityChecks);
+    }
+
+    [Fact]
+    public async Task EnsureProvisionedAsync_InsideTheWindow_DoesNotAskTheProviderAgain()
+    {
+        // Arrange
+        // Every IVR prompt, hold-music start and greeting goes through here; a provider round trip before each one
+        // would be a round trip too many. The provider's answer is trusted for the window.
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var telnyx = new FakeProvisioner(Telnyx);
+        var clock = new MovableClock();
+        var service = CreateService(mediaStore, [telnyx], clock: clock);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = masterReference,
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "telnyx-copy" },
+        };
+
+        // Act
+        var first = await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+        clock.Advance(VoiceMediaAvailabilityCache.Window - TimeSpan.FromMinutes(1));
+        var second = await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("telnyx-copy", first.Reference);
+        Assert.Equal("telnyx-copy", second.Reference);
+        Assert.Equal(new[] { "telnyx-copy" }, telnyx.AvailabilityChecks);
+        Assert.Empty(telnyx.Uploads);
+    }
+
+    [Fact]
+    public async Task EnsureProvisionedAsync_AfterTheWindow_AsksTheProviderAgain()
+    {
+        // Arrange
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var telnyx = new FakeProvisioner(Telnyx);
+        var clock = new MovableClock();
+        var service = CreateService(mediaStore, [telnyx], clock: clock);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = masterReference,
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "telnyx-copy" },
+        };
+
+        // Act
+        await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+        clock.Advance(VoiceMediaAvailabilityCache.Window + TimeSpan.FromSeconds(1));
+        await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(new[] { "telnyx-copy", "telnyx-copy" }, telnyx.AvailabilityChecks);
+    }
+
+    [Fact]
+    public async Task EnsureProvisionedAsync_RemembersTheCopyItMadeAfterAMissingAnswer_AndForgetsTheLostOne()
+    {
+        // Arrange
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var telnyx = new FakeProvisioner(Telnyx) { Availability = reference => reference == "gone" ? VoiceMediaAvailability.Missing : VoiceMediaAvailability.Available };
+        var cache = new VoiceMediaAvailabilityCache(new MovableClock());
+        var service = CreateService(mediaStore, [telnyx], cache: cache);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = masterReference,
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "gone" },
+        };
+
+        // Act
+        var remade = await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+        var again = await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+
+        // Assert
+        var upload = Assert.Single(telnyx.Uploads);
+        Assert.Equal(upload.Reference, remade.Reference);
+        Assert.Equal(upload.Reference, again.Reference);
+        Assert.Equal(new[] { "gone" }, telnyx.AvailabilityChecks);
+        Assert.True(cache.IsKnownAvailable(Telnyx, upload.Reference));
+        Assert.False(cache.IsKnownAvailable(Telnyx, "gone"));
+    }
+
+    [Fact]
+    public async Task EnsureProvisionedAsync_DoesNotRememberAnAnswerItDidNotGet()
+    {
+        // Arrange
+        // Unknown means the provider could not be asked; the next play asks again rather than trusting silence.
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var telnyx = new FakeProvisioner(Telnyx) { Availability = _ => VoiceMediaAvailability.Unknown };
+        var service = CreateService(mediaStore, [telnyx]);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = masterReference,
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "telnyx-copy" },
+        };
+
+        // Act
+        await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+        await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, telnyx.AvailabilityChecks.Count);
+    }
+
+    [Fact]
+    public async Task DeleteEverywhereAsync_ForgetsWhatWasRememberedAboutTheCopies()
+    {
+        // Arrange
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var telnyx = new FakeProvisioner(Telnyx);
+        var cache = new VoiceMediaAvailabilityCache(new MovableClock());
+        var service = CreateService(mediaStore, [telnyx], cache: cache);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = masterReference,
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "telnyx-copy" },
+        };
+
+        await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+        Assert.True(cache.IsKnownAvailable(Telnyx, "telnyx-copy"));
+
+        // Act
+        await service.DeleteEverywhereAsync(item, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(cache.IsKnownAvailable(Telnyx, "telnyx-copy"));
+    }
+
+    [Fact]
+    public async Task StoreAsync_ForgetsTheReplacedCopies_AndRemembersTheNewOne()
+    {
+        // Arrange
+        var mediaStore = new FakeMediaStore();
+        var telnyx = new FakeProvisioner(Telnyx);
+        var cache = new VoiceMediaAvailabilityCache(new MovableClock());
+        cache.MarkAvailable(Telnyx, "old-telnyx");
+        var service = CreateService(mediaStore, [telnyx], cache: cache);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = "old-master",
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "old-telnyx" },
+        };
+
+        // Act
+        var result = await service.StoreAsync(item, new MemoryStream(_audio), "audio/wav", "wav", "cc-voice-media", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(cache.IsKnownAvailable(Telnyx, "old-telnyx"));
+        Assert.True(cache.IsKnownAvailable(Telnyx, result.ProviderReference));
+    }
+
+    [Fact]
+    public async Task ResyncAsync_AsksEveryProviderWhateverIsRemembered()
+    {
+        // Arrange
+        // A re-sync is the operator asking for certainty, so the memory that spares ordinary plays a question is
+        // not consulted; the answer refreshes it.
+        var mediaStore = new FakeMediaStore();
+        var masterReference = mediaStore.Add(_audio);
+        var telnyx = new FakeProvisioner(Telnyx);
+        var cache = new VoiceMediaAvailabilityCache(new MovableClock());
+        var store = new Mock<IVoiceMediaItemStore>();
+        var service = CreateService(mediaStore, [telnyx], store, cache: cache);
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = masterReference,
+            ProviderReferences = new Dictionary<string, string> { [Telnyx] = "telnyx-copy" },
+        };
+
+        await service.EnsureProvisionedAsync(item, Telnyx, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await service.ResyncAsync(item, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceMediaResyncOutcome.Verified, result.Providers[Telnyx]);
+        Assert.Equal(new[] { "telnyx-copy", "telnyx-copy" }, telnyx.AvailabilityChecks);
+        Assert.True(cache.IsKnownAvailable(Telnyx, "telnyx-copy"));
     }
 
     [Fact]
@@ -521,7 +712,9 @@ public sealed class VoiceMediaProvisioningServiceTests
         IRecordingMediaStore mediaStore,
         IVoiceMediaProvisioner[] provisioners,
         Mock<IVoiceMediaItemStore> store = null,
-        string defaultProviderName = null)
+        string defaultProviderName = null,
+        IVoiceMediaAvailabilityCache cache = null,
+        IClock clock = null)
     {
         var settings = new Mock<IOptionsSnapshot<TelephonySettings>>();
         settings.SetupGet(value => value.Value).Returns(new TelephonySettings { DefaultProviderName = defaultProviderName });
@@ -530,8 +723,29 @@ public sealed class VoiceMediaProvisioningServiceTests
             (store ?? new Mock<IVoiceMediaItemStore>()).Object,
             mediaStore is null ? Array.Empty<IRecordingMediaStore>() : new[] { mediaStore },
             provisioners,
+            cache ?? new VoiceMediaAvailabilityCache(clock ?? new MovableClock()),
             settings.Object,
             NullLogger<VoiceMediaProvisioningService>.Instance);
+    }
+
+    private sealed class MovableClock : IClock
+    {
+        public DateTime UtcNow { get; private set; } = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        public void Advance(TimeSpan by)
+            => UtcNow = UtcNow.Add(by);
+
+        public ITimeZone GetTimeZone(string timeZoneId)
+            => throw new NotSupportedException();
+
+        public ITimeZone[] GetTimeZones()
+            => throw new NotSupportedException();
+
+        public ITimeZone GetSystemTimeZone()
+            => throw new NotSupportedException();
+
+        public DateTimeOffset ConvertToTimeZone(DateTimeOffset dateTimeOffset, ITimeZone timeZone)
+            => throw new NotSupportedException();
     }
 
     private sealed class FakeMediaStore : IRecordingMediaStore

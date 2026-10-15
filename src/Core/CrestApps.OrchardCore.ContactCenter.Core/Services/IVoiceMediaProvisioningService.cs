@@ -40,9 +40,12 @@ public interface IVoiceMediaProvisioningService
 
     /// <summary>
     /// Makes sure the named provider holds a copy of the clip and returns the reference it plays the clip by. A
-    /// provider that has no copy, or reports its copy missing, is given one from the master copy. A clip with no
-    /// master copy returns the copy the provider was given when the clip was uploaded, or nothing when that
-    /// provider never was. The caller persists the record when the result says the state changed.
+    /// provider that has no copy, or reports its copy missing, is given one from the master copy. A copy the provider
+    /// confirmed within the window of <see cref="IVoiceMediaAvailabilityCache"/> is trusted without asking again, so
+    /// a copy lost at the provider is noticed, and made again, at the first play after that window rather than at
+    /// the very next play. A clip with no master copy returns the copy the provider was given when the clip was
+    /// uploaded, or nothing when that provider never was. The caller persists the record when the result says the
+    /// state changed.
     /// </summary>
     /// <param name="media">The clip.</param>
     /// <param name="providerName">The technical name of the provider that is to play the clip.</param>

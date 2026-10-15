@@ -22,6 +22,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
     private readonly IVoiceMediaItemStore _store;
     private readonly IRecordingMediaStore _mediaStore;
     private readonly IVoiceMediaProvisioner[] _provisioners;
+    private readonly IVoiceMediaAvailabilityCache _availability;
     private readonly IOptionsSnapshot<TelephonySettings> _telephonySettings;
     private readonly ILogger _logger;
 
@@ -35,18 +36,21 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
     /// <param name="store">The library store the entries are read from and written to.</param>
     /// <param name="mediaStores">The media store master copies are kept in, when the Telephony feature registers one.</param>
     /// <param name="provisioners">The provisioners of the enabled providers that host media.</param>
+    /// <param name="availability">The memory of the copies providers have confirmed they hold.</param>
     /// <param name="telephonySettings">The tenant telephony settings naming the default provider.</param>
     /// <param name="logger">The logger.</param>
     public VoiceMediaProvisioningService(
         IVoiceMediaItemStore store,
         IEnumerable<IRecordingMediaStore> mediaStores,
         IEnumerable<IVoiceMediaProvisioner> provisioners,
+        IVoiceMediaAvailabilityCache availability,
         IOptionsSnapshot<TelephonySettings> telephonySettings,
         ILogger<VoiceMediaProvisioningService> logger)
     {
         _store = store;
         _mediaStore = mediaStores.FirstOrDefault();
         _provisioners = provisioners.ToArray();
+        _availability = availability;
         _telephonySettings = telephonySettings;
         _logger = logger;
     }
@@ -117,6 +121,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
             // The audio changed, so every copy made of the old audio is stale: the record starts over with the one
             // copy made now, and any other provider is given a copy of the new audio when it next plays the clip.
+            ForgetCopies(replaced);
+
             media.MasterStorageReference = masterReference;
             media.ContentType = contentType;
             media.Format = format;
@@ -125,6 +131,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
             if (providerReference is not null)
             {
                 media.ProviderReferences[provisioner.ProviderTechnicalName] = providerReference;
+                _availability.MarkAvailable(provisioner.ProviderTechnicalName, providerReference);
             }
 
             return new VoiceMediaStoreResult
@@ -184,7 +191,16 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
         if (existing is not null)
         {
-            var availability = await provisioner.GetAvailabilityAsync(existing, cancellationToken);
+            // A copy the provider confirmed within the window is trusted without asking again, so a play costs no
+            // provider round trip beyond the play itself. A copy lost at the provider is noticed when the window ends.
+            var availability = _availability.IsKnownAvailable(provisioner.ProviderTechnicalName, existing)
+                ? VoiceMediaAvailability.Available
+                : await provisioner.GetAvailabilityAsync(existing, cancellationToken);
+
+            if (availability == VoiceMediaAvailability.Available)
+            {
+                _availability.MarkAvailable(provisioner.ProviderTechnicalName, existing);
+            }
 
             if (availability != VoiceMediaAvailability.Missing)
             {
@@ -195,6 +211,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
                     Status = VoiceMediaProvisioningStatus.Provisioned,
                 };
             }
+
+            _availability.Forget(provisioner.ProviderTechnicalName, existing);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -216,6 +234,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
         }
 
         SetReference(media, provisioner.ProviderTechnicalName, reference);
+        _availability.MarkAvailable(provisioner.ProviderTechnicalName, reference);
 
         return new VoiceMediaProvisioningResult
         {
@@ -244,6 +263,10 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
         var result = await EnsureProvisionedAsync(item, providerName, cancellationToken);
 
+        // Storing the entry inside the caller's unit of work is safe here: a library entry is written only when an
+        // operator edits it, and its store does not check document versions, so this write cannot collide with a
+        // concurrent one and fail the call the way a write to an agent profile, whose presence changes constantly,
+        // could. The agent greeting path records its copy in a deferred task for that reason.
         if (result.Changed)
         {
             MirrorLegacyReference(item, result.ProviderName, result.Reference);
@@ -279,14 +302,18 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
             if (existing is not null)
             {
+                // A re-sync is the operator asking for certainty, so the provider is asked whatever is remembered.
                 availability = await provisioner.GetAvailabilityAsync(existing, cancellationToken);
 
                 if (availability == VoiceMediaAvailability.Available)
                 {
+                    _availability.MarkAvailable(providerName, existing);
                     outcomes[providerName] = VoiceMediaResyncOutcome.Verified;
 
                     continue;
                 }
+
+                _availability.Forget(providerName, existing);
             }
 
             var reference = await UploadFromMasterAsync(item, provisioner, cancellationToken);
@@ -306,6 +333,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
             }
 
             SetReference(item, providerName, reference);
+            _availability.MarkAvailable(providerName, reference);
             outcomes[providerName] = VoiceMediaResyncOutcome.Uploaded;
             changed = true;
         }
@@ -334,6 +362,8 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
     public async Task DeleteEverywhereAsync(IVoiceMediaAsset media, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(media);
+
+        ForgetCopies(media);
 
         foreach (var (providerName, reference) in media.ProviderReferences ?? new Dictionary<string, string>())
         {
@@ -468,6 +498,19 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
                 "Failed to delete the voice media copy {Reference} from the telephony provider {Provider}.",
                 reference.SanitizeLogValue(),
                 provisioner.ProviderTechnicalName);
+        }
+    }
+
+    private void ForgetCopies(IVoiceMediaAsset media)
+    {
+        if (media?.ProviderReferences is null)
+        {
+            return;
+        }
+
+        foreach (var (providerName, reference) in media.ProviderReferences)
+        {
+            _availability.Forget(providerName, reference);
         }
     }
 

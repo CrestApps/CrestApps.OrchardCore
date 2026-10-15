@@ -25,6 +25,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
+    private readonly IVoicemailGreetingCopyRecorder _greetingCopyRecorder;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterWorkStateService _workStateService;
@@ -39,6 +40,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     /// <param name="interactionManager">The interaction manager used to validate and project linked interactions.</param>
     /// <param name="agentProfileManager">The agent profile manager the recipient agent's voicemail greeting is read from.</param>
     /// <param name="voiceMediaProvisioning">The service that gives the call's provider a copy of the recipient agent's recorded greeting.</param>
+    /// <param name="greetingCopyRecorder">Records a greeting copy the provider was given on the agent's profile, outside this command's unit of work.</param>
     /// <param name="queueService">The queue service used to restore live work after a definitive action failure.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
@@ -50,6 +52,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         IInteractionManager interactionManager,
         IAgentProfileManager agentProfileManager,
         IVoiceMediaProvisioningService voiceMediaProvisioning,
+        IVoicemailGreetingCopyRecorder greetingCopyRecorder,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -61,6 +64,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         _interactionManager = interactionManager;
         _agentProfileManager = agentProfileManager;
         _voiceMediaProvisioning = voiceMediaProvisioning;
+        _greetingCopyRecorder = greetingCopyRecorder;
         _callControlAuthorizationService = callControlAuthorizationService;
         _queueService = queueService;
         _workStateService = workStateService;
@@ -269,7 +273,9 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
     // The provider this call is on is given a copy of the greeting from the master copy when it has none, so a
     // greeting recorded while another provider was in use is still heard. A greeting recorded before master copies
-    // were kept exists only at the provider it was uploaded to, and its name is all that can be offered.
+    // were kept exists only at the provider it was uploaded to, and its name is all that can be offered. The copy
+    // is recorded on the agent's profile outside this command: the profile is written constantly by presence
+    // changes, and a write that collided here would fail the command and leave the caller without a greeting.
     private async Task<string> ResolveGreetingMediaAsync(AgentProfile agent, string providerName, CancellationToken cancellationToken)
     {
         if (agent is null)
@@ -286,7 +292,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         if (provisioned.Changed)
         {
-            await _agentProfileManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+            _greetingCopyRecorder.RecordProviderCopy(agent.ItemId, provisioned.ProviderName, provisioned.Reference);
         }
 
         return provisioned.Reference ?? agent.VoicemailGreetingMediaName;

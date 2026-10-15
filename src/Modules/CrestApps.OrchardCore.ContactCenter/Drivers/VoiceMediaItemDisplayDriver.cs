@@ -177,7 +177,7 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
         ShellScope.AddDeferredTask(scope => ReconcileReplacedAudioAsync(scope, item.ItemId, Snapshot(item), result.Replaced));
     }
 
-    private static VoiceMediaAsset Snapshot(IVoiceMediaAsset media)
+    private static VoiceMediaAsset Snapshot(VoiceMediaItem media)
         => new()
         {
             MasterStorageReference = media.MasterStorageReference,
@@ -217,7 +217,7 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
         }
     }
 
-    private static bool HoldsSameAudio(IVoiceMediaAsset stored, IVoiceMediaAsset uploaded)
+    private static bool HoldsSameAudio(VoiceMediaItem stored, VoiceMediaAsset uploaded)
     {
         if (!string.IsNullOrEmpty(uploaded.MasterStorageReference))
         {

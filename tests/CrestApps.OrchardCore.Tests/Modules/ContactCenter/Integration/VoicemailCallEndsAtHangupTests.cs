@@ -135,6 +135,7 @@ public sealed class VoicemailCallEndsAtHangupTests
             services.GetRequiredService<IInteractionManager>(),
             services.GetRequiredService<IAgentProfileManager>(),
             Mock.Of<IVoiceMediaProvisioningService>(),
+            Mock.Of<IVoicemailGreetingCopyRecorder>(),
             services.GetRequiredService<IActivityQueueService>(),
             services.GetRequiredService<IContactCenterWorkStateService>(),
             services.GetRequiredService<IContactCenterActivityWriter>(),
