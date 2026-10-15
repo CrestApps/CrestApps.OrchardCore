@@ -292,6 +292,14 @@ public sealed class TelnyxOutboundBridgeState
     public string DialedByUserId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent's phone answers this pre-dialed leg on arrival: the leg parked for
+    /// a call the dialer placed, rather than an offer's leg held until the agent accepts. A leg rung again is rung the same
+    /// way.
+    /// </summary>
+    [JsonPropertyName("ao")]
+    public bool? AnswersOnArrival { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether this is the agent leg of a number dialed from the soft phone and connected on
     /// the server, once the number's leg exists: <see cref="PeerCallControlId"/> is then the remote party.
     /// </summary>

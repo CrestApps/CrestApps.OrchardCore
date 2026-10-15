@@ -821,7 +821,8 @@ public sealed class DialProviderCommandTypeExecutorTests
             CreateDialDestinationPolicy(),
             auditRecorder ?? new RecordingContactCenterAuditRecorder(),
             NullLogger<DialProviderCommandTypeExecutor>.Instance,
-            systemDialAuthorizers ?? []);
+            systemDialAuthorizers ?? [],
+            Mock.Of<IContactCenterScopeExecutor>());
 
         return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);
     }

@@ -219,16 +219,22 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
         ContactCenterVoiceProviderResult providerResult,
         CancellationToken cancellationToken)
     {
+        // An offer's leg is tracked under the offer the command accepts. A leg parked for a dialed call is tracked under
+        // the reservation the agent holds the call under, which also tags the leg.
+        var reservationId = string.IsNullOrWhiteSpace(command.ReservationId)
+            ? request.StandbyReservationId
+            : command.ReservationId;
+
         if (_preDialCoordinator is null ||
             string.IsNullOrWhiteSpace(request.PreDialedAgentLegId) ||
-            string.IsNullOrWhiteSpace(command.ReservationId) ||
+            string.IsNullOrWhiteSpace(reservationId) ||
             providerResult?.Succeeded != true ||
             !string.Equals(providerResult.ProviderLegId, request.PreDialedAgentLegId, StringComparison.Ordinal))
         {
             return;
         }
 
-        if (await _preDialCoordinator.OnCallerReadyAsync(command.ReservationId, cancellationToken))
+        if (await _preDialCoordinator.OnCallerReadyAsync(reservationId, cancellationToken))
         {
             providerResult.ProviderLegState = VoiceCallState.Connected;
         }
@@ -513,6 +519,7 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
                 ? null
                 : request.StandbyReservationId,
             AgentLegTimeoutSeconds = Math.Max(0, request.AgentLegTimeoutSeconds),
+            CallerAnswered = request.CallerAnswered,
         };
 
         StampMetadata(connectRequest.Metadata, claim);
