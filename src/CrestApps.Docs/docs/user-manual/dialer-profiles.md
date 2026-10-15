@@ -26,7 +26,7 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 | Mode | Who presses dial | What the agent sees |
 | --- | --- | --- |
 | **Preview** | The agent. The record is offered to an agent signed in to the campaign; the agent reviews it and clicks **Dial** (or **Skip**). The server then places the call after the compliance checks. | The record opens, then the call starts when they choose Dial. |
-| **Power** | The system. Every minute the dialer reserves available agents in the campaign and places up to **Calls per agent** calls for the campaign, each with its own reserved agent. | The record pops up when the call starts; there is nothing to press. |
+| **Power** | The system. As soon as an agent in the campaign is available, the dialer reserves available agents and places up to **Calls per agent** calls for the campaign, each with its own reserved agent. | The record pops up when the call starts; there is nothing to press. |
 | **Progressive** | The system, like Power, reserving one agent per call, with up to 100 calls per pacing cycle. | Same as Power. |
 | **Predictive** | The system, like Power: every call reserves its own available agent before it is placed, and fewer calls are placed per cycle as the abandonment rate approaches the cap. See [Predictive dialing](#predictive-dialing). | Same as Power. |
 
@@ -46,7 +46,23 @@ The agent is signed in to the campaign in the soft phone (right). The record is 
   <source src="/img/docs/um-power-dial.mp4" type="video/mp4" />
 </video>
 
-With a Power profile the agent only signs in and stays **Available**. Within a minute the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
+With a Power profile the agent only signs in and stays **Available**. Within about a second the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
+
+### When calls are placed
+
+Power, Progressive and Predictive campaigns are dialed as soon as there is a record to dial and an agent free to take the call. The dialer looks at the campaign again, within about a second, whenever:
+
+- an agent signs in to the campaign, or sets themselves **Available**,
+- an agent comes back to **Available** after a call or after wrap-up,
+- a call the dialer placed ends without reaching an agent (no answer, busy, an answering machine, or a failed call),
+- an offer is released or runs out,
+- records are loaded into the campaign.
+
+So when numbers keep going unanswered, the next number is dialed right after the last one ends, instead of the agent waiting for the next minute. A burst of changes at the same moment, such as several agents signing in together, is handled as one look, and the campaign keeps being dialed while calls are being placed.
+
+Each look follows the profile's own limits exactly: **Calls per agent**, the Progressive limit, and the Predictive abandonment rules. Only how soon the dialer looks changes, not how many calls it places.
+
+The dialer still looks at every campaign once a minute as well, whatever else is going on. That is a safety net: if a change is missed, for example while the site restarts, the campaign is dialed again within a minute.
 
 ## Create a profile
 
@@ -56,7 +72,7 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
    | Field | Modes | What it does |
    | --- | --- | --- |
-   | **Calls per agent** | Power, Predictive | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
+   | **Calls per agent** | Power, Predictive | Calls started each time the dialer looks at the campaign (see [When calls are placed](#when-calls-are-placed)), 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
    | **Max attempts** | Power, Progressive, Predictive | The fallback limit on how many attempts one contact may get, counting the first call and every follow-up activity created to try again. It applies when the subject flow sets no maximum of its own; see [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 3. |
    | **Retry delay (minutes)** | Power, Progressive, Predictive | The wait after an attempt before the next attempt is dialed when the subject flow does not say when, and the shortest wait when it does. See [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 60. |
    | **Ring time (seconds)** | Power, Progressive, Predictive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |

@@ -1405,6 +1405,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string DefaultPhoneAddressId { get; set; }
         public string DefaultSmsAddressId { get; set; }
     }
+    public sealed class ContactCenterDialerPacingOptions
+    {
+        public const string SectionName = "CrestApps:ContactCenter:DialerPacing";
+        public ContactCenterDialerPacingOptions() { }
+        public System.TimeSpan Debounce { get; set; }
+        public System.TimeSpan LockExpiration { get; set; }
+        public System.TimeSpan LockRetryDelay { get; set; }
+    }
     public sealed class ContactCenterEntityRetentionResult
     {
         public ContactCenterEntityRetentionResult() { }
@@ -2692,6 +2700,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public void RecordDecline(string agentId, System.DateTime declinedUtc) { }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem RestorePersistedStatus(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
         public void TransitionTo(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
+    }
+    public sealed class QueueItemAddedEventData
+    {
+        public QueueItemAddedEventData() { }
+        public string ActivityItemId { get; set; }
+        public string DialerProfileId { get; set; }
+        public string QueueId { get; set; }
+        public string QueueItemId { get; set; }
     }
     public static class QueueItemLifecycle
     {
@@ -4987,6 +5003,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IDialerEligibilityService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityResult> EvaluateAsync(CrestApps.OrchardCore.ContactCenter.Core.Services.DialerEligibilityContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IDialerPacingScheduler
+    {
+        void Request(string queueId);
+        void RequestBackstop(string queueId);
+        void RequestRetry(string queueId);
     }
     public interface IDialerPacingStatisticsProvider
     {
