@@ -25,28 +25,58 @@ internal static class AgentPresenceUtilities
     }
 
     /// <summary>
-    /// Keeps <see cref="AgentProfile.IdleSinceUtc"/> in step with the agent's state: an agent who is Available
-    /// with nothing reserved is idle, and the clock starts the moment they become so; anyone else is not idle and
-    /// the stamp is cleared. Called wherever presence changes, so longest-idle routing measures idleness rather
-    /// than time since the last presence transition of any kind.
+    /// Keeps <see cref="AgentProfile.IdleSinceUtc"/> in step with a state transition, so longest-idle routing ranks
+    /// agents by how long they have waited for work rather than by when their presence last changed.
     /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    /// <item>Staying Available keeps the original instant, or the agent would look freshly idle on every save.</item>
+    /// <item>Going from Available into an offer or a call (Reserved or Busy) holds the instant: routing never ranks an
+    /// agent who is not Available, and holding it is what lets <paramref name="keepsIdlePlace"/> give it back.</item>
+    /// <item>Returning to Available from an offer or a call starts a fresh clock at <paramref name="changedUtc"/>,
+    /// sending the agent to the back of the line, unless <paramref name="keepsIdlePlace"/> says the work never reached
+    /// them, in which case the held instant is kept.</item>
+    /// <item>Any other state (wrap-up, a break, offline) is not idle and clears the stamp.</item>
+    /// </list>
+    /// Before this ran on every transition, only sign-in, sign-out, presence changes, wrap-up and completing work
+    /// touched the stamp, and only with "keep if set". An agent who went Reserved and Busy and then straight back to
+    /// Available -- a call ended without wrap-up, an agent leg that failed, a disposition saved while still on the
+    /// call -- kept the stamp from before the work, stayed first in line and took call after call.
+    /// </remarks>
     /// <param name="profile">The profile whose presence has just been set.</param>
-    /// <param name="nowUtc">The current UTC time.</param>
-    public static void ApplyIdleState(AgentProfile profile, DateTime nowUtc)
+    /// <param name="previousState">The state the agent was in before the transition.</param>
+    /// <param name="changedUtc">When the transition took effect.</param>
+    /// <param name="keepsIdlePlace">Whether a return to Available keeps the agent's held place in the line.</param>
+    public static void ApplyIdleState(
+        AgentProfile profile,
+        AgentPresenceStatus previousState,
+        DateTime changedUtc,
+        bool keepsIdlePlace)
     {
         ArgumentNullException.ThrowIfNull(profile);
 
-        var isIdle = profile.PresenceStatus == AgentPresenceStatus.Available &&
-            string.IsNullOrEmpty(profile.ActiveReservationId);
+        var wasIdleOrWorking = previousState is AgentPresenceStatus.Available or AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy;
 
-        if (!isIdle)
+        if (profile.PresenceStatus == AgentPresenceStatus.Available && string.IsNullOrEmpty(profile.ActiveReservationId))
         {
-            profile.IdleSinceUtc = null;
+            if (previousState == AgentPresenceStatus.Available || (keepsIdlePlace && wasIdleOrWorking))
+            {
+                profile.IdleSinceUtc ??= changedUtc;
+            }
+            else
+            {
+                profile.IdleSinceUtc = changedUtc;
+            }
 
             return;
         }
 
-        // Already idle: keep the original instant, or the agent would appear freshly idle on every save.
-        profile.IdleSinceUtc ??= nowUtc;
+        if (profile.PresenceStatus is AgentPresenceStatus.Available or AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy &&
+            wasIdleOrWorking)
+        {
+            return;
+        }
+
+        profile.IdleSinceUtc = null;
     }
 }

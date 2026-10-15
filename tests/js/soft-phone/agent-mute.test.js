@@ -1,17 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-mute.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js';
-
-const {
-    rememberAgentMute,
+import {
+    conferenceMuted,
     isAgentMuted,
+    muteGroupCallIds,
     pruneAgentMutes,
     reconcileAgentMute,
-    muteGroupCallIds,
-    conferenceMuted,
+    rememberAgentMute,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/agent-mute.js';
+import {
     sharedMicrophoneEnabled,
-} = globalThis.CrestAppsSoftPhone;
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/keypad-dial.js';
 
 // With browser audio the mute happens in the browser and the provider keeps nothing, so every later report from the
 // server says the call is unmuted. Taking those reports at their word turned the agent's microphone back on at the

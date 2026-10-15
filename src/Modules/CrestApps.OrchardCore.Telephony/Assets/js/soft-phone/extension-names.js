@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Who an extension rings, by name.
  *
@@ -7,163 +8,146 @@
  * transfer panel's "Transfer to extension 2 · Jane Doe", the keypad while an extension is typed, the call on screen
  * ("Jane Doe · ext 2") and the Recent list. Nothing is looked up per keystroke.
  *
- * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
- * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Part of the soft phone: an ES module that soft-phone.js, or another of its helpers, imports, and that the unit tests
+ * import directly.
  */
-(function (root) {
-    'use strict';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+// How long the list is trusted before the phone reads it again, when something asks for a name.
+export var EXTENSION_DIRECTORY_MAX_AGE_MS = 5 * 60 * 1000;
 
-    // How long the list is trusted before the phone reads it again, when something asks for a name.
-    var EXTENSION_DIRECTORY_MAX_AGE_MS = 5 * 60 * 1000;
+function text(value) {
+    return value == null ? '' : String(value).trim();
+}
 
-    function text(value) {
-        return value == null ? '' : String(value).trim();
+function label(strings, key, fallback) {
+    return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
+}
+
+function format(template, values) {
+    return String(template).replace(/\{(\d+)\}/g, function (match, index) {
+        var value = values[Number(index)];
+
+        return value === undefined ? match : String(value);
+    });
+}
+
+// The phone's copy of the server's extensions: { names: { number: name }, own: [number], loadedAt }. `own` are the
+// agent's own extensions, which only ring the agent's own phone, so they are never offered or dialed.
+export function createExtensionDirectory() {
+    return { names: {}, own: [], loadedAt: 0 };
+}
+
+// Replaces the copy with the entries the server sent ({ extension, displayName }) and the agent's own extensions.
+export function storeExtensionEntries(directory, entries, now, ownExtensions) {
+    if (!directory) {
+        return;
     }
 
-    function label(strings, key, fallback) {
-        return strings && typeof strings[key] === 'string' && strings[key] ? strings[key] : fallback;
-    }
+    var names = {};
+    var own = (ownExtensions || []).map(text).filter(Boolean);
 
-    function format(template, values) {
-        return String(template).replace(/\{(\d+)\}/g, function (match, index) {
-            var value = values[Number(index)];
+    (entries || []).forEach(function (entry) {
+        var number = text(entry && entry.extension);
+        var name = text(entry && entry.displayName);
 
-            return value === undefined ? match : String(value);
-        });
-    }
-
-    // The phone's copy of the server's extensions: { names: { number: name }, own: [number], loadedAt }. `own` are the
-    // agent's own extensions, which only ring the agent's own phone, so they are never offered or dialed.
-    function createExtensionDirectory() {
-        return { names: {}, own: [], loadedAt: 0 };
-    }
-
-    // Replaces the copy with the entries the server sent ({ extension, displayName }) and the agent's own extensions.
-    function storeExtensionEntries(directory, entries, now, ownExtensions) {
-        if (!directory) {
-            return;
+        if (number && name && name !== number) {
+            names[number] = name;
         }
+    });
 
-        var names = {};
-        var own = (ownExtensions || []).map(text).filter(Boolean);
+    directory.names = names;
+    directory.own = own;
+    directory.loadedAt = now || Date.now();
+}
 
-        (entries || []).forEach(function (entry) {
-            var number = text(entry && entry.extension);
-            var name = text(entry && entry.displayName);
+// The agent's own extensions, as the server named them.
+export function ownExtensions(directory) {
+    return directory && Array.isArray(directory.own) ? directory.own.slice() : [];
+}
 
-            if (number && name && name !== number) {
-                names[number] = name;
-            }
-        });
+// Whether the extension is one of the agent's own.
+export function isOwnExtension(directory, number) {
+    var key = text(number);
 
-        directory.names = names;
-        directory.own = own;
-        directory.loadedAt = now || Date.now();
+    return !!key && ownExtensions(directory).indexOf(key) !== -1;
+}
+
+// Whether the copy should be read again: never read, or older than the maximum age.
+export function shouldReloadExtensions(directory, now) {
+    return !directory || !directory.loadedAt || (now - directory.loadedAt) >= EXTENSION_DIRECTORY_MAX_AGE_MS;
+}
+
+// The name of whoever the extension rings, or '' when the phone does not know it.
+export function extensionName(directory, number) {
+    var key = text(number);
+
+    return directory && directory.names && key && Object.prototype.hasOwnProperty.call(directory.names, key)
+        ? directory.names[key]
+        : '';
+}
+
+// Whether a value a call or history entry carries is a name worth showing: not empty, not the extension itself, not a
+// SIP address and not a number.
+function isPersonName(value, number) {
+    var candidate = text(value);
+
+    return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().-]+$/.test(candidate);
+}
+
+// "Jane Doe · ext 2", or the bare extension when nobody is known to be behind it.
+//   name   - the name the directory gives, or '' (see extensionName).
+//   number - the extension.
+//   fallbackName - a name the call itself carries (the provider's display name for it), used when the directory
+//                  has none.
+export function describeExtension(strings, name, number, fallbackName) {
+    var extension = text(number);
+    var person = text(name) || (isPersonName(fallbackName, extension) ? text(fallbackName) : '');
+
+    if (!extension) {
+        return person;
     }
 
-    // The agent's own extensions, as the server named them.
-    function ownExtensions(directory) {
-        return directory && Array.isArray(directory.own) ? directory.own.slice() : [];
-    }
+    return person
+        ? format(label(strings, 'extensionWithName', '{0} · ext {1}'), [person, extension])
+        : extension;
+}
 
-    // Whether the extension is one of the agent's own.
-    function isOwnExtension(directory, number) {
-        var key = text(number);
+// The transfer panel's offer for a typed extension: "Transfer to extension 2 · Jane Doe", or without the name when
+// the phone does not know who it rings.
+export function transferToExtensionLabel(strings, number, name) {
+    var person = text(name);
 
-        return !!key && ownExtensions(directory).indexOf(key) !== -1;
-    }
+    return person
+        ? format(label(strings, 'transferToExtensionNamed', 'Transfer to extension {0} · {1}'), [number, person])
+        : format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), [number]);
+}
 
-    // Whether the copy should be read again: never read, or older than the maximum age.
-    function shouldReloadExtensions(directory, now) {
-        return !directory || !directory.loadedAt || (now - directory.loadedAt) >= EXTENSION_DIRECTORY_MAX_AGE_MS;
-    }
+// The extension a call was placed to, as the server stamped it on the call.
+export function callExtensionNumber(call) {
+    var metadata = call && call.metadata;
 
-    // The name of whoever the extension rings, or '' when the phone does not know it.
-    function extensionName(directory, number) {
-        var key = text(number);
+    return metadata ? text(metadata.extensionNumber) : '';
+}
 
-        return directory && directory.names && key && Object.prototype.hasOwnProperty.call(directory.names, key)
-            ? directory.names[key]
-            : '';
-    }
+// The transfer panel's rows for the phone system's extensions, when the provider has no directory of its own: each
+// is sent as an extension, never dialed as a phone number. The agent's own are left out.
+export function extensionDirectoryEntries(directory, strings) {
+    var names = (directory && directory.names) || {};
 
-    // Whether a value a call or history entry carries is a name worth showing: not empty, not the extension itself, not a
-    // SIP address and not a number.
-    function isPersonName(value, number) {
-        var candidate = text(value);
-
-        return !!candidate && candidate !== text(number) && !/^sips?:/i.test(candidate) && !/^[+\d\s().\-]+$/.test(candidate);
-    }
-
-    // "Jane Doe · ext 2", or the bare extension when nobody is known to be behind it.
-    //   name   - the name the directory gives, or '' (see extensionName).
-    //   number - the extension.
-    //   fallbackName - a name the call itself carries (the provider's display name for it), used when the directory
-    //                  has none.
-    function describeExtension(strings, name, number, fallbackName) {
-        var extension = text(number);
-        var person = text(name) || (isPersonName(fallbackName, extension) ? text(fallbackName) : '');
-
-        if (!extension) {
-            return person;
-        }
-
-        return person
-            ? format(label(strings, 'extensionWithName', '{0} · ext {1}'), [person, extension])
-            : extension;
-    }
-
-    // The transfer panel's offer for a typed extension: "Transfer to extension 2 · Jane Doe", or without the name when
-    // the phone does not know who it rings.
-    function transferToExtensionLabel(strings, number, name) {
-        var person = text(name);
-
-        return person
-            ? format(label(strings, 'transferToExtensionNamed', 'Transfer to extension {0} · {1}'), [number, person])
-            : format(label(strings, 'transferToExtensionNumber', 'Transfer to extension {0}'), [number]);
-    }
-
-    // The extension a call was placed to, as the server stamped it on the call.
-    function callExtensionNumber(call) {
-        var metadata = call && call.metadata;
-
-        return metadata ? text(metadata.extensionNumber) : '';
-    }
-
-    // The transfer panel's rows for the phone system's extensions, when the provider has no directory of its own: each
-    // is sent as an extension, never dialed as a phone number. The agent's own are left out.
-    function extensionDirectoryEntries(directory, strings) {
-        var names = (directory && directory.names) || {};
-
-        return Object.keys(names).filter(function (number) {
-            return !isOwnExtension(directory, number);
-        }).sort(function (left, right) {
-            return names[left].localeCompare(names[right]) || left.localeCompare(right);
-        }).map(function (number) {
-            return {
-                id: 'extension:' + number,
-                name: names[number],
-                destination: number,
-                detail: format(label(strings, 'transferExtension', 'Ext {0}'), [number]),
-                extension: number,
-                isExtension: true,
-                kind: 'agent',
-                group: label(strings, 'transferGroupExtensions', 'Extensions')
-            };
-        });
-    }
-
-    softPhone.EXTENSION_DIRECTORY_MAX_AGE_MS = EXTENSION_DIRECTORY_MAX_AGE_MS;
-    softPhone.createExtensionDirectory = createExtensionDirectory;
-    softPhone.storeExtensionEntries = storeExtensionEntries;
-    softPhone.ownExtensions = ownExtensions;
-    softPhone.isOwnExtension = isOwnExtension;
-    softPhone.shouldReloadExtensions = shouldReloadExtensions;
-    softPhone.extensionName = extensionName;
-    softPhone.describeExtension = describeExtension;
-    softPhone.transferToExtensionLabel = transferToExtensionLabel;
-    softPhone.callExtensionNumber = callExtensionNumber;
-    softPhone.extensionDirectoryEntries = extensionDirectoryEntries;
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    return Object.keys(names).filter(function (number) {
+        return !isOwnExtension(directory, number);
+    }).sort(function (left, right) {
+        return names[left].localeCompare(names[right]) || left.localeCompare(right);
+    }).map(function (number) {
+        return {
+            id: 'extension:' + number,
+            name: names[number],
+            destination: number,
+            detail: format(label(strings, 'transferExtension', 'Ext {0}'), [number]),
+            extension: number,
+            isExtension: true,
+            kind: 'agent',
+            group: label(strings, 'transferGroupExtensions', 'Extensions')
+        };
+    });
+}

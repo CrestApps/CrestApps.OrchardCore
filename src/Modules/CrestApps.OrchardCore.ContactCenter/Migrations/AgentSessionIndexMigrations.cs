@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -128,12 +129,11 @@ internal sealed class AgentSessionIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom3Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AgentSessionIndex>(table => table
-            .CreateIndex(
-                "IDX_AgentSessionIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<AgentSessionIndex>(
+            SchemaBuilder,
+            "IDX_AgentSessionIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 4;
     }

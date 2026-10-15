@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/telnyx-state.js';
-
-const { mapTelnyxOutboundState, isTelnyxTerminalState, iceServersIncludeTurn } = globalThis.CrestAppsSoftPhone;
+import {
+    iceServersIncludeTurn,
+    isTelnyxTerminalState,
+    mapTelnyxOutboundState,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/telnyx-state.js';
 
 // The SDK reports a dozen call states; the dialer understands three. Getting this mapping wrong shows the agent
 // a call that is ringing as connected, or leaves a finished call on their screen.

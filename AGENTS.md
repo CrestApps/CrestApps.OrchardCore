@@ -633,6 +633,10 @@ npm run watch
 
 # List the selected groups and the files each one writes, without building
 npm run dry-run -- -t vendor
+
+# Lint every module's scripts (ESLint), and type-check the ones marked // @ts-check (TypeScript, no output)
+npm run lint
+npm run check
 ```
 
 ### Supported Asset Types
@@ -642,7 +646,7 @@ npm run dry-run -- -t vendor
 
 ### Asset Build Process
 1. Source files are in module `Assets/` directory
-2. Each `vite` group lists its sources in order; the build imports them in that order, so a helper must be listed before the script that uses it
+2. Each `vite` group's `source` is its main script; helpers are ES modules the script `import`s, and the build follows the imports. Never attach helpers to a `window` namespace; a bundle offers other bundles only a deliberate page API such as `window.telephonyClient`
 3. Each group writes its readable `dest` file and a `.min` sibling, the pair the resource manifest's `SetUrl` points at
 4. Every built file is written with LF line endings, and only when its contents changed
 
@@ -650,7 +654,7 @@ npm run dry-run -- -t vendor
 - Always run `npm run rebuild` after modifying frontend code
 - Commit compiled assets (wwwroot) along with source files
 - Use `npm run watch` during active development
-- Check for TypeScript/JavaScript errors before committing
+- Run `npm run lint` and `npm run check` before committing; CI fails on any error
 - Follow existing patterns for module-specific assets
 
 ## Pull Request Guidelines

@@ -16,10 +16,34 @@
  * The model, the JSON round trip, the checks and the menu tree live in ivr-flow-model.js, which has no DOM and is unit
  * tested.
  */
+import {
+    ACTION_KINDS,
+    GO_TO_MENU,
+    TELEPHONE_KEYS,
+    actionForEditorKind,
+    addNode,
+    addOption,
+    addSubMenu,
+    availableDigits,
+    buildMenuTree,
+    checkJsonForEditor,
+    createAction,
+    createModel,
+    editorKindOf,
+    formatJson,
+    isKnownKind,
+    parseJson,
+    removeSubMenu,
+    renameNode,
+    setActionKind,
+    targetTypeOf,
+    toJson,
+    validate,
+} from './ivr-flow-model.js';
+
 (function (window, document) {
     'use strict';
 
-    var ivr = window.CrestAppsIvrMenu;
     var NEW_MENU = '__new__';
 
     // A small element builder: h('div', { className: 'x', 'data-a': 'b', text: 'hi' }, [children]).
@@ -60,7 +84,7 @@
     }
 
     function init(root) {
-        var config = {};
+        var config;
 
         try {
             config = JSON.parse(root.getAttribute('data-config') || '{}');
@@ -84,8 +108,8 @@
         var jsonTools = root.querySelector('[data-ivr-json-tools]');
         var jsonActions = root.querySelector('[data-ivr-json-actions]');
         var jsonStatus = root.querySelector('[data-ivr-json-status]');
-        var model = ivr.createModel();
-        var tree = ivr.buildMenuTree(model);
+        var model = createModel();
+        var tree = buildMenuTree(model);
         var transientIssues = {};
         var idPrefix = 'ivr' + Math.random().toString(36).slice(2, 8);
 
@@ -117,7 +141,7 @@
         }
 
         function sync() {
-            textarea.value = ivr.toJson(model);
+            textarea.value = toJson(model);
         }
 
         // Where a model field lives: "flow:rootNodeId", "fallback:kind", "node:0:prompt", "option:0:2:target".
@@ -185,7 +209,7 @@
 
         // Shows every problem beside the field that has it, and a count above the editor.
         function applyIssues() {
-            var issues = ivr.validate(model, catalog);
+            var issues = validate(model, catalog);
 
             Object.keys(transientIssues).forEach(function (scope) {
                 issues.push(transientIssues[scope]);
@@ -304,14 +328,14 @@
         // The target control for a kind: a list of queues, agents, destinations or menus, or nothing at all.
         function targetControl(field, action, id, ownChild) {
             var kind = action ? action.kind : '';
-            var type = action ? ivr.targetTypeOf(kind) : null;
+            var type = action ? targetTypeOf(kind) : null;
             var value = action ? String(action.targetId || '').trim() : '';
 
             if (!action) {
                 return h('div', { className: 'form-text' });
             }
 
-            if (!ivr.isKnownKind(kind)) {
+            if (!isKnownKind(kind)) {
                 return h('input', { className: 'form-control', 'data-ivr-field': field, 'data-ivr-text': 'target', value: action.targetId || '', id: id, 'aria-label': t('target', 'Target') });
             }
 
@@ -362,9 +386,9 @@
         function kindOptions(current, emptyLabel, forKey) {
             var options = [{ value: '', text: emptyLabel }];
 
-            ivr.ACTION_KINDS.forEach(function (kind) {
+            ACTION_KINDS.forEach(function (kind) {
                 if (kind === 'SubMenu' && !forKey) {
-                    options.push({ value: kind, text: kindLabel(ivr.GO_TO_MENU) });
+                    options.push({ value: kind, text: kindLabel(GO_TO_MENU) });
 
                     return;
                 }
@@ -372,11 +396,11 @@
                 options.push({ value: kind, text: kindLabel(kind) });
 
                 if (kind === 'SubMenu') {
-                    options.push({ value: ivr.GO_TO_MENU, text: kindLabel(ivr.GO_TO_MENU) });
+                    options.push({ value: GO_TO_MENU, text: kindLabel(GO_TO_MENU) });
                 }
             });
 
-            if (current && current !== ivr.GO_TO_MENU && !ivr.isKnownKind(current)) {
+            if (current && current !== GO_TO_MENU && !isKnownKind(current)) {
                 options.push({ value: current, text: t('unknownKind', 'Unknown: {id}', { id: current }) });
             }
 
@@ -431,12 +455,12 @@
             var targetId = idPrefix + '-t-' + nodeIndex + '-' + optionIndex;
             var digit = String(option.digit || '').trim();
             var ownChild = tree.childOf(nodeIndex, optionIndex);
-            var editorKind = ivr.editorKindOf(option.action, ownChild !== undefined);
-            var digits = ivr.availableDigits(node, optionIndex).map(function (key) {
+            var editorKind = editorKindOf(option.action, ownChild !== undefined);
+            var digits = availableDigits(node, optionIndex).map(function (key) {
                 return { value: key, text: key };
             });
 
-            if (digit && ivr.TELEPHONE_KEYS.indexOf(digit) === -1) {
+            if (digit && TELEPHONE_KEYS.indexOf(digit) === -1) {
                 digits.push({ value: digit, text: digit });
             }
 
@@ -476,10 +500,9 @@
         }
 
         function renderNode(node, nodeIndex) {
-            var nodeId = String(node.nodeId || '').trim();
             var promptId = idPrefix + '-p-' + nodeIndex;
             var mediaId = idPrefix + '-m-' + nodeIndex;
-            var canAddKey = ivr.availableDigits(node, -1).length > 0;
+            var canAddKey = availableDigits(node, -1).length > 0;
 
             var isUnused = tree.unused.indexOf(nodeIndex) >= 0;
 
@@ -600,7 +623,7 @@
             var focus = focusField ? { field: focusField } : captureFocus();
             var children = [];
 
-            tree = ivr.buildMenuTree(model);
+            tree = buildMenuTree(model);
 
             if (model.nodes.length === 0) {
                 children.push(renderEmpty());
@@ -696,7 +719,7 @@
             if (location.scope === 'node' && location.name === 'nodeId') {
                 delete transientIssues['node:' + location.node];
 
-                if (!ivr.renameNode(model, location.node, control.value)) {
+                if (!renameNode(model, location.node, control.value)) {
                     control.value = model.nodes[location.node].nodeId;
                     transientIssues['node:' + location.node] = { code: 'renameRefused', severity: 'error', path: { node: location.node, field: 'nodeId' }, params: {} };
                 }
@@ -706,8 +729,8 @@
                 return;
             }
 
-            if (location.scope === 'option' && location.name === 'kind' && control.value === ivr.GO_TO_MENU) {
-                setActionAt(location, ivr.actionForEditorKind(ivr.GO_TO_MENU));
+            if (location.scope === 'option' && location.name === 'kind' && control.value === GO_TO_MENU) {
+                setActionAt(location, actionForEditorKind(GO_TO_MENU));
                 render('option:' + location.node + ':' + location.option + ':target');
 
                 return;
@@ -715,7 +738,7 @@
 
             if (location.scope === 'option' && ((location.name === 'kind' && control.value === 'SubMenu') ||
                 (location.name === 'target' && control.value === NEW_MENU))) {
-                ivr.addSubMenu(model, location.node, location.option);
+                addSubMenu(model, location.node, location.option);
                 render('node:' + (model.nodes.length - 1) + ':prompt');
 
                 return;
@@ -733,9 +756,9 @@
                 if (!control.value) {
                     setActionAt(location, null);
                 } else if (current) {
-                    ivr.setActionKind(current, control.value);
+                    setActionKind(current, control.value);
                 } else {
-                    setActionAt(location, ivr.createAction(control.value));
+                    setActionAt(location, createAction(control.value));
                 }
             } else if (location.name === 'target') {
                 var action = actionAt(location);
@@ -760,17 +783,17 @@
 
             switch (command) {
                 case 'build':
-                    model = ivr.createModel();
-                    ivr.addNode(model);
+                    model = createModel();
+                    addNode(model);
                     render('node:0:prompt');
                     break;
                 case 'remove-menu':
                     transientIssues = {};
-                    ivr.removeSubMenu(model, nodeIndex);
+                    removeSubMenu(model, nodeIndex);
                     render();
                     break;
                 case 'add-option':
-                    if (ivr.addOption(model.nodes[nodeIndex])) {
+                    if (addOption(model.nodes[nodeIndex])) {
                         render('option:' + nodeIndex + ':' + (model.nodes[nodeIndex].options.length - 1) + ':kind');
                     }
                     break;
@@ -780,7 +803,7 @@
                     break;
                 case 'clear':
                     transientIssues = {};
-                    model = ivr.createModel();
+                    model = createModel();
                     render();
                     break;
                 default:
@@ -828,7 +851,7 @@
         // Replaces the menu with the JSON, but only JSON the entry point could save: it has to parse and pass every
         // check. Otherwise nothing changes, and each problem is listed with the menu it is on.
         function applyJson() {
-            var result = ivr.checkJsonForEditor(textarea.value, catalog);
+            var result = checkJsonForEditor(textarea.value, catalog);
 
             if (result.parseError) {
                 showJsonStatus([h('div', { className: 'text-danger' }, [
@@ -843,7 +866,7 @@
             }
 
             if (!result.ok) {
-                var checkedTree = ivr.buildMenuTree(result.model);
+                var checkedTree = buildMenuTree(result.model);
 
                 showJsonStatus([
                     h('div', { className: 'text-danger fw-semibold', text: t('jsonHasErrors', 'The JSON is valid, but the menu has problems to fix before it can be applied:') }),
@@ -888,7 +911,7 @@
         }
 
         function formatJsonField() {
-            textarea.value = ivr.formatJson(textarea.value);
+            textarea.value = formatJson(textarea.value);
             showJsonStatus(null);
         }
 
@@ -918,7 +941,7 @@
         });
 
         // Start in the forms, unless the field holds JSON they cannot show (a rejected edit shown back as typed).
-        var initial = ivr.parseJson(textarea.value);
+        var initial = parseJson(textarea.value);
 
         if (initial.ok) {
             model = initial.model;

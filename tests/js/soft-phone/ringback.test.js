@@ -1,19 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ringback.js';
-
-const {
-    RINGBACK_MAX_MS,
+import {
     RINGBACK_CADENCE,
-    normalizeRemotePartyState,
+    RINGBACK_MAX_MS,
     createRingbackMemory,
-    noteRemoteParty,
     forgetRemoteParty,
-    pruneRemoteParties,
     isRemotePartyRinging,
-    ringbackTimeLeftMs,
+    normalizeRemotePartyState,
+    noteRemoteParty,
     planRingback,
-} = globalThis.CrestAppsSoftPhone;
+    pruneRemoteParties,
+    ringbackTimeLeftMs,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/ringback.js';
 
 const call = (overrides) => ({ callId: 'agent-leg', state: 'Connected', isOnHold: false, browserOriginated: false, ...overrides });
 

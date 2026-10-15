@@ -122,12 +122,11 @@ internal sealed class AgentQueueMembershipIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<AgentQueueMembershipIndex>(table => table
-            .CreateIndex(
-                "IDX_AgentQueueMembershipIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<AgentQueueMembershipIndex>(
+            SchemaBuilder,
+            "IDX_AgentQueueMembershipIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 3;
     }

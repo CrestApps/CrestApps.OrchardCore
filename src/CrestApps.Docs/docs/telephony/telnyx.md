@@ -640,8 +640,9 @@ your platform, encrypted at rest — not left only in Telnyx's cloud.
 
 - **Recording control** — starting, pausing, resuming, and stopping a recording is driven by Contact Center
   recording governance and executed on the call through Telnyx Call Control (`record_start`, `record_pause`,
-  `record_resume`, `record_stop`). The recording carries the interaction as `client_state` so the finished
-  recording can be traced back to the conversation that owns it.
+  `record_resume`, `record_stop`). A call that was never recorded gets `record_start`; `record_resume` is sent only to
+  a call the platform paused. The finished recording is traced back to the conversation that owns it through the
+  call leg Telnyx names on `call.recording.saved`.
 - **Secure ingestion** — Telnyx assigns a recording id only once the recording is saved, so when the
   `call.recording.saved` webhook arrives the platform stamps the interaction with the recording's retrieval
   handle and enqueues a durable ingest job. A background sweep resolves the recording's current download URL

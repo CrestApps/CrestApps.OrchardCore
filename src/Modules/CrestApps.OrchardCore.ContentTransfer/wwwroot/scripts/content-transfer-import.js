@@ -68,7 +68,6 @@
 				}
 				var file = fileInput.files[0];
 				var url = form.action;
-				var url = form.action;
 				uploadError.style.display = "none";
 				if (maxFileSize > 0 && file.size > maxFileSize) {
 					uploadError.textContent = format(messages.fileTooLargeClient, maxFileSizeDisplay);

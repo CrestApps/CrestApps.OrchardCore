@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * One workspace-state fetch at a time, however many real-time events ask for one.
  *
@@ -7,54 +8,47 @@
  * in flight now folds into it, plus exactly one trailing fetch: the events that arrived mid-flight may describe a
  * change the response in flight predates, and the trailing fetch is what picks it up.
  *
- * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
- * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ * An ES module: the scripts that use it import it, the asset build bundles it into each of them, and the unit tests
+ * import it directly.
  */
-(function (root) {
-    'use strict';
 
-    var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
+// Wraps `run` (which returns a promise) so concurrent calls share work. Every call returns a promise that settles
+// once a fetch started at or after that call has finished.
+export function coalesceRefresh(run) {
+    var inFlight = null;
+    var trailing = null;
 
-    // Wraps `run` (which returns a promise) so concurrent calls share work. Every call returns a promise that settles
-    // once a fetch started at or after that call has finished.
-    function coalesceRefresh(run) {
-        var inFlight = null;
-        var trailing = null;
-
-        function start() {
-            try {
-                inFlight = Promise.resolve(run());
-            } catch (error) {
-                inFlight = Promise.reject(error);
-            }
-
-            var settled = function () {
-                inFlight = null;
-            };
-
-            inFlight.then(settled, settled);
-
-            return inFlight;
+    function start() {
+        try {
+            inFlight = Promise.resolve(run());
+        } catch (error) {
+            inFlight = Promise.reject(error);
         }
 
-        return function refresh() {
-            if (!inFlight) {
-                return start();
-            }
-
-            if (!trailing) {
-                var after = function () {
-                    trailing = null;
-
-                    return start();
-                };
-
-                trailing = inFlight.then(after, after);
-            }
-
-            return trailing;
+        var settled = function () {
+            inFlight = null;
         };
+
+        inFlight.then(settled, settled);
+
+        return inFlight;
     }
 
-    contactCenter.coalesceRefresh = coalesceRefresh;
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    return function refresh() {
+        if (!inFlight) {
+            return start();
+        }
+
+        if (!trailing) {
+            var after = function () {
+                trailing = null;
+
+                return start();
+            };
+
+            trailing = inFlight.then(after, after);
+        }
+
+        return trailing;
+    };
+}

@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js';
-
-const {
+import {
+    createAutoAnswerArm,
+    shouldAutoAnswerInboundLeg,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
+import {
+    ACCEPTED_RESERVATION_MEMORY_MS,
     STANDBY_GRACE_MS,
     STANDBY_LEG_MEMORY_MS,
     createPredictiveStandby,
+    forgetAcceptedReservation,
     isStandbyEligible,
-    setPredictiveStandby,
     isStandingBy,
-    readStandbyLegTag,
+    noteAcceptedReservation,
     noteStandbyLeg,
-    wasStandbyLegSeen,
+    readStandbyLegTag,
+    setPredictiveStandby,
+    shouldAnswerAcceptedReservationLeg,
     shouldStandbyAnswerLeg,
-    createAutoAnswerArm,
-    shouldAutoAnswerInboundLeg,
-} = globalThis.CrestAppsSoftPhone;
+    wasStandbyLegSeen,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/predictive-standby.js';
 
 const NOW = 1_000_000;
 
@@ -197,5 +199,87 @@ describe('noteStandbyLeg / wasStandbyLegSeen', () => {
 
         expect(Object.keys(standby.legs)).toEqual([]);
         expect(wasStandbyLegSeen(standby, '', NOW)).toBe(false);
+    });
+});
+
+// A call placed for an agent already reserved for it (Power, Progressive, Preview) is accepted when it is placed, and its
+// leg rings only once the customer answers, long after the short arm for the accept lapsed. Live, that leg rang as an
+// unsolicited call: a second line, answered by hand, with no customer on it.
+describe('shouldAnswerAcceptedReservationLeg', () => {
+    function accepted(reservationId = 'res-1', userId = 'user-1') {
+        const standby = createPredictiveStandby();
+        noteAcceptedReservation(standby, reservationId, userId, NOW);
+
+        return standby;
+    }
+
+    it('answers the tagged leg of an accepted reservation after the short arm has lapsed', () => {
+        const standby = accepted();
+        const arm = createAutoAnswerArm();
+        const later = NOW + 45000;
+
+        // The arm alone no longer answers it...
+        expect(shouldAutoAnswerInboundLeg(arm, later, claimedLeg())).toBe(false);
+
+        // ...but the remembered reservation does, without the phone standing by.
+        expect(isStandingBy(standby, later)).toBe(false);
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg(), later)).toBe('res-1');
+    });
+
+    it('answers it once: the reservation has one leg', () => {
+        const standby = accepted();
+
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg(), NOW + 1)).toBe('res-1');
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg(), NOW + 2)).toBe('');
+    });
+
+    it('does not answer a leg for another reservation, another user, or an untagged leg', () => {
+        const standby = accepted();
+
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg('res-2'), NOW)).toBe('');
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg('res-1', 'user-2'), NOW)).toBe('');
+        expect(shouldAnswerAcceptedReservationLeg(standby, {}, NOW)).toBe('');
+        expect(shouldAnswerAcceptedReservationLeg(standby, null, NOW)).toBe('');
+
+        // None of those spent it.
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg(), NOW)).toBe('res-1');
+    });
+
+    it('lets a call from a colleague or a call handed over ring, whatever it carries', () => {
+        const standby = accepted();
+
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg('res-1', 'user-1', { transferLeg: true }), NOW)).toBe('');
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg('res-1', 'user-1', {
+            customHeaders: [
+                { name: 'X-CC-Reservation', value: 'res-1' },
+                { name: 'X-CC-Agent-User', value: 'user-1' },
+                { name: 'X-Destination-Leg', value: '1' },
+            ],
+        }), NOW)).toBe('');
+    });
+
+    it('forgets a reservation once a call could no longer be ringing for it', () => {
+        const standby = accepted();
+
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg(), NOW + ACCEPTED_RESERVATION_MEMORY_MS + 1)).toBe('');
+        expect(Object.keys(standby.accepted)).toEqual([]);
+    });
+
+    it('forgets a reservation on request', () => {
+        const standby = accepted();
+
+        forgetAcceptedReservation(standby, 'res-1');
+
+        expect(shouldAnswerAcceptedReservationLeg(standby, claimedLeg(), NOW)).toBe('');
+    });
+
+    it('remembers nothing without a reservation and a user', () => {
+        const standby = createPredictiveStandby();
+
+        noteAcceptedReservation(standby, '', 'user-1', NOW);
+        noteAcceptedReservation(standby, 'res-1', '', NOW);
+        noteAcceptedReservation(null, 'res-1', 'user-1', NOW);
+
+        expect(Object.keys(standby.accepted)).toEqual([]);
     });
 });

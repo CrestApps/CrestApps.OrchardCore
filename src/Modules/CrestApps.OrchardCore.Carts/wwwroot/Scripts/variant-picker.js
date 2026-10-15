@@ -31,7 +31,7 @@
 		if (typeof document === "undefined" || !document.querySelectorAll) return;
 		function readVariants(select) {
 			return Array.prototype.map.call(select.options, function(option) {
-				var options = {};
+				var options;
 				try {
 					options = JSON.parse(option.getAttribute("data-options") || "{}");
 				} catch (e) {

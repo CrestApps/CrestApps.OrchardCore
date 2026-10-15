@@ -738,6 +738,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =
     [
         new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexTableIndexCreation.cs",
+            "IndexTableIndexCreation",
+            "ExistsAsync",
+            "0fd9dcb84ea12ee4",
+            "Read-only index existence probe. The statement is picked per dialect from four literal, parameterized 'SELECT COUNT(1)' queries over the engine's catalog (sys.indexes, pg_indexes, information_schema.statistics, sqlite_master), so it cannot create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",

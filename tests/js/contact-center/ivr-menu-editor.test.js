@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-flow-model.js';
+import * as ivr from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-flow-model.js';
 
-const ivr = globalThis.CrestAppsIvrMenu;
 const editorScript = '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/ivr-menu/ivr-menu-editor.js';
 
 // Just enough of the DOM for the IVR menu editor: the element tree, attributes (with hidden and className reflected
@@ -136,7 +135,7 @@ async function openEditor({ json = menuJson, navigator = {} } = {}) {
     document.body.appendChild(parts.root);
 
     globalThis.document = document;
-    globalThis.window = { CrestAppsIvrMenu: ivr, navigator };
+    globalThis.window = { navigator };
 
     // The editor starts itself on load, so each test loads it afresh over its own page.
     vi.resetModules();

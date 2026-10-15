@@ -41,6 +41,8 @@ The repository is a single npm workspace. Every module that ships a third-party 
 | `npm run watch` | Builds, then rebuilds a group whenever one of its sources changes. Copies are not watched. |
 | `npm run dry-run` | Lists the selected groups and the files each one reads and writes, without building. |
 | `npm run clean` | Deletes the selected groups' outputs and the build cache. |
+| `npm run lint` | Lints every module's scripts with ESLint. |
+| `npm run check` | Type-checks the scripts that opt in with `// @ts-check`. |
 
 Every command accepts filters after `--`. A group is selected when it matches any of them:
 
@@ -110,19 +112,27 @@ _manifest
 
 Scripts are built with [Vite](https://vite.dev/) into a classic script that a page loads with a plain `<script>` tag. It is not an ES module. The output targets current browsers and is minified for the `.min.js` file.
 
-A group with several sources runs them in the order they are listed, so **list a helper before the script that uses it**. Files in a bundle share state through a namespace on `window` rather than through `import` statements:
+Write a script's helpers as ES modules: a helper `export`s its functions, and the script that uses them `import`s them. Point the group's `source` at the main script alone; the build follows its imports, so a helper can neither be left out of the bundle nor run too late. The unit tests import the same helpers.
 
 ```js
-(function (root) {
+// Assets/js/soft-phone/format.js
+export function formatPhoneNumber(number) {
+    // ...
+}
+```
+
+```js
+// Assets/js/soft-phone.js, the group's source
+import { formatPhoneNumber } from './soft-phone/format.js';
+
+(function () {
     'use strict';
 
-    var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-
-    softPhone.formatPhoneNumber = function (number) {
-        // ...
-    };
-}(typeof globalThis !== 'undefined' ? globalThis : window));
+    // ... the script uses formatPhoneNumber directly ...
+}());
 ```
+
+A helper can import another module's helper with a relative path, and the build copies it into the bundle. What one bundle offers another on the same page is a deliberate page API on `window`, such as `window.telephonyClient` or `window.telephonySoftPhone`, not a helper. A group can still list several sources; they then run in the order they are listed.
 
 Each source is built as its own strict-mode module. Two habits that work in a plain script do not work in a bundle:
 
@@ -181,6 +191,14 @@ Pin an exact version for a library whose behavior you have tested against, such 
 4. Register the `.min.js` and `.js` pair in the module's resource manifest, and require it from a view or a display driver.
 5. Commit the source, the `Assets.json` change and the built `wwwroot` files.
 
+## Lint and type-check
+
+`npm run lint` runs ESLint over every module's `Assets` scripts with its recommended rules. It catches mistakes such as a name that is used but never declared, which in a browser only fails when that line runs. When a script reads a global that another script on the page defines, such as `signalR` or `Stripe`, add it to the page globals in `eslint.config.mjs`.
+
+`npm run check` type-checks, with TypeScript, the scripts whose first line is `// @ts-check`. Nothing is compiled: TypeScript only reports errors, and Vite still builds the scripts. Add the comment to a script once it checks clean, and keep it clean from then on.
+
+A pull request runs both, and fails on any error.
+
 ## Troubleshooting
 
 | Problem | What to do |
@@ -188,5 +206,5 @@ Pin an exact version for a library whose behavior you have tested against, such 
 | `'node_modules/...' was not found in any node_modules folder` | Run `npm install` at the repository root. |
 | The build warns that another Node.js version is running | Switch to Node.js 24, the version in `.node-version`. |
 | A script works in the readable file but a global is missing on the page | The script published its API through a top-level `var` or an undeclared assignment. Assign it to `window` instead. |
-| The pull request fails "Test building assets" | Run `npm run rebuild` and commit the `wwwroot` changes it makes. |
+| The pull request fails "Test building assets" | Run `npm run lint`, `npm run check` and `npm run rebuild`, fix what they report, and commit the `wwwroot` changes the rebuild makes. |
 | `npm run build` skips a group you expected to build | Run `npm run rebuild -- -n <group name>`, or `npm run clean` to clear the build cache. |

@@ -7,12 +7,19 @@
  * instead -- who is being monitored, a Listen / Whisper / Barge switcher that changes the mode on the same leg, and
  * Stop. After a takeover the call is the supervisor's, and Stop becomes Hang up.
  *
- * Concatenated after shared/supervisor-actions.js, which decides how the banner reads.
+ * How the banner reads is decided by shared/supervisor-actions.js, which it imports.
  */
+import {
+    MONITOR_MODES,
+    monitorBannerHtml,
+    monitorEndedMessage,
+    nextMonitorEngagement,
+    shouldPromoteMonitorLeg,
+} from './shared/supervisor-actions.js';
+
 (function (window, document) {
     'use strict';
 
-    var contactCenter = window.CrestAppsContactCenter || {};
 
     function readStrings(banner) {
         try {
@@ -50,8 +57,8 @@
         place(banner);
 
         function render() {
-            var html = typeof contactCenter.monitorBannerHtml === 'function'
-                ? contactCenter.monitorBannerHtml(engagement, strings)
+            var html = typeof monitorBannerHtml === 'function'
+                ? monitorBannerHtml(engagement, strings)
                 : '';
 
             banner.innerHTML = html;
@@ -68,7 +75,7 @@
         function apply(event) {
             var previous = engagement;
 
-            engagement = contactCenter.nextMonitorEngagement(engagement, event);
+            engagement = nextMonitorEngagement(engagement, event);
 
             if (!engagement) {
                 return;
@@ -91,7 +98,7 @@
 
             // Taken over, the call is the supervisor's own: it moves to their phone's call list, where it is muted, held
             // and hung up like any other, and the banner goes. Live, a supervisor who took a call over had only the banner.
-            if (contactCenter.shouldPromoteMonitorLeg(previous, engagement) &&
+            if (shouldPromoteMonitorLeg(previous, engagement) &&
                 typeof api.promoteMonitorLeg === 'function' && api.promoteMonitorLeg(engagement.token)) {
                 engagement = null;
                 render();
@@ -105,8 +112,8 @@
                 api.hangupMonitorLeg(engagement.token);
 
                 // A phone that never answered is the supervisor's to fix: say so, rather than just reverting.
-                var endedMessage = typeof contactCenter.monitorEndedMessage === 'function'
-                    ? contactCenter.monitorEndedMessage(engagement, strings)
+                var endedMessage = typeof monitorEndedMessage === 'function'
+                    ? monitorEndedMessage(engagement, strings)
                     : '';
 
                 if (endedMessage && typeof api.showError === 'function') {
@@ -173,7 +180,7 @@
 
             if (modeButton) {
                 var mode = modeButton.getAttribute('data-cc-monitor-mode');
-                var modeIndex = (contactCenter.MONITOR_MODES || []).indexOf(mode);
+                var modeIndex = (MONITOR_MODES || []).indexOf(mode);
 
                 if (modeIndex < 0 || mode === current.mode) {
                     return;

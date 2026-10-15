@@ -6,6 +6,14 @@
  * presence board. It reads its configuration from the root element's data-config attribute and depends
  * on the shared "contact-center-realtime" helper for the hub connection.
  */
+import {
+    agentBoardFiltersActive,
+    filterSupervisorAgents,
+    normalizeAgentBoardFilters,
+} from './shared/agent-board-filters.js';
+import { supervisorPhoneCallSummary } from './shared/supervisor-actions.js';
+import { createSupervisorInterventions } from './supervisor-interventions.js';
+
 (function (window, document) {
     'use strict';
 
@@ -80,7 +88,6 @@
             qualityAlerts: root.querySelector('[data-cc-quality-alerts]')
         };
 
-        var contactCenter = window.CrestAppsContactCenter || {};
 
         // The agent board's filters (see shared/agent-board-filters.js), remembered from the supervisor's last visit.
         var filters = readStoredFilters() || {};
@@ -145,8 +152,8 @@
                 campaign.parentElement.hidden = !(state.campaigns || []).length;
             }
 
-            filters = typeof contactCenter.normalizeAgentBoardFilters === 'function'
-                ? contactCenter.normalizeAgentBoardFilters(filters, state)
+            filters = typeof normalizeAgentBoardFilters === 'function'
+                ? normalizeAgentBoardFilters(filters, state)
                 : filters;
 
             ['search', 'queueId', 'campaignId', 'status'].forEach(function (name) {
@@ -160,8 +167,8 @@
             var clear = refs.filters.querySelector('[data-cc-filter-clear]');
 
             if (clear) {
-                clear.disabled = typeof contactCenter.agentBoardFiltersActive === 'function'
-                    ? !contactCenter.agentBoardFiltersActive(filters)
+                clear.disabled = typeof agentBoardFiltersActive === 'function'
+                    ? !agentBoardFiltersActive(filters)
                     : true;
             }
         }
@@ -324,8 +331,8 @@
             }
 
             var allAgents = state.agents || [];
-            var agents = typeof contactCenter.filterSupervisorAgents === 'function'
-                ? contactCenter.filterSupervisorAgents(allAgents, filters)
+            var agents = typeof filterSupervisorAgents === 'function'
+                ? filterSupervisorAgents(allAgents, filters)
                 : allAgents;
 
             renderBoardCount(agents.length, allAgents.length);
@@ -347,9 +354,7 @@
                 var status = agent.presenceStatus || 'Offline';
 
                 // An agent on a phone call of their own says so, whatever their presence: what they dialed, and for how long.
-                var phoneCall = window.CrestAppsContactCenter && typeof window.CrestAppsContactCenter.supervisorPhoneCallSummary === 'function'
-                    ? window.CrestAppsContactCenter.supervisorPhoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings)
-                    : '';
+                var phoneCall = supervisorPhoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings);
                 var detail = phoneCall || agent.presenceReason || status;
 
                 // Listen / Whisper / Barge, Stop and Take over under the name, and the More menu's kebab at the far right
@@ -492,21 +497,18 @@
         }
 
         var lastState = null;
-        var interventions = typeof window.CrestAppsContactCenter === 'object' &&
-            typeof window.CrestAppsContactCenter.createSupervisorInterventions === 'function'
-            ? window.CrestAppsContactCenter.createSupervisorInterventions({
-                root: root,
-                config: config,
-                refresh: refresh,
-                redraw: function () {
-                    if (lastState) {
-                        renderBoard(lastState);
-                    }
-                },
-                showError: showError,
-                clearError: clearError
-            })
-            : null;
+        var interventions = createSupervisorInterventions({
+            root: root,
+            config: config,
+            refresh: refresh,
+            redraw: function () {
+                if (lastState) {
+                    renderBoard(lastState);
+                }
+            },
+            showError: showError,
+            clearError: clearError
+        });
 
         if (interventions) {
             interventions.bind(refs.board);

@@ -102,12 +102,11 @@ internal sealed class CallQualityRecordIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom2Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<CallQualityRecordIndex>(table => table
-            .CreateIndex(
-                "IDX_CallQualityRecordIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallQualityRecordIndex>(
+            SchemaBuilder,
+            "IDX_CallQualityRecordIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
 
         return 3;
     }

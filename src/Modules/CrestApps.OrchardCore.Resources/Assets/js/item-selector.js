@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * The searchable selector behind the ItemSelector and UserPicker view components, built on the CrestApps
  * bootstrap-select fork rather than a picker of its own.

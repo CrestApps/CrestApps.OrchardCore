@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js';
-
-const { signInsHtml } = globalThis.CrestAppsContactCenter;
+import {
+    signInsHtml,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js';
 
 const view = readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Views/AgentWorkspace/Index.cshtml', 'utf8');
 

@@ -69,8 +69,6 @@ public sealed partial class AgentPresenceManagerService
             ChangedUtc = context?.ChangedUtc,
         }, cancellationToken);
 
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
-
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
 
@@ -148,8 +146,6 @@ public sealed partial class AgentPresenceManagerService
         // Round-robin fairness turns on who least recently finished work, so the stamp is taken here - at the end
         // of the work - rather than when an offer was pushed at the agent, which they may never have accepted.
         profile.LastWorkCompletedUtc = _clock.UtcNow;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
-
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
 

@@ -331,11 +331,11 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
     /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom7Async()
     {
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
-            .CreateIndex("IDX_OmnichannelActivityIndex_ItemId",
-                "ItemId",
-                "DocumentId"),
-            collection: OmnichannelConstants.CollectionName);
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_ItemId",
+            OmnichannelConstants.CollectionName,
+            "ItemId", "DocumentId");
 
         return 8;
     }

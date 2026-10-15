@@ -138,7 +138,7 @@
 				checkbox.className = "form-check-input";
 				checkbox.name = field.inputName;
 				checkbox.value = opt.value;
-				checkbox.id = field.inputName.replace(/[\[\]\.]/g, "_") + "_" + opt.value;
+				checkbox.id = field.inputName.replace(/[[\].]/g, "_") + "_" + opt.value;
 				if (presetValues && Array.isArray(presetValues) && presetValues.includes(opt.value)) checkbox.checked = true;
 				const label = document.createElement("label");
 				label.className = "form-check-label";

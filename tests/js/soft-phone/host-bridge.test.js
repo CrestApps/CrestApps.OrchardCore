@@ -1,16 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/host-bridge.js';
-
-const {
+import {
     HOST_ACK_TIMEOUT_MS,
     HOST_ACTION_GRACE_MS,
     buildIncomingCallMessage,
     createHostDelegation,
     findHostChannel,
     presentationFor,
-    readHostMessage
-} = globalThis.CrestAppsSoftPhone;
+    readHostMessage,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/host-bridge.js';
 
 const offer = callId => ({ type: 'incoming-call', protocol: 1, callId, from: '+17025550100', cards: [] });
 

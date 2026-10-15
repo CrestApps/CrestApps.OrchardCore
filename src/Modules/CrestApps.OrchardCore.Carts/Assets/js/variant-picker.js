@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * The variant picker of the Add to cart form.
  *
@@ -48,7 +49,7 @@
 
   function readVariants(select) {
     return Array.prototype.map.call(select.options, function (option) {
-      var options = {};
+      var options;
 
       try {
         options = JSON.parse(option.getAttribute('data-options') || '{}');

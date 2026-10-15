@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js';
-
-const { estimateMos, parseWebRtcStats, QUALITY_POOR_MOS, QUALITY_POOR_LOSS_PERCENT } = globalThis.CrestAppsSoftPhone;
+import {
+    QUALITY_HIGH_JITTER_BUFFER_MS,
+    QUALITY_POOR_LOSS_PERCENT,
+    QUALITY_POOR_MOS,
+    estimateMos,
+    parseWebRtcStats,
+    readJitterBufferMs,
+    windowedMicrophoneLevel,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js';
 
 /**
  * Builds an RTCStatsReport-shaped object: the real one is a Map, and the parser only ever iterates it.
@@ -116,7 +122,6 @@ describe('parseWebRtcStats', () => {
 // parties talking over each other, which is exactly what a "Good"-rated call that the agent described as
 // delayed turned out to be.
 describe('readJitterBufferMs', () => {
-    const { readJitterBufferMs, QUALITY_HIGH_JITTER_BUFFER_MS } = globalThis.CrestAppsSoftPhone;
 
     it('is unknown when the browser does not report the counters', () => {
         expect(readJitterBufferMs({ jitter: 0.01 }, null)).toBe(-1);
@@ -199,8 +204,8 @@ describe('parseWebRtcStats capture and outbound', () => {
 // cumulative energy counters.
 describe('windowedMicrophoneLevel', () => {
     it('is unknown when the browser reports no capture statistics', () => {
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(null, null)).toBe(-1);
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ kind: 'audio' }, null)).toBe(-1);
+        expect(windowedMicrophoneLevel(null, null)).toBe(-1);
+        expect(windowedMicrophoneLevel({ kind: 'audio' }, null)).toBe(-1);
     });
 
     it('reports the RMS across the window, not the instantaneous level', () => {
@@ -208,33 +213,33 @@ describe('windowedMicrophoneLevel', () => {
         const previous = { totalAudioEnergy: 1, totalSamplesDuration: 10 };
         const current = { audioLevel: 0, totalAudioEnergy: 1 + 0.04 * 8, totalSamplesDuration: 18 };
 
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(current, previous)).toBeCloseTo(0.2, 6);
+        expect(windowedMicrophoneLevel(current, previous)).toBeCloseTo(0.2, 6);
     });
 
     it('measures the first window from the call-lifetime totals', () => {
         const current = { audioLevel: 0, totalAudioEnergy: 0.09 * 4, totalSamplesDuration: 4 };
 
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(current, null)).toBeCloseTo(0.3, 6);
+        expect(windowedMicrophoneLevel(current, null)).toBeCloseTo(0.3, 6);
     });
 
     it('reports a measured silence when the window captured nothing', () => {
         const previous = { totalAudioEnergy: 2, totalSamplesDuration: 30 };
 
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ audioLevel: 0.4, totalAudioEnergy: 2, totalSamplesDuration: 30 }, previous)).toBe(0);
+        expect(windowedMicrophoneLevel({ audioLevel: 0.4, totalAudioEnergy: 2, totalSamplesDuration: 30 }, previous)).toBe(0);
     });
 
     it('treats counters that went backwards as reset and uses the current totals as the window', () => {
         const previous = { totalAudioEnergy: 5, totalSamplesDuration: 60 };
         const current = { audioLevel: 0, totalAudioEnergy: 0.01 * 2, totalSamplesDuration: 2 };
 
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(current, previous)).toBeCloseTo(0.1, 6);
+        expect(windowedMicrophoneLevel(current, previous)).toBeCloseTo(0.1, 6);
     });
 
     it('falls back to the instantaneous level when the cumulative counters are absent', () => {
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ audioLevel: 0.25 }, null)).toBe(0.25);
+        expect(windowedMicrophoneLevel({ audioLevel: 0.25 }, null)).toBe(0.25);
     });
 
     it('never reports above full scale', () => {
-        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ totalAudioEnergy: 10, totalSamplesDuration: 1 }, null)).toBe(1);
+        expect(windowedMicrophoneLevel({ totalAudioEnergy: 10, totalSamplesDuration: 1 }, null)).toBe(1);
     });
 });

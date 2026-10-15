@@ -1,17 +1,17 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js';
-
-const {
+import {
+    monitorBannerHtml,
+    monitorEndedMessage,
+    nextMonitorEngagement,
+    shouldPromoteMonitorLeg,
     supervisorAgentActions,
     supervisorAgentActionsHtml,
     supervisorAgentMenuHtml,
-    nextMonitorEngagement,
-    monitorBannerHtml,
-    monitorEndedMessage,
-    shouldPromoteMonitorLeg,
-} = globalThis.CrestAppsContactCenter;
+    supervisorMenuPlacement,
+    supervisorMessageHtml,
+    supervisorPhoneCallSummary,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js';
 
 const onCall = overrides => ({
     agentId: 'agent-1',
@@ -248,7 +248,6 @@ describe('why a supervisor engagement ended', () => {
 });
 
 describe('a supervisor\'s message to an agent', () => {
-    const { supervisorMessageHtml } = globalThis.CrestAppsContactCenter;
 
     it('shows who it is from and what it says, escaped, with a way to dismiss it', () => {
         const html = supervisorMessageHtml({ messageId: 'm1', fromName: 'Sam', text: 'Offer <b>10%</b>' }, {});
@@ -261,22 +260,6 @@ describe('a supervisor\'s message to an agent', () => {
 
     it('shows nothing for an empty message', () => {
         expect(supervisorMessageHtml({ text: '' }, {})).toBe('');
-    });
-});
-
-describe('the bundles', () => {
-    const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Assets.json', 'utf8'));
-    const helper = 'Assets/js/shared/supervisor-actions.js';
-
-    it.each([
-        ['wwwroot/scripts/supervisor-dashboard.js', 'Assets/js/supervisor-dashboard.js'],
-        ['wwwroot/scripts/contact-center-supervisor-phone.js', 'Assets/js/contact-center-supervisor-phone.js'],
-    ])('%s carries the helper ahead of the script that uses it', (output, script) => {
-        const group = assets.find(candidate => candidate.dest === output);
-
-        expect(group).toBeDefined();
-        expect(group.source.indexOf(helper)).toBeGreaterThanOrEqual(0);
-        expect(group.source.indexOf(helper)).toBeLessThan(group.source.indexOf(script));
     });
 });
 
@@ -308,7 +291,6 @@ describe('the More actions button', () => {
 });
 
 describe('placing the More menu', () => {
-    const { supervisorMenuPlacement } = globalThis.CrestAppsContactCenter;
     const viewport = { width: 1400, height: 900 };
     const menu = { width: 200, height: 300 };
 
@@ -349,7 +331,6 @@ describe('placing the More menu', () => {
 // An agent on a number they dialed from the keypad, or on an extension call, is on a call too: the board says so, with
 // who they are talking to and for how long, instead of showing them as Available.
 describe('an agent on a phone call of their own', () => {
-    const { supervisorPhoneCallSummary } = globalThis.CrestAppsContactCenter;
     const now = Date.parse('2026-09-25T18:10:05Z');
 
     it('reads On a call, the number dialed and how long it has lasted', () => {

@@ -3,260 +3,218 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		var STATUS_NAMES = [
-			"Offline",
-			"Available",
-			"Reserved",
-			"Busy",
-			"WrapUp",
-			"Break",
-			"RequestBreak",
-			"Away",
-			"DoNotDisturb",
-			"Meeting",
-			"Training",
-			"AfterHoursUnavailable"
-		];
-		var STATUS_LABELS = {
-			Offline: ["offline", "Offline"],
-			Available: ["available", "Available"],
-			Reserved: ["reserved", "Reserved"],
-			Busy: ["busy", "On a call"],
-			WrapUp: ["wrapUp", "Wrap-up"],
-			Break: ["break", "Break"],
-			RequestBreak: ["breakPending", "Break pending"],
-			Away: ["away", "Away"],
-			DoNotDisturb: ["doNotDisturb", "Do not disturb"],
-			Meeting: ["meeting", "Meeting"],
-			Training: ["training", "Training"],
-			AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
+	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js
+	var NO_ACTIVE_INTERACTION = "none";
+	function escape(value) {
+		return String(value === null || value === void 0 ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+	}
+	function activeInteractionSignature(active) {
+		if (!active) return NO_ACTIVE_INTERACTION;
+		return [
+			active.interactionId,
+			active.status,
+			active.recordingState || "",
+			active.isRecordingPaused === true ? "paused" : "",
+			active.recordingDisclosure ? "disclosure-owed" : ""
+		].join(":");
+	}
+	function createChangeGate() {
+		var drawn = false;
+		var last;
+		return function changed(signature) {
+			if (drawn && signature === last) return false;
+			drawn = true;
+			last = signature;
+			return true;
 		};
-		var REASONED_STATES = {
-			Break: true,
-			Away: true,
-			DoNotDisturb: true,
-			Meeting: true,
-			Training: true,
-			AfterHoursUnavailable: true
-		};
-		var WORKING_STATES = {
-			Reserved: true,
-			Busy: true,
-			WrapUp: true
-		};
-		function normalizePresenceStatus(value) {
-			if (typeof value === "number") return STATUS_NAMES[value] || "Offline";
-			if (typeof value === "string" && value) {
-				if (/^\d+$/.test(value)) return STATUS_NAMES[Number(value)] || "Offline";
-				return value;
-			}
-			return "Offline";
+	}
+	function emptyStateHtml(options, tagName) {
+		var settings = options || {};
+		var tag = tagName || "div";
+		return "<" + tag + " class=\"cc-empty\" data-cc-empty><div class=\"cc-empty__icon\" aria-hidden=\"true\"><i class=\"" + escape(settings.icon || "fa-regular fa-circle-check") + "\"></i></div><div class=\"cc-empty__title\">" + escape(settings.title) + "</div>" + (settings.hint ? "<div class=\"cc-empty__hint\">" + escape(settings.hint) + "</div>" : "") + "</" + tag + ">";
+	}
+	function format(template, value) {
+		return String(template || "").replace("{0}", value);
+	}
+	function signInsHtml(queues, campaigns, labels) {
+		var text = labels || {};
+		var queueList = queues || [];
+		var campaignList = campaigns || [];
+		if (!queueList.length && !campaignList.length) return "<div class=\"cc-sign-ins__none\">" + escape(text.noSignIns || "You are not signed in to any queue or campaign.") + "</div>";
+		function group(title, chips) {
+			return "<div class=\"cc-sign-ins__group\"><div class=\"cc-sign-ins__label\">" + escape(title) + "</div><div class=\"cc-sign-ins__chips\">" + chips.join("") + "</div></div>";
 		}
-		function text(labels, key, fallback) {
-			var value = labels && labels[key];
-			return typeof value === "string" && value ? value : fallback;
-		}
-		function hasReason(reason) {
-			return typeof reason === "string" && reason.trim().length > 0;
-		}
-		function presenceLabel(presence, labels) {
-			presence = presence || {};
-			var status = normalizePresenceStatus(presence.status);
-			if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
-			var entry = STATUS_LABELS[status];
-			return entry ? text(labels, entry[0], entry[1]) : status;
-		}
-		function pendingPresenceLabel(presence, labels) {
-			presence = presence || {};
-			var status = normalizePresenceStatus(presence.status);
-			if ((presence.requestedStatus == null || presence.requestedStatus === "" ? "" : normalizePresenceStatus(presence.requestedStatus)) !== "Break" || status === "Break" || status === "RequestBreak") return "";
-			if (hasReason(presence.reason)) return text(labels, "breakPendingWithReason", "Break pending: {0}").replace("{0}", presence.reason.trim());
-			return text(labels, "breakPending", "Break pending");
-		}
-		function breakChoiceLabel(presence, labels) {
-			presence = presence || {};
-			return presence.hasActiveReservation === true || WORKING_STATES[normalizePresenceStatus(presence.status)] === true ? text(labels, "requestBreak", "Request break") : text(labels, "break", "Break");
-		}
-		function isOwnPresence(notification, ownUserId) {
-			if (!notification) return false;
-			if (!ownUserId || !notification.userId) return true;
-			return String(notification.userId) === String(ownUserId);
-		}
-		function isOwnOfferNotification(notification, ownUserId) {
-			return isOwnPresence(notification, ownUserId);
-		}
-		contactCenter.isOwnOfferNotification = isOwnOfferNotification;
-		contactCenter.normalizePresenceStatus = normalizePresenceStatus;
-		contactCenter.presenceLabel = presenceLabel;
-		contactCenter.pendingPresenceLabel = pendingPresenceLabel;
-		contactCenter.breakChoiceLabel = breakChoiceLabel;
-		contactCenter.isOwnPresence = isOwnPresence;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		var html = "";
+		if (queueList.length) html += group(text.queues || "Queues", queueList.map(function(queue) {
+			var count = Number(queue && queue.waitingCount) || 0;
+			return "<span class=\"cc-queue-chip\" title=\"" + escape(queue && queue.name) + "\"><span class=\"cc-queue-chip__name\">" + escape(queue && queue.name) + "</span><span class=\"cc-queue-chip__count" + (count > 0 ? "" : " is-empty") + "\" title=\"" + escape(format(text.waiting || "{0} waiting", count)) + "\">" + count + "</span></span>";
+		}));
+		if (campaignList.length) html += group(text.campaigns || "Campaigns", campaignList.map(function(campaign) {
+			return "<span class=\"cc-queue-chip cc-queue-chip--campaign\" title=\"" + escape(campaign && campaign.name) + "\"><i class=\"fa-solid fa-bullhorn\" aria-hidden=\"true\"></i><span class=\"cc-queue-chip__name\">" + escape(campaign && campaign.name) + "</span></span>";
+		}));
+		return html;
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/coalesced-refresh.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		function coalesceRefresh(run) {
-			var inFlight = null;
-			var trailing = null;
-			function start() {
-				try {
-					inFlight = Promise.resolve(run());
-				} catch (error) {
-					inFlight = Promise.reject(error);
-				}
-				var settled = function() {
-					inFlight = null;
-				};
-				inFlight.then(settled, settled);
-				return inFlight;
+	function coalesceRefresh(run) {
+		var inFlight = null;
+		var trailing = null;
+		function start() {
+			try {
+				inFlight = Promise.resolve(run());
+			} catch (error) {
+				inFlight = Promise.reject(error);
 			}
-			return function refresh() {
-				if (!inFlight) return start();
-				if (!trailing) {
-					var after = function() {
-						trailing = null;
-						return start();
-					};
-					trailing = inFlight.then(after, after);
-				}
-				return trailing;
+			var settled = function() {
+				inFlight = null;
 			};
+			inFlight.then(settled, settled);
+			return inFlight;
 		}
-		contactCenter.coalesceRefresh = coalesceRefresh;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		return function refresh() {
+			if (!inFlight) return start();
+			if (!trailing) {
+				var after = function() {
+					trailing = null;
+					return start();
+				};
+				trailing = inFlight.then(after, after);
+			}
+			return trailing;
+		};
+	}
+	//#endregion
+	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js
+	var STATUS_NAMES = [
+		"Offline",
+		"Available",
+		"Reserved",
+		"Busy",
+		"WrapUp",
+		"Break",
+		"RequestBreak",
+		"Away",
+		"DoNotDisturb",
+		"Meeting",
+		"Training",
+		"AfterHoursUnavailable"
+	];
+	var STATUS_LABELS = {
+		Offline: ["offline", "Offline"],
+		Available: ["available", "Available"],
+		Reserved: ["reserved", "Reserved"],
+		Busy: ["busy", "On a call"],
+		WrapUp: ["wrapUp", "Wrap-up"],
+		Break: ["break", "Break"],
+		RequestBreak: ["breakPending", "Break pending"],
+		Away: ["away", "Away"],
+		DoNotDisturb: ["doNotDisturb", "Do not disturb"],
+		Meeting: ["meeting", "Meeting"],
+		Training: ["training", "Training"],
+		AfterHoursUnavailable: ["afterHoursUnavailable", "After-hours unavailable"]
+	};
+	var REASONED_STATES = {
+		Break: true,
+		Away: true,
+		DoNotDisturb: true,
+		Meeting: true,
+		Training: true,
+		AfterHoursUnavailable: true
+	};
+	var WORKING_STATES = {
+		Reserved: true,
+		Busy: true,
+		WrapUp: true
+	};
+	function normalizePresenceStatus(value) {
+		if (typeof value === "number") return STATUS_NAMES[value] || "Offline";
+		if (typeof value === "string" && value) {
+			if (/^\d+$/.test(value)) return STATUS_NAMES[Number(value)] || "Offline";
+			return value;
+		}
+		return "Offline";
+	}
+	function text$1(labels, key, fallback) {
+		var value = labels && labels[key];
+		return typeof value === "string" && value ? value : fallback;
+	}
+	function hasReason(reason) {
+		return typeof reason === "string" && reason.trim().length > 0;
+	}
+	function presenceLabel(presence, labels) {
+		presence = presence || {};
+		var status = normalizePresenceStatus(presence.status);
+		if (REASONED_STATES[status] && hasReason(presence.reason)) return presence.reason.trim();
+		var entry = STATUS_LABELS[status];
+		return entry ? text$1(labels, entry[0], entry[1]) : status;
+	}
+	function pendingPresenceLabel(presence, labels) {
+		presence = presence || {};
+		var status = normalizePresenceStatus(presence.status);
+		if ((presence.requestedStatus == null || presence.requestedStatus === "" ? "" : normalizePresenceStatus(presence.requestedStatus)) !== "Break" || status === "Break" || status === "RequestBreak") return "";
+		if (hasReason(presence.reason)) return text$1(labels, "breakPendingWithReason", "Break pending: {0}").replace("{0}", presence.reason.trim());
+		return text$1(labels, "breakPending", "Break pending");
+	}
+	function breakChoiceLabel(presence, labels) {
+		presence = presence || {};
+		return presence.hasActiveReservation === true || WORKING_STATES[normalizePresenceStatus(presence.status)] === true ? text$1(labels, "requestBreak", "Request break") : text$1(labels, "break", "Break");
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/offer-actions.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		var OFFER_ACCEPT_TIMEOUT_MS = 2e4;
-		function text(labels, key, fallback) {
-			return labels && labels[key] || fallback;
+	var OFFER_ACCEPT_TIMEOUT_MS = 2e4;
+	function text(labels, key, fallback) {
+		return labels && labels[key] || fallback;
+	}
+	function offerAcceptView(state, labels) {
+		var pending = !!(state && state.pending);
+		var preview = !!(state && state.preview);
+		if (pending) return {
+			disabled: true,
+			spinner: true,
+			label: preview ? text(labels, "dialing", "Dialing…") : text(labels, "answering", "Answering…")
+		};
+		return {
+			disabled: false,
+			spinner: false,
+			label: preview ? text(labels, "dial", "Dial") : text(labels, "accept", "Accept")
+		};
+	}
+	function showOfferAccepting(container, state, labels) {
+		if (!container || typeof container.querySelectorAll !== "function") return;
+		var view = offerAcceptView(state, labels);
+		Array.prototype.forEach.call(container.querySelectorAll("button"), function(button) {
+			button.disabled = view.disabled;
+		});
+		var acceptButton = container.querySelector("[data-cc-accept]");
+		if (!acceptButton) return;
+		if (view.spinner) {
+			if (acceptButton.__restingHtml === void 0) acceptButton.__restingHtml = acceptButton.innerHTML;
+			var spinner = acceptButton.ownerDocument.createElement("span");
+			spinner.className = "spinner-border spinner-border-sm me-1";
+			spinner.setAttribute("role", "status");
+			spinner.setAttribute("aria-hidden", "true");
+			acceptButton.textContent = "";
+			acceptButton.appendChild(spinner);
+			acceptButton.appendChild(acceptButton.ownerDocument.createTextNode(view.label));
+		} else if (acceptButton.__restingHtml !== void 0) {
+			acceptButton.innerHTML = acceptButton.__restingHtml;
+			acceptButton.__restingHtml = void 0;
 		}
-		function offerAcceptView(state, labels) {
-			var pending = !!(state && state.pending);
-			var preview = !!(state && state.preview);
-			if (pending) return {
-				disabled: true,
-				spinner: true,
-				label: preview ? text(labels, "dialing", "Dialing…") : text(labels, "answering", "Answering…")
-			};
-			return {
-				disabled: false,
-				spinner: false,
-				label: preview ? text(labels, "dial", "Dial") : text(labels, "accept", "Accept")
-			};
-		}
-		function showOfferAccepting(container, state, labels) {
-			if (!container || typeof container.querySelectorAll !== "function") return;
-			var view = offerAcceptView(state, labels);
-			Array.prototype.forEach.call(container.querySelectorAll("button"), function(button) {
-				button.disabled = view.disabled;
+	}
+	function withOfferAcceptTimeout(promise) {
+		return new Promise(function(resolve, reject) {
+			var timer = setTimeout(function() {
+				reject(Object.assign(/* @__PURE__ */ new Error("The accept timed out."), { offerAcceptTimedOut: true }));
+			}, OFFER_ACCEPT_TIMEOUT_MS);
+			Promise.resolve(promise).then(function(value) {
+				clearTimeout(timer);
+				resolve(value);
+			}, function(error) {
+				clearTimeout(timer);
+				reject(error);
 			});
-			var acceptButton = container.querySelector("[data-cc-accept]");
-			if (!acceptButton) return;
-			if (view.spinner) {
-				if (acceptButton.__restingHtml === void 0) acceptButton.__restingHtml = acceptButton.innerHTML;
-				var spinner = acceptButton.ownerDocument.createElement("span");
-				spinner.className = "spinner-border spinner-border-sm me-1";
-				spinner.setAttribute("role", "status");
-				spinner.setAttribute("aria-hidden", "true");
-				acceptButton.textContent = "";
-				acceptButton.appendChild(spinner);
-				acceptButton.appendChild(acceptButton.ownerDocument.createTextNode(view.label));
-			} else if (acceptButton.__restingHtml !== void 0) {
-				acceptButton.innerHTML = acceptButton.__restingHtml;
-				acceptButton.__restingHtml = void 0;
-			}
-		}
-		function withOfferAcceptTimeout(promise) {
-			return new Promise(function(resolve, reject) {
-				var timer = root.setTimeout(function() {
-					var error = /* @__PURE__ */ new Error("The accept timed out.");
-					error.offerAcceptTimedOut = true;
-					reject(error);
-				}, OFFER_ACCEPT_TIMEOUT_MS);
-				Promise.resolve(promise).then(function(value) {
-					root.clearTimeout(timer);
-					resolve(value);
-				}, function(error) {
-					root.clearTimeout(timer);
-					reject(error);
-				});
-			});
-		}
-		contactCenter.OFFER_ACCEPT_TIMEOUT_MS = OFFER_ACCEPT_TIMEOUT_MS;
-		contactCenter.offerAcceptView = offerAcceptView;
-		contactCenter.showOfferAccepting = showOfferAccepting;
-		contactCenter.withOfferAcceptTimeout = withOfferAcceptTimeout;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
-	//#endregion
-	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js
-	(function(root) {
-		"use strict";
-		var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
-		var NO_ACTIVE_INTERACTION = "none";
-		function escape(value) {
-			return String(value === null || value === void 0 ? "" : value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-		}
-		function activeInteractionSignature(active) {
-			if (!active) return NO_ACTIVE_INTERACTION;
-			return [
-				active.interactionId,
-				active.status,
-				active.recordingState || "",
-				active.isRecordingPaused === true ? "paused" : "",
-				active.recordingDisclosure ? "disclosure-owed" : ""
-			].join(":");
-		}
-		function createChangeGate() {
-			var drawn = false;
-			var last;
-			return function changed(signature) {
-				if (drawn && signature === last) return false;
-				drawn = true;
-				last = signature;
-				return true;
-			};
-		}
-		function emptyStateHtml(options, tagName) {
-			var settings = options || {};
-			var tag = tagName || "div";
-			return "<" + tag + " class=\"cc-empty\" data-cc-empty><div class=\"cc-empty__icon\" aria-hidden=\"true\"><i class=\"" + escape(settings.icon || "fa-regular fa-circle-check") + "\"></i></div><div class=\"cc-empty__title\">" + escape(settings.title) + "</div>" + (settings.hint ? "<div class=\"cc-empty__hint\">" + escape(settings.hint) + "</div>" : "") + "</" + tag + ">";
-		}
-		function format(template, value) {
-			return String(template || "").replace("{0}", value);
-		}
-		function signInsHtml(queues, campaigns, labels) {
-			var text = labels || {};
-			var queueList = queues || [];
-			var campaignList = campaigns || [];
-			if (!queueList.length && !campaignList.length) return "<div class=\"cc-sign-ins__none\">" + escape(text.noSignIns || "You are not signed in to any queue or campaign.") + "</div>";
-			function group(title, chips) {
-				return "<div class=\"cc-sign-ins__group\"><div class=\"cc-sign-ins__label\">" + escape(title) + "</div><div class=\"cc-sign-ins__chips\">" + chips.join("") + "</div></div>";
-			}
-			var html = "";
-			if (queueList.length) html += group(text.queues || "Queues", queueList.map(function(queue) {
-				var count = Number(queue && queue.waitingCount) || 0;
-				return "<span class=\"cc-queue-chip\" title=\"" + escape(queue && queue.name) + "\"><span class=\"cc-queue-chip__name\">" + escape(queue && queue.name) + "</span><span class=\"cc-queue-chip__count" + (count > 0 ? "" : " is-empty") + "\" title=\"" + escape(format(text.waiting || "{0} waiting", count)) + "\">" + count + "</span></span>";
-			}));
-			if (campaignList.length) html += group(text.campaigns || "Campaigns", campaignList.map(function(campaign) {
-				return "<span class=\"cc-queue-chip cc-queue-chip--campaign\" title=\"" + escape(campaign && campaign.name) + "\"><i class=\"fa-solid fa-bullhorn\" aria-hidden=\"true\"></i><span class=\"cc-queue-chip__name\">" + escape(campaign && campaign.name) + "</span></span>";
-			}));
-			return html;
-		}
-		contactCenter.NO_ACTIVE_INTERACTION = NO_ACTIVE_INTERACTION;
-		contactCenter.signInsHtml = signInsHtml;
-		contactCenter.activeInteractionSignature = activeInteractionSignature;
-		contactCenter.createChangeGate = createChangeGate;
-		contactCenter.emptyStateHtml = emptyStateHtml;
-	})(typeof globalThis !== "undefined" ? globalThis : window);
+		});
+	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/agent-workspace.js
 	(function(window, document) {
@@ -320,8 +278,7 @@
 			var strings = config.strings;
 			var state = null;
 			var serverOffsetMs = 0;
-			var panels = window.CrestAppsContactCenter;
-			var activeChanged = panels.createChangeGate();
+			var activeChanged = createChangeGate();
 			var offerSignature = null;
 			var queuesSignature = null;
 			var connectionStatusKey = null;
@@ -364,7 +321,7 @@
 			function serverNow() {
 				return Date.now() - serverOffsetMs;
 			}
-			var refresh = window.CrestAppsContactCenter.coalesceRefresh(function() {
+			var refresh = coalesceRefresh(function() {
 				return fetch(config.stateUrl, {
 					credentials: "same-origin",
 					headers: { "Accept": "application/json" }
@@ -386,14 +343,13 @@
 			}
 			function renderPresence() {
 				if (!refs.presenceLabel || !state) return;
-				var presence = window.CrestAppsContactCenter;
 				var current = state.presence || {};
-				var status = (presence ? presence.normalizePresenceStatus(current.status) : current.status) || "Offline";
-				var label = presence ? presence.presenceLabel(current, config.presenceLabels) : current.reason || status;
-				var pending = presence ? presence.pendingPresenceLabel(current, config.presenceLabels) : "";
+				var status = normalizePresenceStatus(current.status) || "Offline";
+				var label = presenceLabel(current, config.presenceLabels);
+				var pending = pendingPresenceLabel(current, config.presenceLabels);
 				refs.presenceLabel.textContent = pending ? label + " · " + pending : label;
-				if (presence && refs.presenceMenu) {
-					var breakChoice = presence.breakChoiceLabel(current, config.presenceLabels);
+				if (refs.presenceMenu) {
+					var breakChoice = breakChoiceLabel(current, config.presenceLabels);
 					Array.prototype.forEach.call(refs.presenceMenu.querySelectorAll("[data-cc-break-choice]"), function(element) {
 						element.textContent = breakChoice;
 					});
@@ -402,7 +358,7 @@
 			}
 			function renderQueues() {
 				if (!refs.signIns || !state) return;
-				var queuesHtml = panels.signInsHtml(state.queues || [], state.campaigns || [], {
+				var queuesHtml = signInsHtml(state.queues || [], state.campaigns || [], {
 					queues: label("signInQueues", "Queues"),
 					campaigns: label("signInCampaigns", "Campaigns"),
 					noSignIns: label("noSignIns", "You are not signed in to any queue or campaign."),
@@ -440,10 +396,10 @@
 			function renderActive() {
 				if (!refs.active || !state) return;
 				var active = state.activeInteraction;
-				if (!activeChanged(panels.activeInteractionSignature(active))) return;
+				if (!activeChanged(activeInteractionSignature(active))) return;
 				diagnostic("active-interaction-shown", describeActive(active));
 				if (!active) {
-					refs.active.innerHTML = panels.emptyStateHtml({
+					refs.active.innerHTML = emptyStateHtml({
 						icon: "fa-solid fa-headset",
 						title: label("noActiveCall", "No active interactions right now"),
 						hint: label("noActiveCallHint", "Incoming calls and messages you accept will appear here.")
@@ -460,23 +416,22 @@
 				refs.active.innerHTML = "<div class=\"cc-active\"><div class=\"cc-active__headline\"><span class=\"cc-active__dir\"><i class=\"fa-solid " + (inbound ? "fa-arrow-down-left" : "fa-arrow-up-right") + "\"></i></span><div><div class=\"cc-active__customer\">" + escapeHtml(active.customerLabel || active.customerAddress || label("unknownCaller", "Unknown caller")) + "</div><div class=\"cc-active__sub\">" + escapeHtml(inbound ? label("inbound", "Inbound") : label("outbound", "Outbound")) + (active.queueName ? " &middot; " + escapeHtml(active.queueName) : "") + (active.customerAddress ? " &middot; " + escapeHtml(active.customerAddress) : "") + "</div></div></div>" + (recordingBadge ? "<div class=\"cc-active__recording\">" + recordingBadge + "</div>" : "") + disclosureBlock + "<div class=\"cc-active__stats\"><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("status", "Status")) + "</div><div class=\"cc-stat__value\">" + escapeHtml(active.status) + "</div></div><div class=\"cc-stat\"><div class=\"cc-stat__label\">" + escapeHtml(label("talkTime", "Talk time")) + "</div><div class=\"cc-stat__value\" data-cc-talk-time aria-hidden=\"true\">0:00</div></div></div><div class=\"cc-active__actions\">" + (active.contactUrl ? "<a class=\"btn btn-sm btn-outline-secondary\" href=\"" + escapeHtml(active.contactUrl) + "\" target=\"_blank\" rel=\"noopener\"><i class=\"fa-solid fa-up-right-from-square\"></i> " + escapeHtml(label("openContact", "Open customer record")) + "</a>" : "") + secureButton + secureCaptureButton + (active.completeUrl ? "<a class=\"btn btn-sm btn-primary\" href=\"" + escapeHtml(active.completeUrl) + "\"><i class=\"fa-solid fa-check\"></i> " + escapeHtml(label("completeWork", "Complete activity")) + "</a>" : "") + "</div></div>";
 			}
 			function formatCustomer(value) {
-				var shared = window.CrestAppsSoftPhone;
-				if (shared && typeof shared.formatPhoneNumber === "function") return shared.formatPhoneNumber(value) || value;
+				var format = window.telephonyClient && window.telephonyClient.formatPhoneNumber;
+				if (typeof format === "function") return format(value) || value;
 				return value;
 			}
 			function formatTalkTime(entry) {
-				var shared = window.CrestAppsTelephonyShared;
-				if (!entry || !shared || typeof shared.formatDuration !== "function") return "";
+				if (!entry || typeof formatDuration !== "function") return "";
 				var answered = parseUtc(entry.answeredUtc);
 				var ended = parseUtc(entry.endedUtc);
 				if (!answered || !ended || ended <= answered) return "";
-				return shared.formatDuration(Math.round((ended - answered) / 1e3));
+				return formatDuration(Math.round((ended - answered) / 1e3));
 			}
 			function renderHistory() {
 				if (!refs.history || !state) return;
 				var history = state.recentHistory || [];
 				if (!history.length) {
-					refs.history.innerHTML = panels.emptyStateHtml({
+					refs.history.innerHTML = emptyStateHtml({
 						icon: "fa-solid fa-clock-rotate-left",
 						title: label("noHistory", "No recent interactions"),
 						hint: label("noHistoryHint", "Calls and messages you finish will be listed here.")
@@ -509,20 +464,19 @@
 			}
 			function accept(reservationId) {
 				if (!config.acceptOfferUrl) return;
-				var offerActions = window.CrestAppsContactCenter;
 				var answeringLabels = {
 					accept: label("accept", "Accept"),
 					answering: label("answering", "Answering…")
 				};
-				offerActions.showOfferAccepting(refs.offer, { pending: true }, answeringLabels);
-				offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId })).then(function(response) {
+				showOfferAccepting(refs.offer, { pending: true }, answeringLabels);
+				withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId })).then(function(response) {
 					if (!response.ok) showError(label("acceptFailed", "The offer could not be accepted. It may have been re-offered."));
 					else clearError();
 					return refresh();
 				}).catch(function(error) {
 					showError(error && error.offerAcceptTimedOut ? label("acceptTimedOut", "The call is taking too long to connect. Check your soft phone, then try again.") : label("acceptFailed", "The offer could not be accepted. It may have been re-offered."));
 				}).finally(function() {
-					offerActions.showOfferAccepting(refs.offer, { pending: false }, answeringLabels);
+					showOfferAccepting(refs.offer, { pending: false }, answeringLabels);
 				});
 			}
 			function decline(reservationId) {
