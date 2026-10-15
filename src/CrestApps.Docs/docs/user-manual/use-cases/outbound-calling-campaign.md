@@ -48,7 +48,7 @@ When it is done:
 10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power or progressive, the call is placed for them and the record opens as it rings. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
 11. **Agents record the outcome.** After the call, the agent completes the activity with a disposition and notes, which ends wrap-up and runs the subject flow. See [Activities](../activities.md).
 12. **Watch and adjust.** Supervisors filter the live dashboard by the campaign. Managers reassign, reschedule or move work to another dialer profile in bulk, and review dead numbers. See [Live dashboard](../live-dashboard.md), [Managing activities in bulk](../bulk-activities.md) and [Numbers not in service](../numbers-not-in-service.md).
-13. **Measure.** Use **Campaign summary**, **Subject inventory**, **Disposition breakdown** and **Agent productivity**. See [Reports](../reports.md).
+13. **Measure.** Use **Campaign summary**, **Subject inventory**, **Disposition breakdown** and **Agent productivity**, and **Dialer call detail** for the numbers behind the counts: every number that ended as *No answer*, for example. See [Reports](../reports.md).
 
 ## Check that it works
 

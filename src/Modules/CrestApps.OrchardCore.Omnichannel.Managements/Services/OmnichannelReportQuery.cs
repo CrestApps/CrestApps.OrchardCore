@@ -116,6 +116,7 @@ internal static class OmnichannelReportQuery
             .Where(activity => string.IsNullOrEmpty(criteria.Channel) || string.Equals(activity.Channel, criteria.Channel, StringComparison.OrdinalIgnoreCase))
             .Where(activity => MatchesSource(activity, criteria))
             .Where(activity => !criteria.Status.HasValue || activity.Status == criteria.Status.Value)
+            .Where(activity => criteria.DispositionIds is null || criteria.DispositionIds.Contains(activity.DispositionId ?? string.Empty))
             .ToArray();
     }
 
