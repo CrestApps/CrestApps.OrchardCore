@@ -208,6 +208,14 @@ public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTy
                     : result.ProviderName;
                 interaction.ProviderInteractionId = result.ProviderCallId;
                 interaction.StartedUtc = _clock.UtcNow;
+
+                // The agent's screens read it from here: an answered call that is being screened says so, rather than
+                // reading as a call the agent is on.
+                if (result.Metadata?.ContainsKey(ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested) == true)
+                {
+                    DialerCallMetadata.MarkAnswerDetectionRequested(interaction);
+                }
+
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
         }

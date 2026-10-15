@@ -1784,6 +1784,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static System.DateTime? GetAgentClaimedUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static System.DateTime? GetAgentJoinedUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static int? GetAttemptNumber(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static CrestApps.OrchardCore.ContactCenter.Models.DialAttemptPhase GetAttemptPhase(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static string GetDialerProfileId(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static System.DateTime? GetLiveAnsweredUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static int? GetMaxAttempts(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
@@ -1792,12 +1793,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static bool HasAgentJoined(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsAbandoned(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsAgentClaimed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static bool IsAnswerDetectionRequested(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsAwaitingAgent(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsCampaignDial(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool IsOverDialed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool MarkAbandoned(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string reason) { }
         public static bool MarkAgentClaimed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.DateTime claimedUtc) { }
         public static bool MarkAgentJoined(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.DateTime joinedUtc) { }
+        public static void MarkAnswerDetectionRequested(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static bool MarkLiveAnswered(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, System.DateTime answeredUtc) { }
         public static void MarkOverDialed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public static void SetOutcome(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, string outcome) { }

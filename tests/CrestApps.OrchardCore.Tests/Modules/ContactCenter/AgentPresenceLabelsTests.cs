@@ -87,7 +87,9 @@ public sealed class AgentPresenceLabelsTests
             new[]
             {
                 "afterHoursUnavailable", "available", "away", "break", "breakPending", "breakPendingWithReason", "busy",
-                "doNotDisturb", "meeting", "offline", "requestBreak", "reserved", "training", "wrapUp",
+                "dialPhaseConnecting", "dialPhaseConnectingHint", "dialPhaseDialing", "dialPhaseDialingHint",
+                "dialPhaseScreening", "dialPhaseScreeningHint", "doNotDisturb", "meeting", "offline", "requestBreak",
+                "reserved", "training", "wrapUp",
             },
             _labels.Keys.Order(StringComparer.Ordinal));
         Assert.Equal("Break pending: {0}", _labels["breakPendingWithReason"]);
