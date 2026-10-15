@@ -43,4 +43,29 @@ public interface IOmnichannelContactDuplicateLookupService
         Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include,
         CancellationToken cancellationToken)
         => await GetAllExistingNormalizedPhoneNumberOwnersAsync(cancellationToken);
+
+    /// <summary>
+    /// Returns, for each of <paramref name="phoneNumberKeys"/> that a stored record the predicate accepts holds, the
+    /// records that hold it. Only the records holding one of the keys are read, so an import checks a batch of rows
+    /// without reading every stored record into memory.
+    /// </summary>
+    /// <param name="phoneNumberKeys">The comparison keys of the numbers to look for.</param>
+    /// <param name="include">Decides, from the record's contact index row, whether its numbers count, or
+    /// <see langword="null"/> to count every record.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A mapping of the matching keys to owning content item identifiers.</returns>
+    async Task<Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(
+        IReadOnlyCollection<string> phoneNumberKeys,
+        Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include,
+        CancellationToken cancellationToken)
+    {
+        var owners = include is null
+            ? await GetAllExistingNormalizedPhoneNumberOwnersAsync(cancellationToken)
+            : await GetExistingNormalizedPhoneNumberOwnersAsync(include, cancellationToken);
+        var keys = new HashSet<string>(phoneNumberKeys, StringComparer.OrdinalIgnoreCase);
+
+        return owners
+            .Where(pair => keys.Contains(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+    }
 }

@@ -11,6 +11,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </summary>
 public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelContactDuplicateLookupService
 {
+    private const int LookupChunkSize = 400;
+
     private readonly ISession _session;
     private readonly IPhoneNumberService _phoneNumberService;
 
@@ -122,6 +124,59 @@ public sealed class OmnichannelContactDuplicateLookupService : IOmnichannelConta
             pair => pair.Key,
             pair => pair.Value.ToArray(),
             StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <inheritdoc />
+    public async Task<Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(
+        IReadOnlyCollection<string> phoneNumberKeys,
+        Func<OmnichannelContactIndex, bool> include,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(phoneNumberKeys);
+
+        var keys = phoneNumberKeys
+            .Where(key => !string.IsNullOrWhiteSpace(key))
+            .Select(key => key.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (keys.Length == 0)
+        {
+            return [];
+        }
+
+        var phoneOwners = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var seenDocuments = new HashSet<long>();
+
+        // The keys are compared with the four indexed number columns. Each chunk keeps the four lists of query
+        // parameters under the two thousand one hundred SQL Server accepts in one command.
+        foreach (var chunk in keys.Chunk(LookupChunkSize))
+        {
+            var matches = await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published &&
+                    (index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk) ||
+                    index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk) ||
+                    index.PrimaryCellPhoneNumber.IsIn(chunk) ||
+                    index.PrimaryHomePhoneNumber.IsIn(chunk)))
+                .ListAsync(cancellationToken);
+
+            foreach (var index in matches)
+            {
+                if (!seenDocuments.Add(index.Id) || (include is not null && !include(index)))
+                {
+                    continue;
+                }
+
+                AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryCellPhoneNumber, index.PrimaryCellPhoneNumber);
+                AddPhoneOwners(phoneOwners, index.ContentItemId, index.NormalizedPrimaryHomePhoneNumber, index.PrimaryHomePhoneNumber);
+            }
+        }
+
+        var requested = new HashSet<string>(keys, StringComparer.OrdinalIgnoreCase);
+
+        return phoneOwners
+            .Where(pair => requested.Contains(pair.Key))
+            .ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
     }
 
     private void AddPhoneFromIndex(HashSet<string> phoneNumbers, string normalizedValue, string rawValue)

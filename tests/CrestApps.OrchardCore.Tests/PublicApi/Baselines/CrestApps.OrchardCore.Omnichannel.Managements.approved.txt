@@ -1039,6 +1039,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken);
         System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken);
     }
     public sealed class ImportRowDoNotCallFlags
     {
@@ -1050,7 +1051,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class LeadImportProvider
     {
-        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer) { }
+        public LeadImportProvider(YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportProvider> stringLocalizer, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Managements.Models.OmnichannelBackfillState> backfillState = null, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager = null) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadImportSummary>> GetImportsAsync() { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>> GetOptionsAsync(string selectedEntryId) { }
     }
@@ -1060,6 +1061,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public string EntryId { get; init; }
         public string FileName { get; init; }
         public System.DateTime ImportedUtc { get; init; }
+        public bool IsIndexing { get; init; }
         public long LeadCount { get; init; }
     }
     public sealed class LeadMatchFinder
@@ -1100,6 +1102,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken) { }
     }
     public sealed class OmnichannelContentTypeProvider : OrchardCore.ContentTypes.Events.IContentDefinitionEventHandler
     {
