@@ -100,6 +100,82 @@ public sealed class DialerMaxAttemptsFallbackTests
     }
 
     [Theory]
+    [InlineData(1, 2)]
+    [InlineData(2, 3)]
+    [InlineData(3, null)]
+    public async Task TryAgainWithNoScheduleOrMaximum_OnDialerWork_RetriesAfterTheRetryDelay_UntilTheProfilesMaxAttempts(int completedAttempt, int? expectedNextAttempt)
+    {
+        // Arrange: the live case end to end from the disposition on. A voicemail answered attempt N, the dialer
+        // dispositioned it "No answer", and the subject's Try again names neither a schedule nor a maximum. The real
+        // executor creates the next attempt and the real dialer handler applies the profile: three attempts, an hour
+        // apart.
+        var action = new SubjectAction
+        {
+            ItemId = "try-again",
+            Source = OmnichannelConstants.ActionTypes.TryAgain,
+            SubjectContentType = "LeadGeneration",
+            DispositionId = "no-answer",
+        };
+        action.Put(new TryAgainActionMetadata { AssignmentType = SubjectActionOwnerAssignmentType.SameOwner });
+
+        var actionCatalog = new Mock<global::CrestApps.Core.Services.ISourceCatalog<SubjectAction>>();
+        actionCatalog
+            .Setup(value => value.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { action });
+
+        OmnichannelActivity saved = null;
+        var session = new Mock<global::YesSql.ISession>();
+        session
+            .Setup(value => value.SaveAsync(It.IsAny<object>(), false, OmnichannelConstants.CollectionName, It.IsAny<CancellationToken>()))
+            .Callback<object, bool, string, CancellationToken>((entity, _, _, _) => saved = (OmnichannelActivity)entity)
+            .Returns(Task.CompletedTask);
+
+        var executor = new global::CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultSubjectActionExecutor(
+            actionCatalog.Object,
+            Mock.Of<ISubjectFlowSettingsService>(),
+            Mock.Of<global::OrchardCore.ContentManagement.IContentManager>(),
+            Mock.Of<INotInServiceNumberService>(),
+            session.Object,
+            Clock(),
+            Mock.Of<ILocalClock>(),
+            NullLogger<global::CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultSubjectActionExecutor>.Instance,
+            followUpHandlers: [new FollowUpHarness().Handler]);
+
+        var context = new SubjectActionExecutionContext
+        {
+            Activity = new OmnichannelActivity
+            {
+                ItemId = "activity-1",
+                Source = ActivitySources.PowerDial,
+                SubjectContentType = "LeadGeneration",
+                Attempts = completedAttempt,
+                CompletedUtc = _now,
+                CompletedById = "agent-user",
+                CompletedByUsername = "agent",
+            },
+            Disposition = new OmnichannelDisposition { ItemId = "no-answer", Outcome = DispositionOutcome.NoAnswer },
+        };
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        if (expectedNextAttempt is null)
+        {
+            // The profile's three attempts are used: no fourth is created, rather than one a day forever.
+            Assert.Null(saved);
+
+            return;
+        }
+
+        Assert.NotNull(saved);
+        Assert.Equal(expectedNextAttempt, saved.Attempts);
+        Assert.Equal(_now.AddMinutes(60), saved.ScheduledUtc);
+        Assert.Equal("profile-1", saved.DialerProfileId);
+        Assert.Null(saved.MaxAttempts);
+    }
+
+    [Theory]
     [InlineData(DialerAttemptOutcomes.NoAnswer, false, true)]
     [InlineData(DialerAttemptOutcomes.Busy, false, true)]
     [InlineData(DialerAttemptOutcomes.AnsweringMachine, false, true)]
