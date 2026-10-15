@@ -735,6 +735,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.Collections.Generic.IList<string> Skills { get; set; }
         public string UserId { get; set; }
         public string UserName { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaAsset VoicemailGreetingMedia { get; set; }
         public string VoicemailGreetingMediaName { get; set; }
         public string VoicemailGreetingMediaUrl { get; set; }
         public string VoicemailGreetingText { get; set; }
@@ -1990,6 +1991,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.DateTime? NextAfterExpiresUtc { get; }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation> Reservations { get; }
     }
+    public interface IVoiceMediaAsset
+    {
+        string ContentType { get; set; }
+        string Format { get; set; }
+        string MasterStorageReference { get; set; }
+        System.Collections.Generic.Dictionary<string, string> ProviderReferences { get; set; }
+    }
     public sealed class InboundPriorityContext
     {
         public InboundPriorityContext() { }
@@ -3083,16 +3091,71 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string TransferringAgentId { get; set; }
         public string TransferringUserId { get; set; }
     }
-    public sealed class VoiceMediaItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    public sealed class VoiceMediaAsset : CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset
+    {
+        public VoiceMediaAsset() { }
+        public string ContentType { get; set; }
+        public string Format { get; set; }
+        public string MasterStorageReference { get; set; }
+        public System.Collections.Generic.Dictionary<string, string> ProviderReferences { get; set; }
+    }
+    public sealed class VoiceMediaItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset
     {
         public VoiceMediaItem() { }
+        public string ContentType { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public string Description { get; set; }
         public string Format { get; set; }
+        public string MasterStorageReference { get; set; }
         public string MediaReference { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
         public string ProviderName { get; set; }
+        public System.Collections.Generic.Dictionary<string, string> ProviderReferences { get; set; }
+    }
+    public sealed class VoiceMediaProvisioningResult
+    {
+        public VoiceMediaProvisioningResult() { }
+        public bool Changed { get; init; }
+        public string ProviderName { get; init; }
+        public string Reference { get; init; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaProvisioningStatus Status { get; init; }
+    }
+    public enum VoiceMediaProvisioningStatus
+    {
+        Provisioned = 0,
+        ProviderCopyOnly = 1,
+        NoAudio = 2,
+        Unavailable = 3,
+    }
+    public sealed class VoiceMediaResolution
+    {
+        public VoiceMediaResolution() { }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem Item { get; init; }
+        public string Reference { get; init; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaProvisioningStatus Status { get; init; }
+    }
+    public enum VoiceMediaResyncOutcome
+    {
+        Verified = 0,
+        Uploaded = 1,
+        Failed = 2,
+    }
+    public sealed class VoiceMediaResyncResult
+    {
+        public VoiceMediaResyncResult() { }
+        public bool HasMasterCopy { get; init; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaResyncOutcome> Providers { get; init; }
+    }
+    public sealed class VoiceMediaStoreResult
+    {
+        public VoiceMediaStoreResult() { }
+        public bool MasterStored { get; init; }
+        public string ProviderName { get; init; }
+        public string ProviderReference { get; init; }
+        public bool ProviderUploadFailed { get; init; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset Replaced { get; init; }
+        public bool Succeeded { get; }
     }
     public sealed class WarmTransferCommand
     {
@@ -5476,6 +5539,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IVoiceMediaProvisioningService
+    {
+        string ActiveProviderName { get; }
+        bool CanUpload { get; }
+        System.Threading.Tasks.Task DeleteEverywhereAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset media, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaProvisioningResult> EnsureProvisionedAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset media, string providerName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaResolution> ResolveAsync(string mediaId, string providerName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaResyncResult> ResyncAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem item, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaStoreResult> StoreAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset media, System.IO.Stream audio, string contentType, string format, string namePrefix, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IVoiceQueueOfferService
     {
         System.Threading.Tasks.Task<string> OfferNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
@@ -5927,7 +6000,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public abstract class ProviderCallActionCommandTypeExecutor : CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandTypeExecutor
     {
-        protected ProviderCallActionCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyService> telephonyServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
+        protected ProviderCallActionCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyService> telephonyServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaProvisioningService voiceMediaProvisioning, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
         protected abstract string ActionName { get; }
         public abstract CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandType CommandType { get; }
         protected abstract string ErrorCodePrefix { get; }
@@ -6215,7 +6288,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class RejectProviderCommandTypeExecutor : CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderCallActionCommandTypeExecutor
     {
-        public RejectProviderCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyService> telephonyServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
+        public RejectProviderCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyService> telephonyServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaProvisioningService voiceMediaProvisioning, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
         protected override string ActionName { get; }
         public override CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandType CommandType { get; }
         protected override string ErrorCodePrefix { get; }
@@ -6299,7 +6372,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class SendToVoicemailProviderCommandTypeExecutor : CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderCallActionCommandTypeExecutor
     {
-        public SendToVoicemailProviderCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyService> telephonyServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
+        public SendToVoicemailProviderCommandTypeExecutor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyService> telephonyServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaProvisioningService voiceMediaProvisioning, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter activityWriter, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
         protected override string ActionName { get; }
         public override CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandType CommandType { get; }
         protected override string ErrorCodePrefix { get; }
@@ -6397,6 +6470,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public VoiceMediaItemStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask LoadingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem record) { }
+    }
+    public sealed class VoiceMediaProvisioningService : CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaProvisioningService
+    {
+        public VoiceMediaProvisioningService(CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemStore store, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IRecordingMediaStore> mediaStores, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IVoiceMediaProvisioner> provisioners, Microsoft.Extensions.Options.IOptionsSnapshot<CrestApps.OrchardCore.Telephony.TelephonySettings> telephonySettings, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.VoiceMediaProvisioningService> logger) { }
+        public string ActiveProviderName { get; }
+        public bool CanUpload { get; }
+        public System.Threading.Tasks.Task DeleteEverywhereAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset media, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaProvisioningResult> EnsureProvisionedAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset media, string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaResolution> ResolveAsync(string mediaId, string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaResyncResult> ResyncAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem item, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaStoreResult> StoreAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.IVoiceMediaAsset media, System.IO.Stream audio, string contentType, string format, string namePrefix, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class VoicemailDelivery
     {
@@ -6428,7 +6513,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager,
-                    CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemManager mediaItemManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaProvisioningService voiceMediaProvisioning,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IConsultTransferService consults,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService agentRelease,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager,

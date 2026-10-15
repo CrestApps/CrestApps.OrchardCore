@@ -362,6 +362,185 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             capturedCall.Metadata[ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey]);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_SendToVoicemail_GivesTheCallsProviderACopyOfTheAgentsRecordedGreeting()
+    {
+        // Arrange
+        // The agent recorded the greeting while another provider was in use. The call is on this one, so the
+        // greeting is made available here from the master copy, the agent's record is stored with the new copy, and
+        // the provider is handed the copy it can play.
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        CallReference? capturedCall = null;
+
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            call =>
+            {
+                capturedCall = call;
+                return TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" });
+            });
+
+        var interaction = new Interaction { ItemId = "interaction-1", ProviderName = "OtherProvider" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var greeting = new VoiceMediaAsset
+        {
+            MasterStorageReference = "voice-media-greeting",
+            ProviderReferences = new Dictionary<string, string> { ["Telnyx"] = "cc-vm-greeting-telnyx" },
+        };
+        var agent = new AgentProfile
+        {
+            ItemId = "agent-9",
+            VoicemailGreetingMediaName = "cc-vm-greeting-telnyx",
+            VoicemailGreetingMedia = greeting,
+        };
+
+        var agentProfileManager = new Mock<IAgentProfileManager>(MockBehavior.Strict);
+        agentProfileManager
+            .Setup(manager => manager.FindByIdAsync("agent-9", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(agent);
+        agentProfileManager
+            .Setup(manager => manager.UpdateAsync(agent, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var voiceMediaProvisioning = new Mock<IVoiceMediaProvisioningService>(MockBehavior.Strict);
+        voiceMediaProvisioning
+            .Setup(service => service.EnsureProvisionedAsync(greeting, "OtherProvider", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new VoiceMediaProvisioningResult
+            {
+                ProviderName = "OtherProvider",
+                Reference = "cc-vm-greeting-other",
+                Status = VoiceMediaProvisioningStatus.Provisioned,
+                Changed = true,
+            });
+
+        var executor = CreateExecutor(
+            ProviderCommandType.SendToVoicemail,
+            telephonyService,
+            interactionManager,
+            publisher,
+            CreateClock(),
+            agentProfileManager: agentProfileManager,
+            voiceMediaProvisioning: voiceMediaProvisioning);
+
+        var command = CreateCommand(
+            ProviderCommandType.SendToVoicemail,
+            requestPayload: JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+            {
+                ActivityItemId = "activity-1",
+                QueueId = "queue-1",
+                ProviderCallId = "call-1",
+                AgentId = "agent-9",
+                AgentUserId = "user-1",
+            }));
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.NotNull(capturedCall);
+        Assert.Equal("cc-vm-greeting-other", capturedCall!.Metadata[ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey]);
+        agentProfileManager.Verify(
+            manager => manager.UpdateAsync(agent, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SendToVoicemail_PlaysAGreetingRecordedBeforeMasterCopiesWereKept_ByItsProviderName()
+    {
+        // Arrange
+        // There is nothing to make a copy from, so the copy the provider was given at upload is what plays, and the
+        // provisioning service is not asked for anything.
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        CallReference? capturedCall = null;
+
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            call =>
+            {
+                capturedCall = call;
+                return TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" });
+            });
+
+        var interaction = new Interaction { ItemId = "interaction-1", ProviderName = "Telnyx" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.CompletedTask);
+
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var agentProfileManager = new Mock<IAgentProfileManager>(MockBehavior.Strict);
+        agentProfileManager
+            .Setup(manager => manager.FindByIdAsync("agent-9", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "agent-9",
+                VoicemailGreetingMediaName = "cc-vm-greeting-legacy",
+            });
+
+        var voiceMediaProvisioning = new Mock<IVoiceMediaProvisioningService>(MockBehavior.Strict);
+
+        var executor = CreateExecutor(
+            ProviderCommandType.SendToVoicemail,
+            telephonyService,
+            interactionManager,
+            publisher,
+            CreateClock(),
+            agentProfileManager: agentProfileManager,
+            voiceMediaProvisioning: voiceMediaProvisioning);
+
+        var command = CreateCommand(
+            ProviderCommandType.SendToVoicemail,
+            requestPayload: JsonSerializer.Serialize(new ProviderCallActionCommandRequest
+            {
+                ActivityItemId = "activity-1",
+                QueueId = "queue-1",
+                ProviderCallId = "call-1",
+                AgentId = "agent-9",
+                AgentUserId = "user-1",
+            }));
+
+        // Act
+        var result = await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.NotNull(capturedCall);
+        Assert.Equal("cc-vm-greeting-legacy", capturedCall!.Metadata[ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey]);
+        voiceMediaProvisioning.VerifyNoOtherCalls();
+    }
+
     [Theory]
     [InlineData(ProviderCommandType.Reject)]
     [InlineData(ProviderCommandType.SendToVoicemail)]
@@ -953,11 +1132,13 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Mock<IActivityQueueService>? queueService = null,
         Mock<IOmnichannelActivityManager>? activityManager = null,
         ICallControlAuthorizationService? callControlAuthorizationService = null,
-        Mock<IAgentProfileManager>? agentProfileManager = null)
+        Mock<IAgentProfileManager>? agentProfileManager = null,
+        Mock<IVoiceMediaProvisioningService>? voiceMediaProvisioning = null)
     {
         queueService ??= new Mock<IActivityQueueService>(MockBehavior.Loose);
         activityManager ??= new Mock<IOmnichannelActivityManager>(MockBehavior.Loose);
         agentProfileManager ??= new Mock<IAgentProfileManager>(MockBehavior.Loose);
+        voiceMediaProvisioning ??= new Mock<IVoiceMediaProvisioningService>(MockBehavior.Loose);
         callControlAuthorizationService ??= new FakeCallControlAuthorizationService();
         var workStateService = new FakeContactCenterWorkStateService(activityManager.Object);
         var activityWriter = new FakeContactCenterActivityWriter(activityManager.Object);
@@ -968,6 +1149,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 [telephonyService.Object],
                 interactionManager.Object,
                 agentProfileManager.Object,
+                voiceMediaProvisioning.Object,
                 queueService.Object,
                 workStateService,
                 activityWriter,
@@ -978,6 +1160,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 [telephonyService.Object],
                 interactionManager.Object,
                 agentProfileManager.Object,
+                voiceMediaProvisioning.Object,
                 queueService.Object,
                 workStateService,
                 activityWriter,

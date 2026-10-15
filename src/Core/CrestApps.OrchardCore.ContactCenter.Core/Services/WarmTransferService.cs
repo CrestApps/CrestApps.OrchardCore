@@ -17,7 +17,7 @@ public sealed class WarmTransferService : IWarmTransferService
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
-    private readonly IVoiceMediaItemManager _mediaItemManager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
     private readonly IConsultTransferService _consults;
     private readonly ITransferAgentReleaseService _agentRelease;
     private readonly IAgentPresenceManager _presenceManager;
@@ -38,7 +38,7 @@ public sealed class WarmTransferService : IWarmTransferService
         IAgentProfileManager agentManager,
         IAgentAvailabilityService availabilityService,
         IActivityQueueManager queueManager,
-        IVoiceMediaItemManager mediaItemManager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
         IConsultTransferService consults,
         ITransferAgentReleaseService agentRelease,
         IAgentPresenceManager presenceManager,
@@ -56,7 +56,7 @@ public sealed class WarmTransferService : IWarmTransferService
         _agentManager = agentManager;
         _availabilityService = availabilityService;
         _queueManager = queueManager;
-        _mediaItemManager = mediaItemManager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
         _consults = consults;
         _agentRelease = agentRelease;
         _presenceManager = presenceManager;
@@ -136,7 +136,7 @@ public sealed class WarmTransferService : IWarmTransferService
             targetAddress = DisplayName(target);
         }
 
-        var holdAudio = await ResolveHoldAudioAsync(interaction.QueueId, cancellationToken);
+        var holdAudio = await ResolveHoldAudioAsync(interaction.QueueId, interaction.ProviderName, cancellationToken);
 
         if (!string.IsNullOrEmpty(holdAudio))
         {
@@ -362,7 +362,7 @@ public sealed class WarmTransferService : IWarmTransferService
             .OrderBy(consult => consult.StartedUtc)
             .LastOrDefault();
 
-    private async Task<string> ResolveHoldAudioAsync(string queueId, CancellationToken cancellationToken)
+    private async Task<string> ResolveHoldAudioAsync(string queueId, string providerName, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(queueId) || !ContactCenterConstants.QueueStartsAfterCallWork(queueId))
         {
@@ -378,16 +378,22 @@ public sealed class WarmTransferService : IWarmTransferService
         }
 
         // A URL plays as it is. A catalog id means nothing to the provider: the clip is held under the reference the
-        // provider gave it at upload, and handing over the id instead plays silence.
+        // provider gave it at upload, and handing over the id instead plays silence. The provider this call is on
+        // is given a copy from the master copy when it has none.
         if (Uri.TryCreate(mediaId, UriKind.Absolute, out var uri) &&
             (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
         {
             return mediaId;
         }
 
-        var item = await _mediaItemManager.FindByIdAsync(mediaId, cancellationToken);
+        if (string.IsNullOrEmpty(providerName))
+        {
+            return null;
+        }
 
-        return string.IsNullOrWhiteSpace(item?.MediaReference) ? null : item.MediaReference;
+        var resolution = await _voiceMediaProvisioning.ResolveAsync(mediaId, providerName, cancellationToken);
+
+        return string.IsNullOrWhiteSpace(resolution.Reference) ? null : resolution.Reference;
     }
 
     private static string DisplayName(AgentProfile agent)

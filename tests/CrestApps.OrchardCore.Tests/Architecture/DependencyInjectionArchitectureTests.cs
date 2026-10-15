@@ -93,9 +93,6 @@ public sealed class DependencyInjectionArchitectureTests
         new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
-        new DependencyInjectionException(
-            "VoiceMediaItemDisplayDriver",
-            "The provisioner is supplied by whichever telephony provider feature is enabled, and the driver renders differently when none is."),
     ];
 
     /// <summary>

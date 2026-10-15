@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Models;
+
 namespace CrestApps.OrchardCore.Telephony;
 
 /// <summary>
@@ -5,7 +7,9 @@ namespace CrestApps.OrchardCore.Telephony;
 /// media storage, so the provider can play the clip back to callers by an opaque reference without the platform
 /// hosting a publicly reachable URL of its own. Only providers that host media (for example Telnyx Media Storage)
 /// register an implementation; when none is registered, provider-hosted audio is unavailable and callers fall back
-/// to spoken (text-to-speech) prompts.
+/// to spoken (text-to-speech) prompts. The provider's copy is a cache: the platform keeps the master copy of every
+/// clip in its own media store and uploads it again, through this contract, to any provider that has no copy or
+/// reports its copy missing.
 /// </summary>
 public interface IVoiceMediaProvisioner
 {
@@ -29,6 +33,18 @@ public interface IVoiceMediaProvisioner
     /// </param>
     /// <param name="cancellationToken">A cancellation token.</param>
     Task<string> UploadAsync(Stream audio, string contentType, string namePrefix, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Asks the provider whether it still holds a previously uploaded clip, so a copy that was deleted or expired at
+    /// the provider can be uploaded again from the platform's master copy before a caller is left in silence.
+    /// </summary>
+    /// <param name="mediaReference">The provider reference returned from <see cref="UploadAsync"/>.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>
+    /// <see cref="VoiceMediaAvailability.Available"/> or <see cref="VoiceMediaAvailability.Missing"/> when the
+    /// provider answered, and <see cref="VoiceMediaAvailability.Unknown"/> when it could not be asked.
+    /// </returns>
+    Task<VoiceMediaAvailability> GetAvailabilityAsync(string mediaReference, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes a previously uploaded clip from the provider's media storage. Deletion is best-effort and idempotent:

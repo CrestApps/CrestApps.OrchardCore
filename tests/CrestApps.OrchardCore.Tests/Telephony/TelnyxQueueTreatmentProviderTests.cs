@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -289,7 +290,37 @@ public sealed class TelnyxQueueTreatmentProviderTests
         Assert.Empty(handler.Requests);
     }
 
-    private static TelnyxQueueTreatmentProvider CreateProvider(HttpMessageHandler handler, Dictionary<string, VoiceMediaItem> catalog = null, TelnyxOptions options = null)
+    [Fact]
+    public async Task HoldMusic_ReferringToAClipTelnyxWasNeverGiven_PlaysNothingAndSaysTheClipMustBeUploadedAgain()
+    {
+        // Arrange
+        // The clip was uploaded to another provider before master copies were kept, so after the switch to Telnyx
+        // there is nothing to play and nothing to make a copy from. Silence with a reason, not silence.
+        var handler = new RecordingHttpMessageHandler();
+        var logger = new RecordingLogger<TelnyxQueueTreatmentProvider>();
+        var provider = CreateProvider(
+            handler,
+            new Dictionary<string, VoiceMediaItem>(StringComparer.Ordinal)
+            {
+                ["media-1"] = new VoiceMediaItem { ItemId = "media-1" },
+            },
+            logger: logger);
+
+        // Act
+        await provider.StartHoldMusicAsync("ctrl-1", "media-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(handler.Requests);
+        var warning = Assert.Single(logger.At(LogLevel.Warning));
+        Assert.Contains("no master copy", warning, StringComparison.Ordinal);
+        Assert.Contains("upload the clip again", warning, StringComparison.Ordinal);
+    }
+
+    private static TelnyxQueueTreatmentProvider CreateProvider(
+        HttpMessageHandler handler,
+        Dictionary<string, VoiceMediaItem> catalog = null,
+        TelnyxOptions options = null,
+        ILogger<TelnyxQueueTreatmentProvider> logger = null)
     {
         var httpClient = new HttpClient(handler)
         {
@@ -306,16 +337,28 @@ public sealed class TelnyxQueueTreatmentProviderTests
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 
-        var voiceMedia = new Mock<IVoiceMediaItemManager>();
-        voiceMedia.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns((string id, CancellationToken _) => ValueTask.FromResult(
-                catalog is not null && catalog.TryGetValue(id, out var item) ? item : null));
+        var provisioning = new Mock<IVoiceMediaProvisioningService>();
+        provisioning.Setup(x => x.ResolveAsync(It.IsAny<string>(), TelnyxConstants.ProviderTechnicalName, It.IsAny<CancellationToken>()))
+            .Returns((string id, string _, CancellationToken _) => Task.FromResult(Resolve(
+                catalog is not null && catalog.TryGetValue(id, out var item) ? item : null)));
 
         return new TelnyxQueueTreatmentProvider(
             apiClient,
-            voiceMedia.Object,
+            provisioning.Object,
             new TestOptionsMonitor<TelnyxOptions>(options ?? new TelnyxOptions()),
             new TelnyxHangUpAfterSpeechRegistry(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()))),
-            NullLogger<TelnyxQueueTreatmentProvider>.Instance);
+            logger ?? NullLogger<TelnyxQueueTreatmentProvider>.Instance);
     }
+
+    // What the provisioning service answers for a clip that is, or is not, in the catalog: the catalog double here
+    // holds clips that exist only as the copy Telnyx was given at upload.
+    private static VoiceMediaResolution Resolve(VoiceMediaItem item)
+        => new()
+        {
+            Item = item,
+            Reference = item?.MediaReference,
+            Status = item is null || string.IsNullOrEmpty(item.MediaReference)
+                ? VoiceMediaProvisioningStatus.NoAudio
+                : VoiceMediaProvisioningStatus.ProviderCopyOnly,
+        };
 }

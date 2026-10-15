@@ -1,13 +1,12 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
-using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
@@ -18,8 +17,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// <summary>
 /// Lets a signed-in agent manage their own voicemail greeting: record one with the microphone, upload an audio
 /// file, set a spoken (text-to-speech) greeting, or clear it back to the queue/system default. An audio greeting
-/// is uploaded to the telephony provider's media storage (via <see cref="IVoiceMediaProvisioner"/>) so it can be
-/// played back to callers without the platform hosting a public URL.
+/// is kept as a master copy in the platform's media store and sent to the telephony provider (via
+/// <see cref="IVoiceMediaProvisioningService"/>), so it is played to callers without the platform hosting a public
+/// URL and keeps playing after the provider changes.
 /// </summary>
 [Admin]
 [RequireFeatures(
@@ -31,7 +31,7 @@ public sealed class MyVoicemailGreetingController : Controller
     // speech, so anything approaching this is not a greeting.
     private const long MaxGreetingBytes = 20L * 1024 * 1024;
 
-    // Labels the stored greeting media by purpose so provider media storage stays identifiable.
+    // Labels the provider's copy of the greeting by purpose so provider media storage stays identifiable.
     private const string GreetingMediaNamePrefix = "cc-vm-greeting";
 
     private static readonly string[] _allowedContentTypes =
@@ -46,6 +46,7 @@ public sealed class MyVoicemailGreetingController : Controller
     ];
 
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
     private readonly IAuthorizationService _authorizationService;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
@@ -54,6 +55,7 @@ public sealed class MyVoicemailGreetingController : Controller
 
     public MyVoicemailGreetingController(
         IAgentProfileManager agentProfileManager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
         IAuthorizationService authorizationService,
         IClock clock,
         INotifier notifier,
@@ -61,6 +63,7 @@ public sealed class MyVoicemailGreetingController : Controller
         IStringLocalizer<MyVoicemailGreetingController> stringLocalizer)
     {
         _agentProfileManager = agentProfileManager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
         _authorizationService = authorizationService;
         _clock = clock;
         _notifier = notifier;
@@ -78,10 +81,14 @@ public sealed class MyVoicemailGreetingController : Controller
             return Forbid();
         }
 
+        var hasMasterCopy = agent.VoicemailGreetingMedia is not null;
+
         return View(new MyVoicemailGreetingViewModel
         {
-            HasAudioGreeting = !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName) ||
+            HasAudioGreeting = hasMasterCopy ||
+                !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName) ||
                 !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaUrl),
+            IsProviderCopyOnly = !hasMasterCopy && !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName),
         });
     }
 
@@ -111,38 +118,47 @@ public sealed class MyVoicemailGreetingController : Controller
             return BadRequest(S["Unsupported audio format."].Value);
         }
 
-        var provisioner = HttpContext.RequestServices.GetService<IVoiceMediaProvisioner>();
-
-        if (provisioner is null)
+        if (!_voiceMediaProvisioning.CanUpload)
         {
-            return BadRequest(S["Audio greetings are not supported by the configured telephony provider."].Value);
+            return BadRequest(S["Audio greetings are unavailable because no media storage and no telephony provider capable of hosting media is configured."].Value);
         }
 
-        string mediaName;
+        var media = new VoiceMediaAsset();
+        VoiceMediaStoreResult result;
 
         await using (var stream = audio.OpenReadStream())
         {
-            mediaName = await provisioner.UploadAsync(stream, audio.ContentType, GreetingMediaNamePrefix, HttpContext.RequestAborted);
+            result = await _voiceMediaProvisioning.StoreAsync(media, stream, audio.ContentType, VoiceMediaUploadFormat.Resolve(audio), GreetingMediaNamePrefix, HttpContext.RequestAborted);
         }
 
-        if (string.IsNullOrWhiteSpace(mediaName))
+        if (!result.Succeeded)
         {
             return StatusCode(StatusCodes.Status502BadGateway, S["The greeting could not be uploaded. Please try again."].Value);
         }
 
-        // Swap in the new greeting, then best-effort delete the previous provider media so it does not linger.
-        var previousMediaName = agent.VoicemailGreetingMediaName;
-        agent.VoicemailGreetingMediaName = mediaName;
+        // Swap in the new greeting, then best-effort delete the copies it replaces so they do not linger. The
+        // provider's copy name follows the copy the active provider was just given, for readers of that member.
+        var replaced = CaptureGreetingCopies(agent, result.ProviderReference);
+
+        agent.VoicemailGreetingMedia = media;
+        agent.VoicemailGreetingMediaName = result.ProviderReference;
         agent.VoicemailGreetingMediaUrl = null;
 
         await _agentProfileManager.UpdateAsync(agent);
 
-        if (!string.IsNullOrWhiteSpace(previousMediaName) && !string.Equals(previousMediaName, mediaName, StringComparison.Ordinal))
+        if (replaced is not null)
         {
-            await provisioner.DeleteAsync(previousMediaName, HttpContext.RequestAborted);
+            await _voiceMediaProvisioning.DeleteEverywhereAsync(replaced, HttpContext.RequestAborted);
         }
 
-        await _notifier.SuccessAsync(H["Your voicemail greeting was saved."]);
+        if (result.ProviderUploadFailed)
+        {
+            await _notifier.WarningAsync(H["Your voicemail greeting was saved, but {0} did not accept a copy yet. It is sent to the provider when a caller next reaches your voicemail.", result.ProviderName]);
+        }
+        else
+        {
+            await _notifier.SuccessAsync(H["Your voicemail greeting was saved."]);
+        }
 
         return Ok();
     }
@@ -158,26 +174,57 @@ public sealed class MyVoicemailGreetingController : Controller
             return Forbid();
         }
 
-        var previousMediaName = agent.VoicemailGreetingMediaName;
+        var removed = CaptureGreetingCopies(agent, keepReference: null);
 
+        agent.VoicemailGreetingMedia = null;
         agent.VoicemailGreetingMediaName = null;
         agent.VoicemailGreetingMediaUrl = null;
 
         await _agentProfileManager.UpdateAsync(agent);
 
-        if (!string.IsNullOrWhiteSpace(previousMediaName))
+        if (removed is not null)
         {
-            var provisioner = HttpContext.RequestServices.GetService<IVoiceMediaProvisioner>();
-
-            if (provisioner is not null)
-            {
-                await provisioner.DeleteAsync(previousMediaName, HttpContext.RequestAborted);
-            }
+            await _voiceMediaProvisioning.DeleteEverywhereAsync(removed, HttpContext.RequestAborted);
         }
 
         await _notifier.SuccessAsync(H["Your recorded greeting was removed. Callers will hear the default greeting."]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // Every copy the agent's current greeting is held as: its master copy and provider copies, and the copy a
+    // greeting recorded before master copies were kept left at the provider uploads go to. Null when there is none.
+    private VoiceMediaAsset CaptureGreetingCopies(AgentProfile agent, string keepReference)
+    {
+        var current = agent.VoicemailGreetingMedia;
+
+        var copies = new VoiceMediaAsset
+        {
+            MasterStorageReference = current?.MasterStorageReference,
+            ContentType = current?.ContentType,
+            Format = current?.Format,
+            ProviderReferences = current?.ProviderReferences is null
+                ? new Dictionary<string, string>()
+                : new Dictionary<string, string>(current.ProviderReferences),
+        };
+
+        var legacyName = agent.VoicemailGreetingMediaName;
+        var activeProvider = _voiceMediaProvisioning.ActiveProviderName;
+
+        if (!string.IsNullOrWhiteSpace(legacyName) &&
+            !string.Equals(legacyName, keepReference, StringComparison.Ordinal) &&
+            !string.IsNullOrEmpty(activeProvider) &&
+            !copies.ProviderReferences.ContainsValue(legacyName))
+        {
+            copies.ProviderReferences.TryAdd(activeProvider, legacyName);
+        }
+
+        if (string.IsNullOrWhiteSpace(copies.MasterStorageReference) && copies.ProviderReferences.Count == 0)
+        {
+            return null;
+        }
+
+        return copies;
     }
 
     // The signed-in user's own agent profile, or null when they may not work as an agent. Every action goes through

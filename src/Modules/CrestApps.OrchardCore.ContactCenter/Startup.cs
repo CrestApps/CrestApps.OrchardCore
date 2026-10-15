@@ -210,9 +210,11 @@ public sealed class Startup : StartupBase
 
         // The reusable voice media library (hold music, greetings, prompts) referenced by queues, campaigns, and
         // entry points. Registered in the base feature so the library is available wherever those are configured.
+        // The provisioning service keeps each clip's master copy and gives a provider its copy on first use.
         services
             .AddScoped<IVoiceMediaItemStore, VoiceMediaItemStore>()
             .AddScoped<IVoiceMediaItemManager, VoiceMediaItemManager>()
+            .AddScoped<IVoiceMediaProvisioningService, VoiceMediaProvisioningService>()
             .AddScoped<ICatalogEntryHandler<VoiceMediaItem>, VoiceMediaItemHandler>()
             .AddDisplayDriver<VoiceMediaItem, VoiceMediaItemDisplayDriver>()
             .AddIndexProvider<VoiceMediaItemIndexProvider>()

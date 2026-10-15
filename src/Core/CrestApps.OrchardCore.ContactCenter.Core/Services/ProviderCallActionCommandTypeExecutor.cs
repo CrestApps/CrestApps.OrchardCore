@@ -24,6 +24,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     private readonly ITelephonyService _telephonyService;
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterWorkStateService _workStateService;
@@ -36,6 +37,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     /// </summary>
     /// <param name="telephonyServices">The optional telephony services used to execute the provider action.</param>
     /// <param name="interactionManager">The interaction manager used to validate and project linked interactions.</param>
+    /// <param name="agentProfileManager">The agent profile manager the recipient agent's voicemail greeting is read from.</param>
+    /// <param name="voiceMediaProvisioning">The service that gives the call's provider a copy of the recipient agent's recorded greeting.</param>
     /// <param name="queueService">The queue service used to restore live work after a definitive action failure.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
@@ -46,6 +49,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
         IAgentProfileManager agentProfileManager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -56,6 +60,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         _telephonyService = telephonyServices.FirstOrDefault();
         _interactionManager = interactionManager;
         _agentProfileManager = agentProfileManager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
         _callControlAuthorizationService = callControlAuthorizationService;
         _queueService = queueService;
         _workStateService = workStateService;
@@ -244,7 +249,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             var recipientAgent = await _agentProfileManager.FindByIdAsync(recipientAgentId, cancellationToken);
             greetingText = recipientAgent?.VoicemailGreetingText;
             greetingMediaUrl = recipientAgent?.VoicemailGreetingMediaUrl;
-            greetingMediaName = recipientAgent?.VoicemailGreetingMediaName;
+            greetingMediaName = await ResolveGreetingMediaAsync(recipientAgent, interaction.ProviderName, cancellationToken);
         }
 
         // Fall back to the entry point's default spoken greeting (stamped on the interaction when the call arrived)
@@ -260,6 +265,31 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
 
         return (greetingText, greetingMediaUrl, greetingMediaName);
+    }
+
+    // The provider this call is on is given a copy of the greeting from the master copy when it has none, so a
+    // greeting recorded while another provider was in use is still heard. A greeting recorded before master copies
+    // were kept exists only at the provider it was uploaded to, and its name is all that can be offered.
+    private async Task<string> ResolveGreetingMediaAsync(AgentProfile agent, string providerName, CancellationToken cancellationToken)
+    {
+        if (agent is null)
+        {
+            return null;
+        }
+
+        if (agent.VoicemailGreetingMedia is null || string.IsNullOrEmpty(providerName))
+        {
+            return agent.VoicemailGreetingMediaName;
+        }
+
+        var provisioned = await _voiceMediaProvisioning.EnsureProvisionedAsync(agent.VoicemailGreetingMedia, providerName, cancellationToken);
+
+        if (provisioned.Changed)
+        {
+            await _agentProfileManager.UpdateAsync(agent, cancellationToken: cancellationToken);
+        }
+
+        return provisioned.Reference ?? agent.VoicemailGreetingMediaName;
     }
 
     private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)

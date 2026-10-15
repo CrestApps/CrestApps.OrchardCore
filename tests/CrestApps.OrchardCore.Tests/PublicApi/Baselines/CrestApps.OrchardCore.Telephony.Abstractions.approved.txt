@@ -256,6 +256,7 @@ namespace CrestApps.OrchardCore.Telephony
     {
         string ProviderTechnicalName { get; }
         System.Threading.Tasks.Task DeleteAsync(string mediaReference, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.VoiceMediaAvailability> GetAvailabilityAsync(string mediaReference, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> UploadAsync(System.IO.Stream audio, string contentType, string namePrefix, System.Threading.CancellationToken cancellationToken = default);
     }
     public static class TelephonyAudioModeResolver
@@ -1016,6 +1017,12 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public static CrestApps.OrchardCore.Telephony.Models.CallState ToTelephonyCallState(CrestApps.OrchardCore.Telephony.Models.VoiceCallState state) { }
         public static CrestApps.OrchardCore.Telephony.Models.VoiceCallState ToTerminalVoiceCallState(CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, CrestApps.OrchardCore.Telephony.Models.VoiceCallState fallback) { }
         public static CrestApps.OrchardCore.Telephony.Models.VoiceCallState ToVoiceCallState(CrestApps.OrchardCore.Telephony.Models.CallState state, bool isOnHold = false, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause = default) { }
+    }
+    public enum VoiceMediaAvailability
+    {
+        Unknown = 0,
+        Available = 1,
+        Missing = 2,
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Services

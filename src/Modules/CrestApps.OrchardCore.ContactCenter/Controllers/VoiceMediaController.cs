@@ -23,10 +23,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 [Admin]
 public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceMediaItem>
 {
+    private readonly IVoiceMediaItemManager _manager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
+    private readonly IAuthorizationService _authorizationService;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceMediaController"/> class.
     /// </summary>
     /// <param name="manager">The voice media item manager.</param>
+    /// <param name="voiceMediaProvisioning">The service that keeps the master copy and gives each provider its copy.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
@@ -35,6 +40,7 @@ public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceM
     /// <param name="stringLocalizer">The string localizer.</param>
     public VoiceMediaController(
         IVoiceMediaItemManager manager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<VoiceMediaItem> displayManager,
@@ -43,6 +49,9 @@ public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceM
         IStringLocalizer<VoiceMediaController> stringLocalizer)
         : base(manager, authorizationService, updateModelAccessor, displayManager, notifier, htmlLocalizer, stringLocalizer)
     {
+        _manager = manager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
+        _authorizationService = authorizationService;
     }
 
     /// <inheritdoc/>
@@ -145,4 +154,57 @@ public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceM
     [Admin("contact-center/voice-media/delete/{id}", "ContactCenterVoiceMediaDelete")]
     public Task<IActionResult> Delete(string id)
         => DeleteAsync(id);
+
+    /// <summary>
+    /// Checks that every enabled telephony provider that hosts media still holds its copy of a clip, and sends the
+    /// clip from its master copy to any that does not.
+    /// </summary>
+    /// <param name="id">The voice media clip identifier.</param>
+    /// <returns>A redirect to the list.</returns>
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [Admin("contact-center/voice-media/resync/{id}", "ContactCenterVoiceMediaResync")]
+    public async Task<IActionResult> Resync(string id)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ManagePermission))
+        {
+            return Forbid();
+        }
+
+        var item = await _manager.FindByIdAsync(id);
+
+        if (item is null)
+        {
+            return NotFound();
+        }
+
+        var result = await _voiceMediaProvisioning.ResyncAsync(item, HttpContext.RequestAborted);
+
+        if (!result.HasMasterCopy)
+        {
+            await Notifier.WarningAsync(H["'{0}' has no master copy, so it cannot be re-synced. Upload its audio again to protect it.", item.Name]);
+        }
+        else if (result.Providers.Count == 0)
+        {
+            await Notifier.WarningAsync(H["No enabled telephony provider can host media, so there was nothing to re-sync."]);
+        }
+
+        foreach (var (providerName, outcome) in result.Providers)
+        {
+            switch (outcome)
+            {
+                case VoiceMediaResyncOutcome.Verified:
+                    await Notifier.InformationAsync(H["{0} already holds '{1}'.", providerName, item.Name]);
+                    break;
+                case VoiceMediaResyncOutcome.Uploaded:
+                    await Notifier.SuccessAsync(H["'{1}' was sent to {0}.", providerName, item.Name]);
+                    break;
+                default:
+                    await Notifier.ErrorAsync(H["{0} did not accept '{1}'. Check the provider's configuration and try again.", providerName, item.Name]);
+                    break;
+            }
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
 }
