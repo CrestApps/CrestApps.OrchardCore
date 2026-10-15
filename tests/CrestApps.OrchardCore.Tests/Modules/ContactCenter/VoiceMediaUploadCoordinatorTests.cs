@@ -83,6 +83,56 @@ public sealed class VoiceMediaUploadCoordinatorTests
     }
 
     [Fact]
+    public async Task Forget_DropsTheRememberedReference_SoTheNextCallerUploadsAgain()
+    {
+        // Arrange
+        var coordinator = new VoiceMediaUploadCoordinator(new MovableClock());
+        var uploads = 0;
+
+        Task<string> Upload(CancellationToken _)
+            => Task.FromResult($"copy-{Interlocked.Increment(ref uploads)}");
+
+        // Act
+        var first = await coordinator.UploadOnceAsync("Telnyx", "master-1", Upload, TestContext.Current.CancellationToken);
+        coordinator.Forget("telnyx", "master-1");
+        var second = await coordinator.UploadOnceAsync("Telnyx", "master-1", Upload, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("copy-1", first);
+        Assert.Equal("copy-2", second);
+    }
+
+    [Fact]
+    public async Task UploadOnceAsync_DropsTheGateOnceNobodyWaitsOnIt()
+    {
+        // Arrange
+        // A gate per master copy ever uploaded would accumulate for the life of the tenant; one is kept only while
+        // somebody holds or waits on it.
+        var coordinator = new VoiceMediaUploadCoordinator(new MovableClock());
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        async Task<string> Upload(CancellationToken _)
+        {
+            started.TrySetResult();
+            await release.Task;
+
+            return "copy-1";
+        }
+
+        // Act
+        var running = coordinator.UploadOnceAsync("Telnyx", "master-1", Upload, TestContext.Current.CancellationToken);
+        await started.Task;
+        var gatesWhileRunning = coordinator.GateCount;
+        release.SetResult();
+        await running;
+
+        // Assert
+        Assert.Equal(1, gatesWhileRunning);
+        Assert.Equal(0, coordinator.GateCount);
+    }
+
+    [Fact]
     public async Task UploadOnceAsync_DoesNotRememberAFailedUpload()
     {
         // Arrange

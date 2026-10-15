@@ -200,12 +200,15 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
         if (existing is not null)
         {
             // A copy the provider confirmed within the window is trusted without asking again, so a play costs no
-            // provider round trip beyond the play itself. A copy lost at the provider is noticed when the window ends.
-            var availability = _availability.IsKnownAvailable(provisioner.ProviderTechnicalName, existing)
+            // provider round trip beyond the play itself. The window starts when the provider answers and a play
+            // inside it does not extend it, so however often the clip plays the provider is asked again once the
+            // window ends, and a copy lost at the provider is noticed then.
+            var known = _availability.IsKnownAvailable(provisioner.ProviderTechnicalName, existing);
+            var availability = known
                 ? VoiceMediaAvailability.Available
                 : await provisioner.GetAvailabilityAsync(existing, cancellationToken);
 
-            if (availability == VoiceMediaAvailability.Available)
+            if (!known && availability == VoiceMediaAvailability.Available)
             {
                 _availability.MarkAvailable(provisioner.ProviderTechnicalName, existing);
             }
@@ -220,7 +223,9 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
                 };
             }
 
+            // The lost copy may be the one a recent upload produced; it must not be handed out again.
             _availability.Forget(provisioner.ProviderTechnicalName, existing);
+            _uploads.Forget(provisioner.ProviderTechnicalName, media.MasterStorageReference);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {
@@ -253,6 +258,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
         {
             ProviderName = provisioner.ProviderTechnicalName,
             Reference = reference,
+            ReplacedReference = existing,
             Status = VoiceMediaProvisioningStatus.Provisioned,
             Changed = true,
         };
@@ -280,7 +286,7 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
         // overwrite an operator's edit made while the upload ran, and could restore a master copy that edit replaced.
         if (result.Changed)
         {
-            _copyRecorder.RecordLibraryCopy(item.ItemId, item.MasterStorageReference, result.ProviderName, result.Reference);
+            _copyRecorder.RecordLibraryCopy(item.ItemId, item.MasterStorageReference, result.ProviderName, result.Reference, result.ReplacedReference);
         }
 
         return new VoiceMediaResolution
@@ -356,9 +362,16 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
                 }
 
                 _availability.Forget(providerName, existing);
+                _uploads.Forget(providerName, item.MasterStorageReference);
             }
 
-            var reference = await UploadFromMasterAsync(item, provisioner, cancellationToken);
+            // Through the same gate as a first-use upload, so a call that needs the clip while the operator re-syncs
+            // it shares the copy made here rather than making a second one.
+            var reference = await _uploads.UploadOnceAsync(
+                providerName,
+                item.MasterStorageReference,
+                token => UploadFromMasterAsync(item, provisioner, token),
+                cancellationToken);
 
             if (reference is null)
             {
@@ -425,6 +438,9 @@ public sealed class VoiceMediaProvisioningService : IVoiceMediaProvisioningServi
 
                 continue;
             }
+
+            // A copy a recent upload produced must not be handed out again once it is deleted.
+            _uploads.Forget(providerName, media.MasterStorageReference);
 
             await DeleteProviderCopyAsync(provisioner, reference, cancellationToken);
         }

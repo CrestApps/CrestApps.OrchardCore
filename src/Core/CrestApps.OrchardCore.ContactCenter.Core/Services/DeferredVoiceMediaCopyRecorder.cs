@@ -15,25 +15,25 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
 {
     /// <inheritdoc/>
-    public void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference)
+    public void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference, string replacedReference)
     {
         ArgumentException.ThrowIfNullOrEmpty(itemId);
         ArgumentException.ThrowIfNullOrEmpty(masterStorageReference);
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(mediaReference);
 
-        Defer(scope => RecordLibraryCopyAsync(scope.ServiceProvider, itemId, masterStorageReference, providerName, mediaReference));
+        Defer(scope => RecordLibraryCopyAsync(scope.ServiceProvider, itemId, masterStorageReference, providerName, mediaReference, replacedReference));
     }
 
     /// <inheritdoc/>
-    public void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference)
+    public void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference, string replacedReference)
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
         ArgumentException.ThrowIfNullOrEmpty(masterStorageReference);
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentException.ThrowIfNullOrEmpty(mediaReference);
 
-        Defer(scope => RecordGreetingCopyAsync(scope.ServiceProvider, agentId, masterStorageReference, providerName, mediaReference));
+        Defer(scope => RecordGreetingCopyAsync(scope.ServiceProvider, agentId, masterStorageReference, providerName, mediaReference, replacedReference));
     }
 
     /// <inheritdoc/>
@@ -53,7 +53,8 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
     /// <param name="masterStorageReference">The master copy the provider copy was made from.</param>
     /// <param name="providerName">The technical name of the provider that holds the copy.</param>
     /// <param name="mediaReference">The reference the provider plays the clip by.</param>
-    internal static async Task RecordLibraryCopyAsync(IServiceProvider serviceProvider, string itemId, string masterStorageReference, string providerName, string mediaReference)
+    /// <param name="replacedReference">The reference of the copy the new one replaces, or <see langword="null"/>.</param>
+    internal static async Task RecordLibraryCopyAsync(IServiceProvider serviceProvider, string itemId, string masterStorageReference, string providerName, string mediaReference, string replacedReference)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<DeferredVoiceMediaCopyRecorder>>();
 
@@ -66,14 +67,19 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
             {
                 // The entry is gone, or an operator uploaded new audio while the call was still copying the old: the
                 // copy just made plays audio nobody wants any more, and must not be recorded against the new master.
-                await DeleteOrphanCopyAsync(serviceProvider, providerName, mediaReference, logger, itemId);
+                await DeleteOrphanCopyAsync(serviceProvider, masterStorageReference, providerName, mediaReference, logger, "the audio changed meanwhile", itemId);
 
                 return;
             }
 
-            if (!Record(item, providerName, mediaReference))
+            switch (Record(item, providerName, mediaReference, replacedReference))
             {
-                return;
+                case RecordOutcome.AlreadyRecorded:
+                    return;
+                case RecordOutcome.AnotherCopyRecorded:
+                    await DeleteOrphanCopyAsync(serviceProvider, masterStorageReference, providerName, mediaReference, logger, "another copy was recorded meanwhile", itemId);
+
+                    return;
             }
 
             // The single provider copy an entry recorded before copies were tracked per provider follows the copy a
@@ -103,7 +109,8 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
     /// <param name="masterStorageReference">The master copy the provider copy was made from.</param>
     /// <param name="providerName">The technical name of the provider that holds the copy.</param>
     /// <param name="mediaReference">The reference the provider plays the greeting by.</param>
-    internal static async Task RecordGreetingCopyAsync(IServiceProvider serviceProvider, string agentId, string masterStorageReference, string providerName, string mediaReference)
+    /// <param name="replacedReference">The reference of the copy the new one replaces, or <see langword="null"/>.</param>
+    internal static async Task RecordGreetingCopyAsync(IServiceProvider serviceProvider, string agentId, string masterStorageReference, string providerName, string mediaReference, string replacedReference)
     {
         var logger = serviceProvider.GetRequiredService<ILogger<DeferredVoiceMediaCopyRecorder>>();
 
@@ -117,14 +124,19 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
             {
                 // The greeting was removed or replaced between the call and now: the copy plays the old greeting and
                 // must not be recorded against the new one.
-                await DeleteOrphanCopyAsync(serviceProvider, providerName, mediaReference, logger, agentId);
+                await DeleteOrphanCopyAsync(serviceProvider, masterStorageReference, providerName, mediaReference, logger, "the greeting changed meanwhile", agentId);
 
                 return;
             }
 
-            if (!Record(media, providerName, mediaReference))
+            switch (Record(media, providerName, mediaReference, replacedReference))
             {
-                return;
+                case RecordOutcome.AlreadyRecorded:
+                    return;
+                case RecordOutcome.AnotherCopyRecorded:
+                    await DeleteOrphanCopyAsync(serviceProvider, masterStorageReference, providerName, mediaReference, logger, "another copy was recorded meanwhile", agentId);
+
+                    return;
             }
 
             await agents.UpdateAsync(agent);
@@ -196,9 +208,10 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
         ShellScope.AddDeferredTask(task);
     }
 
-    // Puts the copy in the record's map under the provider's name, replacing any entry for that provider. Returns
-    // false when the very copy is already recorded, so nothing needs saving.
-    private static bool Record(IVoiceMediaAsset media, string providerName, string mediaReference)
+    // Puts the copy in the record's map under the provider's name. A copy already recorded for the provider is
+    // replaced only when it is the one the new copy was made to replace (the provider reported it missing); a
+    // different one was recorded by another path meanwhile and is kept, so the new copy is a duplicate.
+    private static RecordOutcome Record(IVoiceMediaAsset media, string providerName, string mediaReference, string replacedReference)
     {
         media.ProviderReferences ??= new Dictionary<string, string>();
 
@@ -208,7 +221,12 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
 
         if (recorded.Any(copy => string.Equals(copy.Value, mediaReference, StringComparison.Ordinal)))
         {
-            return false;
+            return RecordOutcome.AlreadyRecorded;
+        }
+
+        if (recorded.Any(copy => !string.IsNullOrWhiteSpace(copy.Value) && !string.Equals(copy.Value, replacedReference, StringComparison.Ordinal)))
+        {
+            return RecordOutcome.AnotherCopyRecorded;
         }
 
         foreach (var copy in recorded)
@@ -218,19 +236,23 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
 
         media.ProviderReferences[providerName] = mediaReference;
 
-        return true;
+        return RecordOutcome.Recorded;
     }
 
-    private static async Task DeleteOrphanCopyAsync(IServiceProvider serviceProvider, string providerName, string mediaReference, ILogger logger, string ownerId)
+    private static async Task DeleteOrphanCopyAsync(IServiceProvider serviceProvider, string masterStorageReference, string providerName, string mediaReference, ILogger logger, string reason, string ownerId)
     {
         if (logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
-                "The audio of {OwnerId} changed while the telephony provider {Provider} was being given a copy; the copy {Reference} is deleted rather than recorded.",
-                ownerId.SanitizeLogValue(),
+                "The voice media copy {Reference} the telephony provider {Provider} was given for {OwnerId} is deleted rather than recorded: {Reason}.",
+                mediaReference.SanitizeLogValue(),
                 providerName.SanitizeLogValue(),
-                mediaReference.SanitizeLogValue());
+                ownerId.SanitizeLogValue(),
+                reason);
         }
+
+        // A caller arriving within the reuse window must not be handed the copy that is being deleted.
+        serviceProvider.GetRequiredService<IVoiceMediaUploadCoordinator>().Forget(providerName, masterStorageReference);
 
         var provisioning = serviceProvider.GetRequiredService<IVoiceMediaProvisioningService>();
 
@@ -238,5 +260,12 @@ public sealed class DeferredVoiceMediaCopyRecorder : IVoiceMediaCopyRecorder
         {
             ProviderReferences = new Dictionary<string, string> { [providerName] = mediaReference },
         });
+    }
+
+    private enum RecordOutcome
+    {
+        Recorded,
+        AlreadyRecorded,
+        AnotherCopyRecorded,
     }
 }

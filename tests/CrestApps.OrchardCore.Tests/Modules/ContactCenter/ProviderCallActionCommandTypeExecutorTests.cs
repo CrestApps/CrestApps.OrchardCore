@@ -419,7 +419,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
             .ReturnsAsync(agent);
 
         var copyRecorder = new Mock<IVoiceMediaCopyRecorder>(MockBehavior.Strict);
-        copyRecorder.Setup(recorder => recorder.RecordGreetingCopy("agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other"));
+        copyRecorder.Setup(recorder => recorder.RecordGreetingCopy("agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other", null));
 
         var voiceMediaProvisioning = new Mock<IVoiceMediaProvisioningService>(MockBehavior.Strict);
         voiceMediaProvisioning
@@ -460,7 +460,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.True(result.Succeeded);
         Assert.NotNull(capturedCall);
         Assert.Equal("cc-vm-greeting-other", capturedCall!.Metadata[ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey]);
-        copyRecorder.Verify(recorder => recorder.RecordGreetingCopy("agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other"), Times.Once);
+        copyRecorder.Verify(recorder => recorder.RecordGreetingCopy("agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other", null), Times.Once);
         agentProfileManager.Verify(
             manager => manager.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
             Times.Never);

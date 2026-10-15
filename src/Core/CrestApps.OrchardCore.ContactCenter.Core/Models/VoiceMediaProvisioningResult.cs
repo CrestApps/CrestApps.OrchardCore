@@ -16,6 +16,12 @@ public sealed class VoiceMediaProvisioningResult
     public string Reference { get; init; }
 
     /// <summary>
+    /// Gets the reference of the copy the provider reported missing, which the copy in <see cref="Reference"/> was
+    /// made to replace; <see langword="null"/> when no copy was recorded for the provider before.
+    /// </summary>
+    public string ReplacedReference { get; init; }
+
+    /// <summary>
     /// Gets where the clip stands with the provider.
     /// </summary>
     public VoiceMediaProvisioningStatus Status { get; init; }

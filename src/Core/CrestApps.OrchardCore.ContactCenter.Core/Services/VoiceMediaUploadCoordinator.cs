@@ -42,7 +42,7 @@ public sealed class VoiceMediaUploadCoordinator : IVoiceMediaUploadCoordinator
         ArgumentException.ThrowIfNullOrEmpty(masterStorageReference);
         ArgumentNullException.ThrowIfNull(upload);
 
-        var key = string.Concat(providerName.ToUpperInvariant(), "\n", masterStorageReference);
+        var key = GetKey(providerName, masterStorageReference);
 
         if (TryGetRecent(key, out var recent))
         {
@@ -73,8 +73,34 @@ public sealed class VoiceMediaUploadCoordinator : IVoiceMediaUploadCoordinator
         finally
         {
             gate.Release();
+
+            // A gate nobody waits on is dropped, so one does not linger for every master copy ever uploaded.
+            if (gate.CurrentCount == 1)
+            {
+                _locks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(key, gate));
+            }
         }
     }
+
+    /// <inheritdoc/>
+    public void Forget(string providerName, string masterStorageReference)
+    {
+        if (string.IsNullOrEmpty(providerName) || string.IsNullOrEmpty(masterStorageReference))
+        {
+            return;
+        }
+
+        _recent.TryRemove(GetKey(providerName, masterStorageReference), out _);
+    }
+
+    /// <summary>
+    /// Gets the number of gates currently held or waited on. Exposed for tests.
+    /// </summary>
+    internal int GateCount
+        => _locks.Count;
+
+    private static string GetKey(string providerName, string masterStorageReference)
+        => string.Concat(providerName.ToUpperInvariant(), "\n", masterStorageReference);
 
     private bool TryGetRecent(string key, out string reference)
     {

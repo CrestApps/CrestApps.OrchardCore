@@ -3124,6 +3124,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool Changed { get; init; }
         public string ProviderName { get; init; }
         public string Reference { get; init; }
+        public string ReplacedReference { get; init; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaProvisioningStatus Status { get; init; }
     }
     public enum VoiceMediaProvisioningStatus
@@ -4261,8 +4262,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class DeferredVoiceMediaCopyRecorder : CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaCopyRecorder
     {
         public DeferredVoiceMediaCopyRecorder() { }
-        public void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference) { }
-        public void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference) { }
+        public void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference, string replacedReference) { }
+        public void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference, string replacedReference) { }
         public void ReleaseReplacedGreetingCopies(string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaAsset saved, CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaAsset replaced) { }
     }
     public sealed class DialProviderCommandTypeExecutor : CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandTypeExecutor
@@ -5551,8 +5552,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IVoiceMediaCopyRecorder
     {
-        void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference);
-        void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference);
+        void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference, string replacedReference);
+        void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference, string replacedReference);
         void ReleaseReplacedGreetingCopies(string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaAsset saved, CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaAsset replaced);
     }
     public interface IVoiceMediaItemManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>
@@ -5578,6 +5579,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IVoiceMediaUploadCoordinator
     {
+        void Forget(string providerName, string masterStorageReference);
         System.Threading.Tasks.Task<string> UploadOnceAsync(string providerName, string masterStorageReference, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<string>> upload, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IVoiceQueueOfferService
@@ -6527,6 +6529,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public static readonly System.TimeSpan RecentUploadWindow;
         public VoiceMediaUploadCoordinator(OrchardCore.Modules.IClock clock) { }
+        public void Forget(string providerName, string masterStorageReference) { }
         public System.Threading.Tasks.Task<string> UploadOnceAsync(string providerName, string masterStorageReference, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<string>> upload, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class VoicemailDelivery

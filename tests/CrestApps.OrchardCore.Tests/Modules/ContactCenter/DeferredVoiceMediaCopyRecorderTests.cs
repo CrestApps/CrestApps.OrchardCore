@@ -28,7 +28,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
         var provisioning = new Mock<IVoiceMediaProvisioningService>(MockBehavior.Strict);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-abc", "OtherProvider", "other-copy");
+        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-abc", "OtherProvider", "other-copy", null);
 
         // Assert
         Assert.Equal("other-copy", item.ProviderReferences["OtherProvider"]);
@@ -59,7 +59,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-old", "OtherProvider", "other-copy");
+        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-old", "OtherProvider", "other-copy", null);
 
         // Assert
         Assert.Empty(item.ProviderReferences);
@@ -69,6 +69,61 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
         Assert.NotNull(deleted);
         Assert.Null(deleted.MasterStorageReference);
         Assert.Equal("other-copy", Assert.Single(deleted.ProviderReferences).Value);
+    }
+
+    [Fact]
+    public async Task RecordLibraryCopyAsync_WhenAnotherCopyWasRecordedMeanwhile_KeepsItAndDeletesTheDuplicate()
+    {
+        // Arrange
+        // A re-sync, or another node's call, recorded a copy for this provider while this one was in flight. The
+        // recorded copy is the one callers play; the copy made here would only be a second, unreferenced upload.
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = "voice-media-abc",
+            ProviderReferences = new Dictionary<string, string> { ["OtherProvider"] = "other-recorded" },
+        };
+        var store = CreateStore(item);
+        var provisioning = new Mock<IVoiceMediaProvisioningService>();
+        IVoiceMediaAsset deleted = null;
+        provisioning
+            .Setup(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()))
+            .Callback((IVoiceMediaAsset media, CancellationToken _) => deleted = media)
+            .Returns(Task.CompletedTask);
+        var uploads = new Mock<IVoiceMediaUploadCoordinator>();
+
+        // Act
+        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning, uploads: uploads), "media-1", "voice-media-abc", "OtherProvider", "other-duplicate", null);
+
+        // Assert
+        Assert.Equal("other-recorded", Assert.Single(item.ProviderReferences).Value);
+        store.Verify(value => value.UpdateAsync(It.IsAny<VoiceMediaItem>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.NotNull(deleted);
+        Assert.Equal("other-duplicate", Assert.Single(deleted.ProviderReferences).Value);
+        uploads.Verify(coordinator => coordinator.Forget("OtherProvider", "voice-media-abc"), Times.Once);
+    }
+
+    [Fact]
+    public async Task RecordLibraryCopyAsync_ReplacesTheCopyTheProviderReportedMissing()
+    {
+        // Arrange
+        // The provider lost "other-old", the call made "other-new" to replace it. The old reference is still what
+        // the entry records, and it is the one being replaced, so the new copy takes its place.
+        var item = new VoiceMediaItem
+        {
+            ItemId = "media-1",
+            MasterStorageReference = "voice-media-abc",
+            ProviderReferences = new Dictionary<string, string> { ["OtherProvider"] = "other-old" },
+        };
+        var store = CreateStore(item);
+        var provisioning = new Mock<IVoiceMediaProvisioningService>(MockBehavior.Strict);
+
+        // Act
+        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-abc", "OtherProvider", "other-new", "other-old");
+
+        // Assert
+        Assert.Equal("other-new", Assert.Single(item.ProviderReferences).Value);
+        store.Verify(value => value.UpdateAsync(item, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -82,7 +137,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-abc", "OtherProvider", "other-copy");
+        await DeferredVoiceMediaCopyRecorder.RecordLibraryCopyAsync(CreateServices(store: store, provisioning: provisioning), "media-1", "voice-media-abc", "OtherProvider", "other-copy", null);
 
         // Assert
         provisioning.Verify(
@@ -107,7 +162,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
         var provisioning = new Mock<IVoiceMediaProvisioningService>(MockBehavior.Strict);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other");
+        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other", null);
 
         // Assert
         Assert.Equal("cc-vm-greeting-other", agent.VoicemailGreetingMedia.ProviderReferences["OtherProvider"]);
@@ -132,10 +187,41 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
         var agents = CreateAgents(agent);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other");
+        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other", null);
 
         // Assert
         agents.Verify(manager => manager.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RecordGreetingCopyAsync_WhenAnotherCopyWasRecordedMeanwhile_KeepsItAndDeletesTheDuplicate()
+    {
+        // Arrange
+        var agent = new AgentProfile
+        {
+            ItemId = "agent-9",
+            VoicemailGreetingMedia = new VoiceMediaAsset
+            {
+                MasterStorageReference = "voice-media-greeting",
+                ProviderReferences = new Dictionary<string, string> { ["OtherProvider"] = "cc-vm-greeting-recorded" },
+            },
+        };
+        var agents = CreateAgents(agent);
+        var provisioning = new Mock<IVoiceMediaProvisioningService>();
+        IVoiceMediaAsset deleted = null;
+        provisioning
+            .Setup(service => service.DeleteEverywhereAsync(It.IsAny<IVoiceMediaAsset>(), It.IsAny<CancellationToken>()))
+            .Callback((IVoiceMediaAsset media, CancellationToken _) => deleted = media)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-duplicate", null);
+
+        // Assert
+        Assert.Equal("cc-vm-greeting-recorded", Assert.Single(agent.VoicemailGreetingMedia.ProviderReferences).Value);
+        agents.Verify(manager => manager.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.NotNull(deleted);
+        Assert.Equal("cc-vm-greeting-duplicate", Assert.Single(deleted.ProviderReferences).Value);
     }
 
     [Fact]
@@ -158,7 +244,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-old", "OtherProvider", "cc-vm-greeting-other");
+        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-old", "OtherProvider", "cc-vm-greeting-other", null);
 
         // Assert
         Assert.Empty(agent.VoicemailGreetingMedia.ProviderReferences);
@@ -179,7 +265,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
             .Returns(Task.CompletedTask);
 
         // Act
-        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other");
+        await DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents, provisioning: provisioning), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other", null);
 
         // Assert
         Assert.Null(agent.VoicemailGreetingMedia);
@@ -202,7 +288,7 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
             .ThrowsAsync(new InvalidOperationException("The document was changed by somebody else."));
 
         // Act
-        var exception = await Record.ExceptionAsync(() => DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other"));
+        var exception = await Record.ExceptionAsync(() => DeferredVoiceMediaCopyRecorder.RecordGreetingCopyAsync(CreateServices(agents: agents), "agent-9", "voice-media-greeting", "OtherProvider", "cc-vm-greeting-other", null));
 
         // Assert
         Assert.Null(exception);
@@ -334,11 +420,13 @@ public sealed class DeferredVoiceMediaCopyRecorderTests
     private static ServiceProvider CreateServices(
         Mock<IAgentProfileManager> agents = null,
         Mock<IVoiceMediaItemStore> store = null,
-        Mock<IVoiceMediaProvisioningService> provisioning = null)
+        Mock<IVoiceMediaProvisioningService> provisioning = null,
+        Mock<IVoiceMediaUploadCoordinator> uploads = null)
         => new ServiceCollection()
             .AddLogging()
             .AddSingleton((agents ?? new Mock<IAgentProfileManager>()).Object)
             .AddSingleton((store ?? new Mock<IVoiceMediaItemStore>()).Object)
             .AddSingleton((provisioning ?? new Mock<IVoiceMediaProvisioningService>()).Object)
+            .AddSingleton((uploads ?? new Mock<IVoiceMediaUploadCoordinator>()).Object)
             .BuildServiceProvider();
 }

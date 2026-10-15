@@ -298,7 +298,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         if (provisioned.Changed)
         {
-            _copyRecorder.RecordGreetingCopy(agent.ItemId, agent.VoicemailGreetingMedia.MasterStorageReference, provisioned.ProviderName, provisioned.Reference);
+            _copyRecorder.RecordGreetingCopy(agent.ItemId, agent.VoicemailGreetingMedia.MasterStorageReference, provisioned.ProviderName, provisioned.Reference, provisioned.ReplacedReference);
         }
 
         return provisioned.Reference;

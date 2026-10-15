@@ -17,4 +17,12 @@ public interface IVoiceMediaUploadCoordinator
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The provider's reference, or <see langword="null"/> when the upload failed.</returns>
     Task<string> UploadOnceAsync(string providerName, string masterStorageReference, Func<CancellationToken, Task<string>> upload, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets the reference a recent upload produced for the clip and provider, because the provider no longer
+    /// holds that copy or it was deleted, so the next caller uploads again instead of reusing it.
+    /// </summary>
+    /// <param name="providerName">The technical name of the provider.</param>
+    /// <param name="masterStorageReference">The master copy the provider copy was made from.</param>
+    void Forget(string providerName, string masterStorageReference);
 }

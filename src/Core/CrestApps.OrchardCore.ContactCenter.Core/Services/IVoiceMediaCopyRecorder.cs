@@ -14,24 +14,27 @@ public interface IVoiceMediaCopyRecorder
     /// <summary>
     /// Schedules the copy a provider was given of a voice media library entry to be recorded on that entry. The
     /// task reloads the entry and records the copy only while the entry's master copy is still the one the copy was
-    /// made from; otherwise the audio changed meanwhile and the copy, which plays the old audio, is deleted.
+    /// made from; otherwise the audio changed meanwhile and the copy, which plays the old audio, is deleted. A copy
+    /// another path recorded for the provider meanwhile is kept, and the copy made here is deleted as a duplicate,
+    /// unless it is the copy this one was made to replace.
     /// </summary>
     /// <param name="itemId">The library entry identifier.</param>
     /// <param name="masterStorageReference">The master copy the provider copy was made from.</param>
     /// <param name="providerName">The technical name of the provider that holds the copy.</param>
     /// <param name="mediaReference">The reference the provider plays the clip by.</param>
-    void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference);
+    /// <param name="replacedReference">The reference of the copy the provider reported missing, which the new copy replaces; <see langword="null"/> when the provider had no copy recorded.</param>
+    void RecordLibraryCopy(string itemId, string masterStorageReference, string providerName, string mediaReference, string replacedReference);
 
     /// <summary>
     /// Schedules the copy a provider was given of an agent's voicemail greeting to be recorded on the agent's
-    /// profile, under the same rule as <see cref="RecordLibraryCopy"/>: only while the greeting's master copy is
-    /// still the one the copy was made from, and otherwise the copy is deleted.
+    /// profile, under the same rules as <see cref="RecordLibraryCopy"/>.
     /// </summary>
     /// <param name="agentId">The identifier of the agent whose greeting was copied.</param>
     /// <param name="masterStorageReference">The master copy the provider copy was made from.</param>
     /// <param name="providerName">The technical name of the provider that holds the copy.</param>
     /// <param name="mediaReference">The reference the provider plays the greeting by.</param>
-    void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference);
+    /// <param name="replacedReference">The reference of the copy the provider reported missing, which the new copy replaces; <see langword="null"/> when the provider had no copy recorded.</param>
+    void RecordGreetingCopy(string agentId, string masterStorageReference, string providerName, string mediaReference, string replacedReference);
 
     /// <summary>
     /// Schedules the copies an agent's greeting was held as before it was saved to be deleted, once the save has
