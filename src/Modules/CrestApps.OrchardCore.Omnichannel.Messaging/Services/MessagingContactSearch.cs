@@ -112,6 +112,32 @@ public sealed class MessagingContactSearch
     }
 
     /// <summary>
+    /// Reads the term as an address on the channel, so a composer can message an address that is not in the contacts.
+    /// </summary>
+    /// <param name="term">The term the user typed.</param>
+    /// <param name="channelName">The channel the message will be sent on.</param>
+    /// <returns>The address, with no contact id; <see langword="null"/> when the term is not a valid address on the channel.</returns>
+    public ContactSearchResult GetAddress(string term, string channelName)
+    {
+        var channel = _channelResolver.Get(channelName);
+
+        if (channel is null || string.IsNullOrWhiteSpace(term) || !channel.IsValidAddress(term))
+        {
+            return null;
+        }
+
+        var normalized = channel.NormalizeAddress(term);
+        var displayAddress = channel.FormatAddress(normalized);
+
+        return new ContactSearchResult
+        {
+            Name = displayAddress,
+            Address = normalized,
+            DisplayAddress = displayAddress,
+        };
+    }
+
+    /// <summary>
     /// Finds the contact that owns an exact address on the channel, so a composer opened for that address can show
     /// the contact in its To line rather than as a bare address.
     /// </summary>

@@ -33,7 +33,8 @@
                 data-messaging-contact-picker
                 data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
                 data-endpoint-select="#endpoint-select"
-                data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"></select>
+                data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
+                data-new-address-text="@T["Not in your contacts"]"></select>
         <span class="hint">@T["Type a name or address to search the contacts reachable on the selected channel, then select recipients."]</span>
     </div>
 

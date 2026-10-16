@@ -19,6 +19,7 @@
 			}
 			var picker = Selectpicker.getOrCreateInstance(select);
 			if (!picker || !picker.searchbox) return;
+			var newAddressText = select.getAttribute("data-new-address-text") || "";
 			var timer = null;
 			var suppress = false;
 			function currentChannel() {
@@ -37,17 +38,28 @@
 					}).then(function(response) {
 						return response.ok ? response.json() : [];
 					}).then(function(items) {
-						var added = false;
+						var changed = false;
+						Array.prototype.forEach.call(select.querySelectorAll("option[data-messaging-new-address]"), function(option) {
+							if (!option.selected) {
+								option.remove();
+								changed = true;
+							}
+						});
 						(items || []).forEach(function(item) {
 							if (!item.address || select.querySelector("option[value=\"" + CSS.escape(item.address) + "\"]")) return;
 							var option = document.createElement("option");
 							option.value = item.address;
 							option.textContent = item.name || item.displayAddress || item.address;
-							option.setAttribute("data-subtext", item.displayAddress || item.address);
+							if (item.id) option.setAttribute("data-subtext", item.displayAddress || item.address);
+							else {
+								option.setAttribute("data-messaging-new-address", "");
+								if (newAddressText) option.setAttribute("data-subtext", newAddressText);
+							}
+							option.setAttribute("data-tokens", item.address + " " + q);
 							select.appendChild(option);
-							added = true;
+							changed = true;
 						});
-						if (added) picker.refresh();
+						if (changed) picker.refresh();
 						suppress = true;
 						picker.searchbox.dispatchEvent(new Event("input", { bubbles: true }));
 						suppress = false;

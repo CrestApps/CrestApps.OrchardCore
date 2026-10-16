@@ -362,7 +362,18 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        return Json(await _contactSearch.SearchAsync(q, channel, HttpContext.RequestAborted));
+        var results = (await _contactSearch.SearchAsync(q, channel, HttpContext.RequestAborted)).ToList();
+
+        // An address no listed contact has is offered too, without a contact id, so the agent can message a number
+        // that is not in the contacts yet straight from the To line.
+        var address = _contactSearch.GetAddress(q, channel);
+
+        if (address is not null && !results.Any(result => string.Equals(result.Address, address.Address, StringComparison.OrdinalIgnoreCase)))
+        {
+            results.Add(address);
+        }
+
+        return Json(results);
     }
 
     // Returns the message bubbles added since a client-supplied high-water mark (UTC ticks), rendered with the same
