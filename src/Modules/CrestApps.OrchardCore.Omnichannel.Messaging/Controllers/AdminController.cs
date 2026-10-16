@@ -254,9 +254,12 @@ public sealed class AdminController : Controller
         // An address can be used on several channels; the composer sends on the first messaging channel it has.
         var channel = endpoint is null ? null : _channelResolver.GetAll().FirstOrDefault(candidate => endpoint.HasCapability(candidate.Name));
 
-        var recipients = ParseRecipients(model.Recipients)
+        var addresses = ParseRecipients(model.Recipients)
             .Concat(model.ContactAddresses ?? [])
             .Where(address => !string.IsNullOrWhiteSpace(address))
+            .ToList();
+
+        var recipients = addresses
             .Select(address => channel?.NormalizeAddress(address) ?? address.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -272,6 +275,19 @@ public sealed class AdminController : Controller
             if (invalid.Length > 0)
             {
                 ModelState.AddModelError(nameof(model.Recipients), S["These are not valid {0} addresses: {1}", channel.DisplayName, string.Join(", ", invalid)]);
+            }
+            else
+            {
+                // An address no contact owns is held to the stricter rule for typed addresses, so a number is never
+                // guessed into a country.
+                var unlisted = await _contactSearch.FindInvalidNewAddressesAsync(addresses, channel.Name, HttpContext.RequestAborted);
+
+                if (unlisted.Count > 0)
+                {
+                    ModelState.AddModelError(nameof(model.Recipients), channel.Capabilities.AddressesArePhoneNumbers
+                        ? S["These numbers are not in your contacts, so they must be in international format, for example +12015550123: {0}", string.Join(", ", unlisted)]
+                        : S["These addresses are not in your contacts and are not valid {0} addresses: {1}", channel.DisplayName, string.Join(", ", unlisted)]);
+                }
             }
 
             if (recipients.Count > 1 && !channel.Capabilities.SupportsBroadcast)

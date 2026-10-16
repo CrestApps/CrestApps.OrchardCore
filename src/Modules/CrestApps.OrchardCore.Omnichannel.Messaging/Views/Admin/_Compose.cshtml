@@ -1,5 +1,7 @@
 @using System.Text.Json
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
 @model ComposeViewModel
+@inject IMessagingChannelResolver ChannelResolver
 
 @*
     The composer sits in the conversation pane, beside the customer list, laid out like a mail client's compose window:
@@ -8,6 +10,8 @@
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<style asp-name="intl-tel-input" at="Head"></style>
+<script asp-name="intl-tel-input" at="Foot"></script>
 
 <form method="post" asp-action="New" class="messaging-compose d-flex flex-column flex-grow-1 overflow-hidden no-multisubmit">
     <input type="hidden" asp-for="Channel" />
@@ -39,12 +43,37 @@
                     data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
                     data-endpoint-select="#endpoint-select"
                     data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
-                    data-new-address-text="@T["Not in your contacts"]">
+                    data-new-address-text="@T["Not in your contacts"]"
+                    data-phone-channels="@JsonSerializer.Serialize(ChannelResolver.GetAll().Where(channel => channel.Capabilities.AddressesArePhoneNumbers).Select(channel => channel.Name))"
+                    data-phone-hint="@T["A number that is not in your contacts must be in international format, for example +12015550123."]"
+                    data-number-entry="#recipient-number-entry">
                 @foreach (var contact in Model.SelectedContacts)
                 {
                     <option value="@contact.Address" data-subtext="@contact.DisplayAddress" selected>@contact.Name</option>
                 }
             </select>
+        </div>
+        <button type="button" class="btn btn-sm btn-link text-body-secondary text-nowrap px-1" id="recipient-number-toggle" hidden aria-controls="recipient-number-entry" aria-expanded="false">
+            <i class="fa-solid fa-hashtag me-1" aria-hidden="true"></i>@T["Enter a number"]
+        </button>
+    </div>
+
+    @* A number with its country picked from a flag, for someone who is not in the contacts. It is added to the To line
+       above in E.164, so it is sent exactly as validated here. *@
+    <div class="messaging-compose-line" id="recipient-number-entry" hidden
+         data-number-toggle="#recipient-number-toggle"
+         data-invalid-text="@T["Enter a valid number for the selected country."]">
+        <span class="messaging-compose-label" aria-hidden="true"></span>
+        <div class="flex-grow-1" style="min-width: 0;">
+            <div class="d-flex align-items-center gap-2">
+                <div class="flex-grow-1" style="min-width: 0;">
+                    <input type="tel" class="form-control form-control-sm" autocomplete="off" aria-label="@T["Phone number"]" data-number-input />
+                </div>
+                <button type="button" class="btn btn-sm btn-primary text-nowrap" data-number-add>
+                    <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add"]
+                </button>
+            </div>
+            <div class="small text-danger mt-1" data-number-error hidden></div>
         </div>
     </div>
 
