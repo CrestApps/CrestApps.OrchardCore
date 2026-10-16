@@ -638,4 +638,33 @@ img.medium-zoom-image--opened {
     }
 }
 
-/*# sourceMappingURL=chat-widget.css.map */
+/* Persona avatar shown on assistant messages in place of the robot icon. */
+.ai-chat-assistant-avatar {
+    display: block;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.ai-bot-avatar,
+.ai-streaming-avatar {
+    display: inline-flex;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+@keyframes ai-chat-avatar-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+.ai-streaming-avatar {
+    animation: ai-chat-avatar-pulse 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ai-streaming-avatar {
+        animation: none;
+    }
+}
