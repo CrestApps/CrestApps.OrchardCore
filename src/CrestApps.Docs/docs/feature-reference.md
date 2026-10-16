@@ -26,6 +26,7 @@ turns them on, and they disappear again when nothing needs them.
 | `CrestApps.OrchardCore.AI` | AI Services (dependency only) | [AI Services](./ai/overview) |
 | `CrestApps.OrchardCore.AI.ConnectionManagement` | AI Connection Management | [AI Providers](./ai/providers/) |
 | `CrestApps.OrchardCore.AI.ToolInstances` | AI Tool Instances | [AI Tool Instances](./ai/tool-instances) |
+| `CrestApps.OrchardCore.AI.Personas` | AI Personas | [AI Personas](./ai/personas) |
 | `CrestApps.OrchardCore.AI.Chat.Core` | AI Chat Services (dependency only) | [AI Services](./ai/overview) |
 | `CrestApps.OrchardCore.AI.Chat.Api` | AI Chat WebAPI | [AI Services](./ai/overview) |
 | `CrestApps.OrchardCore.AI.Chat` | AI Chat | [AI Chat](./ai/chat) |

@@ -28,7 +28,10 @@ Enable the **AI Personas** feature (`CrestApps.OrchardCore.AI.Personas`). It add
 - **Artificial Intelligence → Personas**, guarded by the **Manage AI personas** permission;
 - the **AI persona** picker on AI profiles, Profile templates, chat interactions and the workflow task;
 - the persona name and avatar in AI Chat sessions, the chat widgets and Chat Interactions;
-- the `AIPersonas` recipe step and the **AI Personas** deployment step.
+- the `AIPersonas` recipe step and the **AI Personas** deployment step (see [Importing and exporting](#importing-and-exporting)).
+
+A tenant starts with no personas. Create them in the admin, import them with a recipe, or register them in code (see
+[Registering personas in code](#registering-personas-in-code)).
 
 Without the feature, persona links that are already stored are kept but ignored: chats run with the profile's own
 instructions, label and voice.
@@ -49,10 +52,9 @@ instructions, label and voice.
    - **Avatar URL** (optional): an image shown next to the assistant's messages.
 3. Save. The persona can now be chosen anywhere a persona picker appears.
 
-Six ready-made personas ship with the AI module: *Friendly assistant*, *Professional concierge*, *Technical expert*,
-*Patient tutor*, *Empathetic support agent* and *Upbeat sales guide*. They are marked **From file** in the list and
-have no voice, because voices belong to a provider. Editing one and saving it creates a saved persona with the same
-technical name, which replaces the file for everything that links to it. A persona file cannot be deleted.
+Personas that code provides (see [Registering personas in code](#registering-personas-in-code)) are marked **From
+file** in the list. They cannot be deleted. Editing one and saving it creates a saved persona with the same technical
+name, which replaces the provided one for everything that links to it.
 
 ## Using a persona
 
@@ -110,11 +112,30 @@ Profiles that use a deleted persona keep working without one. When you delete a 
 use, a warning says how many were affected. When a persona file has the same technical name, the links fall back to
 the file.
 
-## Recipes
+## Importing and exporting
 
-The `AIPersonas` step creates or updates personas. A persona is matched by `ItemId`, then by `Name`, so links keep
-working across tenants. A profile links to a persona with a top-level `PersonaId` in the `AIProfile` step: an empty
-value unlinks it, and leaving the key out keeps the current link.
+Saved personas move between tenants with the standard Orchard Core deployment and recipe pipeline. Profiles link to a
+persona by its technical name, which survives the move, so a profile and its persona can be exported and imported
+together in either order.
+
+### Deployment plan
+
+Enable **OrchardCore.Deployment** together with **AI Personas**. The **AI Personas** deployment step then becomes
+available when you build a deployment plan under **Configuration → Deployment Plans**. It exports either every saved
+persona (**Include all saved personas**) or only the ones you select. Each exported persona keeps its technical name,
+title, description, instructions, assistant name, language, voice, avatar, owner and properties.
+
+Only saved personas are exported. Personas that code provides ship with that code, so the target tenant gets them by
+enabling the same module. Export AI profiles with the **AI Profiles** step; a profile's link travels in its
+`Properties.AIPersonaMetadata`.
+
+### Recipe step
+
+The deployment step emits an `AIPersonas` recipe step, which is also the step you write by hand to create personas
+when a tenant is set up. Each entry is matched by `ItemId` first and then by `Name`. A match is updated in place,
+keeping its technical name; otherwise a new persona is created. `Name` and `Instructions` are required for a new
+persona. A profile links to one with a top-level `PersonaId` in the `AIProfile` step: an empty value unlinks it, and
+leaving the key out keeps the current link.
 
 ```json
 {
@@ -125,9 +146,13 @@ value unlinks it, and leaving the key out keeps the current link.
         {
           "Name": "front-desk",
           "DisplayText": "Front desk",
-          "Instructions": "You are a gracious, efficient front-desk assistant.",
+          "Description": "Gracious and efficient.",
+          "Instructions": "You are {{ assistant_name }}, a gracious, efficient front-desk assistant.",
           "AssistantName": "Ava",
-          "Language": "en-US"
+          "Language": "en-US",
+          "VoiceName": "alloy",
+          "VoiceDeploymentName": "gpt-realtime",
+          "AvatarUrl": "/media/avatars/ava.png"
         }
       ]
     },
@@ -137,6 +162,7 @@ value unlinks it, and leaving the key out keeps the current link.
         {
           "Name": "support",
           "DisplayText": "Support",
+          "Type": "Chat",
           "PersonaId": "front-desk"
         }
       ]
@@ -145,14 +171,104 @@ value unlinks it, and leaving the key out keeps the current link.
 }
 ```
 
-A Profile template file can name the persona its profiles start with by adding `PersonaId: front-desk` to its front
-matter.
+| Property | Required | Description |
+| --- | --- | --- |
+| `ItemId` | No | Matches an existing persona to update. |
+| `Name` | Yes | The technical name profiles link to. It cannot change once created. |
+| `DisplayText` | No | The title shown in editors. Defaults to `Name`. |
+| `Description` | No | Helps editors choose the right persona. |
+| `Instructions` | For a new persona | The Liquid persona prompt, placed first in the system message. |
+| `AssistantName` | No | The name the assistant uses for itself. |
+| `Language` | No | A BCP-47 tag such as `en-US`. |
+| `VoiceName` | No | The provider-specific voice. |
+| `VoiceDeploymentName` | No | The deployment the voice was chosen from. |
+| `AvatarUrl` | No | An image shown next to assistant messages. |
+| `CreatedUtc`, `OwnerId`, `Author` | No | Kept from an export. |
+| `Properties` | No | Extra data stored with the persona. |
 
-## Persona files
+### Recipe schema
 
-Modules ship personas as Markdown files in their `Templates/Personas` folder, and the site can add its own in the
-content root's `Templates/Personas` folder. The file name, without its extension, is the technical name. The front
-matter holds the persona's fields and the body holds its instructions:
+With the **CrestApps Recipes** feature (`CrestApps.OrchardCore.Recipes`) enabled, the tenant exposes JSON schemas for
+the `AIPersonas` step and for the **AI Personas** deployment step (`AIPersonaDeploymentStep`, with `IncludeAll` and
+`PersonaIds`), and the `AIProfile` step schema describes `PersonaId` and `AIPersonaMetadata`. Recipe tooling and AI
+assistants use them to validate and suggest persona recipes. See [Recipes](../modules/recipes).
+
+## Registering personas in code
+
+There are two kinds of persona a module or a site can register.
+
+### Saved personas: seed them once
+
+A saved persona is an ordinary catalog record: editors can change or delete it, and it is exported with the others.
+To give a tenant personas when it is set up, ship them in a recipe with the `AIPersonas` step, or create them with
+`IAIPersonaManager`, for example in a data migration:
+
+```csharp
+public sealed class PersonaMigrations : DataMigration
+{
+    private readonly IAIPersonaManager _personaManager;
+
+    public PersonaMigrations(IAIPersonaManager personaManager)
+    {
+        _personaManager = personaManager;
+    }
+
+    public async Task<int> CreateAsync()
+    {
+        var persona = await _personaManager.NewAsync("front-desk", new JsonObject
+        {
+            ["DisplayText"] = "Front desk",
+            ["Instructions"] = "You are {{ assistant_name }}, a gracious, efficient front-desk assistant.",
+            ["AssistantName"] = "Ava",
+        });
+
+        var result = await _personaManager.ValidateAsync(persona);
+
+        if (result.Succeeded)
+        {
+            await _personaManager.CreateAsync(persona);
+        }
+
+        return 1;
+    }
+}
+```
+
+Register the migration in a startup that requires the feature, so it only runs where personas are enabled:
+
+```csharp
+[RequireFeatures("CrestApps.OrchardCore.AI.Personas")]
+public sealed class PersonasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<PersonaMigrations>();
+    }
+}
+```
+
+### Provided personas: read from files or code
+
+A provided persona is read from code every time it is needed. Every tenant that enables the module gets it, editors
+cannot delete it, and it is not exported. Saving one in the editor creates a saved persona with the same technical
+name, which replaces it.
+
+To ship persona files with a module, put Markdown files in the module's `Templates/Personas` folder. Orchard Core
+embeds module files, so register the assembly from a startup that requires the feature:
+
+```csharp
+[RequireFeatures("CrestApps.OrchardCore.AI.Personas")]
+public sealed class PersonasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCoreAIPersonasFromAssembly(typeof(PersonasStartup).Assembly);
+    }
+}
+```
+
+The file name, without its extension, is the technical name. The front matter holds the persona's fields and the
+body holds its instructions:
 
 ```markdown
 ---
@@ -162,8 +278,12 @@ AssistantName: Ava
 Language: en-US
 ---
 
-You are a gracious, efficient front-desk assistant.
+You are {{ assistant_name }}, a gracious, efficient front-desk assistant.
 ```
+
+A site can also drop such files into the `Templates/Personas` folder of its content root, the web project's folder.
+For any other source, implement `IAIPersonaProvider` and register it with
+`services.AddSingleton<IAIPersonaProvider, MyPersonaProvider>()`.
 
 ## Related docs
 

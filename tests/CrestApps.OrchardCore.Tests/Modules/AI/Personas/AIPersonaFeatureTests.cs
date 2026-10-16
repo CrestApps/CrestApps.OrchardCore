@@ -5,14 +5,12 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.Core.Templates.Parsing;
 using CrestApps.OrchardCore.AI;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.Deployments.Sources;
 using CrestApps.OrchardCore.AI.Deployments.Steps;
 using CrestApps.OrchardCore.AI.Drivers;
-using CrestApps.OrchardCore.AI.Providers;
 using CrestApps.OrchardCore.AI.Recipes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -178,30 +176,7 @@ public sealed class AIPersonaFeatureTests
     }
 
     [Fact]
-    public void ShippedPersonaFiles_ShouldEachHaveATitleDescriptionAndInstructions()
-    {
-        // Arrange
-        var directory = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.AI", "Templates", "Personas");
-        var parser = new DefaultMarkdownTemplateParser();
-
-        // Act
-        var personas = Directory.GetFiles(directory, "*.md")
-            .Select(file => AIPersonaFileParser.Parse(Path.GetFileNameWithoutExtension(file), parser.Parse(File.ReadAllText(file))))
-            .ToList();
-
-        // Assert
-        Assert.Equal(6, personas.Count);
-        Assert.All(personas, persona =>
-        {
-            Assert.False(string.IsNullOrWhiteSpace(persona.DisplayText), persona.Name);
-            Assert.False(string.IsNullOrWhiteSpace(persona.Description), persona.Name);
-            Assert.False(string.IsNullOrWhiteSpace(persona.Instructions), persona.Name);
-            Assert.Equal("en-US", persona.Language);
-        });
-    }
-
-    [Fact]
-    public void PersonasStartup_ShouldRegisterTheCatalogResolverModuleFilesAndPickers()
+    public void PersonasStartup_ShouldRegisterTheCatalogResolverAndPickersButNoPersonas()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -213,7 +188,11 @@ public sealed class AIPersonaFeatureTests
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IAIPersonaManager));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IAIPersonaResolver));
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(INamedCatalog<AIPersona>));
-        Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(IAIPersonaProvider) && descriptor.ImplementationType == typeof(ModuleAIPersonaProvider));
+
+        // A tenant starts with no personas: the only provider is Core's reader for the site's own Templates/Personas folder.
+        Assert.Equal([typeof(AIPersonaFileSystemProvider)], services
+            .Where(descriptor => descriptor.ServiceType == typeof(IAIPersonaProvider))
+            .Select(descriptor => descriptor.ImplementationType));
         Assert.Contains(services, descriptor => descriptor.ImplementationType == typeof(AIPersonaDisplayDriver));
         Assert.Contains(services, descriptor => descriptor.ImplementationType == typeof(AIProfilePersonaDisplayDriver));
         Assert.Contains(services, descriptor => descriptor.ImplementationType == typeof(AIProfileTemplatePersonaDisplayDriver));
@@ -239,24 +218,6 @@ public sealed class AIPersonaFeatureTests
                 ["personas"] = new JsonArray { persona },
             },
         };
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-
-        while (directory is not null)
-        {
-            if (Directory.Exists(Path.Combine(directory.FullName, "src"))
-                && Directory.Exists(Path.Combine(directory.FullName, "tests", "CrestApps.OrchardCore.Tests")))
-            {
-                return directory.FullName;
-            }
-
-            directory = directory.Parent;
-        }
-
-        throw new DirectoryNotFoundException("Unable to locate the repository root from the test assembly location.");
-    }
 
     private sealed class PassThroughLocalizer<T> : IStringLocalizer<T>
     {
