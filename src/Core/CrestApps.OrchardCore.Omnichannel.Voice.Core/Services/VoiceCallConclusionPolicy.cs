@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -20,7 +21,7 @@ public static class VoiceCallConclusionPolicy
     /// <summary>
     /// The note written for a call on which nothing was said.
     /// </summary>
-    public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
+    public const string NoConversationNote = "The automated call produced no conversation: the customer said nothing.";
 
     /// <summary>
     /// The note written for a call that did have a conversation but which the review did not summarize.
@@ -65,16 +66,27 @@ public static class VoiceCallConclusionPolicy
             !activity.Status.IsTerminal();
 
     /// <summary>
-    /// Whether anybody actually said anything on the call.
+    /// Whether the customer actually said anything on the call.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Generated prompts are the scaffolding the platform adds rather than speech, and an empty or whitespace turn
     /// is a transcription that produced nothing — neither is somebody talking.
+    /// </para>
+    /// <para>
+    /// The assistant talking alone is not a conversation either. Every answered call has the assistant's opening, and
+    /// a silent line adds its "are you still there?" prompts. Counted as a conversation, such a call went to the
+    /// review, which wrote an outcome nobody chose: live, silent callers were concluded as "Appointment booked" and
+    /// "Handed to a person".
+    /// </para>
     /// </remarks>
     /// <param name="prompts">The stored transcript for the call's session.</param>
     public static bool HasConversation(IEnumerable<AIChatSessionPrompt> prompts)
         => prompts is not null
-            && prompts.Any(prompt => !prompt.IsGeneratedPrompt && !string.IsNullOrWhiteSpace(prompt.Content));
+            && prompts.Any(prompt =>
+                prompt.Role == ChatRole.User &&
+                !prompt.IsGeneratedPrompt &&
+                !string.IsNullOrWhiteSpace(prompt.Content));
 
     /// <summary>
     /// The notes to record against the concluded call.
@@ -132,20 +144,25 @@ public static class VoiceCallConclusionPolicy
     /// instead recorded a call that rang out unanswered as "Done" -- finished, and never tried again. A disposition
     /// marked with the matching outcome says what to record: a voicemail takes the answering-machine one, a busy line
     /// the busy one, and a call nobody answered (or either of those with no disposition of its own) the no-answer one.
-    /// A subject with none of them takes the outcome its try-again action is wired to, so the call is tried again, and
-    /// failing that the first choice, as before.
+    /// A subject with none of them takes the outcome its try-again action is wired to, so the call is tried again.
+    /// A subject with neither takes a disposition with the outcome from the whole catalog, as the dialer does: the
+    /// subject's own list may not offer one at all -- an inbound subject is wired to what callers ask for, not to
+    /// "No answer" -- and its first choice recorded silent callers as "Appointment booked". Only a catalog with no
+    /// such disposition anywhere falls back to the first choice.
     /// </remarks>
     /// <param name="choices">The dispositions the call may be concluded as.</param>
     /// <param name="subjectActions">Every configured subject action.</param>
     /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
     /// <param name="reachedVoicemail">Whether a voicemail, rather than nobody, picked up.</param>
     /// <param name="lineBusy">Whether the network reported the customer's line busy.</param>
+    /// <param name="catalog">Every configured disposition, or <see langword="null"/> when only the choices are known.</param>
     public static OmnichannelDisposition ChooseUnansweredDisposition(
         IEnumerable<OmnichannelDisposition> choices,
         IEnumerable<SubjectAction> subjectActions,
         string subjectContentType,
         bool reachedVoicemail = false,
-        bool lineBusy = false)
+        bool lineBusy = false,
+        IEnumerable<OmnichannelDisposition> catalog = null)
     {
         var offered = choices as IList<OmnichannelDisposition> ?? choices?.ToList();
 
@@ -163,9 +180,77 @@ public static class VoiceCallConclusionPolicy
         var byOutcome = DispositionOutcomes.Find(offered, subjectActions, subjectContentType, specific, includeUnwired: true)
             ?? DispositionOutcomes.Find(offered, subjectActions, subjectContentType, DispositionOutcome.NoAnswer, includeUnwired: true);
 
-        return byOutcome
-            ?? FindRetriedDisposition(offered, subjectActions, subjectContentType)
+        if (byOutcome is not null)
+        {
+            return byOutcome;
+        }
+
+        var retried = FindRetriedDisposition(offered, subjectActions, subjectContentType);
+
+        if (retried is not null || catalog is null)
+        {
+            return retried ?? ChooseDisposition(offered, modelChoiceId: null);
+        }
+
+        var everything = catalog as IList<OmnichannelDisposition> ?? catalog.ToList();
+
+        return DispositionOutcomes.Find(everything, subjectActions, subjectContentType, specific, includeUnwired: true)
+            ?? DispositionOutcomes.Find(everything, subjectActions, subjectContentType, DispositionOutcome.NoAnswer, includeUnwired: true)
             ?? ChooseDisposition(offered, modelChoiceId: null);
+    }
+
+    /// <summary>
+    /// The disposition to record for a conversation the review has judged.
+    /// </summary>
+    /// <remarks>
+    /// The review's choice stands when it is one of the dispositions offered. When it chose none -- the customer made
+    /// no decision on the call, or hung up before one was made -- the call is not given one: a disposition records
+    /// what the customer decided, and "the closest" recorded a caller who asked to book and hung up as "Handed to a
+    /// person". The subject's try-again outcome is taken, so the customer is called again; failing that, a
+    /// disposition from the whole catalog that records a customer who hung up before the call was done; and only a
+    /// catalog with neither falls back to the first choice.
+    /// </remarks>
+    /// <param name="choices">The dispositions the call may be concluded as.</param>
+    /// <param name="subjectActions">Every configured subject action.</param>
+    /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
+    /// <param name="modelChoiceId">The identifier the review returned, if any.</param>
+    /// <param name="catalog">Every configured disposition, or <see langword="null"/> when only the choices are known.</param>
+    public static OmnichannelDisposition ChooseReviewedDisposition(
+        IEnumerable<OmnichannelDisposition> choices,
+        IEnumerable<SubjectAction> subjectActions,
+        string subjectContentType,
+        string modelChoiceId,
+        IEnumerable<OmnichannelDisposition> catalog = null)
+    {
+        var offered = choices as IList<OmnichannelDisposition> ?? choices?.ToList();
+
+        if (offered is null || offered.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelChoiceId))
+        {
+            var chosen = offered.FirstOrDefault(disposition => disposition?.ItemId == modelChoiceId);
+
+            if (chosen is not null)
+            {
+                return chosen;
+            }
+        }
+
+        var retried = FindRetriedDisposition(offered, subjectActions, subjectContentType);
+
+        if (retried is not null)
+        {
+            return retried;
+        }
+
+        var hungUp = catalog is null
+            ? null
+            : DispositionOutcomes.Find(catalog, subjectActions, subjectContentType, DispositionOutcome.Disconnected, includeUnwired: true);
+
+        return hungUp ?? ChooseDisposition(offered, modelChoiceId: null);
     }
 
     /// <summary>

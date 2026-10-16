@@ -730,11 +730,17 @@ acts on next:
 - The model is offered **the dispositions the subject's own actions are wired to**, so whatever it picks always
   has somewhere to lead. A subject with no actions configured falls back to every disposition on the site, so a
   call is never left unclassified.
-- It is **held to that list**. A disposition it invents, or one belonging to a different subject, is discarded in
-  favour of the first choice it was offered.
-- A call **nobody spoke on** — rang out, declined, answered and hung up — is never sent for review. Asked to
-  summarize an empty transcript the model writes a plausible account of a conversation that did not happen, and
-  that account would be saved as fact; such a call is recorded as having produced no conversation.
+- It is **held to that list**, and it decides from what the customer said: the assistant's read-back, thanks or
+  goodbye is not the customer's agreement. A disposition it invents, or one belonging to a different subject, is
+  discarded, and so is a call on which the customer decided nothing the list records: the model is told to choose
+  none rather than the closest. Such a call takes the disposition the subject's **Try Again** action is wired to, so
+  the customer is called again, and failing that one with the *Disconnected* outcome (see
+  [Dispositions](../user-manual/dispositions.md#outcomes)); only a site with neither falls back to the first choice.
+- A call **the customer never spoke on** — rang out, declined, answered and hung up, or answered by someone who
+  stayed silent through the assistant's prompts — is never sent for review. The assistant talking alone is not a
+  conversation. Asked to summarize such a transcript the model writes a plausible account of a conversation that
+  did not happen, and that account would be saved as fact; such a call is recorded as having produced no
+  conversation, with the disposition for the *No answer* outcome.
 - A call **handed to a live agent** is not concluded here at all. The model's leg ends the moment the caller is
   transferred, and the outcome belongs to the agent who took it.
 

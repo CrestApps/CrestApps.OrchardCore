@@ -160,6 +160,27 @@ public sealed class VoiceCallConclusionPolicyTests
     }
 
     [Fact]
+    public void TheAssistantTalkingAlone_IsNotAConversation()
+    {
+        // Arrange
+        // Every answered call has the assistant's opening, and a silent line adds its prompts. Live, such calls went
+        // to the review and were concluded "Appointment booked" and "Handed to a person" with no word from the caller.
+        var prompts = new[]
+        {
+            new AIChatSessionPrompt { Role = ChatRole.Assistant, Content = "Hello, this is Studio Athena's assistant. How can I help?" },
+            new AIChatSessionPrompt { Role = ChatRole.Assistant, Content = "Sorry, are you still there?" },
+            new AIChatSessionPrompt { Role = ChatRole.Assistant, Content = "I'm looking to schedule a haircut appointment." },
+        };
+
+        // Act
+        var hasConversation = VoiceCallConclusionPolicy.HasConversation(prompts);
+
+        // Assert
+        Assert.False(hasConversation);
+        Assert.Equal(VoiceCallConclusionPolicy.NoConversationNote, VoiceCallConclusionPolicy.ResolveNotes(hasConversation, "The customer booked a haircut."));
+    }
+
+    [Fact]
     public void TheScaffoldingThePlatformAdds_IsNotSomebodySpeaking()
     {
         // Arrange
@@ -342,6 +363,99 @@ public sealed class VoiceCallConclusionPolicyTests
 
         // Assert
         Assert.Same(done, chosen);
+    }
+
+    [Fact]
+    public void AnUnansweredCall_TakesTheCatalogsNoAnswer_WhenTheSubjectOffersNone()
+    {
+        // Arrange
+        // An inbound subject is wired to what callers ask for. Live, its first choice recorded silent callers as
+        // "Appointment booked", although the catalog had a "No answer" disposition.
+        var booked = new OmnichannelDisposition { ItemId = "booked" };
+        var answered = new OmnichannelDisposition { ItemId = "answered" };
+        var noAnswer = new OmnichannelDisposition { ItemId = "no-answer", Outcome = DispositionOutcome.NoAnswer };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseUnansweredDisposition([booked, answered], [], "FrontDesk", catalog: [booked, answered, noAnswer]);
+
+        // Assert
+        Assert.Same(noAnswer, chosen);
+    }
+
+    [Fact]
+    public void AnUnansweredCallReachingVoicemail_TakesTheCatalogsAnsweringMachine_BeforeItsNoAnswer()
+    {
+        // Arrange
+        var booked = new OmnichannelDisposition { ItemId = "booked" };
+        var noAnswer = new OmnichannelDisposition { ItemId = "no-answer", Outcome = DispositionOutcome.NoAnswer };
+        var machine = new OmnichannelDisposition { ItemId = "machine", Outcome = DispositionOutcome.AnsweringMachine };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseUnansweredDisposition([booked], [], "Reminder", reachedVoicemail: true, catalog: [booked, noAnswer, machine]);
+
+        // Assert
+        Assert.Same(machine, chosen);
+    }
+
+    [Fact]
+    public void ASubjectsTryAgain_StillComesBeforeTheCatalog()
+    {
+        // Arrange
+        // The subject's own flow says what happens next: a call it tries again is tried again.
+        var retry = new OmnichannelDisposition { ItemId = "retry" };
+        var noAnswer = new OmnichannelDisposition { ItemId = "no-answer", Outcome = DispositionOutcome.NoAnswer };
+        SubjectAction[] actions = [new SubjectAction { Source = OmnichannelConstants.ActionTypes.TryAgain, SubjectContentType = "Lead", DispositionId = "retry" }];
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseUnansweredDisposition([retry], actions, "Lead", catalog: [retry, noAnswer]);
+
+        // Assert
+        Assert.Same(retry, chosen);
+    }
+
+    [Fact]
+    public void TheReviewsChoice_StandsWhenItIsOffered()
+    {
+        // Arrange
+        var booked = new OmnichannelDisposition { ItemId = "booked" };
+        var answered = new OmnichannelDisposition { ItemId = "answered" };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseReviewedDisposition([booked, answered], [], "FrontDesk", "answered", catalog: [booked, answered]);
+
+        // Assert
+        Assert.Same(answered, chosen);
+    }
+
+    [Fact]
+    public void AConversationWithNoDecision_TakesTheCatalogsHungUp_NotTheFirstChoice()
+    {
+        // Arrange
+        // Live, a caller who asked to book and hung up was concluded "Handed to a person", the closest on offer.
+        var booked = new OmnichannelDisposition { ItemId = "booked" };
+        var handedOver = new OmnichannelDisposition { ItemId = "handed-over" };
+        var hungUp = new OmnichannelDisposition { ItemId = "hung-up", Outcome = DispositionOutcome.Disconnected };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseReviewedDisposition([booked, handedOver], [], "FrontDesk", modelChoiceId: null, catalog: [booked, handedOver, hungUp]);
+
+        // Assert
+        Assert.Same(hungUp, chosen);
+    }
+
+    [Fact]
+    public void AConversationWithNoDecision_IsTriedAgain_WhenTheSubjectRetries()
+    {
+        // Arrange
+        var retry = new OmnichannelDisposition { ItemId = "retry" };
+        var hungUp = new OmnichannelDisposition { ItemId = "hung-up", Outcome = DispositionOutcome.Disconnected };
+        SubjectAction[] actions = [new SubjectAction { Source = OmnichannelConstants.ActionTypes.TryAgain, SubjectContentType = "Reminder", DispositionId = "retry" }];
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseReviewedDisposition([retry], actions, "Reminder", "not-offered", catalog: [retry, hungUp]);
+
+        // Assert
+        Assert.Same(retry, chosen);
     }
 
     [Fact]
