@@ -3,9 +3,11 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
+using CrestApps.Core.Services;
 using CrestApps.Core.Templates.Models;
 using CrestApps.Core.Templates.Providers;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Prompting;
 using CrestApps.OrchardCore.AI.Prompting.Providers;
 using Microsoft.Extensions.DependencyInjection;
@@ -133,6 +135,28 @@ public sealed class SavedSystemPromptTemplateRenderingTests
         Assert.Equal("Built-in content.", rendered);
     }
 
+    [Fact]
+    public async Task ListAsync_WhenSavedSystemPromptTemplateExists_ShouldListItOnceUnderItsName()
+    {
+        // Arrange
+        var savedTemplates = new List<AIProfileTemplate>
+        {
+            CreateSystemPromptTemplate(_templateName, "Answer as {{ brand }} support."),
+        };
+
+        await using var serviceProvider = CreateServiceProvider(savedTemplates);
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        var selectionService = scope.ServiceProvider.GetRequiredService<PromptTemplateSelectionService>();
+
+        // Act
+        var templates = await selectionService.ListAsync();
+
+        // Assert
+        var template = Assert.Single(templates, template => template.Metadata.Title == _templateName);
+        Assert.Equal(_templateName, template.Id);
+    }
+
     private static async Task<string> BuildSystemMessageAsync(ServiceProvider serviceProvider, AIProfile profile)
     {
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -159,6 +183,8 @@ public sealed class SavedSystemPromptTemplateRenderingTests
             .ReturnsAsync(Array.Empty<IFeatureInfo>());
         services.AddSingleton(shellFeaturesManager.Object);
 
+        services.AddScoped(_ => new Mock<INamedSourceCatalog<AIProfileTemplate>>().Object);
+
         var templateManager = new Mock<IAIProfileTemplateManager>();
         templateManager
             .Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -166,6 +192,7 @@ public sealed class SavedSystemPromptTemplateRenderingTests
         services.AddScoped(_ => templateManager.Object);
 
         new Startup().ConfigureServices(services);
+        services.AddScoped<PromptTemplateSelectionService>();
 
         // Module discovery needs a running OrchardCore host; the saved templates are what is under test.
         services.Remove(services.Single(descriptor =>

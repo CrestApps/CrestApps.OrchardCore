@@ -27,10 +27,6 @@ public sealed class Startup : StartupBase
         // Add module directory scanner.
         services.AddSingleton<ITemplateProvider, ModuleTemplateProvider>();
 
-        // System Prompt AI templates are read per scope by OrchardCoreTemplateService, not cached
-        // with the other providers, so they are not registered as an ITemplateProvider.
-        services.AddScoped<AIProfileSystemPromptTemplateProvider>();
-
         // Add display drivers for prompt selection UI.
         services.AddDisplayDriver<AIProfile, AIProfilePromptSelectionDisplayDriver>();
         services.AddDisplayDriver<ChatInteraction, ChatInteractionPromptSelectionDisplayDriver>();
