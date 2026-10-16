@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -9,8 +10,9 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
@@ -18,8 +20,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 internal static partial class SupervisorDashboardEndpoints
 {
     // Diagnosing a campaign reads its pending records and the dispatcher's recent decisions, which costs far more than the
-    // state poll; a supervisor's polls, and every supervisor's, share one reading for this long.
-    private static readonly TimeSpan _dispatchCacheDuration = TimeSpan.FromSeconds(20);
+    // state poll; a supervisor's polls, and every supervisor's, share one reading for this long. The reading is kept in the
+    // distributed cache, keyed by tenant, so every node serves the same one and tenants never see each other's.
+    private static readonly JsonSerializerOptions _dispatchSerializerOptions = new(JsonSerializerDefaults.Web);
+
+    private static readonly DistributedCacheEntryOptions _dispatchCacheOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(20),
+    };
 
     internal static async Task<IResult> HandleDispatchAsync(
         IAuthorizationService authorizationService,
@@ -27,7 +35,8 @@ internal static partial class SupervisorDashboardEndpoints
         IAgentProfileManager agentManager,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         IDialerDispatchDiagnosticsService diagnosticsService,
-        IMemoryCache cache,
+        IDistributedCache cache,
+        ShellSettings shellSettings,
         IClock clock,
         HttpContext httpContext)
     {
@@ -89,7 +98,7 @@ internal static partial class SupervisorDashboardEndpoints
         }
 
         var now = clock.UtcNow;
-        var diagnoses = await DiagnoseCachedAsync(diagnosticsService, cache, authorizedQueueIds, cancellationToken);
+        var diagnoses = await DiagnoseCachedAsync(diagnosticsService, cache, shellSettings.Name, authorizedQueueIds, cancellationToken);
         var model = new SupervisorDispatchStateViewModel { ServerTimeUtc = now };
 
         foreach (var diagnosis in diagnoses)
@@ -123,7 +132,8 @@ internal static partial class SupervisorDashboardEndpoints
 
     private static async Task<IReadOnlyList<QueueDispatchDiagnostics>> DiagnoseCachedAsync(
         IDialerDispatchDiagnosticsService diagnosticsService,
-        IMemoryCache cache,
+        IDistributedCache cache,
+        string tenantName,
         IReadOnlyCollection<string> queueIds,
         CancellationToken cancellationToken)
     {
@@ -132,7 +142,9 @@ internal static partial class SupervisorDashboardEndpoints
 
         foreach (var queueId in queueIds)
         {
-            if (cache.TryGetValue(DispatchCacheKey(queueId), out QueueDispatchDiagnostics cached))
+            var cached = await ReadCachedAsync(cache, DispatchCacheKey(tenantName, queueId), cancellationToken);
+
+            if (cached is not null)
             {
                 found[queueId] = cached;
             }
@@ -146,7 +158,11 @@ internal static partial class SupervisorDashboardEndpoints
         {
             foreach (var diagnosis in await diagnosticsService.DiagnoseAsync(missing, cancellationToken))
             {
-                cache.Set(DispatchCacheKey(diagnosis.QueueId), diagnosis, _dispatchCacheDuration);
+                await cache.SetAsync(
+                    DispatchCacheKey(tenantName, diagnosis.QueueId),
+                    JsonSerializer.SerializeToUtf8Bytes(diagnosis, _dispatchSerializerOptions),
+                    _dispatchCacheOptions,
+                    cancellationToken);
                 found[diagnosis.QueueId] = diagnosis;
             }
         }
@@ -157,8 +173,28 @@ internal static partial class SupervisorDashboardEndpoints
             .ToArray();
     }
 
-    private static string DispatchCacheKey(string queueId)
-        => $"ContactCenterDispatchDiagnostics:{queueId}";
+    private static async Task<QueueDispatchDiagnostics> ReadCachedAsync(IDistributedCache cache, string key, CancellationToken cancellationToken)
+    {
+        var value = await cache.GetAsync(key, cancellationToken);
+
+        if (value is null || value.Length == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<QueueDispatchDiagnostics>(value, _dispatchSerializerOptions);
+        }
+        catch (JsonException)
+        {
+            // An entry this release cannot read is read again from the source.
+            return null;
+        }
+    }
+
+    private static string DispatchCacheKey(string tenantName, string queueId)
+        => $"ContactCenterDispatchDiagnostics:{tenantName}:{queueId}";
 
     internal static SupervisorDispatchViewModel ToViewModel(
         QueueDispatchDiagnostics diagnosis,

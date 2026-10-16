@@ -12,8 +12,11 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using OrchardCore.Environment.Shell;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -263,7 +266,7 @@ public sealed class SupervisorDashboardDispatchTests
         private readonly List<OmnichannelCampaign> _campaigns = [];
         private readonly Dictionary<string, QueueDispatchDiagnostics> _diagnoses = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _authorizedQueueIds = new(StringComparer.OrdinalIgnoreCase);
-        private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions());
+        private readonly IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
 
         public DispatchProbe()
         {
@@ -339,6 +342,7 @@ public sealed class SupervisorDashboardDispatchTests
                 queueAuthorization.Object,
                 Diagnostics.Object,
                 _cache,
+                new ShellSettings { Name = "Default" },
                 new StubClock(),
                 new DefaultHttpContext
                 {
