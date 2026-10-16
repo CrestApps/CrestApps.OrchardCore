@@ -1,0 +1,230 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIPersonaViewModel
+
+@{
+    var speechVoicesUrl = Url.RouteUrl(AIConstants.RouteNames.GetVoices);
+    var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
+}
+
+@if (Model.IsFromFile)
+{
+    <div class="alert alert-info">@T["This persona comes from a file. Saving it creates a saved persona with the same technical name, which replaces the file for every profile and interaction that uses it."]</div>
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["How the persona is shown in editors."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" disabled="@(!Model.IsNew)" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        @if (Model.IsNew)
+        {
+            <span class="hint">@T["What profiles and interactions link to. It cannot be changed later."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["What profiles and interactions link to."]</span>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Optional. Helps editors choose the right persona."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label">@T["Persona instructions"]</label>
+    <div class="ocat-end">
+        <div class="hint mb-1">@T["Who the assistant is and how it talks: its personality, tone and manners. They go before the system instructions of every profile and interaction that uses this persona, so leave the task and the rules to the profile. Liquid is supported, and the variable assistant_name holds the assistant name."]</div>
+        <textarea asp-for="Instructions" class="form-control content-preview-text" rows="8"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AssistantName" class="ocat-label">@T["Assistant name"]</label>
+    <div class="ocat-end">
+        <input asp-for="AssistantName" class="form-control" />
+        <span class="hint">@T["The name the assistant uses for itself, such as Ava. The model is told its name, and chat screens show it on the assistant's messages."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Language" class="ocat-label">@T["Language"]</label>
+    <div class="ocat-end">
+        <input asp-for="Language" class="form-control" placeholder="en-US" />
+        <span class="hint">@T["Optional. The language the persona speaks, such as en-US. Spoken conversations listen in this language when nothing else sets one."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="VoiceDeploymentName" class="ocat-label">@T["Voice"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-md-6">
+                <select asp-for="VoiceDeploymentName" asp-items="Model.VoiceDeployments" class="form-select" id="personaVoiceDeploymentSelect">
+                    <option value="">@T["Choose the deployment to pick a voice from"]</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <select asp-for="VoiceName" class="form-select" id="personaVoiceSelect" data-voice-name="@Model.VoiceName">
+                    <option value="">@T["No voice"]</option>
+                    @if (!string.IsNullOrWhiteSpace(Model.VoiceName))
+                    {
+                        <option value="@Model.VoiceName" selected="selected">@Model.VoiceName</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <span class="hint">@T["Optional. Voices belong to one provider, so the persona speaks with this voice only on deployments of the same provider and uses the deployment's default voice elsewhere. A profile that picks its own voice overrides this one."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AvatarUrl" class="ocat-label">@T["Avatar URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="AvatarUrl" class="form-control" placeholder="/media/avatars/ava.png" />
+        <span class="hint">@T["Optional. An image chat screens show next to the assistant's messages."]</span>
+    </div>
+</div>
+
+<style asp-name="codemirror"></style>
+<style asp-name="easymde"></style>
+
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
+    document.addEventListener('DOMContentLoaded', function () {
+        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+
+        const instructionsElement = document.getElementById("@Html.IdFor(m => m.Instructions)");
+        const mde = new EasyMDE({
+            element: instructionsElement,
+            forceSync: true,
+            autoDownloadFontAwesome: false
+        });
+
+        mde.codemirror.on('change', function () {
+            document.dispatchEvent(new Event('contentpreview:render'));
+        });
+
+        if (isRtl) {
+            document.querySelectorAll('.editor-toolbar').forEach(function (toolbar) {
+                toolbar.style.direction = 'rtl';
+                toolbar.style.textAlign = 'right';
+            });
+
+            document.querySelectorAll('.CodeMirror').forEach(function (container) {
+                container.style.textAlign = 'right';
+            });
+        }
+
+        const deploymentSelect = document.getElementById('personaVoiceDeploymentSelect');
+        const voiceSelect = document.getElementById('personaVoiceSelect');
+        const realtimeDeploymentNames = @Html.Raw(JsonSerializer.Serialize(Model.RealtimeDeploymentNames ?? []));
+        const speechVoicesUrl = @Html.Raw(JsonSerializer.Serialize(speechVoicesUrl ?? string.Empty));
+        const realtimeVoicesUrl = @Html.Raw(JsonSerializer.Serialize(realtimeVoicesUrl ?? string.Empty));
+        const noVoiceText = @Html.Raw(JsonSerializer.Serialize(T["No voice"].Value));
+        let selectedVoice = voiceSelect.getAttribute('data-voice-name') || '';
+
+        function escapeHtml(value) {
+            const element = document.createElement('div');
+            element.textContent = value == null ? '' : String(value);
+
+            return element.innerHTML;
+        }
+
+        function renderVoices(voices) {
+            let html = '<option value="">' + escapeHtml(noVoiceText) + '</option>';
+            let found = !selectedVoice;
+            const grouped = {};
+
+            voices.forEach(function (voice) {
+                const group = voice.languageDisplayName || voice.gender || 'Voices';
+                (grouped[group] = grouped[group] || []).push(voice);
+
+                if (voice.id === selectedVoice) {
+                    found = true;
+                }
+            });
+
+            // A voice saved earlier stays selectable even when the provider no longer lists it.
+            if (!found) {
+                html += '<option value="' + escapeHtml(selectedVoice) + '">' + escapeHtml(selectedVoice) + '</option>';
+            }
+
+            Object.keys(grouped).sort().forEach(function (group) {
+                html += '<optgroup label="' + escapeHtml(group) + '">';
+                grouped[group].forEach(function (voice) {
+                    html += '<option value="' + escapeHtml(voice.id) + '">' + escapeHtml(voice.name || voice.id) + '</option>';
+                });
+                html += '</optgroup>';
+            });
+
+            voiceSelect.innerHTML = html;
+            voiceSelect.value = selectedVoice;
+        }
+
+        async function loadVoices() {
+            const deploymentName = deploymentSelect.value;
+
+            if (!deploymentName) {
+                renderVoices([]);
+
+                return;
+            }
+
+            const url = realtimeDeploymentNames.indexOf(deploymentName) >= 0 ? realtimeVoicesUrl : speechVoicesUrl;
+
+            if (!url) {
+                renderVoices([]);
+
+                return;
+            }
+
+            try {
+                const response = await fetch(url + '?deploymentName=' + encodeURIComponent(deploymentName), { credentials: 'same-origin' });
+                const result = response.ok ? await response.json() : null;
+
+                renderVoices(result && Array.isArray(result.voices) ? result.voices : []);
+            } catch (e) {
+                renderVoices([]);
+            }
+        }
+
+        voiceSelect.addEventListener('change', function () {
+            selectedVoice = voiceSelect.value;
+        });
+
+        deploymentSelect.addEventListener('change', function () {
+            selectedVoice = '';
+            loadVoices();
+        });
+
+        if (deploymentSelect.value) {
+            loadVoices();
+        }
+    });
+</script>
+
+@if (Model.IsNew)
+{
+    <script asp-name="technical-name-generator"></script>
+    <script at="Foot" depends-on="technical-name-generator">
+        window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.DisplayText)', '@Html.IdFor(x => x.Name)');
+    </script>
+}

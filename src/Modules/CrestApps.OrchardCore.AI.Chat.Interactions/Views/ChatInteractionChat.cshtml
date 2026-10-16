@@ -3,6 +3,7 @@
 @using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Models
+@using CrestApps.Core.AI.Profiles
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
@@ -22,6 +23,9 @@
     var buttonHtmlId = $"{baseId}_SendButton";
     var userPromptHtmlId = $"{baseId}_UserPrompt";
     var placeholderHtmlId = $"{baseId}_SessionPlaceHolder";
+
+    // The linked persona names the assistant and gives it an avatar. Without the Personas feature it is the default look.
+    var assistantDisplay = await Context.RequestServices.ResolveChatAssistantDisplayAsync(Model.Interaction);
     var chatContainerHtmlId = $"{baseId}_ChatContainer";
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
@@ -176,6 +180,8 @@
         sendButtonElementSelector = $"#{buttonHtmlId}",
         placeholderElementSelector = $"#{placeholderHtmlId}",
         messages = prompts,
+        assistantLabel = assistantDisplay.GetAssistantLabel(T["Assistant"].Value),
+        assistantAvatarUrl = assistantDisplay.AvatarUrl,
         untitledText = T["Untitled"].Value,
         clearHistoryTitle = T["Clear History"].Value,
         clearHistoryMessage = T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value,

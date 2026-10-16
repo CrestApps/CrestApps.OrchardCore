@@ -104,3 +104,16 @@ public sealed class ToolInstancesStartup : StartupBase
         services.AddScoped<IChatInteractionSettingsHandler, ChatInteractionToolInstancesSettingsHandler>();
     }
 }
+
+/// <summary>
+/// Adds the persona picker to chat interactions when the Personas feature is enabled. Core saves the choice from the
+/// <c>personaId</c> hub setting.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.Personas)]
+public sealed class PersonasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionPersonaDisplayDriver>();
+    }
+}

@@ -1855,6 +1855,18 @@ public sealed class AIToolInstancesRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the AI personas recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Personas")]
+public sealed class AIPersonasRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AIPersonaRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the MCP connection recipe feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.AI.Mcp")]

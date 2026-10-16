@@ -497,3 +497,71 @@ public sealed class ToolInstancesOCDeploymentsStartup : StartupBase
         services.AddDeployment<AIToolInstanceDeploymentSource, AIToolInstanceDeploymentStep, AIToolInstanceDeploymentStepDisplayDriver>();
     }
 }
+
+/// <summary>
+/// Registers services and configuration for the Personas feature.
+/// </summary>
+[Feature(AIConstants.Feature.Personas)]
+public sealed class PersonasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddPersonas(personas => personas
+                    .AddYesSqlStores()
+                )
+            )
+        );
+
+        // Modules ship persona files the same way they ship profile templates.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIPersonaProvider, ModuleAIPersonaProvider>());
+
+        services
+            .AddDataMigration<AIPersonaIndexMigrations>()
+            .AddScoped<ICatalogEntryHandler<AIPersona>, AIPersonaDeletionHandler>()
+            .AddDisplayDriver<AIPersona, AIPersonaDisplayDriver>()
+            .AddDisplayDriver<AIProfile, AIProfilePersonaDisplayDriver>()
+            .AddDisplayDriver<AIProfileTemplate, AIProfileTemplatePersonaDisplayDriver>()
+            .AddNavigationProvider<AIPersonaAdminMenu>()
+            .AddPermissionProvider<AIPersonaPermissionsProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe execution step for the Personas feature.
+/// </summary>
+[Feature(AIConstants.Feature.Personas)]
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class PersonasRecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<AIPersonaStep>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step for the Personas feature.
+/// </summary>
+[Feature(AIConstants.Feature.Personas)]
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class PersonasOCDeploymentsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<AIPersonaDeploymentSource, AIPersonaDeploymentStep, AIPersonaDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Adds the persona picker to the "AI completion with configuration" workflow task.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Chat.Interactions", AIConstants.Feature.Personas, "OrchardCore.Workflows")]
+public sealed class ChatInteractionsPersonasWorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigPersonaDisplayDriver>();
+    }
+}

@@ -203,6 +203,7 @@ const sidebars = {
                 'ai/tools',
                 'ai/prompt-templates',
                 'ai/profile-templates',
+                'ai/personas',
                 'ai/memory',
                 'ai/memory-azure-ai',
                 'ai/memory-elasticsearch',
