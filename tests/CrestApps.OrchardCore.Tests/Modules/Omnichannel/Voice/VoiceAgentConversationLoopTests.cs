@@ -520,6 +520,26 @@ public sealed partial class VoiceAgentConversationLoopTests
         Assert.Equal(1, harness.Media.Hangups);
     }
 
+    [Fact]
+    public async Task AnInboundCallerWhoHasNotSpokenYet_IsAskedIfTheyAreStillThere_NotLeftAVoicemailMessage()
+    {
+        // Arrange
+        // Only a call this platform placed can reach a voicemail. Live, an inbound caller who said nothing at first was
+        // told "Sorry we missed you. We were calling about your recent inquiry" and hung up on.
+        var harness = new LoopHarness();
+        harness.Activity.Source = ActivitySources.Inbound;
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.Loop.OnListeningTimedOutAsync(harness.SilenceWatchdog.Armed[^1], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken[^1]);
+        Assert.False(harness.Activity.TryGet<VoicemailReached>(out _));
+        Assert.Equal(0, harness.Media.Hangups);
+    }
+
     // ---- The provider says who answered ----
 
     [Fact]
