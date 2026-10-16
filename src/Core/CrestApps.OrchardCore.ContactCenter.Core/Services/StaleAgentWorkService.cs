@@ -244,17 +244,24 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
         }
 
         var target = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
+        var context = new AgentStateChangeContext
+        {
+            Actor = actor,
+            Source = AgentStateChangeSources.StaleWorkReleased,
+            ChangedUtc = now,
+        };
 
         try
         {
-            var updated = await _presenceManager.SetPresenceAsync(agent.UserId, target, reason: null, new AgentStateChangeContext
-            {
-                Actor = actor,
-                Source = AgentStateChangeSources.StaleWorkReleased,
-                ChangedUtc = now,
-            }, CancellationToken.None);
+            // A Busy or wrapping-up agent is moved on the way their own work ending would move them: setting a state on
+            // an agent the platform believes is working is deferred until that work ends, which here it never would.
+            var updated = agent.PresenceStatus == AgentPresenceStatus.Reserved
+                ? await _presenceManager.SetPresenceAsync(agent.UserId, target, reason: null, context, CancellationToken.None)
+                : await _presenceManager.CompleteWorkAsync(agent.ItemId, context, CancellationToken.None);
 
-            return updated?.PresenceStatus == target ? target : null;
+            return updated is not null && updated.PresenceStatus is not (AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp)
+                ? updated.PresenceStatus
+                : null;
         }
         catch (InvalidOperationException ex)
         {
@@ -667,7 +674,11 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
                 return CallTruth.Unresolved;
             }
 
-            var lookup = await stateProvider.GetCallStateAsync(callId, cancellationToken);
+            // An unreachable provider must not hold up the dashboard's poll: past the timeout it is unresolved.
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeout.CancelAfter(_options.ProviderLookupTimeout);
+
+            var lookup = await stateProvider.GetCallStateAsync(callId, timeout.Token);
 
             if (lookup is null || !lookup.Succeeded)
             {

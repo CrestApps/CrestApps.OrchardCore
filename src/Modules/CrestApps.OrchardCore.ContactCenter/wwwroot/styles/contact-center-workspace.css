@@ -704,11 +704,11 @@
   white-space: normal;
 }
 
-.cc-agent__stale {
-  display: inline-block;
+.cc-agent__body .cc-agent__stale {
   max-width: 100%;
   white-space: normal;
   text-align: left;
+  overflow-wrap: anywhere;
 }
 
 .cc-agent__meta {

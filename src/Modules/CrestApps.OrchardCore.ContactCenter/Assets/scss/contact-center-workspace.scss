@@ -697,11 +697,12 @@
 }
 
 // What an agent is waiting on, under their status: how long they have been idle, and where they are signed in.
-.cc-agent__stale {
-    display: inline-block;
+// Beats Bootstrap's .badge nowrap, so a long reason wraps inside the card instead of spilling out of it.
+.cc-agent__body .cc-agent__stale {
     max-width: 100%;
     white-space: normal;
     text-align: left;
+    overflow-wrap: anywhere;
 }
 .cc-agent__meta {
     display: block;

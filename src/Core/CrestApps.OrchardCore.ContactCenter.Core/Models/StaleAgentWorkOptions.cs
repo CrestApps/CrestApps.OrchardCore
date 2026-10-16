@@ -34,6 +34,11 @@ public sealed class StaleAgentWorkOptions
     public TimeSpan CallMaximumAge { get; set; } = TimeSpan.FromHours(6);
 
     /// <summary>
+    /// Gets or sets how long the provider is given to answer about one call before it is treated as unable to.
+    /// </summary>
+    public TimeSpan ProviderLookupTimeout { get; set; } = TimeSpan.FromSeconds(4);
+
+    /// <summary>
     /// Gets or sets how long a provider's answer about a call is reused by the dashboard before it is asked again.
     /// Releasing an agent's work never reuses an answer.
     /// </summary>

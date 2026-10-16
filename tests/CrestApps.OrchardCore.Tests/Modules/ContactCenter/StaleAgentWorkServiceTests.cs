@@ -296,10 +296,9 @@ public sealed class StaleAgentWorkServiceTests
         Assert.Equal(QueueItemStatus.Waiting, harness.QueueItems.Single().Status);
         Assert.Null(harness.QueueItems.Single().AgentId);
         Assert.Equal(AgentPresenceStatus.Available, release.ReturnedTo);
-        harness.Presence.Verify(manager => manager.SetPresenceAsync(
-            "user-1",
-            AgentPresenceStatus.Available,
-            null,
+        // A Busy agent is moved on as their own work ending would move them; setting a state would only be deferred.
+        harness.Presence.Verify(manager => manager.CompleteWorkAsync(
+            "agent-1",
             It.Is<AgentStateChangeContext>(context =>
                 context.Actor == ContactCenterActor.Supervisor("sup-1") &&
                 context.Source == AgentStateChangeSources.StaleWorkReleased),
@@ -524,6 +523,14 @@ public sealed class StaleAgentWorkServiceTests
                 .Setup(manager => manager.FindByIdAsync("agent-1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => Agent);
 
+            Presence
+                .Setup(manager => manager.CompleteWorkAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string _, AgentStateChangeContext _, CancellationToken _) =>
+                {
+                    Agent.PresenceStatus = AgentPresenceStatus.Available;
+
+                    return Agent;
+                });
             Presence
                 .Setup(manager => manager.SetPresenceAsync(It.IsAny<string>(), It.IsAny<AgentPresenceStatus>(), It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string _, AgentPresenceStatus status, string _, AgentStateChangeContext _, CancellationToken _) =>

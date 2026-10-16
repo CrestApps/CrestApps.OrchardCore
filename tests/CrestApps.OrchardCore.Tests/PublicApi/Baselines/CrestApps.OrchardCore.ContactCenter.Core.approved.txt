@@ -3076,6 +3076,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.TimeSpan CallMinimumAge { get; set; }
         public System.TimeSpan ClientRecordedCallSilence { get; set; }
         public System.TimeSpan ProviderAnswerCacheDuration { get; set; }
+        public System.TimeSpan ProviderLookupTimeout { get; set; }
         public System.TimeSpan UnresolvedCallAge { get; set; }
     }
     public sealed class StaleAgentWorkRelease
