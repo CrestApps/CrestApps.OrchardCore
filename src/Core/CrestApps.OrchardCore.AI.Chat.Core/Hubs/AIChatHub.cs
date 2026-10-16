@@ -4,6 +4,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.Chat.Models;
+using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Exceptions;
@@ -230,6 +231,124 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
             string.IsNullOrEmpty(storedSession.UserId) ? "visitor" : "user",
             userId,
             connectionId);
+    }
+
+    /// <summary>
+    /// Reads an assistant message aloud, speaking only with a voice the text-to-speech deployment offers.
+    /// </summary>
+    /// <param name="profileId">The profile id.</param>
+    /// <param name="sessionId">The session id.</param>
+    /// <param name="text">The text to speak.</param>
+    /// <param name="voiceName">The voice the page asked for, which is the profile's voice.</param>
+    /// <remarks>
+    /// This follows <see cref="AIChatHubCore{TClient}.SynthesizeSpeech(string, string, string, string)"/> step for
+    /// step, except for the voice. The base sends the requested voice, then the profile's voice, then the site's
+    /// default text-to-speech voice, without asking whether the deployment has it. The profile's voice is the one
+    /// its calls and realtime conversations speak with, so it is often a realtime model's voice the text-to-speech
+    /// provider does not know, and the synthesis then fails. <see cref="TextToSpeechVoiceSelector"/> tries the same
+    /// candidates in the same order and keeps the first one the deployment offers.
+    /// </remarks>
+    public override async Task SynthesizeSpeech(string profileId, string sessionId, string text, string voiceName = null)
+    {
+        if (string.IsNullOrWhiteSpace(profileId))
+        {
+            await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(profileId)));
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            await Clients.Caller.ReceiveError(GetRequiredFieldMessage(nameof(text)));
+
+            return;
+        }
+
+        // Captured eagerly, as the base hub does: the caller context is not guaranteed once the invocation returns.
+        var user = Context?.User;
+        var cancellationToken = Context.ConnectionAborted;
+
+        try
+        {
+            await ExecuteInScopeAsync(async services =>
+            {
+                var userAccessor = services.GetService<IUserAccessor>();
+
+                if (userAccessor is not null)
+                {
+                    userAccessor.User = user;
+                }
+
+                var profileManager = services.GetRequiredService<IAIProfileManager>();
+                var profile = await profileManager.FindByIdAsync(profileId);
+
+                if (profile is null)
+                {
+                    await Clients.Caller.ReceiveError(GetProfileNotFoundMessage());
+
+                    return;
+                }
+
+                if (!await AuthorizeProfileAsync(services, profile))
+                {
+                    await Clients.Caller.ReceiveError(GetNotAuthorizedMessage());
+
+                    return;
+                }
+
+                profile.TryGetSettings<ChatModeProfileSettings>(out var chatModeSettings);
+
+                var deploymentSettings = await GetDeploymentSettingsAsync(services);
+
+                if (string.IsNullOrEmpty(deploymentSettings.DefaultTextToSpeechDeploymentName))
+                {
+                    await Clients.Caller.ReceiveError(GetNoTtsDeploymentMessage());
+
+                    return;
+                }
+
+                var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
+                var deployment = await deploymentManager.FindByNameAsync(deploymentSettings.DefaultTextToSpeechDeploymentName);
+
+                if (deployment is null)
+                {
+                    await Clients.Caller.ReceiveError(GetTtsDeploymentNotFoundMessage());
+
+                    return;
+                }
+
+                var voiceSelector = services.GetRequiredService<TextToSpeechVoiceSelector>();
+                var effectiveVoiceName = await voiceSelector.SelectVoiceAsync(
+                    deployment,
+                    voiceName,
+                    chatModeSettings?.VoiceName,
+                    deploymentSettings.DefaultTextToSpeechVoiceId);
+
+                var clientFactory = services.GetRequiredService<IAIClientFactory>();
+                using var textToSpeechClient = await clientFactory.CreateTextToSpeechClientAsync(deployment);
+                await StreamSpeechAsync(textToSpeechClient, sessionId ?? string.Empty, text, effectiveVoiceName, cancellationToken);
+            });
+        }
+        catch (Exception ex)
+        {
+            if (ex is OperationCanceledException)
+            {
+                Logger.LogDebug("Speech synthesis was cancelled.");
+
+                return;
+            }
+
+            Logger.LogError(ex, "An error occurred while synthesizing speech.");
+
+            try
+            {
+                await Clients.Caller.ReceiveError(GetSpeechSynthesisErrorMessage(ex));
+            }
+            catch (Exception writeEx)
+            {
+                Logger.LogWarning(writeEx, "Failed to write speech synthesis error message.");
+            }
+        }
     }
 
     protected override DateTime GetUtcNow()
