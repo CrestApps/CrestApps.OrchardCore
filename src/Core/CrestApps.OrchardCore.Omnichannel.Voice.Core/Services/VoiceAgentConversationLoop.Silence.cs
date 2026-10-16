@@ -40,9 +40,10 @@ public sealed partial class VoiceAgentConversationLoop
     /// </summary>
     /// <remarks>
     /// Asks whether the caller is still there, twice, and then says goodbye and ends the call through the same
-    /// speak-then-hang-up path a goodbye from the model takes. A line nobody has spoken on at all is taken to be a
-    /// voicemail that is recording, and is left a message instead. A turn the watch no longer describes -- the
-    /// caller spoke, the assistant replied, the call ended or was handed to an agent -- is left alone.
+    /// speak-then-hang-up path a goodbye from the model takes. On a call this platform placed, a line nobody has
+    /// spoken on at all is taken to be a voicemail that is recording, and is left a message instead. A turn the watch
+    /// no longer describes -- the caller spoke, the assistant replied, the call ended or was handed to an agent -- is
+    /// left alone.
     /// </remarks>
     /// <param name="silence">The listening turn, as it stood when listening began.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -91,7 +92,12 @@ public sealed partial class VoiceAgentConversationLoop
             !prompt.IsGeneratedPrompt &&
             !string.IsNullOrWhiteSpace(prompt.Content));
 
-        if (!activity.TryGet<VoicemailReached>(out var voicemail) && nobodyHasSpoken)
+        // Only a call this platform placed can reach a voicemail. Somebody who called in is a person, and a silence
+        // from them is a caller who has not spoken yet. Live, an inbound caller who said nothing at first was told
+        // "Sorry we missed you. We were calling about your recent inquiry" and hung up on.
+        var weCalled = !string.Equals(activity.Source, ActivitySources.Inbound, StringComparison.Ordinal);
+
+        if (!activity.TryGet<VoicemailReached>(out var voicemail) && nobodyHasSpoken && weCalled)
         {
             voicemail = new VoicemailReached();
             activity.Put(voicemail);
