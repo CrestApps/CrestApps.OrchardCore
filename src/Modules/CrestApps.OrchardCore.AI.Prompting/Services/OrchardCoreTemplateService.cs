@@ -2,6 +2,7 @@ using CrestApps.Core.Templates.Models;
 using CrestApps.Core.Templates.Providers;
 using CrestApps.Core.Templates.Rendering;
 using CrestApps.Core.Templates.Services;
+using CrestApps.OrchardCore.AI.Prompting.Providers;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
@@ -11,34 +12,44 @@ namespace CrestApps.OrchardCore.AI.Prompting.Services;
 /// <summary>
 /// OrchardCore-aware prompt template service that filters templates
 /// based on enabled features in the current shell and caches parsed templates.
-/// Templates are cached in memory for the lifetime of the tenant shell.
+/// Templates from the registered <see cref="ITemplateProvider"/>s are cached in memory
+/// for the lifetime of the tenant shell.
 /// The <see cref="IMemoryCache"/> is scoped per tenant, so entries are
 /// automatically cleared when the shell is released or the application restarts.
+/// System Prompt AI templates can be edited at any time, so they are read once per scope
+/// instead. A built-in template keeps precedence over a System Prompt AI template with the
+/// same identifier, so a saved template cannot replace a prompt the application renders itself.
 /// </summary>
 public sealed class OrchardCoreTemplateService : DefaultTemplateService
 {
     private const string CacheKey = "AITemplates_All";
 
+    private readonly AIProfileSystemPromptTemplateProvider _systemPromptTemplateProvider;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IMemoryCache _memoryCache;
     private readonly ILogger _logger;
+
+    private IReadOnlyList<Template> _systemPromptTemplates;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OrchardCoreTemplateService"/> class.
     /// </summary>
     /// <param name="providers">The providers.</param>
     /// <param name="renderer">The renderer.</param>
+    /// <param name="systemPromptTemplateProvider">The provider for System Prompt AI templates.</param>
     /// <param name="shellFeaturesManager">The shell features manager.</param>
     /// <param name="memoryCache">The memory cache.</param>
     /// <param name="logger">The logger.</param>
     public OrchardCoreTemplateService(
         IEnumerable<ITemplateProvider> providers,
         ITemplateEngine renderer,
+        AIProfileSystemPromptTemplateProvider systemPromptTemplateProvider,
         IShellFeaturesManager shellFeaturesManager,
         IMemoryCache memoryCache,
         ILogger<OrchardCoreTemplateService> logger)
     : base(providers, renderer)
     {
+        _systemPromptTemplateProvider = systemPromptTemplateProvider;
         _shellFeaturesManager = shellFeaturesManager;
         _memoryCache = memoryCache;
         _logger = logger;
@@ -52,9 +63,12 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
             _memoryCache.Set(CacheKey, allTemplates);
         }
 
+        _systemPromptTemplates ??= await _systemPromptTemplateProvider.GetTemplatesAsync(cancellationToken);
+
         var enabledFeatures = await GetEnabledFeatureIdsAsync();
 
         var filteredTemplates = allTemplates
+            .Concat(_systemPromptTemplates)
             .Where(t => string.IsNullOrEmpty(t.FeatureId) || enabledFeatures.Contains(t.FeatureId));
 
         var deduplicatedTemplates = new List<Template>();
