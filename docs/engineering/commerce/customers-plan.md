@@ -39,6 +39,7 @@ This is what shipping, guest order lookup and the customer account pages wait on
 | C-D3 | **Guests find their orders through signed links**: one in the order confirmation, and a *Find my order* page that emails a fresh link to the order's address. Links expire (60 days, like pay links). | The page never shows whether an order or email exists, and no order number plus email pair can be guessed. |
 | C-D4 | **The checkout asks for contact details and a billing address**: email and name always for guests, the billing address set by a site setting (*Off*, *Optional*, *Required*; default *Optional*). Shipping addresses come with Shipping (Phase 7). | Many stores need a billing address for tax or invoices; others don't want the friction. |
 | C-D5 | **Person or business**: a business customer has a company name and a tax id. Tax exemptions stay with Taxation and come later. | Cheap now, and invoices need them. |
+| C-D7 | **Accounts are Orchard Core users.** Customers builds no registration, sign-in, password reset or email confirmation: Orchard Core Users does those. A customer with an account links to its user; a guest customer has none until they register through Orchard Core's registration. | One account system for the site, with Orchard Core's email confirmation, lockout and external logins. |
 | C-D6 | **Customer pages stay admin pages for now** (`[CustomerAdminPage]`), like My Orders: My Account and My Addresses. Front-end account pages come with the storefront (Phase 10). | One way to build customer pages until the storefront exists. |
 
 ## Design
@@ -83,7 +84,8 @@ This is what shipping, guest order lookup and the customer account pages wait on
 
 - **Order links:** a signed, expiring link names one order (data protection, like `ITransactionPayLinkService`). It opens a read-only order page with its receipt, and pay links where something is owed.
 - ***Find my order*:** the page takes an email and always answers "if we have orders for that email, we sent a link". It emails one link per recent order, rate-limited.
-- **Merging into an account:** when a user signs in or registers with a **verified** email, their guest customers with that email merge into the user's customer. Orders, transactions, carts and subscriptions move to it, and the merge is recorded on both records. Unverified emails never merge; the user can still open each order through its link.
+- **Merging into an account:** when a user signs in or registers with a **verified** email (Orchard Core's email
+  confirmation, `User.EmailConfirmed`), their guest customers with that email merge into the user's customer. Orders, transactions, carts and subscriptions move to it, and the merge is recorded on both records. Unverified emails never merge; the user can still open each order through its link.
 - **Carts:** they keep their own guest cookie and merge on sign-in as today. A cart's owner becomes the customer when it is checked out.
 
 ### Privacy and retention
@@ -140,5 +142,7 @@ store.
 
 ## Open questions
 
-- Should a guest be offered **Create an account** on the order confirmation page (an emailed invitation link), or only through the site's normal registration? The proposal is the confirmation page, as an optional prompt.
+- **Create an account** after a guest order is a prompt on the confirmation page that opens Orchard Core's registration
+  with the email filled in. Orchard Core sends its own confirmation email, and the merge follows once the email is
+  confirmed. Nothing in Customers issues registration tokens.
 - Should the Contact step also show for **subscription** checkouts, replacing Subscriptions' own name and email fields? The proposal is not yet (out of scope above), to keep this phase to orders.
