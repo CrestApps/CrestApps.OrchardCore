@@ -21,7 +21,9 @@ It suits profiles that hold a conversation on their own, such as automated text 
 ## Start a session
 
 1. Open **Artificial Intelligence > Profile Builder**.
-2. Click **New session** to start empty, or choose a profile under **Improve an existing AI profile** and click **Start** to begin from its instructions and settings.
+2. Click **New Session** to start empty. To begin from an AI profile you already have, open the arrow beside **New Session**, choose **Improve an existing AI profile...**, pick the profile and click **Start session**. The session starts with the profile's instructions and settings, and can update that profile when you finish.
+
+The list shows your sessions with when each last changed and how much feedback and how many revisions it has. Use **Search** to find one by title, **Open** to continue it, and **Actions > Delete** to remove it. AI profiles saved from a session are kept.
 
 The session page has three parts: the **Settings** on the left, the chat in the middle, and the feedback panel on the right.
 
