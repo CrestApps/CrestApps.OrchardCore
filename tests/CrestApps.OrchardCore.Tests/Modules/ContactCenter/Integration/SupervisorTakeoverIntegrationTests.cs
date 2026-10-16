@@ -182,6 +182,7 @@ public sealed class SupervisorTakeoverIntegrationTests
             [],
             clock,
             new InPlaceCallSessionUpdater(interactions, sessions),
+            Mock.Of<IStaleAgentWorkService>(),
             NullLogger<ContactCenterSupervisorInterventionService>.Instance);
 
         return (monitoring, sink, interventions);

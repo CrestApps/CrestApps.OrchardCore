@@ -77,6 +77,8 @@ An automatic load is for conversations the AI starts. To have an AI profile **an
 
 While the entry point is open, the AI picks up every call to the number, greets the caller with the profile's opening message and holds the conversation. The welcome message, phone menu and queue are not used. While the entry point is closed, callers go to voicemail, or are refused when its closed action is **Reject**. Each call is an automated activity with the AI's transcript. It reaches an agent only if the AI hands the caller over. See [AI voice agent](entry-points-and-ivr.md#ai-voice-agent).
 
+A caller who says nothing at first is never taken for a voicemail, as a silent line on a call the AI placed can be: only a call the platform places can reach one.
+
 This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** to the **Route to** list.
 
 ## Let the AI answer incoming texts

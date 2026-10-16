@@ -55,6 +55,7 @@ public sealed class SupervisorDashboardController : Controller
                 ["recording"] = Url.RouteUrl(SupervisorInterventionEndpoints.RecordingRouteName),
                 ["agentState"] = Url.RouteUrl(SupervisorInterventionEndpoints.AgentStateRouteName),
                 ["message"] = Url.RouteUrl(SupervisorInterventionEndpoints.MessageRouteName),
+                ["freeAgent"] = Url.RouteUrl(SupervisorInterventionEndpoints.FreeAgentRouteName),
             },
         };
 

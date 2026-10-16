@@ -111,6 +111,23 @@ public interface IContactCenterSupervisorInterventionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Frees an agent of stale work: settles a phone call the provider no longer has, a Contact Center call the provider
+    /// reports ended, and the reservation, queue items and busy state that came with them, then returns the agent to their
+    /// ready state. A call the provider confirms is alive is never touched, and when the agent is on one nothing is
+    /// released and the result says so. Recorded under the supervisor's name.
+    /// </summary>
+    /// <param name="agentId">The agent profile.</param>
+    /// <param name="supervisorUserId">The supervisor.</param>
+    /// <param name="principal">The supervisor's principal.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The result; on success its reason says what was released.</returns>
+    Task<SupervisorEngagementResult> FreeAgentAsync(
+        string agentId,
+        string supervisorUserId,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sends an agent a short message, shown on their soft phone.
     /// </summary>
     /// <param name="agentId">The agent profile.</param>
