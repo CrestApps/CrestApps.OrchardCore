@@ -18,10 +18,7 @@ How to use the builder in the admin is described in the User Manual under [Profi
 
 This video shows why the Profile Builder exists, how it works, and how to build, test and save a profile with it.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder.jpg" aria-label="Video overview of the AI Profile Builder">
-  <source src="/img/docs/ai-profile-builder.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/ai-profile-builder.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube id="UOKvEY-kID4" title="Video overview of the AI Profile Builder" />
 
 ## Overview
 
