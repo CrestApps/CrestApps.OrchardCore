@@ -7,11 +7,10 @@
  * on the shared "contact-center-realtime" helper for the hub connection.
  */
 import {
-    agentBoardFiltersActive,
     filterSupervisorAgents,
     normalizeAgentBoardFilters,
 } from './shared/agent-board-filters.js';
-import { supervisorPhoneCallSummary } from './shared/supervisor-actions.js';
+import { supervisorPhoneCallSummary, supervisorStaleWorkSummary } from './shared/supervisor-actions.js';
 import { createSupervisorInterventions } from './supervisor-interventions.js';
 
 (function (window, document) {
@@ -188,14 +187,6 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                     control.value = filters[name] || '';
                 }
             });
-
-            var clear = refs.filters.querySelector('[data-cc-filter-clear]');
-
-            if (clear) {
-                clear.disabled = typeof agentBoardFiltersActive === 'function'
-                    ? !agentBoardFiltersActive(filters)
-                    : true;
-            }
         }
 
         function bindFilters() {
@@ -224,28 +215,6 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                     applyFrom(event.target);
                 }
             });
-
-            var clear = refs.filters.querySelector('[data-cc-filter-clear]');
-
-            if (clear) {
-                clear.addEventListener('click', function () {
-                    filters = {};
-                    storeFilters(filters);
-
-                    ['search', 'queueId', 'campaignId', 'status'].forEach(function (name) {
-                        var control = filterControl(name);
-
-                        if (control) {
-                            control.value = '';
-                        }
-                    });
-
-                    if (lastState) {
-                        syncFilterControls(lastState);
-                        renderBoard(lastState);
-                    }
-                });
-            }
         }
 
         // The latest call-quality alert for each agent, until a supervisor dismisses it.
@@ -393,6 +362,7 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                         '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' +
                         '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' +
                         idleHtml(agent) +
+                        staleHtml(agent) +
                         signedInHtml(agent, state, status) +
                     '</span>' +
                     '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' +
@@ -404,6 +374,19 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
             // The actions are delegated from the board (see supervisor-interventions.js), so a redraw needs no rebinding.
             setRegionHtml(refs.board, 'board', boardHtml);
             updateIdleTimes();
+        }
+
+        // A warning for an agent holding work that nothing backs -- a call that is over but still on their line. The
+        // supervisor's Free agent action in the More menu clears it.
+        function staleHtml(agent) {
+            var summary = supervisorStaleWorkSummary(agent, strings);
+
+            if (!summary) {
+                return '';
+            }
+
+            return '<span class="cc-agent__stale badge ta-badge text-bg-warning" role="note" data-cc-stale title="' + escapeHtml(label('staleHint', 'This agent holds work nothing backs. Use Free agent in the More menu to release it.')) + '">' +
+                '<i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> ' + escapeHtml(summary) + '</span>';
         }
 
         // How long an Available agent has been waiting for work. The text is filled in by updateIdleTimes, so the card's
@@ -553,6 +536,10 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                 notes.push(label('dispatchWaiting', 'Work and available agents are both here; it is waiting for the next dispatch pass.'));
             } else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount === 0) {
                 notes.push(label('dispatchNoAvailable', 'Dialable work is waiting for an available agent.'));
+            }
+
+            if (queue.staleAgentCount > 0) {
+                notes.push(format(label('dispatchStaleAgents', '{0} signed-in agents look available or busy only because of stale work. Free them from the agent list.'), queue.staleAgentCount));
             }
 
             var loaded = loadedLines(queue);

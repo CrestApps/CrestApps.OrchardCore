@@ -151,7 +151,7 @@ a transcript only exists once a turn is over, and says nothing about how long it
 | **Time to first assistant audio** | From the answer to the moment the assistant's first audio starts playing, including the time the session took to open. | From the answer to the provider's first *speak started*. |
 | **Assistant turns / caller turns** | The lines each side said, from the stored transcript. | Same. |
 | **Barge-ins** | Times the caller talked over the assistant *and* its speech was stopped: the provider reported speech while the echo guard heard a voice over the assistant. The closing line is left to finish and is not counted. | Not applicable: a turn-based call stops listening while it speaks. |
-| **Idle prompts** | Times the session spoke up because the line had been quiet on both sides. | The "are you still there?" lines it said. |
+| **Idle prompts** | Times the session asked whether the caller was still there because the line had been quiet on both sides: at most two in a row, after which the next silence ends the call. | The "are you still there?" lines it said. |
 | **Echo held** | Caller audio heard while the assistant was speaking that the echo guard sent to the model as silence. | Not applicable. |
 
 Durations that an engine cannot measure are stored as unknown and left out of that figure's totals and averages,

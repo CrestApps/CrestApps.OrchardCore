@@ -141,6 +141,13 @@ public sealed class RealtimeVoiceConversationContext
     public Action EndCallOnVoicemail { get; set; }
 
     /// <summary>
+    /// Gets or sets what is told when the session has said goodbye on a line that stayed quiet through its prompts,
+    /// so the call is ended exactly as the end-call tool ends it: <see cref="EndCallRequested"/> fires, the goodbye
+    /// plays, and the line closes. Left unset, the session stops asking and the line stays open.
+    /// </summary>
+    public Action EndCallOnSilence { get; set; }
+
+    /// <summary>
     /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
     /// <see langword="null"/> when this call has nowhere to hand them.
     /// </summary>

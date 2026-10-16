@@ -294,6 +294,19 @@ The breakdown reads each campaign's pending records, so the dashboard asks for i
 
 The **Campaign summary** report adds *Pending right now: dialable versus held back* and *Why pending records are not dialing* when queues are enabled. They describe the present, whatever period the report covers, so they sit apart from its own *Pending* counts.
 
+### Agents stuck on work that is already over
+
+An agent can be left showing **On a call**, Busy or Reserved with nothing on the line: a soft-phone call record the provider can no longer resolve, a Contact Center call the provider reports ended, a reservation or queue item nothing backs. The agent's own *Set Available* repairs Contact Center reservations and queue items but deliberately leaves any call the provider might still hold, so it could not clear this.
+
+The **Live dashboard** flags such an agent with a warning badge on their card, and offers **Free agent** in the card's More menu to a supervisor who holds *Intervene in calls* and oversees the agent's queues. The warning is raised only with evidence:
+
+- an active soft-phone call the provider says is gone, or cannot resolve for several minutes, or one the browser placed itself that has gone quiet with no live session behind it;
+- a Contact Center call that is not settled although the provider reports its call gone;
+- a Reserved or Busy state, a held reservation, or a Reserved or Assigned queue item that no live offer or call backs, once the `OrphanedBusyGracePeriod` has passed.
+
+**Free agent** asks for confirmation, listing what will be released, then settles the stale soft-phone calls (outcome *Failed*, end time set), settles Contact Center calls from the provider's answer, releases the reservation and queue items, and returns the agent to their ready state. The provider is asked again at that moment, with no reused answer. **A call the provider confirms is still alive is never ended**: when the agent holds one, nothing is released and the supervisor is told why. Each attempt, released or declined, is written to the audit log under the supervisor's name (`SupervisorFreedAgent`).
+
+The *Why isn't this dialing?* card counts the signed-in agents who look available or busy only because of stale work, so the explanation points at them.
 ### Abandoned calls
 
 These mechanisms support the common abandoned-call rules for automated dialing (a live answer connected to an agent within two seconds, a short recorded message when it is not, and a minimum ring time). They do not by themselves make a campaign compliant; operators confirm their own obligations.

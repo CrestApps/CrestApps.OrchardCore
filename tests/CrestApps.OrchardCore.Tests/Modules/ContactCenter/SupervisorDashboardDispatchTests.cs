@@ -260,6 +260,28 @@ public sealed class SupervisorDashboardDispatchTests
             Buckets = pending == 0 ? [] : [new DispatchBucket { Blocker = DispatchBlocker.DialableNow, Count = pending }],
         };
 
+    // An agent who looks Available only because a call that is over is still on their line is a reason work is not going
+    // out; the card counts them so the supervisor knows to free them.
+    [Fact]
+    public async Task DispatchPoll_CountsSignedInAgentsWhoLookAvailableOnlyBecauseOfStaleWork()
+    {
+        // Arrange
+        var probe = new DispatchProbe();
+        probe.AddCampaign("renewals", "Renewals");
+        probe.Authorize(_renewalsQueue);
+        probe.AddAgent(new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available, CampaignIds = ["renewals"] });
+        probe.AddAgent(new AgentProfile { ItemId = "a2", UserId = "u2", PresenceStatus = AgentPresenceStatus.Busy, CampaignIds = ["renewals"] });
+        probe.AddAgent(new AgentProfile { ItemId = "a3", UserId = "u3", PresenceStatus = AgentPresenceStatus.Break, CampaignIds = ["renewals"] });
+        probe.AddAgent(new AgentProfile { ItemId = "a4", UserId = "u4", PresenceStatus = AgentPresenceStatus.Available, CampaignIds = ["renewals"] });
+        probe.AddStaleWork("a1", "a2", "a3");
+        probe.Diagnose(new QueueDispatchDiagnostics { QueueId = _renewalsQueue, CampaignId = "renewals", PendingCount = 10, EvaluatedCount = 10, DialableNowCount = 10 });
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert: the agent on a break is not counted; a stale call does not change what a break means.
+        Assert.Equal(2, Assert.Single(model.Queues).StaleAgentCount);
+    }
     private sealed class DispatchProbe
     {
         private readonly List<AgentProfile> _agents = [];
@@ -267,9 +289,15 @@ public sealed class SupervisorDashboardDispatchTests
         private readonly Dictionary<string, QueueDispatchDiagnostics> _diagnoses = new(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<string> _authorizedQueueIds = new(StringComparer.OrdinalIgnoreCase);
         private readonly IDistributedCache _cache = new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions()));
+        private Dictionary<string, StaleAgentWork> _staleWork = [];
 
         public DispatchProbe()
         {
+            StaleWork
+                .Setup(service => service.DetectAsync(It.IsAny<IReadOnlyCollection<AgentProfile>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IReadOnlyCollection<AgentProfile> agents, CancellationToken _) => _staleWork
+                    .Where(entry => agents.Any(agent => agent.ItemId == entry.Key))
+                    .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal));
             Diagnostics
                 .Setup(service => service.DiagnoseAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((IReadOnlyCollection<string> queueIds, CancellationToken _) =>
@@ -286,7 +314,17 @@ public sealed class SupervisorDashboardDispatchTests
 
         public Mock<IDialerDispatchDiagnosticsService> Diagnostics { get; } = new();
 
+        public Mock<IStaleAgentWorkService> StaleWork { get; } = new();
+
         public List<string> DiagnosedQueueIds { get; } = [];
+
+        // The agents the stale-work detection reports as holding stale work.
+        public void AddStaleWork(params string[] agentIds)
+            => _staleWork = agentIds.ToDictionary(id => id, id => new StaleAgentWork
+            {
+                AgentId = id,
+                Items = [new StaleAgentWorkItem { Kind = StaleAgentWorkKind.TelephonyCall, Reason = "stale" }],
+            }, StringComparer.Ordinal);
 
         public void AddAgent(AgentProfile agent)
             => _agents.Add(agent);
@@ -341,6 +379,7 @@ public sealed class SupervisorDashboardDispatchTests
                 agentManager.Object,
                 queueAuthorization.Object,
                 Diagnostics.Object,
+                StaleWork.Object,
                 _cache,
                 new ShellSettings { Name = "Default" },
                 new StubClock(),

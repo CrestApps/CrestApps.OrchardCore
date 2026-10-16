@@ -25,7 +25,7 @@ public enum DispositionOutcome
     NotInService = 1,
 
     /// <summary>
-    /// Nobody answered. Automated calls apply it to a call that rang out or was never spoken on.
+    /// Nobody answered. Automated calls apply it to a call that rang out or on which the customer never spoke.
     /// </summary>
     NoAnswer = 2,
 
@@ -52,8 +52,9 @@ public enum DispositionOutcome
     Failed = 6,
 
     /// <summary>
-    /// The customer answered but the call ended before an agent was connected to it. The dialer applies it to an
-    /// attempt the customer hung up on while it was being connected.
+    /// The customer answered but the call ended before it was done. The dialer applies it to an attempt the customer
+    /// hung up on while it was being connected, and automated calls to a conversation in which the customer decided
+    /// nothing, when the subject has no try-again disposition.
     /// </summary>
     Disconnected = 7,
 }

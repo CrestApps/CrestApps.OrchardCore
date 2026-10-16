@@ -577,7 +577,14 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.AssistantTranscriptDone:
                         var spoken = assistantText.Length > 0 ? assistantText.ToString() : conversationEvent.Text;
                         assistantText.Clear();
-                        Interlocked.CompareExchange(ref _openingLine, spoken, null);
+
+                        // A line cut off before it had any words says nothing about the call's language, and taking
+                        // the slot would keep every later line out of it.
+                        if (!string.IsNullOrWhiteSpace(spoken))
+                        {
+                            Interlocked.CompareExchange(ref _openingLine, spoken, null);
+                            Volatile.Write(ref _latestAssistantLine, spoken);
+                        }
 
                         var lineStartedUtc = assistantLineStartedUtc;
                         assistantLineStartedUtc = null;

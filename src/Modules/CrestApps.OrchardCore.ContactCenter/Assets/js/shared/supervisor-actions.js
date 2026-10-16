@@ -73,6 +73,29 @@ function has(list, value) {
     return Array.isArray(list) && list.indexOf(value) >= 0;
 }
 
+// Whether the agent holds work the server found to be stale.
+function hasStaleWork(agent) {
+    return !!(agent && Array.isArray(agent.staleWork) && agent.staleWork.length);
+}
+
+// One piece of stale work, in words: the page's localized wording for its kind, else the server's generic reason.
+function staleWorkText(item, labels) {
+    return (item && labels && labels['stale.' + item.kind]) || (item && item.reason) || '';
+}
+
+// The warning shown on an agent's card: the first stale item's wording, and how many more there are.
+function staleWorkSummary(agent, labels) {
+    if (!hasStaleWork(agent)) {
+        return '';
+    }
+
+    var first = staleWorkText(agent.staleWork[0], labels);
+
+    return agent.staleWork.length > 1
+        ? format(text(labels, 'staleMore', '{0} (+{1} more)'), first, agent.staleWork.length - 1)
+        : first;
+}
+
 // The dashboard's actions for one agent row.
 //   agent: a row of the dashboard state; state: { canIntervene, canMessage }; labels: localized strings.
 // Returns { modes: [{ mode, label, pressed, action, disabled }], stop, takeOver: { disabled, title } | null,
@@ -149,6 +172,12 @@ function agentActions(agent, state, labels) {
                 label: recording ? text(labels, 'recordOff', 'Stop recording') : text(labels, 'recordOn', 'Start recording')
             });
         }
+    }
+
+    // Work the agent is wrongly holding (a call that is over but still on their line, a state nothing backs) is released
+    // by freeing the agent, which refuses while the provider says a call is alive. Offered only when something is stale.
+    if (state && state.canIntervene && hasStaleWork(agent)) {
+        actions.menu.push({ action: 'free-agent', label: text(labels, 'freeAgent', 'Free agent…') });
     }
 
     if (state && state.canIntervene) {
@@ -430,4 +459,4 @@ export function monitorEndedMessage(engagement, labels) {
         'Your soft phone did not answer. Close and reopen it, wait until it says it is ready, then try again.');
 }
 
-export { menuPlacement as supervisorMenuPlacement, phoneCallSummary as supervisorPhoneCallSummary, PHASES as MONITOR_PHASES, agentActions as supervisorAgentActions, agentActionsHtml as supervisorAgentActionsHtml, agentMenuHtml as supervisorAgentMenuHtml, nextEngagement as nextMonitorEngagement, modeLabel as monitorModeLabel, escapeHtml as escapeSupervisorHtml };
+export { hasStaleWork as supervisorHasStaleWork, staleWorkText as supervisorStaleWorkText, staleWorkSummary as supervisorStaleWorkSummary, menuPlacement as supervisorMenuPlacement, phoneCallSummary as supervisorPhoneCallSummary, PHASES as MONITOR_PHASES, agentActions as supervisorAgentActions, agentActionsHtml as supervisorAgentActionsHtml, agentMenuHtml as supervisorAgentMenuHtml, nextEngagement as nextMonitorEngagement, modeLabel as monitorModeLabel, escapeHtml as escapeSupervisorHtml };
