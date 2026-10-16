@@ -101,8 +101,20 @@ Voice names belong to one provider. An OpenAI realtime voice does not exist in A
 persona remembers the deployment its voice was chosen from, and the voice is used only on deployments of the same
 provider. Elsewhere the deployment's default voice is used, and the log says why.
 
-Contact Center AI calls that run as a realtime (speech-to-speech) session use the same order. Turn-based automated
-calls use the voice of their activity, subject flow or site settings.
+Contact Center AI calls that run as a realtime (speech-to-speech) session use the same order.
+
+Turn-based automated calls, where the telephony provider speaks each reply, choose their voice in this order:
+
+1. the voice of the activity (for example, the voice of an inventory load)
+2. the voice of the subject flow
+3. the persona's voice, when it was chosen on a deployment of the same provider as the call's text-to-speech
+   deployment (the activity's, then the subject flow's, then the site default)
+4. the telephony provider's default voice
+
+The voice goes to the telephony provider's speak command, so it must be a voice that provider accepts. When the
+persona has a **Language**, these calls speak in it and listen for it (`es-MX` listens for `es`); otherwise they speak
+`en-US`. If the provider refuses to speak a line with the persona's voice or language, the line is spoken again as if
+there were no persona, and the log says why.
 
 ## Deleting a persona
 

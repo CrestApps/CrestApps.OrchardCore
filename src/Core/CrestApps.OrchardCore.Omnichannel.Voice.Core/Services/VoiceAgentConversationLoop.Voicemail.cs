@@ -102,7 +102,8 @@ public sealed partial class VoiceAgentConversationLoop
         {
             // The greeting is still going. Listen for the rest of it, and if the line goes quiet instead -- the tone
             // has sounded and it is recording -- the silence watch leaves the message.
-            await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: "en", commandId: $"ai-tx-vm-{turnsBefore}", cancellationToken);
+            var listenLanguage = await GetListenLanguageAsync(media, activity, cancellationToken);
+            await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: listenLanguage, commandId: $"ai-tx-vm-{turnsBefore}", cancellationToken);
             await WatchForSilenceAsync(voiceEvent, turnsBefore + 1, VoicemailToneWait);
 
             return true;
