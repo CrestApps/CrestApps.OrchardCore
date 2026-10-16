@@ -623,7 +623,7 @@ The mutation is also allowed to decline after seeing the fresh version. That is 
 
 When the AI profile driving an automated call names a realtime deployment, and the **Contact Center Voice Media** feature is enabled, the call is held as a live speech-to-speech session instead of the turn-based transcribe-complete-synthesize loop. The caller's audio reaches the model as it arrives and the model's voice goes back as it is produced, so it can answer while they are still finishing and hear them if they interrupt. Everything downstream is unchanged, because both paths write the same transcript.
 
-Seven things about that session are decided here rather than by the provider's defaults.
+Eight things about that session are decided here rather than by the provider's defaults.
 
 ### The line is band-limited in both directions
 
@@ -664,6 +664,12 @@ It only does this for a real interruption: the provider's report *and* the echo 
 The closing line is deliberately left to finish — the goodbye, or the line announcing a transfer. Goodbyes overlap on a phone, and clipping the closing line is exactly what the closing watchdog exists to prevent. The caller still takes the call back: speaking abandons the hangup, and the model answers once the line has played.
 
 Each interruption is logged at information level with how much of the assistant's audio was still to play and how much of the line the caller had heard; a speech start treated as echo, or one over the closing line, is logged at debug.
+
+### A silent line is asked twice, then ended
+
+When the line has been quiet on both sides for 8 seconds, the session asks whether the caller is still there. It asks again after another 8 seconds, and after a third silence it says goodbye and ends the call the way the end-call tool does: the goodbye plays and the line closes, about 30 seconds after the assistant's last word. A caller who speaks starts the count again. The turn-based loop keeps the same pace with its own fixed lines, so a caller meets the same behaviour whichever kind of session holds the call. Before, the session asked twice and then held the line open, unheard, until somebody hung up: five minutes on one live call.
+
+Both lines are asked for as standalone messages (`RequestStandaloneMessageAsync`), each from a fixed instruction under the session's own instructions, rather than as a continuation of the conversation. Asked to continue the conversation, the model filled a silent line by speaking for the customer ("I'm looking to schedule a haircut appointment") and then answering itself. A standalone message does not see the conversation, so its instruction says the call is under way (do not greet, introduce yourself or repeat any notice: without that, the model answered with the call's whole opening) and quotes the assistant's latest line on the call, for its language only.
 
 ### A transfer ends the session
 

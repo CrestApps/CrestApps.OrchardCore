@@ -583,6 +583,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (!string.IsNullOrWhiteSpace(spoken))
                         {
                             Interlocked.CompareExchange(ref _openingLine, spoken, null);
+                            Volatile.Write(ref _latestAssistantLine, spoken);
                         }
 
                         var lineStartedUtc = assistantLineStartedUtc;
