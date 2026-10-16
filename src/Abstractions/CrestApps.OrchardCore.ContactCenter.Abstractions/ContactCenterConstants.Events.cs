@@ -418,6 +418,11 @@ public static partial class ContactCenterConstants
         public const string SupervisorSetAgentState = "SupervisorSetAgentState";
 
         /// <summary>
+        /// Raised when a supervisor frees an agent of stale work, or is refused because the agent is on a live call.
+        /// </summary>
+        public const string SupervisorFreedAgent = "SupervisorFreedAgent";
+
+        /// <summary>
         /// Raised when a supervisor sends an agent a message.
         /// </summary>
         public const string SupervisorMessagedAgent = "SupervisorMessagedAgent";

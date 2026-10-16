@@ -114,6 +114,43 @@ public sealed partial class ContactCenterSupervisorInterventionService
     }
 
     /// <inheritdoc/>
+    public async Task<SupervisorEngagementResult> FreeAgentAsync(
+        string agentId,
+        string supervisorUserId,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default)
+    {
+        var target = await AuthorizeAgentAsync(agentId, supervisorUserId, principal, ContactCenterPermissions.InterveneInCalls, cancellationToken);
+
+        if (target.Failure is not null)
+        {
+            return target.Failure;
+        }
+
+        var now = _clock.UtcNow;
+        var release = await _staleWorkService.ReleaseAsync(target.Agent, ContactCenterActor.Supervisor(supervisorUserId), CancellationToken.None);
+
+        // A refusal is recorded too: a supervisor who tried to free an agent on a live call is part of the history.
+        await PublishAgentEventAsync(ContactCenterConstants.Events.SupervisorFreedAgent, target.Agent, supervisorUserId, now, new Dictionary<string, string>
+        {
+            ["outcome"] = release.Released ? "released" : release.DeclinedForLiveCall ? "declinedLiveCall" : "nothingReleased",
+            ["released"] = string.Join(", ", release.ReleasedItems.Select(item => item.Kind.ToString())),
+            ["returnedTo"] = release.ReturnedTo?.ToString() ?? string.Empty,
+            ["reason"] = release.Reason ?? string.Empty,
+        });
+
+        if (!release.Released)
+        {
+            return SupervisorEngagementResult.Failure(release.Reason ?? "Nothing was released.");
+        }
+
+        var result = SupervisorEngagementResult.Success();
+        result.Reason = release.Reason;
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<SupervisorEngagementResult> SendMessageAsync(
         string agentId,
         string supervisorUserId,
