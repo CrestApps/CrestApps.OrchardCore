@@ -37,6 +37,7 @@ were rejected and removed), the revision history, and the new feedback to apply 
    real values, such as the user's name, when a conversation starts.
 7. The opening message is what the assistant is told when it starts a conversation itself, such as an automated
    SMS or call. Change it only when the feedback is about how the conversation opens. Return it unchanged otherwise.
+   It is a separate setting: never copy it, or describe it, in the system message.
 8. Change a sampling parameter only when the feedback is about randomness, repetition or length that instructions
    cannot fix on their own. Lower temperature for consistency, raise it for variety; use the penalties for
    repetition; use MaxTokens only as a hard ceiling. Leave a parameter null to keep its current value.

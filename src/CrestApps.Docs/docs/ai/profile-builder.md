@@ -16,6 +16,13 @@ user_manual:
 
 How to use the builder in the admin is described in the User Manual under [Profile Builder](../user-manual/ai/profile-builder.md).
 
+This video shows why the Profile Builder exists, how it works, and how to build, test and save a profile with it.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder.jpg" aria-label="Video overview of the AI Profile Builder">
+  <source src="/img/docs/ai-profile-builder.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/ai-profile-builder.vtt" srcLang="en" label="English" default />
+</video>
+
 ## Overview
 
 A conversation-driven AI profile, such as one that runs automated SMS conversations or phone calls, behaves only as well as its system message. Writing that message by hand means guessing at every situation, testing, and editing again. The AI Profile Builder turns this into a loop:

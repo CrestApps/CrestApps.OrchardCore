@@ -1,0 +1,191 @@
+WEBVTT
+
+00:00:01.000 --> 00:00:05.489
+The AI Profile Builder writes the instructions of an AI profile with you.
+
+00:00:05.489 --> 00:00:09.012
+You play the person the AI will talk to, tell it what it
+
+00:00:09.012 --> 00:00:12.080
+got wrong, and it rewrites its own instructions.
+
+00:00:12.080 --> 00:00:16.001
+This video shows why it exists, how it works, and how to build,
+
+00:00:16.001 --> 00:00:18.160
+test and save a profile with it.
+
+00:00:22.760 --> 00:00:27.121
+An AI profile that holds a conversation on its own, such as an
+
+00:00:27.121 --> 00:00:32.700
+automated text message or phone call, behaves only as well as its system message.
+
+00:00:33.450 --> 00:00:38.755
+Writing that message by hand means guessing at every situation, trying it in
+
+00:00:38.755 --> 00:00:41.990
+a chat, and editing it again, over and over.
+
+00:00:42.740 --> 00:00:47.780
+And a fix for one reply can quietly break another reply that used to work.
+
+00:00:48.530 --> 00:00:51.027
+The Profile Builder turns this around.
+
+00:00:51.027 --> 00:00:54.998
+You play the conversation, say what the AI got wrong, and the AI
+
+00:00:54.998 --> 00:00:58.970
+rewrites its own instructions until it behaves the way you want.
+
+00:01:03.170 --> 00:01:06.337
+A session is a chat with a coach beside it.
+
+00:01:06.337 --> 00:01:10.990
+You role-play in text or by voice, and give feedback on any reply.
+
+00:01:11.740 --> 00:01:16.950
+The coach reads your comment, the conversation, and every earlier piece of feedback,
+
+00:01:16.950 --> 00:01:19.440
+including the replies you threw away.
+
+00:01:19.440 --> 00:01:24.650
+It rewrites the system message and, when needed, parameters such as the temperature.
+
+00:01:25.400 --> 00:01:29.974
+Every rewrite is kept as a revision you can restore, and Replay checks
+
+00:01:29.974 --> 00:01:32.140
+that earlier fixes still hold.
+
+00:01:32.890 --> 00:01:38.290
+When the assistant behaves the way you want, you save the result as an AI profile.
+
+00:01:42.483 --> 00:01:45.685
+Open Artificial Intelligence, Profile Builder.
+
+00:01:45.685 --> 00:01:47.903
+Your sessions are listed here.
+
+00:01:48.355 --> 00:01:51.536
+New Session starts with empty instructions.
+
+00:01:51.536 --> 00:01:56.275
+To improve an AI profile you already have, open the menu beside it.
+
+00:01:56.726 --> 00:01:59.725
+Pick the profile, and start the session.
+
+00:01:59.725 --> 00:02:04.746
+It begins with the profile's instructions, model, parameters and tools.
+
+00:02:05.196 --> 00:02:07.059
+The page has three parts.
+
+00:02:07.059 --> 00:02:11.146
+The settings on the left hold the instructions and parameters.
+
+00:02:11.599 --> 00:02:16.008
+The chat in the middle is where you play the person the AI talks to.
+
+00:02:16.008 --> 00:02:18.749
+Here, a patient texting a dental office.
+
+00:02:19.201 --> 00:02:23.560
+And the Builder panel on the right holds your feedback, the revisions, the
+
+00:02:23.560 --> 00:02:25.631
+replay, and the finished result.
+
+00:02:29.823 --> 00:02:32.533
+Write what the patient would say, and send it.
+
+00:02:35.558 --> 00:02:37.985
+The assistant answers with a price.
+
+00:02:37.985 --> 00:02:41.477
+But this office doesn't quote prices by text message:
+
+00:02:41.477 --> 00:02:43.548
+the front desk confirms them.
+
+00:02:44.012 --> 00:02:46.187
+Under the reply, click Feedback.
+
+00:02:46.187 --> 00:02:48.762
+The reply moves into the Builder panel.
+
+00:02:49.222 --> 00:02:51.692
+Write what was wrong, in your own words.
+
+00:02:54.366 --> 00:03:00.626
+Feedback and regenerate rewrites the instructions, then answers the same message again with them.
+
+00:03:01.076 --> 00:03:05.091
+The new rule is in the system instructions, and the new reply leaves
+
+00:03:05.091 --> 00:03:06.936
+the price to the front desk.
+
+00:03:07.388 --> 00:03:09.918
+When a reply is right, click Looks good.
+
+00:03:09.918 --> 00:03:12.118
+Later rewrites keep that behavior.
+
+00:03:12.568 --> 00:03:17.532
+Every piece of feedback stays in this list, with the replies you rejected.
+
+00:03:17.532 --> 00:03:22.308
+Each rewrite reads all of it, so fixing one thing doesn't undo another.
+
+00:03:26.497 --> 00:03:32.207
+The Revisions tab keeps every version of the instructions, with what changed and why.
+
+00:03:32.659 --> 00:03:38.129
+Expand a revision to read its system message, and restore it to make it current again.
+
+00:03:38.581 --> 00:03:43.299
+On the Replay tab, Run replay answers every message you gave feedback on
+
+00:03:43.299 --> 00:03:45.901
+again, with the current instructions.
+
+00:03:46.351 --> 00:03:50.902
+Then it checks each answer against your feedback, and marks it Pass or
+
+00:03:50.902 --> 00:03:52.579
+Fail, with the reason.
+
+00:03:52.579 --> 00:03:56.771
+Tools aren't used during a replay, so nothing is sent or booked.
+
+00:04:00.972 --> 00:04:05.093
+On the Finish tab, the opening message is what the assistant is told
+
+00:04:05.093 --> 00:04:08.992
+when it starts a conversation itself, such as an automated text.
+
+00:04:09.444 --> 00:04:13.768
+The coach deployment is the model that rewrites the instructions.
+
+00:04:13.768 --> 00:04:16.264
+A capable model writes better ones.
+
+00:04:16.717 --> 00:04:21.258
+Copy the system message, save the result as a new AI profile, or
+
+00:04:21.258 --> 00:04:24.567
+update the profile this session started from.
+
+00:04:25.017 --> 00:04:30.707
+The profile opens with the instructions you built, ready for automated messages and calls.
+
+00:04:32.707 --> 00:04:37.626
+The AI Profile Builder turns the replies you don't want into instructions that hold.
+
+00:04:37.626 --> 00:04:39.047
+Thanks for watching.
+

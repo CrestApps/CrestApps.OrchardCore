@@ -18,7 +18,19 @@ It suits profiles that hold a conversation on their own, such as automated text 
 
 <AskYourAdmin />
 
+This video shows why the Profile Builder exists, how it works, and how to build, test and save a profile with it.
+
+<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder.jpg" aria-label="Video overview of the AI Profile Builder">
+  <source src="/img/docs/ai-profile-builder.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/ai-profile-builder.vtt" srcLang="en" label="English" default />
+</video>
+
 ## Start a session
+
+<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder-start.jpg" aria-label="Video of starting a Profile Builder session from an existing AI profile">
+  <source src="/img/docs/ai-profile-builder-start.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/ai-profile-builder-start.vtt" srcLang="en" label="English" default />
+</video>
 
 1. Open **Artificial Intelligence > Profile Builder**.
 2. Click **New Session** to start empty. To begin from an AI profile you already have, open the arrow beside **New Session**, choose **Improve an existing AI profile...**, pick the profile and click **Start session**. The session starts with the profile's instructions and settings, and can update that profile when you finish.
@@ -30,6 +42,11 @@ The session page has three parts: the **Settings** on the left, the chat in the 
 In **Settings**, choose the **Chat deployment** (the model to test) and, if you like, write a first version of the **System instructions**. Tools, knowledge and other settings work as in a [chat interaction](chat-interactions.md).
 
 ## Role-play and give feedback
+
+<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder-feedback.jpg" aria-label="Video of giving feedback on a reply and regenerating it with the rewritten instructions">
+  <source src="/img/docs/ai-profile-builder-feedback.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/ai-profile-builder-feedback.vtt" srcLang="en" label="English" default />
+</video>
 
 1. Type what that person would say and send it. The AI answers.
 2. Under a reply, click **Feedback**. The reply is highlighted and shown in the feedback panel.
@@ -54,6 +71,11 @@ If the chat deployment has a conversation deployment, you can role-play by voice
 
 ## Revisions
 
+<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder-replay.jpg" aria-label="Video of the revision history and of replaying earlier feedback">
+  <source src="/img/docs/ai-profile-builder-replay.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/ai-profile-builder-replay.vtt" srcLang="en" label="English" default />
+</video>
+
 The **Revisions** tab lists every version of the instructions, with what changed and why. Expand **System message** to read a version, and click **Restore** to make it the current one again.
 
 ## Check that earlier fixes still work
@@ -67,6 +89,11 @@ On the **Replay** tab, click **Run replay**. Every message you gave feedback on 
 Tools are not used during a replay, so nothing is sent or booked.
 
 ## Save the result
+
+<video controls preload="metadata" width="100%" poster="/img/docs/ai-profile-builder-finish.jpg" aria-label="Video of saving the session to an AI profile">
+  <source src="/img/docs/ai-profile-builder-finish.mp4" type="video/mp4" />
+  <track kind="captions" src="/img/docs/ai-profile-builder-finish.vtt" srcLang="en" label="English" default />
+</video>
 
 On the **Finish** tab:
 

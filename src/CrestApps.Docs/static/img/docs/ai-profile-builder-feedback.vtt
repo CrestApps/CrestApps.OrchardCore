@@ -1,0 +1,44 @@
+WEBVTT
+
+00:00:03.192 --> 00:00:05.902
+Write what the patient would say, and send it.
+
+00:00:08.927 --> 00:00:11.354
+The assistant answers with a price.
+
+00:00:11.354 --> 00:00:14.846
+But this office doesn't quote prices by text message:
+
+00:00:14.846 --> 00:00:16.917
+the front desk confirms them.
+
+00:00:17.381 --> 00:00:19.556
+Under the reply, click Feedback.
+
+00:00:19.556 --> 00:00:22.131
+The reply moves into the Builder panel.
+
+00:00:22.592 --> 00:00:25.062
+Write what was wrong, in your own words.
+
+00:00:27.735 --> 00:00:33.995
+Feedback and regenerate rewrites the instructions, then answers the same message again with them.
+
+00:00:34.445 --> 00:00:38.461
+The new rule is in the system instructions, and the new reply leaves
+
+00:00:38.461 --> 00:00:40.305
+the price to the front desk.
+
+00:00:40.757 --> 00:00:43.287
+When a reply is right, click Looks good.
+
+00:00:43.287 --> 00:00:45.487
+Later rewrites keep that behavior.
+
+00:00:45.938 --> 00:00:50.901
+Every piece of feedback stays in this list, with the replies you rejected.
+
+00:00:50.901 --> 00:00:55.678
+Each rewrite reads all of it, so fixing one thing doesn't undo another.
+
