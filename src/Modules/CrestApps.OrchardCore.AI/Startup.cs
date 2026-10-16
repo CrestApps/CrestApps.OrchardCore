@@ -514,9 +514,6 @@ public sealed class PersonasStartup : StartupBase
             )
         );
 
-        // Modules ship persona files the same way they ship profile templates.
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IAIPersonaProvider, ModuleAIPersonaProvider>());
-
         services
             .AddDataMigration<AIPersonaIndexMigrations>()
             .AddScoped<ICatalogEntryHandler<AIPersona>, AIPersonaDeletionHandler>()
