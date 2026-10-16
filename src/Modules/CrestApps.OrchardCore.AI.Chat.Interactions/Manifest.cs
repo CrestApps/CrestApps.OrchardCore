@@ -24,3 +24,14 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = ChatInteractionsConstants.Feature.ProfileBuilder,
+    Name = "AI Profile Builder",
+    Description = "Builds AI profiles by role-play: give the AI feedback on its replies and it rewrites its own instructions, then save the result as an AI profile.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        ChatInteractionsConstants.Feature.ChatInteractions,
+    ]
+)]

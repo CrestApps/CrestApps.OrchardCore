@@ -1,0 +1,75 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@model ProfileBuilderIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIProfileBuilder" title="@T["Profile Builder"]" />
+</zone>
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <p class="mb-3 text-muted">
+            @T["Role-play as the customer, tell the AI what it got wrong, and it rewrites its own instructions. When it behaves the way you want, save the result as an AI profile."]
+        </p>
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <form asp-action="New" method="post">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New session"]
+                    </button>
+                </form>
+            </div>
+            @if (Model.Profiles.Count > 0)
+            {
+                <div class="col-12 col-md-auto">
+                    <form asp-action="New" method="post" class="d-flex gap-2">
+                        <select name="profileId" class="form-select" aria-label="@T["AI profile to improve"]" required>
+                            <option value="">@T["Improve an existing AI profile..."]</option>
+                            @foreach (var profile in Model.Profiles)
+                            {
+                                <option value="@profile.Value">@profile.Text</option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-secondary text-nowrap">@T["Start"]</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (Model.Sessions.Count == 0)
+{
+    <div class="alert alert-info">@T["You have no profile builder sessions yet."]</div>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var entry in Model.Sessions)
+        {
+            var session = entry.Session;
+            var changes = session.Revisions.Count > 0 ? session.Revisions.Count - 1 : 0;
+
+            <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                <div>
+                    <a asp-action="Session" asp-route-id="@session.ItemId" class="fw-semibold">@entry.Title</a>
+                    <div class="text-muted small">
+                        @T.Plural(session.Feedback.Count, "1 piece of feedback", "{0} pieces of feedback")
+                        &middot;
+                        @T.Plural(changes, "1 revision", "{0} revisions")
+                        &middot;
+                        <span title="@(session.ModifiedUtc ?? session.CreatedUtc)"><time datetime="@((session.ModifiedUtc ?? session.CreatedUtc).ToString("o"))">@((session.ModifiedUtc ?? session.CreatedUtc).ToString("g"))</time> UTC</span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <a asp-action="Session" asp-route-id="@session.ItemId" class="btn btn-sm btn-primary">@T["Open"]</a>
+                    <a asp-action="Delete" asp-route-id="@session.ItemId" class="btn btn-sm btn-danger"
+                       data-url-af="RemoveUrl UnsafeUrl"
+                       data-title="@T["Delete session"]"
+                       data-message="@T["Delete this session, its conversation and its feedback? AI profiles saved from it are kept."]">@T["Delete"]</a>
+                </div>
+            </li>
+        }
+    </ul>
+}
