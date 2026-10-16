@@ -132,10 +132,11 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 
             // One voice question, whichever path answers it: a realtime deployment's own voices, or the
             // text-to-speech voices when the conversation runs as the speech-to-text plus text-to-speech
-            // cascade.
-            settings.VoiceName = model.ChatMode == ChatMode.Conversation
-                ? model.VoiceName?.Trim()
-                : null;
+            // cascade. Kept whatever the chat mode, because phone calls answered or placed with this profile speak
+            // with it whatever the mode is; clearing it on a text-only profile discarded the voice its editor shows.
+            settings.VoiceName = string.IsNullOrWhiteSpace(model.VoiceName)
+                ? null
+                : model.VoiceName.Trim();
             settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 
