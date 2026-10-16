@@ -22,9 +22,7 @@
     "name": "ai-chat-ui-css",
     "source": [
       "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.css",
-      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.min.css",
-      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.css.map",
-      "node_modules/@crestapps/ai-chat-ui/dist/chat-widget.css.map"
+      "node_modules/@crestapps/ai-chat-ui/dist/ai-chat.min.css"
     ],
     "dest": "wwwroot/css/",
     "tags": [
