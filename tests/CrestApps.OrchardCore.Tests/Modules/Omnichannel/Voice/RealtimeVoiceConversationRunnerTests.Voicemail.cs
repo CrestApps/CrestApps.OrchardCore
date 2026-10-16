@@ -17,6 +17,17 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
     private const string VoicemailMessage = "Hi Amani, this is Alex from Contoso Motors. Sorry we missed you; we will try you again soon.";
 
     [Fact]
+    public void VoicemailPrompt_QuotesTheOpeningLine_SoTheMessageKeepsTheCallsLanguage()
+    {
+        // The message is asked for without the conversation; live, a Greek call's message came in English.
+        var prompt = RealtimeVoiceConversationRunner.VoicemailPrompt(" Καλησπέρα σας, καλώ από το Studio Athena. ");
+
+        Assert.StartsWith(VoiceCallGuidance.LeavingAVoicemail, prompt, StringComparison.Ordinal);
+        Assert.EndsWith("\"Καλησπέρα σας, καλώ από το Studio Athena.\"", prompt, StringComparison.Ordinal);
+        Assert.Equal(VoiceCallGuidance.LeavingAVoicemail, RealtimeVoiceConversationRunner.VoicemailPrompt(null));
+    }
+
+    [Fact]
     public async Task WhenTheProviderReportsAMachine_TheModelsRepliesToTheGreetingAreKeptOffTheLine()
     {
         // Arrange
@@ -77,6 +88,10 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.Contains(VoiceCallGuidance.LeavingAVoicemail, harness.Conversation.Unprompted[^1], StringComparison.Ordinal);
         Assert.Contains("## Right now", harness.Conversation.Unprompted[^1], StringComparison.Ordinal);
         Assert.False(endCall.EndCallRequested);
+
+        // As a standalone message: on live calls, asked for inside the conversation, the model answered the greeting
+        // it had just heard, or called a tool and said nothing.
+        Assert.Equal(harness.Conversation.Unprompted[^1], Assert.Single(harness.Conversation.Standalone));
 
         // The model says it, and it is the one thing the machine hears.
         QueueResponse(harness, VoicemailMessage);

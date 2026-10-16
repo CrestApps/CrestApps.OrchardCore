@@ -112,6 +112,72 @@ public sealed class MessagingContactSearch
     }
 
     /// <summary>
+    /// Reads the term as an address on the channel, so a composer can message an address that is not in the contacts.
+    /// The term must already be written the way the channel needs a typed address; it is never reshaped into one.
+    /// </summary>
+    /// <param name="term">The term the user typed.</param>
+    /// <param name="channelName">The channel the message will be sent on.</param>
+    /// <returns>The address, with no contact id; <see langword="null"/> when the term is not a valid typed address on the channel.</returns>
+    public ContactSearchResult GetAddress(string term, string channelName)
+    {
+        var channel = _channelResolver.Get(channelName);
+        var address = term?.Trim();
+
+        if (channel is null || string.IsNullOrEmpty(address) || !channel.IsValidNewAddress(address))
+        {
+            return null;
+        }
+
+        var displayAddress = channel.FormatAddress(address);
+
+        return new ContactSearchResult
+        {
+            Name = displayAddress,
+            Address = address,
+            DisplayAddress = displayAddress,
+        };
+    }
+
+    /// <summary>
+    /// Finds the addresses that no contact owns on the channel and that are not written the way the channel needs a
+    /// typed address, so a send refuses them. A contact's stored address is held only to the channel's own rule.
+    /// </summary>
+    /// <param name="addresses">The addresses as they were typed or picked.</param>
+    /// <param name="channelName">The channel the message will be sent on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The refused addresses, in the order given; empty when the channel is unknown.</returns>
+    public async Task<IReadOnlyList<string>> FindInvalidNewAddressesAsync(
+        IEnumerable<string> addresses,
+        string channelName,
+        CancellationToken cancellationToken)
+    {
+        var channel = _channelResolver.Get(channelName);
+        var invalid = new List<string>();
+
+        if (channel is null)
+        {
+            return invalid;
+        }
+
+        foreach (var address in addresses ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(address) || channel.IsValidNewAddress(address.Trim()))
+            {
+                continue;
+            }
+
+            var normalized = channel.NormalizeAddress(address);
+
+            if (string.IsNullOrEmpty(normalized) || (await channel.FindContactIdsAsync(normalized, cancellationToken)).Count == 0)
+            {
+                invalid.Add(address.Trim());
+            }
+        }
+
+        return invalid;
+    }
+
+    /// <summary>
     /// Finds the contact that owns an exact address on the channel, so a composer opened for that address can show
     /// the contact in its To line rather than as a bare address.
     /// </summary>

@@ -30,6 +30,24 @@ internal static class TelnyxApiErrors
     public const string CallNotAnsweredYetCode = "90034";
 
     /// <summary>
+    /// The code Telnyx refuses a command with when the call control id it was given is not one it recognizes: a call
+    /// control id is only good for as long as the call, and Telnyx answers an older one this way rather than 404.
+    /// </summary>
+    public const string InvalidCallControlIdCode = "90015";
+
+    /// <summary>
+    /// Gets whether Telnyx refused the command because the call control id is not valid (any longer).
+    /// </summary>
+    /// <param name="result">The refused command's result.</param>
+    /// <returns><see langword="true"/> when the refusal says Telnyx does not know the call control id.</returns>
+    /// <remarks>
+    /// For a command that changes a live call this stays a failure: the call may still be up on a leg the id does not
+    /// name. For a lookup it means the call is gone, and the sweep that reads the state treats it as it does a 404.
+    /// </remarks>
+    public static bool IsInvalidCallControlId(TelnyxApiResult result)
+        => HasErrorCode(result, InvalidCallControlIdCode);
+
+    /// <summary>
     /// Gets whether Telnyx refused the command because the call has not been answered yet.
     /// </summary>
     /// <param name="result">The refused command's result.</param>

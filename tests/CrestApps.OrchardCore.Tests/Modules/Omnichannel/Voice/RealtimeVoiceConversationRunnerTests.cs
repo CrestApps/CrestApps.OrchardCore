@@ -1672,11 +1672,21 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         /// </summary>
         public List<string> Unprompted { get; } = [];
 
+        public List<string> Standalone { get; } = [];
+
         public Task RequestUnpromptedResponseAsync(string instructions = null, CancellationToken cancellationToken = default)
         {
             Unprompted.Add(instructions ?? string.Empty);
 
             return Task.CompletedTask;
+        }
+
+        // A response asked for all the same, so it counts with the unprompted ones.
+        public Task RequestStandaloneMessageAsync(string instructions, CancellationToken cancellationToken = default)
+        {
+            Standalone.Add(instructions);
+
+            return RequestUnpromptedResponseAsync(instructions, cancellationToken);
         }
 
         public Task RequestAcknowledgementAsync(string instructions, CancellationToken cancellationToken = default)
