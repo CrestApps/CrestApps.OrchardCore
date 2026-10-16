@@ -384,11 +384,11 @@ The dividing rule: if it can be done in the browser, it belongs in the User Manu
 2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 3. **Validate the docs** – run `npm run check:manuals` and `npm run build` in `src/CrestApps.Docs`. The build fails on any broken link or anchor, and CI runs both checks; failing to validate locally will cause workflow failures.
 
-### Documentation Screencasts
+### Documentation Videos
 
-- **Only produce screencasts when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
-- When asked to record documentation screencasts, capture them **full-screen at 1600×1000** resolution to match the existing docs videos.
-- Deliver screencasts as **MP4** (`H.264`, even width/height, `-pix_fmt yuv420p`) stored under `src/CrestApps.Docs/static/img/docs/`, and embed them with an HTML `<video controls preload="metadata" width="100%">` player rather than a GIF.
+- **Only produce videos when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
+- **Never commit a video file** (`.mp4`, `.webm`, or its captions and poster) to this repository. Videos are published on the CrestApps YouTube channel, and their sources (storyboards, recorder scenes, YouTube metadata) live in the private `CrestApps/CrestApps.Videos` repository, together with the `crestapps-video-producer` skill that makes them.
+- Embed a video by name with the `<YouTube video="<slug>" title="..." />` component (`src/CrestApps.Docs/src/components/YouTube`), available on every page without an import. The slug is the video's folder name in `CrestApps.Videos`; its YouTube id comes from `src/CrestApps.Docs/src/data/videos.json`, which the `CrestApps.Videos` publish workflow updates by pull request. Until the slug is in that map the embed renders nothing, so a page can include it before the video is published. To show one chapter of a longer video, add `start` and `end` in seconds: `<YouTube video="<slug>" title="..." start={99} end={146} />`.
 
 ## Documentation expectations
 
