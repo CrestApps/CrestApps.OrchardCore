@@ -27,6 +27,7 @@ public sealed class DefaultAIDeploymentSettingsSchema : SiteSettingsSchemaBase
                 ("DefaultVisionDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default vision deployment.")),
                 ("DefaultSpeechToTextDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default speech-to-text deployment.")),
                 ("DefaultTextToSpeechDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default text-to-speech deployment.")),
-                ("DefaultTextToSpeechVoiceId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The voice identifier to use for text-to-speech.")))
+                ("DefaultTextToSpeechVoiceId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The voice identifier to use for text-to-speech.")),
+                ("DefaultRealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("The technical name of the default realtime deployment: the model that carries a spoken conversation, in the chat or on a phone call, when the profile names none.")))
             .AdditionalProperties(false);
 }

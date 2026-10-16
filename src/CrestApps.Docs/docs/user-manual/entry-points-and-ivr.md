@@ -108,7 +108,7 @@ A call entry point can hand its calls to an AI voice agent: an AI chat profile, 
 
 While the entry point is open, the AI answers each call itself, greets the caller with its initial prompt and holds the conversation. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**.
 
-The AI voice agent needs the **Telnyx AI Voice Agent** feature. A realtime-capable chat deployment holds a live conversation; others take turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
+The AI voice agent needs the **Telnyx AI Voice Agent** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
 
