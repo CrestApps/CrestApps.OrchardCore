@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Models;
+using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -7,13 +8,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 /// <summary>
 /// The AI Profile Builder session list.
 /// </summary>
-public class ProfileBuilderIndexViewModel
+public class ProfileBuilderIndexViewModel : ListCatalogEntryViewModel<ProfileBuilderSessionEntry>
 {
-    /// <summary>
-    /// Gets or sets the current user's sessions, most recently changed first.
-    /// </summary>
-    public IReadOnlyList<ProfileBuilderSessionEntry> Sessions { get; set; } = [];
-
     /// <summary>
     /// Gets or sets the chat profiles a session can start from.
     /// </summary>

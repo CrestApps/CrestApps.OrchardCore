@@ -9,16 +9,21 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Routing;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Controllers;
 
@@ -30,6 +35,8 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Controllers;
 [Admin("ai/profile-builder/{action}/{id?}", "ProfileBuilder{action}")]
 public sealed class ProfileBuilderController : Controller
 {
+    private const string _optionsSearch = "Options.Search";
+
     private readonly IProfileBuilderSessionStore _sessionStore;
     private readonly ProfileBuilderService _builderService;
     private readonly ICatalogManager<ChatInteraction> _interactionManager;
@@ -72,40 +79,66 @@ public sealed class ProfileBuilderController : Controller
     /// <summary>
     /// Lists the current user's builder sessions.
     /// </summary>
+    /// <param name="options">The search and bulk action options.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <param name="pagerOptions">The pager options.</param>
+    /// <param name="shapeFactory">The shape factory.</param>
     [Admin("ai/profile-builder", "ProfileBuilderIndex")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(
+        CatalogEntryOptions options,
+        PagerParameters pagerParameters,
+        [FromServices] IOptions<PagerOptions> pagerOptions,
+        [FromServices] IShapeFactory shapeFactory)
     {
         if (!await CanUseBuilderAsync())
         {
             return Forbid();
         }
 
+        var pager = new Pager(pagerParameters, pagerOptions.Value);
         var sessions = await _sessionStore.ListAsync(GetUserId());
-        var interactions = new Dictionary<string, ChatInteraction>(StringComparer.Ordinal);
+        var entries = new List<ProfileBuilderSessionEntry>();
 
         foreach (var session in sessions)
         {
             var interaction = await _interactionManager.FindByIdAsync(session.ChatInteractionId);
 
-            if (interaction is not null)
+            entries.Add(new ProfileBuilderSessionEntry
             {
-                interactions[interaction.ItemId] = interaction;
-            }
+                Session = session,
+                Title = interaction is not null && !string.IsNullOrWhiteSpace(interaction.Title)
+                    ? interaction.Title
+                    : S["Untitled"],
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.Search))
+        {
+            entries = entries
+                .Where(entry => entry.Title.Contains(options.Search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        // Maintain the search when generating page links.
+        var routeData = new RouteData();
+
+        if (!string.IsNullOrEmpty(options.Search))
+        {
+            routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
         var profiles = await _profileManager.GetAsync(AIProfileType.Chat);
 
+        options.BulkActions =
+        [
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
+        ];
+
         var model = new ProfileBuilderIndexViewModel
         {
-            Sessions = sessions
-                .Select(session => new ProfileBuilderSessionEntry
-                {
-                    Session = session,
-                    Title = interactions.TryGetValue(session.ChatInteractionId, out var interaction) && !string.IsNullOrWhiteSpace(interaction.Title)
-                        ? interaction.Title
-                        : S["Untitled"],
-                })
-                .ToArray(),
+            Models = entries.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize).ToList(),
+            Options = options,
+            Pager = await shapeFactory.PagerAsync(pager, entries.Count, routeData),
             Profiles = profiles
                 .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId))
@@ -113,6 +146,75 @@ public sealed class ProfileBuilderController : Controller
         };
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Applies the search box.
+    /// </summary>
+    /// <param name="model">The posted list.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    [Admin("ai/profile-builder", "ProfileBuilderIndex")]
+    public async Task<IActionResult> IndexFilterPost(ListCatalogEntryViewModel model, PagerParameters pagerParameters)
+    {
+        if (!await CanUseBuilderAsync())
+        {
+            return Forbid();
+        }
+
+        return RedirectToAction(nameof(Index), new RouteValueDictionary
+        {
+            { _optionsSearch, model.Options?.Search },
+            { "pageSize", pagerParameters.PageSize },
+        });
+    }
+
+    /// <summary>
+    /// Applies a bulk action to the selected sessions.
+    /// </summary>
+    /// <param name="options">The bulk action options.</param>
+    /// <param name="itemIds">The selected session identifiers.</param>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.BulkAction")]
+    [Admin("ai/profile-builder", "ProfileBuilderIndex")]
+    public async Task<IActionResult> IndexPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
+    {
+        if (!await CanUseBuilderAsync())
+        {
+            return Forbid();
+        }
+
+        if (options.BulkAction == CatalogEntryAction.Remove && itemIds?.Any() == true)
+        {
+            var counter = 0;
+
+            foreach (var id in itemIds)
+            {
+                var (session, _, denied) = await LoadAsync(id);
+
+                if (denied is not null)
+                {
+                    continue;
+                }
+
+                await _builderService.DeleteAsync(session);
+                counter++;
+            }
+
+            if (counter == 0)
+            {
+                await _notifier.WarningAsync(H["No sessions were deleted."]);
+            }
+            else
+            {
+                await _notifier.SuccessAsync(H.Plural(counter, "1 session has been deleted.", "{0} sessions have been deleted."));
+            }
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     /// <summary>
