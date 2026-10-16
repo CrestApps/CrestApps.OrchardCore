@@ -58,6 +58,11 @@ public sealed class Order : CatalogItem
     /// </summary>
     public string CheckoutSessionId { get; set; }
 
+    /// <summary>
+    /// Gets or sets the customer who placed the order, when the Customers feature is enabled.
+    /// </summary>
+    public string CustomerId { get; set; }
+
     public string CustomerName { get; set; }
 
     public string CustomerEmail { get; set; }

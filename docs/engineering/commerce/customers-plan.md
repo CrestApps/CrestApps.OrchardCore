@@ -127,6 +127,19 @@ This is what shipping, guest order lookup and the customer account pages wait on
 | **CU5 Privacy** | Retention task and settings, Erase, Export, audit entries | An inactive guest's data is anonymized on schedule while the order stays; Export returns everything the store holds on a customer. |
 | **CU6 Docs and samples** | User and technical manuals, the store sample with a customer and addresses, changelog | Docs build passes; a fresh store sample shows customers end to end. |
 
+### CU1 as built
+
+- `Customer` (`CatalogItem`, `Customers` collection), `CustomerIndex`, `ICustomerStore` (search by the start of name,
+  company or email; concurrency-checked saves), `ICustomerService.GetOrCreateForUserAsync` under a per-user
+  distributed lock, `CustomerRecordContactResolver` replacing the default contact resolver.
+- Commerce > Customers: list with search and filters (Active, With an account, Guests, Businesses, Disabled, All),
+  Add customer, edit (an account's email is read-only), View and Manage customers permissions.
+- Orders: `Order.CustomerId` and an indexed `CustomerId` column (upgrade step uses `IndexTableIndexCreation`); a
+  signed-in checkout sets it.
+- Orders placed before Customers was enabled are not linked to a customer. The customer's orders view (with the
+  address book or guest access slice) lists by `CustomerId` or, for a customer with an account, by `UserId`, so they
+  still show.
+
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
 

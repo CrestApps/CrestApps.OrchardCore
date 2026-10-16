@@ -184,6 +184,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
+| `CrestApps.OrchardCore.Customers` | Customers | [Customers](./modules/customers) |
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |

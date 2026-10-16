@@ -2,10 +2,12 @@ using CrestApps.OrchardCore.Carts.Core;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.RateLimits;
 using OrchardCore.Users;
@@ -69,6 +71,16 @@ public sealed class CartCheckoutController : Controller
         {
             order.CustomerName = user.UserName;
             order.CustomerEmail = user.Email;
+
+            // With Customers enabled, the order belongs to the user's customer, made on their first order.
+            if (HttpContext.RequestServices.GetService<ICustomerService>() is { } customers &&
+                await customers.GetOrCreateForUserAsync(user.UserId, cancellationToken) is { } customer)
+            {
+                order.CustomerId = customer.ItemId;
+                order.CustomerName = customer.GetName() ?? user.UserName;
+
+                await customers.TouchAsync(customer, cancellationToken);
+            }
         }
 
         var session = await _engine.StartAsync(new StartCheckoutRequest

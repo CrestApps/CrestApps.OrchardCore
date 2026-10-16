@@ -13,6 +13,8 @@ public sealed class OrderIndex : CatalogItemIndex
 
     public string UserId { get; set; }
 
+    public string CustomerId { get; set; }
+
     public string CustomerEmail { get; set; }
 
     public string CartId { get; set; }
@@ -39,6 +41,7 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 ItemId = order.ItemId,
                 OrderNumber = order.OrderNumber,
                 UserId = order.UserId,
+                CustomerId = order.CustomerId,
                 CustomerEmail = order.CustomerEmail?.ToUpperInvariant(),
                 CartId = order.CartId,
                 CheckoutSessionId = order.CheckoutSessionId,
