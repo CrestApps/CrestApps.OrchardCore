@@ -128,6 +128,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Supervisor transferred a call"].Value, ContactCenterConstants.Events.SupervisorTransferredCall) { Group = supervision },
             new SelectListItem(S["Supervisor changed a call's recording"].Value, ContactCenterConstants.Events.SupervisorChangedRecording) { Group = supervision },
             new SelectListItem(S["Supervisor set an agent's state"].Value, ContactCenterConstants.Events.SupervisorSetAgentState) { Group = supervision },
+            new SelectListItem(S["Supervisor freed an agent"].Value, ContactCenterConstants.Events.SupervisorFreedAgent) { Group = supervision },
             new SelectListItem(S["Supervisor messaged an agent"].Value, ContactCenterConstants.Events.SupervisorMessagedAgent) { Group = supervision },
 
             new SelectListItem(S["Secure capture started"].Value, ContactCenterConstants.Events.SecureCaptureStarted) { Group = secureCapture },

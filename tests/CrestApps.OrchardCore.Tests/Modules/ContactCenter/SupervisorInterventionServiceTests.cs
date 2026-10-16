@@ -454,6 +454,84 @@ public sealed class SupervisorInterventionServiceTests
         Assert.Empty(context.Notifier.Messages);
     }
 
+    [Fact]
+    public async Task FreeAgent_ReleasesTheirStaleWork_AsTheSupervisor_AndRecordsIt()
+    {
+        // Arrange
+        var context = new Context();
+        context.StaleWork
+            .Setup(value => value.ReleaseAsync(It.IsAny<AgentProfile>(), ContactCenterActor.Supervisor("sup1"), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StaleAgentWorkRelease
+            {
+                Released = true,
+                Reason = "Released 1 stale item(s).",
+                ReturnedTo = AgentPresenceStatus.Available,
+                ReleasedItems = [new StaleAgentWorkItem { Kind = StaleAgentWorkKind.TelephonyCall }],
+            });
+
+        // Act
+        var result = await context.Service.FreeAgentAsync("agent-1", "sup1", _supervisor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Reason);
+        context.Publisher.Verify(value => value.PublishAsync(
+            It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.SupervisorFreedAgent && e.AggregateId == "agent-1" && e.ActorId == "sup1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // The provider says the call is alive: nothing is released, the supervisor is told why, and the attempt is on record.
+    [Fact]
+    public async Task FreeAgent_WhenTheAgentIsOnALiveCall_DeclinesAndSaysSo()
+    {
+        // Arrange
+        var context = new Context();
+        context.StaleWork
+            .Setup(value => value.ReleaseAsync(It.IsAny<AgentProfile>(), It.IsAny<ContactCenterActor>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new StaleAgentWorkRelease
+            {
+                DeclinedForLiveCall = true,
+                Reason = "The provider confirms a call is still in progress for this agent, so nothing was released.",
+            });
+
+        // Act
+        var result = await context.Service.FreeAgentAsync("agent-1", "sup1", _supervisor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("still in progress", result.Reason);
+        context.Publisher.Verify(value => value.PublishAsync(
+            It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.SupervisorFreedAgent && e.ActorId == "sup1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task FreeAgent_WithoutTheInterventionPermission_IsRefusedBeforeAnythingIsTouched()
+    {
+        // Arrange
+        var context = new Context(grantIntervene: false);
+
+        // Act
+        var result = await context.Service.FreeAgentAsync("agent-1", "sup1", _supervisor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        context.StaleWork.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task FreeAgent_ForAnAgentOutsideTheSupervisorsQueues_IsRefused()
+    {
+        // Arrange
+        var context = new Context(supervisesQueue: false);
+
+        // Act
+        var result = await context.Service.FreeAgentAsync("agent-1", "sup1", _supervisor, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        context.StaleWork.VerifyNoOtherCalls();
+    }
+
     private sealed class Context
     {
         public Context(
@@ -530,6 +608,7 @@ public sealed class SupervisorInterventionServiceTests
                 [Notifier],
                 new StubClock(),
                 new InPlaceCallSessionUpdater(interactions.Object, sessions.Object),
+                StaleWork.Object,
                 NullLogger<ContactCenterSupervisorInterventionService>.Instance);
         }
 
@@ -554,6 +633,8 @@ public sealed class SupervisorInterventionServiceTests
         public Mock<ITelephonyService> Telephony { get; } = new();
 
         public Mock<IContactCenterAuditRecorder> Audit { get; } = new();
+
+        public Mock<IStaleAgentWorkService> StaleWork { get; } = new();
 
         public Mock<IContactCenterEventPublisher> Publisher { get; } = new();
 

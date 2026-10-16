@@ -166,6 +166,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string SharedVoicemailResolved = "SharedVoicemailResolved";
             public const string SupervisorChangedRecording = "SupervisorChangedRecording";
             public const string SupervisorEndedCall = "SupervisorEndedCall";
+            public const string SupervisorFreedAgent = "SupervisorFreedAgent";
             public const string SupervisorMessagedAgent = "SupervisorMessagedAgent";
             public const string SupervisorMonitorModeChanged = "SupervisorMonitorModeChanged";
             public const string SupervisorMonitorStarted = "SupervisorMonitorStarted";

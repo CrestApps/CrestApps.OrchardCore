@@ -81,6 +81,8 @@ An automatic load is for conversations the AI starts. To have an AI profile **an
 
 While the entry point is open, the AI picks up every call to the number, greets the caller with the profile's opening message and holds the conversation. The welcome message, phone menu and queue are not used. While the entry point is closed, callers go to voicemail, or are refused when its closed action is **Reject**. Each call is an automated activity with the AI's transcript. It reaches an agent only if the AI hands the caller over. See [AI voice agent](entry-points-and-ivr.md#ai-voice-agent).
 
+A caller who says nothing at first is never taken for a voicemail, as a silent line on a call the AI placed can be: only a call the platform places can reach one.
+
 This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** to the **Route to** list.
 
 ## Let the AI answer incoming texts
@@ -116,7 +118,7 @@ This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** feat
 
 ## When the conversation ends
 
-The AI picks a disposition using your hints, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. Open **Review AI conversation** on the activity to read the full transcript.
+The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript.
 
 To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
 

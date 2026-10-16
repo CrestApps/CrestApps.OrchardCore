@@ -11,6 +11,7 @@ import {
     supervisorMenuPlacement,
     supervisorMessageHtml,
     supervisorPhoneCallSummary,
+    supervisorStaleWorkSummary,
 } from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js';
 
 const onCall = overrides => ({
@@ -353,5 +354,43 @@ describe('an agent on a phone call of their own', () => {
 
     it('is empty for an agent on no such call', () => {
         expect(supervisorPhoneCallSummary(null, now, {})).toBe('');
+    });
+});
+
+// An agent holding work nothing backs (a call that is over but still on their line) is flagged on their card, and the
+// supervisor who may intervene is offered Free agent -- only then, so the menu is not cluttered for a healthy agent.
+describe('an agent holding stale work', () => {
+    const stale = [{ kind: 'TelephonyCall', reason: 'A phone call is still open although the provider no longer has it.' }];
+
+    it('offers Free agent to a supervisor who may intervene', () => {
+        const actions = supervisorAgentActions({ agentId: 'agent-1', staleWork: stale }, supervisor, {});
+
+        expect(actions.menu.map(item => item.action)).toContain('free-agent');
+    });
+
+    it('does not offer Free agent for an agent with nothing stale', () => {
+        const actions = supervisorAgentActions({ agentId: 'agent-1', staleWork: [] }, supervisor, {});
+
+        expect(actions.menu.map(item => item.action)).not.toContain('free-agent');
+    });
+
+    it('does not offer Free agent without the intervention permission', () => {
+        const actions = supervisorAgentActions({ agentId: 'agent-1', staleWork: stale }, { canIntervene: false, canMessage: true }, {});
+
+        expect(actions.menu.map(item => item.action)).not.toContain('free-agent');
+    });
+
+    it('warns with the localized wording for the kind, else the server\'s reason', () => {
+        const agent = { staleWork: stale };
+
+        expect(supervisorStaleWorkSummary(agent, { 'stale.TelephonyCall': 'Call still open' })).toBe('Call still open');
+        expect(supervisorStaleWorkSummary(agent, {})).toBe(stale[0].reason);
+        expect(supervisorStaleWorkSummary({ staleWork: [] }, {})).toBe('');
+    });
+
+    it('says how many more there are', () => {
+        const agent = { staleWork: [stale[0], { kind: 'QueueItem', reason: 'Work is still assigned.' }] };
+
+        expect(supervisorStaleWorkSummary(agent, { staleMore: '{0} (+{1} more)' })).toBe(stale[0].reason + ' (+1 more)');
     });
 });

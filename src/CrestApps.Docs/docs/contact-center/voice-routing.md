@@ -694,7 +694,7 @@ The provider's report now reaches the session through `IAnsweringMachineSignals`
 
 The signals are held in memory on the node that holds the session, which is the node the provider's later webhooks for that call must reach anyway for the live media to work (see the affinity note on the Voice Media stream above). A detection delivered to another node is not seen by the session; the activity is still marked, and the call is still concluded as a voicemail from that mark. Each call's signals are dropped when it hangs up and when the session holding it ends, and a call whose hangup was never reported is dropped after four hours.
 
-With detection off, a live session recognises a voicemail only when the model does: it leaves its message and calls the end-call tool with `voicemail` set. The turn-based loop is unchanged: it still recognises a greeting from its transcript or from a line nobody speaks on, and speaks its message through the provider's text-to-speech.
+With detection off, a live session recognises a voicemail only when the model does: it leaves its message and calls the end-call tool with `voicemail` set. The turn-based loop is unchanged: it still recognises a greeting from its transcript or, on a call the platform placed, from a line nobody speaks on, and speaks its message through the provider's text-to-speech. A caller who rang in is a person, so a silence from them is never taken for a voicemail.
 
 ## Related guides
 

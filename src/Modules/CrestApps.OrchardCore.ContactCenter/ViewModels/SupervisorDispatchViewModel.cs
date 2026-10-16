@@ -109,6 +109,12 @@ public sealed class SupervisorDispatchViewModel
     public int AvailableAgentCount { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of signed-in agents who look Available or busy only because they hold stale work, such as a
+    /// call that is over but still on their line. Each can be freed from the agent board.
+    /// </summary>
+    public int StaleAgentCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the reason the whole queue is paused, or <see langword="null"/> when it is running.
     /// </summary>
     public string QueueBlocker { get; set; }
