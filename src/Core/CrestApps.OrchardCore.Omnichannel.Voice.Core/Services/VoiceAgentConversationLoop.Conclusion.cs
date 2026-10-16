@@ -232,6 +232,8 @@ public sealed partial class VoiceAgentConversationLoop
         var localClock = services.GetService<ILocalClock>();
         var localNow = localClock is null ? new DateTimeOffset(clock.UtcNow) : await localClock.GetLocalNowAsync();
 
+        // The system prompt tells the review to leave DispositionId out when nothing records what happened, so the
+        // list does not ask for one regardless: told both, a model obeys the line nearest the data.
         var userPrompt = $"""
             Call transcript:
             {transcriptText}
@@ -240,7 +242,7 @@ public sealed partial class VoiceAgentConversationLoop
 
             Subject goal: {flowSettings?.SubjectGoal}
 
-            Available dispositions (choose one DispositionId): {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
+            Available dispositions (choose one DispositionId, or omit it when none records what happened): {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
             """;
 
         if (allowUpdateSubject && subject is not null && subjectTextFields.Count > 0)
