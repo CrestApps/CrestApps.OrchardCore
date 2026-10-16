@@ -59,10 +59,6 @@
 			search: typeof chosen.search === "string" ? chosen.search : ""
 		};
 	}
-	function agentBoardFiltersActive(filters) {
-		var chosen = filters || {};
-		return !!(chosen.queueId || chosen.campaignId || chosen.status || String(chosen.search || "").trim());
-	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
 	var MONITOR_MODES = [
@@ -98,6 +94,17 @@
 	}
 	function has(list, value) {
 		return Array.isArray(list) && list.indexOf(value) >= 0;
+	}
+	function hasStaleWork(agent) {
+		return !!(agent && Array.isArray(agent.staleWork) && agent.staleWork.length);
+	}
+	function staleWorkText(item, labels) {
+		return item && labels && labels["stale." + item.kind] || item && item.reason || "";
+	}
+	function staleWorkSummary(agent, labels) {
+		if (!hasStaleWork(agent)) return "";
+		var first = staleWorkText(agent.staleWork[0], labels);
+		return agent.staleWork.length > 1 ? format(text(labels, "staleMore", "{0} (+{1} more)"), first, agent.staleWork.length - 1) : first;
 	}
 	function agentActions(agent, state, labels) {
 		var actions = {
@@ -152,6 +159,10 @@
 				});
 			}
 		}
+		if (state && state.canIntervene && hasStaleWork(agent)) actions.menu.push({
+			action: "free-agent",
+			label: text(labels, "freeAgent", "Free agent…")
+		});
 		if (state && state.canIntervene) {
 			actions.menu.push({
 				action: "state:Available",
@@ -240,6 +251,7 @@
 	var PANEL_TITLES = {
 		"end-call": ["endCallTitle", "End call"],
 		"sign-out": ["signOutTitle", "Sign out"],
+		"free-agent": ["freeAgentTitle", "Free agent"],
 		transfer: ["transferTitle", "Transfer call"],
 		message: ["messageTitle", "Message"]
 	};
@@ -424,6 +436,12 @@
 					body = "<p class=\"mb-2\">" + escape(format(label("signOutConfirm", "Sign {0} out of their queues?"), name)) + "</p>";
 					confirm = label("signOutButton", "Sign out");
 					break;
+				case "free-agent":
+					body = "<p class=\"mb-2\">" + escape(format(label("freeAgentConfirm", "Release what {0} is holding that nothing backs?"), name)) + "</p><ul class=\"mb-2\" data-cc-free-agent-items>" + (agent.staleWork || []).map(function(item) {
+						return "<li>" + escape(staleWorkText(item, strings)) + "</li>";
+					}).join("") + "</ul><p class=\"small text-muted mb-2\">" + escape(label("freeAgentNote", "A call the provider confirms is still alive is never ended; if there is one, nothing is released.")) + "</p>";
+					confirm = label("freeAgentButton", "Free agent");
+					break;
 				case "transfer":
 					body = "<label class=\"form-label\" for=\"ccTransferTarget\">" + escape(label("transferTo", "Transfer to")) + "</label><select class=\"form-select form-select-sm mb-2\" id=\"ccTransferTarget\" data-cc-transfer-target>" + transferOptions() + "</select><label class=\"form-label\" for=\"ccTransferNumber\">" + escape(label("transferNumber", "Number (for a phone number)")) + "</label><input type=\"tel\" class=\"form-control form-control-sm mb-2\" id=\"ccTransferNumber\" data-cc-transfer-number autocomplete=\"off\" />";
 					confirm = label("transferButton", "Transfer");
@@ -452,6 +470,9 @@
 						agentId: current.agentId,
 						status: "SignOut"
 					}, button, closePanel);
+					break;
+				case "free-agent":
+					act("freeAgent", { agentId: current.agentId }, button, closePanel);
 					break;
 				case "transfer":
 					var choice = (panel.querySelector("[data-cc-transfer-target]") || {}).value || "";
@@ -485,7 +506,7 @@
 			var agent = findAgent(agentId);
 			closeMenu(false);
 			if (!agent) return;
-			if (action === "end-call" || action === "transfer" || action === "message") {
+			if (action === "end-call" || action === "transfer" || action === "message" || action === "free-agent") {
 				showPanel(action, agent);
 				return;
 			}
@@ -617,6 +638,7 @@
 	(function(window, document) {
 		"use strict";
 		var REFRESH_INTERVAL_MS = 1e4;
+		var DISPATCH_REFRESH_INTERVAL_MS = 3e4;
 		var FILTERS_STORAGE_KEY = "crestapps.contactCenter.dashboard.agentFilters";
 		function readStoredFilters() {
 			try {
@@ -649,6 +671,14 @@
 			var seconds = Math.floor(totalSeconds % 60);
 			return minutes > 0 ? minutes + "m " + seconds + "s" : seconds + "s";
 		}
+		function formatIdle(totalSeconds) {
+			if (!isFinite(totalSeconds) || totalSeconds < 0) totalSeconds = 0;
+			var hours = Math.floor(totalSeconds / 3600);
+			var minutes = Math.floor(totalSeconds % 3600 / 60);
+			var seconds = Math.floor(totalSeconds % 60);
+			if (hours > 0) return hours + "h " + minutes + "m";
+			return minutes > 0 ? minutes + "m " + seconds + "s" : seconds + "s";
+		}
 		function init(root) {
 			var config = parseConfig(root);
 			var strings = config.strings;
@@ -663,8 +693,11 @@
 				filters: root.querySelector("[data-cc-board-filters]"),
 				connection: root.querySelector("[data-cc-connection]"),
 				error: root.querySelector("[data-cc-error]"),
-				qualityAlerts: root.querySelector("[data-cc-quality-alerts]")
+				qualityAlerts: root.querySelector("[data-cc-quality-alerts]"),
+				dispatch: root.querySelector("[data-cc-dispatch]"),
+				dispatchPanel: root.querySelector("[data-cc-dispatch-panel]")
 			};
+			var clockOffsetMs = 0;
 			var filters = readStoredFilters() || {};
 			function filterControl(name) {
 				return refs.filters ? refs.filters.querySelector("[data-cc-filter=\"" + name + "\"]") : null;
@@ -705,8 +738,6 @@
 					var control = filterControl(name);
 					if (control && control !== document.activeElement && control.value !== (filters[name] || "")) control.value = filters[name] || "";
 				});
-				var clear = refs.filters.querySelector("[data-cc-filter-clear]");
-				if (clear) clear.disabled = typeof agentBoardFiltersActive === "function" ? !agentBoardFiltersActive(filters) : true;
 			}
 			function bindFilters() {
 				if (!refs.filters) return;
@@ -723,24 +754,6 @@
 				});
 				refs.filters.addEventListener("change", function(event) {
 					if (event.target && event.target.matches("select[data-cc-filter]")) applyFrom(event.target);
-				});
-				var clear = refs.filters.querySelector("[data-cc-filter-clear]");
-				if (clear) clear.addEventListener("click", function() {
-					filters = {};
-					storeFilters(filters);
-					[
-						"search",
-						"queueId",
-						"campaignId",
-						"status"
-					].forEach(function(name) {
-						var control = filterControl(name);
-						if (control) control.value = "";
-					});
-					if (lastState) {
-						syncFilterControls(lastState);
-						renderBoard(lastState);
-					}
 				});
 			}
 			var qualityAlerts = {};
@@ -812,14 +825,118 @@
 					var detail = phoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings) || agent.presenceReason || status;
 					var actions = interventions ? interventions.actionsHtml(agent, state) : "";
 					var menu = interventions ? interventions.menuHtml(agent, state) : "";
-					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span></span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";
+					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span>" + idleHtml(agent) + staleHtml(agent) + signedInHtml(agent, state, status) + "</span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";
 				}).join("");
 				setRegionHtml(refs.board, "board", boardHtml);
+				updateIdleTimes();
+			}
+			function staleHtml(agent) {
+				var summary = staleWorkSummary(agent, strings);
+				if (!summary) return "";
+				return "<span class=\"cc-agent__stale badge ta-badge text-bg-warning\" role=\"note\" data-cc-stale title=\"" + escapeHtml(label("staleHint", "This agent holds work nothing backs. Use Free agent in the More menu to release it.")) + "\"><i class=\"fa-solid fa-triangle-exclamation\" aria-hidden=\"true\"></i> " + escapeHtml(summary) + "</span>";
+			}
+			function idleHtml(agent) {
+				if (!agent.idleSinceUtc) return "";
+				return "<span class=\"cc-agent__meta\">" + escapeHtml(label("idleFor", "Idle")) + " <span class=\"cc-agent__idle\" data-cc-idle-since=\"" + escapeHtml(agent.idleSinceUtc) + "\"></span></span>";
+			}
+			function nameOf(items, id) {
+				var item = (items || []).find(function(candidate) {
+					return candidate.id === id;
+				});
+				return item && item.name ? item.name : id;
+			}
+			function signedInHtml(agent, state, status) {
+				var names = (agent.queueIds || []).map(function(id) {
+					return nameOf(state.queues, id);
+				}).concat((agent.campaignIds || []).map(function(id) {
+					return nameOf(state.campaigns, id);
+				}));
+				if (!names.length) return status === "Offline" ? "" : "<span class=\"cc-agent__meta\">" + escapeHtml(label("notSignedIn", "Not signed in to any queue or campaign")) + "</span>";
+				return "<span class=\"cc-agent__meta\">" + escapeHtml(label("signedInTo", "Signed in to")) + ": " + escapeHtml(names.join(", ")) + "</span>";
+			}
+			function updateIdleTimes() {
+				var now = Date.now() + clockOffsetMs;
+				Array.prototype.forEach.call(root.querySelectorAll("[data-cc-idle-since]"), function(element) {
+					var since = Date.parse(element.getAttribute("data-cc-idle-since"));
+					var text = isFinite(since) ? formatIdle((now - since) / 1e3) : "";
+					if (element.textContent !== text) element.textContent = text;
+				});
 			}
 			function renderBoardCount(shown, total) {
 				if (!refs.boardCount) return;
 				var text = shown === total ? format(label("agentCount", "{0} agents"), total) : format(label("filteredAgentCount", "{0} of {1} agents"), shown, total);
 				if (refs.boardCount.textContent !== text) refs.boardCount.textContent = text;
+			}
+			function renderDispatch(state) {
+				if (!refs.dispatch || !state) return;
+				var queues = state.queues || [];
+				var serverNow = Date.parse(state.serverTimeUtc || "");
+				var reference = isFinite(serverNow) ? serverNow : Date.now();
+				if (!queues.length) {
+					setRegionHtml(refs.dispatch, "dispatch", "<div class=\"cc-empty\">" + escapeHtml(label("noPendingWork", "No work is waiting to be dispatched.")) + "</div>");
+					return;
+				}
+				setRegionHtml(refs.dispatch, "dispatch", queues.map(function(queue) {
+					return dispatchCard(queue, reference);
+				}).join(""));
+			}
+			function dispatchCard(queue, reference) {
+				var cls = "cc-dispatch__card";
+				var pacingStuck = queue.pacing === "ProfileDisabled" || queue.pacing === "ProfileMissing";
+				if (!!queue.queueBlocker || !!queue.routing || pacingStuck || queue.profileMismatchCount > 0 || queue.dialableNowCount > 0 && queue.availableAgentCount === 0) cls += " is-stalled";
+				else if (queue.heldBackCount > 0 && queue.dialableNowCount === 0) cls += " is-held";
+				var headline = format(label("dispatchHeadline", "Pending {0}: {1} dialable now, {2} held back"), queue.pendingCount, queue.dialableNowCount, queue.heldBackCount);
+				if (queue.evaluatedCount < queue.pendingCount) headline += " " + format(label("dispatchPartial", "(explaining the first {0})"), queue.evaluatedCount);
+				var items = (queue.buckets || []).map(function(bucket) {
+					var text = label("blocker." + bucket.blocker, bucket.blocker);
+					if (bucket.nextDueUtc) {
+						var due = Date.parse(bucket.nextDueUtc);
+						if (isFinite(due)) text += " (" + format(label("dispatchNextDue", "next due in {0}"), formatWait(Math.max(0, (due - reference) / 1e3))) + ")";
+					}
+					return "<li><span>" + escapeHtml(text) + "</span><span class=\"cc-strong\">" + bucket.count + "</span></li>";
+				}).join("");
+				var notes = [];
+				if (queue.queueBlocker) notes.push(label("blocker." + queue.queueBlocker, queue.queueBlocker));
+				notes.push(queue.signedInAgentCount === 0 ? label("dispatchNoAgents", "No agents are signed in.") : format(label("dispatchAgents", "{0} of {1} signed-in agents are available."), queue.availableAgentCount, queue.signedInAgentCount));
+				if (queue.routing) {
+					var routing = queue.routing;
+					var ago = formatWait(Math.max(0, (reference - Date.parse(routing.occurredUtc)) / 1e3));
+					notes.push(format(label("dispatchRouting", "Routing found no agent {0} ago: {1}"), ago, routing.reason || label("dispatchNoReason", "no reason recorded")));
+					(routing.candidateReasons || []).slice(0, 4).forEach(function(reason) {
+						notes.push(format(label("dispatchCandidate", "{0} agents: {1}"), reason.agentCount, reason.reason));
+					});
+				} else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) notes.push(label("dispatchWaiting", "Work and available agents are both here; it is waiting for the next dispatch pass."));
+				else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount === 0) notes.push(label("dispatchNoAvailable", "Dialable work is waiting for an available agent."));
+				if (queue.staleAgentCount > 0) notes.push(format(label("dispatchStaleAgents", "{0} signed-in agents look available or busy only because of stale work. Free them from the agent list."), queue.staleAgentCount));
+				var loaded = loadedLines(queue);
+				return "<div class=\"" + cls + "\"><div class=\"cc-dispatch__name\">" + escapeHtml(queue.name) + "</div><div class=\"cc-dispatch__headline\">" + escapeHtml(headline) + "</div><ul class=\"cc-dispatch__list\">" + items + "</ul>" + (loaded.length ? "<div class=\"cc-dispatch__note\">" + loaded.map(escapeHtml).join("<br />") + "</div>" : "") + "<div class=\"cc-dispatch__note\">" + notes.map(escapeHtml).join("<br />") + "</div></div>";
+			}
+			function loadedLines(queue) {
+				if (!queue.campaignId) return [];
+				var lines = [format(label("loadedItems", "Queue items: {0} waiting, {1} reserved, {2} assigned"), queue.waitingItemCount, queue.reservedItemCount, queue.assignedItemCount)];
+				if (queue.pacing && queue.pacing !== "NothingWaiting") lines.push(label("pacing." + queue.pacing, queue.pacing));
+				(queue.profileStamps || []).forEach(function(stamp) {
+					var text;
+					if (!stamp.profileId) text = label("stampNone", "No dialer profile stamped");
+					else if (stamp.name) text = format(label("stampProfile", "{0} ({1}, {2})"), stamp.name, stamp.mode, stamp.enabled ? label("profileOn", "turned on") : label("profileOff", "turned off"));
+					else text = label("stampUnreadable", "A dialer profile that cannot be read");
+					lines.push(format(label("stampLine", "Stamped: {0}: {1}"), text, stamp.itemCount));
+				});
+				(queue.activityMix || []).slice(0, 4).forEach(function(group) {
+					lines.push(format(label("mixLine", "Pending {0} / {1} / {2}: {3}"), group.source || "-", group.interactionType || "-", group.channel || "-", group.count));
+				});
+				if (queue.profileMismatchCount > 0) lines.push(format(label("mismatch", "{0} queue items are stamped with a different dialer profile than their activity"), queue.profileMismatchCount));
+				if (queue.activitiesWithoutProfileCount > 0) lines.push(format(label("noOwnProfile", "{0} pending activities carry no dialer profile of their own"), queue.activitiesWithoutProfileCount));
+				return lines;
+			}
+			function refreshDispatch() {
+				if (!config.dispatchUrl || document.hidden) return Promise.resolve();
+				return fetch(config.dispatchUrl, {
+					credentials: "same-origin",
+					headers: { "Accept": "application/json" }
+				}).then(function(response) {
+					return response.ok ? response.json() : null;
+				}).then(renderDispatch).catch(function() {});
 			}
 			function watchQueues(state) {
 				if (!realtime) return;
@@ -878,6 +995,8 @@
 					if (state) {
 						lastAgents = state.agents || [];
 						lastState = state;
+						var serverTime = Date.parse(state.serverTimeUtc || "");
+						if (isFinite(serverTime)) clockOffsetMs = serverTime - Date.now();
 						if (interventions) interventions.onState(state);
 						if (interventions && interventions.isMenuOpen()) {
 							renderSummary(state);
@@ -928,6 +1047,10 @@
 			}
 			refresh();
 			window.setInterval(refresh, REFRESH_INTERVAL_MS);
+			if (refs.dispatchPanel && !config.dispatchUrl) refs.dispatchPanel.hidden = true;
+			refreshDispatch();
+			window.setInterval(refreshDispatch, DISPATCH_REFRESH_INTERVAL_MS);
+			window.setInterval(updateIdleTimes, 1e3);
 		}
 		function boot() {
 			var roots = document.querySelectorAll("[data-cc-dashboard]");

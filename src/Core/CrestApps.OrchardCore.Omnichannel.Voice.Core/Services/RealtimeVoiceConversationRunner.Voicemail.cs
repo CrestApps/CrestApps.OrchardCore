@@ -93,6 +93,10 @@ public sealed partial class RealtimeVoiceConversationRunner
     // One once the message is over -- said, or given up on -- and the call is being ended.
     private int _voicemailMessageDone;
 
+    // The assistant's first finished line on this call with any words in it, heard or not: the message is asked for
+    // without the conversation, and this is what tells it the language the call was held in.
+    private string _openingLine;
+
     /// <summary>
     /// Whether the provider has said that a machine answered this call.
     /// </summary>
@@ -329,8 +333,9 @@ public sealed partial class RealtimeVoiceConversationRunner
             }
 
             // Under the session's own instructions, so the message comes in the persona, voice and language the call
-            // has been held in: see WithSessionInstructions.
-            await conversation.RequestUnpromptedResponseAsync(WithSessionInstructions(VoiceCallGuidance.LeavingAVoicemail), callToken);
+            // has been held in: see WithSessionInstructions. Standalone, so the greeting the model just heard is not
+            // there to be answered and no tool call can end the response with nothing said.
+            await conversation.RequestStandaloneMessageAsync(WithSessionInstructions(VoicemailPrompt(Volatile.Read(ref _openingLine))), callToken);
 
             var requestedTicks = _clock.UtcNow.Ticks;
 
@@ -354,6 +359,24 @@ public sealed partial class RealtimeVoiceConversationRunner
 
         EndTheCallOnVoicemail(context);
     }
+
+    /// <summary>
+    /// The instruction for the voicemail message, with the call's opening line quoted.
+    /// </summary>
+    /// <remarks>
+    /// The message is asked for without the conversation, so without that line the model leaves it in the language
+    /// of its instructions rather than the one the call was held in: live, a Greek call's message came in English.
+    /// The line is quoted for its language only. On a call where the model waited for the other end to speak first,
+    /// its first line on a machine is its reply to the greeting ("you're talking about a written message?"), and
+    /// quoted as the call's opening words it could be carried on into the message.
+    /// </remarks>
+    /// <param name="openingLine">The assistant's first line on the call, or <see langword="null"/> before it has one.</param>
+    internal static string VoicemailPrompt(string openingLine)
+        => string.IsNullOrWhiteSpace(openingLine)
+            ? VoiceCallGuidance.LeavingAVoicemail
+            : VoiceCallGuidance.LeavingAVoicemail +
+                " Leave the message in the same language as these words you said earlier on this call, quoted only to " +
+                $"show that language, not as something to answer or carry on from: \"{openingLine.Trim()}\"";
 
     // Waits, for a while, for the model to finish whatever it is saying to the greeting.
     private async Task WaitForTheResponseInFlightAsync(CancellationToken callToken)

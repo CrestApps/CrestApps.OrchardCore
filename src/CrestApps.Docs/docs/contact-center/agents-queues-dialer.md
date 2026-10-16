@@ -273,6 +273,40 @@ Before every attempt, `IDialerEligibilityService` runs and records an auditable 
 
 When an automated profile enforces the abandonment cap, the **abandoned-call message** (`SafeHarborEnabled` / `SafeHarborMessage`) must be enabled so a live party that no agent reaches hears a caller-identifying message instead of a silent drop. `CrestApps:ContactCenter:Compliance:AbandonmentRollingWindowMinutes` (default 30, range 1-1440) sets the rolling measurement window and is validated on start.
 
+### Why work is not being dispatched
+
+A supervisor who sees pending campaign records and available agents, but no calls, can read why on the **Live dashboard**. It answers from the decisions the dispatcher already makes and changes nothing.
+
+- **Agent cards** show how long an Available agent has been idle (from the agent's `IdleSinceUtc`, the same time longest-idle routing ranks by, ticking live) and the queues and campaigns the agent is signed in to. An agent who is working but signed in to none says so, because that is why nothing reaches them.
+- **Why isn't this dialing?** shows one card per queue or campaign the supervisor oversees that has work pending. It splits the pending records into *dialable now* and *held back*, and the held-back records by reason, beside how many of the signed-in agents are Available.
+
+The reasons are the ones the code applies, in the order it applies them:
+
+- The **queue** is turned off, or its business hours are closed (a stored queue; a campaign's own queue has neither).
+- The record is not waiting in the campaign's queue, so routing never sees it.
+- The **dialer profile** is turned off, the record is **scheduled for later** (with when the first becomes due), it is inside the **retry delay**, or it is **out of attempts**. These are the checks the queue gate makes before an agent is reserved, and the gate and the dashboard share one evaluator so they cannot disagree.
+- The compliance gate last suppressed the record: **do not call**, **national registry**, **outside the calling window**, **number not in service**, **no destination**, **compliance check unavailable**, or **abandonment cap reached**. These are read from the `DialSuppressed` events of the last two hours, ignoring any record dialed since.
+- When records are dialable and agents are available but nothing is assigned, the card shows what routing recorded the last time it looked: the reason, and how many agents it turned away for each reason (from the `RoutingDecisionMade` events of the last fifteen minutes).
+
+A campaign's card also says **what is loaded in its queue**, which the queue tiles never show because a campaign's queue is not stored: its items waiting, reserved and assigned; how the queue is paced (the pacer runs only for a queue whose head item carries an enabled Power, Progressive or paced Predictive profile, so a turned-off, missing or agent-driven Preview profile there is called out); the dialer profiles the waiting items are stamped with, by name, mode and on/off state; the source, interaction type and channel of the pending activities; and two warnings: queue items stamped with a different dialer profile than their activity carries (the gate trusts the stamp), and pending activities that carry no profile of their own.
+
+The breakdown reads each campaign's pending records, so the dashboard asks for it every thirty seconds rather than with the live poll, and every supervisor's request shares one reading for twenty seconds. A campaign with more than 2,000 pending records explains the first 2,000 by schedule order and says so. It needs the same permission and queue scope as the rest of the dashboard.
+
+The **Campaign summary** report adds *Pending right now: dialable versus held back* and *Why pending records are not dialing* when queues are enabled. They describe the present, whatever period the report covers, so they sit apart from its own *Pending* counts.
+
+### Agents stuck on work that is already over
+
+An agent can be left showing **On a call**, Busy or Reserved with nothing on the line: a soft-phone call record the provider can no longer resolve, a Contact Center call the provider reports ended, a reservation or queue item nothing backs. The agent's own *Set Available* repairs Contact Center reservations and queue items but deliberately leaves any call the provider might still hold, so it could not clear this.
+
+The **Live dashboard** flags such an agent with a warning badge on their card, and offers **Free agent** in the card's More menu to a supervisor who holds *Intervene in calls* and oversees the agent's queues. The warning is raised only with evidence:
+
+- an active soft-phone call the provider says is gone, or cannot resolve for several minutes, or one the browser placed itself that has gone quiet with no live session behind it;
+- a Contact Center call that is not settled although the provider reports its call gone;
+- a Reserved or Busy state, a held reservation, or a Reserved or Assigned queue item that no live offer or call backs, once the `OrphanedBusyGracePeriod` has passed.
+
+**Free agent** asks for confirmation, listing what will be released, then settles the stale soft-phone calls (outcome *Failed*, end time set), settles Contact Center calls from the provider's answer, releases the reservation and queue items, and returns the agent to their ready state. The provider is asked again at that moment, with no reused answer. **A call the provider confirms is still alive is never ended**: when the agent holds one, nothing is released and the supervisor is told why. Each attempt, released or declined, is written to the audit log under the supervisor's name (`SupervisorFreedAgent`).
+
+The *Why isn't this dialing?* card counts the signed-in agents who look available or busy only because of stale work, so the explanation points at them.
 ### Abandoned calls
 
 These mechanisms support the common abandoned-call rules for automated dialing (a live answer connected to an agent within two seconds, a short recorded message when it is not, and a minimum ring time). They do not by themselves make a campaign compliant; operators confirm their own obligations.

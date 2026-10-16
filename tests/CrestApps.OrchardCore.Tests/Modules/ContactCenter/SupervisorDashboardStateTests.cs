@@ -104,14 +104,125 @@ public sealed class SupervisorDashboardStateTests
         Assert.Equal("support", Assert.Single(model.Queues).Id);
     }
 
+    // A supervisor sees why an agent is not getting work only if the card says how long they have been waiting for it.
+    [Fact]
+    public async Task StatePoll_AnAvailableAgent_ReportsSinceWhenTheyStartedWaitingForWork()
+    {
+        // Arrange
+        var idleSince = new DateTime(2026, 10, 15, 9, 30, 0, DateTimeKind.Utc);
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile
+        {
+            ItemId = "agent-idle",
+            UserId = "user-idle",
+            PresenceStatus = AgentPresenceStatus.Available,
+            IdleSinceUtc = idleSince,
+            PresenceChangedUtc = idleSince.AddHours(-3),
+            QueueIds = ["support"],
+        });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Equal(idleSince, Assert.Single(model.Agents).IdleSinceUtc);
+    }
+
+    // An agent whose idle stamp was never set (a profile from before the stamp existed) is idle since they last changed
+    // state, rather than showing no clock.
+    [Fact]
+    public async Task StatePoll_AnAvailableAgentWithNoIdleStamp_FallsBackToWhenTheirPresenceLastChanged()
+    {
+        // Arrange
+        var changed = new DateTime(2026, 10, 15, 8, 0, 0, DateTimeKind.Utc);
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile
+        {
+            ItemId = "agent-legacy",
+            UserId = "user-legacy",
+            PresenceStatus = AgentPresenceStatus.Available,
+            PresenceChangedUtc = changed,
+            QueueIds = ["support"],
+        });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Equal(changed, Assert.Single(model.Agents).IdleSinceUtc);
+    }
+
+    // Idle time is waiting for work; an agent on a call, or on a break, is not waiting.
+    [Theory]
+    [InlineData(AgentPresenceStatus.Busy)]
+    [InlineData(AgentPresenceStatus.Reserved)]
+    [InlineData(AgentPresenceStatus.WrapUp)]
+    [InlineData(AgentPresenceStatus.Offline)]
+    public async Task StatePoll_AnAgentWhoIsNotAvailable_ReportsNoIdleTime(AgentPresenceStatus status)
+    {
+        // Arrange
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile
+        {
+            ItemId = "agent-working",
+            UserId = "user-working",
+            PresenceStatus = status,
+            IdleSinceUtc = new DateTime(2026, 10, 15, 9, 30, 0, DateTimeKind.Utc),
+            QueueIds = ["support"],
+        });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Null(Assert.Single(model.Agents).IdleSinceUtc);
+    }
+
+    // The board warns about an agent holding work nothing backs; the supervisor's Free agent action is offered from it.
+    [Fact]
+    public async Task StatePoll_AnAgentHoldingStaleWork_CarriesItOnTheirRow()
+    {
+        // Arrange
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile { ItemId = "agent-stuck", UserId = "user-stuck", PresenceStatus = AgentPresenceStatus.Busy, QueueIds = ["support"] });
+        probe.AddAgent(new AgentProfile { ItemId = "agent-fine", UserId = "user-fine", PresenceStatus = AgentPresenceStatus.Available, QueueIds = ["support"] });
+        probe.AddStaleWork(
+            "agent-stuck",
+            new StaleAgentWorkItem { Kind = StaleAgentWorkKind.TelephonyCall, Reason = "A phone call is still open although the provider no longer has it." });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        var stuck = Assert.Single(model.Agents, agent => agent.AgentId == "agent-stuck");
+        var item = Assert.Single(stuck.StaleWork);
+        Assert.Equal("TelephonyCall", item.Kind);
+        Assert.Equal("A phone call is still open although the provider no longer has it.", item.Reason);
+        Assert.Empty(Assert.Single(model.Agents, agent => agent.AgentId == "agent-fine").StaleWork);
+    }
     private sealed class DashboardProbe
     {
         private readonly List<AgentProfile> _agents = [];
+        private readonly Dictionary<string, StaleAgentWork> _staleWork = new(StringComparer.Ordinal);
         private readonly List<ActivityQueue> _queues = [];
         private readonly HashSet<string> _authorizedQueueIds = new(StringComparer.OrdinalIgnoreCase);
 
+        public Mock<IStaleAgentWorkService> StaleWork { get; } = new();
+
         public void AddAgent(AgentProfile agent)
             => _agents.Add(agent);
+
+        // What the stale-work detection finds for an agent, as the poll receives it.
+        public void AddStaleWork(string agentId, params StaleAgentWorkItem[] items)
+            => _staleWork[agentId] = new StaleAgentWork { AgentId = agentId, Items = items };
 
         public void AddQueue(string queueId)
             => _queues.Add(new ActivityQueue { ItemId = queueId, Name = queueId, Enabled = true });
@@ -125,6 +236,10 @@ public sealed class SupervisorDashboardStateTests
             agentManager
                 .Setup(manager => manager.PageAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<QueryContext>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new PageResult<AgentProfile> { Count = _agents.Count, Entries = _agents.ToArray() });
+
+            StaleWork
+                .Setup(service => service.DetectAsync(It.IsAny<IReadOnlyCollection<AgentProfile>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => _staleWork);
 
             var queueManager = new Mock<IActivityQueueManager>();
             queueManager
@@ -173,6 +288,7 @@ public sealed class SupervisorDashboardStateTests
                     [],
                     phoneCalls.Object,
                     new PassThroughStringLocalizer<SupervisorDashboardInterventionDescriber>()),
+                StaleWork.Object,
                 new DefaultHttpContext
                 {
                     User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, SupervisorId)], "Test")),

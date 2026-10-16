@@ -840,6 +840,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public const string SetState = "SetState";
         public const string SignIn = "SignIn";
         public const string SignOut = "SignOut";
+        public const string StaleWorkReleased = "StaleWorkReleased";
         public const string SupervisorTakeover = "SupervisorTakeover";
         public const string WorkCompleted = "WorkCompleted";
         public const string WrapUpStarted = "WrapUpStarted";
@@ -3043,6 +3044,50 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static System.Collections.Generic.IList<string> NormalizeAll(System.Collections.Generic.IEnumerable<string> names) { }
         public static bool TryCreate(string name, out CrestApps.OrchardCore.ContactCenter.Core.Models.SkillTag skillTag) { }
     }
+    public sealed class StaleAgentWork
+    {
+        public StaleAgentWork() { }
+        public string AgentId { get; set; }
+        public bool HasLiveWork { get; set; }
+        public bool IsStale { get; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWorkItem> Items { get; set; }
+        public bool ProviderConfirmsLiveCall { get; set; }
+    }
+    public sealed class StaleAgentWorkItem
+    {
+        public StaleAgentWorkItem() { }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWorkKind Kind { get; set; }
+        public string Reason { get; set; }
+        public string ReferenceId { get; set; }
+        public System.DateTime? StartedUtc { get; set; }
+    }
+    public enum StaleAgentWorkKind
+    {
+        TelephonyCall = 0,
+        ProviderInteraction = 1,
+        Presence = 2,
+        Reservation = 3,
+        QueueItem = 4,
+    }
+    public sealed class StaleAgentWorkOptions
+    {
+        public StaleAgentWorkOptions() { }
+        public System.TimeSpan CallMaximumAge { get; set; }
+        public System.TimeSpan CallMinimumAge { get; set; }
+        public System.TimeSpan ClientRecordedCallSilence { get; set; }
+        public System.TimeSpan ProviderAnswerCacheDuration { get; set; }
+        public System.TimeSpan ProviderLookupTimeout { get; set; }
+        public System.TimeSpan UnresolvedCallAge { get; set; }
+    }
+    public sealed class StaleAgentWorkRelease
+    {
+        public StaleAgentWorkRelease() { }
+        public bool DeclinedForLiveCall { get; set; }
+        public string Reason { get; set; }
+        public bool Released { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWorkItem> ReleasedItems { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus? ReturnedTo { get; set; }
+    }
     public sealed class SupervisorEngagementResult
     {
         public SupervisorEngagementResult() { }
@@ -3196,6 +3241,94 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     public static class WorkAssignmentLifecycle
     {
         public static bool CanTransition(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus from, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus to) { }
+    }
+}
+namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch
+{
+    public sealed class DispatchActivityGroup
+    {
+        public DispatchActivityGroup() { }
+        public string Channel { get; set; }
+        public int Count { get; set; }
+        public string InteractionType { get; set; }
+        public string Source { get; set; }
+    }
+    public enum DispatchBlocker
+    {
+        DialableNow = 0,
+        QueueDisabled = 1,
+        BusinessHoursClosed = 2,
+        NotQueued = 3,
+        ProfileDisabled = 4,
+        ScheduledForLater = 5,
+        RetryCoolDown = 6,
+        AttemptsExhausted = 7,
+        NoDestination = 8,
+        DoNotCall = 9,
+        NationalDoNotCallRegistry = 10,
+        OutsideCallingWindow = 11,
+        NumberNotInService = 12,
+        ComplianceScreeningUnavailable = 13,
+        AbandonmentRateExceeded = 14,
+    }
+    public sealed class DispatchBucket
+    {
+        public DispatchBucket() { }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchBlocker Blocker { get; set; }
+        public int Count { get; set; }
+        public System.DateTime? NextDueUtc { get; set; }
+    }
+    public sealed class DispatchCandidateReason
+    {
+        public DispatchCandidateReason() { }
+        public int AgentCount { get; set; }
+        public string Reason { get; set; }
+    }
+    public enum DispatchPacing
+    {
+        NothingWaiting = 0,
+        Paced = 1,
+        ProfileDisabled = 2,
+        AgentDriven = 3,
+        ProfileMissing = 4,
+    }
+    public sealed class DispatchProfileStamp
+    {
+        public DispatchProfileStamp() { }
+        public bool? Enabled { get; set; }
+        public int ItemCount { get; set; }
+        public string Mode { get; set; }
+        public string ProfileId { get; set; }
+        public string ProfileName { get; set; }
+    }
+    public sealed class DispatchRoutingFinding
+    {
+        public DispatchRoutingFinding() { }
+        public int CandidateCount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchCandidateReason> CandidateReasons { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+        public string Reason { get; set; }
+    }
+    public sealed class QueueDispatchDiagnostics
+    {
+        public QueueDispatchDiagnostics() { }
+        public int ActivitiesWithoutProfileCount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchActivityGroup> ActivityMix { get; set; }
+        public int AssignedItemCount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchBucket> Buckets { get; set; }
+        public string CampaignId { get; set; }
+        public int DialableNowCount { get; set; }
+        public int EvaluatedCount { get; set; }
+        public int HeldBackCount { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchPacing Pacing { get; set; }
+        public int PendingCount { get; set; }
+        public int ProfileMismatchCount { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchProfileStamp> ProfileStamps { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchBlocker? QueueBlocker { get; set; }
+        public string QueueId { get; set; }
+        public int ReservedItemCount { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.DispatchRoutingFinding RoutingFinding { get; set; }
+        public int WaitingItemCount { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
@@ -4142,8 +4275,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorEngagementNotifier> notifiers,
                     OrchardCore.Modules.IClock clock,
                     CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionUpdater callSessionUpdater,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IStaleAgentWorkService staleWorkService,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterSupervisorInterventionService> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> EndCallAsync(string interactionId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> FreeAgentAsync(string agentId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SendMessageAsync(string agentId, string supervisorUserId, string supervisorName, System.Security.Claims.ClaimsPrincipal principal, string text, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SetAgentStateAsync(string agentId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus status, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SetRecordingAsync(string interactionId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, bool record, System.Threading.CancellationToken cancellationToken = default) { }
@@ -4346,6 +4481,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DialerAttemptService> logger) { }
         public System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> TryDialUnreservedAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerDispatchDiagnosticsService : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerDispatchDiagnosticsService
+    {
+        public DialerDispatchDiagnosticsService(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHours, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader profileReader, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateStore workStateStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.QueueDispatchDiagnostics>> DiagnoseAsync(System.Collections.Generic.IReadOnlyCollection<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerEligibilityContext
     {
@@ -5019,6 +5159,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterSupervisorInterventionService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> EndCallAsync(string interactionId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> FreeAgentAsync(string agentId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SendMessageAsync(string agentId, string supervisorUserId, string supervisorName, System.Security.Claims.ClaimsPrincipal principal, string text, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SetAgentStateAsync(string agentId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus status, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SupervisorEngagementResult> SetRecordingAsync(string interactionId, string supervisorUserId, System.Security.Claims.ClaimsPrincipal principal, bool record, System.Threading.CancellationToken cancellationToken = default);
@@ -5077,6 +5218,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> TryDialUnreservedAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile profile, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IDialerDispatchDiagnosticsService
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch.QueueDispatchDiagnostics>> DiagnoseAsync(System.Collections.Generic.IReadOnlyCollection<string> queueIds, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IDialerEligibilityService
     {
@@ -5377,6 +5522,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindNextWaitingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetOpenByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IQueueItemStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>
@@ -5393,6 +5539,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetDialerInFlightAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetDialerInFlightQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetHeadWaitingByQueueAsync(System.Collections.Generic.IEnumerable<string> queueIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetOpenByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default);
     }
@@ -5507,6 +5654,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemail> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailPage> QueryAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.SharedVoicemailQuery query, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IStaleAgentWorkService
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWork>> DetectAsync(System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> agents, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWorkRelease> ReleaseAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISupervisorEngagementNotifier
     {
@@ -6203,6 +6355,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> FindNextWaitingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetOpenByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class QueueItemPrioritizer
@@ -6231,6 +6384,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetDialerInFlightAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetDialerInFlightQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetHeadWaitingByQueueAsync(System.Collections.Generic.IEnumerable<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetOpenByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -6451,6 +6605,29 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public static class SpokenPromptCulture
     {
         public static string Localize(string language, System.Func<string> build) { }
+    }
+    public sealed class StaleAgentWorkService : CrestApps.OrchardCore.ContactCenter.Core.Services.IStaleAgentWorkService
+    {
+        public StaleAgentWorkService(
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionManager sessionManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService healingService,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCallStateSynchronizationService> synchronizationServices,
+                    CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager> reservationManagers,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore> telephonyInteractions,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver> providerResolvers,
+                    Microsoft.Extensions.Caching.Distributed.IDistributedCache cache,
+                    OrchardCore.Environment.Shell.ShellSettings shellSettings,
+                    Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailabilityOptions> availabilityOptions,
+                    Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWorkOptions> options,
+                    OrchardCore.Modules.IClock clock,
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.StaleAgentWorkService> logger) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWork>> DetectAsync(System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> agents, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.StaleAgentWorkRelease> ReleaseAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class StickyAgentRoutingStrategy : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy
     {

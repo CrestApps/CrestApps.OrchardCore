@@ -578,6 +578,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                         var spoken = assistantText.Length > 0 ? assistantText.ToString() : conversationEvent.Text;
                         assistantText.Clear();
 
+                        // A line cut off before it had any words says nothing about the call's language, and taking
+                        // the slot would keep every later line out of it.
+                        if (!string.IsNullOrWhiteSpace(spoken))
+                        {
+                            Interlocked.CompareExchange(ref _openingLine, spoken, null);
+                        }
+
                         var lineStartedUtc = assistantLineStartedUtc;
                         assistantLineStartedUtc = null;
 

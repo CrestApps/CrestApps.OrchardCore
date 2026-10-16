@@ -72,6 +72,16 @@ public interface IQueueItemManager : ICatalogManager<QueueItem>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the items the specified agents hold open: reserved for an offer or assigned to work in progress.
+    /// </summary>
+    /// <param name="agentIds">The agent identifiers.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The reserved or assigned items held by the agents.</returns>
+    Task<IReadOnlyCollection<QueueItem>> GetOpenByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the single oldest waiting item in the specified queue using a bounded top-one query, without
     /// loading the whole waiting backlog. This supports longest-wait measurement.
     /// </summary>

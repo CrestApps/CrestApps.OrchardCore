@@ -157,6 +157,27 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<QueueItem>> GetOpenByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(agentIds);
+
+        var items = new List<QueueItem>();
+
+        foreach (var agentIdBatch in agentIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Chunk(QueryBatchSize))
+        {
+            items.AddRange(await Session.Query<QueueItem, QueueItemIndex>(
+                index => index.AgentId.IsIn(agentIdBatch)
+                    && (index.Status == QueueItemStatus.Reserved || index.Status == QueueItemStatus.Assigned),
+                collection: ContactCenterStorage.CollectionName)
+                .ListAsync(cancellationToken));
+        }
+
+        return items;
+    }
+
+    /// <inheritdoc/>
     public async Task<QueueItem> FindNextWaitingAsync(string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
