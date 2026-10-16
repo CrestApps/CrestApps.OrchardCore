@@ -21,9 +21,7 @@ Enable the **AI Tool Instances** feature (`CrestApps.OrchardCore.AI.ToolInstance
 
 The screencast below enables the feature, then creates an HTTP API Request tool instance named **Order Lookup API** — the function name the AI model calls is derived automatically from that name.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Tool Instances and creating an HTTP API Request instance">
-  <source src="/img/docs/ai-tool-instances.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling AI Tool Instances and creating an HTTP API Request instance" start={354} end={385} />
 
 ## Managing tool instances
 

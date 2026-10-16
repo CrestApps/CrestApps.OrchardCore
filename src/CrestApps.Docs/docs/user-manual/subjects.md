@@ -26,15 +26,11 @@ Create one subject for each goal of a conversation. You can add more for later s
 
 Create an **outbound** subject for calls you make. This one uses a default campaign and adds a *Vehicle of interest* field:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an outbound subject, attaching the Omnichannel Subject part, choosing its default campaign and adding a field">
-  <source src="/img/docs/um-subject-outbound.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an outbound subject, attaching the Omnichannel Subject part, choosing its default campaign and adding a field" start={716} end={769} />
 
 Create an **inbound** subject for calls customers make. This one is a manual phone subject with a *Question* field:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an inbound manual phone subject and adding a field">
-  <source src="/img/docs/um-subject-inbound.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an inbound manual phone subject and adding a field" start={659} end={713} />
 
 ## Create a subject
 

@@ -17,9 +17,7 @@ technical_manual:
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a skill and granting an agent queues, campaigns and skills on the agent entitlements screen">
-  <source src="/img/docs/um-skills-entitlements.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a skill and granting an agent queues, campaigns and skills on the agent entitlements screen" start={343} end={389} />
 
 ## Create a skill
 

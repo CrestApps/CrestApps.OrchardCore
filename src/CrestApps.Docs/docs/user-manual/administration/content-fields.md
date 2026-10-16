@@ -16,9 +16,7 @@ A **content field** is one box on a content item's form, such as a title, a date
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling Content Fields, adding the Phone Field, and using the country-aware phone input">
-  <source src="/img/docs/content-fields.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling Content Fields, adding the Phone Field, and using the country-aware phone input" start={7} end={42} />
 
 ## Add a phone field to a content type
 

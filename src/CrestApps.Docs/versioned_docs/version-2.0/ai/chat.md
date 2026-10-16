@@ -14,9 +14,7 @@ Provides UI to interact with AI models using the profiles.
 
 The screencast below creates a chat-type AI profile on the `gpt-4.1-mini` deployment, shows it on the admin menu, and then opens its chat to ask the model a question — all starting from the admin dashboard.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a chat AI profile and chatting with the model">
-  <source src="/img/docs/ai-chat.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of creating a chat AI profile and chatting with the model" start={46} end={75} />
 
 ## AI Chat Feature
 
@@ -164,9 +162,7 @@ This linked citation rendering now applies consistently across the admin chat UI
 
 ### Admin Chat User Interface
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of the admin chat">
-  <source src="/img/docs/admin-ui-sample.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of the admin chat" start={78} end={98} />
 
 ### Invoking Utility and Agent Profiles
 
@@ -215,9 +211,7 @@ It's best to enable **Orchard Core AI Agent** (i.e., `CrestApps.OrchardCore.AI.A
 
 The screencast below enables the **AI Chat Admin Widget** feature, creates a chat profile with **all tool capabilities selected**, points the widget at that profile in **Settings → Artificial Intelligence → Admin Widget**, and then opens the floating widget to ask the assistant a question it answers using its tools.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant">
-  <source src="/img/docs/ai-admin-widget.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant" start={503} end={574} />
 
 ---
 
@@ -254,9 +248,7 @@ To show the widget on every page of the site, place it in a layer whose rule alw
 
 The following screen cast walks through creating a public-facing profile, adding an always-on layer with a Boolean rule, placing the AI Chat widget in the footer zone, and chatting with it from the site's home page.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of adding the frontend widget with an always-on layer">
-  <source src="/img/docs/ai-frontend-widget.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of adding the frontend widget with an always-on layer" start={577} end={615} />
 
 ---
 

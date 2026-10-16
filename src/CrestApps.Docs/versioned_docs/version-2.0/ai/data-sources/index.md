@@ -40,9 +40,7 @@ This module provides AI data source management, knowledge base (KB) indexing, an
 
 The following screencast shows the full Elasticsearch-backed RAG flow: reviewing the **Articles** content index and the **AI RAG Knowledge Base** index (both created with the Elasticsearch provider), creating an **AI Data Source** that maps the Articles index to the knowledge base, syncing the embeddings, creating an AI profile that is **restricted to the indexed data**, and finally asking a question. The assistant answers strictly from the indexed articles and renders the source article as a linked reference.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of an Elasticsearch-backed AI data source grounding answers on Article content">
-  <source src="/img/docs/ai-elasticsearch-datasource.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of an Elasticsearch-backed AI data source grounding answers on Article content" start={260} end={351} />
 
 The data source list now follows the deployments-style creation flow. **Add Data Source** opens a modal that lists the available source types. Built-in options include:
 

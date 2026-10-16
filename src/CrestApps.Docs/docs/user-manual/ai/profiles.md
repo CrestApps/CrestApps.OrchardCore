@@ -21,9 +21,7 @@ An **AI profile** is one AI assistant or task with its own name, instructions, m
 
 Before you create a profile, an administrator must connect at least one AI provider and add a chat deployment. See [Connections and deployments](connections.md).
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a chat AI profile and chatting with the model">
-  <source src="/img/docs/ai-chat.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of creating a chat AI profile and chatting with the model" start={46} end={75} />
 
 ## Profile types
 

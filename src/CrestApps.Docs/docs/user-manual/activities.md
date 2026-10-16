@@ -19,9 +19,7 @@ An **activity** is one piece of work for one contact: a call to make, a text to 
 
 ## Your activity list
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of an agent opening their activity list, completing an activity and picking a disposition">
-  <source src="/img/docs/um-complete-activity.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of an agent opening their activity list, completing an activity and picking a disposition" start={532} end={555} />
 
 **Interaction Center > Activities** lists the manual activities assigned to you that are not started yet, newest first. Each row shows the contact, the number or address, the channel, the attempt number, when it is scheduled, and the contact's **current local time**, so you know whether it is a good time to call. Hover over the local time to see the contact's full local date and time zone.
 
@@ -46,9 +44,7 @@ If the activity is already finished, you are sent back to where you came from wi
 
 Open the contact (**Interaction Center > Contacts**, then **List Activities**) and use **Add Activity**. This screencast schedules an outbound call and then logs an inbound call for the same contact:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of opening a contact, scheduling an outbound activity and logging an inbound call whose disposition schedules a follow-up">
-  <source src="/img/docs/um-contact-activities.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a contact, scheduling an outbound activity and logging an inbound call whose disposition schedules a follow-up" start={424} end={475} />
 
 ### Schedule an outbound activity
 
@@ -74,9 +70,7 @@ If no inbound subject exists yet, the page says so and you cannot log the call. 
 
 If the caller is not in the system yet, create the contact first, then log the call. In this screencast the search finds nobody, so the agent creates a *Customer* contact with the caller's name and cell number, then logs the call on it:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of searching for an unknown caller, creating the contact and logging the inbound call">
-  <source src="/img/docs/um-inbound-new-contact.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of searching for an unknown caller, creating the contact and logging the inbound call" start={478} end={529} />
 
 ## Other actions on a contact's activities
 

@@ -10,10 +10,7 @@ Some organizations run a separate site for each business they look after. A book
 
 This video is the whole tour: how a parent adds, opens and manages its clients, decides who may open them, and sees what happened. Each section below also has a short screencast of just that task.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
-  <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security" />
 
 Your platform administrator may have renamed these words for your organization. A bookkeeping firm might see **Practice**, **Client** and **Clients** instead of *parent*, *child tenant* and *child tenants*. The screens work the same way whatever the words are.
 
@@ -51,10 +48,7 @@ Your plan sets how many child tenants you may have. When you reach it, **Add chi
 
 ## Add a child tenant
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding a child tenant: typing its name, checking its address, picking what it starts from, and watching it go from Setting up to Running">
-  <source src="/img/docs/tenant-hierarchy-create.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-create.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of adding a child tenant: typing its name, checking its address, picking what it starts from, and watching it go from Setting up to Running" start={195} end={228} />
 
 1. Open **Child tenants > All child tenants** and click **Add child tenant**.
 2. Type the **Name** everybody sees, for example *Northwind Traders*.
@@ -67,10 +61,7 @@ The list shows the new child tenant as **Setting up**, then **Running**. When it
 
 ## Open a child tenant
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of opening a child tenant without a password, the building icon that shows where you are, switching to another child tenant and going back">
-  <source src="/img/docs/tenant-hierarchy-open.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-open.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of opening a child tenant without a password, the building icon that shows where you are, switching to another child tenant and going back" start={227} end={271} />
 
 - Click **Open** next to the child tenant in the list, or
 - open **Child tenants > Open a child tenant** and pick it from the list.
@@ -93,10 +84,7 @@ When you sign out of your own site, are disabled, change your password, or lose 
 
 ## Change a child tenant
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of managing a child tenant: its features, suspending and resuming it, removing it, and restoring it while its removal is scheduled">
-  <source src="/img/docs/tenant-hierarchy-manage.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-manage.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of managing a child tenant: its features, suspending and resuming it, removing it, and restoring it while its removal is scheduled" start={270} end={325} />
 
 Open **Child tenants > All child tenants**, click **Manage** next to the child tenant, and pick a choice:
 
@@ -122,10 +110,7 @@ If your plan keeps removed child tenants for a number of days, the child tenant 
 
 ## Decide who may open child tenants
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the access rules: letting everyone with a role open every child tenant, and adding a rule for one person">
-  <source src="/img/docs/tenant-hierarchy-access.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-access.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of the access rules: letting everyone with a role open every child tenant, and adding a rule for one person" start={324} end={367} />
 
 People on your team never get a password for a child tenant. They open it from your site and are signed in to it automatically. **Access rules** decide who may open which child tenants, and which roles they have once they are inside. Someone who matches no rule cannot open a child tenant.
 
@@ -145,10 +130,7 @@ Give access through roles rather than one user at a time. When someone joins or 
 
 ## See what happened
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the activity in the Audit Trail: the tenant hierarchy events, who did each one, and the details of an event">
-  <source src="/img/docs/tenant-hierarchy-activity.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-activity.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of the activity in the Audit Trail: the tenant hierarchy events, who did each one, and the details of an event" start={366} end={398} />
 
 Everything that happens to your child tenants is recorded in the **Audit Trail**, under the **Tenant Hierarchy** category. Open **Child tenants > Activity** for the whole history, or **Manage > Activity** for one child tenant. Each line shows what happened, when, who did it, and which child tenant, with details such as the roles someone received, how they signed in, why a session ended and the network address it came from. Click **Details** for the full event.
 

@@ -18,9 +18,7 @@ This module adds custom content fields for Orchard Core that extend the built-in
 
 The screencast below enables the **Content Fields** feature, adds the Phone Field to the **Page** content type, and shows the country-aware phone input with its flag dropdown when editing a content item.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Content Fields, adding the Phone Field, and using the country-aware phone input">
-  <source src="/img/docs/content-fields.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling Content Fields, adding the Phone Field, and using the country-aware phone input" start={7} end={42} />
 
 ## Included fields
 

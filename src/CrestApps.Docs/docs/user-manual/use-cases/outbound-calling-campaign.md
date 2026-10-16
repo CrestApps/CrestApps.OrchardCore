@@ -19,9 +19,7 @@ When it is done:
 - agents record an outcome, and the subject flow schedules the retry or the follow-up on its own;
 - reports show how far the campaign got and what the outcomes were.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed">
-  <source src="/img/docs/um-power-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed" start={225} end={263} />
 
 ## Before you start
 

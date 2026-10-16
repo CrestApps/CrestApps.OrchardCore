@@ -17,9 +17,7 @@ When agents are not taking work, they pick a reason from their presence menu: *L
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an agent state reason code and seeing it in the presence menu">
-  <source src="/img/docs/um-agent-states.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an agent state reason code and seeing it in the presence menu" start={392} end={417} />
 
 ## Create a reason code
 

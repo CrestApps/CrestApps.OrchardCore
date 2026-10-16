@@ -11,10 +11,7 @@ The Tenant Hierarchy module lets a tenant that the platform marks as a **parent*
 
 This video walks through the problem the module solves, each screen, and how it keeps tenants isolated. The [setup](#install-the-host-guards) and [security](#isolation-between-parents) parts are also below as short screencasts, and the [User Manual](../user-manual/administration/child-tenants.md) has one for each task.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
-  <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security" />
 
 | Feature name | Feature ID | Where it runs |
 | --- | --- | --- |
@@ -28,10 +25,7 @@ How people use the screens is described in the User Manual: [Child tenants](../u
 
 ## Install the host guards
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of setting up the tenant hierarchy: AddTenantHierarchy in Program.cs, the TenantHierarchy section of appsettings.json, and a provisioner for another database server">
-  <source src="/img/docs/tenant-hierarchy-setup.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-setup.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of setting up the tenant hierarchy: AddTenantHierarchy in Program.cs, the TenantHierarchy section of appsettings.json, and a provisioner for another database server" start={477} end={520} />
 
 The module needs host-level services that run in every tenant: the scope guard, the feature guard, the egress guard, the cookie hardening, the parent removal guard, the Fetch Metadata guard and the unavailable-address guard. Register them in `Program.cs`:
 
@@ -159,10 +153,7 @@ When the Default tenant has no host name, Orchard Core sends it every request th
 
 One parent never reaches another parent or the other parent's children, and their children never reach each other. Each door between two hierarchies has its own block, and most have two, so one mistake does not open it.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of how the tenant hierarchy stays secure: the one-time code with PKCE, linked accounts, the guards between tenants, and cookies and addresses">
-  <source src="/img/docs/tenant-hierarchy-security.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-security.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of how the tenant hierarchy stays secure: the one-time code with PKCE, linked accounts, the guards between tenants, and cookies and addresses" start={424} end={478} />
 
 | Door | What blocks it |
 | --- | --- |
