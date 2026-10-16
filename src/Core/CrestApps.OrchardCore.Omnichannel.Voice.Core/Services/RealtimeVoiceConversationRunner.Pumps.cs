@@ -577,6 +577,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.AssistantTranscriptDone:
                         var spoken = assistantText.Length > 0 ? assistantText.ToString() : conversationEvent.Text;
                         assistantText.Clear();
+                        Interlocked.CompareExchange(ref _openingLine, spoken, null);
 
                         var lineStartedUtc = assistantLineStartedUtc;
                         assistantLineStartedUtc = null;
