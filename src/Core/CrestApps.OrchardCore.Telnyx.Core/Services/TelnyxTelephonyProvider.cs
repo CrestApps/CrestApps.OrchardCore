@@ -577,7 +577,13 @@ public sealed partial class TelnyxTelephonyProvider :
         {
             var (response, data) = await _apiClient.GetCallAsync(callId, cancellationToken);
 
-            if (response.StatusCode == HttpStatusCode.NotFound)
+            // A call Telnyx no longer knows is a call that is over. Telnyx says so with a 404, or -- for a call control id
+            // older than the call it named -- a 422 (90015 invalid id, 90018 already ended). Read as "could not query",
+            // the interaction behind it was retried every minute for as long as it existed and never settled: the agent
+            // it belonged to stayed on a call that had ended, and the sweep logged an error for it on every pass.
+            if (response.StatusCode == HttpStatusCode.NotFound ||
+                TelnyxApiErrors.IsInvalidCallControlId(response) ||
+                TelnyxApiErrors.IsCallAlreadyEnded(response))
             {
                 return new TelephonyCallLookupResult
                 {
