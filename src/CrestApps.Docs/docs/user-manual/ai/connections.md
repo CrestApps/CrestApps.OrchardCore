@@ -105,6 +105,7 @@ Open **Settings > Artificial Intelligence** and fill in the **Default Deployment
 | **Default speech-to-text deployment** | Dictation and spoken conversations. |
 | **Default text-to-speech deployment** | Reading answers aloud and spoken conversations. |
 | **Default text-to-speech voice** | The voice used when a profile does not pick one. The list loads after you pick a text-to-speech deployment. |
+| **Default realtime deployment** | Spoken conversations, in the chat and on phone calls, of profiles that name no **Conversation deployment**. Left empty, the first realtime-capable deployment is used. |
 
 Click **Save**.
 

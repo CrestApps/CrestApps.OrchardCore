@@ -72,7 +72,7 @@ How each mode looks and works for the person chatting is described in [Talk inst
 
 #### Configuring Chat Mode
 
-Chat mode is set per profile, in the **Deployments & Interactions** card (see [AI profiles](../user-manual/ai/profiles.md#deployments--interactions)). When **Conversation** is selected, the **Conversation deployment** and **Voice** fields appear. The voices are fetched from the model that will speak — the resolved realtime deployment's own voices, or the text-to-speech provider's when the conversation runs as the cascade. If no voice is selected, the default voice from site settings (or the provider's default) is used.
+Chat mode is set per profile, in the **Deployments & Interactions** card (see [AI profiles](../user-manual/ai/profiles.md#deployments--interactions)). The **Conversation deployment** and **Voice** fields are always shown: the chat uses them when **Conversation** is selected, and the phone calls the profile answers or places always use them. The voices are fetched from the model that will speak — the resolved realtime deployment's own voices, or the text-to-speech provider's when the conversation runs as the cascade. If no voice is selected, the default voice from site settings (or the provider's default) is used.
 
 The **Chat deployment** is a separate question: it names the text model the profile talks to, and it answers typed messages including those typed during a voice conversation. Its picker lists text-capable deployments only.
 
