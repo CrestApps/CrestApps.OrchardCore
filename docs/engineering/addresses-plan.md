@@ -46,8 +46,11 @@ What doesn't work for addresses that customers type:
 ## Country data and licenses
 
 The per-country rules come from **Google's address data**, the data behind
-[libaddressinput](https://github.com/google/libaddressinput). Its README states: "Data licensed under the CC-BY 4.0."
-The file is `testdata/countryinfo.txt`, which is maintained (last changed 2026-05). It covers 253 countries, each with:
+[libaddressinput](https://github.com/google/libaddressinput). Its README says the libraries use "address metadata from
+Google's Address Data Service", and states: "Data licensed under the CC-BY 4.0." The data is taken from that service
+(`chromium-i18n.appspot.com/ssl-address/data`), not from the repository's `testdata/countryinfo.txt`: that file is test
+data and lags the service (it still has Korea's six-digit postal codes, replaced in 2015; the service has 252
+countries, the file 245). Each country has:
 
 - `fmt`: the fields and their order, such as `%N%n%O%n%A%n%Z %C` for Germany, where `%N` is the name, `%O` the company, `%A` the
   street lines, `%D` the dependent locality, `%C` the city, `%S` the region, `%Z` the postal code, `%X` the sorting
@@ -57,7 +60,7 @@ The file is `testdata/countryinfo.txt`, which is maintained (last changed 2026-0
 - `state_name_type`, `sublocality_name_type`, `zip_name_type`: what the region, the dependent locality and the postal
   code are called (state, province, prefecture, island, parish, emirate…; postal code, ZIP, PIN…);
 - `sub_keys`, `sub_names`, `sub_lnames`, `sub_isoids`: the regions, with local and Latin names and their ISO 3166-2
-  codes (1,149 first-level regions across the countries that list them, about 250 KB).
+  codes (first-level regions only).
 
 | Source | License | Fees | What we must do |
 | --- | --- | --- | --- |
@@ -70,9 +73,8 @@ Our packages are MIT, and a CC BY data file can ship inside an MIT package. A `T
 package and a docs page carry the credit. Anyone who uses or redistributes our packages owes nothing and only keeps
 that notice.
 
-We never call Google's live Address Data Service (chromium-i18n.appspot.com) from a running site. It has no service
-level, and a store would otherwise send addresses to it. The data is copied into the repo by a script and updated when
-we choose.
+We never call the Address Data Service from a running site. It has no service level, and a store would otherwise send
+addresses to it. A script copies the data into the repo, and we refresh it when we choose.
 
 ## Decisions (2026-10-16)
 
@@ -108,12 +110,12 @@ we choose.
 ### Core (`CrestApps.OrchardCore.Addresses.Core`, new)
 
 - The country data as an embedded JSON resource: country formats and first-level regions only, keeping the fields we
-  use (about 300 KB before compression).
+  use (about 130 KB, 30 KB compressed).
 - `DefaultAddressFormatProvider` reads it once and caches it. When managed countries are on, it still uses the data
   for formats; `ICountryService` only decides which countries are offered and their names.
 - `DefaultAddressValidator`, `DefaultAddressFormatter`.
-- `utilities/address-data/`: the script that turns `countryinfo.txt` into the embedded JSON, records the source
-  commit and date, and keeps the notice up to date. Running it is a deliberate change reviewed like code.
+- `utilities/address-data/`: the script that reads the service into the embedded JSON and records the day it was
+  taken. Running it is a deliberate change reviewed like code; a test fails until the notice names the same day.
 
 ### Addresses module
 
@@ -161,6 +163,22 @@ we choose.
 | **AD4 Address Field** | `AddressField` feature, settings, index, Liquid, schemas, docs | A content type with Home and Work address fields saves, prints and lists by city. |
 
 AD1 to AD3 come before CU3. AD4 can follow CU3.
+
+### AD1 as built
+
+- `Address` gained `DependentLocality` and `SortingCode`. Abstractions gained `AddressComponent`, `AddressFormat`
+  (layouts, required and capitalized parts, postal code pattern and examples, labels, regions, `FindRegion`),
+  `AddressLayoutLine`, `AddressRegion`, `AddressLabels`, and `IAddressFormatProvider`, `IAddressValidator`,
+  `IAddressFormatter`.
+- `CrestApps.OrchardCore.Addresses.Core`: the embedded snapshot (252 countries, about 130 KB, 2026-10-16),
+  `DefaultAddressFormatProvider` (singleton), `DefaultAddressValidator`, `DefaultAddressFormatter`,
+  `AddAddressesCore()`, and `THIRD-PARTY-NOTICES.md` packed with the package. The Addresses module calls
+  `AddAddressesCore()`; Customers adopts it in AD3.
+- What the current data changed from the plan's examples: the United States writes `City, ST ZIP`; Japan has no city
+  part (the city and ward are written in the street lines); France no longer writes a CEDEX, though 15 countries and
+  territories, most of them French overseas, still use the sorting code.
+- Printing: text before a line's first part belongs to it (Monaco's `MC-`), and text between parts is written only
+  between two that have a value. A part the country doesn't use is not printed.
 
 ## Out of scope
 
