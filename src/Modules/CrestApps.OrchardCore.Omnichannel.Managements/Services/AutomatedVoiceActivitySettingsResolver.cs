@@ -14,7 +14,7 @@ public sealed class AutomatedVoiceActivitySettingsResolver : IAutomatedVoiceActi
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly ISiteService _siteService;
     private readonly IAIProfileManager _profileManager;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IAIPersonaResolver _personaResolver;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AutomatedVoiceActivitySettingsResolver"/> class.
@@ -22,20 +22,20 @@ public sealed class AutomatedVoiceActivitySettingsResolver : IAutomatedVoiceActi
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="siteService">The site service used to read default AI deployment settings.</param>
     /// <param name="profileManager">The manager used to load the AI profile the call speaks for.</param>
-    /// <param name="serviceProvider">
-    /// The service provider used to reach the AI persona resolver, which is registered only while the AI Personas
-    /// feature is enabled.
+    /// <param name="personaResolvers">
+    /// The AI persona resolver, registered only while the AI Personas feature is enabled; without it there is no
+    /// persona.
     /// </param>
     public AutomatedVoiceActivitySettingsResolver(
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ISiteService siteService,
         IAIProfileManager profileManager,
-        IServiceProvider serviceProvider)
+        IEnumerable<IAIPersonaResolver> personaResolvers)
     {
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _siteService = siteService;
         _profileManager = profileManager;
-        _serviceProvider = serviceProvider;
+        _personaResolver = personaResolvers.LastOrDefault();
     }
 
     /// <inheritdoc/>
@@ -88,14 +88,19 @@ public sealed class AutomatedVoiceActivitySettingsResolver : IAutomatedVoiceActi
             return explicitVoice;
         }
 
-        var profile = string.IsNullOrWhiteSpace(profileId)
-            ? null
-            : await _profileManager.FindByIdAsync(profileId, cancellationToken);
+        // Without the AI Personas feature there is no persona and the site's default voice is used.
+        if (_personaResolver is null || string.IsNullOrWhiteSpace(profileId))
+        {
+            return FirstValue(defaultVoice);
+        }
 
-        // The persona's voice is used only when it was chosen on a deployment of the provider that speaks; without
-        // the AI Personas feature there is no persona and the site's default voice is used.
-        var persona = await _serviceProvider.ResolvePersonaAsync(profile, cancellationToken);
-        var voice = await _serviceProvider.SelectPersonaVoiceAsync(
+        var profile = await _profileManager.FindByIdAsync(profileId, cancellationToken);
+        var persona = profile is null
+            ? null
+            : await _personaResolver.ResolveAsync(profile, cancellationToken);
+
+        // The persona's voice is used only when it was chosen on a deployment of the provider that speaks.
+        var voice = await _personaResolver.SelectVoiceAsync(
             persona,
             explicitVoice: null,
             textToSpeechDeploymentName,

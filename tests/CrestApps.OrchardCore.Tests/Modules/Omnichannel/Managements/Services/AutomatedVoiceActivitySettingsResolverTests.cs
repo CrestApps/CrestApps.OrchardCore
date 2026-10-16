@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Settings;
 
@@ -174,7 +175,7 @@ public sealed class AutomatedVoiceActivitySettingsResolverTests
             flowSettingsService.Object,
             siteService.Object,
             profileManager.Object,
-            services ?? PersonaVoiceTestServices.Create(withPersonas: false));
+            (services ?? PersonaVoiceTestServices.Create(withPersonas: false)).GetServices<IAIPersonaResolver>());
     }
 
     private static SubjectFlowSettings CreateFlowSettings()
