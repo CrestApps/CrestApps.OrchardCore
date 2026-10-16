@@ -7,7 +7,6 @@
  * on the shared "contact-center-realtime" helper for the hub connection.
  */
 import {
-    agentBoardFiltersActive,
     filterSupervisorAgents,
     normalizeAgentBoardFilters,
 } from './shared/agent-board-filters.js';
@@ -188,14 +187,6 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                     control.value = filters[name] || '';
                 }
             });
-
-            var clear = refs.filters.querySelector('[data-cc-filter-clear]');
-
-            if (clear) {
-                clear.disabled = typeof agentBoardFiltersActive === 'function'
-                    ? !agentBoardFiltersActive(filters)
-                    : true;
-            }
         }
 
         function bindFilters() {
@@ -224,28 +215,6 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                     applyFrom(event.target);
                 }
             });
-
-            var clear = refs.filters.querySelector('[data-cc-filter-clear]');
-
-            if (clear) {
-                clear.addEventListener('click', function () {
-                    filters = {};
-                    storeFilters(filters);
-
-                    ['search', 'queueId', 'campaignId', 'status'].forEach(function (name) {
-                        var control = filterControl(name);
-
-                        if (control) {
-                            control.value = '';
-                        }
-                    });
-
-                    if (lastState) {
-                        syncFilterControls(lastState);
-                        renderBoard(lastState);
-                    }
-                });
-            }
         }
 
         // The latest call-quality alert for each agent, until a supervisor dismisses it.

@@ -59,10 +59,6 @@
 			search: typeof chosen.search === "string" ? chosen.search : ""
 		};
 	}
-	function agentBoardFiltersActive(filters) {
-		var chosen = filters || {};
-		return !!(chosen.queueId || chosen.campaignId || chosen.status || String(chosen.search || "").trim());
-	}
 	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/supervisor-actions.js
 	var MONITOR_MODES = [
@@ -742,8 +738,6 @@
 					var control = filterControl(name);
 					if (control && control !== document.activeElement && control.value !== (filters[name] || "")) control.value = filters[name] || "";
 				});
-				var clear = refs.filters.querySelector("[data-cc-filter-clear]");
-				if (clear) clear.disabled = typeof agentBoardFiltersActive === "function" ? !agentBoardFiltersActive(filters) : true;
 			}
 			function bindFilters() {
 				if (!refs.filters) return;
@@ -760,24 +754,6 @@
 				});
 				refs.filters.addEventListener("change", function(event) {
 					if (event.target && event.target.matches("select[data-cc-filter]")) applyFrom(event.target);
-				});
-				var clear = refs.filters.querySelector("[data-cc-filter-clear]");
-				if (clear) clear.addEventListener("click", function() {
-					filters = {};
-					storeFilters(filters);
-					[
-						"search",
-						"queueId",
-						"campaignId",
-						"status"
-					].forEach(function(name) {
-						var control = filterControl(name);
-						if (control) control.value = "";
-					});
-					if (lastState) {
-						syncFilterControls(lastState);
-						renderBoard(lastState);
-					}
 				});
 			}
 			var qualityAlerts = {};
