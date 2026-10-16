@@ -22,6 +22,12 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-fntsjXVNWbInEb5pJUOytHGtm6akqH/anvzVoI60K05UeTMv/KchvUzzfYvEbBKx")
             .SetDependencies("vuejs:3", "signalr", "marked", "chart.js", "highlightjs", "dompurify", "realtime-audio", "chat-markers", "chat-image-carousel", "medium-zoom")
             .SetVersion("2.0.0");
+
+        _manifest
+            .DefineScript("ProfileBuilderApp")
+            .SetUrl("~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/profile-builder.min.js", "~/CrestApps.OrchardCore.AI.Chat.Interactions/scripts/profile-builder.js")
+            .SetDependencies("ChatInteractionApp")
+            .SetVersion("1.0.0");
     }
 
     /// <summary>
