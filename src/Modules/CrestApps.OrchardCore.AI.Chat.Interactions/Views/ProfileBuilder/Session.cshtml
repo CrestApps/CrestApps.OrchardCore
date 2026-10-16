@@ -100,112 +100,115 @@
             </div>
         </div>
 
-        <div class="profile-builder-panel card flex-shrink-0 d-flex flex-column" id="profile-builder-panel" data-profile-builder-config="@config">
-            <div class="card-header profile-builder-tabs">
-                <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="pb-tab-feedback" data-bs-toggle="tab" data-bs-target="#pb-pane-feedback" type="button" role="tab" aria-controls="pb-pane-feedback" aria-selected="true">@T["Feedback"]</button>
+        <div class="profile-builder-panel flex-shrink-0 bg-theme border rounded d-flex flex-column" id="profile-builder-panel" data-profile-builder-config="@config">
+            <div class="d-flex justify-content-between align-items-center p-2 pb-0">
+                <span class="fw-semibold">@T["Builder"]</span>
+            </div>
+            <div class="profile-builder-content p-3 pt-2 flex-grow-1 overflow-y-auto">
+                <ul class="nav nav-tabs flex-column flex-md-row" role="tablist">
+                    <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link active" id="pb-tab-feedback" data-bs-toggle="tab" data-bs-target="#pb-pane-feedback" type="button" role="tab" aria-controls="pb-pane-feedback" aria-selected="true">@T["Feedback"]</button>
+                    </li>
+                    <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link" id="pb-tab-revisions" data-bs-toggle="tab" data-bs-target="#pb-pane-revisions" type="button" role="tab" aria-controls="pb-pane-revisions" aria-selected="false">@T["Revisions"]</button>
+                    </li>
+                    <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link" id="pb-tab-replay" data-bs-toggle="tab" data-bs-target="#pb-pane-replay" type="button" role="tab" aria-controls="pb-pane-replay" aria-selected="false">@T["Replay"]</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pb-tab-revisions" data-bs-toggle="tab" data-bs-target="#pb-pane-revisions" type="button" role="tab" aria-controls="pb-pane-revisions" aria-selected="false">@T["Revisions"]</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pb-tab-replay" data-bs-toggle="tab" data-bs-target="#pb-pane-replay" type="button" role="tab" aria-controls="pb-pane-replay" aria-selected="false">@T["Replay"]</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="pb-tab-finish" data-bs-toggle="tab" data-bs-target="#pb-pane-finish" type="button" role="tab" aria-controls="pb-pane-finish" aria-selected="false">@T["Finish"]</button>
+                        <button class="nav-item nav-link" id="pb-tab-finish" data-bs-toggle="tab" data-bs-target="#pb-pane-finish" type="button" role="tab" aria-controls="pb-pane-finish" aria-selected="false">@T["Finish"]</button>
                     </li>
                 </ul>
-            </div>
 
-            <div class="card-body tab-content flex-grow-1 overflow-y-auto">
-                <div class="tab-pane fade show active" id="pb-pane-feedback" role="tabpanel" aria-labelledby="pb-tab-feedback">
-                    <div class="mb-3">
-                        <div class="form-label fw-semibold">@T["Reply"]</div>
-                        <div class="profile-builder-selected border rounded p-2 small text-muted" id="pb-selected-reply">@T["Choose Feedback under a reply to comment on it."]</div>
-                    </div>
-                    <div class="mb-2">
-                        <label for="pb-comment" class="form-label fw-semibold">@T["Your feedback"]</label>
-                        <textarea id="pb-comment" class="form-control" rows="4" placeholder="@T["What should the assistant have done differently?"]"></textarea>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mb-2">
-                        <button type="button" class="btn btn-primary" id="pb-send-regenerate" disabled title="@T["Rewrite the instructions, then generate this reply again with them"]">
-                            <i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Feedback & regenerate"]
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" id="pb-send-feedback" disabled title="@T["Rewrite the instructions and keep this reply"]">
-                            @T["Feedback only"]
-                        </button>
-                    </div>
-                    <div class="small mb-3" id="pb-status" role="status" aria-live="polite"></div>
-
-                    <div class="fw-semibold mb-2">@T["Feedback so far"]</div>
-                    <div id="pb-feedback-list" class="d-flex flex-column gap-2 small"></div>
-                </div>
-
-                <div class="tab-pane fade" id="pb-pane-revisions" role="tabpanel" aria-labelledby="pb-tab-revisions">
-                    <p class="small text-muted">@T["Every change to the instructions is kept here. Restore one to make it current again."]</p>
-                    <div id="pb-revision-list" class="d-flex flex-column gap-2 small"></div>
-                </div>
-
-                <div class="tab-pane fade" id="pb-pane-replay" role="tabpanel" aria-labelledby="pb-tab-replay">
-                    <p class="small text-muted">@T["Replay answers every message you gave feedback on again with the current instructions, and checks each answer against that feedback. Tools are not used during a replay."]</p>
-                    <button type="button" class="btn btn-primary mb-3" id="pb-replay">
-                        <i class="fa-solid fa-flask me-1" aria-hidden="true"></i>@T["Run replay"]
-                    </button>
-                    <div id="pb-replay-results" class="d-flex flex-column gap-2 small"></div>
-                </div>
-
-                <div class="tab-pane fade" id="pb-pane-finish" role="tabpanel" aria-labelledby="pb-tab-finish">
-                    <div class="mb-3">
-                        <label for="pb-initial-prompt" class="form-label fw-semibold">@T["Opening message"]</label>
-                        <textarea id="pb-initial-prompt" class="form-control" rows="3" placeholder="@T["Optional. What the assistant is told when it starts a conversation itself, such as an automated SMS or call."]">@Model.Session.InitialPrompt</textarea>
-                        <div class="d-flex gap-2 mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="pb-send-opening" title="@T["Send the opening message to see how the assistant opens a conversation"]">@T["Try the opening"]</button>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="pb-coach-deployment" class="form-label fw-semibold">@T["Coach deployment"]</label>
-                        <select id="pb-coach-deployment" class="form-select">
-                            <option value="">@T["Same as the chat deployment"]</option>
-                            @foreach (var deployment in coachDeployments)
-                            {
-                                <option value="@deployment.Name" selected="@(string.Equals(deployment.Name, Model.Session.CoachDeploymentName, StringComparison.OrdinalIgnoreCase))">@deployment.Name</option>
-                            }
-                        </select>
-                        <span class="hint dashed">@T["The model that reads your feedback and rewrites the instructions. A capable model gives better rewrites."]</span>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-secondary mb-4" id="pb-save-settings">@T["Save"]</button>
-
-                    <hr />
-
-                    <div class="fw-semibold mb-2">@T["Use the result"]</div>
-                    <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="pb-copy-system-message">
-                            <i class="fa-regular fa-copy me-1" aria-hidden="true"></i>@T["Copy system message"]
-                        </button>
-                    </div>
-
-                    @if (Model.Profile is not null)
-                    {
-                        <div class="border rounded p-2 mb-3">
-                            <div class="small mb-2">@T["This session is linked to the AI profile <strong>{0}</strong>.", linkedProfileTitle]</div>
-                            <button type="button" class="btn btn-primary btn-sm" id="pb-update-profile">@T["Update the AI profile"]</button>
-                        </div>
-                    }
-
-                    <div class="border rounded p-2">
-                        <div class="small fw-semibold mb-2">@T["Save as a new AI profile"]</div>
-                        <div class="mb-2">
-                            <label for="pb-profile-display-text" class="form-label small">@T["Title"]</label>
-                            <input id="pb-profile-display-text" class="form-control form-control-sm" value="@Model.DisplayName" />
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="pb-pane-feedback" role="tabpanel" aria-labelledby="pb-tab-feedback">
+                        <div class="mb-3">
+                            <div class="form-label fw-semibold">@T["Reply"]</div>
+                            <div class="profile-builder-selected border rounded p-2 small text-muted" id="pb-selected-reply">@T["Choose Feedback under a reply to comment on it."]</div>
                         </div>
                         <div class="mb-2">
-                            <label for="pb-profile-name" class="form-label small">@T["Technical name"]</label>
-                            <input id="pb-profile-name" class="form-control form-control-sm" />
+                            <label for="pb-comment" class="form-label fw-semibold">@T["Your feedback"]</label>
+                            <textarea id="pb-comment" class="form-control" rows="4" placeholder="@T["What should the assistant have done differently?"]"></textarea>
                         </div>
-                        <button type="button" class="btn btn-primary btn-sm" id="pb-create-profile">@T["Create AI profile"]</button>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-primary" id="pb-send-regenerate" disabled title="@T["Rewrite the instructions, then generate this reply again with them"]">
+                                <i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Feedback & regenerate"]
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="pb-send-feedback" disabled title="@T["Rewrite the instructions and keep this reply"]">
+                                @T["Feedback only"]
+                            </button>
+                        </div>
+                        <div class="small mb-3" id="pb-status" role="status" aria-live="polite"></div>
+
+                        <div class="fw-semibold mb-2">@T["Feedback so far"]</div>
+                        <div id="pb-feedback-list" class="d-flex flex-column gap-2 small"></div>
                     </div>
-                    <div class="small mt-2" id="pb-finish-status" role="status" aria-live="polite"></div>
+
+                    <div class="tab-pane fade" id="pb-pane-revisions" role="tabpanel" aria-labelledby="pb-tab-revisions">
+                        <p class="small text-muted">@T["Every change to the instructions is kept here. Restore one to make it current again."]</p>
+                        <div id="pb-revision-list" class="d-flex flex-column gap-2 small"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pb-pane-replay" role="tabpanel" aria-labelledby="pb-tab-replay">
+                        <p class="small text-muted">@T["Replay answers every message you gave feedback on again with the current instructions, and checks each answer against that feedback. Tools are not used during a replay."]</p>
+                        <button type="button" class="btn btn-primary mb-3" id="pb-replay">
+                            <i class="fa-solid fa-flask me-1" aria-hidden="true"></i>@T["Run replay"]
+                        </button>
+                        <div id="pb-replay-results" class="d-flex flex-column gap-2 small"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pb-pane-finish" role="tabpanel" aria-labelledby="pb-tab-finish">
+                        <div class="mb-3">
+                            <label for="pb-initial-prompt" class="form-label fw-semibold">@T["Opening message"]</label>
+                            <textarea id="pb-initial-prompt" class="form-control" rows="3" placeholder="@T["Optional. What the assistant is told when it starts a conversation itself, such as an automated SMS or call."]">@Model.Session.InitialPrompt</textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="pb-send-opening" title="@T["Send the opening message to see how the assistant opens a conversation"]">@T["Try the opening"]</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pb-coach-deployment" class="form-label fw-semibold">@T["Coach deployment"]</label>
+                            <select id="pb-coach-deployment" class="form-select">
+                                <option value="">@T["Same as the chat deployment"]</option>
+                                @foreach (var deployment in coachDeployments)
+                                {
+                                    <option value="@deployment.Name" selected="@(string.Equals(deployment.Name, Model.Session.CoachDeploymentName, StringComparison.OrdinalIgnoreCase))">@deployment.Name</option>
+                                }
+                            </select>
+                            <span class="hint dashed">@T["The model that reads your feedback and rewrites the instructions. A capable model gives better rewrites."]</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary mb-4" id="pb-save-settings">@T["Save"]</button>
+
+                        <hr />
+
+                        <div class="fw-semibold mb-2">@T["Use the result"]</div>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="pb-copy-system-message">
+                                <i class="fa-regular fa-copy me-1" aria-hidden="true"></i>@T["Copy system message"]
+                            </button>
+                        </div>
+
+                        @if (Model.Profile is not null)
+                        {
+                            <div class="border rounded p-2 mb-3">
+                                <div class="small mb-2">@T["This session is linked to the AI profile <strong>{0}</strong>.", linkedProfileTitle]</div>
+                                <button type="button" class="btn btn-primary btn-sm" id="pb-update-profile">@T["Update the AI profile"]</button>
+                            </div>
+                        }
+
+                        <div class="border rounded p-2">
+                            <div class="small fw-semibold mb-2">@T["Save as a new AI profile"]</div>
+                            <div class="mb-2">
+                                <label for="pb-profile-display-text" class="form-label small">@T["Title"]</label>
+                                <input id="pb-profile-display-text" class="form-control form-control-sm" value="@Model.DisplayName" />
+                            </div>
+                            <div class="mb-2">
+                                <label for="pb-profile-name" class="form-label small">@T["Technical name"]</label>
+                                <input id="pb-profile-name" class="form-control form-control-sm" />
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm" id="pb-create-profile">@T["Create AI profile"]</button>
+                        </div>
+                        <div class="small mt-2" id="pb-finish-status" role="status" aria-live="polite"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -237,18 +240,8 @@
     .profile-builder-container .min-h-0 {
         min-height: 0;
     }
-    .profile-builder-tabs .nav-tabs {
-        gap: 0.25rem;
-    }
-    .profile-builder-panel > .tab-content {
-        border: 0;
-        min-height: 0;
-    }
-    /* The admin theme frames every tab pane; here the card is the frame. */
-    .profile-builder-panel > .tab-content > .tab-pane {
-        border: 0;
-        padding: 0;
-        margin: 0;
+    .profile-builder-content .tab-pane {
+        padding-bottom: 1rem;
     }
     .profile-builder-selected {
         max-height: 10rem;
