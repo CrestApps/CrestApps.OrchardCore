@@ -33,7 +33,7 @@
 
 <div class="mt-1">
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Answers"]">
-        <i class="fa-solid @(channel == "SMS" ? "fa-comment-sms" : "fa-headset") text-secondary me-1" aria-hidden="true"></i>@channelName
+        <i class="fa-solid @(channel == "SMS" ? "fa-comment-sms" : channel == "Email" ? "fa-envelope" : "fa-headset") text-secondary me-1" aria-hidden="true"></i>@channelName
     </span>
     @foreach (var number in numbers)
     {

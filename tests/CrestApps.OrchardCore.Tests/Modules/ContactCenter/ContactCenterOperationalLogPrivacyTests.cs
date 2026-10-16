@@ -324,6 +324,10 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Messaging"),
             Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
+            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core"),
+            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Email"),
+            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Omnichannel.Automation.Core"),
+            Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Email"),
             Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Telnyx.Core"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Telnyx"),
         ];

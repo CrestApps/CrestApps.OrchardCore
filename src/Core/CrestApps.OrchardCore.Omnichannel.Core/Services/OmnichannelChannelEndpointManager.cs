@@ -45,6 +45,11 @@ public sealed class OmnichannelChannelEndpointManager : CatalogManager<Omnichann
         {
             serviceAddress = canonical.Value;
         }
+        else if (string.Equals(channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            // An email address is stored in its canonical lower-case form, and mail names it however the sender typed.
+            serviceAddress = OmnichannelEmailAddress.Normalize(serviceAddress) ?? serviceAddress;
+        }
 
         return _store.GetByServiceAddressAsync(channel, serviceAddress, cancellationToken);
     }

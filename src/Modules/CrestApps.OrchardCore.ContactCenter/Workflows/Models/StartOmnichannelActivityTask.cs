@@ -131,7 +131,40 @@ public sealed class StartOmnichannelActivityTask : TaskActivity<StartOmnichannel
                 return WorkflowOutcomeResults.From("Failed");
             }
 
-            await processor.StartAsync(activity, CancellationToken.None);
+            try
+            {
+                await processor.StartAsync(activity, CancellationToken.None);
+            }
+            catch (OmnichannelActivityDeferredException ex)
+            {
+                // The sending address is at its limit or paused. The activity keeps its place and the automated
+                // activity processor starts it when its turn comes, so the workflow has done its part.
+                activity.ScheduledUtc = ex.RetryAtUtc;
+                await _activityManager.UpdateAsync(activity);
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "The Place Call or Send Message task scheduled activity '{ActivityItemId}' for {RetryAtUtc}: {Reason}",
+                        activityItemId.SanitizeLogValue(),
+                        ex.RetryAtUtc,
+                        ex.Message.SanitizeLogValue());
+                }
+            }
+            catch (OmnichannelActivityRefusedException ex)
+            {
+                activity.Status = ActivityStatus.Cancelled;
+                activity.TerminalReasonCode = ex.TerminalReasonCode;
+                activity.Notes = string.IsNullOrWhiteSpace(activity.Notes) ? ex.Message : activity.Notes + Environment.NewLine + ex.Message;
+                await _activityManager.UpdateAsync(activity);
+
+                _logger.LogWarning(
+                    "The Place Call or Send Message task cancelled activity '{ActivityItemId}' because its destination was refused: {Reason}",
+                    activityItemId.SanitizeLogValue(),
+                    ex.Message.SanitizeLogValue());
+
+                return WorkflowOutcomeResults.From("Failed");
+            }
 
             return WorkflowOutcomeResults.From("Done");
         }

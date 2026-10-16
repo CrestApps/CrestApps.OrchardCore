@@ -106,7 +106,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
             {
                 context.Result.Fail(new ValidationResult(answersCalls
                     ? S["Select the AI agent that answers this entry point's calls."]
-                    : S["Select the AI agent that answers this entry point's texts."], [nameof(ContactCenterEntryPoint.TargetAIProfileId)]));
+                    : S["Select the AI agent that answers this entry point's messages."], [nameof(ContactCenterEntryPoint.TargetAIProfileId)]));
             }
         }
 

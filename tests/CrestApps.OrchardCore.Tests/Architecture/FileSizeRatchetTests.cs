@@ -31,6 +31,10 @@ public sealed class FileSizeRatchetTests
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging"),
         Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Sms"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Messaging.Email.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Messaging.Email"),
+        Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Automation.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Email"),
         Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Voice.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Omnichannel.Voice"),
     ];

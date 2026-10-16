@@ -134,6 +134,11 @@ public static class OmnichannelConstants
     public static class Events
     {
         public const string SmsReceived = "SmsReceived";
+
+        /// <summary>
+        /// Raised when an email from a customer reaches one of the business's email addresses.
+        /// </summary>
+        public const string EmailReceived = "EmailReceived";
     }
 
     /// <summary>
@@ -165,6 +170,12 @@ public static class OmnichannelConstants
         /// The activity was open when its lead was converted, and the conversion was asked to cancel open work.
         /// </summary>
         public const string LeadConverted = "lead_converted";
+
+        /// <summary>
+        /// The activity was not started because its address cannot receive the message: it bounced before, the
+        /// receiving system refused it, or it is on the channel's suppression list.
+        /// </summary>
+        public const string AddressUndeliverable = "address_undeliverable";
 
         /// <summary>
         /// The set of terminal reason codes that count as an escalation to a human for reporting.
@@ -222,6 +233,33 @@ public static class OmnichannelConstants
         /// Retrying cannot succeed.
         /// </summary>
         public const string MediaNotSupported = "media_not_supported";
+    }
+
+    /// <summary>
+    /// Provider-neutral reasons a messaging provider refused a message on any channel. Each provider maps its own
+    /// codes onto these, so the code that reacts to a refusal never needs to know which provider sent it.
+    /// </summary>
+    public static class MessagingErrorCodes
+    {
+        /// <summary>
+        /// The provider permanently refused the recipient's address: it does not exist, or the receiving system
+        /// rejects it (an email hard bounce, for example). Retrying cannot succeed.
+        /// </summary>
+        public const string RecipientRejected = "recipient_rejected";
+
+        /// <summary>
+        /// The message was held back, not refused: the sending address is at its sending limit, or paused because a
+        /// provider asked it to slow down. It goes out at the time the dispatch result gives, and the wait is not a
+        /// failed attempt.
+        /// </summary>
+        public const string Deferred = "deferred";
+
+        /// <summary>
+        /// The receiving system refused the message because of the sender (a policy or reputation block, such as an
+        /// email 5.7.x answer), not because of the recipient. Suppressing the recipient would be wrong; the sending
+        /// address is slowed down instead.
+        /// </summary>
+        public const string SenderBlocked = "sender_blocked";
     }
 
     /// <summary>

@@ -23,7 +23,14 @@
         .Replace("\r\n", "\n")
         .Replace("\r", "\n")
         .Trim();
-    var content = System.Text.RegularExpressions.Regex.Replace(normalized, "\n{2,}", "\n");
+
+    // A message with a subject is written like a letter, in paragraphs, so its blank lines between paragraphs stay
+    // (only longer runs are collapsed). A chat message keeps no blank lines at all.
+    var subject = message.GetSubject();
+    var content = string.IsNullOrEmpty(subject)
+        ? System.Text.RegularExpressions.Regex.Replace(normalized, "\n{2,}", "\n")
+        : System.Text.RegularExpressions.Regex.Replace(normalized, "\n{3,}", "\n\n");
+    var quotedText = message.GetQuotedText();
 
     var attachments = message.GetAttachments();
     var skippedAttachments = message.GetSkippedAttachmentCount();
@@ -48,6 +55,10 @@
      data-inbound="@(message.IsInbound ? "true" : "false")"
      data-created-ticks="@message.CreatedUtc.Ticks">
     <div class="p-2 px-3 rounded-4 @bubbleClass" style="max-width: 80%; min-width: 6rem;">
+        @if (!string.IsNullOrEmpty(subject))
+        {
+            <div class="fw-semibold small mb-1 text-break" data-message-subject>@subject</div>
+        }
         @if (attachments.Count > 0 && !string.IsNullOrEmpty(message.ConversationId))
         {
             <div class="messaging-attachments d-flex flex-wrap gap-1 @(string.IsNullOrEmpty(content) ? string.Empty : "mb-2")">
@@ -91,6 +102,14 @@
         @if (!string.IsNullOrEmpty(content))
         {
             <div style="white-space: pre-wrap; word-break: break-word;">@content</div>
+        }
+        @if (!string.IsNullOrEmpty(quotedText))
+        {
+            @* The history a reply quoted is folded away, so the thread reads as the conversation and not as copies of it. *@
+            <details class="mt-1 small" data-message-quoted-text>
+                <summary class="text-muted" style="cursor: pointer;">@T["Show quoted text"]</summary>
+                <div class="border-start ps-2 mt-1 text-muted" style="white-space: pre-wrap; word-break: break-word;">@quotedText</div>
+            </details>
         }
 
         @* Sender name and time sit below the message in a slightly smaller, muted font. *@

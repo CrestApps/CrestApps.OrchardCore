@@ -285,6 +285,7 @@ const sidebars = {
                 'omnichannel/crm',
                 'omnichannel/cadences',
                 'omnichannel/sms',
+                'omnichannel/email',
                 'omnichannel/messaging-workspace',
                 'omnichannel/azure-communication-services',
                 'omnichannel/event-grid',

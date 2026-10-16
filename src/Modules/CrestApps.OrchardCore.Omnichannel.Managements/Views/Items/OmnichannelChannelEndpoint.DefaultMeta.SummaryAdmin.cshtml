@@ -28,9 +28,13 @@
     var capabilityName = AddressOptions.Value.Capabilities.TryGetValue(capability, out var registered) && registered.DisplayName != null
         ? registered.DisplayName.Value
         : capability;
-    var capabilityIcon = string.Equals(capability, "SMS", StringComparison.OrdinalIgnoreCase)
-        ? "fa-comment-sms"
-        : string.Equals(capability, "Phone", StringComparison.OrdinalIgnoreCase) ? "fa-headset" : "fa-tag";
+    var capabilityIcon = capability.ToUpperInvariant() switch
+    {
+        "SMS" => "fa-comment-sms",
+        "PHONE" => "fa-headset",
+        "EMAIL" => "fa-envelope",
+        _ => "fa-tag",
+    };
 
     <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Used for"]">
         <i class="fa-solid @capabilityIcon text-secondary me-1" aria-hidden="true"></i>@capabilityName

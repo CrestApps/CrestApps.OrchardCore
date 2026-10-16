@@ -31,6 +31,18 @@ public sealed class MessageDispatchResult
     public string ErrorCode { get; set; }
 
     /// <summary>
+    /// Gets or sets when the message may be sent, for a message the channel held back rather than refused (the
+    /// sending address is at its limit, or a provider asked it to slow down). <see langword="null"/> otherwise.
+    /// </summary>
+    public DateTime? RetryAfterUtc { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the message was held back to be sent at <see cref="RetryAfterUtc"/>. A held
+    /// message is not a failed attempt, so it is rescheduled without spending one of its retries.
+    /// </summary>
+    public bool IsDeferred => !Succeeded && RetryAfterUtc.HasValue;
+
+    /// <summary>
     /// Creates a successful result.
     /// </summary>
     /// <param name="providerMessageId">The provider's identifier for the message, when known.</param>
@@ -53,6 +65,23 @@ public sealed class MessageDispatchResult
     /// <returns>The result.</returns>
     public static MessageDispatchResult Failed(string error)
         => Failed(new LocalizedString(error, error));
+
+    /// <summary>
+    /// Creates a result for a message held back until <paramref name="retryAfterUtc"/>.
+    /// </summary>
+    /// <param name="retryAfterUtc">When the message may be sent.</param>
+    /// <param name="reason">Why it was held back.</param>
+    /// <returns>The result.</returns>
+    public static MessageDispatchResult Deferred(DateTime retryAfterUtc, LocalizedString reason)
+        => new()
+        {
+            Succeeded = false,
+            RetryAfterUtc = retryAfterUtc,
+
+            // The same value as OmnichannelConstants.MessagingErrorCodes.Deferred, which this assembly cannot reference.
+            ErrorCode = "deferred",
+            Errors = reason is null ? [] : [reason],
+        };
 
     /// <summary>
     /// Gets the errors joined into one line, for storing on the message bubble.

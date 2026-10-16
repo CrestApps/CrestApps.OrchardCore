@@ -20,6 +20,11 @@ public class BroadcastCreateViewModel
     public string EndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets the subject line, sent when the channel of the endpoint picked supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the message body.
     /// </summary>
     public string Body { get; set; }
@@ -45,6 +50,12 @@ public class BroadcastCreateViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyDictionary<string, string> EndpointChannels { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the channels whose messages carry a subject.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyCollection<string> SubjectChannels { get; set; } = [];
 }
 
 /// <summary>

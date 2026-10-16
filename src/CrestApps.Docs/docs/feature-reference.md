@@ -100,9 +100,11 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Omnichannel.Activities` | Omnichannel Activities | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Managements` | Omnichannel Management | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.Sms` | SMS Omnichannel Automation | [SMS Automation](./omnichannel/sms) |
+| `CrestApps.OrchardCore.Omnichannel.Email` | Email Omnichannel Automation | [Email](./omnichannel/email#automate-email-ai) |
 | `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Omnichannel Channel Endpoints (dependency only) | [Management (CRM)](./omnichannel/management#omnichannel-address) |
 | `CrestApps.OrchardCore.Omnichannel.Messaging` | Omnichannel Messaging Workspace | [Messaging Workspace](./omnichannel/messaging-workspace) |
 | `CrestApps.OrchardCore.Omnichannel.Messaging.Sms` | SMS Messaging Channel | [Messaging Workspace](./omnichannel/messaging-workspace#setting-up-sms) |
+| `CrestApps.OrchardCore.Omnichannel.Messaging.Email` | Email Messaging Channel | [Email](./omnichannel/email) |
 | `CrestApps.OrchardCore.ContactCenter` | Contact Center | [Contact Center](./contact-center/) |
 | `CrestApps.OrchardCore.ContactCenter.AgentServices` | Contact Center Agent Services (dependency only) | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | Contact Center Agents | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |

@@ -1,0 +1,107 @@
+@model EmailSuppressionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSuppressions" title="@T["Email Suppressions"]" />
+</zone>
+
+<p class="text-muted">@T["Nothing is sent to these addresses from any email address: they bounced for good, kept bouncing, or their owner reported the business's mail as spam. Bounces and complaints add addresses here by themselves, from the mail server's answers and the delivery events webhook."]</p>
+
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-1">
+            <div class="col">
+                <form method="get" asp-action="Index" class="has-search">
+                    <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <input name="search" value="@Model.Search" class="form-control" placeholder="@T["Search addresses"]" type="search" autocomplete="off" />
+                </form>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#add-suppression" aria-expanded="false" aria-controls="add-suppression">@T["Add an address"]</button>
+            </div>
+        </div>
+        <div class="collapse mt-3" id="add-suppression">
+            <form method="post" asp-action="Add" class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label for="suppression-address" class="form-label">@T["Email address"]</label>
+                    <input id="suppression-address" name="address" type="email" class="form-control" required />
+                </div>
+                <div class="col-md-5">
+                    <label for="suppression-note" class="form-label">@T["Note"]</label>
+                    <input id="suppression-note" name="note" class="form-control" maxlength="500" />
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">@T["Suppress"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@if (Model.Items.Count == 0)
+{
+    <div class="alert alert-info">@(string.IsNullOrEmpty(Model.Search) ? T["No address is suppressed."] : T["No suppressed address matches '{0}'.", Model.Search])</div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>@T["Address"]</th>
+                <th>@T["Reason"]</th>
+                <th>@T["Details"]</th>
+                <th>@T["Since"]</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var suppression in Model.Items)
+            {
+                <tr>
+                    <td class="text-break">@suppression.Address</td>
+                    <td class="text-nowrap">
+                        @switch (suppression.Reason)
+                        {
+                            case EmailSuppressionReason.HardBounce:
+                                <span class="badge text-bg-danger">@T["Bounced"]</span>
+                                break;
+                            case EmailSuppressionReason.RepeatedSoftBounces:
+                                <span class="badge text-bg-warning">@T["Kept bouncing"]</span>
+                                break;
+                            case EmailSuppressionReason.Complaint:
+                                <span class="badge text-bg-danger">@T["Spam complaint"]</span>
+                                break;
+                            default:
+                                <span class="badge text-bg-secondary">@T["Added by hand"]</span>
+                                break;
+                        }
+                    </td>
+                    <td class="small text-muted text-break">@suppression.Detail@(string.IsNullOrEmpty(suppression.CreatedBy) ? string.Empty : $" ({suppression.CreatedBy})")</td>
+                    <td class="text-nowrap">@suppression.CreatedUtc.ToLocalTime().ToString("g")</td>
+                    <td class="text-end">
+                        <form method="post" asp-action="Remove" class="d-inline" onsubmit="return confirm(this.dataset.confirm);" data-confirm="@T["Send to {0} again? Only take an address off when you know it works.", suppression.Address]">
+                            <input type="hidden" name="address" value="@suppression.Address" />
+                            <input type="hidden" name="search" value="@Model.Search" />
+                            <input type="hidden" name="page" value="@Model.Page" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">@T["Remove"]</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (Model.PageCount > 1)
+    {
+        <nav aria-label="@T["Pages"]">
+            <ul class="pagination align-items-center">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : string.Empty)">
+                    <a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page - 1)">@T["Previous"]</a>
+                </li>
+                <li class="page-item disabled"><span class="page-link">@T["Page {0} of {1}", Model.Page, Model.PageCount]</span></li>
+                <li class="page-item @(Model.Page >= Model.PageCount ? "disabled" : string.Empty)">
+                    <a class="page-link" asp-action="Index" asp-route-search="@Model.Search" asp-route-page="@(Model.Page + 1)">@T["Next"]</a>
+                </li>
+            </ul>
+        </nav>
+    }
+}
