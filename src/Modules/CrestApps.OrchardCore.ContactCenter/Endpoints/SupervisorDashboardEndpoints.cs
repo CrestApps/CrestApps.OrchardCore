@@ -26,13 +26,14 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class SupervisorDashboardEndpoints
+internal static partial class SupervisorDashboardEndpoints
 {
     private const int AgentPageSize = 200;
     private const int UserQueryBatchSize = 500;
 
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
+    public const string DispatchRouteName = "ContactCenterSupervisorDashboardDispatch";
 
     public static IEndpointRouteBuilder AddSupervisorDashboardEndpoints(this IEndpointRouteBuilder builder)
     {
@@ -41,6 +42,9 @@ internal static class SupervisorDashboardEndpoints
 
         builder.MapPost("Admin/contact-center/dashboard/engage", HandleEngageAsync)
             .WithName(EngageRouteName);
+
+        builder.MapGet("Admin/contact-center/dashboard/dispatch", HandleDispatchAsync)
+            .WithName(DispatchRouteName);
 
         return builder;
     }
@@ -213,6 +217,9 @@ internal static class SupervisorDashboardEndpoints
                 DisplayName = agentDisplayNames.TryGetValue(agent.ItemId, out var displayName) ? displayName : "Unknown agent",
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
+                IdleSinceUtc = agent.PresenceStatus == AgentPresenceStatus.Available
+                    ? agent.IdleSinceUtc ?? agent.PresenceChangedUtc
+                    : null,
                 QueueCount = agent.QueueIds.Count,
                 QueueIds = agent.QueueIds
                     .Where(queueId => authorizedQueueIds.Contains(queueId) && ContactCenterConstants.CampaignQueue.GetCampaignId(queueId) is null)

@@ -31,6 +31,12 @@ public sealed class SupervisorAgentViewModel
     public string PresenceReason { get; set; }
 
     /// <summary>
+    /// Gets or sets when the agent started waiting for work, while they are Available, so the board can show how long they
+    /// have been idle. It is <see langword="null"/> for an agent who is not Available.
+    /// </summary>
+    public DateTime? IdleSinceUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of queues the agent is signed in to.
     /// </summary>
     public int QueueCount { get; set; }
