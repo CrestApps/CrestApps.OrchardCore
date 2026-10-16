@@ -35,6 +35,7 @@ internal static partial class SupervisorDashboardEndpoints
         IAgentProfileManager agentManager,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         IDialerDispatchDiagnosticsService diagnosticsService,
+        IStaleAgentWorkService staleWorkService,
         IDistributedCache cache,
         ShellSettings shellSettings,
         IClock clock,
@@ -101,25 +102,36 @@ internal static partial class SupervisorDashboardEndpoints
         var diagnoses = await DiagnoseCachedAsync(diagnosticsService, cache, shellSettings.Name, authorizedQueueIds, cancellationToken);
         var model = new SupervisorDispatchStateViewModel { ServerTimeUtc = now };
 
-        foreach (var diagnosis in diagnoses)
-        {
+        var explained = diagnoses
             // Nothing pending and nothing waiting is nothing to explain.
-            if (diagnosis.PendingCount == 0 && diagnosis.WaitingItemCount == 0)
-            {
-                continue;
-            }
+            .Where(diagnosis => diagnosis.PendingCount != 0 || diagnosis.WaitingItemCount != 0)
+            .Select(diagnosis => (
+                Diagnosis: diagnosis,
+                SignedIn: agents
+                    .Where(agent => ContactCenterConstants.IsCampaignQueue(diagnosis.QueueId)
+                        ? CampaignQueueIds(agent).Contains(diagnosis.QueueId, StringComparer.OrdinalIgnoreCase)
+                        : agent.QueueIds.Contains(diagnosis.QueueId, StringComparer.OrdinalIgnoreCase))
+                    .ToArray()))
+            .ToArray();
 
-            var signedIn = agents
-                .Where(agent => ContactCenterConstants.IsCampaignQueue(diagnosis.QueueId)
-                    ? CampaignQueueIds(agent).Contains(diagnosis.QueueId, StringComparer.OrdinalIgnoreCase)
-                    : agent.QueueIds.Contains(diagnosis.QueueId, StringComparer.OrdinalIgnoreCase))
-                .ToArray();
+        // An agent who looks available or busy for a stale reason is a reason work is not going out, so the same
+        // detection the agent board uses is applied to the agents signed in to the queues being explained.
+        var staleWork = await staleWorkService.DetectAsync(
+            explained.SelectMany(entry => entry.SignedIn).DistinctBy(agent => agent.ItemId).ToArray(),
+            cancellationToken);
 
-            model.Queues.Add(ToViewModel(
+        foreach (var (diagnosis, signedIn) in explained)
+        {
+            var viewModel = ToViewModel(
                 diagnosis,
                 names.TryGetValue(diagnosis.QueueId, out var name) ? name : diagnosis.QueueId,
                 signedIn.Length,
-                signedIn.Count(agent => agent.PresenceStatus == AgentPresenceStatus.Available)));
+                signedIn.Count(agent => agent.PresenceStatus == AgentPresenceStatus.Available));
+
+            viewModel.StaleAgentCount = signedIn.Count(agent =>
+                agent.PresenceStatus is AgentPresenceStatus.Available or AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy &&
+                staleWork.ContainsKey(agent.ItemId));
+            model.Queues.Add(viewModel);
         }
 
         model.Queues = model.Queues

@@ -99,6 +99,17 @@
 	function has(list, value) {
 		return Array.isArray(list) && list.indexOf(value) >= 0;
 	}
+	function hasStaleWork(agent) {
+		return !!(agent && Array.isArray(agent.staleWork) && agent.staleWork.length);
+	}
+	function staleWorkText(item, labels) {
+		return item && labels && labels["stale." + item.kind] || item && item.reason || "";
+	}
+	function staleWorkSummary(agent, labels) {
+		if (!hasStaleWork(agent)) return "";
+		var first = staleWorkText(agent.staleWork[0], labels);
+		return agent.staleWork.length > 1 ? format(text(labels, "staleMore", "{0} (+{1} more)"), first, agent.staleWork.length - 1) : first;
+	}
 	function agentActions(agent, state, labels) {
 		var actions = {
 			modes: [],
@@ -152,6 +163,10 @@
 				});
 			}
 		}
+		if (state && state.canIntervene && hasStaleWork(agent)) actions.menu.push({
+			action: "free-agent",
+			label: text(labels, "freeAgent", "Free agent…")
+		});
 		if (state && state.canIntervene) {
 			actions.menu.push({
 				action: "state:Available",
@@ -240,6 +255,7 @@
 	var PANEL_TITLES = {
 		"end-call": ["endCallTitle", "End call"],
 		"sign-out": ["signOutTitle", "Sign out"],
+		"free-agent": ["freeAgentTitle", "Free agent"],
 		transfer: ["transferTitle", "Transfer call"],
 		message: ["messageTitle", "Message"]
 	};
@@ -424,6 +440,12 @@
 					body = "<p class=\"mb-2\">" + escape(format(label("signOutConfirm", "Sign {0} out of their queues?"), name)) + "</p>";
 					confirm = label("signOutButton", "Sign out");
 					break;
+				case "free-agent":
+					body = "<p class=\"mb-2\">" + escape(format(label("freeAgentConfirm", "Release what {0} is holding that nothing backs?"), name)) + "</p><ul class=\"mb-2\" data-cc-free-agent-items>" + (agent.staleWork || []).map(function(item) {
+						return "<li>" + escape(staleWorkText(item, strings)) + "</li>";
+					}).join("") + "</ul><p class=\"small text-muted mb-2\">" + escape(label("freeAgentNote", "A call the provider confirms is still alive is never ended; if there is one, nothing is released.")) + "</p>";
+					confirm = label("freeAgentButton", "Free agent");
+					break;
 				case "transfer":
 					body = "<label class=\"form-label\" for=\"ccTransferTarget\">" + escape(label("transferTo", "Transfer to")) + "</label><select class=\"form-select form-select-sm mb-2\" id=\"ccTransferTarget\" data-cc-transfer-target>" + transferOptions() + "</select><label class=\"form-label\" for=\"ccTransferNumber\">" + escape(label("transferNumber", "Number (for a phone number)")) + "</label><input type=\"tel\" class=\"form-control form-control-sm mb-2\" id=\"ccTransferNumber\" data-cc-transfer-number autocomplete=\"off\" />";
 					confirm = label("transferButton", "Transfer");
@@ -452,6 +474,9 @@
 						agentId: current.agentId,
 						status: "SignOut"
 					}, button, closePanel);
+					break;
+				case "free-agent":
+					act("freeAgent", { agentId: current.agentId }, button, closePanel);
 					break;
 				case "transfer":
 					var choice = (panel.querySelector("[data-cc-transfer-target]") || {}).value || "";
@@ -485,7 +510,7 @@
 			var agent = findAgent(agentId);
 			closeMenu(false);
 			if (!agent) return;
-			if (action === "end-call" || action === "transfer" || action === "message") {
+			if (action === "end-call" || action === "transfer" || action === "message" || action === "free-agent") {
 				showPanel(action, agent);
 				return;
 			}
@@ -824,10 +849,15 @@
 					var detail = phoneCallSummary(agent.phoneCall, isFinite(serverNow) ? serverNow : Date.now(), strings) || agent.presenceReason || status;
 					var actions = interventions ? interventions.actionsHtml(agent, state) : "";
 					var menu = interventions ? interventions.menuHtml(agent, state) : "";
-					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span>" + idleHtml(agent) + signedInHtml(agent, state, status) + "</span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";
+					return "<div class=\"cc-agent\"><span class=\"cc-presence__dot is-" + status.toLowerCase() + "\"></span><span class=\"cc-agent__body\"><span class=\"cc-agent__name\">" + escapeHtml(agent.displayName || agent.userId) + "</span><span class=\"cc-agent__state badge ta-badge text-bg-secondary\">" + escapeHtml(detail) + "</span>" + idleHtml(agent) + staleHtml(agent) + signedInHtml(agent, state, status) + "</span><span class=\"cc-badge-count\" title=\"" + escapeHtml(label("activeInteractions", "Active interactions")) + "\">" + agent.activeInteractions + "</span>" + menu + actions + "</div>";
 				}).join("");
 				setRegionHtml(refs.board, "board", boardHtml);
 				updateIdleTimes();
+			}
+			function staleHtml(agent) {
+				var summary = staleWorkSummary(agent, strings);
+				if (!summary) return "";
+				return "<span class=\"cc-agent__stale badge ta-badge text-bg-warning\" role=\"note\" data-cc-stale title=\"" + escapeHtml(label("staleHint", "This agent holds work nothing backs. Use Free agent in the More menu to release it.")) + "\"><i class=\"fa-solid fa-triangle-exclamation\" aria-hidden=\"true\"></i> " + escapeHtml(summary) + "</span>";
 			}
 			function idleHtml(agent) {
 				if (!agent.idleSinceUtc) return "";
@@ -901,6 +931,7 @@
 					});
 				} else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) notes.push(label("dispatchWaiting", "Work and available agents are both here; it is waiting for the next dispatch pass."));
 				else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount === 0) notes.push(label("dispatchNoAvailable", "Dialable work is waiting for an available agent."));
+				if (queue.staleAgentCount > 0) notes.push(format(label("dispatchStaleAgents", "{0} signed-in agents look available or busy only because of stale work. Free them from the agent list."), queue.staleAgentCount));
 				var loaded = loadedLines(queue);
 				return "<div class=\"" + cls + "\"><div class=\"cc-dispatch__name\">" + escapeHtml(queue.name) + "</div><div class=\"cc-dispatch__headline\">" + escapeHtml(headline) + "</div><ul class=\"cc-dispatch__list\">" + items + "</ul>" + (loaded.length ? "<div class=\"cc-dispatch__note\">" + loaded.map(escapeHtml).join("<br />") + "</div>" : "") + "<div class=\"cc-dispatch__note\">" + notes.map(escapeHtml).join("<br />") + "</div></div>";
 			}

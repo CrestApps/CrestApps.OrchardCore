@@ -704,6 +704,13 @@
   white-space: normal;
 }
 
+.cc-agent__stale {
+  display: inline-block;
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
+}
+
 .cc-agent__meta {
   display: block;
   max-width: 100%;

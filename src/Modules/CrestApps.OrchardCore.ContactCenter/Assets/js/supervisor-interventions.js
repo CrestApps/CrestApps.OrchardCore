@@ -15,6 +15,7 @@ import {
     supervisorAgentActionsHtml,
     supervisorAgentMenuHtml,
     supervisorMenuPlacement,
+    supervisorStaleWorkText,
 } from './shared/supervisor-actions.js';
 
 // How long a Take over that had to barge in first waits for the supervisor's phone to connect.
@@ -24,6 +25,7 @@ var TAKEOVER_JOIN_TIMEOUT_MS = 30000;
 var PANEL_TITLES = {
     'end-call': ['endCallTitle', 'End call'],
     'sign-out': ['signOutTitle', 'Sign out'],
+    'free-agent': ['freeAgentTitle', 'Free agent'],
     transfer: ['transferTitle', 'Transfer call'],
     message: ['messageTitle', 'Message']
 };
@@ -279,6 +281,16 @@ export function createSupervisorInterventions(options) {
                 body = '<p class="mb-2">' + escape(format(label('signOutConfirm', 'Sign {0} out of their queues?'), name)) + '</p>';
                 confirm = label('signOutButton', 'Sign out');
                 break;
+            case 'free-agent':
+                body = '<p class="mb-2">' + escape(format(label('freeAgentConfirm', 'Release what {0} is holding that nothing backs?'), name)) + '</p>' +
+                    '<ul class="mb-2" data-cc-free-agent-items>' +
+                    (agent.staleWork || []).map(function (item) {
+                        return '<li>' + escape(supervisorStaleWorkText(item, strings)) + '</li>';
+                    }).join('') +
+                    '</ul>' +
+                    '<p class="small text-muted mb-2">' + escape(label('freeAgentNote', 'A call the provider confirms is still alive is never ended; if there is one, nothing is released.')) + '</p>';
+                confirm = label('freeAgentButton', 'Free agent');
+                break;
             case 'transfer':
                 body = '<label class="form-label" for="ccTransferTarget">' + escape(label('transferTo', 'Transfer to')) + '</label>' +
                     '<select class="form-select form-select-sm mb-2" id="ccTransferTarget" data-cc-transfer-target>' + transferOptions() + '</select>' +
@@ -322,6 +334,9 @@ export function createSupervisorInterventions(options) {
             case 'sign-out':
                 act('agentState', { agentId: current.agentId, status: 'SignOut' }, button, closePanel);
                 break;
+            case 'free-agent':
+                act('freeAgent', { agentId: current.agentId }, button, closePanel);
+                break;
             case 'transfer':
                 var choice = (panel.querySelector('[data-cc-transfer-target]') || {}).value || '';
                 var separator = choice.indexOf(':');
@@ -363,7 +378,7 @@ export function createSupervisorInterventions(options) {
             return;
         }
 
-        if (action === 'end-call' || action === 'transfer' || action === 'message') {
+        if (action === 'end-call' || action === 'transfer' || action === 'message' || action === 'free-agent') {
             showPanel(action, agent);
 
             return;

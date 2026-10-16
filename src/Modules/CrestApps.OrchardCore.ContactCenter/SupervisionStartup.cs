@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
@@ -29,6 +30,11 @@ public sealed class SupervisionStartup : StartupBase
             .AddScoped<SupervisorDashboardInterventionDescriber>()
             .AddScoped<SupervisorInterventionEndpoints.CallScope>();
 
+        // Finding the work an agent is wrongly holding, and freeing them of it, from the live dashboard.
+        services
+            .AddOptions<StaleAgentWorkOptions>();
+
+        services.AddScoped<IStaleAgentWorkService, StaleAgentWorkService>();
         // Listening to, coaching, joining, taking over and ending an agent's own phone call: a number they dialed from
         // the keypad, or an extension call. Its supervisor legs are reported after a Contact Center call's sink passes.
         services
