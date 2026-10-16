@@ -32,7 +32,15 @@ public sealed class SupervisionStartup : StartupBase
 
         // Finding the work an agent is wrongly holding, and freeing them of it, from the live dashboard.
         services
-            .AddOptions<StaleAgentWorkOptions>();
+            .AddOptions<StaleAgentWorkOptions>()
+            .Validate(options => options.CallMinimumAge >= TimeSpan.Zero, "CallMinimumAge cannot be negative.")
+            .Validate(options => options.UnresolvedCallAge >= TimeSpan.Zero, "UnresolvedCallAge cannot be negative.")
+            .Validate(options => options.ClientRecordedCallSilence >= TimeSpan.Zero, "ClientRecordedCallSilence cannot be negative.")
+            .Validate(options => options.CallMaximumAge > TimeSpan.Zero, "CallMaximumAge must be greater than zero.")
+            .Validate(options => options.ProviderLookupTimeout > TimeSpan.Zero, "ProviderLookupTimeout must be greater than zero.")
+            .Validate(options => options.ProviderAnswerCacheDuration > TimeSpan.Zero, "ProviderAnswerCacheDuration must be greater than zero.")
+            .ValidateOnStart();
+
 
         services.AddScoped<IStaleAgentWorkService, StaleAgentWorkService>();
         // Listening to, coaching, joining, taking over and ending an agent's own phone call: a number they dialed from

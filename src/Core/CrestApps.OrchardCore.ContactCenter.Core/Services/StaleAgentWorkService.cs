@@ -4,10 +4,11 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -44,7 +45,8 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
     private readonly IActivityReservationManager _reservationManager;
     private readonly ITelephonyInteractionStore _telephonyInteractions;
     private readonly ITelephonyProviderResolver _providerResolver;
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
+    private readonly string _tenantName;
     private readonly AgentAvailabilityOptions _availabilityOptions;
     private readonly StaleAgentWorkOptions _options;
     private readonly IClock _clock;
@@ -64,7 +66,8 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
     /// <param name="reservationManagers">The reservation manager, registered only with queues and campaigns.</param>
     /// <param name="telephonyInteractions">The soft-phone call store, registered only with telephony.</param>
     /// <param name="providerResolvers">The telephony provider resolver, registered only with telephony.</param>
-    /// <param name="cache">The cache provider answers are reused from.</param>
+    /// <param name="cache">The distributed cache provider answers are reused from.</param>
+    /// <param name="shellSettings">The current tenant, which keys the cached answers so tenants never see each other's.</param>
     /// <param name="availabilityOptions">The availability policy, whose grace period applies to presence and routing state.</param>
     /// <param name="options">The stale-work policy.</param>
     /// <param name="clock">The clock.</param>
@@ -81,7 +84,8 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
         IEnumerable<IActivityReservationManager> reservationManagers,
         IEnumerable<ITelephonyInteractionStore> telephonyInteractions,
         IEnumerable<ITelephonyProviderResolver> providerResolvers,
-        IMemoryCache cache,
+        IDistributedCache cache,
+        ShellSettings shellSettings,
         IOptions<AgentAvailabilityOptions> availabilityOptions,
         IOptions<StaleAgentWorkOptions> options,
         IClock clock,
@@ -99,6 +103,7 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
         _telephonyInteractions = telephonyInteractions?.FirstOrDefault();
         _providerResolver = providerResolvers?.FirstOrDefault();
         _cache = cache;
+        _tenantName = shellSettings.Name;
         _availabilityOptions = availabilityOptions.Value;
         _options = options.Value;
         _clock = clock;
@@ -649,16 +654,24 @@ public sealed class StaleAgentWorkService : IStaleAgentWorkService
             return CallTruth.Unresolved;
         }
 
-        var key = $"ContactCenterStaleAgentWork:{providerName}:{callId}";
+        var key = $"crestapps:cc:stale-agent-work:{_tenantName}:{providerName}:{callId}";
 
-        if (useCachedAnswers && _cache.TryGetValue(key, out CallTruth cached))
+        if (useCachedAnswers)
         {
-            return cached;
+            var cached = await _cache.GetAsync(key, cancellationToken);
+
+            if (cached is { Length: 1 } && Enum.IsDefined(typeof(CallTruth), (int)cached[0]))
+            {
+                return (CallTruth)cached[0];
+            }
         }
 
         var truth = await LookUpCallAsync(providerName, callId, cancellationToken);
 
-        _cache.Set(key, truth, _options.ProviderAnswerCacheDuration);
+        await _cache.SetAsync(key, [(byte)truth], new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _options.ProviderAnswerCacheDuration,
+        }, cancellationToken);
 
         return truth;
     }
