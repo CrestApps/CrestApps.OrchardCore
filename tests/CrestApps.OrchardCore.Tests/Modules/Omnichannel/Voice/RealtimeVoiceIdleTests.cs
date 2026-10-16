@@ -47,6 +47,39 @@ public sealed class RealtimeVoiceIdleTests
         Assert.Equal(RealtimeVoiceConversationRunner.IdleStep.SayGoodbye, step);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(RealtimeVoiceConversationRunner.MaximumIdlePrompts)]
+    public void ASilenceWhileAResponseIsInFlight_IsLeftAlone(int promptsAsked)
+    {
+        // Arrange
+        // A standalone message may only be asked for when no response is in flight; one on top of another is two
+        // replies talking over each other.
+        var quietFor = RealtimeVoiceConversationRunner.IdleBeforeSpeakingUp + RealtimeVoiceConversationRunner.IdleResponseInFlightLimit - TimeSpan.FromMilliseconds(1);
+
+        // Act
+        var step = RealtimeVoiceConversationRunner.NextIdleStep(promptsAsked, quietFor, responseInFlight: true);
+
+        // Assert
+        Assert.Equal(RealtimeVoiceConversationRunner.IdleStep.Wait, step);
+    }
+
+    [Fact]
+    public void AResponseThatNeverFinishes_DoesNotHoldASilentLineOpen()
+    {
+        // Arrange
+        var quietFor = RealtimeVoiceConversationRunner.IdleBeforeSpeakingUp + RealtimeVoiceConversationRunner.IdleResponseInFlightLimit;
+
+        // Act
+        var asked = RealtimeVoiceConversationRunner.NextIdleStep(0, quietFor, responseInFlight: true);
+        var ended = RealtimeVoiceConversationRunner.NextIdleStep(RealtimeVoiceConversationRunner.MaximumIdlePrompts, quietFor, responseInFlight: true);
+
+        // Assert
+        Assert.Equal(RealtimeVoiceConversationRunner.IdleStep.AskIfStillThere, asked);
+        Assert.Equal(RealtimeVoiceConversationRunner.IdleStep.SayGoodbye, ended);
+    }
+
     [Fact]
     public void BothKindsOfCall_WaitTheSameEightSecondsBeforeEachStep()
     {

@@ -185,6 +185,15 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     internal const int MaximumIdlePrompts = 2;
 
     /// <summary>
+    /// How much longer than <see cref="IdleBeforeSpeakingUp"/> the idle watchdog waits on a response still in flight.
+    /// </summary>
+    /// <remarks>
+    /// A response under way is the model answering something, and a standalone message asked for on top of it talks
+    /// over it. A response that never reports finishing must not hold a silent line open for good, so the wait ends.
+    /// </remarks>
+    internal static readonly TimeSpan IdleResponseInFlightLimit = TimeSpan.FromSeconds(20);
+
+    /// <summary>
     /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
     /// provider default, because a person on the phone pauses mid-sentence and a call carries noise through those
     /// pauses; cutting in on them is what makes an assistant feel like it is not listening.
@@ -326,7 +335,6 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _voicemailMessageStarted, 0);
         Interlocked.Exchange(ref _voicemailMessageDone, 0);
         Volatile.Write(ref _openingLine, null);
-        Volatile.Write(ref _latestAssistantLine, null);
 
         // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
         // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was
@@ -501,7 +509,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                     attempts = 0;
                 }
 
-                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor));
+                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor), Volatile.Read(ref _responseInFlight) == 1);
 
                 if (step == IdleStep.Wait || conversation is null)
                 {
@@ -525,7 +533,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                     // Ended the way the end-call tool ends a call: the goodbye plays, the caller has their moment to
                     // answer it, and the line is closed. A caller who speaks during it takes the call back.
                     await conversation.RequestStandaloneMessageAsync(
-                        WithSessionInstructions(SilentLineGoodbyePrompt(Volatile.Read(ref _latestAssistantLine))),
+                        WithSessionInstructions(SilentLineGoodbyePrompt(Volatile.Read(ref _lastAssistantLine))),
                         callToken);
                     context.EndCallOnSilence?.Invoke();
 
@@ -548,7 +556,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 // A standalone message, worded from its instruction alone (see StillTherePrompt): asked to continue
                 // the conversation, the model moved the sale along, and on a silent line it spoke for the customer.
                 await conversation.RequestStandaloneMessageAsync(
-                    WithSessionInstructions(StillTherePrompt(Volatile.Read(ref _latestAssistantLine))),
+                    WithSessionInstructions(StillTherePrompt(Volatile.Read(ref _lastAssistantLine))),
                     callToken);
             }
         }

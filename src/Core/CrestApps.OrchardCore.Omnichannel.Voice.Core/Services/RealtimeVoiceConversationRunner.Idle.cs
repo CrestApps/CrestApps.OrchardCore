@@ -39,9 +39,17 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </remarks>
     /// <param name="promptsAsked">How many times the caller has been asked whether they are still there.</param>
     /// <param name="quietFor">How long the line has been quiet on both sides.</param>
-    internal static IdleStep NextIdleStep(int promptsAsked, TimeSpan quietFor)
+    /// <param name="responseInFlight">Whether the model is producing a response that has not finished yet.</param>
+    internal static IdleStep NextIdleStep(int promptsAsked, TimeSpan quietFor, bool responseInFlight = false)
     {
         if (quietFor < IdleBeforeSpeakingUp)
+        {
+            return IdleStep.Wait;
+        }
+
+        // A standalone message may only be asked for when no response is in flight: on a session that answers by
+        // itself, one on top of another is two replies talking over each other.
+        if (responseInFlight && quietFor < IdleBeforeSpeakingUp + IdleResponseInFlightLimit)
         {
             return IdleStep.Wait;
         }
