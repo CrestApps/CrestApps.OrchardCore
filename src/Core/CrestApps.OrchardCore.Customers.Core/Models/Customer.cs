@@ -56,6 +56,21 @@ public sealed class Customer : CatalogItem
     public bool AcceptsMarketing { get; set; }
 
     /// <summary>
+    /// Gets or sets the customer's address book.
+    /// </summary>
+    public List<CustomerAddress> Addresses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the address billed first, from <see cref="Addresses"/>.
+    /// </summary>
+    public string DefaultBillingAddressId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address shipped to first, from <see cref="Addresses"/>.
+    /// </summary>
+    public string DefaultShippingAddressId { get; set; }
+
+    /// <summary>
     /// Gets or sets the customer's ids at outside services, such as a payment provider's customer id, by service.
     /// </summary>
     public Dictionary<string, string> ExternalIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
@@ -68,6 +83,40 @@ public sealed class Customer : CatalogItem
     /// Gets or sets when the customer last bought or changed something, which decides when their data is kept until.
     /// </summary>
     public DateTime LastActivityUtc { get; set; }
+
+    public CustomerAddress FindAddress(string addressId)
+        => string.IsNullOrEmpty(addressId)
+            ? null
+            : Addresses?.FirstOrDefault(address => string.Equals(address.AddressId, addressId, StringComparison.Ordinal));
+
+    public CustomerAddress GetDefaultBillingAddress()
+        => FindAddress(DefaultBillingAddressId);
+
+    public CustomerAddress GetDefaultShippingAddress()
+        => FindAddress(DefaultShippingAddressId);
+
+    /// <summary>
+    /// Removes an address, and the defaults that named it. Returns false when there is no such address.
+    /// </summary>
+    public bool RemoveAddress(string addressId)
+    {
+        if (Addresses is null || Addresses.RemoveAll(address => string.Equals(address.AddressId, addressId, StringComparison.Ordinal)) == 0)
+        {
+            return false;
+        }
+
+        if (string.Equals(DefaultBillingAddressId, addressId, StringComparison.Ordinal))
+        {
+            DefaultBillingAddressId = null;
+        }
+
+        if (string.Equals(DefaultShippingAddressId, addressId, StringComparison.Ordinal))
+        {
+            DefaultShippingAddressId = null;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// The name to show: the display name, or the person's or company's name, or the email.

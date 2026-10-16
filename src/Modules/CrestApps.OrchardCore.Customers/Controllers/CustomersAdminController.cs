@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -33,6 +34,7 @@ public sealed class CustomersAdminController : Controller
     private static readonly EmailAddressAttribute _emailAddress = new();
 
     private readonly ICustomerStore _store;
+    private readonly CustomerAddressBook _addressBook;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
@@ -45,6 +47,7 @@ public sealed class CustomersAdminController : Controller
 
     public CustomersAdminController(
         ICustomerStore store,
+        CustomerAddressBook addressBook,
         IUserService userService,
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
@@ -55,6 +58,7 @@ public sealed class CustomersAdminController : Controller
         IHtmlLocalizer<CustomersAdminController> htmlLocalizer)
     {
         _store = store;
+        _addressBook = addressBook;
         _userService = userService;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
@@ -207,8 +211,130 @@ public sealed class CustomersAdminController : Controller
 
         var model = ToViewModel(customer);
         model.CanManage = await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers);
+        model.Addresses = await _addressBook.SummarizeAsync(customer);
 
         return View(await BuildEditorAsync(model));
+    }
+
+    [Admin("customers/{customerId}/addresses/add", "CustomersAddressCreate")]
+    public async Task<IActionResult> AddressCreate(string customerId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers))
+        {
+            return Forbid();
+        }
+
+        var customer = await FindEditableAsync(customerId);
+
+        return customer is null ? NotFound() : View("AddressEdit", await _addressBook.BuildEditorAsync(customer, null));
+    }
+
+    [HttpPost]
+    [ActionName(nameof(AddressCreate))]
+    [Admin("customers/{customerId}/addresses/add", "CustomersAddressCreate")]
+    public Task<IActionResult> AddressCreatePost(string customerId, CustomerAddressViewModel model)
+        => SaveAddressAsync(customerId, addressId: null, model);
+
+    [Admin("customers/{customerId}/addresses/{addressId}", "CustomersAddressEdit")]
+    public async Task<IActionResult> AddressEdit(string customerId, string addressId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers))
+        {
+            return Forbid();
+        }
+
+        var customer = await FindEditableAsync(customerId);
+        var address = customer?.FindAddress(addressId);
+
+        return address is null ? NotFound() : View(await _addressBook.BuildEditorAsync(customer, address));
+    }
+
+    [HttpPost]
+    [ActionName(nameof(AddressEdit))]
+    [Admin("customers/{customerId}/addresses/{addressId}", "CustomersAddressEdit")]
+    public Task<IActionResult> AddressEditPost(string customerId, string addressId, CustomerAddressViewModel model)
+        => SaveAddressAsync(customerId, addressId, model);
+
+    [HttpPost]
+    [Admin("customers/{customerId}/addresses/{addressId}/delete", "CustomersAddressDelete")]
+    public async Task<IActionResult> AddressDelete(string customerId, string addressId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers))
+        {
+            return Forbid();
+        }
+
+        var customer = await FindEditableAsync(customerId);
+
+        if (customer is null || !customer.RemoveAddress(addressId))
+        {
+            return NotFound();
+        }
+
+        if (await TrySaveAsync(customer))
+        {
+            await _notifier.SuccessAsync(H["The address was deleted."]);
+        }
+
+        return RedirectToAction(nameof(Edit), new { customerId });
+    }
+
+    private async Task<IActionResult> SaveAddressAsync(string customerId, string addressId, CustomerAddressViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers))
+        {
+            return Forbid();
+        }
+
+        var customer = await FindEditableAsync(customerId);
+        var address = customer?.FindAddress(addressId);
+
+        if (customer is null || (addressId is not null && address is null))
+        {
+            return NotFound();
+        }
+
+        await _addressBook.ValidateAsync(customer, model, address is null, ModelState);
+
+        if (!ModelState.IsValid)
+        {
+            return View("AddressEdit", await _addressBook.BuildEditorAsync(customer, address, model));
+        }
+
+        CustomerAddressBook.Apply(customer, address, model);
+
+        if (await TrySaveAsync(customer))
+        {
+            await _notifier.SuccessAsync(H["The address was saved."]);
+        }
+
+        return RedirectToAction(nameof(Edit), new { customerId });
+    }
+
+    // An anonymized customer keeps nothing personal, so they have no address book to change.
+    private async Task<Customer> FindEditableAsync(string customerId)
+    {
+        var customer = string.IsNullOrEmpty(customerId) ? null : await _store.FindByIdAsync(customerId, HttpContext.RequestAborted);
+
+        return customer?.Status == CustomerStatus.Anonymized ? null : customer;
+    }
+
+    private async Task<bool> TrySaveAsync(Customer customer)
+    {
+        customer.ModifiedUtc = _clock.UtcNow;
+
+        try
+        {
+            await _store.UpdateAsync(customer, HttpContext.RequestAborted);
+
+            return true;
+        }
+        catch (ConcurrencyException)
+        {
+            await _notifier.ErrorAsync(H["Someone else changed this customer at the same time. Your change was not saved; try again."]);
+
+            return false;
+        }
     }
 
     [HttpPost]
@@ -241,6 +367,7 @@ public sealed class CustomersAdminController : Controller
             var invalid = ToViewModel(customer);
             CopyInput(model, invalid);
             invalid.CanManage = true;
+            invalid.Addresses = await _addressBook.SummarizeAsync(customer);
 
             return View(await BuildEditorAsync(invalid));
         }

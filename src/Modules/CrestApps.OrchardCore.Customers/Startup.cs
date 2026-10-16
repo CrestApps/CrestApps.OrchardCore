@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -25,6 +26,10 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ICustomerStore, CustomerStore>();
         services.AddScoped<ICustomerService, DefaultCustomerService>();
+
+        // Addresses pick their country from a list. The Addresses module replaces it with the countries it manages.
+        services.TryAddScoped<ICountryService, DefaultCountryService>();
+        services.AddScoped<CustomerAddressBook>();
 
         // Statements, receipts and reminders address a customer by their customer record once there is one.
         services.AddScoped<DefaultCustomerContactResolver>();

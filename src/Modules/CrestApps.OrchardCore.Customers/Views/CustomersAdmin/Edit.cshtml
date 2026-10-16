@@ -118,6 +118,13 @@
     }
 </form>
 
+@if (!Model.IsNew)
+{
+    <div class="mt-5">
+        <partial name="_CustomerAddressList" model="new CustomerAddressListViewModel { Addresses = Model.Addresses, CustomerId = Model.CustomerId, CanManage = Model.CanManage && Model.Status != CustomerStatus.Anonymized }" />
+    </div>
+}
+
 <script at="Foot">
     // Company and tax id are for businesses.
     (function () {

@@ -1,0 +1,71 @@
+@model CustomerAddressViewModel
+
+<div asp-validation-summary="ModelOnly"></div>
+
+<div class="row g-3">
+    <div class="col-md-6" asp-validation-class-for="Label">
+        <label asp-for="Label" class="form-label">@T["Label"]</label>
+        <input asp-for="Label" class="form-control" placeholder="@T["Home, Office…"]" />
+        <span class="hint">@T["Optional. A name to tell this address apart."]</span>
+    </div>
+    <div class="col-md-6"></div>
+
+    <div class="col-md-6" asp-validation-class-for="Name">
+        <label asp-for="Name" class="form-label">@T["Full name"]</label>
+        <input asp-for="Name" class="form-control" autocomplete="name" />
+        <span asp-validation-for="Name"></span>
+    </div>
+    <div class="col-md-6" asp-validation-class-for="Company">
+        <label asp-for="Company" class="form-label">@T["Company"]</label>
+        <input asp-for="Company" class="form-control" autocomplete="organization" />
+    </div>
+
+    <div class="col-12" asp-validation-class-for="AddressLine1">
+        <label asp-for="AddressLine1" class="form-label">@T["Street address"]</label>
+        <input asp-for="AddressLine1" class="form-control" autocomplete="address-line1" />
+        <span asp-validation-for="AddressLine1"></span>
+    </div>
+    <div class="col-12" asp-validation-class-for="AddressLine2">
+        <label asp-for="AddressLine2" class="form-label">@T["Apartment, suite, floor"]</label>
+        <input asp-for="AddressLine2" class="form-control" autocomplete="address-line2" />
+    </div>
+
+    <div class="col-md-4" asp-validation-class-for="City">
+        <label asp-for="City" class="form-label">@T["City"]</label>
+        <input asp-for="City" class="form-control" autocomplete="address-level2" />
+        <span asp-validation-for="City"></span>
+    </div>
+    <div class="col-md-4" asp-validation-class-for="Region">
+        <label asp-for="Region" class="form-label">@T["State, province or region"]</label>
+        <input asp-for="Region" class="form-control" autocomplete="address-level1" />
+    </div>
+    <div class="col-md-4" asp-validation-class-for="PostalCode">
+        <label asp-for="PostalCode" class="form-label">@T["Postal code"]</label>
+        <input asp-for="PostalCode" class="form-control" autocomplete="postal-code" />
+    </div>
+
+    <div class="col-md-6" asp-validation-class-for="Country">
+        <label asp-for="Country" class="form-label">@T["Country"]</label>
+        <select asp-for="Country" asp-items="Model.Countries" class="form-select" autocomplete="country">
+            <option value="">@T["Choose a country"]</option>
+        </select>
+        <span asp-validation-for="Country"></span>
+    </div>
+    <div class="col-md-6" asp-validation-class-for="Phone">
+        <label asp-for="Phone" class="form-label">@T["Phone"]</label>
+        <input asp-for="Phone" type="tel" class="form-control" autocomplete="tel" />
+    </div>
+
+    <div class="col-12">
+        <div class="form-check">
+            <input asp-for="IsDefaultBilling" type="checkbox" class="form-check-input" />
+            <label asp-for="IsDefaultBilling" class="form-check-label">@T["Default billing address"]</label>
+            <span class="hint dashed">@T["Offered first at checkout for billing."]</span>
+        </div>
+        <div class="form-check">
+            <input asp-for="IsDefaultShipping" type="checkbox" class="form-check-input" />
+            <label asp-for="IsDefaultShipping" class="form-check-label">@T["Default shipping address"]</label>
+            <span class="hint dashed">@T["Offered first for deliveries."]</span>
+        </div>
+    </div>
+</div>

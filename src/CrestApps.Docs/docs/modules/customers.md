@@ -35,8 +35,19 @@ A guest customer has no user. Customers builds no registration of its own; a gue
 | `AcceptsMarketing` | Whether the customer agreed to news and offers. Order and payment messages are always sent. |
 | `ExternalIds` | Ids at outside services, such as a payment provider's customer id, by service name. |
 | `CreatedUtc`, `ModifiedUtc`, `LastActivityUtc` | `LastActivityUtc` is when the customer last bought or changed something. |
+| `Addresses`, `DefaultBillingAddressId`, `DefaultShippingAddressId` | The address book, below. |
 
 `CustomerIndex` indexes the user id, the email, name and company in upper case for searching, the kind, the status, whether the customer has an account, and the dates.
+
+## Address book
+
+A customer keeps up to 20 `CustomerAddress` entries on the record itself. Each has an `AddressId`, a `Label` (such as *Home*), `Name`, `Company`, `AddressLine1`, `AddressLine2`, `City`, `Region`, `PostalCode`, `Country` (an ISO 3166-1 alpha-2 code) and `Phone`.
+
+- `GetDefaultBillingAddress()` and `GetDefaultShippingAddress()` return the defaults, or `null`. `RemoveAddress(addressId)` also clears a default that named the address.
+- `ToAddress()` returns the immutable `Address` from the Addresses abstractions. An order stores that copy, so editing or deleting an address never changes a past order.
+- `GetLines(countryName)` returns the address as envelope lines, skipping empty parts.
+
+Country names and validation come from `ICountryService`. When the Addresses module is enabled its countries are used; otherwise Customers registers the default ISO list. A name, a street, a city and a known country are required.
 
 ## Services
 
@@ -50,7 +61,9 @@ With Customers enabled, an order placed by a signed-in user belongs to their cus
 
 ## Admin
 
-**Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active.
+**Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active, and their address book (`customers/{customerId}/addresses/...`). An anonymized customer's addresses can't be edited.
+
+**My Account** (`my-account`) is the signed-in user's own page: their customer details and address book. It is an admin-area page marked `[CustomerAdminPage]`, so a customer reaches it without **Access admin panel**. The first visit makes the user's customer record with `GetOrCreateForUserAsync`; a disabled or anonymized customer can't edit it.
 
 ## Permissions
 
@@ -58,5 +71,6 @@ With Customers enabled, an order placed by a signed-in user belongs to their cus
 | --- | --- |
 | **Manage customers** | Adding and editing customers. Implies **View customers**. |
 | **View customers** | Listing and opening customers, read-only. |
+| **Manage own customer profile and addresses** | Using **My Account**. Granted to the Authenticated role by default. |
 
-Administrators have both by default.
+Administrators have the first two by default.
