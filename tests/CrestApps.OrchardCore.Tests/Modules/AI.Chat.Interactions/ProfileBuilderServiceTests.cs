@@ -249,6 +249,40 @@ public sealed class ProfileBuilderServiceTests
     }
 
     [Fact]
+    public async Task SubmitFeedbackAsync_ApprovingAnApprovedReplyAgain_RecordsNothingNew()
+    {
+        // Arrange
+        var interaction = new ChatInteraction { ItemId = "interaction", SystemMessage = "Be helpful." };
+        var session = new ProfileBuilderSession
+        {
+            ItemId = "session",
+            ChatInteractionId = interaction.ItemId,
+            Feedback = [new ProfileBuilderFeedback { Id = "first", Kind = ProfileBuilderFeedbackKind.Approved, PromptId = "a1" }],
+        };
+
+        var promptStore = new Mock<IChatInteractionPromptStore>();
+        promptStore.Setup(store => store.GetPromptsAsync(interaction.ItemId)).ReturnsAsync(
+        [
+            Prompt("u1", ChatRole.User, "Hi", _now),
+            Prompt("a1", ChatRole.Assistant, "Hello there.", _now),
+        ]);
+
+        var service = CreateService(interaction, promptStore.Object, new RecordingChatClient("{}"), out _, out var sessionStore);
+
+        // Act
+        var outcome = await service.SubmitFeedbackAsync(session, interaction, new ProfileBuilderFeedbackRequest
+        {
+            PromptId = "a1",
+            Kind = ProfileBuilderFeedbackKind.Approved,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(outcome.Succeeded);
+        Assert.Equal("first", Assert.Single(session.Feedback).Id);
+        sessionStore.Verify(store => store.UpdateAsync(It.IsAny<ProfileBuilderSession>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public void CaptureManualChanges_RecordsAnEditMadeInTheSettingsPanel()
     {
         // Arrange

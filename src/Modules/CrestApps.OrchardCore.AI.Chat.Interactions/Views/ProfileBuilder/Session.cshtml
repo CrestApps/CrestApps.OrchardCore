@@ -100,23 +100,25 @@
             </div>
         </div>
 
-        <div class="profile-builder-panel flex-shrink-0 bg-theme border rounded d-flex flex-column" id="profile-builder-panel" data-profile-builder-config="@config">
-            <ul class="nav nav-tabs px-2 pt-2" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="pb-tab-feedback" data-bs-toggle="tab" data-bs-target="#pb-pane-feedback" type="button" role="tab" aria-controls="pb-pane-feedback" aria-selected="true">@T["Feedback"]</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="pb-tab-revisions" data-bs-toggle="tab" data-bs-target="#pb-pane-revisions" type="button" role="tab" aria-controls="pb-pane-revisions" aria-selected="false">@T["Revisions"]</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="pb-tab-replay" data-bs-toggle="tab" data-bs-target="#pb-pane-replay" type="button" role="tab" aria-controls="pb-pane-replay" aria-selected="false">@T["Replay"]</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="pb-tab-finish" data-bs-toggle="tab" data-bs-target="#pb-pane-finish" type="button" role="tab" aria-controls="pb-pane-finish" aria-selected="false">@T["Finish"]</button>
-                </li>
-            </ul>
+        <div class="profile-builder-panel card flex-shrink-0 d-flex flex-column" id="profile-builder-panel" data-profile-builder-config="@config">
+            <div class="card-header profile-builder-tabs">
+                <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="pb-tab-feedback" data-bs-toggle="tab" data-bs-target="#pb-pane-feedback" type="button" role="tab" aria-controls="pb-pane-feedback" aria-selected="true">@T["Feedback"]</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pb-tab-revisions" data-bs-toggle="tab" data-bs-target="#pb-pane-revisions" type="button" role="tab" aria-controls="pb-pane-revisions" aria-selected="false">@T["Revisions"]</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pb-tab-replay" data-bs-toggle="tab" data-bs-target="#pb-pane-replay" type="button" role="tab" aria-controls="pb-pane-replay" aria-selected="false">@T["Replay"]</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="pb-tab-finish" data-bs-toggle="tab" data-bs-target="#pb-pane-finish" type="button" role="tab" aria-controls="pb-pane-finish" aria-selected="false">@T["Finish"]</button>
+                    </li>
+                </ul>
+            </div>
 
-            <div class="tab-content flex-grow-1 overflow-y-auto p-3">
+            <div class="card-body tab-content flex-grow-1 overflow-y-auto">
                 <div class="tab-pane fade show active" id="pb-pane-feedback" role="tabpanel" aria-labelledby="pb-tab-feedback">
                     <div class="mb-3">
                         <div class="form-label fw-semibold">@T["Reply"]</div>
@@ -234,6 +236,19 @@
     }
     .profile-builder-container .min-h-0 {
         min-height: 0;
+    }
+    .profile-builder-tabs .nav-tabs {
+        gap: 0.25rem;
+    }
+    .profile-builder-panel > .tab-content {
+        border: 0;
+        min-height: 0;
+    }
+    /* The admin theme frames every tab pane; here the card is the frame. */
+    .profile-builder-panel > .tab-content > .tab-pane {
+        border: 0;
+        padding: 0;
+        margin: 0;
     }
     .profile-builder-selected {
         max-height: 10rem;

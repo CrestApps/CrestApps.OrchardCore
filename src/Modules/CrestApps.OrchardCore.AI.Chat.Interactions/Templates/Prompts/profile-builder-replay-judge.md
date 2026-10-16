@@ -7,7 +7,7 @@ Category: Chat Interactions
 
 You check an AI assistant for regressions. Its author role-played conversations with it and gave feedback on some
 replies: rejected replies with a comment saying what was wrong, and approved replies that show what is wanted. Each
-case below is a customer message the author gave feedback on, answered again with the assistant's current
+case below is a user message the author gave feedback on, answered again with the assistant's current
 instructions.
 
 For each case, decide:

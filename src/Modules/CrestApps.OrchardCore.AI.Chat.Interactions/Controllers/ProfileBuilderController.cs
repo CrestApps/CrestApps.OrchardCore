@@ -165,12 +165,12 @@ public sealed class ProfileBuilderController : Controller
         }
 
         // The chat shape reads these to show the feedback buttons on each reply and to word the empty chat as a
-        // role-play rather than a question.
+        // role-play rather than a question. The person played is not always a customer, so the wording is neutral.
         HttpContext.Features.Set(new ChatInteractionChatClientOverrides
         {
             MessageTemplate = ProfileBuilderClientTemplates.MessageTemplate,
-            PlaceholderHeading = S["Role-play as the customer to see how the AI responds."],
-            PromptPlaceholder = S["Write what the customer says"],
+            PlaceholderHeading = S["Play the person the AI will talk to, and see how it responds."],
+            PromptPlaceholder = S["Write a message as the person the AI is talking to"],
         });
 
         // The page lays out the editor's settings and chat zones itself, beside the feedback panel, and leaves out

@@ -20,7 +20,7 @@ How to use the builder in the admin is described in the User Manual under [Profi
 
 A conversation-driven AI profile, such as one that runs automated SMS conversations or phone calls, behaves only as well as its system message. Writing that message by hand means guessing at every situation, testing, and editing again. The AI Profile Builder turns this into a loop:
 
-1. Role-play the customer in a chat.
+1. Role-play the person the assistant will talk to.
 2. Under a reply you do not like, write what was wrong.
 3. A coach model rewrites the instructions from your comment, keeping every earlier fix, and can regenerate the reply with them.
 4. Replay every message you commented on to check that nothing regressed.
@@ -31,8 +31,8 @@ A conversation-driven AI profile, such as one that runs automated SMS conversati
 A builder session is a **chat interaction** marked with `ProfileBuilderInteractionMetadata`, plus a `ProfileBuilderSession` document kept beside it in the `AI` collection (`ProfileBuilderSessionIndex`).
 
 - **The conversation** is the chat interaction. Role-play therefore uses the chat interaction hub unchanged: streaming, tools, data sources, documents, the speech-to-text and text-to-speech conversation mode, and realtime voice. Realtime turns are stored as chat interaction prompts, so they can receive feedback like typed turns.
-- **The ledger** is the session document. It holds every piece of feedback (the customer message, the reply, the conversation before it, the comment, and whether the reply was regenerated), every revision of the instructions, and the last replay. It is kept out of the chat interaction because the settings panel saves the whole interaction through the hub, and a ledger stored there would be lost whenever an autosave raced a feedback request.
-- **The page** reuses the chat interaction editor. The controller sets a `ChatInteractionChatClientOverrides` request feature that gives the chat client a message template with **Feedback** and **Looks good** under each reply. The panel script (`profile-builder.js`) drives the chat client's own Vue instance: it flushes pending settings saves before feedback, writes the rewritten values back into the settings panel, and sends a customer message again to regenerate a reply.
+- **The ledger** is the session document. It holds every piece of feedback (the user message, the reply, the conversation before it, the comment, and whether the reply was regenerated), every revision of the instructions, and the last replay. It is kept out of the chat interaction because the settings panel saves the whole interaction through the hub, and a ledger stored there would be lost whenever an autosave raced a feedback request.
+- **The page** reuses the chat interaction editor. The controller sets a `ChatInteractionChatClientOverrides` request feature that gives the chat client a message template with **Feedback** and **Looks good** under each reply. The panel script (`profile-builder.js`) drives the chat client's own Vue instance: it flushes pending settings saves before feedback, writes the rewritten values back into the settings panel, and sends a user message again to regenerate a reply.
 
 Builder sessions are left out of the **Chat Interactions** list.
 
@@ -52,13 +52,13 @@ Because the whole history is in every request, a fix found on the fourth try at 
 
 ## Regenerating a reply
 
-**Feedback & regenerate** is offered for the latest reply only. After the rewrite, the reply and the customer message it answered are deleted from the conversation, and the client sends the customer message again, so the new reply is generated without the rejected one in its history. The rejected reply stays in the ledger.
+**Feedback & regenerate** is offered for the latest reply only. After the rewrite, the reply and the message it answered are deleted from the conversation, and the client sends that message again, so the new reply is generated without the rejected one in its history. The rejected reply stays in the ledger.
 
 In a voice conversation the reply has already been spoken, so regenerate is not offered. A realtime session keeps the instructions it started with; end and restart it to use new ones.
 
 ## Replay
 
-Replay groups feedback by situation (the same customer message at the same point in a conversation), answers each situation again with the current settings, and asks the `profile-builder-replay-judge` template to mark each answer **Pass**, **Fail** or **Unknown** against all the feedback given on it. At most 20 situations are replayed, the most recent ones. Tools are not offered during a replay, so replaying a conversation never repeats an action such as sending a message.
+Replay groups feedback by situation (the same user message at the same point in a conversation), answers each situation again with the current settings, and asks the `profile-builder-replay-judge` template to mark each answer **Pass**, **Fail** or **Unknown** against all the feedback given on it. At most 20 situations are replayed, the most recent ones. Tools are not offered during a replay, so replaying a conversation never repeats an action such as sending a message.
 
 ## Saving the result
 

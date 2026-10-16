@@ -7,8 +7,8 @@
  *
  * - handles the Feedback / Looks good buttons the builder's message template adds under each reply,
  * - posts feedback, then writes the rewritten settings into the settings panel so its autosave keeps them,
- * - for "feedback & regenerate", removes the rejected reply and its customer message from the chat and sends
- *   the customer message again, so the new instructions answer it,
+ * - for "feedback & regenerate", removes the rejected reply and the message it answered from the chat and sends
+ *   that message again, so the new instructions answer it,
  * - shows the feedback ledger, the revision history and the replay results, and saves the result as a profile.
  */
 (function (window, document) {
@@ -559,8 +559,8 @@
         }
     }
 
-    // The server has already deleted the rejected reply and its customer message; take them off the screen and
-    // send the customer message again through the chat client, so it streams like any other turn.
+    // The server has already deleted the rejected reply and the message it answered; take them off the screen
+    // and send that message again through the chat client, so it streams like any other turn.
     function regenerate(app, replyIndex, customerMessage) {
         var removeFrom = replyIndex;
 

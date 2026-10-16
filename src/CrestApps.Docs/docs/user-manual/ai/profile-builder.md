@@ -1,14 +1,14 @@
 ---
 sidebar_label: Profile Builder
 title: Profile Builder
-description: Build an AI profile by playing the customer and telling the AI what it got wrong; it rewrites its own instructions until it behaves the way you want.
+description: Build an AI profile by playing the person it will talk to and telling the AI what it got wrong; it rewrites its own instructions until it behaves the way you want.
 technical_manual:
   - ai/profile-builder
 ---
 
-The **Profile Builder** helps you write the instructions for an AI profile without writing them yourself. You play the customer in a chat. When the AI answers in a way you do not like, you say what was wrong, and the AI rewrites its own instructions. When it behaves the way you want, you save the result as an [AI profile](profiles.md).
+The **Profile Builder** helps you write the instructions for an AI profile without writing them yourself. In a chat, you play the person the AI will talk to: a customer, a patient, a lead, whoever it serves. When the AI answers in a way you do not like, you say what was wrong, and the AI rewrites its own instructions. When it behaves the way you want, you save the result as an [AI profile](profiles.md).
 
-It suits profiles that hold a conversation on their own, such as automated text messages or phone calls, where you need to know how the AI will react before a real customer talks to it.
+It suits profiles that hold a conversation on their own, such as automated text messages or phone calls, where you need to know how the AI will react before a real person talks to it.
 
 | | |
 | --- | --- |
@@ -29,7 +29,7 @@ In **Settings**, choose the **Chat deployment** (the model to test) and, if you 
 
 ## Role-play and give feedback
 
-1. Type what a customer would say and send it. The AI answers.
+1. Type what that person would say and send it. The AI answers.
 2. Under a reply, click **Feedback**. The reply is highlighted and shown in the feedback panel.
 3. In **Your feedback**, write what the AI should have done differently, for example *"Too long. Keep text messages under two sentences"* or *"Never quote a price; offer to connect them with sales"*.
 4. Click one of:

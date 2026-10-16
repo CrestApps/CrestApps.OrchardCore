@@ -43,7 +43,7 @@ internal static class ProfileBuilderCoachPrompt
         AppendSettings(builder, current);
 
         builder.AppendLine("# Conversation so far");
-        builder.AppendLine("The author role-plays the customer. This is the conversation as it stands now; replies that were regenerated are no longer in it but are listed under the feedback history.");
+        builder.AppendLine("The author role-plays the person the assistant talks to. This is the conversation as it stands now; replies that were regenerated are no longer in it but are listed under the feedback history.");
         builder.AppendLine();
         AppendTranscript(builder, transcript);
 
@@ -116,7 +116,7 @@ internal static class ProfileBuilderCoachPrompt
         foreach (var (caseId, customerMessage, reply, feedback) in cases)
         {
             builder.Append("## Case ").AppendLine(caseId);
-            builder.AppendLine("Customer said:");
+            builder.AppendLine("User said:");
             AppendQuoted(builder, customerMessage);
             builder.AppendLine("New reply:");
             AppendQuoted(builder, reply);
@@ -177,7 +177,7 @@ internal static class ProfileBuilderCoachPrompt
 
         foreach (var turn in transcript.Skip(skipped))
         {
-            builder.Append(IsAssistant(turn.Role) ? "Assistant: " : "Customer: ");
+            builder.Append(IsAssistant(turn.Role) ? "Assistant: " : "User: ");
             builder.AppendLine(Truncate(turn.Text, MaxQuotedLength));
         }
 
@@ -193,7 +193,7 @@ internal static class ProfileBuilderCoachPrompt
             builder.Append("Led to revision ").AppendLine(feedback.RevisionNumber.Value.ToString(CultureInfo.InvariantCulture));
         }
 
-        builder.AppendLine("Customer said:");
+        builder.AppendLine("User said:");
         AppendQuoted(builder, feedback.CustomerMessage);
 
         builder.AppendLine(feedback.Kind == ProfileBuilderFeedbackKind.Approved

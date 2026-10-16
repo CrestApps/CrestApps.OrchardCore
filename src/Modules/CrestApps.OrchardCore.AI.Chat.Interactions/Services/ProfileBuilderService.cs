@@ -265,6 +265,20 @@ public sealed class ProfileBuilderService
             return ProfileBuilderFeedbackOutcome.Failed("The reply could not be found. Reload the page and try again.");
         }
 
+        // Approving a reply that is already approved, for example by a second click, records nothing new.
+        var latestOnReply = session.Feedback.LastOrDefault(entry => string.Equals(entry.PromptId, reply.ItemId, StringComparison.Ordinal));
+
+        if (request.Kind == ProfileBuilderFeedbackKind.Approved &&
+            latestOnReply?.Kind == ProfileBuilderFeedbackKind.Approved &&
+            string.IsNullOrWhiteSpace(request.Comment))
+        {
+            return new ProfileBuilderFeedbackOutcome
+            {
+                Succeeded = true,
+                Feedback = latestOnReply,
+            };
+        }
+
         if (request.Kind != ProfileBuilderFeedbackKind.Approved && string.IsNullOrWhiteSpace(request.Comment))
         {
             return ProfileBuilderFeedbackOutcome.Failed("Write what you would like the assistant to do differently.");

@@ -20,7 +20,7 @@ internal static class ProfileBuilderClientTemplates
         <div class="ai-chat-messages">
             <div v-for="(message, index) in messages" :key="index" class="ai-chat-message-item" :data-builder-message-index="index">
                 <div>
-                    <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">Customer</div>
+                    <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">You</div>
                     <div v-else-if="message.role !== 'indicator'" :class="getAssistantRoleClasses(message)">
                         <span :class="getAssistantIconClasses(message, index)"><i :class="getAssistantIcon(message)"></i></span>
                         {{ getAssistantLabel(message) }}
