@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
@@ -28,6 +29,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         SupportsDeliveryReceipts = true,
         SupportsBroadcast = true,
         ObservesQuietHours = true,
+        AddressesArePhoneNumbers = true,
 
         // A text message carries pictures only (MMS), and the carriers refuse one much over a megabyte, so the
         // composer shrinks photos to fit.
@@ -45,6 +47,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     // eagerly closes a dependency cycle the container cannot report, and the scope deadlocks.
     private readonly Lazy<ISmsDispatcher> _dispatcher;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
+    private readonly IPhoneNumberService _phoneNumberService;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
@@ -54,16 +57,20 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <param name="dispatcher">The dispatcher that routes a send to the provider owning the number, resolved on first send.</param>
     /// <param name="session">The session the contact indexes are read from.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="contactTypeProvider">The provider of the content types that are contacts.</param>
+    /// <param name="phoneNumberService">The phone number service a typed number is validated with.</param>
     public SmsMessagingChannel(
         Lazy<ISmsDispatcher> dispatcher,
         ISession session,
         IStringLocalizer<SmsMessagingChannel> stringLocalizer,
-        IOmnichannelContactTypeProvider contactTypeProvider)
+        IOmnichannelContactTypeProvider contactTypeProvider,
+        IPhoneNumberService phoneNumberService)
     {
         _dispatcher = dispatcher;
         _session = session;
         S = stringLocalizer;
         _contactTypeProvider = contactTypeProvider;
+        _phoneNumberService = phoneNumberService;
     }
 
     /// <inheritdoc/>
@@ -106,6 +113,19 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         return digits >= 7 &&
             digits <= 15 &&
             normalized.Select((character, index) => char.IsDigit(character) || (index == 0 && character == '+')).All(valid => valid);
+    }
+
+    /// <inheritdoc/>
+    public bool IsValidNewAddress(string address)
+    {
+        // A number typed for someone outside the contacts must be E.164 as written: a '+', the country code and a number
+        // the numbering plan knows. A national number such as 7025550123 is not guessed into a country.
+        if (string.IsNullOrEmpty(address) || address.Length < 2 || address[0] != '+' || address.AsSpan(1).ContainsAnyExceptInRange('0', '9'))
+        {
+            return false;
+        }
+
+        return _phoneNumberService.IsValidNumber(address, null);
     }
 
     /// <inheritdoc/>

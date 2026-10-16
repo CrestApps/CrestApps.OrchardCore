@@ -19,6 +19,9 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
     var REFRESH_INTERVAL_MS = 10000;
 
+    // The dispatch breakdown reads far more than the state poll does, so it is asked for less often.
+    var DISPATCH_REFRESH_INTERVAL_MS = 30000;
+
     // Where a supervisor's agent board filters are kept between visits, in their own browser only.
     var FILTERS_STORAGE_KEY = 'crestapps.contactCenter.dashboard.agentFilters';
 
@@ -70,6 +73,23 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
         return minutes > 0 ? minutes + 'm ' + seconds + 's' : seconds + 's';
     }
 
+    // How long an agent has been idle: the seconds, and hours once there are any.
+    function formatIdle(totalSeconds) {
+        if (!isFinite(totalSeconds) || totalSeconds < 0) {
+            totalSeconds = 0;
+        }
+
+        var hours = Math.floor(totalSeconds / 3600);
+        var minutes = Math.floor((totalSeconds % 3600) / 60);
+        var seconds = Math.floor(totalSeconds % 60);
+
+        if (hours > 0) {
+            return hours + 'h ' + minutes + 'm';
+        }
+
+        return minutes > 0 ? minutes + 'm ' + seconds + 's' : seconds + 's';
+    }
+
     function init(root) {
         var config = parseConfig(root);
         var strings = config.strings;
@@ -85,8 +105,13 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
             filters: root.querySelector('[data-cc-board-filters]'),
             connection: root.querySelector('[data-cc-connection]'),
             error: root.querySelector('[data-cc-error]'),
-            qualityAlerts: root.querySelector('[data-cc-quality-alerts]')
+            qualityAlerts: root.querySelector('[data-cc-quality-alerts]'),
+            dispatch: root.querySelector('[data-cc-dispatch]'),
+            dispatchPanel: root.querySelector('[data-cc-dispatch-panel]')
         };
+
+        // How far the server's clock is ahead of this browser's, so an idle timer is not off by the difference.
+        var clockOffsetMs = 0;
 
 
         // The agent board's filters (see shared/agent-board-filters.js), remembered from the supervisor's last visit.
@@ -367,6 +392,8 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                     '<span class="cc-agent__body">' +
                         '<span class="cc-agent__name">' + escapeHtml(agent.displayName || agent.userId) + '</span>' +
                         '<span class="cc-agent__state badge ta-badge text-bg-secondary">' + escapeHtml(detail) + '</span>' +
+                        idleHtml(agent) +
+                        signedInHtml(agent, state, status) +
                     '</span>' +
                     '<span class="cc-badge-count" title="' + escapeHtml(label('activeInteractions', 'Active interactions')) + '">' + agent.activeInteractions + '</span>' +
                     menu +
@@ -376,6 +403,57 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
             // The actions are delegated from the board (see supervisor-interventions.js), so a redraw needs no rebinding.
             setRegionHtml(refs.board, 'board', boardHtml);
+            updateIdleTimes();
+        }
+
+        // How long an Available agent has been waiting for work. The text is filled in by updateIdleTimes, so the card's
+        // markup does not change every second and a poll does not redraw the board for it.
+        function idleHtml(agent) {
+            if (!agent.idleSinceUtc) {
+                return '';
+            }
+
+            return '<span class="cc-agent__meta">' + escapeHtml(label('idleFor', 'Idle')) + ' ' +
+                '<span class="cc-agent__idle" data-cc-idle-since="' + escapeHtml(agent.idleSinceUtc) + '"></span></span>';
+        }
+
+        function nameOf(items, id) {
+            var item = (items || []).find(function (candidate) {
+                return candidate.id === id;
+            });
+
+            return item && item.name ? item.name : id;
+        }
+
+        // The queues and campaigns the agent is signed in to; an agent who is at work but in none of them is why nothing
+        // reaches them, so it is said.
+        function signedInHtml(agent, state, status) {
+            var names = (agent.queueIds || []).map(function (id) {
+                return nameOf(state.queues, id);
+            }).concat((agent.campaignIds || []).map(function (id) {
+                return nameOf(state.campaigns, id);
+            }));
+
+            if (!names.length) {
+                return status === 'Offline'
+                    ? ''
+                    : '<span class="cc-agent__meta">' + escapeHtml(label('notSignedIn', 'Not signed in to any queue or campaign')) + '</span>';
+            }
+
+            return '<span class="cc-agent__meta">' + escapeHtml(label('signedInTo', 'Signed in to')) + ': ' + escapeHtml(names.join(', ')) + '</span>';
+        }
+
+        function updateIdleTimes() {
+            var now = Date.now() + clockOffsetMs;
+
+            Array.prototype.forEach.call(root.querySelectorAll('[data-cc-idle-since]'), function (element) {
+                var since = Date.parse(element.getAttribute('data-cc-idle-since'));
+                var text = isFinite(since) ? formatIdle((now - since) / 1000) : '';
+
+                if (element.textContent !== text) {
+                    element.textContent = text;
+                }
+            });
         }
 
         function renderBoardCount(shown, total) {
@@ -390,6 +468,168 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
             if (refs.boardCount.textContent !== text) {
                 refs.boardCount.textContent = text;
             }
+        }
+
+        // The breakdown of what holds each queue's and campaign's pending work back, and what is left to dispatch.
+        function renderDispatch(state) {
+            if (!refs.dispatch || !state) {
+                return;
+            }
+
+            var queues = state.queues || [];
+            var serverNow = Date.parse(state.serverTimeUtc || '');
+            var reference = isFinite(serverNow) ? serverNow : Date.now();
+
+            if (!queues.length) {
+                setRegionHtml(refs.dispatch, 'dispatch', '<div class="cc-empty">' + escapeHtml(label('noPendingWork', 'No work is waiting to be dispatched.')) + '</div>');
+
+                return;
+            }
+
+            setRegionHtml(refs.dispatch, 'dispatch', queues.map(function (queue) {
+                return dispatchCard(queue, reference);
+            }).join(''));
+        }
+
+        function dispatchCard(queue, reference) {
+            var cls = 'cc-dispatch__card';
+            var pacingStuck = queue.pacing === 'ProfileDisabled' || queue.pacing === 'ProfileMissing';
+            var stalled = !!queue.queueBlocker ||
+                !!queue.routing ||
+                pacingStuck ||
+                queue.profileMismatchCount > 0 ||
+                (queue.dialableNowCount > 0 && queue.availableAgentCount === 0);
+
+            if (stalled) {
+                cls += ' is-stalled';
+            } else if (queue.heldBackCount > 0 && queue.dialableNowCount === 0) {
+                cls += ' is-held';
+            }
+
+            var headline = format(
+                label('dispatchHeadline', 'Pending {0}: {1} dialable now, {2} held back'),
+                queue.pendingCount,
+                queue.dialableNowCount,
+                queue.heldBackCount);
+
+            if (queue.evaluatedCount < queue.pendingCount) {
+                headline += ' ' + format(label('dispatchPartial', '(explaining the first {0})'), queue.evaluatedCount);
+            }
+
+            var items = (queue.buckets || []).map(function (bucket) {
+                var text = label('blocker.' + bucket.blocker, bucket.blocker);
+
+                if (bucket.nextDueUtc) {
+                    var due = Date.parse(bucket.nextDueUtc);
+
+                    if (isFinite(due)) {
+                        text += ' (' + format(label('dispatchNextDue', 'next due in {0}'), formatWait(Math.max(0, (due - reference) / 1000))) + ')';
+                    }
+                }
+
+                return '<li><span>' + escapeHtml(text) + '</span><span class="cc-strong">' + bucket.count + '</span></li>';
+            }).join('');
+
+            var notes = [];
+
+            if (queue.queueBlocker) {
+                notes.push(label('blocker.' + queue.queueBlocker, queue.queueBlocker));
+            }
+
+            notes.push(queue.signedInAgentCount === 0
+                ? label('dispatchNoAgents', 'No agents are signed in.')
+                : format(label('dispatchAgents', '{0} of {1} signed-in agents are available.'), queue.availableAgentCount, queue.signedInAgentCount));
+
+            if (queue.routing) {
+                var routing = queue.routing;
+                var ago = formatWait(Math.max(0, (reference - Date.parse(routing.occurredUtc)) / 1000));
+
+                notes.push(format(label('dispatchRouting', 'Routing found no agent {0} ago: {1}'), ago, routing.reason || label('dispatchNoReason', 'no reason recorded')));
+
+                (routing.candidateReasons || []).slice(0, 4).forEach(function (reason) {
+                    notes.push(format(label('dispatchCandidate', '{0} agents: {1}'), reason.agentCount, reason.reason));
+                });
+            } else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) {
+                notes.push(label('dispatchWaiting', 'Work and available agents are both here; it is waiting for the next dispatch pass.'));
+            } else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount === 0) {
+                notes.push(label('dispatchNoAvailable', 'Dialable work is waiting for an available agent.'));
+            }
+
+            var loaded = loadedLines(queue);
+
+            return '<div class="' + cls + '">' +
+                '<div class="cc-dispatch__name">' + escapeHtml(queue.name) + '</div>' +
+                '<div class="cc-dispatch__headline">' + escapeHtml(headline) + '</div>' +
+                '<ul class="cc-dispatch__list">' + items + '</ul>' +
+                (loaded.length ? '<div class="cc-dispatch__note">' + loaded.map(escapeHtml).join('<br />') + '</div>' : '') +
+                '<div class="cc-dispatch__note">' + notes.map(escapeHtml).join('<br />') + '</div>' +
+                '</div>';
+        }
+
+        // What is loaded in a campaign's queue: its items by state, how it is paced, the dialer profiles its items are stamped
+        // with, what kind of work is pending, and where the stamp and the activity disagree.
+        function loadedLines(queue) {
+            if (!queue.campaignId) {
+                return [];
+            }
+
+            var lines = [format(
+                label('loadedItems', 'Queue items: {0} waiting, {1} reserved, {2} assigned'),
+                queue.waitingItemCount,
+                queue.reservedItemCount,
+                queue.assignedItemCount)];
+
+            if (queue.pacing && queue.pacing !== 'NothingWaiting') {
+                lines.push(label('pacing.' + queue.pacing, queue.pacing));
+            }
+
+            (queue.profileStamps || []).forEach(function (stamp) {
+                var text;
+
+                if (!stamp.profileId) {
+                    text = label('stampNone', 'No dialer profile stamped');
+                } else if (stamp.name) {
+                    text = format(
+                        label('stampProfile', '{0} ({1}, {2})'),
+                        stamp.name,
+                        stamp.mode,
+                        stamp.enabled ? label('profileOn', 'turned on') : label('profileOff', 'turned off'));
+                } else {
+                    text = label('stampUnreadable', 'A dialer profile that cannot be read');
+                }
+
+                lines.push(format(label('stampLine', 'Stamped: {0}: {1}'), text, stamp.itemCount));
+            });
+
+            (queue.activityMix || []).slice(0, 4).forEach(function (group) {
+                lines.push(format(
+                    label('mixLine', 'Pending {0} / {1} / {2}: {3}'),
+                    group.source || '-',
+                    group.interactionType || '-',
+                    group.channel || '-',
+                    group.count));
+            });
+
+            if (queue.profileMismatchCount > 0) {
+                lines.push(format(label('mismatch', '{0} queue items are stamped with a different dialer profile than their activity'), queue.profileMismatchCount));
+            }
+
+            if (queue.activitiesWithoutProfileCount > 0) {
+                lines.push(format(label('noOwnProfile', '{0} pending activities carry no dialer profile of their own'), queue.activitiesWithoutProfileCount));
+            }
+
+            return lines;
+        }
+
+        function refreshDispatch() {
+            if (!config.dispatchUrl || document.hidden) {
+                return Promise.resolve();
+            }
+
+            return fetch(config.dispatchUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(renderDispatch)
+                .catch(function () { });
         }
 
         function watchQueues(state) {
@@ -477,6 +717,12 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                         lastAgents = state.agents || [];
                         lastState = state;
 
+                        var serverTime = Date.parse(state.serverTimeUtc || '');
+
+                        if (isFinite(serverTime)) {
+                            clockOffsetMs = serverTime - Date.now();
+                        }
+
                         if (interventions) {
                             interventions.onState(state);
                         }
@@ -548,6 +794,14 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
         refresh();
         window.setInterval(refresh, REFRESH_INTERVAL_MS);
+
+        if (refs.dispatchPanel && !config.dispatchUrl) {
+            refs.dispatchPanel.hidden = true;
+        }
+
+        refreshDispatch();
+        window.setInterval(refreshDispatch, DISPATCH_REFRESH_INTERVAL_MS);
+        window.setInterval(updateIdleTimes, 1000);
     }
 
     function boot() {

@@ -104,6 +104,86 @@ public sealed class SupervisorDashboardStateTests
         Assert.Equal("support", Assert.Single(model.Queues).Id);
     }
 
+    // A supervisor sees why an agent is not getting work only if the card says how long they have been waiting for it.
+    [Fact]
+    public async Task StatePoll_AnAvailableAgent_ReportsSinceWhenTheyStartedWaitingForWork()
+    {
+        // Arrange
+        var idleSince = new DateTime(2026, 10, 15, 9, 30, 0, DateTimeKind.Utc);
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile
+        {
+            ItemId = "agent-idle",
+            UserId = "user-idle",
+            PresenceStatus = AgentPresenceStatus.Available,
+            IdleSinceUtc = idleSince,
+            PresenceChangedUtc = idleSince.AddHours(-3),
+            QueueIds = ["support"],
+        });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Equal(idleSince, Assert.Single(model.Agents).IdleSinceUtc);
+    }
+
+    // An agent whose idle stamp was never set (a profile from before the stamp existed) is idle since they last changed
+    // state, rather than showing no clock.
+    [Fact]
+    public async Task StatePoll_AnAvailableAgentWithNoIdleStamp_FallsBackToWhenTheirPresenceLastChanged()
+    {
+        // Arrange
+        var changed = new DateTime(2026, 10, 15, 8, 0, 0, DateTimeKind.Utc);
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile
+        {
+            ItemId = "agent-legacy",
+            UserId = "user-legacy",
+            PresenceStatus = AgentPresenceStatus.Available,
+            PresenceChangedUtc = changed,
+            QueueIds = ["support"],
+        });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Equal(changed, Assert.Single(model.Agents).IdleSinceUtc);
+    }
+
+    // Idle time is waiting for work; an agent on a call, or on a break, is not waiting.
+    [Theory]
+    [InlineData(AgentPresenceStatus.Busy)]
+    [InlineData(AgentPresenceStatus.Reserved)]
+    [InlineData(AgentPresenceStatus.WrapUp)]
+    [InlineData(AgentPresenceStatus.Offline)]
+    public async Task StatePoll_AnAgentWhoIsNotAvailable_ReportsNoIdleTime(AgentPresenceStatus status)
+    {
+        // Arrange
+        var probe = new DashboardProbe();
+        probe.AddQueue("support");
+        probe.AddAgent(new AgentProfile
+        {
+            ItemId = "agent-working",
+            UserId = "user-working",
+            PresenceStatus = status,
+            IdleSinceUtc = new DateTime(2026, 10, 15, 9, 30, 0, DateTimeKind.Utc),
+            QueueIds = ["support"],
+        });
+        probe.Authorize("support");
+
+        // Act
+        var model = await probe.PollAsync();
+
+        // Assert
+        Assert.Null(Assert.Single(model.Agents).IdleSinceUtc);
+    }
+
     private sealed class DashboardProbe
     {
         private readonly List<AgentProfile> _agents = [];

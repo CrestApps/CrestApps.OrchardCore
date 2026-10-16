@@ -77,6 +77,16 @@ public interface IMessagingChannel
     bool IsValidAddress(string address);
 
     /// <summary>
+    /// Determines whether an address typed for someone who is not in the contacts is written exactly the way this
+    /// channel needs it. A contact's stored address only has to pass <see cref="IsValidAddress(string)"/>; a typed one
+    /// is held to this stricter rule, because nothing else confirms what the agent meant.
+    /// </summary>
+    /// <param name="address">The address as it was typed.</param>
+    /// <returns><see langword="true"/> when the address can be messaged as typed.</returns>
+    bool IsValidNewAddress(string address)
+        => IsValidAddress(address);
+
+    /// <summary>
     /// Hands one outbound message to the provider that serves the sending endpoint.
     /// </summary>
     /// <param name="message">The message to send.</param>

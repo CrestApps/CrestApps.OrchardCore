@@ -44,4 +44,10 @@ public sealed class MessagingChannelCapabilities
     /// Gets the longest body the channel accepts, or <see langword="null"/> when there is no practical limit.
     /// </summary>
     public int? MaxBodyLength { get; init; }
+
+    /// <summary>
+    /// Gets a value indicating whether the channel's addresses are phone numbers, so the composer offers a phone number
+    /// input with a country picker for an address that is not in the contacts.
+    /// </summary>
+    public bool AddressesArePhoneNumbers { get; init; }
 }
