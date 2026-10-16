@@ -166,9 +166,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// </summary>
     /// <remarks>
     /// Long enough to be a silence rather than a pause for thought: people take a few seconds to answer a
-    /// question about their budget, and being chivvied for it is worse than the wait.
+    /// question about their budget, and being chivvied for it is worse than the wait. Twelve seconds felt like dead
+    /// air on a phone, and a silent call ran for some forty seconds before it ended; eight still leaves a caller who
+    /// is looking something up three chances to answer, and any word restarts the count. The same wait as the
+    /// turn-based loop's (<see cref="TurnBasedSilenceWatchdog.SilenceBeforeSpeakingUp"/>).
     /// </remarks>
-    private static readonly TimeSpan IdleBeforeSpeakingUp = TimeSpan.FromSeconds(12);
+    internal static readonly TimeSpan IdleBeforeSpeakingUp = TimeSpan.FromSeconds(8);
 
     /// <summary>
     /// How often the idle watchdog looks.
@@ -176,9 +179,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private static readonly TimeSpan IdlePollInterval = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// How many times a silence is worth breaking before accepting that the caller has gone.
+    /// How many times a silence is worth breaking before accepting that the caller has gone. The next silence ends
+    /// the call with a goodbye.
     /// </summary>
-    private const int MaximumIdlePrompts = 2;
+    internal const int MaximumIdlePrompts = 2;
 
     /// <summary>
     /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
@@ -322,6 +326,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _voicemailMessageStarted, 0);
         Interlocked.Exchange(ref _voicemailMessageDone, 0);
         Volatile.Write(ref _openingLine, null);
+        Volatile.Write(ref _latestAssistantLine, null);
 
         // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
         // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was
@@ -466,10 +471,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         CancellationToken callToken)
     {
         var attempts = 0;
+        var lastPromptTicks = 0L;
 
         try
         {
-            while (!callToken.IsCancellationRequested && attempts < MaximumIdlePrompts)
+            while (!callToken.IsCancellationRequested)
             {
                 await Task.Delay(IdlePollInterval, callToken);
 
@@ -488,12 +494,46 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 // No session to ask while one that was lost is being replaced; the replacement speaks first anyway.
                 var conversation = live.Current;
 
-                if (quietFor < IdleBeforeSpeakingUp.Ticks || conversation is null)
+                // The prompts count one silence: a caller who answered is there, and the next silence starts the
+                // count again, as the turn-based loop counts only the prompts since the caller last spoke.
+                if (attempts > 0 && Interlocked.Read(ref _lastCallerSpeechTicks) > lastPromptTicks)
+                {
+                    attempts = 0;
+                }
+
+                var step = NextIdleStep(attempts, TimeSpan.FromTicks(quietFor));
+
+                if (step == IdleStep.Wait || conversation is null)
                 {
                     continue;
                 }
 
+                // Stamped before asking rather than after, so the next check measures from this prompt instead of
+                // firing again while the model is still deciding what to say.
+                Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
+
+                if (step == IdleStep.SayGoodbye)
+                {
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "Nobody has spoken on activity '{ActivityId}' after {Attempts} prompts, so the call is being ended.",
+                            context.Activity?.ItemId.SanitizeLogValue(),
+                            attempts);
+                    }
+
+                    // Ended the way the end-call tool ends a call: the goodbye plays, the caller has their moment to
+                    // answer it, and the line is closed. A caller who speaks during it takes the call back.
+                    await conversation.RequestStandaloneMessageAsync(
+                        WithSessionInstructions(SilentLineGoodbyePrompt(Volatile.Read(ref _latestAssistantLine))),
+                        callToken);
+                    context.EndCallOnSilence?.Invoke();
+
+                    return;
+                }
+
                 attempts++;
+                lastPromptTicks = now;
                 _meter?.IdlePrompt();
 
                 if (_logger.IsEnabled(LogLevel.Information))
@@ -505,20 +545,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                         attempts);
                 }
 
-                // Stamped before asking rather than after, so the next check measures from this prompt instead of
-                // firing again while the model is still deciding what to say.
-                Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
-
-                // Worded tightly because the first attempt was not. Asked only to "check whether they are still
-                // there", the model filled the silence by moving the sale along -- a new question the customer
-                // had even less chance of answering than the one they had just missed. What a person does here
-                // is ask again, so that is what this asks for, and it forbids the alternative outright.
-                await conversation.RequestUnpromptedResponseAsync(
-                    WithSessionInstructions(
-                        "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
-                        "either ask whether they are still there, or repeat the question you just asked them. Do " +
-                        "not ask anything new, do not move on to another topic, and do not continue the previous " +
-                        "sentence."),
+                // A standalone message, worded from its instruction alone (see StillTherePrompt): asked to continue
+                // the conversation, the model moved the sale along, and on a silent line it spoke for the customer.
+                await conversation.RequestStandaloneMessageAsync(
+                    WithSessionInstructions(StillTherePrompt(Volatile.Read(ref _latestAssistantLine))),
                     callToken);
             }
         }

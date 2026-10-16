@@ -216,6 +216,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.Action<string> AssistantSaid { get; set; }
         public string ContactName { get; set; }
         public System.Action CustomerAnswered { get; set; }
+        public System.Action EndCallOnSilence { get; set; }
         public System.Action EndCallOnVoicemail { get; set; }
         public System.Threading.CancellationToken EndCallRequested { get; set; }
         public System.Func<int> EndCallRequests { get; set; }

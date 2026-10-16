@@ -31,6 +31,11 @@ public sealed partial class VoiceAgentConversationLoop
     internal const string SilentLineGoodbye = "It sounds like now isn't a good time, so I'll let you go. Goodbye.";
 
     /// <summary>
+    /// Why a call was ended after the line stayed quiet through every prompt.
+    /// </summary>
+    internal const string SilentLineEndedReason = "The line stayed silent after the assistant asked whether anybody was there.";
+
+    /// <summary>
     /// How many times a silence is broken before the call is ended. The same limit a live session keeps.
     /// </summary>
     private const int MaximumStillTherePrompts = 2;

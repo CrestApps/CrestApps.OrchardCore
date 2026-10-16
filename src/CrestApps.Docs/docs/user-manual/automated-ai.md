@@ -66,6 +66,10 @@ When a voicemail or answering machine answers, the AI does not talk to the recor
 
 The AI is told who answered by your phone system's **Answering machine detection** setting (see [Telephony settings](telephony-settings.md)). With it off, the AI has to recognise the greeting for what it is before it leaves its message, so turn detection on for campaigns that reach many voicemails.
 
+### When the line goes quiet
+
+When nobody speaks for 8 seconds, the AI asks whether the person is still there. It asks twice, 8 seconds apart, and after another 8 seconds of silence it says goodbye and hangs up, about half a minute after its last word. Anything the person says starts the count again. Calls the AI answers work the same way.
+
 ## Let the AI answer incoming calls
 
 An automatic load is for conversations the AI starts. To have an AI profile **answer** the calls customers make to one of your numbers, set it on the number's **inbound entry point**, not on a queue. A queue only holds callers for people.

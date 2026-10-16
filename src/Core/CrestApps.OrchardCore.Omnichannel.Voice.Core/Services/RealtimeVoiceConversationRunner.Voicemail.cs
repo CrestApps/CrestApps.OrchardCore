@@ -98,6 +98,11 @@ public sealed partial class RealtimeVoiceConversationRunner
     private string _openingLine;
 
     /// <summary>
+    /// The assistant's latest line with words in it, quoted to keep a standalone line in the call's current language.
+    /// </summary>
+    private string _latestAssistantLine;
+
+    /// <summary>
     /// Whether the provider has said that a machine answered this call.
     /// </summary>
     private bool OnAMachine()
