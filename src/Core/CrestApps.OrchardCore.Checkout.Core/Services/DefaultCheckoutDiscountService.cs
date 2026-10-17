@@ -48,10 +48,11 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
         invoice.Discounts ??= [];
         invoice.Discounts.Clear();
 
-        // A checkout that pays off an existing balance (an outstanding transaction) has no price to reduce:
-        // the transaction's total does not change, so a discount would only leave the balance partly unpaid
-        // and still use up the code. Nothing is offered here, whatever a provider would have returned.
-        if (flow?.Session is CheckoutSession { SettlesExistingBalance: true })
+        // A checkout that pays off an existing balance (an outstanding transaction) has no price of its own to
+        // reduce. Unless the module that settles the balance takes what the discounts take off off that balance
+        // (and redeems the codes once it is settled), a discount would only leave the balance partly unpaid and
+        // still use up the code, so nothing is offered, whatever a provider would have returned.
+        if (flow?.Session is CheckoutSession { SettlesExistingBalance: true, AcceptsDiscountsOnBalance: false })
         {
             return;
         }

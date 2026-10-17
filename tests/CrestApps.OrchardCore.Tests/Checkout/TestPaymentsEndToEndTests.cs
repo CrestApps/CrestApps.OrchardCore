@@ -185,6 +185,7 @@ public sealed class TestPaymentsEndToEndTests
                     NullLogger<TransactionSettlementService>.Instance,
                     new PassThroughStringLocalizer<TransactionSettlementService>()),
                 providerResolver,
+                serviceProvider,
                 NullLogger<TransactionSettlementCheckoutHandler>.Instance,
                 new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
 

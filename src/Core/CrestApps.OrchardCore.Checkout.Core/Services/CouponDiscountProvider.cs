@@ -28,6 +28,7 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(1);
 
     private readonly ICouponStore _couponStore;
+    private readonly CouponScopeEvaluator _scopeEvaluator;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -36,16 +37,19 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
     /// Initializes a new instance of the <see cref="CouponDiscountProvider"/> class.
     /// </summary>
     /// <param name="couponStore">The coupon catalog.</param>
+    /// <param name="scopeEvaluator">The rule that limits a coupon to some sources, reference types or one customer.</param>
     /// <param name="distributedLock">The lock that serializes redemptions of one coupon.</param>
     /// <param name="clock">The clock used to check the validity window.</param>
     /// <param name="logger">The logger.</param>
     public CouponDiscountProvider(
         ICouponStore couponStore,
+        CouponScopeEvaluator scopeEvaluator,
         IDistributedLock distributedLock,
         IClock clock,
         ILogger<CouponDiscountProvider> logger)
     {
         _couponStore = couponStore;
+        _scopeEvaluator = scopeEvaluator;
         _distributedLock = distributedLock;
         _clock = clock;
         _logger = logger;
@@ -146,7 +150,13 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
 
         // A code that has expired, been disabled, or run out between being entered and the invoice being
         // rebuilt simply stops applying. The customer sees the full price rather than an error, because the
-        // invoice is rebuilt on every step and an error there would block a purchase they can still make.
-        return coupon is not null && coupon.IsRedeemable(_clock.UtcNow) ? coupon : null;
+        // invoice is rebuilt on every step and an error there would block a purchase they can still make. A coupon
+        // limited to some sources, reference types or one customer applies only to a checkout that matches.
+        if (coupon is null || !coupon.IsRedeemable(_clock.UtcNow) || !await _scopeEvaluator.IsInScopeAsync(coupon, flow, cancellationToken))
+        {
+            return null;
+        }
+
+        return coupon;
     }
 }

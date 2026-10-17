@@ -185,6 +185,28 @@ A first-cycle coupon reduces only what is due for the first cycle. The recurring
 
 A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything. Redemption takes a lock on the coupon, so two checkouts finishing at the same instant cannot both take the last one.
 
+### Coupons on a checkout that settles an existing balance
+
+A checkout that pays a balance that already exists (`CheckoutSession.SettlesExistingBalance`, set by the [Transactions](transactions) module for a checkout with `ReferenceType = "Transaction"`) has no price of its own to reduce. A discount there is only safe when the module that settles the balance also takes it off the balance, so the session carries a second flag, `CheckoutSession.AcceptsDiscountsOnBalance`:
+
+- When it is `false`, `CouponCheckoutFlowDisplayDriver` renders no promotion code box and ignores a posted code, and `DefaultCheckoutDiscountService` applies no discounts (and clears any recorded earlier), so `InitialPaymentAmount` and `DueNow` are untouched and nothing is redeemed.
+- When it is `true`, discounts apply as on any checkout. `CouponRedemptionCheckoutHandler` still redeems nothing for a session that settles an existing balance: the settling module redeems the codes itself, once the balance is settled.
+
+The Transactions module sets both flags. On completion, `TransactionSettlementCheckoutHandler` records each one-time discount line the invoice applied as a `Discount` adjustment of exactly that amount (`ITransactionCommandService.AdjustAsync`, never more than is still owed), then applies the confirmed payment. A 100% code settles the transaction with no payment attempt; a partial code plus the payment settles it in full. Only when the transaction ends with nothing owed does it call each `ICheckoutDiscountProvider.RedeemAsync`, so a code is never used up by a checkout that left the balance owing. A partial code with no confirmed payment records nothing. See [Transaction commands](transactions.md#transaction-commands).
+
+### Limiting a coupon to a source, a reference type or one customer
+
+A `Coupon` can be limited (`Coupon.IsScoped`) by:
+
+| Property | Matched against |
+| --- | --- |
+| `Sources` | `CheckoutDiscountScope.Source`, for example the source of the transaction a checkout settles. Case-insensitive. |
+| `ReferenceTypes` | `CheckoutSession.ReferenceType`, or `CheckoutDiscountScope.ReferenceType` (what the transaction is for). Case-insensitive. |
+| `CustomerId` | `CheckoutSession.OwnerId`, or `CheckoutDiscountScope.CustomerId` (the transaction's owner, a user id or a guest customer id). |
+| `CustomerEmail` | `CheckoutDiscountScope.CustomerEmail`, the `CheckoutContactInfo.Email` the checkout collected, or the email of the session owner's account through `ICustomerContactResolver`. Case-insensitive. |
+
+`CheckoutDiscountScope` is stored in the session's property bag by the module that knows what the checkout pays for; `TransactionSettlementCheckoutHandler` stores the transaction's `Source`, `ReferenceType`, `OwnerId` and guest email. Every limit set must match, and a scoped coupon is refused on a checkout that does not say what the limit needs (fail closed). `CouponScopeEvaluator` holds the rule, and both places a code is checked use it: `CouponCheckoutFlowDisplayDriver` refuses the code when it is entered (*That code can't be used for this payment.*), and `CouponDiscountProvider` stops applying it when the invoice is rebuilt. The coupon editor sets the limits under **Who and what it is for**; see [Coupons](../user-manual/commerce/coupons.md#limit-who-and-what-a-coupon-is-for).
+
 :::warning
 A coupon with neither a usage limit nor an end date will keep discounting until somebody notices. The coupon list warns when one exists.
 :::

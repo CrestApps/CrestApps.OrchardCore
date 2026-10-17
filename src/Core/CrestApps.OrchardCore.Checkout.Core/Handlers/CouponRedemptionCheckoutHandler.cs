@@ -39,6 +39,14 @@ public sealed class CouponRedemptionCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
+        // A checkout that settles an existing balance redeems nothing on completion: the module that settles the
+        // balance redeems the codes once the balance is actually settled, so a code is never used up by a payment
+        // that left the balance owing.
+        if (context.Flow.Session is CheckoutSession { SettlesExistingBalance: true })
+        {
+            return;
+        }
+
         var redemption = new CheckoutDiscountRedemptionContext(context.Flow, [.. invoice.Discounts]);
 
         foreach (var provider in _providers)
