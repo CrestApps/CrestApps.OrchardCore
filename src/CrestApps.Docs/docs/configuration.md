@@ -1437,9 +1437,14 @@ See [Predictive dialing](contact-center/agents-queues-dialer.md#predictive-diali
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:Reporting` |
-| **Controls** | The widest date range a Contact Center report accepts |
+| **Controls** | The widest date range a Contact Center report accepts, the widest period an agent workforce report reads from the agent state log, and how far back the daily agent time summaries are kept |
 
-Key: `MaximumReportRange` (default `400.00:00:00`, 400 days).
+| Key | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `MaximumReportRange` | `TimeSpan` | `400.00:00:00` (400 days) | The widest range any Contact Center report accepts. |
+| `MaximumWorkforceReportRange` | `TimeSpan` | `31.00:00:00` (31 days) | The widest period an agent workforce report reads when it is shown in the browser: every *Workforce & Payroll* report, the agent presence audit, the agent activity timeline and the reconciled payroll timecard. A longer period is refused with a message, before any event is read. Measured in the tenant's time zone. Must be greater than zero. |
+| `MaximumWorkforceExportRange` | `TimeSpan` | `31.00:00:00` (31 days) | The same limit for an export of those reports, which lists every row. Must be greater than zero. |
+| `AgentTimeSummaryBackfill` | `TimeSpan` | `92.00:00:00` (92 days) | How far back the daily agent time summaries are computed and kept. The time-based workforce reports read whole UTC days inside their period from these summaries. `00:00:00` turns the summaries off, so every report reads the log, and the roller deletes the summaries it kept. Cannot be negative. |
 
 ```json
 {
@@ -1447,7 +1452,10 @@ Key: `MaximumReportRange` (default `400.00:00:00`, 400 days).
     "CrestApps": {
       "ContactCenter": {
         "Reporting": {
-          "MaximumReportRange": "180.00:00:00"
+          "MaximumReportRange": "180.00:00:00",
+          "MaximumWorkforceReportRange": "31.00:00:00",
+          "MaximumWorkforceExportRange": "62.00:00:00",
+          "AgentTimeSummaryBackfill": "92.00:00:00"
         }
       }
     }
@@ -1457,7 +1465,12 @@ Key: `MaximumReportRange` (default `400.00:00:00`, 400 days).
 
 ```text
 OrchardCore__CrestApps__ContactCenter__Reporting__MaximumReportRange=180.00:00:00
+OrchardCore__CrestApps__ContactCenter__Reporting__MaximumWorkforceReportRange=31.00:00:00
+OrchardCore__CrestApps__ContactCenter__Reporting__MaximumWorkforceExportRange=62.00:00:00
+OrchardCore__CrestApps__ContactCenter__Reporting__AgentTimeSummaryBackfill=92.00:00:00
 ```
+
+Raising the workforce limits makes one request read more of the agent state log; on a busy tenant a period the database cannot read within its command timeout ends with a *This period is too large to report* message instead of figures. See [Agent workforce reports over long periods](contact-center/report-catalog.md#agent-workforce-reports-over-long-periods).
 
 See [Report Catalog](contact-center/report-catalog.md).
 

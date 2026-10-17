@@ -26,7 +26,7 @@ You only see the reports your permissions allow. If the **Reports** page says *N
 ## Run a report
 
 1. Open **Reports** and pick a category, then a report.
-2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days.
+2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days, and a report on agents' time up to 31 days (see [Agent time over long periods](#agent-time-over-long-periods)).
 3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status** or **Disposition**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) feature is on, the button becomes an **Export** menu with **Export CSV** and **Export Excel (.xlsx)**. Excel puts each section of the report on its own worksheet.
@@ -40,6 +40,16 @@ How the filters work:
 - If a report needs a feature your site does not use (for example call transfers or recording), it shows a notice naming that feature instead of showing zeroes. A report that still has real figures leaves out only the columns that feature would fill.
 
 Reports cannot be scheduled or emailed yet; run and export them when you need them.
+
+## Agent time over long periods
+
+The reports on agents' time read every state change of every agent in the period: all the *Workforce & Payroll* reports, **Agent presence audit** and **Agent activity timeline**. To keep them quick, they have these limits:
+
+- **31 days at a time.** A longer period shows *This period is too long for this report*, with the longest period allowed and the number of days you picked, and no figures. Pick 31 days or fewer, for example one month at a time. An export has the same limit. Your administrator can change both limits.
+- **5,000 rows on screen.** **Agent presence audit** lists the most recent 5,000 changes and **Agent activity timeline** the first 5,000 entries, with a note above the table that gives the total. Pick an agent or a shorter period to see the rest. An export of **Agent presence audit** lists every change; **Agent activity timeline** exports its first 5,000 entries. The timeline's summary at the top still counts every entry.
+- **Too much to read in time.** If the period still holds more than the database can read in time, the report shows *This period is too large to report*. Pick an agent or a shorter period and run it again.
+
+Reports of agents' time over many days are quick because the site keeps a summary of each finished day for every agent. The figures are the same as adding up every change: the first and last day of the period, today, and any day that changed after it was summarized are always worked out from the changes themselves.
 
 ### Date range choices
 
