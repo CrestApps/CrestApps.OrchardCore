@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Indexes;
 using CrestApps.OrchardCore.Products.Services;
@@ -76,9 +77,6 @@ public sealed class ProductSearchContentHandler : ContentHandlerBase
 
     private static async Task RefreshAsync(IServiceProvider services, HashSet<string> contentItemIds, HashSet<string> taxonomyIds)
     {
-        var contentManager = services.GetRequiredService<IContentManager>();
-        var indexer = services.GetRequiredService<ProductSearchIndexer>();
-
         if (taxonomyIds.Count > 0)
         {
             foreach (var id in await GetProductsFiledUnderAsync(services, taxonomyIds))
@@ -87,19 +85,7 @@ public sealed class ProductSearchContentHandler : ContentHandlerBase
             }
         }
 
-        foreach (var contentItemId in contentItemIds)
-        {
-            var published = await contentManager.GetAsync(contentItemId, VersionOptions.Published);
-
-            if (published is not null && published.Has<ProductPart>())
-            {
-                await indexer.IndexAsync(published);
-            }
-            else
-            {
-                await indexer.RemoveAsync(contentItemId);
-            }
-        }
+        await services.GetRequiredService<IProductSearchIndexRefresher>().RefreshAsync(contentItemIds);
     }
 
     /// <summary>

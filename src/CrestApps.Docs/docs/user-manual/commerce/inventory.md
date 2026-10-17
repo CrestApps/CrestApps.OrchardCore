@@ -55,7 +55,30 @@ Open a line to change it. Each change needs only a number and, if you like, a re
 
 The history lists every change, newest first, with when it happened, what it was, the change, what was on hand after it, and who made it. **Recount from history** recomputes what's on hand from that history, for when a number looks wrong.
 
-Two people changing the same line at once can't overwrite each other: the second waits a moment, or is asked to try again.
+Two people changing the same line at once can't overwrite each other: the second is asked to try again.
+
+## Export and import counts
+
+**Export CSV** downloads every product and variant counted, one per line, with its **Sku**, **Title**, **ContentItemId**, **VariantId**, **OnHand**, **Reserved**, **Available** and **LowStockThreshold**. It opens in any spreadsheet program.
+
+To set many counts at once, such as after a stocktake:
+
+1. Export the stock, and change the **OnHand** column to what you counted.
+2. Click **Import CSV**, choose the file, and click **Import**.
+
+Each line is found by its **ContentItemId** and **VariantId**, or by its **Sku** when those are missing or come from another site. Only **OnHand** is read; the other columns can stay or go. A line whose count differs is recorded as a **Count** with the reason *Imported from stock.csv.*, and a line that already matches is left alone.
+
+If any line has a problem, such as a SKU nothing has, a SKU two variants share, the same item twice, or a count that isn't a whole number, nothing is imported. The first problems are listed by line, so you can fix the file and import it again. A file can have up to 10,000 lines.
+
+## Low-stock alerts
+
+When a product or variant drops to its low-stock threshold or sells out, users in the roles chosen under **Settings > Commerce > Inventory** get a notification, such as *Low stock: Mug* with *Only 4 of Mug left.*, or *Out of stock: Mug*. It's sent when the stock drops to the threshold, and again if it sells out, not on every sale in between. Notifications need Orchard Core's **Notifications** feature.
+
+With **Workflows** enabled, the **Low Stock** event starts a workflow at the same moment, for example to email a supplier. Its input has the product as `ContentItem`, and `Sku`, `Title`, `Available`, `LowStockThreshold` and `SoldOut`.
+
+## In-stock filter for listings
+
+With **Product Listing** enabled, a listing can offer an **In stock** filter that shows only products some of which can be bought now. A product with variants is in stock when any variant is. A product on backorder isn't, and a product you don't count always is. Listings that offer every filter show it on their own; for a listing whose filters you chose, tick **In stock** under **Choose filters**. A product that sells out leaves the filtered list right away, and comes back when you receive more.
 
 ## What shoppers see
 
@@ -91,6 +114,13 @@ Under **Settings > Commerce > Inventory**:
 | --- | --- | --- |
 | **Low-stock threshold** | Stock counts as low at this many available units or fewer, for products without their own. Changing it updates every product that uses the default. | 5 |
 | **Hold stock for (minutes)** | How long units stay held for a buyer who started checkout and hasn't paid. | 60 |
+| **Notify about low stock** | The roles whose users are told when a product runs low or sells out. | Administrator |
+
+## Recipes and deployments
+
+A recipe can set counts with a **Stock** step, finding each item by its ids or its SKU; see the [Inventory technical manual](../../modules/inventory.md) for its format.
+
+To copy counts to another site, add the **Stock** step to a deployment plan (**Commerce** category). It exports every item with its ids and SKU. The products themselves need a content step, before the **Stock** step.
 
 ## Related pages
 

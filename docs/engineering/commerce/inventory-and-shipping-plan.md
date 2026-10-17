@@ -183,6 +183,19 @@ Each slice is a PR with tests, opened when its tests pass.
   cart display shows the label per variant, and the variant picker keeps the line and the button in step.
 - Listing cards get availability through the Add to cart action they already render; the in-stock *filter* is IN3b.
 
+### IN3b Stock operations
+
+- Stock levels: `DefaultInventoryService` tells `IStockLevelObserver`s of every change to available units; the module's
+  tracker defers to `StockLevelDispatcher`, which re-reads the items after commit and calls `IStockLevelHandler`s only
+  for a changed level (in stock, low, out). A rolled-back change raises nothing.
+- Handlers: a notification to the roles in `InventorySettings.LowStockNotificationRoles` (default Administrator), the
+  `LowStockEvent` workflow event, and a search refresh when a product sells out or comes back.
+- Listings: Products gains `ProductAttributeKeys.InStock` and `IProductSearchIndexRefresher`; Inventory contributes the
+  value to each record. The automatic *In stock* toggle hides itself without a value, so sites without Inventory don't
+  see it. Contributors are part of the index fingerprint, and `BuildVersion` went to 9.
+- CSV export and import on Commerce > Inventory (`StockCsv`, `StockCountImporter`): counts, found by ids or SKU, all or
+  nothing. The `Stock` recipe step and deployment step use the same importer.
+
 ## Not in this phase
 
 Multiple locations in the admin (the schema allows them), preorders, live carrier rates and labels, returns (RMA)

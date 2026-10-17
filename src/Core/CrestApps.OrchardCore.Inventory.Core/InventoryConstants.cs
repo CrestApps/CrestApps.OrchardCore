@@ -17,6 +17,11 @@ public static class InventoryConstants
     /// </summary>
     public const string SettingsGroupId = "inventory";
 
+    /// <summary>
+    /// The name of the recipe and deployment step that sets stock counts.
+    /// </summary>
+    public const string StockRecipeStep = "Stock";
+
     public static class Features
     {
         public const string Inventory = "CrestApps.OrchardCore.Inventory";

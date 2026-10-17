@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Listing;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
@@ -23,19 +24,22 @@ public sealed class InventorySyncService
     private readonly InventoryProductSynchronizer _synchronizer;
     private readonly ISiteService _siteService;
     private readonly ISession _session;
+    private readonly IEnumerable<IProductSearchIndexRefresher> _searchRefreshers;
 
     public InventorySyncService(
         IContentManager contentManager,
         IContentDefinitionManager contentDefinitionManager,
         InventoryProductSynchronizer synchronizer,
         ISiteService siteService,
-        ISession session)
+        ISession session,
+        IEnumerable<IProductSearchIndexRefresher> searchRefreshers)
     {
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
         _synchronizer = synchronizer;
         _siteService = siteService;
         _session = session;
+        _searchRefreshers = searchRefreshers;
     }
 
     /// <summary>
@@ -46,13 +50,26 @@ public sealed class InventorySyncService
     {
         var settings = await _siteService.GetSettingsAsync<InventorySettings>();
         var tracked = await GetTrackedTypesAsync();
+        var counted = new List<string>();
 
         foreach (var contentItemId in contentItemIds)
         {
             // The latest version, so stock can be counted before a product is published.
             var product = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
 
-            await _synchronizer.SyncAsync(contentItemId, product, product is not null && tracked.Contains(product.ContentType), settings, cancellationToken);
+            if (await _synchronizer.SyncAsync(contentItemId, product, product is not null && tracked.Contains(product.ContentType), settings, cancellationToken))
+            {
+                counted.Add(contentItemId);
+            }
+        }
+
+        // A product that started or stopped being counted may have gone in or out of stock, so listings are told.
+        if (counted.Count > 0)
+        {
+            foreach (var refresher in _searchRefreshers)
+            {
+                await refresher.RefreshAsync(counted, cancellationToken);
+            }
         }
     }
 

@@ -29,6 +29,11 @@ public class InventorySettingsViewModel
     public int DefaultLowStockThreshold { get; set; }
 
     public int HoldMinutes { get; set; }
+
+    public string[] LowStockNotificationRoles { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<string> Roles { get; set; } = [];
 }
 
 public class InventoryIndexOptions
