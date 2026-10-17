@@ -84,6 +84,7 @@ public sealed class Startup : StartupBase
                     && options.SharedVoicemailRetentionDays >= 0
                     && options.EventMetricRetentionDays >= 0
                     && options.CallQualityRecordRetentionDays >= 0
+                    && options.DialerPacingCycleRetentionDays >= 0
                     && options.SecureCaptureRetentionDays >= 0
                     && options.ProcessedEventRetentionDays >= 0
                     && options.WorkStateRetentionDays >= 0,

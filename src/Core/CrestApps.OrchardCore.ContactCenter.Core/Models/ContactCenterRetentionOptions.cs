@@ -19,6 +19,11 @@ public sealed class ContactCenterRetentionOptions
     public const int DefaultMaxPurgeBatchesPerCycle = 10_000;
 
     /// <summary>
+    /// The number of days dialer pacing cycle records are kept when none is configured.
+    /// </summary>
+    public const int DefaultDialerPacingCycleRetentionDays = 14;
+
+    /// <summary>
     /// Gets or sets the number of records deleted per purge batch. Each batch is committed before the next is
     /// read so a large drain never accumulates one unbounded transaction. Zero or less uses
     /// <see cref="DefaultPurgeBatchSize"/>.
@@ -119,6 +124,14 @@ public sealed class ContactCenterRetentionOptions
     /// measured.
     /// </summary>
     public int CallQualityRecordRetentionDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of days to retain dialer pacing cycle records, measured from when the latest cycle each
+    /// one stands for ended. Unlike the windows over business records, this one is set by default to
+    /// <see cref="DefaultDialerPacingCycleRetentionDays"/>: a record only describes what the dialer did, carries no
+    /// customer data, and one is written for every cycle that places calls. Zero keeps them indefinitely.
+    /// </summary>
+    public int DialerPacingCycleRetentionDays { get; set; } = DefaultDialerPacingCycleRetentionDays;
 
     /// <summary>
     /// Gets or sets the number of days to retain secure capture sessions that have reached a terminal state

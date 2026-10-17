@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Services;
+
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
 /// <summary>
@@ -20,6 +22,16 @@ public sealed class SupervisorDashboardIndexViewModel
     /// Gets or sets the URL that explains why each queue's and campaign's pending work is or is not being handed to agents.
     /// </summary>
     public string DispatchUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the URL that returns the dialer banner, or <see langword="null"/> when the Paced Dialing feature is off.
+    /// </summary>
+    public string DialerUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialer banner the page opens with, or <see langword="null"/> when the Paced Dialing feature is off.
+    /// </summary>
+    public DialerPacingBanner DialerBanner { get; set; }
 
     /// <summary>
     /// Gets or sets the URL that starts a supervisor live-monitoring engagement.

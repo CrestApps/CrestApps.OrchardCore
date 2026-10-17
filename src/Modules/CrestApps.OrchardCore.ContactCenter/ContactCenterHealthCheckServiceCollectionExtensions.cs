@@ -119,6 +119,29 @@ internal static class ContactCenterHealthCheckServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Registers the health checks owned by the Contact Center Paced Dialing feature.
+    /// </summary>
+    /// <param name="services">The service collection to register the checks with.</param>
+    /// <returns>The same <paramref name="services"/> so calls can be chained.</returns>
+    /// <remarks>
+    /// The dialer pacing heartbeat reads the pacing cycle records only the Paced Dialing feature writes, so it must be
+    /// registered by that feature. Every node reads the same shared records and so reaches the same verdict, which makes
+    /// it an alerting dependency check: gating readiness on it would drain the whole fleet when the dialer stalls.
+    /// </remarks>
+    public static IServiceCollection AddContactCenterDialerPacingHealthChecks(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services
+            .AddHealthChecks()
+            .AddCheck<ContactCenterDialerPacingHealthCheck>(
+                ContactCenterConstants.HealthChecks.DialerPacingCheckName,
+                tags: [ContactCenterConstants.HealthChecks.AreaTag, ContactCenterConstants.HealthChecks.DependencyTag]);
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers the distributed-dependency health checks that only make sense once Redis backs the deployment.
     /// </summary>
     /// <param name="services">The service collection to register the checks with.</param>
