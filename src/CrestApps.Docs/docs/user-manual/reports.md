@@ -65,11 +65,104 @@ The button always shows the range you picked in words, for example *From Jan 1, 
 | How busy is each queue right now and over the period? | **Queue usage** |
 | How far along is each campaign or subject, and how many numbers were not in service? | **Campaign summary**, **Subject inventory** |
 | What did an agent do, minute by minute? | **Agent activity timeline** |
+| Why is an available agent not getting calls, and how long has each agent waited? | **Agent availability and wait time** (see [below](#agent-availability-and-wait-time)) |
 | How much paid time did each agent spend in each state? | **Reconciled payroll timecard** and the other *Workforce & Payroll* reports |
 | Which dispositions are agents choosing? | **Disposition breakdown** |
 | Which numbers did the dialer call, and how did each call end? | **Dialer call detail** (see [below](#dialer-call-detail)) |
 | How often did the AI hand a conversation to a person? | **AI handoff & containment** |
 | How many leads converted, from which source and list, and what is in the sales pipeline? | **Lead funnel**, **Lead conversion by source and list**, **Opportunity pipeline** (see [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#reports)) |
+
+## Agent availability and wait time
+
+**Agent availability and wait time**, under *Queue & Routing*, answers "why is this agent not getting calls?". It shows each agent as they are right now: how long they have waited for a call, the calls they took today, whether their workspace is really connected, anything stuck on them, and, for every queue and campaign they can work, whether they can be given work and why not. Use it when an agent says they are free but nothing comes through, when the live dashboard and the time reports disagree, or before you move people between queues.
+
+The report is live: it ignores the **Date range** and reads everything as of the moment you click **Show**. "Today" starts at midnight in the site's time zone. Pick an **Agent** to look at one person.
+
+### Who is listed
+
+- If you oversee queues or campaigns (they are on your own [agent entitlement](skills-and-entitlements.md) record), the report lists every agent who is entitled to, or signed in to, one of them. That includes agents the [live dashboard](live-dashboard.md) leaves out, such as an agent who shows as Available but is signed in to nothing, or only to a queue you do not oversee.
+- If you oversee nothing, the report lists every agent.
+- If you pick an **Agent**, the report shows that agent, whoever oversees them.
+
+### Agents
+
+| Column | What it shows |
+| --- | --- |
+| **Presence** | The agent's state now, with its reason, for example *Break (Lunch)*. *Busy* means on a call. |
+| **Available since (UTC)** and **Idle time** | For an Available agent, when they last became free and how long ago that was. Routing offers work first to the agent who has been free the longest, by this time. |
+| **Last call assigned (UTC)** | When routing last gave the agent work. |
+| **Last call ended (UTC)** | When the agent's last call ended. |
+| **Calls today** | How many times the agent went on a call today. |
+| **Longest wait between calls** | The longest stretch today the agent was ready for a call (Available, or being offered one) without getting one, including the stretch still running now. |
+| **Signed in to** | The queues and campaigns the agent is signed in to, or *Nothing*. |
+| **Live session** | *Yes* when the agent's workspace is connected and has checked in recently (within 90 seconds, unless your administrator changed it). *No: offline, disconnected or no recent heartbeat* means the workspace was closed, lost its connection or stopped checking in. *No session* means the agent has not opened their workspace. Routing only offers work to an agent with a live session. |
+| **Heartbeat age** | How long ago the agent's workspace last checked in. |
+| **On live dashboard** | Whether your live dashboard shows the agent, and if not, why: *not signed in to any queue or campaign*, or *not signed in to a queue or campaign you oversee*. |
+| **Stale-state flags** | Anything stuck on the agent (see [Stale-state flags](#stale-state-flags)). Shown in red. |
+| **History check** | A note when the agent's state now and their recorded history disagree (see [History check](#history-check)). Shown in red. |
+
+### Why each queue or campaign is or is not giving work
+
+One row for every queue and campaign the agent is entitled to or signed in to.
+
+| Column | What it shows |
+| --- | --- |
+| **Queue or campaign** and **Type** | The queue or campaign, and which one it is. |
+| **Entitled** | Whether a manager has allowed the agent to work it. |
+| **Signed in** | Whether the agent is signed in to it now. |
+| **Waiting** | How many items are waiting in it. |
+| **Eligible now** | *Yes* when the agent can be given work from it right now. |
+| **Why not eligible** | Every reason the agent cannot be given work from it, or, when they can, why they still may not be getting any. Shown in red when the agent is not eligible. |
+| **Routing detail** | When work is waiting and the agent passes the checks above, what routing itself says about the agent for the next waiting item, in its own words: for example a missing skill, their place in the longest-idle line, or that they already had the call. |
+
+The reasons in **Why not eligible** are the checks routing makes, in the same order:
+
+| Reason | What it means and what to do |
+| --- | --- |
+| **The queue no longer exists**, **The queue is turned off**, **Closed by its business hours** | Nobody gets work from this queue now. Check the queue's settings or its business hours. |
+| **Not entitled to this queue** (or campaign) | A manager has not allowed the agent to work it. Change the agent's entitlements. |
+| **Not signed in to this queue** (or campaign) | The agent is allowed to work it but did not sign in to it. Ask them to sign in to it from their workspace. |
+| **No live session** | The agent's workspace is closed, disconnected or has stopped checking in. Ask them to reopen or reload it. |
+| **The live session is not signed in to it** | The workspace the agent has open is not signed in to this queue. Ask them to sign in again. |
+| **Not Available (presence is ...)** | The agent is on a break, on a call, in wrap-up or in another state that does not take work. |
+| **At capacity (x/y active interactions)** | The agent is already handling as many interactions as they are allowed at once. |
+| **Routing passes this agent over for the next waiting item** | The agent passes every check, but routing chose not to offer them the next item; the **Routing detail** says why, for example a missing required skill, or that they declined the call or transferred it away, so it goes to someone who has not had it first. |
+| **None: next in line for the waiting work** | Routing will offer the agent the next waiting item. |
+| **None: eligible, but another agent is ahead in line** | The agent can take work, but someone else gets the next item first. |
+| **None, but no work is waiting** | The agent can take work; there is simply nothing waiting. |
+| **None, but no waiting item can be worked now** | Items are waiting, but none can be offered yet, for example campaign records scheduled for later. |
+
+An agent with no queue or campaign at all shows one row: **Not entitled to or signed in to any queue or campaign.**
+
+### Stale-state flags
+
+A flag means something is holding the agent in a state that nothing real is behind. For an agent the live dashboard shows, **Free agent** in the **More** menu of their card releases it.
+
+| Flag | What it means |
+| --- | --- |
+| **Available with no live session** | The agent is marked Available but their workspace is not connected, so routing passes them over. The time reports still count them as Available. |
+| **Unresolved soft-phone call record** | A call is still open on the agent's soft phone although the phone service no longer has it, cannot find it, or the browser that placed it is gone. This is how an agent can show *On a call* with nobody on the line. |
+| **Open interaction although the provider reports the call ended** | A Contact Center call is still open although the phone service says it ended. |
+| **Busy with no live interaction** and **Reserved with no live interaction** | The agent's state says they are on a call or being offered one, but there is no call or offer behind it. |
+| **Held reservation that no offer or call backs** | The agent is still holding an offer that is no longer ringing. |
+| **Work assigned with no offer or call behind it** | Work is still assigned to the agent although no offer or call is in progress. |
+| **Holds reservation ...** | An offer may be ringing for the agent right now. Not a problem on its own; it turns into a held-reservation flag if it stays. |
+| **Stale work not checked** | Stuck calls and states are found by the Contact Center Supervision & Live Dashboard feature, which is off. Ask your administrator to turn it on. |
+
+### History check
+
+The *Workforce & Payroll* reports, such as **Agent time summary**, count an agent's time from the state changes the system recorded, up to now when no later change is recorded. The **History check** column says when that record and the agent's state now disagree:
+
+- **No sign-out is recorded after the change to ... so the time summary counts this agent as ... up to now, but the agent has no live session.** The agent left without signing out (for example they closed the browser), so the time reports keep counting them, for example as Available for many hours, although nobody is there.
+- **The profile says ..., but the last recorded change is to ...** The agent's state now is not the one the record ends with.
+- **No state change is recorded for this agent.** The time reports show no time for an agent who is signed in now.
+
+### Find out why an agent is not getting calls
+
+1. Open **Reports > Queue & Routing > Agent availability and wait time**, pick the **Agent** and click **Show**.
+2. In **Agents**, check **Presence**, **Live session** and **Stale-state flags**. A red flag usually is the answer: use **Free agent** on the live dashboard, or ask the agent to reload their workspace.
+3. In **Why each queue or campaign is or is not giving work**, find the queue or campaign that has work **Waiting** and read **Why not eligible** and **Routing detail**.
+4. If **On live dashboard** says *No*, the row says why the board does not show the agent.
 
 ## Dialer call detail
 
