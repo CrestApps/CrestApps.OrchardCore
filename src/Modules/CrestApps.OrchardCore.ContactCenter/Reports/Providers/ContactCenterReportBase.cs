@@ -73,7 +73,16 @@ public abstract class ContactCenterReportBase : IReport, IReportFilterMetadata, 
             return _capabilityGuard.DescribeUnavailable(missing);
         }
 
-        return await RunCoreAsync(context, cancellationToken);
+        try
+        {
+            return await RunCoreAsync(context, cancellationToken);
+        }
+        catch (Exception exception) when (ReportQueryTimeout.IsTimeout(exception))
+        {
+            // A period too wide for the database to read in time is answered with what to change, not with an
+            // unhandled error that held a connection for the whole timeout.
+            return ReportQueryTimeout.Describe(S);
+        }
     }
 
     /// <summary>
