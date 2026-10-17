@@ -42,7 +42,7 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 OrderNumber = order.OrderNumber,
                 UserId = order.UserId,
                 CustomerId = order.CustomerId,
-                CustomerEmail = order.CustomerEmail?.ToUpperInvariant(),
+                CustomerEmail = order.CustomerEmail?.Trim().ToUpperInvariant(),
                 CartId = order.CartId,
                 CheckoutSessionId = order.CheckoutSessionId,
                 Status = order.Status,

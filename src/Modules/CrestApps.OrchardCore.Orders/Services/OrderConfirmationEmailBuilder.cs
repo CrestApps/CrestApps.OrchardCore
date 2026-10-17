@@ -26,7 +26,10 @@ public sealed class OrderConfirmationEmailBuilder
         S = stringLocalizer;
     }
 
-    public async Task<OrderConfirmationEmail> BuildAsync(Order order)
+    /// <summary>
+    /// The confirmation of <paramref name="order"/>, with a link to it when <paramref name="orderUrl"/> is given.
+    /// </summary>
+    public async Task<OrderConfirmationEmail> BuildAsync(Order order, string orderUrl = null)
     {
         ArgumentNullException.ThrowIfNull(order);
 
@@ -89,6 +92,14 @@ public sealed class OrderConfirmationEmailBuilder
             }
 
             html.Append("</p>");
+        }
+
+        if (!string.IsNullOrEmpty(orderUrl))
+        {
+            var view = S["View your order"].Value;
+
+            text.AppendLine().AppendLine($"{view}: {orderUrl}");
+            html.Append("<p style=\"margin-top:16px\"><a href=\"").Append(_encoder.Encode(orderUrl)).Append("\">").Append(_encoder.Encode(view)).Append("</a></p>");
         }
 
         html.Append("</div>");

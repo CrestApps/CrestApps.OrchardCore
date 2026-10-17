@@ -96,6 +96,30 @@ public class CustomerEditViewModel
 
     [BindNever]
     public IReadOnlyList<CustomerAddressSummary> Addresses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the customer's recent orders, when Orders is enabled.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<CustomerOrderSummary> Orders { get; set; } = [];
+
+    [BindNever]
+    public bool HasOrders { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customer this merged guest moved to.
+    /// </summary>
+    [BindNever]
+    public CustomerMergeSummary MergedInto { get; set; }
+
+    [BindNever]
+    public DateTime? MergedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the guest customers merged into this one.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<CustomerMergeSummary> MergedCustomers { get; set; } = [];
 }
 
 /// <summary>
@@ -195,4 +219,24 @@ public class MyAccountViewModel
     public string Phone { get; set; }
 
     public bool AcceptsMarketing { get; set; }
+}
+
+public class CustomerOrderSummary
+{
+    public string OrderId { get; set; }
+
+    public string OrderNumber { get; set; }
+
+    public DateTime CreatedUtc { get; set; }
+
+    public string Status { get; set; }
+
+    public string Total { get; set; }
+}
+
+public class CustomerMergeSummary
+{
+    public string CustomerId { get; set; }
+
+    public string Name { get; set; }
 }

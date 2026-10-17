@@ -100,6 +100,8 @@ public sealed class CustomerRecordTests
                 await store.CreateAsync(new Customer { ItemId = "c1", DisplayName = "Pat Lee", Email = "pat@example.test", UserId = "user-1", LastActivityUtc = now }, TestContext.Current.CancellationToken);
                 await store.CreateAsync(new Customer { ItemId = "c2", Kind = CustomerKind.Business, CompanyName = "Contoso", Email = "buyer@contoso.test", LastActivityUtc = now.AddDays(-1) }, TestContext.Current.CancellationToken);
                 await store.CreateAsync(new Customer { ItemId = "c3", DisplayName = "Old Guest", Email = "old@example.test", Status = CustomerStatus.Disabled, LastActivityUtc = now.AddDays(-2) }, TestContext.Current.CancellationToken);
+                await store.CreateAsync(new Customer { ItemId = "c4", DisplayName = "Pat (guest)", Email = "Pat@Example.test", LastActivityUtc = now.AddDays(-3) }, TestContext.Current.CancellationToken);
+                await store.CreateAsync(new Customer { ItemId = "c5", DisplayName = "Pat (merged)", Email = "pat@example.test", Status = CustomerStatus.Merged, LastActivityUtc = now.AddDays(-4) }, TestContext.Current.CancellationToken);
                 await session.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
@@ -107,15 +109,18 @@ public sealed class CustomerRecordTests
             {
                 var store = new CustomerStore(session);
 
-                Assert.Equal(["c1"], await IdsAsync(store, new CustomerQuery { Search = "pat" }));
+                Assert.Equal(["c1", "c4", "c5"], await IdsAsync(store, new CustomerQuery { Search = "pat" }));
                 Assert.Equal(["c2"], await IdsAsync(store, new CustomerQuery { Search = "CONTO" }));
                 Assert.Equal(["c2"], await IdsAsync(store, new CustomerQuery { Search = "buyer@" }));
                 Assert.Equal(["c1"], await IdsAsync(store, new CustomerQuery { HasAccount = true }));
                 Assert.Equal(["c2"], await IdsAsync(store, new CustomerQuery { Kind = CustomerKind.Business }));
-                Assert.Equal(["c1", "c2"], await IdsAsync(store, new CustomerQuery { Status = CustomerStatus.Active }));
+                Assert.Equal(["c1", "c2", "c4"], await IdsAsync(store, new CustomerQuery { Status = CustomerStatus.Active }));
 
                 // The most recently active come first.
-                Assert.Equal(["c1", "c2", "c3"], await IdsAsync(store, new CustomerQuery()));
+                Assert.Equal(["c1", "c2", "c3", "c4", "c5"], await IdsAsync(store, new CustomerQuery()));
+
+                // Only active guests, whatever the case of the email: never the account itself or a guest already merged.
+                Assert.Equal(["c4"], (await store.ListGuestsByEmailAsync("PAT@example.TEST", TestContext.Current.CancellationToken)).Select(customer => customer.ItemId));
                 Assert.Equal("c1", (await store.FindByUserIdAsync("user-1", TestContext.Current.CancellationToken)).ItemId);
             }
         }
@@ -159,29 +164,5 @@ public sealed class CustomerRecordTests
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;
-    }
-
-    private sealed class InMemoryCustomerStore : ICustomerStore
-    {
-        public List<Customer> Customers { get; } = [];
-
-        public ValueTask<Customer> FindByIdAsync(string customerId, CancellationToken cancellationToken = default)
-            => ValueTask.FromResult(Customers.FirstOrDefault(customer => customer.ItemId == customerId));
-
-        public Task<Customer> FindByUserIdAsync(string userId, CancellationToken cancellationToken = default)
-            => Task.FromResult(Customers.FirstOrDefault(customer => customer.UserId == userId));
-
-        public Task<(int Count, IReadOnlyList<Customer> Customers)> PageAsync(CustomerQuery query, int skip, int take, CancellationToken cancellationToken = default)
-            => Task.FromResult<(int, IReadOnlyList<Customer>)>((Customers.Count, Customers));
-
-        public ValueTask CreateAsync(Customer customer, CancellationToken cancellationToken = default)
-        {
-            Customers.Add(customer);
-
-            return ValueTask.CompletedTask;
-        }
-
-        public ValueTask UpdateAsync(Customer customer, CancellationToken cancellationToken = default)
-            => ValueTask.CompletedTask;
     }
 }

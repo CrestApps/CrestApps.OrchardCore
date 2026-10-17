@@ -1,7 +1,7 @@
 @model CustomerEditViewModel
 
 @{
-    var readOnly = !Model.CanManage || Model.Status == CustomerStatus.Anonymized;
+    var readOnly = !Model.CanManage || Model.Status is CustomerStatus.Anonymized or CustomerStatus.Merged;
     var hasAccount = !string.IsNullOrEmpty(Model.UserId);
 }
 
@@ -117,6 +117,66 @@
         </div>
     }
 </form>
+
+@if (Model.MergedInto is not null)
+{
+    <div class="alert alert-info mt-4">
+        @T["This guest's orders and addresses moved to"]
+        <a asp-action="Edit" asp-route-customerId="@Model.MergedInto.CustomerId">@Model.MergedInto.Name</a>
+        @if (Model.MergedUtc.HasValue)
+        {
+            @T[" on {0:d}, when that account's email was verified.", Model.MergedUtc.Value]
+        }
+    </div>
+}
+
+@if (!Model.IsNew && Model.HasOrders)
+{
+    <div class="mt-5">
+        <h2 class="h5">@T["Orders"]</h2>
+        @if (Model.Orders.Count == 0)
+        {
+            <p class="text-muted">@T["No orders yet."]</p>
+        }
+        else
+        {
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Order"]</th>
+                        <th scope="col">@T["Placed"]</th>
+                        <th scope="col">@T["Status"]</th>
+                        <th scope="col" class="text-end">@T["Total"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in Model.Orders)
+                    {
+                        <tr>
+                            <td><a asp-route="OrdersDetail" asp-route-orderId="@order.OrderId" class="font-monospace">@order.OrderNumber</a></td>
+                            <td>@order.CreatedUtc.ToString("d")</td>
+                            <td>@order.Status</td>
+                            <td class="text-end">@order.Total</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+}
+
+@if (Model.MergedCustomers.Count > 0)
+{
+    <div class="mt-4">
+        <h2 class="h6">@T["Merged guest checkouts"]</h2>
+        <ul class="list-unstyled small">
+            @foreach (var merged in Model.MergedCustomers)
+            {
+                <li><a asp-action="Edit" asp-route-customerId="@merged.CustomerId">@merged.Name</a></li>
+            }
+        </ul>
+    </div>
+}
 
 @if (!Model.IsNew)
 {

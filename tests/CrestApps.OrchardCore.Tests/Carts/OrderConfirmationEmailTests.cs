@@ -67,7 +67,10 @@ public sealed class OrderConfirmationEmailTests
         var clock = new Mock<IClock>();
         clock.Setup(c => c.UtcNow).Returns(_now);
 
-        return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, CreateBuilder(), services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationCheckoutHandler>.Instance);
+        var links = new Mock<IOrderLinkService>();
+        links.Setup(l => l.CreateUrlAsync(It.IsAny<Order>())).ReturnsAsync("https://store.test/orders/view/token");
+
+        return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationCheckoutHandler>.Instance);
     }
 
     private static CheckoutFlowCompletedContext Completed(Order order)
@@ -108,7 +111,8 @@ public sealed class OrderConfirmationEmailTests
         await handler.CompletedAsync(Completed(order));
         await handler.CompletedAsync(Completed(order));
 
-        _email.Verify(email => email.SendAsync(It.Is<MailMessage>(message => message.To == "jordan@example.test"), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        // A guest's confirmation links to the order.
+        _email.Verify(email => email.SendAsync(It.Is<MailMessage>(message => message.To == "jordan@example.test" && message.TextBody.Contains("https://store.test/orders/view/token")), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal(_now, order.ConfirmationSentUtc);
     }
 

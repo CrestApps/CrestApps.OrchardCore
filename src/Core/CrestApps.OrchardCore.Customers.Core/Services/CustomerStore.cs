@@ -14,6 +14,11 @@ public interface ICustomerStore
 
     Task<(int Count, IReadOnlyList<Customer> Customers)> PageAsync(CustomerQuery query, int skip, int take, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The active guest customers who bought with <paramref name="email"/>, ignoring case.
+    /// </summary>
+    Task<IReadOnlyList<Customer>> ListGuestsByEmailAsync(string email, CancellationToken cancellationToken = default);
+
     ValueTask CreateAsync(Customer customer, CancellationToken cancellationToken = default);
 
     ValueTask UpdateAsync(Customer customer, CancellationToken cancellationToken = default);
@@ -53,6 +58,23 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
 
         return Session.Query<Customer, CustomerIndex>(index => index.UserId == userId, collection: CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Customer>> ListGuestsByEmailAsync(string email, CancellationToken cancellationToken = default)
+    {
+        if (CustomerIndexProvider.Normalize(email) is not { } normalized)
+        {
+            return [];
+        }
+
+        var guests = await Session.Query<Customer, CustomerIndex>(index =>
+                index.NormalizedEmail == normalized &&
+                !index.HasAccount &&
+                index.Status == CustomerStatus.Active,
+                collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return guests.ToArray();
     }
 
     public async Task<(int Count, IReadOnlyList<Customer> Customers)> PageAsync(CustomerQuery query, int skip, int take, CancellationToken cancellationToken = default)

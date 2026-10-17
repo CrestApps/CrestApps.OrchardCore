@@ -67,6 +67,16 @@ With Orders enabled, Customers adds a **Contact** step to every order's checkout
 - **What it keeps:** the entries as `CustomerContactStep` in the session's saved steps, and a `CheckoutContactInfo` (name, email, phone, billing address) on the session. The order copies that contact and billing address when it is paid, and Pay Later puts the guest's name and email on its transaction, so receipts and reminders reach them.
 - **When the order is paid** (`CompletingAsync`, inside the completion's transaction): the order is linked to the signed-in buyer's customer, or to a new guest customer made with `ICustomerService.CreateGuestAsync`; each guest checkout makes its own, since an email typed at checkout proves nothing. A guest's billing address goes into their address book as the default billing address; a signed-in customer's new address goes in when they asked, never twice.
 
+## Merging guests into an account
+
+`ICustomerMergeService.MergeVerifiedGuestsAsync(userId)` joins a guest's history to their account. It runs when a user signs in (`ILoginFormEvent.LoggedInAsync`), registers (`IRegistrationFormEvents.RegisteredAsync`) or confirms their email (`IUserEventHandler.ConfirmedAsync`), and does nothing unless the user's `EmailConfirmed` is true. Under a per-user distributed lock it takes every active guest customer with the user's email (`ICustomerStore.ListGuestsByEmailAsync`) and, for each:
+
+- calls every `ICustomerMergeHandler`. With Orders on, `OrderCustomerMergeHandler` moves the guest's orders to the account's customer (setting `UserId` too, so they appear under My Orders) and, with Transactions on, turns the guest transactions paying for them into the user's;
+- moves the guest's addresses into the account's book, skipping duplicates, up to 20;
+- marks the guest `Merged` with `MergedIntoCustomerId` and `MergedUtc`, and adds it to the account customer's `MergedCustomerIds`.
+
+The event handlers resolve the merge service when they run: Orchard Core's user store and user service create them, and the merge service needs the user service, so injecting it would be a circular dependency. A failed merge is logged and tried again on the next sign-in.
+
 ## Admin
 
 **Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active, and their address book (`customers/{customerId}/addresses/...`). An anonymized customer's addresses can't be edited.

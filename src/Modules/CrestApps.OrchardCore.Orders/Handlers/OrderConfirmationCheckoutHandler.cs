@@ -23,6 +23,7 @@ public sealed class OrderConfirmationCheckoutHandler : CheckoutHandlerBase
     private readonly IOrderStore _orderStore;
     private readonly ISiteService _siteService;
     private readonly OrderConfirmationEmailBuilder _emailBuilder;
+    private readonly IOrderLinkService _orderLinks;
     private readonly IServiceProvider _serviceProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -31,6 +32,7 @@ public sealed class OrderConfirmationCheckoutHandler : CheckoutHandlerBase
         IOrderStore orderStore,
         ISiteService siteService,
         OrderConfirmationEmailBuilder emailBuilder,
+        IOrderLinkService orderLinks,
         IServiceProvider serviceProvider,
         IClock clock,
         ILogger<OrderConfirmationCheckoutHandler> logger)
@@ -38,6 +40,7 @@ public sealed class OrderConfirmationCheckoutHandler : CheckoutHandlerBase
         _orderStore = orderStore;
         _siteService = siteService;
         _emailBuilder = emailBuilder;
+        _orderLinks = orderLinks;
         _serviceProvider = serviceProvider;
         _clock = clock;
         _logger = logger;
@@ -65,7 +68,9 @@ public sealed class OrderConfirmationCheckoutHandler : CheckoutHandlerBase
             return;
         }
 
-        var email = await _emailBuilder.BuildAsync(order);
+        // A guest opens the order from the email; a signed-in customer finds it under My Orders.
+        var orderUrl = order.UserId is null ? await _orderLinks.CreateUrlAsync(order) : null;
+        var email = await _emailBuilder.BuildAsync(order, orderUrl);
 
         var result = await emailService.SendAsync(new MailMessage
         {

@@ -170,6 +170,24 @@ This is what shipping, guest order lookup and the customer account pages wait on
   when `OrderSettings.SendConfirmations` is on and the site has an email service. CU4 adds the signed order link to
   it.
 
+### CU4 as built
+
+- Orders: `IOrderLinkService` (data protection, 60-day time limit, purpose `CrestApps.OrchardCore.Orders.OrderLink`)
+  and `OrderViewController`: `orders/view/{token}` (read-only order, pay link for an outstanding Pay Later transaction)
+  and `orders/find` (emails links to orders from the last year, same answer either way, limited by
+  `IPaymentAttemptLimiter` per IP and per email, plus the `find-order` rate-limit group). `OrderQuery` gained
+  `CustomerId` and `CustomerEmail`; `OrderIndex.CustomerEmail` is now trimmed and indexed (upgrade step 3 with
+  `IndexTableIndexCreation`). The confirmation page and a guest's confirmation email carry the link; the page invites
+  a guest to create an account when registration is on.
+- Customers: `CustomerStatus.Merged`, `MergedIntoCustomerId`, `MergedUtc`, `MergedCustomerIds`;
+  `ICustomerStore.ListGuestsByEmailAsync`; `ICustomerMergeService` run from sign-in, registration and email
+  confirmation; `ICustomerMergeHandler` with `OrderCustomerMergeHandler` (orders and their guest transactions). The
+  customer page lists the customer's orders (by user for account holders, so orders from before CU1 show) and merges.
+- Not moved: subscriptions and installment plans keep their own owner fields, as the plan says.
+- Found live: injecting the merge service into the user event handlers is a circular dependency (UserStore → user
+  event handlers → merge service → customer service → user service → registration events). They resolve it when they
+  run.
+
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
 

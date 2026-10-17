@@ -41,6 +41,16 @@ Open an order to see what was bought, the quantities and prices, the tax and the
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
 
+## Guests and their orders
+
+A guest has no account to sign in to, so they reach their order through a **link**:
+
+- The confirmation page and the confirmation email give a guest a link that opens their order: what they bought, the total, the billing address, and a **Pay now** button when something is still owed. A link works for 60 days. A changed or expired link shows *This order link no longer works* and nothing about any order.
+- **Find my order** (`/orders/find` on your site) asks for an email and emails a link to each order placed with it in the last year. It always answers the same way, whether or not there are orders, so it never tells anyone who has bought from you. It is limited to a few requests per visitor and per email.
+- When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+
+Link to **Find my order** from your site's footer or help page so guests can find it.
+
 ## Order confirmations
 
 When an order is paid, the customer is emailed a confirmation with the order number, what they bought, the total and the billing address. It goes to the email given at checkout, once per order.
