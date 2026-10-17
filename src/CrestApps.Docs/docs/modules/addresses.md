@@ -53,6 +53,38 @@ The formats come from Google's address data, the data behind [libaddressinput](h
 
 The data is a snapshot inside the package. A running site never contacts Google, and no address leaves the site. `utilities/address-data/build-address-data.mjs` refreshes the snapshot from Google's Address Data Service when the maintainers choose to.
 
+## The address editor
+
+Every page that asks for an address uses the same editor: the customer address book, the admin, the checkout, and content fields. It asks for the country first and lays the other fields out for it, in the country's order, with its labels (State, Prefecture, Post town, ZIP code, Eircode…), marking what the country requires and offering its regions as a list.
+
+`IAddressEditorService` (in `CrestApps.OrchardCore.Addresses.Core.Editing`) builds and checks it:
+
+| Method | |
+| --- | --- |
+| `BuildAsync(address, options)` | The editor for an address, or for a new one. |
+| `PopulateAsync(model, options)` | Lays a posted editor out again for the country it posted, to show it with its errors. |
+| `ValidateAsync(model, modelState, prefix, options)` | Checks the posted address against its country and the page's options, and adds each problem to `modelState` under `prefix` and the field's name, in the visitor's language. Returns the `AddressValidationResult`, whose `Address` is the tidied value to keep. |
+| `GetLayoutAsync(countryCode)` | The `AddressEditorLayout` of a country: its lines, labels, required parts, regions and an example postal code. |
+
+`AddressEditorOptions` sets what the page asks for besides the country's own parts: `ShowName`, `RequireName`, `ShowCompany`, `ShowPhone`, the `Countries` offered (all the site serves when `null`), and the `DefaultCountry` of a new address. `AddressEditorViewModel.HasAnyValue()` tells an optional address left blank from one started.
+
+The editor is the `AddressEditor` shape, whose model is the `AddressEditorViewModel`. Its fields post under the shape's prefix, so a page binds them back with that prefix:
+
+```csharp
+// In a controller.
+var editor = await _addressEditor.BuildAsync(customerAddress, options);
+model.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(editor, prefix: "Address");
+
+// On post.
+var posted = new AddressEditorViewModel();
+await TryUpdateModelAsync(posted, "Address");
+var result = await _addressEditor.ValidateAsync(posted, ModelState, "Address", options);
+```
+
+A display driver can return `Initialize<AddressEditorViewModel>("AddressEditor", …)` instead, with its own prefix. `CreateAddressDisplayAsync(address)` gives the `AddressDisplay` shape, which prints an address through `IAddressFormatter`.
+
+When the country changes, the editor's script asks `~/addresses/formats/{countryCode}` for the country's layout and re-lays the fields. Fields the country doesn't use are set aside and disabled, so they post nothing. Without the script, the server lays the form out again when it comes back. The layout is the same for everyone, in the visitor's language, so the endpoint needs no sign-in and is cached by the browser for an hour.
+
 ## Country lists
 
 `ICountryService.GetCountriesAsync()` lists the countries a site offers. With only the Addresses feature it returns the ISO list from the .NET runtime. With **Address Countries** enabled it returns the published `Country` content items instead, falling back to the ISO list while there are none, so a store can offer only the countries it serves or rename one.

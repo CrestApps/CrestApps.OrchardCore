@@ -7,8 +7,8 @@
       $(CrestAppsDescription)
 
       Address formats for every country: which parts an address has, in what order, which are required, what its
-      postal codes look like and which regions it has, with the checks and printing built on them. The country data
-      comes from Google's address data (libaddressinput), licensed under CC BY 4.0.
+      postal codes look like and which regions it has, with the checks, printing and address editor built on them.
+      The country data comes from Google's address data (libaddressinput), licensed under CC BY 4.0.
     </Description>
     <PackageTags>$(PackageTags) Addresses Core</PackageTags>
   </PropertyGroup>
@@ -23,7 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.DisplayManagement" />
   </ItemGroup>
 
   <ItemGroup>
