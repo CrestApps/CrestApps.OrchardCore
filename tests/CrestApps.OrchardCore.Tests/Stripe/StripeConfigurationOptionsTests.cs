@@ -137,8 +137,8 @@ public sealed class StripeConfigurationOptionsTests
     }
 
     [Theory]
-    [InlineData(true, false, false)]
-    [InlineData(false, true, true)]
+    [InlineData(true, false, true)]
+    [InlineData(false, true, false)]
     [InlineData(null, true, true)]
     [InlineData(null, false, false)]
     public void Configure_TheConfiguredModeWinsOverTheStoredMode(bool? configuredIsLive, bool storedIsLive, bool expectedIsLive)
