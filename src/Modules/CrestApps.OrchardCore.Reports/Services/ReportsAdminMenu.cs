@@ -65,7 +65,7 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
                         }
                     });
                 }
-            }, priority: 1);
+            }, priority: ReportsConstants.AdminMenuPriority);
 
         return ValueTask.CompletedTask;
     }

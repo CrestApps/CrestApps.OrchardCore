@@ -1,0 +1,100 @@
+@model DesignedReportViewModel
+
+@{
+    var run = Model.Run;
+    var hasFilters = run.Filters.Count > 0;
+}
+
+@if (!string.IsNullOrWhiteSpace(Model.Design.Description))
+{
+    <p class="text-muted">@Model.Design.Description</p>
+}
+
+<form method="get" action="@Model.FormAction" class="designed-report">
+    <input type="hidden" name="@ReportFilterValueBinder.AppliedField" value="1" />
+
+    <div class="card">
+        @if (hasFilters || Model.ExportFormats.Count > 0 || !string.IsNullOrEmpty(Model.EditUrl))
+        {
+            <div class="card-header">
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-md-4 align-items-end g-2">
+                    <partial name="_ReportFilters" model="new ReportFiltersViewModel { Filters = run.Filters }" />
+                    <div class="col-auto p-1 ms-auto d-flex flex-wrap gap-1">
+                        @if (hasFilters)
+                        {
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter" aria-hidden="true"></i> @T["Show"]
+                            </button>
+                        }
+                        @if (run.Document is not null && Model.ExportFormats.Count == 1)
+                        {
+                            var exportFormat = Model.ExportFormats[0];
+
+                            <button type="submit" class="btn btn-outline-secondary" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get">
+                                <i class="fa-solid fa-download" aria-hidden="true"></i> @T["Export {0}", exportFormat.DisplayName]
+                            </button>
+                        }
+                        else if (run.Document is not null && Model.ExportFormats.Count > 1)
+                        {
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-solid fa-download" aria-hidden="true"></i> @T["Export"]
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    @foreach (var exportFormat in Model.ExportFormats)
+                                    {
+                                        <li>
+                                            <button type="submit" class="dropdown-item" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get">@T["Export {0}", exportFormat.DisplayName]</button>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.EditUrl))
+                        {
+                            <a class="btn btn-outline-secondary" href="@Model.EditUrl">
+                                <i class="fa-solid fa-pen-ruler" aria-hidden="true"></i> @T["Edit design"]
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card-body">
+            @if (run.Errors.Count > 0)
+            {
+                <div class="alert alert-danger" role="alert">
+                    <div class="fw-semibold">@T["This report cannot run."]</div>
+                    <ul class="mb-0">
+                        @foreach (var error in run.Errors)
+                        {
+                            <li>@error</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @if (run.Warnings.Count > 0)
+            {
+                <div class="alert alert-warning" role="alert">
+                    <ul class="mb-0">
+                        @foreach (var warning in run.Warnings)
+                        {
+                            <li>@warning</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @if (run.Document is not null && run.Document.HasContent)
+            {
+                <partial name="_ReportDocument" model="run.Document" />
+            }
+            else if (run.Errors.Count == 0)
+            {
+                <p class="card-text text-center text-muted">@T["No data found for the selected filters."]</p>
+            }
+        </div>
+    </div>
+</form>

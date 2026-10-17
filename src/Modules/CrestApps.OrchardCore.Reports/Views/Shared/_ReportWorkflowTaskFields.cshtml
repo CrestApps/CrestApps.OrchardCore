@@ -1,0 +1,49 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.ViewModels
+
+@model ReportTaskViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReportId">
+    <label class="ocat-label" asp-for="ReportId">@T["Report"]</label>
+    <div class="ocat-end">
+        <select class="selectpicker show-tick" asp-for="ReportId" data-width="100%" data-live-search="true" title="@T["Choose a report"]">
+            <option value="">@T["Use the expression below"]</option>
+            @foreach (var report in Model.Reports)
+            {
+                <option value="@report.Value" selected="@(report.Value == Model.ReportId)">@report.Text</option>
+            }
+        </select>
+        <span asp-validation-for="ReportId"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReportIdExpression">
+    <label class="ocat-label" asp-for="ReportIdExpression">@T["Report ID expression"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ReportIdExpression" />
+        <span asp-validation-for="ReportIdExpression"></span>
+        <span class="hint">@T["Optional. A Liquid expression that gives the report ID, used instead of the report chosen above, such as {0}.", "{{ Workflow.Input.ReportId }}"]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Filters">
+    <label class="ocat-label" asp-for="Filters">@T["Filters"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Filters" rows="3"></textarea>
+        <span asp-validation-for="Filters"></span>
+        <span class="hint">@T["Optional. One filter per line, as filter ID = value, with Liquid. Repeat a filter for several values. A recent period takes a number of days, such as created = 7. Filters not set use the report's defaults."]</span>
+    </div>
+</div>
+
+@if (Model.HasOutput)
+{
+    <div class="ocat-wrapper">
+        <label class="ocat-label" asp-for="OutputName">@T["Output name"]</label>
+        <div class="ocat-end">
+            <input class="form-control" asp-for="OutputName" placeholder="@Model.DefaultOutputName" />
+            <span class="hint">@T["The name of the workflow output the task writes, read in Liquid as {0}.", $"{{{{ Workflow.Output.{Model.DefaultOutputName} }}}}"]</span>
+        </div>
+    </div>
+}

@@ -1734,6 +1734,72 @@ OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
 
 See [Transactions](modules/transactions.md#links-in-messages) and [Test payments](modules/checkout.md#test-payments).
 
+## Reports
+
+### Report builder limits
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Reports:Builder:Limits` |
+| **Feature** | Report Builder |
+| **Controls** | The size limits of one designed report run |
+
+Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`),
+`MaxFilterOptions` (`500`), `MaxJoinKeys` (`10000`) and `JoinKeyBatchSize` (`500`).
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Reports": {
+        "Builder": {
+          "Limits": {
+            "MaxRowsPerDataSet": 100000
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxRowsPerDataSet=100000
+```
+
+### Report versions
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Reports:Builder:Versions` |
+| **Feature** | Report Builder |
+| **Controls** | How many published versions of each designed report are kept |
+
+Key: `MaxVersions` (default `50`). The oldest versions beyond it are deleted when a report is published; `0` keeps
+them all.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Reports": {
+        "Builder": {
+          "Versions": {
+            "MaxVersions": 100
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=100
+```
+
+See [Report Builder](modules/report-builder/index.md#configuration).
+
 ## Multi-tenancy
 
 ### Tenant hierarchy

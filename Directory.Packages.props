@@ -2,7 +2,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-    <OrchardCoreVersion>4.0.0-preview-19188</OrchardCoreVersion>
+    <OrchardCoreVersion>4.0.0-preview-19190</OrchardCoreVersion>
     <CrestAppsCoreVersion>2.0.0-preview.326</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
@@ -78,6 +78,7 @@
     <PackageVersion Include="OrchardCore.Notifications.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Notifications.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.PublishLater" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Queries.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.ReCaptcha.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.RateLimits.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Recipes.Abstractions" Version="$(OrchardCoreVersion)" />
