@@ -83,6 +83,11 @@ public sealed class Order : CatalogItem
     public DateTime? PaidUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the order confirmation was emailed to the customer, so it is sent once.
+    /// </summary>
+    public DateTime? ConfirmationSentUtc { get; set; }
+
+    /// <summary>
     /// Gets the number of units ordered.
     /// </summary>
     public int ItemCount

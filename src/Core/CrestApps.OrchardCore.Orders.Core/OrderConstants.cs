@@ -15,6 +15,11 @@ public static class OrderConstants
     /// </summary>
     public const string CheckoutStepKey = "Order";
 
+    /// <summary>
+    /// The site settings group of the Orders settings.
+    /// </summary>
+    public const string SettingsGroupId = "orders";
+
     public static class Features
     {
         public const string Orders = "CrestApps.OrchardCore.Orders";

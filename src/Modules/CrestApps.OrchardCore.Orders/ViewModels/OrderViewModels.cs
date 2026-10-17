@@ -69,3 +69,8 @@ public class OrderConfirmationViewModel
     /// </summary>
     public bool IsSignedIn { get; set; }
 }
+
+public class OrderSettingsViewModel
+{
+    public bool SendConfirmations { get; set; }
+}
