@@ -32,6 +32,12 @@ public sealed class AnalyticsStartup : StartupBase
     {
         services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
         services.AddScoped<IContactCenterReportCapabilityGuard, ContactCenterReportCapabilityGuard>();
+
+        // What the dialer holds right now, read by the dialer queue inventory and the campaign summary alike, through the
+        // same classification the live dashboard's dispatch card uses.
+        services.AddScoped<DialerRecordClassifier>();
+        services.AddScoped<IDialerQueueInventoryService, DialerQueueInventoryService>();
+
         services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
 
         services
@@ -51,6 +57,7 @@ public sealed class AnalyticsStartup : StartupBase
             .AddScoped<IReport, AgentProductivityReportProvider>()
             .AddScoped<IReport, QueueUsageReportProvider>()
             .AddScoped<IReport, CampaignSummaryReportProvider>()
+            .AddScoped<IReport, DialerQueueInventoryReportProvider>()
             .AddScoped<IReport, SubjectInventoryReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();

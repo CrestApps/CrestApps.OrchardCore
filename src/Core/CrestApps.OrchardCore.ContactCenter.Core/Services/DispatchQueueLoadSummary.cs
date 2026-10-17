@@ -111,8 +111,7 @@ internal static class DispatchQueueLoadSummary
                 withoutProfile++;
             }
 
-            if (waitingByActivity.TryGetValue(record.ActivityId, out var item) &&
-                !string.Equals(item.DialerProfileId ?? string.Empty, own, StringComparison.Ordinal))
+            if (waitingByActivity.TryGetValue(record.ActivityId, out var item) && IsStampMismatch(item.DialerProfileId, own))
             {
                 mismatched++;
             }
@@ -120,6 +119,15 @@ internal static class DispatchQueueLoadSummary
 
         return (mismatched, withoutProfile);
     }
+
+    /// <summary>
+    /// Decides whether a queue item's stamped dialer profile differs from the one its activity carries.
+    /// </summary>
+    /// <param name="stampedProfileId">The profile stamped on the queue item, if any.</param>
+    /// <param name="activityProfileId">The profile the activity carries, if any.</param>
+    /// <returns><see langword="true"/> when the two differ, treating no profile on either side as the same value.</returns>
+    public static bool IsStampMismatch(string stampedProfileId, string activityProfileId)
+        => !string.Equals(stampedProfileId ?? string.Empty, activityProfileId ?? string.Empty, StringComparison.Ordinal);
 
     /// <summary>
     /// Decides how the queue is paced from the profile stamped on its head item, the way the pacer does.
