@@ -1,15 +1,17 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Addresses.Core.Editing;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Customers.Services;
 
 /// <summary>
-/// What the administrators' and the customers' own address pages share: the country list, the checks and saving an
+/// What the administrators' and the customers' own address pages share: the address editor, the checks and saving an
 /// address to the book.
 /// </summary>
 public sealed class CustomerAddressBook
@@ -19,71 +21,84 @@ public sealed class CustomerAddressBook
     /// </summary>
     public const int MaxAddresses = 20;
 
-    private readonly ICountryService _countryService;
+    /// <summary>
+    /// The prefix the address editor's fields post under.
+    /// </summary>
+    public const string EditorPrefix = nameof(CustomerAddressViewModel.Address);
+
+    private readonly IAddressEditorService _addressEditor;
+    private readonly IAddressFormatter _addressFormatter;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IStringLocalizer S;
 
-    public CustomerAddressBook(ICountryService countryService, IStringLocalizer<CustomerAddressBook> stringLocalizer)
+    public CustomerAddressBook(
+        IAddressEditorService addressEditor,
+        IAddressFormatter addressFormatter,
+        IShapeFactory shapeFactory,
+        IStringLocalizer<CustomerAddressBook> stringLocalizer)
     {
-        _countryService = countryService;
+        _addressEditor = addressEditor;
+        _addressFormatter = addressFormatter;
+        _shapeFactory = shapeFactory;
         S = stringLocalizer;
     }
 
-    public async Task<Func<string, string>> GetCountryNamesAsync()
-    {
-        var countries = (await _countryService.GetCountriesAsync())
-            .GroupBy(country => country.Code, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().Name, StringComparer.OrdinalIgnoreCase);
-
-        return code => code is not null && countries.TryGetValue(code, out var name) ? name : code;
-    }
+    /// <summary>
+    /// An address book entry is for mail and deliveries: it names who receives it, and keeps a phone for the courier.
+    /// A new one starts in the country of the customer's other addresses.
+    /// </summary>
+    public static AddressEditorOptions EditorOptionsFor(Customer customer)
+        => new()
+        {
+            RequireName = true,
+            ShowPhone = true,
+            DefaultCountry = customer?.GetDefaultBillingAddress()?.Address?.Country
+                ?? customer?.GetDefaultShippingAddress()?.Address?.Country
+                ?? customer?.Addresses?.FirstOrDefault()?.Address?.Country,
+        };
 
     public async Task<IReadOnlyList<CustomerAddressSummary>> SummarizeAsync(Customer customer)
     {
-        var countryName = await GetCountryNamesAsync();
+        var summaries = new List<CustomerAddressSummary>();
 
-        return (customer.Addresses ?? [])
-            .Select(address => new CustomerAddressSummary
+        foreach (var address in customer.Addresses ?? [])
+        {
+            summaries.Add(new CustomerAddressSummary
             {
                 AddressId = address.AddressId,
                 Label = address.Label,
-                Lines = address.GetLines(countryName),
+                Lines = await _addressFormatter.GetLinesAsync(address.ToAddress()),
                 IsDefaultBilling = string.Equals(customer.DefaultBillingAddressId, address.AddressId, StringComparison.Ordinal),
                 IsDefaultShipping = string.Equals(customer.DefaultShippingAddressId, address.AddressId, StringComparison.Ordinal),
-            })
-            .ToArray();
+            });
+        }
+
+        return summaries;
     }
 
     public async Task<CustomerAddressViewModel> BuildEditorAsync(Customer customer, CustomerAddress address, CustomerAddressViewModel input = null)
     {
+        var options = EditorOptionsFor(customer);
         var model = input ?? new CustomerAddressViewModel();
 
-        if (input is null && address is not null)
+        if (input is not null)
+        {
+            model.Address ??= new AddressEditorViewModel();
+
+            await _addressEditor.PopulateAsync(model.Address, options);
+        }
+        else if (address is not null)
         {
             model.Label = address.Label;
-            model.Name = address.Name;
-            model.Company = address.Company;
-            model.AddressLine1 = address.AddressLine1;
-            model.AddressLine2 = address.AddressLine2;
-            model.City = address.City;
-            model.Region = address.Region;
-            model.PostalCode = address.PostalCode;
-            model.Country = address.Country;
-            model.Phone = address.Phone;
+            model.Address = await _addressEditor.BuildAsync(address.Address, options);
             model.IsDefaultBilling = string.Equals(customer.DefaultBillingAddressId, address.AddressId, StringComparison.Ordinal);
             model.IsDefaultShipping = string.Equals(customer.DefaultShippingAddressId, address.AddressId, StringComparison.Ordinal);
         }
-        else if (input is null)
+        else
         {
-            // A new address starts with the customer's own details, and a first one becomes their default. The
-            // recipient is a person; a business's name goes in Company.
-            var personName = string.Join(' ', new[] { customer.FirstName, customer.LastName }.Where(part => !string.IsNullOrWhiteSpace(part)));
-
-            model.Name = !string.IsNullOrEmpty(personName)
-                ? personName
-                : customer.Kind == CustomerKind.Business ? null : customer.GetName();
-            model.Company = customer.Kind == CustomerKind.Business ? customer.CompanyName : null;
-            model.Phone = customer.Phone;
+            // A first address becomes the customer's default.
+            model.Address = await _addressEditor.BuildAsync(NewAddressFor(customer), options);
             model.IsDefaultBilling = customer.GetDefaultBillingAddress() is null;
             model.IsDefaultShipping = customer.GetDefaultShippingAddress() is null;
         }
@@ -92,87 +107,78 @@ public sealed class CustomerAddressBook
         model.CustomerName = customer.GetName();
         model.AddressId = address?.AddressId;
         model.IsNew = address is null;
-        model.Countries = (await _countryService.GetCountriesAsync())
-            .Select(country => new SelectListItem(country.Name, country.Code, string.Equals(country.Code, model.Country, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
+        model.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(model.Address, EditorPrefix);
 
         return model;
     }
 
-    public async Task ValidateAsync(Customer customer, CustomerAddressViewModel model, bool isNew, ModelStateDictionary modelState)
+    /// <summary>
+    /// A new address starts with the customer's own details. The recipient is a person; a business's name goes in
+    /// Company rather than being repeated as the recipient.
+    /// </summary>
+    public static Address NewAddressFor(Customer customer)
     {
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            modelState.AddModelError(nameof(model.Name), S["Enter who receives mail at this address."]);
-        }
+        var personName = string.Join(' ', new[] { customer.FirstName, customer.LastName }.Where(part => !string.IsNullOrWhiteSpace(part)));
 
-        if (string.IsNullOrWhiteSpace(model.AddressLine1))
+        return new Address
         {
-            modelState.AddModelError(nameof(model.AddressLine1), S["Enter the street address."]);
-        }
+            Name = !string.IsNullOrEmpty(personName)
+                ? personName
+                : customer.Kind == CustomerKind.Business ? null : customer.GetName(),
+            Company = customer.Kind == CustomerKind.Business ? customer.CompanyName : null,
+            Phone = customer.Phone,
+        };
+    }
 
-        if (string.IsNullOrWhiteSpace(model.City))
-        {
-            modelState.AddModelError(nameof(model.City), S["Enter the city."]);
-        }
-
-        var countries = await _countryService.GetCountriesAsync();
-
-        if (string.IsNullOrWhiteSpace(model.Country) || !countries.Any(country => string.Equals(country.Code, model.Country, StringComparison.OrdinalIgnoreCase)))
-        {
-            modelState.AddModelError(nameof(model.Country), S["Choose a country."]);
-        }
+    /// <summary>
+    /// Checks the posted address against its country and the book's limit. Returns the address to keep, tidied, or
+    /// <see langword="null"/> when something is wrong; what is wrong is in <paramref name="modelState"/>.
+    /// </summary>
+    public async Task<Address> ValidateAsync(Customer customer, CustomerAddressViewModel model, bool isNew, ModelStateDictionary modelState)
+    {
+        var result = await _addressEditor.ValidateAsync(model.Address ?? new AddressEditorViewModel(), modelState, EditorPrefix, EditorOptionsFor(customer));
 
         if (isNew && (customer.Addresses?.Count ?? 0) >= MaxAddresses)
         {
             modelState.AddModelError(string.Empty, S["An address book holds up to {0} addresses. Delete one to add another.", MaxAddresses]);
         }
+
+        return result.IsValid && modelState.IsValid ? result.Address : null;
     }
 
     /// <summary>
     /// Saves the address to the customer's book: a new one is added, an existing one changed in place.
     /// </summary>
-    public static CustomerAddress Apply(Customer customer, CustomerAddress address, CustomerAddressViewModel model)
+    public static CustomerAddress Apply(Customer customer, CustomerAddress entry, CustomerAddressViewModel model, Address address)
     {
-        if (address is null)
+        if (entry is null)
         {
-            address = new CustomerAddress { AddressId = UniqueId.GenerateId() };
+            entry = new CustomerAddress { AddressId = UniqueId.GenerateId() };
             customer.Addresses ??= [];
-            customer.Addresses.Add(address);
+            customer.Addresses.Add(entry);
         }
 
-        address.Label = Trim(model.Label);
-        address.Name = Trim(model.Name);
-        address.Company = Trim(model.Company);
-        address.AddressLine1 = Trim(model.AddressLine1);
-        address.AddressLine2 = Trim(model.AddressLine2);
-        address.City = Trim(model.City);
-        address.Region = Trim(model.Region);
-        address.PostalCode = Trim(model.PostalCode);
-        address.Country = Trim(model.Country)?.ToUpperInvariant();
-        address.Phone = Trim(model.Phone);
+        entry.Label = string.IsNullOrWhiteSpace(model.Label) ? null : model.Label.Trim();
+        entry.Address = address;
 
         if (model.IsDefaultBilling)
         {
-            customer.DefaultBillingAddressId = address.AddressId;
+            customer.DefaultBillingAddressId = entry.AddressId;
         }
-        else if (string.Equals(customer.DefaultBillingAddressId, address.AddressId, StringComparison.Ordinal))
+        else if (string.Equals(customer.DefaultBillingAddressId, entry.AddressId, StringComparison.Ordinal))
         {
             customer.DefaultBillingAddressId = null;
         }
 
         if (model.IsDefaultShipping)
         {
-            customer.DefaultShippingAddressId = address.AddressId;
+            customer.DefaultShippingAddressId = entry.AddressId;
         }
-        else if (string.Equals(customer.DefaultShippingAddressId, address.AddressId, StringComparison.Ordinal))
+        else if (string.Equals(customer.DefaultShippingAddressId, entry.AddressId, StringComparison.Ordinal))
         {
             customer.DefaultShippingAddressId = null;
         }
 
-        return address;
+        return entry;
     }
-
-    private static string Trim(string value)
-        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.Addresses;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Customers.Core;
 using OrchardCore.Modules.Manifest;
@@ -19,5 +20,6 @@ using OrchardCore.Modules.Manifest;
     [
         CommerceConstants.Features.Area,
         "OrchardCore.Users",
+        AddressConstants.Feature.ModuleId,
     ]
 )]

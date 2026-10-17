@@ -198,9 +198,9 @@ public sealed class MyAccountController : Controller
             return NotFound();
         }
 
-        await _addressBook.ValidateAsync(customer, model, address is null, ModelState);
+        var value = await _addressBook.ValidateAsync(customer, model, address is null, ModelState);
 
-        if (!ModelState.IsValid)
+        if (value is null)
         {
             var invalid = await _addressBook.BuildEditorAsync(customer, address, model);
             invalid.IsOwn = true;
@@ -208,7 +208,7 @@ public sealed class MyAccountController : Controller
             return View("AddressEdit", invalid);
         }
 
-        CustomerAddressBook.Apply(customer, address, model);
+        CustomerAddressBook.Apply(customer, address, model, value);
 
         if (await TrySaveAsync(customer))
         {

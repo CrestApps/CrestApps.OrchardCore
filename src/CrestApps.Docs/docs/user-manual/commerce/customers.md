@@ -64,23 +64,20 @@ A customer keeps an address book of up to 20 addresses, such as a home and an of
 
 1. Open the customer. Their addresses are listed under **Addresses**, with badges on the defaults.
 2. Click **Add address**, or **Edit** on an address.
-3. Fill in the address (below).
-4. Click **Save**.
+3. Choose the **Country** first. The rest of the form follows it: the fields the country uses, in its order and with its names, such as **State** and **ZIP code** for the United States, **Post town** and **Postal code** for the United Kingdom, or **Prefecture** first for Japan. Where a country has a list of states or provinces, you pick one from it.
+4. Fill in the address, give it a **Label** such as *Home* or *Office* if you like, and click **Save**.
 
 | Field | What it does |
 | --- | --- |
 | **Label** | A name for the address, such as *Home* or *Office*. |
+| **Country** | Required. Decides the other fields. |
 | **Full name** | Who receives mail at the address. Required. |
 | **Company** | The business at the address, if any. |
-| **Street address** | Required. |
-| **Apartment, suite, floor** | The second address line. |
-| **City** | Required. |
-| **State, province or region**, **Postal code** | As the country writes them. |
-| **Country** | Required. |
+| The address fields | Street address and the second line, then the parts the country uses (city or post town, state, province or prefecture, postal code…). The ones marked * are required for that country. |
 | **Phone** | A number for the courier. |
 | **Default billing address**, **Default shipping address** | Tick one to make this address the default. Ticking it moves the default from another address; unticking it on the default leaves none. |
 
-A new address starts with the customer's name, company and phone, and a customer's first address becomes both defaults.
+The address is checked against its country: a postal code has to look like that country's, and belong to the state or province chosen. A new address starts with the customer's name, company and phone, in the country of their other addresses, and a customer's first address becomes both defaults.
 
 To remove an address, click **Delete** and confirm. Orders keep their own copy of the addresses they used, so changing or deleting an address never changes a past order.
 

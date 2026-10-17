@@ -41,13 +41,12 @@ A guest customer has no user. Customers builds no registration of its own; a gue
 
 ## Address book
 
-A customer keeps up to 20 `CustomerAddress` entries on the record itself. Each has an `AddressId`, a `Label` (such as *Home*), `Name`, `Company`, `AddressLine1`, `AddressLine2`, `City`, `Region`, `PostalCode`, `Country` (an ISO 3166-1 alpha-2 code) and `Phone`.
+A customer keeps up to 20 `CustomerAddress` entries on the record itself. Each has an `AddressId`, a `Label` (such as *Home*) and an `Address`: the shared, immutable value from the [Addresses](addresses) module, so a customer's address is the same type an order, a tax rule or a content field holds.
 
 - `GetDefaultBillingAddress()` and `GetDefaultShippingAddress()` return the defaults, or `null`. `RemoveAddress(addressId)` also clears a default that named the address.
-- `ToAddress()` returns the immutable `Address` from the Addresses abstractions. An order stores that copy, so editing or deleting an address never changes a past order.
-- `GetLines(countryName)` returns the address as envelope lines, skipping empty parts.
+- `ToAddress()` returns a copy of the `Address`. An order stores that copy, so editing or deleting an address never changes a past order.
 
-Country names and validation come from `ICountryService`. When the Addresses module is enabled its countries are used; otherwise Customers registers the default ISO list. A name, a street, a city and a known country are required.
+The address pages use the Addresses module's editor (`IAddressEditorService` and the `AddressEditor` shape, posted under the `Address` prefix), so they lay the form out for the chosen country and check the address against its rules: the parts the country requires, its postal code pattern, a region from its list, and a postal code within that region. The address book also requires the recipient's name and offers a phone, and a new address starts in the country of the customer's other addresses. Addresses are listed and printed through `IAddressFormatter`, the way each country writes them. Customers depends on the Addresses feature for all of this.
 
 ## Services
 

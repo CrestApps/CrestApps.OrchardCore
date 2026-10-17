@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -150,28 +151,18 @@ public class CustomerAddressViewModel
     [BindNever]
     public bool IsOwn { get; set; }
 
+    /// <summary>
+    /// Gets or sets the address editor, laid out for the address's country.
+    /// </summary>
     [BindNever]
-    public List<SelectListItem> Countries { get; set; } = [];
+    public IShape AddressEditor { get; set; }
 
     public string Label { get; set; }
 
-    public string Name { get; set; }
-
-    public string Company { get; set; }
-
-    public string AddressLine1 { get; set; }
-
-    public string AddressLine2 { get; set; }
-
-    public string City { get; set; }
-
-    public string Region { get; set; }
-
-    public string PostalCode { get; set; }
-
-    public string Country { get; set; }
-
-    public string Phone { get; set; }
+    /// <summary>
+    /// Gets or sets the address as the editor posts it, under the <c>Address</c> prefix.
+    /// </summary>
+    public AddressEditorViewModel Address { get; set; } = new();
 
     public bool IsDefaultBilling { get; set; }
 

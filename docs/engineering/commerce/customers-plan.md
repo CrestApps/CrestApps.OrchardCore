@@ -143,12 +143,15 @@ This is what shipping, guest order lookup and the customer account pages wait on
 ### CU2 as built
 
 - `CustomerAddress` entries live on the customer (`Addresses`, `DefaultBillingAddressId`, `DefaultShippingAddressId`),
-  capped at 20. `ToAddress()` gives the immutable `Address` snapshot an order keeps. Countries come from
-  `ICountryService` (the Addresses module's when enabled, the ISO list otherwise); regions are free text for now.
+  capped at 20. `ToAddress()` gives the immutable `Address` snapshot an order keeps.
 - The admin edits a customer's addresses under the customer (`customers/{customerId}/addresses/...`).
 - **My Account** (`my-account`, `[CustomerAdminPage]`, Manage own customer profile and addresses permission for the
   Authenticated role) edits the user's own details and addresses, making their customer record on the first visit.
 - The customer's orders list moves to CU4, where guest access adds the order page.
+- Amended before merging (step AD3 of the [Addresses plan](../addresses-plan.md)): a `CustomerAddress` is an id, a
+  label and the shared `Address` value, edited with the Addresses module's `AddressEditor` and checked against the
+  country's rules; addresses are listed through `IAddressFormatter`. Customers depends on the Addresses feature,
+  which also supplies the country list, so the `DefaultCountryService` fallback is gone.
 
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
