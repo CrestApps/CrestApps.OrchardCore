@@ -740,11 +740,6 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         return amounts;
     }
 
-    // Refuses a provider that cannot express what the invoice needs, before any money moves. Discovering this
-    // after a charge would mean refunding a customer for a configuration mistake.
-    //
-    // The rule itself lives in CheckoutPaymentMethodSelector, which the payment step also uses to decide which
-    // methods to offer. Sharing it is what stops the page from advertising a method this check would reject.
     // Adds the request to keep the payment method to what the browser sent. Nothing else changes, so the provider still
     // sees the payment method its own script tokenized.
     private static BeginPaymentOptions WithSavedPaymentMethod(BeginPaymentOptions options)
@@ -767,6 +762,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         };
     }
 
+    // Refuses a provider that cannot express what the invoice needs, before any money moves. Discovering this
+    // after a charge would mean refunding a customer for a configuration mistake.
+    //
+    // The rule itself lives in CheckoutPaymentMethodSelector, which the payment step also uses to decide which
+    // methods to offer. Sharing it is what stops the page from advertising a method this check would reject.
     private static bool TryValidateCapabilities(
         ICheckoutPaymentProvider provider,
         IReadOnlyList<string> obligations,
