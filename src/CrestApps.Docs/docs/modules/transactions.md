@@ -106,7 +106,9 @@ A transaction its owner pays themselves (one that is not charged automatically) 
   button. The link names one transaction, is signed with the site's data protection keys so it cannot be altered,
   and expires after 60 days; every notice sends a fresh one. It opens a public page with the invoice and a **Pay**
   button that starts the normal checkout, so a customer an administrator created (with no password) or a guest can
-  pay. A link that was altered or expired shows nothing about any transaction. Links use the site's **Base URL**
+  pay. The checkout it starts returns to the page (`StartCheckoutRequest.ReturnUrl`), with *Back to the payment page*
+  on the payment step and the confirmation, and the confirmation is headed *Payment received*. A link that was
+  altered or expired shows nothing about any transaction. Links use the site's **Base URL**
   from the general settings, so set it to the public address; without it, a link made outside a request is left out
   and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
 - **The invoice page.** With the Receipts module enabled, the transaction's page links its invoice: the same layout

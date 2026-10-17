@@ -46,6 +46,13 @@ Implement `ICheckoutHandler` to contribute the step and its billing items, then 
 `CheckoutFlowDisplayDriver` and register it as an `IDisplayDriver<CheckoutFlow>`. The driver renders only
 while its own step is current, so a step never has to know about the ones around it.
 
+## Returning the customer
+
+Set `ReturnUrl`, `ReturnText` and `Title` on the `StartCheckoutRequest` to bring the customer back to the page
+that started the checkout: the confirmation shows a **Continue** button to it, the payment step and the page of
+a canceled or expired checkout show a **Back** link, and `Title` heads the confirmation instead of "Order
+confirmation". Only a local URL is accepted; any other throws when the checkout is started.
+
 ## Adding a payment provider
 
 Implement `ICheckoutPaymentProvider`, register it, and add an `IDisplayDriver<CheckoutFlowPaymentMethod>`

@@ -221,6 +221,33 @@ example — it returns `PaymentBeginResult.Decline`. The engine records the atte
 reason, reports it as `PaymentBeginOutcome.Declined` with `ProviderErrorMessage`, and gives the next attempt for the
 same obligation its own idempotency key, so retrying with another card is not answered with the old decline.
 
+### Where the customer returns
+
+The module that starts a checkout can say where the customer goes back to and what the confirmation is called, through three optional `StartCheckoutRequest` properties:
+
+| Property | What it does |
+| --- | --- |
+| `ReturnUrl` | The page the customer returns to, usually the one that started the checkout. The confirmation page shows a **Continue** button to it; the payment step (and the first step, which has no **Back** of its own) and the page of a canceled, expired or failed checkout show a **Back** link to it. |
+| `ReturnText` | The text of that button and link, for example *Back to my payments*. When empty the pages say **Continue** or **Back** (or **Leave checkout** on a payment step that also has a **Back** to the previous step). |
+| `Title` | The confirmation heading, for example *Payment received*, so a checkout that is not an order is not headed *Order confirmation* or thanked for a *purchase*. |
+
+```csharp
+var session = await checkoutEngine.StartAsync(new StartCheckoutRequest
+{
+    ReferenceType = "RegistrationFee",
+    ReferenceId = fee.Id,
+    ReturnUrl = Url.Action("Index", "Payments"),
+    ReturnText = S["Back to my payments"],
+    Title = S["Payment received"],
+});
+```
+
+They are stored on the session as a `CheckoutReturnInfo` and read back with `CheckoutReturnInfo.GetFrom(session)`. `ReturnUrl` must be **local**: a path such as `Url.Action(...)` or `Url.RouteUrl(...)` produces (which includes the tenant's URL prefix), or an application-relative `~/` path. `StartAsync` throws `ArgumentException` for anything else, including absolute and protocol-relative (`//host`) URLs, before the session is created, so a checkout can never send a customer to another site. The rule is `CheckoutReturnInfo.IsLocalUrl`, the same one as ASP.NET Core's `IUrlHelper.IsLocalUrl`, and the pages apply it again when they render the link.
+
+The [Transactions](transactions) pay-link page passes itself as the return URL, with *Back to the payment page* and the heading *Payment received*.
+
+A checkout that is no longer live still has a page rather than a `404`: a completed one redirects to its confirmation, and a canceled, expired or failed one shows *This checkout is no longer available.* with the reason and the **Back** link. The page is only shown to the visitor who owns the checkout, through the same ownership-checked lookup as every other checkout page.
+
 ### Completion never blocks a request
 
 `TryCompleteAsync` returns immediately with one of `Completed`, `AlreadyCompleted`, `Pending`, `Blocked`, `Failed`, or `NotFound`. It never waits in a loop for a provider to make up its mind, because that would tie up a web worker per customer and still time out behind a proxy.
@@ -288,7 +315,7 @@ To use the framework in your own module:
 
 1. Add a reference to `CrestApps.OrchardCore.Checkout.Core` (services) and `CrestApps.OrchardCore.Checkout.Abstractions` (contracts).
 2. Implement **`ICheckoutHandler`** to contribute your steps and billing items and to react to completion.
-3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself.
+3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself. Set `ReturnUrl`, `ReturnText` and `Title` on the request to bring the customer back to your page (see [Where the customer returns](#where-the-customer-returns)).
 4. Render your step by deriving from **`CheckoutFlowDisplayDriver`** and registering it as an `IDisplayDriver<CheckoutFlow>`.
 5. To add a gateway, implement **`ICheckoutPaymentProvider`**, register it, and add an `IDisplayDriver<CheckoutFlowPaymentMethod>` for its panel (grouped with `.OnGroup(yourProviderKey)`); the framework's reconciliation and ledger handle the safety guarantees for you.
 6. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
