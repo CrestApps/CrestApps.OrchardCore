@@ -1,0 +1,59 @@
+name: Rebuild Assets for Dependabot
+
+# Dependabot can only edit package.json and package-lock.json. The generated wwwroot files are committed, so
+# every npm bump would otherwise fail assets_validation.yml until someone rebuilt them by hand. This job runs
+# `npm run rebuild` on Dependabot's npm branches and pushes the result to the same branch.
+#
+# Commits pushed with the default GITHUB_TOKEN do not trigger other workflows, so the validation checks would never
+# re-run. Add a repository secret named ASSETS_PUSH_TOKEN (a PAT or GitHub App token with contents:write) under both
+# "Secrets > Actions" and "Secrets > Dependabot" so the pushed commit starts CI again.
+
+on:
+  pull_request_target:
+    branches: [ main, release/** ]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/**/package.json'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.head_ref }}-dependabot-assets
+  cancel-in-progress: true
+
+jobs:
+  rebuild:
+    name: Rebuild committed assets
+    # Only Dependabot-authored npm branches in this repository. pull_request_target runs with write access, so it must
+    # never build a fork's code.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        token: ${{ secrets.ASSETS_PUSH_TOKEN || secrets.GITHUB_TOKEN }}
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: ".node-version"
+        cache: npm
+    - name: Install packages
+      run: npm ci
+    - name: Rebuild assets
+      run: npm run rebuild
+    - name: Commit rebuilt assets
+      run: |
+        git add --renormalize .
+        if git diff --cached --quiet; then
+          echo "Assets are already up to date."
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git commit -m "Rebuild assets"
+        git push
