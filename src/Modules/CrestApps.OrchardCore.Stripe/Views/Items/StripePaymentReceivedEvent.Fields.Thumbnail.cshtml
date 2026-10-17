@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentReceivedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
+    @T["Stripe Payment Received"]
+</h4>
+<p class="text-muted">@T["Triggered when a Stripe invoice payment succeeds."]</p>

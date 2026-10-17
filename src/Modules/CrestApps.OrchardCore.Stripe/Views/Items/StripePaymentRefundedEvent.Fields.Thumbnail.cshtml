@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentRefundedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+    @T["Stripe Payment Refunded"]
+</h4>
+<p class="text-muted">@T["Triggered when a Stripe refund is observed."]</p>

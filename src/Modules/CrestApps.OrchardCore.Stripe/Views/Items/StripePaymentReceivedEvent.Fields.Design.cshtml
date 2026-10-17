@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentReceivedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-money-bill-wave" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Stripe Payment Received"])
+    </h4>
+</header>

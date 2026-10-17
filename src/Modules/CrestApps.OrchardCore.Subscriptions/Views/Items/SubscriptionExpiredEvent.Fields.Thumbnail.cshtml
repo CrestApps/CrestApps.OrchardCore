@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscriptionExpiredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+    @T["Subscription Expired"]
+</h4>
+<p class="text-muted">@T["Triggered when a subscription ends and access is removed."]</p>

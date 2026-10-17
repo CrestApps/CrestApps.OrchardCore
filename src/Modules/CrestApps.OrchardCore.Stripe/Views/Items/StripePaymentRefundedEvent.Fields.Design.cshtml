@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentRefundedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-rotate-left" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Stripe Payment Refunded"])
+    </h4>
+</header>
