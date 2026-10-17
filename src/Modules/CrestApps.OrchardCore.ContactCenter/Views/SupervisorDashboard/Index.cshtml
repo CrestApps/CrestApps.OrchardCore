@@ -172,7 +172,7 @@
        nothing to call (see Endpoints/SupervisorDashboardEndpoints.Dialer.cs). It is kept current by the script below. *@
     @if (Model.DialerBanner is not null)
     {
-        <div class="alert alert-@Model.DialerBanner.Level mb-3" data-cc-dialer-banner data-url="@Model.DialerUrl" role="status" aria-live="polite">
+        <div class="alert alert-@(Model.DialerBanner.Level) mb-3" data-cc-dialer-banner data-url="@Model.DialerUrl" role="status" aria-live="polite">
             <span data-cc-dialer-banner-message>@Model.DialerBanner.Message</span>
         </div>
     }
