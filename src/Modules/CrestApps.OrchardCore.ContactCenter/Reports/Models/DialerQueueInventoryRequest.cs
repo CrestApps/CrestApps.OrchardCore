@@ -18,4 +18,11 @@ public sealed class DialerQueueInventoryRequest
     /// campaigns is read from the activity index. Activities that are not pending, or belong to no campaign, are ignored.
     /// </summary>
     public IReadOnlyCollection<OmnichannelActivityIndex> PendingActivities { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the inventory's rows are built: the queue rows, with each queue's pacing
+    /// and last call. A report that only needs the records and the campaign split turns it off, which saves reading each
+    /// campaign queue's head item and last call. It is on by default.
+    /// </summary>
+    public bool IncludeQueueRows { get; set; } = true;
 }

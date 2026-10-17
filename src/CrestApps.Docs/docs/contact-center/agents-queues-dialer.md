@@ -292,7 +292,9 @@ A campaign's card also says **what is loaded in its queue**, which the queue til
 
 The breakdown reads each campaign's pending records, so the dashboard asks for it every thirty seconds rather than with the live poll, and every supervisor's request shares one reading for twenty seconds. A campaign with more than 2,000 pending records explains the first 2,000 by schedule order and says so. It needs the same permission and queue scope as the rest of the dashboard.
 
-The **Campaign summary** report adds *Pending right now: dialable versus held back* and *Why pending records are not dialing* when queues are enabled. They describe the present, whatever period the report covers, so they sit apart from its own *Pending* counts.
+The **Campaign summary** report splits each campaign's *Pending* into dialable now, held back (with the reasons), scheduled for later, not in any queue and assigned to a user, and adds *Why pending records are not dialing*. It uses the dialer queue inventory's computation (see [Campaign summary split](#campaign-summary-split)).
+
+A pending record that is not in its campaign's queue but is assigned to a user is reported as **assigned to a user for manual work** (`DispatchBlocker.AssignedToUser`) rather than as not queued, because a user works it from their own list.
 
 A record whose queue item is stamped with a dialer profile that has since been deleted is held back as **the dialer profile it is stamped with no longer exists** (`DispatchBlocker.ProfileMissing`): the pacer reads the stamped profile and finds nothing to pace with. A record with no profile at all, or a queued callback, is still let through to routing, as the queue gate does.
 
@@ -307,11 +309,23 @@ It has one row per campaign queue and the dialer profile stamped on its items, p
 How it is computed (`IDialerQueueInventoryService`, the default `DialerQueueInventoryService`):
 
 - **Index rows only for grouping.** Every waiting, reserved and assigned queue item is read from `QueueItemIndex`, which now carries `DialerProfileId`, and every pending campaign activity from `OmnichannelActivityIndex`. No queue item document is read except the head of each campaign queue, which pacing is decided from.
-- **The dashboard's classification.** Each campaign's pending records are classified by `DialerRecordClassifier`, which `DialerDispatchDiagnosticsService` uses too: it reads the records' activities, work states, last calls and the `DialSuppressed` events of the last two hours in batches of 500 and applies the same evaluation as the queue gate. As on the dashboard, at most 2,000 records of a campaign are explained, the earliest due first; the rest are counted under *Not explained*.
-- **In its queue.** A pending record is in its campaign's queue when an item for it is waiting, reserved or assigned there. A record with no item there is held back as *not in the queue*; it is also counted as *in no queue* when no queue holds an item for it.
+- **The dashboard's classification.** Each campaign's queued pending records are classified by `DialerRecordClassifier`, which `DialerDispatchDiagnosticsService` uses too: it reads the records' activities, work states, last calls and the `DialSuppressed` events of the last two hours in batches of 500 and applies the same evaluation as the queue gate. At most 2,000 queued records of a campaign are explained, the earliest due first; the rest are counted under *Not explained*.
+- **In its queue.** A pending record is in its campaign's queue when an item for it is waiting, reserved or assigned there. A record with no item there is decided from its activity index row by the same rule the dashboard applies: *assigned to a user for manual work* when it has an assignee, otherwise held back as *not in the queue*, and counted as *in no queue* when no queue holds an item for it.
 - **Pending** means what the Campaign summary counts as pending: not finished and not being worked yet (`ActivityProgressTally.IsPending`).
 
 `QueueItemIndexMigrations` step 7 (`UpdateFrom6Async`) adds the nullable `DialerProfileId` column (26 characters). It adds no database index: the report filters on `Status` and reads the column, which the existing indexes already serve. A queue item is indexed again whenever it is saved, so only items untouched since the upgrade lack the value; the **Contact Center Queue Item Dialer Profile Backfill** background task (`QueueItemDialerProfileIndexBackfillBackgroundTask`, every minute, 25 pages of 200 items a run) re-saves the waiting, reserved and assigned items whose document carries a profile, outside activation, and stops once none is left. Settled items are not backfilled, because no report reads their profile.
+
+### Campaign summary split
+
+The **Campaign summary** report (`contact-center-campaign-summary`) counts the activities created in the period, as before, and splits their pending ones by where they stand with the dialer now. It reads the period's activities through `IContactCenterReportingService.GetCampaignActivitiesAsync`, classifies them with `IDialerQueueInventoryService.GetInventoryAsync` (passing them as `PendingActivities`, without the queue rows), narrows them by the **Dialer profile** and **Queue state** filters, builds the progress counts with `BuildCampaignSummaryAsync`, and splits the narrowed records with `IDialerQueueInventoryService.Summarize` — the same method that splits the dialer queue inventory's campaigns. Each explained pending record is in exactly one `DialerQueueState`, so per campaign:
+
+*Pending* = *Dialable now* + *Held back* + *Scheduled for later* + *Not in any queue* + *Assigned to a user* + *Not explained*
+
+and, over a period that covers every record, each term equals the dialer queue inventory's figure for the campaign. The inventory's *Held back* includes the scheduled, not-in-any-queue and assigned records; the campaign summary's is what is left. Pending activities that belong to no campaign are counted but not split.
+
+- **Filters.** *Interaction type* (`ContactCenterReportCriteria.InteractionType`) narrows the activities like the other criteria. *Dialer profile* keeps an activity whose own `DialerProfileId` matches or whose active queue item is stamped with it. *Queue state* keeps only pending records in that state.
+- **Columns.** *Attempts distribution* groups the row's activities by `Attempts` (5 and over together). *Last attempt* is the newest interaction of any of the row's activities, read from `InteractionIndex` in batches of 500. *Next due* is the earliest due time of a record scheduled for later or in its retry delay. *Stamped dialer profile* counts the queued pending records by stamped profile.
+- A pending record that is not in its campaign's queue is decided from its activity index row (assigned to a user, or not queued) and does not count toward the 2,000-record limit, which applies only to the queued records that need their documents read.
 
 ### Agents stuck on work that is already over
 
