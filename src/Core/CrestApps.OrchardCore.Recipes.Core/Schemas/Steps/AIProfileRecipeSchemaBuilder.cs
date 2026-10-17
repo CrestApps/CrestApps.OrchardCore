@@ -37,6 +37,7 @@ internal static class AIProfileRecipeSchemaBuilder
             ("FunctionInvocationMetadata", BuildFunctionInvocationMetadataSchema()),
             ("AgentInvocationMetadata", BuildAgentInvocationMetadataSchema()),
             ("PromptTemplateMetadata", BuildPromptTemplateMetadataSchema()),
+            ("AIPersonaMetadata", BuildAIPersonaMetadataSchema()),
             ("AnalyticsMetadata", BuildAnalyticsMetadataSchema()),
             ("DataSourceMetadata", BuildDataSourceMetadataSchema()),
             ("AIDataSourceRagMetadata", BuildAIDataSourceRagMetadataSchema()),
@@ -286,6 +287,15 @@ internal static class AIProfileRecipeSchemaBuilder
             .Description("Known system-prompt template metadata stored when the template Source is SystemPrompt.")
             .Properties(
                 ("SystemMessage", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("System message contributed by this reusable system-prompt template.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildAIPersonaMetadataSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Description("The AI persona this resource links to, by the persona's technical name. Applied when the AI Personas feature is enabled.")
+            .Properties(
+                ("PersonaId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Technical name of the linked persona.")),
+                ("Parameters", new JsonSchemaBuilder().Type(SchemaValueType.Object).Description("Liquid arguments used when rendering the persona instructions.").AdditionalProperties(true)))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildAIProfileSettingsSchema()

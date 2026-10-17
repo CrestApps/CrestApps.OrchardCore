@@ -5,6 +5,7 @@
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.Core.AI.Models
+@using CrestApps.Core.AI.Profiles
 @using CrestApps.OrchardCore.AI.Chat.Hubs
 @using CrestApps.OrchardCore.AI.Core
 @using Microsoft.Extensions.DependencyInjection
@@ -66,6 +67,9 @@
         && profile.GetOrCreate<AnalyticsMetadata>().EnableSessionMetrics;
     var profileMetadata = profile.GetOrCreate<AIProfileMetadata>();
     var addInitialPrompt = !string.IsNullOrWhiteSpace(profileMetadata.InitialPrompt);
+
+    // The linked persona names the assistant and gives it an avatar. Without the Personas feature it is the default look.
+    var assistantDisplay = await Context.RequestServices.ResolveChatAssistantDisplayAsync(profile);
     ChatModeProfileSettings chatModeSettings = null;
     profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings);
     var chatMode = chatModeSettings?.ChatMode ?? ChatMode.TextInput;
@@ -283,6 +287,8 @@
             placeholderElementSelector = $"#{placeholderHtmlId}",
             autoCreateSession = false,
             initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+            assistantLabel = assistantDisplay.GetAssistantLabel(T["Assistant"].Value),
+            assistantAvatarUrl = assistantDisplay.AvatarUrl,
             messages = Array.Empty<object>(),
             metricsEnabled,
             chatMode = effectiveChatMode.ToString(),
@@ -336,8 +342,8 @@
             <div>
                 <div v-if="message.role === 'user'" class="ai-chat-msg-role ai-chat-msg-role-user">@T["You"]</div>
                 <div v-else-if="message.role !== 'indicator'" class="ai-chat-msg-role ai-chat-msg-role-assistant">
-                    <span :class="message.isStreaming && index === lastAssistantIndex ? 'ai-streaming-icon' : 'ai-bot-icon'"><i class="fa fa-robot"></i></span>
-                    @T["Assistant"]
+                    <span :class="getAssistantIconClasses(message, index)"><img v-if="getAssistantAvatarUrl(message)" class="ai-chat-assistant-avatar" :src="getAssistantAvatarUrl(message)" alt="" /><i v-else :class="getAssistantIcon(message)"></i></span>
+                    {{ getAssistantLabel(message) }}
                 </div>
                 <div class="ai-chat-message-body min-w-0 lh-base">
                     <h6 v-if="message.title" class="mb-1" style="font-size: 0.8rem;">{{ message.title }}</h6>
@@ -375,7 +381,8 @@
 </template>
 <template id="@($"{baseId}_IndicatorTemplate")">
     <div class="ai-chat-msg-role ai-chat-msg-role-assistant">
-        <span class="ai-streaming-icon"><i class="fa fa-robot" style="display: inline-block;"></i></span>
-        @T["Assistant"]
+        @* Filled by ai-chat.js with the assistant's avatar or robot icon, and its name. *@
+        {{ assistantIcon }}
+        {{ assistantLabel }}
     </div>
 </template>

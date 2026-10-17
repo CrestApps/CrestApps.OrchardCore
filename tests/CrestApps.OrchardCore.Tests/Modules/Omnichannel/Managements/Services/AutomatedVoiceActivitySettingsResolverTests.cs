@@ -1,7 +1,9 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Settings;
 
@@ -58,9 +60,98 @@ public sealed class AutomatedVoiceActivitySettingsResolverTests
         Assert.Equal("site-voice", result.TextToSpeechVoiceId);
     }
 
+    [Fact]
+    public async Task ResolveAsync_WhenActivityPicksAVoice_ShouldUseItOverTheFlowAndThePersona()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            SubjectContentType = "Appointment",
+            TextToSpeechVoiceId = "activity-voice",
+        };
+        var resolver = CreateResolver(CreatePersonaFlowSettings(voice: "flow-voice"), CreateSiteSettings(), PersonaVoiceTestServices.Create());
+
+        // Act
+        var result = await resolver.ResolveAsync(activity, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("activity-voice", result.TextToSpeechVoiceId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenTheFlowPicksAVoice_ShouldUseItOverThePersona()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            SubjectContentType = "Appointment",
+        };
+        var resolver = CreateResolver(CreatePersonaFlowSettings(voice: "flow-voice"), CreateSiteSettings(), PersonaVoiceTestServices.Create());
+
+        // Act
+        var result = await resolver.ResolveAsync(activity, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("flow-voice", result.TextToSpeechVoiceId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenNoVoiceIsPickedAndThePersonaVoiceIsOfTheSpeakingProvider_ShouldUseThePersonaVoice()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            SubjectContentType = "Appointment",
+        };
+        var resolver = CreateResolver(CreatePersonaFlowSettings(), CreateSiteSettings(), PersonaVoiceTestServices.Create());
+
+        // Act
+        var result = await resolver.ResolveAsync(activity, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(PersonaVoiceTestServices.PersonaVoice, result.TextToSpeechVoiceId);
+        Assert.Equal(PersonaVoiceTestServices.SameProviderDeployment, result.TextToSpeechDeploymentName);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenThePersonaVoiceIsOfAnotherProvider_ShouldUseTheSiteDefaultVoice()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            SubjectContentType = "Appointment",
+            TextToSpeechDeploymentName = PersonaVoiceTestServices.OtherProviderDeployment,
+        };
+        var resolver = CreateResolver(CreatePersonaFlowSettings(), CreateSiteSettings(), PersonaVoiceTestServices.Create());
+
+        // Act
+        var result = await resolver.ResolveAsync(activity, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("site-voice", result.TextToSpeechVoiceId);
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WhenTheAIPersonasFeatureIsDisabled_ShouldUseTheSiteDefaultVoice()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            SubjectContentType = "Appointment",
+        };
+        var resolver = CreateResolver(CreatePersonaFlowSettings(), CreateSiteSettings(), PersonaVoiceTestServices.Create(withPersonas: false));
+
+        // Act
+        var result = await resolver.ResolveAsync(activity, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("site-voice", result.TextToSpeechVoiceId);
+    }
+
     private static AutomatedVoiceActivitySettingsResolver CreateResolver(
         SubjectFlowSettings flowSettings,
-        DefaultAIDeploymentSettings deploymentSettings)
+        DefaultAIDeploymentSettings deploymentSettings,
+        IServiceProvider services = null)
     {
         var flowSettingsService = new Mock<ISubjectFlowSettingsService>();
         flowSettingsService
@@ -75,7 +166,16 @@ public sealed class AutomatedVoiceActivitySettingsResolverTests
         siteService.Setup(service => service.GetSiteSettingsAsync())
             .ReturnsAsync(site.Object);
 
-        return new AutomatedVoiceActivitySettingsResolver(flowSettingsService.Object, siteService.Object);
+        var profileManager = new Mock<IAIProfileManager>();
+        profileManager
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string id, CancellationToken _) => ValueTask.FromResult(PersonaVoiceTestServices.CreateProfile(id)));
+
+        return new AutomatedVoiceActivitySettingsResolver(
+            flowSettingsService.Object,
+            siteService.Object,
+            profileManager.Object,
+            (services ?? PersonaVoiceTestServices.Create(withPersonas: false)).GetServices<IAIPersonaResolver>());
     }
 
     private static SubjectFlowSettings CreateFlowSettings()
@@ -86,6 +186,16 @@ public sealed class AutomatedVoiceActivitySettingsResolverTests
             SpeechToTextDeploymentName = "flow-stt",
             TextToSpeechDeploymentName = "flow-tts",
             TextToSpeechVoiceId = "flow-voice",
+        };
+    }
+
+    private static SubjectFlowSettings CreatePersonaFlowSettings(string voice = null)
+    {
+        return new SubjectFlowSettings
+        {
+            ProfileId = "flow-profile",
+            TextToSpeechDeploymentName = PersonaVoiceTestServices.SameProviderDeployment,
+            TextToSpeechVoiceId = voice,
         };
     }
 

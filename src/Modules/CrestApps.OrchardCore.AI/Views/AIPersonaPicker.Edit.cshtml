@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.AI.Core
+@using CrestApps.OrchardCore.AI.Core.ViewModels
+
+@model AIPersonaPickerViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="PersonaId" class="ocat-label">@T["AI persona"]</label>
+    <div class="ocat-end">
+        <select asp-for="PersonaId" class="form-select" data-ai-persona-select>
+            <option value="">@T["No persona"]</option>
+            @foreach (var option in Model.Personas)
+            {
+                <option value="@option.Id" selected="@(string.Equals(option.Id, Model.PersonaId, StringComparison.OrdinalIgnoreCase))" data-voice-name="@option.VoiceName" title="@option.Description">@option.Text</option>
+            }
+        </select>
+        <span class="hint">
+            @T["The character the assistant plays: its personality, the name it uses and the voice it speaks with. The persona's instructions come before the system instructions, which still decide what the assistant does."]
+            <a asp-action="Index" asp-controller="AIPersonas" asp-area="@AIConstants.Feature.Area" target="_blank">@T["Manage personas"]</a>
+        </span>
+    </div>
+</div>
