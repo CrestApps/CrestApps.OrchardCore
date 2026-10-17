@@ -1,0 +1,26 @@
+@model CustomerAddressViewModel
+
+<div asp-validation-summary="ModelOnly"></div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-6" asp-validation-class-for="Label">
+        <label asp-for="Label" class="form-label">@T["Label"]</label>
+        <input asp-for="Label" class="form-control" placeholder="@T["Home, Office…"]" />
+        <span class="hint">@T["Optional. A name to tell this address apart."]</span>
+    </div>
+</div>
+
+@await DisplayAsync(Model.AddressEditor)
+
+<div class="mb-3">
+    <div class="form-check">
+        <input asp-for="IsDefaultBilling" type="checkbox" class="form-check-input" />
+        <label asp-for="IsDefaultBilling" class="form-check-label">@T["Default billing address"]</label>
+        <span class="hint dashed">@T["Offered first at checkout for billing."]</span>
+    </div>
+    <div class="form-check">
+        <input asp-for="IsDefaultShipping" type="checkbox" class="form-check-input" />
+        <label asp-for="IsDefaultShipping" class="form-check-label">@T["Default shipping address"]</label>
+        <span class="hint dashed">@T["Offered first for deliveries."]</span>
+    </div>
+</div>

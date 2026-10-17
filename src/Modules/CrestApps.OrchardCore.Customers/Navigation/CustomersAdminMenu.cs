@@ -16,6 +16,13 @@ public sealed class CustomersAdminMenu : AdminNavigationProvider
         { "action", nameof(CustomersAdminController.Index) },
     };
 
+    private static readonly RouteValueDictionary _myAccountRouteValues = new()
+    {
+        { "area", CustomersConstants.Features.Customers },
+        { "controller", typeof(MyAccountController).ControllerName() },
+        { "action", nameof(MyAccountController.Index) },
+    };
+
     internal readonly IStringLocalizer S;
 
     public CustomersAdminMenu(IStringLocalizer<CustomersAdminMenu> stringLocalizer)
@@ -34,6 +41,13 @@ public sealed class CustomersAdminMenu : AdminNavigationProvider
                     .Id("customers")
                     .Action(_routeValues)
                     .Permission(CustomerPermissions.ViewCustomers)
+                    .LocalNav()
+                )
+                .Add(S["My Account"], S["My Account"].PrefixPosition("1"), account => account
+                    .AddClass("my-account")
+                    .Id("my-account")
+                    .Action(_myAccountRouteValues)
+                    .Permission(CustomerPermissions.ManageOwnCustomerProfile)
                     .LocalNav()
                 )
             );

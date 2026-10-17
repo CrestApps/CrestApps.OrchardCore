@@ -8,6 +8,11 @@ public static class CustomerPermissions
     public static readonly Permission ManageCustomers = new("ManageCustomers", "Manage customers");
 
     public static readonly Permission ViewCustomers = new("ViewCustomers", "View customers", [ManageCustomers]);
+
+    /// <summary>
+    /// A signed-in customer's own profile and address book (My Account).
+    /// </summary>
+    public static readonly Permission ManageOwnCustomerProfile = new("ManageOwnCustomerProfile", "Manage own customer profile and addresses");
 }
 
 internal sealed class CustomerPermissionsProvider : IPermissionProvider
@@ -16,6 +21,7 @@ internal sealed class CustomerPermissionsProvider : IPermissionProvider
     [
         CustomerPermissions.ManageCustomers,
         CustomerPermissions.ViewCustomers,
+        CustomerPermissions.ManageOwnCustomerProfile,
     ];
 
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
@@ -29,6 +35,11 @@ internal sealed class CustomerPermissionsProvider : IPermissionProvider
             {
                 Name = OrchardCoreConstants.Roles.Administrator,
                 Permissions = _allPermissions,
+            },
+            new PermissionStereotype
+            {
+                Name = OrchardCoreConstants.Roles.Authenticated,
+                Permissions = [CustomerPermissions.ManageOwnCustomerProfile],
             },
         ];
     }

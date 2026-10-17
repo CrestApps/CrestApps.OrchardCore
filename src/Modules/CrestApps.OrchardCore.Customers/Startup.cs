@@ -26,6 +26,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICustomerStore, CustomerStore>();
         services.AddScoped<ICustomerService, DefaultCustomerService>();
 
+        services.AddScoped<CustomerAddressBook>();
+
         // Statements, receipts and reminders address a customer by their customer record once there is one.
         services.AddScoped<DefaultCustomerContactResolver>();
         services.Replace(ServiceDescriptor.Scoped<ICustomerContactResolver, CustomerRecordContactResolver>());

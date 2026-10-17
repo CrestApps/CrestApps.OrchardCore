@@ -11,7 +11,7 @@ Everyone who buys from your store is a **customer**: a person or a business, wit
 | | |
 | --- | --- |
 | **Menu** | Commerce > Customers |
-| **Permission** | **View customers** to look, **Manage customers** to add and edit |
+| **Permission** | **View customers** to look, **Manage customers** to add and edit; **Manage own customer profile and addresses** for **My Account** |
 | **Feature** | Customers |
 
 <AskYourAdmin />
@@ -57,6 +57,38 @@ Click a customer to open them, change their details, and click **Save**.
 Below the details, **Account** links to the customer's account when they have one, and shows when they became a customer and when they were last active.
 
 If someone else saved the customer while you were editing, your changes aren't saved and you're asked to review theirs first.
+
+## Addresses
+
+A customer keeps an address book of up to 20 addresses, such as a home and an office. One can be the **default billing** address and one the **default shipping** address; they're the ones offered first when the customer buys.
+
+1. Open the customer. Their addresses are listed under **Addresses**, with badges on the defaults.
+2. Click **Add address**, or **Edit** on an address.
+3. Choose the **Country** first. The rest of the form follows it: the fields the country uses, in its order and with its names, such as **State** and **ZIP code** for the United States, **Post town** and **Postal code** for the United Kingdom, or **Prefecture** first for Japan. Where a country has a list of states or provinces, you pick one from it.
+4. Fill in the address, give it a **Label** such as *Home* or *Office* if you like, and click **Save**.
+
+| Field | What it does |
+| --- | --- |
+| **Label** | A name for the address, such as *Home* or *Office*. |
+| **Country** | Required. Decides the other fields. |
+| **Full name** | Who receives mail at the address. Required. |
+| **Company** | The business at the address, if any. |
+| The address fields | Street address and the second line, then the parts the country uses (city or post town, state, province or prefecture, postal code…). The ones marked * are required for that country. |
+| **Phone** | A number for the courier. |
+| **Default billing address**, **Default shipping address** | Tick one to make this address the default. Ticking it moves the default from another address; unticking it on the default leaves none. |
+
+The address is checked against its country: a postal code has to look like that country's, and belong to the state or province chosen. A new address starts with the customer's name, company and phone, in the country of their other addresses, and a customer's first address becomes both defaults.
+
+To remove an address, click **Delete** and confirm. Orders keep their own copy of the addresses they used, so changing or deleting an address never changes a past order.
+
+## My Account
+
+A signed-in customer manages their own details under **My Account**, with the **Manage own customer profile and addresses** permission. Every signed-in user has it by default.
+
+- The top of the page edits how the store addresses them: whether they buy for **Myself** or **A business**, their name, company, tax id, phone and marketing consent. Their email is shown but is changed on their account.
+- **Addresses** lists their address book, where they add, edit and delete addresses the same way as above.
+
+The first time a user opens **My Account**, their customer record is made from their account, just as it is on their first order.
 
 ## Related pages
 
