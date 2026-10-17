@@ -20,4 +20,10 @@ public sealed class DialerQueueInventory
     /// Gets or sets each covered campaign's pending records split by what the dialer can do with them.
     /// </summary>
     public IList<DialerCampaignDispatchSummary> Campaigns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets every covered pending record as it was classified, so a report can narrow the records and split them
+    /// again with <see cref="Services.IDialerQueueInventoryService.Summarize(IEnumerable{DialerInventoryRecord})"/>.
+    /// </summary>
+    public IList<DialerInventoryRecord> Records { get; set; } = [];
 }

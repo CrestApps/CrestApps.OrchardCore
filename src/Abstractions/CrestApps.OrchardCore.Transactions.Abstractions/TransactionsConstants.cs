@@ -138,5 +138,10 @@ public static class TransactionsConstants
         /// The transaction was settled offline and recorded manually by a manager.
         /// </summary>
         public const string Offline = "offline";
+
+        /// <summary>
+        /// Nothing more was owed once an adjustment (a discount, waiver, credit or write-off) was recorded.
+        /// </summary>
+        public const string Adjusted = "adjusted";
     }
 }

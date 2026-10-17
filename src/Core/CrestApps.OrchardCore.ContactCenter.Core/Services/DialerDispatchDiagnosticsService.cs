@@ -300,7 +300,7 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         // Routing only sees what waits in the campaign's queue.
         if (!queued)
         {
-            return (DispatchBlocker.NotQueued, null);
+            return (EvaluateNotQueued(activity?.AssignedToId), null);
         }
 
         // A record stamped with a profile that has since been deleted is never paced: the pacer reads the stamped profile
@@ -342,6 +342,15 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
         return (DispatchBlocker.DialableNow, null);
     }
+
+    /// <summary>
+    /// Decides why a pending record that is not in its campaign's queue is not dialed.
+    /// </summary>
+    /// <param name="assignedToId">The user the record is assigned to, if any.</param>
+    /// <returns><see cref="DispatchBlocker.AssignedToUser"/> for a record a user works from their own list; otherwise
+    /// <see cref="DispatchBlocker.NotQueued"/>.</returns>
+    internal static DispatchBlocker EvaluateNotQueued(string assignedToId)
+        => string.IsNullOrEmpty(assignedToId) ? DispatchBlocker.NotQueued : DispatchBlocker.AssignedToUser;
 
     private static DispatchBlocker? ToBlocker(DialerSuppressionReason reason)
         => reason switch

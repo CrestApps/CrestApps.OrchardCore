@@ -58,6 +58,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.EditChatInteractions);
 
         // Configure RowLevelTabularBatchSettings from configuration.
         services.AddTransient<IConfigureOptions<RowLevelTabularBatchOptions>, RowLevelTabularBatchOptionsConfiguration>();

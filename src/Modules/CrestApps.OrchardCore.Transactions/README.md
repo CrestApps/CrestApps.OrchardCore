@@ -57,6 +57,13 @@ the report can group and label it. Register an `ITransactionSource` to give that
 Make creation idempotent on something stable — the checkout session and obligation, for example — because
 the pipelines that create obligations can legitimately run more than once.
 
+## Acting on a transaction from your own module
+
+Inject `ITransactionCommandService` to record an offline payment, mark a transaction paid, cancel it, adjust or
+waive what is owed (`AdjustAsync` with a discount, waiver, credit or write-off), send its invoice now, or refund
+it. The Commerce console uses the same service, so the timeline, receipts and handler calls are identical. Each
+command returns a result with errors and runs under a lock on the transaction.
+
 ## Reacting to a transaction from your own module
 
 Implement `ITransactionEventHandler` (or derive from `TransactionEventHandlerBase`) to hear about every change:

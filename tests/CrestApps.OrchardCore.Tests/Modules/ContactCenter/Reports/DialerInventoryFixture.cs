@@ -26,7 +26,17 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports;
 /// </summary>
 internal sealed class DialerInventoryFixture : IAsyncDisposable
 {
+    public const string RenewalsCampaign = "renewals";
+    public const string WinBackCampaign = "winback";
+    public const string DisabledProfile = "profile-renewals-off";
+    public const string PowerProfile = "profile-winback-power";
+    public const string DeletedProfile = "profile-deleted";
+
     public static readonly DateTime Now = new(2026, 10, 16, 15, 0, 0, DateTimeKind.Utc);
+
+    public static readonly string RenewalsQueue = ContactCenterConstants.CampaignQueue.CreateId(RenewalsCampaign);
+
+    public static readonly string WinBackQueue = ContactCenterConstants.CampaignQueue.CreateId(WinBackCampaign);
 
     private readonly Dictionary<string, OmnichannelActivity> _activities = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DialerProfile> _profiles = new(StringComparer.Ordinal);
@@ -74,6 +84,56 @@ internal sealed class DialerInventoryFixture : IAsyncDisposable
         }
 
         return new DialerInventoryFixture(store, databasePath);
+    }
+
+    /// <summary>
+    /// Creates a fixture seeded with the incident the dialer queue inventory exists for, scaled down: a campaign queue
+    /// whose records are stamped with a turned-off profile, pending records of that campaign in no queue at all, and a
+    /// second queue stamped with an enabled Power profile that is not dialing because its head item carries a deleted one.
+    /// </summary>
+    /// <param name="addMore">Adds more records before the fixture is saved.</param>
+    public static async Task<DialerInventoryFixture> CreateIncidentAsync(Action<DialerInventoryFixture> addMore = null)
+    {
+        var fixture = await CreateAsync();
+
+        fixture.AddProfile(DisabledProfile, "Renewals power", DialerMode.Power, enabled: false);
+        fixture.AddProfile(PowerProfile, "Win-back power", DialerMode.Power, enabled: true);
+
+        // Eight records waiting in the renewals queue, stamped with the turned-off profile; two of the activities carry a
+        // different profile of their own.
+        for (var i = 0; i < 8; i++)
+        {
+            var activity = fixture.AddActivity(RenewalsCampaign, i < 6 ? DisabledProfile : PowerProfile);
+            fixture.AddQueueItem(activity, RenewalsQueue, DisabledProfile, enqueuedUtc: Now.AddHours(-6).AddMinutes(i));
+        }
+
+        // Three pending renewals records that are in no queue at all.
+        for (var i = 0; i < 3; i++)
+        {
+            fixture.AddActivity(RenewalsCampaign, DisabledProfile);
+        }
+
+        // The win-back queue: correctly stamped with an enabled Power profile, but its head item is stamped with a profile
+        // that was deleted, so the pacer never runs for it.
+        var head = fixture.AddActivity(WinBackCampaign, PowerProfile);
+        fixture.AddQueueItem(head, WinBackQueue, DeletedProfile, enqueuedUtc: Now.AddHours(-5), priority: InteractionPriority.High);
+
+        for (var i = 0; i < 4; i++)
+        {
+            var activity = fixture.AddActivity(WinBackCampaign, PowerProfile);
+            fixture.AddQueueItem(activity, WinBackQueue, PowerProfile, enqueuedUtc: Now.AddHours(-4).AddMinutes(i));
+        }
+
+        // One win-back record is with an agent right now, and the queue last placed a call three hours ago.
+        var reserved = fixture.AddActivity(WinBackCampaign, PowerProfile, ActivityStatus.Reserved);
+        fixture.AddQueueItem(reserved, WinBackQueue, PowerProfile, QueueItemStatus.Reserved);
+        fixture.AddOutboundCall(WinBackQueue, reserved, Now.AddHours(-3));
+        fixture.AddOutboundCall(WinBackQueue, reserved, Now.AddHours(-9));
+
+        addMore?.Invoke(fixture);
+        await fixture.SaveAsync();
+
+        return fixture;
     }
 
     public void AddProfile(string profileId, string name, DialerMode mode, bool enabled)

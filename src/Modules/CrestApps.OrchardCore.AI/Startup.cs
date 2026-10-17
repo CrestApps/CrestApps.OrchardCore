@@ -99,6 +99,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<GeneralAISettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
 
         services
             .AddAIDeploymentServices()
@@ -332,6 +333,7 @@ public sealed class ChatCoreStartup : StartupBase
 
         // Register the default orchestrator settings UI.
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
 
         services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();

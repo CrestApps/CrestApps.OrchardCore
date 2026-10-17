@@ -125,10 +125,18 @@ public sealed class Transaction : CatalogItem
     public decimal AmountPaid { get; set; }
 
     /// <summary>
-    /// Gets the amount still owed, in <see cref="Currency"/>. Never negative.
+    /// Gets or sets the amount taken off what is owed without money being received, in <see cref="Currency"/>: discounts,
+    /// waivers, credits and write-offs recorded as <see cref="TransactionEventType.Adjusted"/> events. It lowers
+    /// <see cref="OutstandingAmount"/> but is never counted as paid.
+    /// </summary>
+    public decimal AmountAdjusted { get; set; }
+
+    /// <summary>
+    /// Gets the amount still owed, in <see cref="Currency"/>: the total less what was adjusted and what was paid. Never
+    /// negative.
     /// </summary>
     public decimal OutstandingAmount
-        => Math.Max(0m, TotalAmount - AmountPaid);
+        => Math.Max(0m, TotalAmount - AmountAdjusted - AmountPaid);
 
     /// <summary>
     /// Gets or sets the amount given back to the customer so far, in <see cref="Currency"/>. A refund doesn't

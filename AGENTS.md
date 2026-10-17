@@ -474,6 +474,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
 - **AI site settings navigation**: Every `SiteDisplayDriver<>` that sets `SettingsGroupId => AIConstants.AISettingsGroupId` must also register `.AddNavigationProvider<AISiteSettingsAdminMenu>()` in its feature's `Startup` class. This ensures the **Settings → Artificial Intelligence** admin menu entry exists whenever the feature is enabled, so users can navigate to the settings page.
+- **Settings group permissions**: Every `SiteDisplayDriver<>` that checks a module permission (anything other than `ManageSettings`) must register it with `services.AddSiteSettingsPermission(groupId, permission)` in the same startup class that registers the driver, and its project must reference `OrchardCore.Settings.Core` (or `OrchardCore.Settings`). Orchard Core's settings screen authorizes `ManageGroupSettings` for the group, so without the registration a role holding only the module permission sees the menu item and gets access denied. `SiteSettingsGroupPermissionRegistrationTests` enforces this.
 
 ### Module Structure Conventions
 

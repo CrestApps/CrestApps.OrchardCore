@@ -185,7 +185,39 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
         ContactCenterReportCriteria criteria,
         CancellationToken cancellationToken = default)
     {
+        var activities = await GetCampaignActivitiesAsync(fromUtc, toUtc, criteria, cancellationToken);
+
+        return await BuildCampaignSummaryAsync(fromUtc, toUtc, activities, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<OmnichannelActivityIndex>> GetCampaignActivitiesAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default)
+    {
         var activities = await QueryActivityIndexesAsync(fromUtc, toUtc, cancellationToken);
+
+        if (!string.IsNullOrEmpty(criteria?.CampaignGroupId))
+        {
+            ApplyCurrentCampaignGroupCriteria(criteria, await _campaignManager.GetAllAsync(cancellationToken));
+        }
+
+        ApplyActivitySourceCriteria(criteria, _activitySourceOptions);
+
+        return FilterActivities(activities, criteria);
+    }
+
+    /// <inheritdoc/>
+    public async Task<CampaignSummaryReport> BuildCampaignSummaryAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        IReadOnlyList<OmnichannelActivityIndex> activities,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(activities);
+
         var campaigns = await _campaignManager.GetAllAsync(cancellationToken);
         var campaignGroups = await _campaignGroupManager.GetAllAsync(cancellationToken);
 
@@ -203,13 +235,10 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
             campaignGroupIds[campaign.ItemId] = campaign.CampaignGroupId;
         }
 
-        ApplyCurrentCampaignGroupCriteria(criteria, campaigns);
-        ApplyActivitySourceCriteria(criteria, _activitySourceOptions);
-
         return BuildCampaignSummary(
             fromUtc,
             toUtc,
-            FilterActivities(activities, criteria),
+            activities,
             names,
             campaignGroupIds,
             campaignGroupNames);
@@ -298,6 +327,7 @@ public sealed partial class ContactCenterReportingService : IContactCenterReport
                 : string.IsNullOrEmpty(criteria.ActivitySource) || activity.Source == criteria.ActivitySource)
             .Where(activity => string.IsNullOrEmpty(channel) || string.Equals(activity.Channel, channel, StringComparison.OrdinalIgnoreCase))
             .Where(activity => !criteria.ActivityStatus.HasValue || activity.Status == criteria.ActivityStatus.Value)
+            .Where(activity => !criteria.InteractionType.HasValue || activity.InteractionType == criteria.InteractionType.Value)
             .ToArray();
     }
 

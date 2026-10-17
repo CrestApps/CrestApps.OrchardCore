@@ -53,6 +53,21 @@ public class ContactCenterReportFilterViewModel
     public string ActivityStatus { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected activity interaction type.
+    /// </summary>
+    public string InteractionType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected dialer profile identifier.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected queue state of the pending records.
+    /// </summary>
+    public string QueueState { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the queue filter is displayed.
     /// </summary>
     public bool ShowQueueFilter { get; set; }
@@ -98,6 +113,21 @@ public class ContactCenterReportFilterViewModel
     public bool ShowActivityStatusFilter { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the interaction type filter is displayed.
+    /// </summary>
+    public bool ShowInteractionTypeFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the dialer profile filter is displayed.
+    /// </summary>
+    public bool ShowDialerProfileFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the queue state filter is displayed.
+    /// </summary>
+    public bool ShowQueueStateFilter { get; set; }
+
+    /// <summary>
     /// Gets or sets the queue options.
     /// </summary>
     public IList<SelectListItem> Queues { get; set; } = [];
@@ -141,4 +171,19 @@ public class ContactCenterReportFilterViewModel
     /// Gets or sets the activity status options.
     /// </summary>
     public IList<SelectListItem> ActivityStatuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the interaction type options.
+    /// </summary>
+    public IList<SelectListItem> InteractionTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the dialer profile options.
+    /// </summary>
+    public IList<SelectListItem> DialerProfiles { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the queue state options.
+    /// </summary>
+    public IList<SelectListItem> QueueStates { get; set; } = [];
 }
