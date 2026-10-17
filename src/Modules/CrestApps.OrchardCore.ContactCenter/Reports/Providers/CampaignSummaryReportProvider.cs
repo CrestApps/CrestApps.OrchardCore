@@ -328,7 +328,7 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
     private void AddReasonsSection(
         ReportDocument document,
         CampaignSummaryReport report,
-        IReadOnlyDictionary<string, DialerCampaignDispatchSummary> splits,
+        Dictionary<string, DialerCampaignDispatchSummary> splits,
         ReportTimeZone timeZone)
     {
         var reasonRows = new List<ReportRow>();
