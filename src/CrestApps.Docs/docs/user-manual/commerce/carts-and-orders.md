@@ -37,6 +37,12 @@ Guests do not need an account to use a cart. If a guest signs in, what they put 
 | Awaiting payment | The buyer started the checkout and did not finish it. |
 | Canceled | The buyer checked out again with a changed cart before paying, so the newer order replaced this one. |
 
-Open an order to see what was bought, the quantities and prices, the tax and the total paid, when it was placed and paid, and who placed it. Refunds are made from the [payment screens](payments-and-refunds.md).
+Open an order to see what was bought, the quantities and prices, the tax and the total paid, when it was placed and paid, who placed it, and the address it was billed to. Refunds are made from the [payment screens](payments-and-refunds.md).
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
+
+## Order confirmations
+
+When an order is paid, the customer is emailed a confirmation with the order number, what they bought, the total and the billing address. It goes to the email given at checkout, once per order.
+
+Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.

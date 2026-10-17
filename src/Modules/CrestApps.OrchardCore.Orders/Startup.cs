@@ -1,13 +1,15 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
-using CrestApps.OrchardCore.Orders.Drivers;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Orders.Drivers;
+using CrestApps.OrchardCore.Orders.Handlers;
 using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Navigation;
+using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data;
@@ -16,6 +18,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Orders;
 
@@ -31,10 +34,14 @@ public sealed class Startup : StartupBase
         services.AddScoped<IOrderStore, OrderStore>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<ICheckoutHandler, OrderCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, OrderConfirmationCheckoutHandler>();
+        services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
         services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();
         services.AddNavigationProvider<OrdersAdminMenu>();
+        services.AddNavigationProvider<OrderSettingsAdminMenu>();
+        services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
 
         services.Configure<TemplateOptions>(options =>
         {

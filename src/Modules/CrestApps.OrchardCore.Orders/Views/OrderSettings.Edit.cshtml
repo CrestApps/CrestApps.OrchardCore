@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.Orders.ViewModels.OrderSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="SendConfirmations" type="checkbox" class="form-check-input" />
+            <label asp-for="SendConfirmations" class="form-check-label">@T["Send order confirmations"]</label>
+            <span class="hint dashed">@T["Emails the customer their order number, what they bought, the total and the billing address once the order is paid. Needs the site's email to be set up."]</span>
+        </div>
+    </div>
+</div>

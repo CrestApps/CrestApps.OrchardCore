@@ -75,6 +75,8 @@ The cart page shows **Checkout** when the Orders feature is enabled. Checking ou
 
 The checkout's confirmation page shows the order number.
 
+**Order confirmations.** Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, tax, total, billing address; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings > Commerce > Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
+
 Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
 
 ### Order statuses

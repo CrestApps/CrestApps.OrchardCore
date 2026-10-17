@@ -165,9 +165,10 @@ This is what shipping, guest order lookup and the customer account pages wait on
   `Order.CustomerPhone` are new. Pay Later already read the contact for guests.
 - When paid, the order is linked to the signed-in buyer's customer or a new guest customer
   (`ICustomerService.CreateGuestAsync`), and a guest's billing address becomes their default billing address.
-- Not yet: **an order confirmation email**. Nothing in the store sends one today, for guests or signed-in buyers; the
-  exit gate's "the confirmation reaches the guest" needs it. It comes as its own small step (CU3b) before CU4, whose
-  signed order link goes in that email.
+- **CU3b, order confirmations** (decided 2026-10-16: on by default): `OrderConfirmationCheckoutHandler` emails a paid
+  order's confirmation to the order's email once (`Order.ConfirmationSentUtc`) after the completion is committed,
+  when `OrderSettings.SendConfirmations` is on and the site has an email service. CU4 adds the signed order link to
+  it.
 
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
