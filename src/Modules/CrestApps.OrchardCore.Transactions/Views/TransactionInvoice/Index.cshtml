@@ -61,7 +61,7 @@
     }
 </div>
 
-@if (!string.IsNullOrEmpty(Model.PayUrl))
+@if (Model.IsAdministrator && !string.IsNullOrEmpty(Model.PayUrl))
 {
     <div class="card mb-3 no-print">
         <div class="card-body">

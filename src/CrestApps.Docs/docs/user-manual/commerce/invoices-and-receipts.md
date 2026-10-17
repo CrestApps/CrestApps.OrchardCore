@@ -36,6 +36,7 @@ Every reminder for a payment the customer pays themselves carries a **link that 
 - The link opens a page for that one payment. Nobody needs an account or a password to use it, so a guest who bought without an account can pay too.
 - Each link works for **60 days**. Every reminder sends a fresh link, so the newest reminder always has one that works.
 - Anyone who has the link can pay with it. Forwarding the reminder to someone else, such as the person who handles payments at the customer's company, is fine.
+- With the **Receipts** feature on, a reminder to a customer with an account also has a **View your invoice** link to the invoice page. It asks them to sign in. See [Links to the customer's pages](#links-to-the-customers-pages).
 
 ### The pay page
 
@@ -59,6 +60,8 @@ The invoice page shows the invoice exactly as it prints.
 1. Open the transaction: **Commerce > Transactions** for an administrator, **Commerce > My Transactions** for a customer.
 2. Click the invoice number next to **Invoice**.
 3. Click **Print invoice**. Only the invoice is printed, without the site's menus.
+
+Customers can also open and print their invoices on the website, without the admin; see [My Transactions on the website](transactions.md#my-transactions-on-the-website).
 
 The invoice shows:
 
@@ -88,7 +91,7 @@ With the **Send Payment Receipts** feature on, the customer is sent a receipt af
 
 - Each receipt gets its own number, in order across the site: **R-1001**, **R-1002**, and so on. The number never changes, so a reprinted receipt shows the number the customer was sent.
 - The message is titled *Receipt for your payment of*, followed by the amount, thanks the customer, gives the receipt number, and includes the receipt itself.
-- Customers with an account get it through the site's notifications, on the methods they chose. Guests get it by email at the address they gave when they bought.
+- Customers with an account get it through the site's notifications, on the methods they chose, with a **View your receipt online** link to the receipt's page. Guests get it by email at the address they gave when they bought.
 - The transaction's **Timeline** notes that a receipt was sent.
 
 A receipt shows:
@@ -110,6 +113,12 @@ A receipt shows:
 ## Refund notices
 
 With the **Send Payment Receipts** feature on, when a refund of a payment on a transaction succeeds, the customer is told. The message is titled *Your refund of*, followed by the amount, and says the money went back to the card or account they paid with and can take a few business days to appear on their statement. The transaction's **Timeline** notes that the customer was told. A refund that an administrator settles by hand with **Mark settled** sends the same notice. See [Payments and Refunds](payments-and-refunds.md).
+
+## Links to the customer's pages
+
+Receipts and reminders sent to a customer with an account carry a link to the document's page: **View your receipt online** in a receipt, **View your invoice** in a reminder for an invoiced payment. The customer signs in and sees only their own documents. Guests don't get these links, because they have no account to sign in with; their pay link is all they need.
+
+The links open the customer's pages in the admin (**Commerce > My Transactions**) unless your administrator sets them to open the [pages on the website](transactions.md#my-transactions-on-the-website). That is a setting in the site's configuration, not on a settings screen.
 
 ## Brand your invoices and receipts
 
@@ -140,7 +149,7 @@ Invoices and receipts share one set of branding settings.
 
 ## Make sure links point at your site
 
-The pay links in reminders, and the link you copy from an invoice, use your site's public address. Your administrator sets it in **Base url** under **Settings > General**, for example *https://shop.contoso.com*.
+The pay links in reminders, the links to the customer's invoice and receipt pages, and the link you copy from an invoice, use your site's public address. Your administrator sets it in **Base url** under **Settings > General**, for example *https://shop.contoso.com*.
 
 Set it before you rely on pay links. Without it, a link copied from the invoice page uses whatever address you opened the admin from, which a customer may not be able to reach, and the reminders the site sends on its schedule go out **without** a pay link: customers with an account are asked to sign in to pay instead.
 

@@ -1632,6 +1632,16 @@ The phone number verification providers have no configuration section. Set them 
 
 ## Commerce
 
+### Transaction customer pages
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Transactions:CustomerPages` |
+| **Read by** | Transactions (`CrestApps.OrchardCore.Transactions`), through the tenant configuration |
+| **Controls** | Which customer pages the links in receipt and reminder messages open |
+
+Keys: `LinkTarget`: `Admin` (default) opens the customer pages in the admin (`Admin/my-transactions`, `Admin/transaction-invoices/{itemId}`, `Admin/transaction-receipts/{itemId}/{paymentId}`); `Site` opens the pages in the site theme (`my-transactions`, `my-transactions/invoices/{itemId}`, `my-transactions/receipts/{itemId}/{paymentId}`). Both sets of pages are always available; the key only decides where the links point.
+
 ### Test payments
 
 | | |
@@ -1646,6 +1656,11 @@ Keys: `AllowOutsideDevelopment` (default `false`). The test payment method confi
 {
   "OrchardCore": {
     "CrestApps": {
+      "Transactions": {
+        "CustomerPages": {
+          "LinkTarget": "Site"
+        }
+      },
       "Checkout": {
         "TestProvider": {
           "AllowOutsideDevelopment": true
@@ -1657,10 +1672,11 @@ Keys: `AllowOutsideDevelopment` (default `false`). The test payment method confi
 ```
 
 ```text
+OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
 OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
 ```
 
-See [Test payments](modules/checkout.md#test-payments).
+See [Transactions](modules/transactions.md#links-in-messages) and [Test payments](modules/checkout.md#test-payments).
 
 ## Multi-tenancy
 

@@ -3,6 +3,9 @@ sidebar_label: Transactions
 sidebar_position: 14
 title: Transactions
 description: A provider-agnostic ledger that tracks, reports, and settles outstanding financial obligations from any payment provider, with customer statements, an administrator report and management console, and payment reminders delivered through the notification system.
+user_manual:
+  - user-manual/commerce/transactions
+  - user-manual/commerce/invoices-and-receipts
 ---
 
 | | |
@@ -80,7 +83,8 @@ The **Send Payment Receipts** feature (`CrestApps.OrchardCore.Transactions.Recei
 and Notifications) sends the owner a receipt for every payment applied to a transaction: settled online,
 recorded offline, or marked paid. A receipt covers the money in that one payment, with that payment's share of the
 transaction's tax, so a balance paid in three parts gets three receipts that add up. A signed-up owner receives it
-through the notification system with an HTML body; a guest owner receives it by email.
+through the notification system with an HTML body and a link to the receipt's page (see
+[Links in messages](#links-in-messages)); a guest owner receives it by email.
 
 Each receipt gets a short sequential number per site, `R-1001`, `R-1002` and so on, issued once when it is first sent
 and shown on every copy after that (`TransactionEvent.ReceiptNumber`). The numbers come from
@@ -174,6 +178,8 @@ services.AddScoped<ITransactionEventHandler, RegistrationPaymentStatusHandler>()
 
 Authenticated users with the **View own transactions** permission get a **My Transactions** entry in the admin navigation. Consistent with the administrator report, it offers a search bar, a status filter in the list header (including an *outstanding* view), and a pager, and lets them open a transaction and **Pay** an outstanding balance online. Paying opens the checkout straight on the payment step: the balance being paid is shown in the order summary, so there is no separate step for it.
 
+The same statement, and the customer's invoices and receipts, are also available in the site theme; see [Customer pages in the site theme](#customer-pages-in-the-site-theme).
+
 ### Administrator report and console
 
 Users with the **Manage transactions** permission get a **Commerce → Transactions** report. It searches by title, and its list header filters by status (including an *outstanding* view) and by **source**, from the sources registered by the enabled features. Each row shows the owner, source, total, outstanding balance and due date as badges. Opening a transaction reveals its full timeline and the management actions, each of which asks for confirmation before it changes anything:
@@ -185,6 +191,117 @@ Users with the **Manage transactions** permission get a **Commerce → Transacti
 - **Add note** — attach a free-form note to the timeline.
 
 Because the report is provider-agnostic, an administrator can see and manage an unpaid balance the same way regardless of which module created it. If a customer never pays, a manager has one place to chase, settle, cancel, or annotate the obligation, and can pair it with whatever downstream action a consuming module exposes (for example disabling a service or canceling a subscription).
+
+## Customer pages in the site theme
+
+The customer pages above are admin pages marked `[CustomerAdminPage]`, so they render in the admin theme. A customer who never uses the admin gets the same documents in the site theme, at front-end routes that need no admin access:
+
+| Route | Route name (`TransactionsConstants.RouteNames`) | Shows | Needs |
+| --- | --- | --- | --- |
+| `my-transactions` | `Statement` (`TransactionsStatement`) | The signed-in customer's statement, filtered by `search` and `outstanding=true`, paged with `page` and `pagesize`. | Transactions |
+| `my-transactions/invoices/{itemId}` | `Invoice` (`TransactionsInvoice`) | The printable invoice, with **Pay now** (the transaction's signed pay link) while it is due. | Transactions and Receipts |
+| `my-transactions/receipts/{itemId}/{paymentId}` | `Receipt` (`TransactionsReceipt`) | The printable receipt of one payment. | Transactions and Receipts |
+
+The admin routes keep working and are named too: `AdminStatement` (`Admin/my-transactions`), `AdminInvoice` (`Admin/transaction-invoices/{itemId}`) and `AdminReceipt` (`Admin/transaction-receipts/{itemId}/{paymentId}`).
+
+### Ownership rules
+
+The admin pages and the site pages build their documents through the same `ITransactionCustomerPageService`, so they apply the same rules:
+
+- A visitor who is not signed in is sent to the sign-in page by the site pages (the admin redirects them as it does for any admin page).
+- The statement needs **View own transactions** and lists only transactions owned by the viewer's account (`OwnerKind` `Authenticated` and `OwnerId` equal to the user's identifier).
+- An invoice or a receipt needs **View own transactions** or **Manage transactions**; neither answers `403`. A customer sees only a transaction their account owns. A guest transaction is never shown to an account, even one that shares its identifier: a guest reaches their invoice through the signed [pay link](#invoices-and-pay-links). A user with **Manage transactions** sees any invoice or receipt, and the model's `IsAdministrator` is `true`.
+- Someone else's transaction, an invoice that was never issued (no `InvoiceNumber`), an event that is not a recorded payment, and a site without the Receipts module all answer `404`, so identifiers cannot be probed.
+
+### Shapes
+
+Each site page renders a shape. A theme overrides how it looks with a template of the same name (for example `Views/TransactionInvoice.cshtml` in the theme):
+
+| Shape (`TransactionsConstants.Shapes`) | Model |
+| --- | --- |
+| `TransactionStatement` | `TransactionStatementViewModel`: the page's `Entries` (each a `TransactionStatementEntry` with the `Transaction`, its `PayUrl`, its `InvoiceUrl` and its `Receipts`), `TotalCount`, `Search`, `OutstandingOnly` and the `Pager` shape. |
+| `TransactionInvoice` | `TransactionInvoiceViewModel`: the `Transaction`, the `Invoice` (`ReceiptDocument`), `IsAdministrator` and `PayUrl`. |
+| `TransactionReceipt` | `TransactionReceiptViewModel`: the `Transaction`, the `Payment` event, the `Receipt` (`ReceiptDocument`) and `IsAdministrator`. |
+
+### Showing the documents from another module
+
+`ITransactionCustomerPageService`, `ITransactionInvoiceBuilder`, `ITransactionReceiptBuilder`, the view models and `TransactionsConstants` live in `CrestApps.OrchardCore.Transactions.Abstractions`, so a module can show a customer their documents in its own pages without referencing the Transactions module. The builders are registered only while the Receipts module is enabled, so resolve them as optional. A portal page that shows a customer's invoice:
+
+```csharp
+using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Transactions.Services;
+using CrestApps.OrchardCore.Transactions.ViewModels;
+using Microsoft.AspNetCore.Mvc;
+using OrchardCore.DisplayManagement;
+
+public sealed class PortalPaymentsController : Controller
+{
+    private readonly ITransactionCustomerPageService _pages;
+    private readonly IShapeFactory _shapeFactory;
+
+    public PortalPaymentsController(ITransactionCustomerPageService pages, IShapeFactory shapeFactory)
+    {
+        _pages = pages;
+        _shapeFactory = shapeFactory;
+    }
+
+    [HttpGet("portal/payments/{itemId}/invoice")]
+    public async Task<IActionResult> Invoice(string itemId)
+    {
+        if (User.Identity?.IsAuthenticated != true)
+        {
+            return Challenge();
+        }
+
+        var result = await _pages.BuildInvoiceAsync(User, itemId, HttpContext.RequestAborted);
+
+        if (result.Status == TransactionCustomerPageStatus.Forbidden)
+        {
+            return Forbid();
+        }
+
+        if (!result.Succeeded)
+        {
+            return NotFound();
+        }
+
+        // The view renders the shape with @await DisplayAsync(Model).
+        return View(await _shapeFactory.CreateAsync<TransactionInvoiceViewModel>(TransactionsConstants.Shapes.Invoice, result.Model.CopyTo));
+    }
+}
+```
+
+`BuildStatementAsync` takes a `TransactionStatementRequest` (`Page`, `PageSize`, `Search`, `OutstandingOnly`) and leaves `Pager` empty, so the caller can set a pager that links to its own page. `BuildReceiptAsync` takes the transaction and payment event identifiers.
+
+### Links in messages
+
+The receipt sent by **Send Payment Receipts** and the reminders sent by **Transaction Reminders** link a signed-up customer to their document: the receipt carries a **View your receipt online** link, and a reminder for an invoiced transaction carries **View your invoice** (only while the Receipts module is enabled). Guests get neither, because both pages need an account; their reminders keep the signed pay link.
+
+`ITransactionCustomerLinkService` creates these links. They open the admin pages by default; set `LinkTarget` to `Site` to open the site pages instead. Like pay links, they use the site's **Base URL** when it is set, and the current request otherwise; a link made outside a request on a site without a base URL is left out.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Transactions": {
+        "CustomerPages": {
+          "LinkTarget": "Site"
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
+```
+
+| Key | Values | Default |
+| --- | --- | --- |
+| `LinkTarget` | `Admin` (the `Admin/...` customer pages) or `Site` (the `my-transactions/...` pages in the site theme) | `Admin` |
+
+A module can also set it in code with `services.Configure<TransactionCustomerPagesOptions>(options => options.LinkTarget = TransactionCustomerLinkTarget.Site)` (`CrestApps.OrchardCore.Transactions.Core`). See also [Configuration](../configuration.md#transaction-customer-pages).
 
 ## Registering a transaction source
 

@@ -10,19 +10,6 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
-/// Builds the invoice for a transaction its owner pays themselves.
-/// </summary>
-public interface ITransactionInvoiceBuilder
-{
-    /// <summary>
-    /// Builds the invoice for <paramref name="transaction"/>: what it is for, its tax, its total, and what is still due.
-    /// </summary>
-    /// <param name="transaction">The transaction.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<ReceiptDocument> BuildAsync(Transaction transaction, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
 /// The default <see cref="ITransactionInvoiceBuilder"/>. An invoice uses the site's receipt branding and layout, and
 /// shows the whole transaction: the receipts for the payments made against it are separate documents.
 /// </summary>
