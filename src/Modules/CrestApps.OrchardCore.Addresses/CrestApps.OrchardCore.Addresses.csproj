@@ -6,7 +6,7 @@
     <Description>
       $(OCCMSDescription)
 
-      Provides country, region, county, city, and district content types together with reusable address and selector parts.
+      Address formats for every country, with the checks, printing and address editor built on them, and optional managed countries.
     </Description>
     <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Addresses</PackageTags>
   </PropertyGroup>

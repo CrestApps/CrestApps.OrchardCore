@@ -205,6 +205,21 @@ AD1 to AD3 come before CU3. AD4 can follow CU3. AD2 was split in two to keep eac
   malformed codes were saved. `CountryCodeValidator` now holds the rule, `CountryCodeDisplayDriver` applies it in
   the editor, and the handler still covers recipes and the content API.
 
+### AD2b as built
+
+- `CrestApps.OrchardCore.Addresses.Core.Editing`: `IAddressEditorService` (`BuildAsync`, `PopulateAsync`,
+  `ValidateAsync` with the page's prefix and localized messages, `GetLayoutAsync`), `AddressEditorViewModel` (not
+  sealed: Orchard Core renders a sealed shape model empty), `AddressEditorOptions`, `AddressEditorLayout`,
+  `AddressDisplayViewModel`, and `IShapeFactory.CreateAddressEditorAsync` / `CreateAddressDisplayAsync`. Core now
+  references the ASP.NET Core framework and `OrchardCore.DisplayManagement`.
+- The `AddressEditor` shape asks for the country first, then lays the fields out in the country's order; fields the
+  country doesn't use are rendered disabled in a hidden pool so they post nothing. The region is a list when the
+  country has one, text otherwise. `AddressDisplay` prints through `IAddressFormatter`.
+- `GET ~/addresses/formats/{countryCode}` returns the layout (anonymous, `private, max-age=3600`, 404 for anything
+  but two letters). `address-editor.js` (Vite, no jQuery) re-lays the fields from it and keeps only the latest answer.
+- Gotchas met: `Layout` and `Component` clash with `RazorPage` members; markup in a `@functions` method needs it async;
+  Razor writes a false `data-` attribute as `"False"` rather than leaving it out.
+
 ## Out of scope
 
 - Checking that an address exists (a paid postal database); the `IAddressVerifier` hook comes later.

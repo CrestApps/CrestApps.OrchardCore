@@ -1,9 +1,12 @@
 using CrestApps.OrchardCore.Addresses.Core;
 using CrestApps.OrchardCore.Addresses.Drivers;
+using CrestApps.OrchardCore.Addresses.Endpoints;
 using CrestApps.OrchardCore.Addresses.Handlers;
 using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Migrations;
 using CrestApps.OrchardCore.Addresses.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -14,7 +17,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Addresses;
 
 /// <summary>
-/// Registers each country's address format and the checks and printing built on it. Countries come from the ISO list
+/// Registers each country's address format, the checks, printing and address editor built on it, and the endpoint the
+/// editor reads layouts from. Countries come from the ISO list
 /// until the Address Countries feature replaces them with managed content.
 /// </summary>
 public sealed class Startup : StartupBase
@@ -25,6 +29,13 @@ public sealed class Startup : StartupBase
 
         // Sites from earlier 3.0 previews keep their managed countries.
         services.AddDataMigration<AddressCountriesUpgradeMigrations>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        // The address editor asks for a country's layout when the country changes. A layout is public: it is the same
+        // for everyone, in the visitor's language.
+        routes.MapGet("/addresses/formats/{countryCode}", AddressFormatsEndpoint.HandleAsync);
     }
 }
 
