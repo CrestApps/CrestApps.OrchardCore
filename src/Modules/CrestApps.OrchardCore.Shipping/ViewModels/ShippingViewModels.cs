@@ -1,7 +1,9 @@
+using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Shipping.ViewModels;
 
@@ -160,6 +162,49 @@ public class EditShippingMethodViewModel
     public string ProviderDisplayName { get; set; }
 
     public dynamic Editor { get; set; }
+}
+
+public class ShippingCheckoutStepViewModel
+{
+    public string AddressId { get; set; }
+
+    public AddressEditorViewModel Address { get; set; } = new();
+
+    public string RateId { get; set; }
+
+    public bool SaveAddress { get; set; }
+
+    [BindNever]
+    public bool IsSignedIn { get; set; }
+
+    [BindNever]
+    public bool CanSaveAddress { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<ShippingAddressSummary> SavedAddresses { get; set; } = [];
+
+    [BindNever]
+    public IShape AddressEditor { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<ShippingRate> Rates { get; set; } = [];
+
+    [BindNever]
+    public bool HasZone { get; set; }
+
+    [BindNever]
+    public string Currency { get; set; }
+}
+
+public class ShippingAddressSummary
+{
+    public string AddressId { get; set; }
+
+    public string Label { get; set; }
+
+    public IReadOnlyList<string> Lines { get; set; } = [];
+
+    public bool IsDefault { get; set; }
 }
 
 public class ShippingRatesTestViewModel

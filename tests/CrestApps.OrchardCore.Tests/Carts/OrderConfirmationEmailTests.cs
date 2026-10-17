@@ -89,6 +89,25 @@ public sealed class OrderConfirmationEmailTests
     }
 
     [Fact]
+    public async Task TheEmail_SaysHowAndWhereTheOrderShips()
+    {
+        var order = PaidOrder();
+        order.Shipping = new OrderShipping { Name = "Express", Amount = 15m };
+        order.ShippingAddress = new Address { Name = "Sam Lee", AddressLine1 = "400 Pine St", City = "Seattle", Region = "WA", PostalCode = "98101", Country = "US" };
+
+        var email = await CreateBuilder().BuildAsync(order);
+
+        Assert.Contains("Shipping (Express)", email.Text);
+        Assert.Contains("Ships to:", email.Text);
+        Assert.Contains("400 Pine St", email.Text);
+        Assert.Contains("Seattle WA 98101", email.Html);
+
+        order.Shipping.Amount = 0;
+
+        Assert.Contains("Free", (await CreateBuilder().BuildAsync(order)).Text);
+    }
+
+    [Fact]
     public async Task WhatTheOrderSays_IsEncodedInTheHtml()
     {
         var order = PaidOrder();

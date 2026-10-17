@@ -224,6 +224,32 @@ public sealed class OrderCheckoutTests
     }
 
     [Fact]
+    public async Task CompletingTheCheckout_KeepsWhereAndHowTheOrderShips()
+    {
+        var cart = CreateCart(("mug", 1, 12m));
+        _carts.Carts.Add(cart);
+
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
+        var session = await StartCheckoutAsync(order);
+        var shipTo = new Address { Name = "Sam Lee", AddressLine1 = "9 Pine Rd", City = "Seattle", Region = "WA", PostalCode = "98101", Country = "US", Phone = "555-0199" };
+
+        session.Put(new CheckoutShippingInfo { Address = shipTo, RateId = "standard", MethodId = "standard", ZoneId = "us", ProviderName = "Flat", Name = "Standard", Amount = 5m });
+        session.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 17m, LineItems = [new CheckoutLineItem { ItemId = "mug", Quantity = 1, UnitPrice = 12m }, new CheckoutLineItem { ItemId = "shipping", Quantity = 1, UnitPrice = 5m }] });
+
+        await CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        Assert.Equal("Seattle", order.ShippingAddress.City);
+        Assert.NotSame(shipTo, order.ShippingAddress);
+        Assert.Equal(("Standard", 5m, "standard"), (order.Shipping.Name, order.Shipping.Amount, order.Shipping.MethodId));
+        Assert.Equal(17m, order.Total);
+
+        // Forgetting the buyer keeps only where, roughly, the order went.
+        order.Anonymize(_now);
+
+        Assert.Equal(("US", "WA", null), (order.ShippingAddress.Country, order.ShippingAddress.Region, order.ShippingAddress.AddressLine1));
+    }
+
+    [Fact]
     public async Task CompletingTheCheckout_KeepsWhatWasAddedToTheCartAfterward()
     {
         var cart = CreateCart(("mug", 2, 12m));

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using OrchardCore.Entities;
 
@@ -17,10 +18,13 @@ public sealed class DefaultCheckoutTaxProfileProvider : ICheckoutTaxProfileProvi
     {
         ArgumentNullException.ThrowIfNull(flow);
 
-        var profile = new CheckoutTaxProfile();
+        var profile = new CheckoutTaxProfile
+        {
+            Destination = GetDestination(flow.Session),
+        };
 
         // Reuse a classification already resolved on the invoice when one exists; a scenario-specific
-        // provider supplies the real destination and customer profile.
+        // provider supplies the customer profile.
         if (flow.Session.TryGet<CheckoutInvoice>(out var invoice))
         {
             profile.DefaultTaxCategoryCode = invoice.TaxCategoryCode;
@@ -35,7 +39,10 @@ public sealed class DefaultCheckoutTaxProfileProvider : ICheckoutTaxProfileProvi
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        var profile = new CheckoutTaxProfile();
+        var profile = new CheckoutTaxProfile
+        {
+            Destination = GetDestination(session),
+        };
 
         // The originating content is not available at recurring billing time, so the classification
         // resolved at checkout is reused from the persisted invoice. A scenario-specific provider can
@@ -47,5 +54,19 @@ public sealed class DefaultCheckoutTaxProfileProvider : ICheckoutTaxProfileProvi
         }
 
         return Task.FromResult(profile);
+    }
+
+    /// <summary>
+    /// Gets where the order is taxed: the address it ships to, else the buyer's billing address, else nowhere (only
+    /// rules without a jurisdiction then apply).
+    /// </summary>
+    public static Address GetDestination(ICheckoutFlowSession session)
+    {
+        if (session.TryGet<CheckoutShippingInfo>(out var shipping) && shipping.Address is { } shippingAddress)
+        {
+            return shippingAddress;
+        }
+
+        return session.TryGet<CheckoutContactInfo>(out var contact) ? contact.BillingAddress : null;
     }
 }

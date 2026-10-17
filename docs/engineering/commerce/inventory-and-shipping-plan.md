@@ -210,6 +210,18 @@ Each slice is a PR with tests, opened when its tests pass.
 - Admin: Commerce > Shipping (zones in try order), a zone page listing its methods, a method editor per provider, and
   *Try rates*. Settings: weight unit and shipping classes. `ShippingZones` recipe and deployment step.
 
+### SH2 Checkout
+
+- `CheckoutShippingInfo` in Checkout.Abstractions carries where and how the order ships; the default tax profile provider
+  uses its address as the destination, else the billing address. No separate order tax profile provider was needed.
+- The Contact step rebuilds the invoice, so orders that don't ship are taxed where they're billed.
+- `Order.ShippingAddress` and `Order.Shipping` (`OrderShipping`), copied by `OrderCheckoutHandler` like the contact info;
+  anonymizing keeps country and region.
+- The step: an address posted without a rate for it comes back with that address's rates as a validation error, so the
+  checkout controller needed no new action. One rate is chosen automatically.
+- Shipping depends on Orders now; the address book comes from Customers when it's on.
+- Not done: re-pricing a chosen rate at payment. The price is fixed when chosen.
+
 ## Not in this phase
 
 Multiple locations in the admin (the schema allows them), preorders, live carrier rates and labels, returns (RMA)

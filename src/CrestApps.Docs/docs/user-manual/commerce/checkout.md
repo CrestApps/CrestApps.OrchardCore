@@ -36,6 +36,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 | Step | When it appears |
 | --- | --- |
 | **Contact** | Buying from the cart, when the [Customers](customers.md) feature is on. Asks who the order is for and, as your settings say, where it is billed. A signed-in buyer skips it when no billing address is asked for. See [Who the order is for](#who-the-order-is-for). |
+| **Shipping** | Buying goods from the cart, when the [Shipping](shipping.md) feature is on. Asks where the order goes and how, from the methods of the zone the address is in, with what each costs. Orders of downloads and services skip it. |
 | **Plan** | Signing up to a subscription plan. |
 | **Registration** | Signing up to a subscription while not signed in. See [Buy without an account](#buy-without-an-account). |
 | One step per content type | When a plan asks the buyer to fill in content, such as details about their organization. The step is named after the content type. |

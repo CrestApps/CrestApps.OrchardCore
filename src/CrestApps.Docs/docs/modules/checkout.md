@@ -220,7 +220,7 @@ The framework never calculates tax itself. It consumes the [Taxation](taxation) 
 - When the Taxation feature is **disabled**, a no-op implementation leaves the invoice untaxed and checkout keeps working.
 - When the **Checkout** and **Taxation** features are **both enabled**, a taxation-aware implementation is wired in automatically (via `[RequireFeatures]`, so there is no separate integration feature to switch on). It determines the tax for the amount due now, folds any exclusive tax into the charged amount, and captures an immutable snapshot. Recurring cycles are taxed with the rules effective at billing time, each carrying its own snapshot, so historical tax is never recalculated.
 
-An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes.
+An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes. The default provider's destination is the address the order ships to (`CheckoutShippingInfo`, set by [Shipping](shipping)), else the buyer's billing address (`CheckoutContactInfo`); with neither, only rules without a jurisdiction apply.
 
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
 determination. Settling an outstanding [transaction](transactions) does this: the transaction already carries its

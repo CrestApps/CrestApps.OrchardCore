@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Encodings.Web;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -39,7 +40,8 @@ public sealed class OrderConfirmationEmailBuilder
         var greeting = string.IsNullOrWhiteSpace(order.CustomerName)
             ? S["Thank you for your order."].Value
             : S["Thank you for your order, {0}.", order.CustomerName].Value;
-        var billedTo = await GetBillingLinesAsync(order);
+        var billedTo = await GetAddressLinesAsync(order.BillingAddress);
+        var shipsTo = await GetAddressLinesAsync(order.ShippingAddress);
 
         var text = new StringBuilder()
             .AppendLine(greeting)
@@ -63,6 +65,16 @@ public sealed class OrderConfirmationEmailBuilder
                 .Append("</tr>");
         }
 
+        if (order.Shipping is not null)
+        {
+            var label = S["Shipping ({0})", order.Shipping.Name].Value;
+            var amount = order.Shipping.Amount == 0 ? S["Free"].Value : Money(order.Shipping.Amount);
+
+            text.AppendLine($"{label}  {amount}");
+            html.Append("<tr><td style=\"padding:4px 0\">").Append(_encoder.Encode(label)).Append("</td>")
+                .Append("<td style=\"padding:4px 0;text-align:right\">").Append(_encoder.Encode(amount)).Append("</td></tr>");
+        }
+
         if (order.TaxAmount is > 0)
         {
             text.AppendLine($"{S["Tax"]}  {Money(order.TaxAmount.Value)}");
@@ -75,24 +87,8 @@ public sealed class OrderConfirmationEmailBuilder
             .Append("<td style=\"padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;text-align:right\">").Append(_encoder.Encode(Money(total))).Append("</td></tr>")
             .Append("</table>");
 
-        if (billedTo.Count > 0)
-        {
-            text.AppendLine().AppendLine(S["Billed to:"].Value);
-            html.Append("<p style=\"margin-top:16px\"><strong>").Append(_encoder.Encode(S["Billed to"].Value)).Append("</strong><br>");
-
-            for (var i = 0; i < billedTo.Count; i++)
-            {
-                text.AppendLine(billedTo[i]);
-                html.Append(_encoder.Encode(billedTo[i]));
-
-                if (i < billedTo.Count - 1)
-                {
-                    html.Append("<br>");
-                }
-            }
-
-            html.Append("</p>");
-        }
+        AppendAddress(text, html, S["Ships to:"].Value, S["Ships to"].Value, shipsTo);
+        AppendAddress(text, html, S["Billed to:"].Value, S["Billed to"].Value, billedTo);
 
         if (!string.IsNullOrEmpty(orderUrl))
         {
@@ -107,11 +103,33 @@ public sealed class OrderConfirmationEmailBuilder
         return new OrderConfirmationEmail(S["Your order {0}", order.OrderNumber].Value, text.ToString(), html.ToString());
     }
 
-    // Printed the way the address's country writes it when the Addresses feature is on, plainly otherwise.
-    private async Task<IReadOnlyList<string>> GetBillingLinesAsync(Order order)
+    private static void AppendAddress(StringBuilder text, StringBuilder html, string textLabel, string htmlLabel, IReadOnlyList<string> lines)
     {
-        var address = order.BillingAddress;
+        if (lines.Count == 0)
+        {
+            return;
+        }
 
+        text.AppendLine().AppendLine(textLabel);
+        html.Append("<p style=\"margin-top:16px\"><strong>").Append(_encoder.Encode(htmlLabel)).Append("</strong><br>");
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            text.AppendLine(lines[i]);
+            html.Append(_encoder.Encode(lines[i]));
+
+            if (i < lines.Count - 1)
+            {
+                html.Append("<br>");
+            }
+        }
+
+        html.Append("</p>");
+    }
+
+    // Printed the way the address's country writes it when the Addresses feature is on, plainly otherwise.
+    private async Task<IReadOnlyList<string>> GetAddressLinesAsync(Address address)
+    {
         if (address is null)
         {
             return [];

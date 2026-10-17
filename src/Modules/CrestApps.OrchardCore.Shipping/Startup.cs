@@ -7,6 +7,9 @@ using CrestApps.OrchardCore.Shipping.Migrations;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Navigation;
 using CrestApps.OrchardCore.Shipping.Recipes;
+using CrestApps.OrchardCore.Shipping.Services;
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Handlers;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -43,6 +46,11 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ShippingMethod, FreeShippingMethodDisplayDriver>();
 
         services.AddSiteDisplayDriver<ShippingSettingsDisplayDriver>();
+
+        // The Shipping step of an order's checkout, after Contact.
+        services.AddScoped<ShippingOrderRateService>();
+        services.AddScoped<ICheckoutHandler, ShippingCheckoutHandler>();
+        services.AddDisplayDriver<CheckoutFlow, ShippingCheckoutFlowDisplayDriver>();
 
         // Lets a role with Manage shipping, but no site-settings permission, open Settings > Commerce > Shipping.
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);

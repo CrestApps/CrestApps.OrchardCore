@@ -64,6 +64,19 @@ Under **Settings > Commerce > Shipping**:
 | **Weight unit** | Kilograms or pounds, for product weights and weight tables. Changing it doesn't convert weights already entered. | Kilograms |
 | **Shipping classes** | The classes products can be in, one per line, such as *Bulky* or *Fragile*. | None |
 
+## What buyers see at checkout
+
+An order with goods in it gets a **Shipping** step after **Contact**:
+
+1. **Ship to:** a signed-in customer picks an address from their address book, their default shipping address first, or enters a new one and can save it. Anyone else starts with the billing address they just gave, and can change it. The address needs a recipient's name; a phone helps the carrier.
+2. **Shipping method:** the methods of the address's zone, with what each costs for this order, such as *Standard — 3 to 5 business days — $7.00*. With one method there is nothing to choose. After changing the address, the buyer continues once to see the methods for the new one.
+
+The method chosen becomes a line of the order, such as *Shipping: Standard*, and is taxed like the rest of the order, where it goes: tax rules for the shipping address's jurisdiction apply, and a rule applies to shipping only when **Applies to shipping** is ticked on it. An order that doesn't ship is taxed where it's billed.
+
+A buyer whose address no zone covers is told the store doesn't ship there. Orders of downloads and services have no Shipping step.
+
+The order page, the order link a guest gets and the confirmation email show where the order ships and the shipping method with what it cost.
+
 ## Try your rates
 
 **Try rates**, on **Commerce > Shipping**, shows which zone an address falls in and what each of its methods charges for an order you describe: country, region, currency, subtotal, weight, number of items and shipping class. No order is placed. Use it to check your zones and tables before buyers see them.

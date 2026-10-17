@@ -76,6 +76,16 @@ public sealed class Order : CatalogItem
     /// </summary>
     public Address BillingAddress { get; set; }
 
+    /// <summary>
+    /// Gets or sets where the order is shipped, or <see langword="null"/> when nothing in it ships.
+    /// </summary>
+    public Address ShippingAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the order is shipped and what it cost, or <see langword="null"/> when nothing in it ships.
+    /// </summary>
+    public OrderShipping Shipping { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime ModifiedUtc { get; set; }
@@ -113,6 +123,7 @@ public sealed class Order : CatalogItem
         CustomerEmail = null;
         CustomerPhone = null;
         BillingAddress = BillingAddress is null ? null : new Address { Country = BillingAddress.Country, Region = BillingAddress.Region };
+        ShippingAddress = ShippingAddress is null ? null : new Address { Country = ShippingAddress.Country, Region = ShippingAddress.Region };
         AnonymizedUtc ??= now;
         ModifiedUtc = now;
     }
@@ -177,6 +188,26 @@ public sealed class OrderLine
 /// <summary>
 /// Where an order is in its life.
 /// </summary>
+/// <summary>
+/// The shipping method an order was shipped by, and what it cost before tax.
+/// </summary>
+public sealed class OrderShipping
+{
+    public string MethodId { get; set; }
+
+    public string RateId { get; set; }
+
+    public string ZoneId { get; set; }
+
+    public string ProviderName { get; set; }
+
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
+}
+
 public enum OrderStatus
 {
     /// <summary>

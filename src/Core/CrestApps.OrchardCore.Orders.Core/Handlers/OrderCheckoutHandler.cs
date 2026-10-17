@@ -139,6 +139,21 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             order.BillingAddress = contact.BillingAddress?.Clone() ?? order.BillingAddress;
         }
 
+        if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutShippingInfo>(session, out var shipping) && shipping.Address is not null)
+        {
+            order.ShippingAddress = shipping.Address.Clone();
+            order.Shipping = new OrderShipping
+            {
+                MethodId = shipping.MethodId,
+                RateId = shipping.RateId,
+                ZoneId = shipping.ZoneId,
+                ProviderName = shipping.ProviderName,
+                Name = shipping.Name,
+                Description = shipping.Description,
+                Amount = shipping.Amount,
+            };
+        }
+
         await _orderStore.UpdateAsync(order);
 
         // In the same unit of work: a handler that can't record the sale, such as one that can't sell the stock just

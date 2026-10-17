@@ -32,6 +32,18 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
   - Built in: `Flat`, `Table` (the row with the largest `From` at or below the value; none below the first row or above `Maximum`) and `Free` (from `MinimumSubtotal`).
   - A carrier module registers its own provider, and a `DisplayDriver<ShippingMethod>` for its settings that renders only for methods with its `ProviderName`.
 
+## Checkout
+
+- **`ShippingCheckoutHandler`** adds the **Shipping** step (`ShippingConstants.CheckoutStepKey`, order 2, after Contact) to an order's checkout when a line is a good (`ProductType.Good`). On completion it adds a signed-in buyer's new address to their address book when they asked, as their default shipping address if they had none.
+- **`ShippingCheckoutFlowDisplayDriver`** renders and posts the step.
+  - The address comes from the customer's address book (Customers, optional) or the address editor, with the recipient's name and phone.
+  - **`ShippingOrderRateService`** prices the order's goods: their weight and class come from the product version bought, and the currency is the order's.
+  - An address posted without a rate chosen for it (or with a rate the address doesn't offer) comes back with its rates and the error *Choose how to ship your order*, so the step finishes only with a rate priced on the server. One rate is chosen for the buyer.
+  - The step's billing item is the shipping line (`TaxableKind = Shipping`, the method's `TaxCategoryCode`), then the invoice is rebuilt. The choice is kept as `ShippingCheckoutStep` in `SavedSteps` and as **`CheckoutShippingInfo`** (address, rate, method, zone, name, amount) in the session.
+- **Tax destination.** `DefaultCheckoutTaxProfileProvider` now sets `CheckoutTaxProfile.Destination` to the `CheckoutShippingInfo` address, else the `CheckoutContactInfo` billing address. The Contact step rebuilds the invoice when it's saved, so an order that doesn't ship is taxed where it's billed.
+- **Orders.** `OrderCheckoutHandler.CompletingAsync` copies `CheckoutShippingInfo` to `Order.ShippingAddress` and `Order.Shipping` (`OrderShipping`: method, rate, zone, provider, name, description, amount). `Order.Anonymize` keeps only the country and region of both addresses. The admin order page, the guest order page and the confirmation email show both.
+- The price is the one shown when the buyer chose the method; editing a method later doesn't change checkouts already past the step.
+
 ## Admin
 
 - **Commerce > Shipping** (`shipping/zones`, `ShippingZonesController`) lists zones in the order they are tried. A zone's page edits it and lists its methods; **Add method** opens the method editor for a provider (`shipping/zones/{zoneId}/methods/create/{providerName}`).
@@ -71,4 +83,4 @@ The **Shipping Zones** deployment step (*Commerce*) exports every zone with its 
 
 ## Coming next
 
-A shipping step at checkout with a taxed shipping line and the shipping address as the tax destination, then shipments.
+Shipments: shipping an order in one or several parts, with tracking.

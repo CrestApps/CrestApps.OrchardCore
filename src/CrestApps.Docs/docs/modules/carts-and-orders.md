@@ -125,7 +125,7 @@ Carts are the first checkout source with several products, so a `BillingItem` ca
 
 ## Not included
 
-Shipping and fulfillment, inventory, saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature.
+Saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature, stock with [Inventory](inventory), and shipping charges with [Shipping](shipping), which fills in `Order.ShippingAddress` and `Order.Shipping`.
 
 ## Getting started
 

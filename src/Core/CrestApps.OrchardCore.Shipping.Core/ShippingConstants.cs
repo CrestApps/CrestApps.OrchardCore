@@ -12,6 +12,11 @@ public static class ShippingConstants
     /// </summary>
     public const string ZonesRecipeStep = "ShippingZones";
 
+    /// <summary>
+    /// The key of the checkout step that asks where and how an order ships.
+    /// </summary>
+    public const string CheckoutStepKey = "Shipping";
+
     public static class Features
     {
         public const string Shipping = "CrestApps.OrchardCore.Shipping";
