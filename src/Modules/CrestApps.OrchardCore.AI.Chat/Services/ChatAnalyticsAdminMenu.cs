@@ -22,9 +22,9 @@ public sealed class ChatAnalyticsAdminMenu : AdminNavigationProvider
 
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        // The reports live under Reports > AI Reports. The top-level Reports menu is built by the Reports module,
-        // which merges this entry into its category by name; the merged node may keep this entry's id and classes,
-        // so they match the Reports module's (without the "reports" id the menu loses its icon).
+        // The reports live under Reports > Artificial Intelligence Reports. The top-level Reports menu is built by the
+        // Reports module, which merges this entry into its category by name; the merged node may keep this entry's id
+        // and classes, so they match the Reports module's (without the "reports" id the menu loses its icon).
         var category = new LocalizedString(ReportsConstants.Categories.AIReports, ReportsConstants.Categories.AIReports);
 
         builder

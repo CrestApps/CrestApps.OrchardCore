@@ -73,7 +73,7 @@ public static class ReportsConstants
         /// <summary>
         /// The AI report category: chat session analytics, extracted data and conversion goals.
         /// </summary>
-        public const string AIReports = "AI Reports";
+        public const string AIReports = "Artificial Intelligence Reports";
 
         /// <summary>
         /// The compliance and audit report category.

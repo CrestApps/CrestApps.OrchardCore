@@ -11,7 +11,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 
 | | |
 | --- | --- |
-| **Menu** | Reports > AI Reports |
+| **Menu** | Reports > Artificial Intelligence Reports |
 | **Permission** | View AI Chat Analytics (Export AI Chat Analytics to download CSV files) |
 | **Feature** | AI Chat Session Analytics |
 
@@ -39,7 +39,7 @@ A chat counts as finished when it ends naturally or when nobody writes for the p
 
 ## AI Chat Session Analytics
 
-1. Open **Reports > AI Reports > AI Chat Session Analytics**.
+1. Open **Reports > Artificial Intelligence Reports > AI Chat Session Analytics**.
 2. Choose a **Date range**, such as **Last 30 Days** or dates of your own, and optionally one profile (or **Any profile**).
 3. Click **Show**.
 
@@ -99,7 +99,7 @@ Some AI services do not report tokens for every answer, so these figures can be 
 
 Lists the details an assistant collected with data extraction, such as names, emails and products of interest, one row per chat.
 
-1. Open **Reports > AI Reports > AI Chat Extracted Data**.
+1. Open **Reports > Artificial Intelligence Reports > AI Chat Extracted Data**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
 3. Click **Show**. The table has **Session date**, **Session ID** and one column per extracted detail.
 4. Click **Export as CSV** to download it, for example to import leads into another system.
@@ -108,7 +108,7 @@ Lists the details an assistant collected with data extraction, such as names, em
 
 Shows how each finished chat scored against the profile's conversion goals.
 
-1. Open **Reports > AI Reports > AI Chat Conversion Goals**.
+1. Open **Reports > Artificial Intelligence Reports > AI Chat Conversion Goals**.
 2. Pick the **AI Profile** (required), and optionally a **Date range**.
 3. Click **Show**. The table has **Session date**, **Session ID**, **Total points** and one column per goal.
 4. Click **Export as CSV** to download it.
