@@ -1,0 +1,53 @@
+@model CrestApps.OrchardCore.ContentFields.ViewModels.AddressFieldSettingsViewModel
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="Required" />
+        <label class="form-check-label" asp-for="Required">@T["Required"]</label>
+        <span class="hint dashed">@T["An address must be entered. Otherwise the address can be left blank."]</span>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Hint" class="form-label">@T["Hint"]</label>
+    <input asp-for="Hint" class="form-control" />
+    <span class="hint">@T["The hint text to display above the address."]</span>
+</div>
+
+<div class="mb-3">
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="ShowName" />
+        <label class="form-check-label" asp-for="ShowName">@T["Ask for a recipient name"]</label>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="ShowCompany" />
+        <label class="form-check-label" asp-for="ShowCompany">@T["Ask for a company"]</label>
+    </div>
+    <div class="form-check">
+        <input type="checkbox" class="form-check-input" asp-for="ShowPhone" />
+        <label class="form-check-label" asp-for="ShowPhone">@T["Ask for a phone number"]</label>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Countries" class="form-label">@T["Countries offered"]</label>
+    <select asp-for="Countries" class="form-select" multiple size="8" style="max-width:30em;">
+        @foreach (var country in Model.CountryOptions)
+        {
+            <option value="@country.Value" selected="@Model.Countries.Contains(country.Value, StringComparer.OrdinalIgnoreCase)">@country.Text</option>
+        }
+    </select>
+    <span class="hint">@T["Leave none selected to offer every country the site serves."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="DefaultCountry" class="form-label">@T["Default country"]</label>
+    <select asp-for="DefaultCountry" class="form-select" style="max-width:30em;">
+        <option value="">@T["None"]</option>
+        @foreach (var country in Model.CountryOptions)
+        {
+            <option value="@country.Value" selected="@string.Equals(country.Value, Model.DefaultCountry, StringComparison.OrdinalIgnoreCase)">@country.Text</option>
+        }
+    </select>
+    <span class="hint">@T["The country a new address starts in."]</span>
+</div>

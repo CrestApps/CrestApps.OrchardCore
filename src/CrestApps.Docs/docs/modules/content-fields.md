@@ -82,6 +82,46 @@ When `CrestApps.OrchardCore.Recipes` is also enabled, recipe schemas now underst
 
 When the field value is submitted, the display driver uses `IPhoneNumberService` (from `CrestApps.OrchardCore.PhoneNumbers`) to validate that the entered number is a well-formed phone number. Invalid numbers produce a model-state error and the editor is re-displayed.
 
+### AddressField
+
+Feature **Address Field** (`CrestApps.OrchardCore.ContentFields.Address`), depending on [Addresses](addresses) (`CrestApps.OrchardCore.Addresses`), `OrchardCore.ContentFields` and `OrchardCore.ContentTypes`. It is a feature of its own so the CrestApps Content Fields feature does not depend on Addresses.
+
+A content field holding the shared `Address` value from the Addresses module. A content type can have several, for example a Home and a Work address.
+
+#### Stored properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `Address` | `Address` | The address, or `null` when none was entered: `Name`, `Company`, `AddressLine1`, `AddressLine2`, `DependentLocality`, `City`, `Region` (the region's ISO 3166-2 code without the country, when the country lists regions), `County`, `District`, `PostalCode`, `SortingCode`, `Country` (ISO 3166-1 alpha-2) and `Phone`. |
+
+#### Settings (`AddressFieldSettings`)
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `Hint` | `string` | `null` | Help text shown above the address. |
+| `Required` | `bool` | `false` | Whether an address must be entered. An optional address left blank is stored as `null`. |
+| `ShowName`, `ShowCompany`, `ShowPhone` | `bool` | `true`, `true`, `false` | Which of the recipient, the company and a phone number the editor asks for. |
+| `Countries` | `string[]` | `null` | The ISO codes of the countries offered; `null` or empty offers every country `ICountryService` lists. |
+| `DefaultCountry` | `string` | `null` | The country a new address starts in. |
+
+#### Editing and display
+
+The editor is the Addresses module's `AddressEditor` shape, bound under the field's prefix and checked with `IAddressEditorService`, so it is laid out for the chosen country and refuses what that country's rules refuse (required parts, postal code pattern, region list, postal code within the region). The display shape `AddressField` prints the address through `IAddressFormatter`. `AddressField` and `Address` are registered with Liquid's member access strategy.
+
+#### Index
+
+`AddressFieldIndex` (a `ContentFieldIndex`) has a row per address field, with `Country`, `Region`, `City` and `PostalCode`, so content can be queried by place:
+
+```csharp
+var venues = await session
+    .Query<ContentItem, AddressFieldIndex>(index => index.ContentType == "Venue" && index.Country == "CA" && index.Region == "ON" && index.Published)
+    .ListAsync();
+```
+
+#### Recipes
+
+With CrestApps Recipes on, `AddressField` has a content-definition schema (its settings) and a content schema (the `Address` object), like `PhoneField`.
+
 ## Notes
 
 - The shared `intl-tel-input` script and stylesheet are registered by `CrestApps.OrchardCore.Resources`.

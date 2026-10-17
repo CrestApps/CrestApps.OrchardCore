@@ -220,6 +220,16 @@ AD1 to AD3 come before CU3. AD4 can follow CU3. AD2 was split in two to keep eac
 - Gotchas met: `Layout` and `Component` clash with `RazorPage` members; markup in a `@functions` method needs it async;
   Razor writes a false `data-` attribute as `"False"` rather than leaving it out.
 
+### AD4 as built
+
+- Feature **Address Field** (`CrestApps.OrchardCore.ContentFields.Address`) in the ContentFields module: `AddressField`
+  (an `Address`), `AddressFieldSettings` (Hint, Required, ShowName, ShowCompany, ShowPhone, Countries,
+  DefaultCountry), display and settings drivers, the `AddressField` display shape, `AddressFieldIndex` with its
+  migration, a recipe schema, and Liquid access to `AddressField` and `Address`.
+- Found live: the index provider has to be registered with `AddScopedIndexProvider`, like Orchard Core's own field
+  indexes. Registered with `AddIndexProvider` it got the root provider, could not resolve the scoped
+  `IContentDefinitionManager`, and the failed index map threw away the content item being saved.
+
 ## Out of scope
 
 - Checking that an address exists (a paid postal database); the `IAddressVerifier` hook comes later.
