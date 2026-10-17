@@ -62,6 +62,26 @@ internal static class ActivityProgressTally
     }
 
     /// <summary>
+    /// Decides whether an activity in the supplied status is counted as pending: not finished, and not being worked yet.
+    /// It is the same test <see cref="Count(IEnumerable{OmnichannelActivityIndex})"/> applies, so a report that splits the
+    /// pending records further splits exactly the records counted as pending.
+    /// </summary>
+    /// <param name="status">The activity status.</param>
+    /// <returns><see langword="true"/> when the activity is pending.</returns>
+    public static bool IsPending(ActivityStatus status)
+    {
+        return status is not (ActivityStatus.Completed
+            or ActivityStatus.Failed
+            or ActivityStatus.Cancelled
+            or ActivityStatus.Purged
+            or ActivityStatus.AwaitingAgentResponse
+            or ActivityStatus.AwaitingCustomerAnswer
+            or ActivityStatus.Reserved
+            or ActivityStatus.Dialing
+            or ActivityStatus.InProgress);
+    }
+
+    /// <summary>
     /// Adds one group's counts to the running totals.
     /// </summary>
     /// <param name="totals">The running totals.</param>

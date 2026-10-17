@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIPersonaSummaryViewModel>
+
+<span class="badge ta-badge font-weight-normal" title="@T["Technical name"]">
+    <i class="fa-solid fa-hashtag text-secondary" aria-hidden="true"></i>
+    @Model.Value.Persona.Name
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Persona.AssistantName))
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Assistant name"]">
+        <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i>
+        @Model.Value.Persona.AssistantName
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Persona.VoiceName))
+{
+    <span class="badge ta-badge font-weight-normal" title="@T["Voice"]">
+        <i class="fa-solid fa-microphone text-secondary" aria-hidden="true"></i>
+        @Model.Value.Persona.VoiceName
+    </span>
+}
+
+@if (Model.Value.IsFromFile)
+{
+    <span class="badge text-bg-info" title="@T["This persona comes from a file. Saving it creates a saved persona that replaces the file."]">@T["From file"]</span>
+}

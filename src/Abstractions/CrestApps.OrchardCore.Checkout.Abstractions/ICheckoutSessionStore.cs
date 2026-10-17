@@ -47,6 +47,30 @@ public interface ICheckoutSessionStore
     Task<CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the sessions that belong to a user or whose buyer gave an email, oldest first, whatever their status.
+    /// It is how a person's checkouts are found for an access or erasure request, including the guest checkouts only
+    /// their email ties to them. The email is matched without case sensitivity. When both are given, a session that
+    /// matches either is returned. This does not enforce ownership and does not run the checkout handlers, so the
+    /// sessions must not be used to resume a customer-facing flow.
+    /// </summary>
+    /// <param name="ownerId">The owning user id, or <see langword="null"/> to match by email only.</param>
+    /// <param name="email">The buyer's email, or <see langword="null"/> to match by owner only.</param>
+    /// <param name="skip">The number of matching sessions to skip.</param>
+    /// <param name="take">The maximum number of sessions to return.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>The matching sessions, or none when neither an owner nor an email is given.</returns>
+    Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the sessions with the given ids, whatever their status or owner. This does not enforce ownership and does
+    /// not run the checkout handlers, so the sessions must not be used to resume a customer-facing flow.
+    /// </summary>
+    /// <param name="sessionIds">The session identifiers.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>The sessions that exist; an unknown id is skipped.</returns>
+    Task<IReadOnlyList<CheckoutSession>> GetManyAsync(IEnumerable<string> sessionIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Persists changes to the session. New sessions created by <see cref="NewAsync"/> are untracked until
     /// this method is called, so it must be invoked to persist them; for sessions loaded through the query
     /// methods the call also makes the intent to persist explicit on the money-sensitive checkout path.

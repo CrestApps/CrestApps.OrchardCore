@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIPersonaSummaryViewModel>
+
+<a asp-controller="AIPersonas"
+   asp-action="Edit"
+   asp-route-id="@Model.Value.Persona.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+@if (!Model.Value.IsFromFile)
+{
+    <a asp-controller="AIPersonas"
+       asp-action="Delete"
+       asp-route-id="@Model.Value.Persona.ItemId"
+       class="btn btn-danger btn-sm"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

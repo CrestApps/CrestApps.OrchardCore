@@ -90,6 +90,29 @@ internal sealed class ReportTimeZone
         => DateOnly.FromDateTime(ToLocal(utc));
 
     /// <summary>
+    /// Gets the local midnight that starts the day an instant falls on, as an instant.
+    /// </summary>
+    /// <param name="utc">The instant.</param>
+    /// <returns>The start of the instant's local day, in UTC; never later than <paramref name="utc"/>.</returns>
+    /// <remarks>
+    /// A zone whose clocks jump forward at midnight has no midnight that day, so the day starts at the first local
+    /// time that exists after it.
+    /// </remarks>
+    public DateTime StartOfDayUtc(DateTime utc)
+    {
+        var midnight = ToLocal(utc).Date;
+
+        while (Zone.IsInvalidTime(midnight))
+        {
+            midnight = midnight.AddMinutes(1);
+        }
+
+        var start = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(midnight, DateTimeKind.Unspecified), Zone);
+
+        return start <= utc ? start : utc;
+    }
+
+    /// <summary>
     /// Gets the first local midnight after an instant, as an instant.
     /// </summary>
     /// <param name="utc">The instant.</param>

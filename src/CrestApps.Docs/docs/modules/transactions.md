@@ -106,7 +106,9 @@ A transaction its owner pays themselves (one that is not charged automatically) 
   button. The link names one transaction, is signed with the site's data protection keys so it cannot be altered,
   and expires after 60 days; every notice sends a fresh one. It opens a public page with the invoice and a **Pay**
   button that starts the normal checkout, so a customer an administrator created (with no password) or a guest can
-  pay. A link that was altered or expired shows nothing about any transaction. Links use the site's **Base URL**
+  pay. The checkout it starts returns to the page (`StartCheckoutRequest.ReturnUrl`), with *Back to the payment page*
+  on the payment step and the confirmation, and the confirmation is headed *Payment received*. A link that was
+  altered or expired shows nothing about any transaction. Links use the site's **Base URL**
   from the general settings, so set it to the public address; without it, a link made outside a request is left out
   and the notice asks the owner to sign in instead. `ITransactionPayLinkService` creates and reads them.
 - **The invoice page.** With the Receipts module enabled, the transaction's page links its invoice: the same layout
@@ -131,6 +133,40 @@ reported twice counts once, and adds to `Transaction.AmountRefunded`. Once every
 the transaction to `TransactionStatus.Refunded`. A refund never lowers `AmountPaid`, so a refunded transaction never
 becomes collectable again. The transaction is found through the payment's reference or, for a purchase checkout,
 through the refund's session and obligation. A handler that fails is logged and never undoes the refund.
+
+### Reacting to lifecycle changes
+
+`ITransactionEventHandler` (in `CrestApps.OrchardCore.Transactions.Abstractions`) tells a module about every change in a transaction's state, with the status it had before. Derive from `TransactionEventHandlerBase` and override only the events you need, then register the handler as `ITransactionEventHandler` (scoped):
+
+| Event | Raised |
+| --- | --- |
+| `CreatedAsync(transaction)` | After `ITransactionManager.CreateAsync` saved a new transaction. |
+| `StatusChangedAsync(transaction, previous, current)` | After `ITransactionManager.UpdateAsync` saved a status different from the one the transaction was loaded with (or last saved with). Once per such save; a save that leaves the status as it was raises nothing, so reminders, notes and invoice numbers never raise it. |
+| `CanceledAsync(transaction, reason)` | Right after `StatusChangedAsync` reported a change to `Canceled`. The reason is the `TransactionEvent.Reason` of the newest `Canceled` timeline event, or `null` when none was given. |
+| `BecameOverdueAsync(transaction)` | Once per transaction, by the reminder sweep, the first time it finds the transaction `Outstanding` or `PartiallyPaid` with money owed after the day it was due (a payment due today is not overdue yet). `Transaction.BecameOverdueUtc` records that it was raised, so it is never raised twice. |
+
+Every place a transaction changes goes through the manager, so the events cover the console (**Cancel**, **Mark paid**, **Record payment**), an online settlement, a refund that brings what was kept to zero (`Refunded`), an installment charge that was declined (`Failed`, then `Outstanding` once no retries are left, or `Paid` when a retry goes through), and a canceled installment plan. The manager diffs the status itself, so a consumer no longer needs a catalog handler that re-reads every save.
+
+Handlers run after the save, and they are resolved when the event is raised (not injected into the manager), so a handler may depend on `ITransactionManager`. A handler that throws is logged and does not undo the change or stop the other handlers, the same as `ITransactionPaymentHandler`. The overdue sweep is part of the **Transaction Reminders** feature's background task (`TransactionReminderBackgroundTask`, every 6 hours). It runs even when **Enabled** is turned off in the reminder settings, which only stops the reminders themselves.
+
+```csharp
+public sealed class RegistrationPaymentStatusHandler : TransactionEventHandlerBase
+{
+    public override Task StatusChangedAsync(Transaction transaction, TransactionStatus previous, TransactionStatus current, CancellationToken cancellationToken = default)
+    {
+        // Move the registration this transaction charges to unpaid, paid or refunded.
+        return Task.CompletedTask;
+    }
+
+    public override Task BecameOverdueAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        // Flag the registration as overdue.
+        return Task.CompletedTask;
+    }
+}
+
+services.AddScoped<ITransactionEventHandler, RegistrationPaymentStatusHandler>();
+```
 
 ## Using the module
 

@@ -51,6 +51,14 @@ the report can group and label it. Register an `ITransactionSource` to give that
 Make creation idempotent on something stable — the checkout session and obligation, for example — because
 the pipelines that create obligations can legitimately run more than once.
 
+## Reacting to a transaction from your own module
+
+Implement `ITransactionEventHandler` (or derive from `TransactionEventHandlerBase`) to hear about every change:
+`CreatedAsync`, `StatusChangedAsync` with the previous and current status, `CanceledAsync` with the reason, and
+`BecameOverdueAsync`, raised once per transaction by the reminder sweep. They run after the save, and a handler
+that fails is logged without undoing the change. `ITransactionPaymentHandler` and `IPaymentRefundHandler` report
+each payment and refund.
+
 ## Documentation
 
 Full documentation: <https://docs.crestapps.com/docs/modules/transactions>

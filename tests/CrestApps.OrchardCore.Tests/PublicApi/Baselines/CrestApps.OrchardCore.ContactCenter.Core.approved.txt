@@ -418,6 +418,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
         public System.DateTime? DequeuedUtc { get; set; }
+        public string DialerProfileId { get; set; }
         public long DocumentId { get; set; }
         public System.DateTime EnqueuedUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority Priority { get; set; }
@@ -3274,6 +3275,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch
         NumberNotInService = 12,
         ComplianceScreeningUnavailable = 13,
         AbandonmentRateExceeded = 14,
+        ProfileMissing = 15,
     }
     public sealed class DispatchBucket
     {

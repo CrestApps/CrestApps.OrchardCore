@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Stripe.Drivers;
@@ -68,6 +69,10 @@ public class Startup : StartupBase
         services.AddScoped<IStripeCustomerService, StripeCustomerService>();
         services.AddScoped<IStripeCheckoutService, StripeCheckoutService>();
         services.AddScoped<IStripeRefundService, StripeRefundService>();
+
+        // Exports and redacts the Stripe customers that hold a person's contact, for access and erasure requests.
+        services.AddScoped<ICommercePersonalDataContributor, StripePersonalDataContributor>();
+
         services.AddScoped(sp =>
         {
             var options = sp.GetRequiredService<IOptions<StripeOptions>>();

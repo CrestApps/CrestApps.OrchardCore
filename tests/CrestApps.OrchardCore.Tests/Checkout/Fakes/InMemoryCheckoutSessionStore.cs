@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Tests.Checkout.Fakes;
 
@@ -40,6 +41,35 @@ internal sealed class InMemoryCheckoutSessionStore : ICheckoutSessionStore
             .Where(session => session.ReferenceType == referenceType && session.ReferenceId == referenceId)
             .OrderByDescending(session => session.CreatedUtc)
             .FirstOrDefault());
+
+    public Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(ownerId) && string.IsNullOrWhiteSpace(email))
+        {
+            return Task.FromResult<IReadOnlyList<CheckoutSession>>([]);
+        }
+
+        var matches = _sessions.Values
+            .Where(session =>
+                (!string.IsNullOrEmpty(ownerId) && string.Equals(session.OwnerId, ownerId, StringComparison.Ordinal)) ||
+                (!string.IsNullOrWhiteSpace(email) &&
+                    session.TryGet<CheckoutContactInfo>(out var contact) &&
+                    string.Equals(contact.Email?.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(session => session.CreatedUtc)
+            .ThenBy(session => session.SessionId, StringComparer.Ordinal)
+            .Skip(skip)
+            .Take(take)
+            .ToArray();
+
+        return Task.FromResult<IReadOnlyList<CheckoutSession>>(matches);
+    }
+
+    public Task<IReadOnlyList<CheckoutSession>> GetManyAsync(IEnumerable<string> sessionIds, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<CheckoutSession>>(sessionIds
+            .Where(id => id is not null && _sessions.ContainsKey(id))
+            .Distinct(StringComparer.Ordinal)
+            .Select(id => _sessions[id])
+            .ToArray());
 
     public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default)
     {
