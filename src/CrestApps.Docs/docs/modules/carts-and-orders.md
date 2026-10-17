@@ -75,6 +75,8 @@ The cart page shows **Checkout** when the Orders feature is enabled. Checking ou
 
 The checkout's confirmation page shows the order number.
 
+Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
+
 ### Order statuses
 
 | Status | Meaning |
@@ -99,7 +101,7 @@ Carts are the first checkout source with several products, so a `BillingItem` ca
 
 ## Not included
 
-Customer profiles and address books, shipping and fulfillment, inventory, saved carts, carts with recurring prices, and order editing.
+Shipping and fulfillment, inventory, saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature.
 
 ## Getting started
 

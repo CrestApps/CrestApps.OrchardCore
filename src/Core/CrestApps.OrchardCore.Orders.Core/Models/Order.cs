@@ -1,4 +1,5 @@
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 
 namespace CrestApps.OrchardCore.Orders.Core.Models;
@@ -66,6 +67,14 @@ public sealed class Order : CatalogItem
     public string CustomerName { get; set; }
 
     public string CustomerEmail { get; set; }
+
+    public string CustomerPhone { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address the order was billed to, copied when it was paid for. Changing or deleting the
+    /// address it came from never changes it.
+    /// </summary>
+    public Address BillingAddress { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 

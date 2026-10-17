@@ -35,6 +35,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 
 | Step | When it appears |
 | --- | --- |
+| **Contact** | Buying from the cart, when the [Customers](customers.md) feature is on. Asks who the order is for and, as your settings say, where it is billed. A signed-in buyer skips it when no billing address is asked for. See [Who the order is for](#who-the-order-is-for). |
 | **Plan** | Signing up to a subscription plan. |
 | **Registration** | Signing up to a subscription while not signed in. See [Buy without an account](#buy-without-an-account). |
 | One step per content type | When a plan asks the buyer to fill in content, such as details about their organization. The step is named after the content type. |
@@ -77,11 +78,24 @@ The **Promotion code** box sits under the order summary on the **Payment** step.
 
 To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. See [Coupons](coupons.md).
 
+## Who the order is for
+
+With the Customers feature on, the **Contact** step of an order asks for:
+
+- **Full name** and **Email**, so the order and its messages reach the buyer, and a **Phone** if they want to give one. A signed-in buyer starts with their own details, and can change them for this order.
+- A **Billing address**, when your settings ask for one. It starts with the country and lays itself out the way that country writes addresses, with its list of states or provinces where it has one. A signed-in buyer can pick one of their saved addresses instead, and tick **Save a new address to my address book**.
+
+Under **Settings > Commerce > Customers**, **Billing address at checkout** is **Optional** (asked for, may be left blank; the default), **Required** (for example for invoices or tax) or **Off**. A checkout keeps the setting it started with.
+
+When the order is paid, it keeps its own copy of the name, email, phone and billing address, so later changes never change it. A guest becomes a customer of their own, listed under **Commerce > Customers** with the address they entered.
+
 ## Buy without an account
 
 When someone signs up to a subscription without being signed in, the **Registration** step asks them to create an account. It starts with *Already registered?* and a **Click here to log in.** link that brings the buyer back to the checkout after signing in. A buyer who is already signed in never sees this step.
 
 If your site allows it (the **Allow guest sign-up** subscription setting, see [Subscriptions](subscriptions.md)), the step also offers **Subscribe as guest**, with the note *Subscribing as a guest does not include the ability to manage your subscription.* Ticking it hides the **Create an account** form.
+
+Buying from the cart needs no account: a guest gives their name and email on the **Contact** step.
 
 Paying an outstanding balance through a payment link needs no account.
 

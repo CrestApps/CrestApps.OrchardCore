@@ -19,6 +19,12 @@ public interface ICustomerService
     Task<Customer> FindForUserAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// A new guest customer for someone who bought without an account. Each guest checkout makes its own: an email
+    /// typed at checkout proves nothing, so it never joins someone else's customer.
+    /// </summary>
+    Task<Customer> CreateGuestAsync(string name, string email, string phone, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Notes that the customer bought or changed something, which keeps their data for the retention window.
     /// </summary>
     Task TouchAsync(Customer customer, CancellationToken cancellationToken = default);

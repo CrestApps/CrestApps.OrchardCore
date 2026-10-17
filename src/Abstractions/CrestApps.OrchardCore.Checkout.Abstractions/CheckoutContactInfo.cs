@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Addresses.Models;
+
 namespace CrestApps.OrchardCore.Checkout;
 
 /// <summary>
@@ -17,4 +19,14 @@ public sealed class CheckoutContactInfo
     /// Gets or sets the buyer's email address, when it was collected.
     /// </summary>
     public string Email { get; set; }
+
+    /// <summary>
+    /// Gets or sets the buyer's phone number, when it was collected.
+    /// </summary>
+    public string Phone { get; set; }
+
+    /// <summary>
+    /// Gets or sets the address the buyer is billed at, when the checkout asked for one.
+    /// </summary>
+    public Address BillingAddress { get; set; }
 }

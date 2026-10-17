@@ -58,6 +58,15 @@ The address pages use the Addresses module's editor (`IAddressEditorService` and
 
 With Customers enabled, an order placed by a signed-in user belongs to their customer: `Order.CustomerId` is set at checkout, and the customer's record is made on their first order. Orders keep their own copy of the customer's name and email, so an order reads the same after the customer changes.
 
+## The checkout's Contact step
+
+With Orders enabled, Customers adds a **Contact** step to every order's checkout (`CustomersConstants.ContactStepKey`, right after the hidden order step and before payment). `CustomerContactCheckoutHandler` adds it, and `CustomerContactCheckoutFlowDisplayDriver` renders it as the `CustomerContactStep_Edit` shape.
+
+- **What it asks:** a name and an email (required), a phone, and a billing address as `CustomerCheckoutSettings.BillingAddress` says: `Optional` (the default), `Required` or `Off`, under **Settings > Commerce > Customers** with the **Manage customers** permission. The checkout keeps the setting it started with, stored on the session, so changing it never strands a checkout. A signed-in buyer never sees the step when the setting is `Off`.
+- **The billing address** uses the Addresses module's `AddressEditor` under the step's prefix, without a recipient name (the buyer named above is the recipient) and with the buyer's phone. A signed-in customer can pick one of their saved addresses and ask for a new one to be saved.
+- **What it keeps:** the entries as `CustomerContactStep` in the session's saved steps, and a `CheckoutContactInfo` (name, email, phone, billing address) on the session. The order copies that contact and billing address when it is paid, and Pay Later puts the guest's name and email on its transaction, so receipts and reminders reach them.
+- **When the order is paid** (`CompletingAsync`, inside the completion's transaction): the order is linked to the signed-in buyer's customer, or to a new guest customer made with `ICustomerService.CreateGuestAsync`; each guest checkout makes its own, since an email typed at checkout proves nothing. A guest's billing address goes into their address book as the default billing address; a signed-in customer's new address goes in when they asked, never twice.
+
 ## Admin
 
 **Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active, and their address book (`customers/{customerId}/addresses/...`). An anonymized customer's addresses can't be edited.

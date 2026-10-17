@@ -94,6 +94,26 @@ public sealed class DefaultCustomerService : ICustomerService
         }
     }
 
+    public async Task<Customer> CreateGuestAsync(string name, string email, string phone, CancellationToken cancellationToken = default)
+    {
+        var now = _clock.UtcNow;
+        var customer = new Customer
+        {
+            ItemId = UniqueId.GenerateId(),
+            Kind = CustomerKind.Person,
+            DisplayName = Trim(name),
+            Email = Trim(email),
+            Phone = Trim(phone),
+            CreatedUtc = now,
+            ModifiedUtc = now,
+            LastActivityUtc = now,
+        };
+
+        await _store.CreateAsync(customer, cancellationToken);
+
+        return customer;
+    }
+
     public async Task TouchAsync(Customer customer, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(customer);
@@ -102,4 +122,7 @@ public sealed class DefaultCustomerService : ICustomerService
 
         await _store.UpdateAsync(customer, cancellationToken);
     }
+
+    private static string Trim(string value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

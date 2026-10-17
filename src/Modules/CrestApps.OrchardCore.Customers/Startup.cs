@@ -1,16 +1,23 @@
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
 using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Customers.Drivers;
+using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Customers.Migrations;
 using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Orders.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Customers;
 
@@ -36,3 +43,19 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<CustomersAdminMenu>();
     }
 }
+
+/// <summary>
+/// The Contact step of an order's checkout, and its setting, when Orders is enabled.
+/// </summary>
+[RequireFeatures(OrderConstants.Features.Orders)]
+public sealed class OrdersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ICheckoutHandler, CustomerContactCheckoutHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
+        services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
+        services.AddNavigationProvider<CustomerSettingsAdminMenu>();
+    }
+}
+
