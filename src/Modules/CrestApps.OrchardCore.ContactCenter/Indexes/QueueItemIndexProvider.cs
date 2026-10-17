@@ -31,6 +31,7 @@ public sealed class QueueItemIndexProvider : IndexProvider<QueueItem>
                 ActivityClaimKey = item.Status is QueueItemStatus.Completed or QueueItemStatus.Removed
                     ? item.ItemId
                     : item.ActivityItemId,
+                DialerProfileId = item.DialerProfileId,
                 Status = item.Status,
                 Priority = item.Priority,
                 AgentId = item.AgentId,

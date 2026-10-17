@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Drivers;
@@ -61,6 +62,7 @@ public sealed class Startup : StartupBase
         services.Configure<TransactionCustomerPagesOptions>(_shellConfiguration.GetSection(TransactionsConstants.CustomerPagesConfigurationSection));
         services.AddScoped<ITransactionCustomerPageService, TransactionCustomerPageService>();
         services.AddScoped<ITransactionCustomerLinkService, TransactionCustomerLinkService>();
+        services.AddScoped<ICommercePersonalDataContributor, TransactionPersonalDataContributor>();
     }
 }
 
@@ -75,6 +77,7 @@ public sealed class CheckoutStartup : StartupBase
     {
         services.AddScoped<ICheckoutHandler, TransactionSettlementCheckoutHandler>();
         services.AddNavigationProvider<PaymentLedgerAdminMenu>();
+        services.AddScoped<ICommercePersonalDataContributor, TransactionSettlementPersonalDataContributor>();
     }
 }
 

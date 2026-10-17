@@ -776,7 +776,8 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
-            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable())
+            .Column<string>("DialerProfileId", column => column.Nullable().WithLength(26)),
             collection: ContactCenterStorage.CollectionName);
 
         await schemaBuilder.CreateMapIndexTableAsync<AgentProfileIndex>(table => table

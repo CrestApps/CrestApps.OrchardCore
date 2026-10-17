@@ -42,6 +42,8 @@ Every reminder for a payment the customer pays themselves carries a **link that 
 
 The page shows the payment's title, the **Amount due** and the **Due on** date, and a button such as **Pay USD 50.00**. Clicking it opens [checkout](checkout.md) with the balance ready to pay. With the **Receipts** feature on, the full invoice is shown under the button, with a **Print invoice** button.
 
+The checkout brings the customer back to this page. The **Payment** step has a **Back to the payment page** link for a customer who decides not to pay now, and once the payment goes through the confirmation is headed **Payment received** and has a **Back to the payment page** button, which shows the payment as received.
+
 The page says instead:
 
 | Message | What it means |
