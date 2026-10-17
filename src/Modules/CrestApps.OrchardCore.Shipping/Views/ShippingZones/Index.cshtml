@@ -1,0 +1,42 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<ShippingZone>>
+
+<zone Name="Title">
+    <breadcrumb name="ShippingZones" title="@T["Shipping"]" />
+</zone>
+
+@* The post form provides the antiforgery token used by the delete action. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary" role="button" asp-action="Rates">@T["Try rates"]</a>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Shipping Zone"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* The zones, in the order they are tried, rendered by the AdminList shape in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="ShippingZones" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> Add a shipping zone, such as your own country, then the methods buyers there can choose from."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Covers" position="30" title="@T["Covers"]" width="auto" />
+            <admin-list-column name="Methods" position="40" title="@T["Methods"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>

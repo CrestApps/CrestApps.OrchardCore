@@ -1,0 +1,20 @@
+@model ShippingSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="WeightUnit" class="ocat-label">@T["Weight unit"]</label>
+    <div class="ocat-end">
+        <select asp-for="WeightUnit" class="form-select w-auto">
+            <option value="@WeightUnit.Kilogram">@T["Kilograms (kg)"]</option>
+            <option value="@WeightUnit.Pound">@T["Pounds (lb)"]</option>
+        </select>
+        <span class="hint">@T["Product weights and weight tables are in this unit. Changing it doesn't convert weights already entered."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ShippingClasses" class="ocat-label">@T["Shipping classes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="ShippingClasses" rows="4" class="form-control"></textarea>
+        <span class="hint">@T["One per line, such as Bulky or Fragile. A product can be put in a class, and each shipping method can charge extra for each unit in it."]</span>
+    </div>
+</div>

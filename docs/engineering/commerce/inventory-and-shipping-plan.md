@@ -196,6 +196,20 @@ Each slice is a PR with tests, opened when its tests pass.
 - CSV export and import on Commerce > Inventory (`StockCsv`, `StockCountImporter`): counts, found by ids or SKU, all or
   nothing. The `Stock` recipe step and deployment step use the same importer.
 
+### SH1 Zones and rates
+
+- `Shipping.Core`: `ShippingZone` in a named catalog (one document, no index), holding its `ShippingMethod`s; provider
+  settings live in each method's property bag (`FlatRateSettings`, `TableRateSettings`, `FreeShippingSettings`), so a
+  carrier module adds its own provider and a `DisplayDriver<ShippingMethod>` without a schema change. No separate
+  Abstractions project yet, as with Inventory.
+- `IShippingRateService` finds the zone (first by position, then name; rest of world last) and prices its enabled
+  methods; methods in another currency are skipped, class surcharges are per unit and matched ignoring case (a
+  dictionary read back from JSON loses its comparer), and amounts are rounded to the currency.
+- Zones store regions as ISO 3166-2 codes (`US-AK`); `Address.Region` is the code without the country.
+- `ShippingPart` keeps per-variant weights by variant id; new variants get a row once the product is saved.
+- Admin: Commerce > Shipping (zones in try order), a zone page listing its methods, a method editor per provider, and
+  *Try rates*. Settings: weight unit and shipping classes. `ShippingZones` recipe and deployment step.
+
 ## Not in this phase
 
 Multiple locations in the admin (the schema allows them), preorders, live carrier rates and labels, returns (RMA)

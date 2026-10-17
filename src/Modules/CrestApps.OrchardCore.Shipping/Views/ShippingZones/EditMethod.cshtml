@@ -1,0 +1,20 @@
+@model EditShippingMethodViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ShippingMethodsEdit" title="@T["{0}: {1}", Model.ZoneName, Model.ProviderDisplayName]">
+        <breadcrumb-item id="ShippingZones" action="Index" controller="ShippingZones" area="@ShippingConstants.Features.Shipping" permission="@ShippingPermissions.ManageShipping.Name">@T["Shipping"]</breadcrumb-item>
+        <breadcrumb-item id="ShippingZonesEdit" action="Edit" controller="ShippingZones" area="@ShippingConstants.Features.Shipping" route-id="@Model.ZoneId" permission="@ShippingPermissions.ManageShipping.Name">@Model.ZoneName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Edit" asp-route-id="@Model.ZoneId">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

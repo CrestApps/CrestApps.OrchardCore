@@ -1,0 +1,45 @@
+namespace CrestApps.OrchardCore.Shipping;
+
+public static class ShippingConstants
+{
+    /// <summary>
+    /// The site settings group of the Shipping settings.
+    /// </summary>
+    public const string SettingsGroupId = "shipping";
+
+    /// <summary>
+    /// The name of the recipe and deployment step that sets shipping zones and their methods.
+    /// </summary>
+    public const string ZonesRecipeStep = "ShippingZones";
+
+    public static class Features
+    {
+        public const string Shipping = "CrestApps.OrchardCore.Shipping";
+    }
+
+    public static class Parts
+    {
+        public const string ShippingPart = "ShippingPart";
+    }
+
+    /// <summary>
+    /// The rate providers that come with Shipping.
+    /// </summary>
+    public static class Providers
+    {
+        /// <summary>
+        /// One amount per order, plus an optional amount per item.
+        /// </summary>
+        public const string Flat = "Flat";
+
+        /// <summary>
+        /// An amount looked up by the order's weight, subtotal or number of items.
+        /// </summary>
+        public const string Table = "Table";
+
+        /// <summary>
+        /// Nothing to pay, optionally only above an order subtotal.
+        /// </summary>
+        public const string Free = "Free";
+    }
+}

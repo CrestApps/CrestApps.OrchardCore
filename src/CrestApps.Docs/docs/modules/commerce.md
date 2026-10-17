@@ -25,6 +25,7 @@ This video walks through the commerce modules, their screens, configuration and 
 | Stripe | Stripe | The Stripe payment provider: cards, saved cards, Apple Pay and Google Pay, Connect, webhooks. | [Payments](payments) |
 | Pay Later | Pay Later | An offline "pay later" payment option that records the balance as a transaction. | [Pay Later](pay-later) |
 | Inventory | Inventory | How many units of each product and variant are on hand, with a ledger of every change and a Commerce > Inventory screen. | [Inventory](inventory) |
+| Shipping | Shipping | Shipping zones by country and region, their methods with flat, table and free rates, and product weights and shipping classes. | [Shipping](shipping) |
 | Customers | Customers | A record for everyone who buys, a person or a business, with an account or as a guest, linked to their Orchard Core user. | [Customers](customers) |
 | Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
 | Receipts | Receipts | The reusable printable receipt and its branding settings. | [Receipts](receipts) |
