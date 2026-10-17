@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Stripe.Workflows;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
@@ -16,12 +17,19 @@ namespace CrestApps.OrchardCore.Stripe.Services;
 /// Verifies a Stripe secret key and automatically provisions the webhook endpoint, persisting the resolved
 /// account identifier and credentials into the tenant-level Stripe settings.
 /// </summary>
+/// <remarks>
+/// A key supplied by the application configuration (the <c>CrestApps_Stripe</c> section) is used as it is and never
+/// copied into the stored settings, so a secret kept in a vault stays out of the database. When the configuration
+/// supplies the webhook signing secret, no webhook is created, because a new endpoint would come with a signing secret
+/// the configured one would shadow and every event would then fail verification.
+/// </remarks>
 public sealed class StripeConnectService : IStripeConnectService
 {
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IShellReleaseManager _shellReleaseManager;
     private readonly StripeWorkflowNotifier _workflowNotifier;
+    private readonly StripeConfigurationOptions _configurationOptions;
     private readonly ILogger<StripeConnectService> _logger;
 
     /// <summary>
@@ -31,18 +39,21 @@ public sealed class StripeConnectService : IStripeConnectService
     /// <param name="dataProtectionProvider">The provider used to protect and unprotect Stripe secrets.</param>
     /// <param name="shellReleaseManager">The manager used to reload the tenant after the connection changes.</param>
     /// <param name="workflowNotifier">The notifier used to raise Stripe workflow events on failures.</param>
+    /// <param name="configurationOptions">The Stripe values supplied by the application configuration.</param>
     /// <param name="logger">The logger used to record connection failures.</param>
     public StripeConnectService(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IShellReleaseManager shellReleaseManager,
         StripeWorkflowNotifier workflowNotifier,
+        IOptions<StripeConfigurationOptions> configurationOptions,
         ILogger<StripeConnectService> logger)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _shellReleaseManager = shellReleaseManager;
         _workflowNotifier = workflowNotifier;
+        _configurationOptions = configurationOptions.Value;
         _logger = logger;
     }
 
@@ -65,10 +76,16 @@ public sealed class StripeConnectService : IStripeConnectService
 
         var secretPrefix = isLive ? "sk_live_" : "sk_test_";
         var publishablePrefix = isLive ? "pk_live_" : "pk_test_";
+        var configured = _configurationOptions.GetKeys(isLive);
 
         var effectiveSecret = secretKey?.Trim();
 
-        if (!string.IsNullOrEmpty(effectiveSecret))
+        if (configured.HasSecretKey)
+        {
+            // The configured key wins at runtime, so it is the one to verify, whatever the form carried.
+            effectiveSecret = configured.SecretKey.Trim();
+        }
+        else if (!string.IsNullOrEmpty(effectiveSecret))
         {
             if (!effectiveSecret.StartsWith(secretPrefix, StringComparison.Ordinal))
             {
@@ -85,7 +102,9 @@ public sealed class StripeConnectService : IStripeConnectService
             return StripeConnectionResult.Failure("Enter your Stripe secret key before connecting.");
         }
 
-        var effectivePublishable = publishableKey?.Trim();
+        var effectivePublishable = configured.HasPublishableKey
+            ? null
+            : publishableKey?.Trim();
 
         if (!string.IsNullOrEmpty(effectivePublishable) && !effectivePublishable.StartsWith(publishablePrefix, StringComparison.Ordinal))
         {
@@ -110,10 +129,15 @@ public sealed class StripeConnectService : IStripeConnectService
             return StripeConnectionResult.Failure($"Stripe rejected the secret key: {ex.StripeError?.Message ?? ex.Message}");
         }
 
-        // Persist the verified credentials first so API calls work even if the webhook cannot be created.
+        // Persist the verified credentials first so API calls work even if the webhook cannot be created. A secret
+        // that comes from the configuration is never copied into the stored settings.
+        var storedSecret = configured.HasSecretKey
+            ? null
+            : protector.Protect(effectiveSecret);
+
         if (isLive)
         {
-            settings.LivePrivateSecret = protector.Protect(effectiveSecret);
+            settings.LivePrivateSecret = storedSecret ?? settings.LivePrivateSecret;
             settings.LiveAccountId = accountId;
 
             if (!string.IsNullOrEmpty(effectivePublishable))
@@ -123,7 +147,7 @@ public sealed class StripeConnectService : IStripeConnectService
         }
         else
         {
-            settings.TestPrivateSecret = protector.Protect(effectiveSecret);
+            settings.TestPrivateSecret = storedSecret ?? settings.TestPrivateSecret;
             settings.TestAccountId = accountId;
 
             if (!string.IsNullOrEmpty(effectivePublishable))
@@ -132,17 +156,60 @@ public sealed class StripeConnectService : IStripeConnectService
             }
         }
 
+        string webhookWarning = null;
+        string webhookNote = null;
+
+        if (configured.HasWebhookSecret)
+        {
+            webhookNote = " The webhook signing secret is configured from the application settings, so no webhook was created; register the webhook in the Stripe dashboard with that signing secret.";
+        }
+        else
+        {
+            webhookWarning = await ProvisionWebhookAsync(settings, isLive, effectiveSecret, webhookUrl, accountId, protector);
+        }
+
+        var walletDomain = await TryRegisterWalletDomainAsync(effectiveSecret, webhookUrl);
+
+        site.Put(settings);
+
+        await _siteService.UpdateSiteSettingsAsync(site);
+
+        _shellReleaseManager.RequestRelease();
+
+        var walletNote = walletDomain is null
+            ? string.Empty
+            : $" Apple Pay and Google Pay are enabled for '{walletDomain}'.";
+
+        if (webhookWarning is not null)
+        {
+            return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}', but the webhook could not be created automatically ({webhookWarning}). Payments will work; to receive events, make sure this site is publicly reachable and connect again, or add a webhook signing secret manually.{walletNote}", accountId);
+        }
+
+        if (webhookNote is not null)
+        {
+            return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}'.{webhookNote}{walletNote}", accountId);
+        }
+
+        return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}' and provisioned the webhook.{walletNote}", accountId);
+    }
+
+    private async Task<string> ProvisionWebhookAsync(
+        StripeSettings settings,
+        bool isLive,
+        string secretKey,
+        string webhookUrl,
+        string accountId,
+        IDataProtector protector)
+    {
         // Best-effort removal of a webhook left over from a previous connection, so reconnecting does not
         // leave an orphaned endpoint behind at Stripe.
         var existingWebhookId = isLive ? settings.LiveWebhookId : settings.TestWebhookId;
 
-        await TryDeleteWebhookAsync(effectiveSecret, existingWebhookId);
-
-        string webhookWarning = null;
+        await TryDeleteWebhookAsync(secretKey, existingWebhookId);
 
         try
         {
-            var webhookService = new WebhookEndpointService(new StripeClient(effectiveSecret));
+            var webhookService = new WebhookEndpointService(new StripeClient(secretKey));
 
             var webhook = await webhookService.CreateAsync(new WebhookEndpointCreateOptions
             {
@@ -161,6 +228,8 @@ public sealed class StripeConnectService : IStripeConnectService
                 settings.TestWebhookId = webhook.Id;
                 settings.TestWebhookSecret = string.IsNullOrEmpty(webhook.Secret) ? settings.TestWebhookSecret : protector.Protect(webhook.Secret);
             }
+
+            return null;
         }
         catch (StripeException ex)
         {
@@ -168,27 +237,8 @@ public sealed class StripeConnectService : IStripeConnectService
 
             await TriggerFailureAsync("webhook_provisioning", ex.Message);
 
-            webhookWarning = ex.StripeError?.Message ?? ex.Message;
+            return ex.StripeError?.Message ?? ex.Message;
         }
-
-        var walletDomain = await TryRegisterWalletDomainAsync(effectiveSecret, webhookUrl);
-
-        site.Put(settings);
-
-        await _siteService.UpdateSiteSettingsAsync(site);
-
-        _shellReleaseManager.RequestRelease();
-
-        var walletNote = walletDomain is null
-            ? string.Empty
-            : $" Apple Pay and Google Pay are enabled for '{walletDomain}'.";
-
-        if (webhookWarning is null)
-        {
-            return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}' and provisioned the webhook.{walletNote}", accountId);
-        }
-
-        return StripeConnectionResult.Success($"Connected the Stripe account '{accountId}', but the webhook could not be created automatically ({webhookWarning}). Payments will work; to receive events, make sure this site is publicly reachable and connect again, or add a webhook signing secret manually.{walletNote}", accountId);
     }
 
     /// <inheritdoc/>
@@ -197,6 +247,8 @@ public sealed class StripeConnectService : IStripeConnectService
         var site = await _siteService.LoadSiteSettingsAsync();
         var settings = site.GetOrCreate<StripeSettings>();
         var protector = _dataProtectionProvider.CreateProtector(StripeSettingsDisplayDriver.ProtectionPurpose);
+
+        var configured = _configurationOptions.GetKeys(isLive);
 
         var accountId = isLive ? settings.LiveAccountId : settings.TestAccountId;
         var storedSecret = GetStoredSecret(settings, isLive, protector);
@@ -207,7 +259,12 @@ public sealed class StripeConnectService : IStripeConnectService
             return StripeConnectionResult.Failure("There is no connected Stripe account to disconnect.");
         }
 
-        await TryDeleteWebhookAsync(storedSecret, webhookId);
+        // The webhook was created with the key in effect, which is the configured one when the configuration has it.
+        var effectiveSecret = configured.HasSecretKey
+            ? configured.SecretKey.Trim()
+            : storedSecret;
+
+        await TryDeleteWebhookAsync(effectiveSecret, webhookId);
 
         ClearConnection(settings, isLive);
 
@@ -217,11 +274,16 @@ public sealed class StripeConnectService : IStripeConnectService
 
         _shellReleaseManager.RequestRelease();
 
-        return StripeConnectionResult.Success(
-            string.IsNullOrEmpty(accountId)
-                ? "Disconnected the Stripe account."
-                : $"Disconnected the Stripe account '{accountId}'.",
-            accountId);
+        var message = string.IsNullOrEmpty(accountId)
+            ? "Disconnected the Stripe account."
+            : $"Disconnected the Stripe account '{accountId}'.";
+
+        if (configured.HasAny)
+        {
+            message += " Keys configured from the application settings are not removed and stay in use; remove them from the application settings to stop using them.";
+        }
+
+        return StripeConnectionResult.Success(message, accountId);
     }
 
     private static string GetStoredSecret(StripeSettings settings, bool isLive, IDataProtector protector)

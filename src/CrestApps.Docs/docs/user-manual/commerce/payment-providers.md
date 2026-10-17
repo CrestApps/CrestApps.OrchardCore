@@ -38,6 +38,20 @@ You need a Stripe account. Your keys are on the Stripe dashboard under **Develop
 5. Under **Status**, click **Connect**. The button only appears once a secret key is saved. If you change a key and have not saved yet, the page shows *You changed the keys. Save the settings first, then connect with the new keys.* instead of the button.
 6. A green message confirms the connection, and **Status** now shows *Connected to the test Stripe account* (or *production Stripe account*) followed by the Stripe account number.
 
+### Values configured from the application settings
+
+Your administrator or hosting team can supply the Stripe keys, and whether production is used, outside this page, in the site's application settings. This is common on test and demonstration sites that are created automatically, and on sites that keep their keys in a secure vault.
+
+When a value comes from the application settings:
+
+- The page shows the note *Configured from the application settings.* under it, and the box or check box cannot be changed. A banner at the top of the page says that some values are configured from the application settings.
+- A configured publishable key, and the **Enable Production** choice, are shown as they are. A configured secret key or webhook signing secret is never shown.
+- That value is used instead of anything saved on this page, and saving the page does not change it. To change it, ask the person who manages the site's application settings.
+- **Connect** works as usual with a configured secret key. If the webhook signing secret is configured too, **Connect** does not create a webhook: your developer registers it in the Stripe dashboard instead, and the message after connecting says so.
+- **Disconnect** clears only what this page saved. Configured keys stay in use until they are removed from the application settings.
+
+Values that are not configured work exactly as described on the rest of this page.
+
 ### What Connect does
 
 When you click **Connect**, your site:

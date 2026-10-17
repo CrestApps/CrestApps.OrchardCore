@@ -83,6 +83,78 @@ If the site is not publicly reachable (for example on `localhost`), Stripe canno
 
 Secrets are stored as protected site settings. The active key set is projected into `StripeOptions` based on `IsLive`. Clicking **Connect** verifies the secret key, stores it, records the resolved account id, and (when the site is publicly reachable) provisions the webhook and captures its signing secret. You can also fill the fields in and **Save** to store them without provisioning a webhook.
 
+### Configuration from the application settings
+
+Stripe can also be configured outside the database, from the tenant's configuration (`IShellConfiguration`): `appsettings.json`, environment variables, user secrets, or a secret store such as Azure Key Vault. This suits CI, staging and demo tenants that are created and thrown away by a script, tenants provisioned automatically, and sites that keep their secrets in a vault. The section is optional and is named `CrestApps_Stripe`:
+
+| Key | Description |
+| --- | --- |
+| `IsLive` | `true` uses the live keys, `false` the test keys. Leave it out to let the settings page decide. |
+| `Test:PublishableKey` / `Test:SecretKey` / `Test:WebhookSecret` | The test-mode publishable key (`pk_test_`), secret key (`sk_test_`) and webhook signing secret (`whsec_`). |
+| `Live:PublishableKey` / `Live:SecretKey` / `Live:WebhookSecret` | The live-mode publishable key (`pk_live_`), secret key (`sk_live_`) and webhook signing secret (`whsec_`). |
+
+In the startup project's `appsettings.json` the section sits under the `OrchardCore` key:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_Stripe": {
+      "IsLive": false,
+      "Test": {
+        "PublishableKey": "pk_test_...",
+        "SecretKey": "sk_test_...",
+        "WebhookSecret": "whsec_..."
+      }
+    }
+  }
+}
+```
+
+The same values as environment variables, which is all a throwaway tenant needs to take a test-mode payment:
+
+```text
+OrchardCore__CrestApps_Stripe__IsLive=false
+OrchardCore__CrestApps_Stripe__Test__PublishableKey=pk_test_...
+OrchardCore__CrestApps_Stripe__Test__SecretKey=sk_test_...
+OrchardCore__CrestApps_Stripe__Test__WebhookSecret=whsec_...
+```
+
+To give one tenant its own keys, put the section under the tenant's name (`OrchardCore__Contoso__CrestApps_Stripe__Test__SecretKey=...`) or in `App_Data/Sites/{TenantName}/appsettings.json` without the `OrchardCore` wrapper. See [Per-tenant configuration](../configuration.md#per-tenant-configuration).
+
+**Which value wins.** The application configuration wins over the settings page, one value at a time. `IsLive` from configuration, when it is set, chooses the mode; otherwise the stored **Enable Production** value does. For the active mode, each key that has a value in configuration is used, and each key that does not falls back to the value stored on the settings page. Configuration wins because it belongs to whoever deploys the tenant: keys kept in environment variables or a vault are the ones an operator rotates and audits, so an administrator editing the page must not be able to shadow them without anyone noticing. A tenant whose secrets come from configuration never reads the stored secrets, so it does not depend on the database holding readable ones.
+
+**On the settings page**, each value that comes from configuration is shown read-only with the note *Configured from the application settings.* A configured publishable key and mode are shown; a configured secret is only reported, never shown. Saving the page never overwrites the stored value of a configured field, so removing the key from configuration later brings the stored value back. See [Connect Stripe](../user-manual/commerce/payment-providers.md#connect-stripe) in the User Manual.
+
+**Connect and Disconnect** use the configured secret key when there is one and never copy it into the database; the verified account id and webhook id are still stored. When the webhook signing secret comes from configuration, **Connect** does not create a webhook, because a new endpoint comes with a signing secret of its own that the configured one would shadow, and every event would then fail verification; register the webhook (`POST /stripe/webhook`) in the Stripe dashboard with the signing secret you configured. **Disconnect** clears the stored values only; keys in configuration stay in use until you remove them there.
+
+Configuration is read when the tenant starts, so restart the application (or reload the tenant) after you change it.
+
+### Moving Stripe settings between environments
+
+The Stripe settings have a recipe step and a deployment step of their own, named `StripeSettings`, instead of the standard site settings step, because they hold data-protected secrets.
+
+The **Stripe Settings** deployment step (category *Payments*) exports the stored settings without any secret: `LivePrivateSecret`, `LiveWebhookSecret`, `TestPrivateSecret` and `TestWebhookSecret` are left out, since they are encrypted with the source tenant's data protection keys and a deployment plan is not a place to keep a credential. The account and webhook identifiers (`LiveAccountId`, `LiveWebhookId`, `TestAccountId`, `TestWebhookId`) are left out too: they describe the source site's connection to Stripe, and a destination that adopted them would delete the source's webhook at Stripe the next time it connected or disconnected. Values from the application configuration are never part of a plan.
+
+The `StripeSettings` recipe step imports what it carries. A member the step carries replaces the stored one; a secret the step leaves out, or leaves empty, keeps the value the destination already stores, so replaying an exported plan never erases the destination's credentials. A hand-written recipe can supply secrets in clear text, and the step protects them with the same data protection purpose the settings page uses before it stores them. Every key is checked against its Stripe prefix for its mode (`pk_test_`, `sk_live_`, `whsec_` and so on), so a key of the wrong mode, or an encrypted value copied from another database, fails the step and nothing is stored. Account and webhook identifiers in the step are ignored.
+
+```json
+{
+  "steps": [
+    {
+      "name": "StripeSettings",
+      "Settings": {
+        "IsLive": false,
+        "TestPublishableKey": "pk_test_...",
+        "TestPrivateSecret": "sk_test_...",
+        "TestWebhookSecret": "whsec_..."
+      }
+    }
+  ]
+}
+```
+
+Keep a recipe that holds clear-text secrets out of source control, or leave the secrets out and supply them through the application configuration instead. The deployment step needs the **Deployment** feature and the recipe step the **Recipes** feature.
+
 ### Checkout modes
 
 The checkout's payment step collects card details on your own page using Stripe Elements, with Payment and Setup Intents confirmed in the browser. The amount collected always comes from the server-side checkout session, never from values the browser supplies.

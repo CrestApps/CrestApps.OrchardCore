@@ -3,11 +3,16 @@ using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Deployments.Drivers;
+using CrestApps.OrchardCore.Stripe.Deployments.Sources;
+using CrestApps.OrchardCore.Stripe.Deployments.Steps;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Endpoints;
 using CrestApps.OrchardCore.Stripe.Handlers;
 using CrestApps.OrchardCore.Stripe.Indexes;
 using CrestApps.OrchardCore.Stripe.Migrations;
+using CrestApps.OrchardCore.Stripe.Models;
+using CrestApps.OrchardCore.Stripe.Recipes;
 using CrestApps.OrchardCore.Stripe.Services;
 using CrestApps.OrchardCore.Stripe.Workflows;
 using CrestApps.OrchardCore.Stripe.Workflows.Drivers;
@@ -18,9 +23,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -34,12 +42,27 @@ namespace CrestApps.OrchardCore.Stripe;
 /// </summary>
 public class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant configuration the optional <c>CrestApps_Stripe</c> section is bound from.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <summary>
     /// Registers Stripe services, settings drivers, permissions, migrations, indexes, and resource options.
     /// </summary>
     /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Keys from appsettings.json, environment variables, user secrets or a secret store. Each value present here
+        // wins over the one stored on the settings page; see StripeOptionsConfiguration.
+        services.Configure<StripeConfigurationOptions>(_shellConfiguration.GetSection(StripeConfigurationOptions.SectionName));
+
         services.AddScoped<IDisplayDriver<ISite>, StripeSettingsDisplayDriver>();
         services.AddTransient<IConfigureOptions<StripeOptions>, StripeOptionsConfiguration>();
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ResourceManagementOptionsConfiguration>();
@@ -102,6 +125,44 @@ public class Startup : StartupBase
     {
         routes
             .AddWebhookEndpoint<Startup>();
+    }
+}
+
+/// <summary>
+/// Registers the deployment step that exports the Stripe settings.
+/// </summary>
+/// <remarks>
+/// The settings get a step of their own rather than the standard site settings step because they hold data-protected
+/// secrets: the standard step would copy the encrypted values, which no other environment can decrypt, and its import
+/// replaces the stored settings whole, which would erase the destination's credentials.
+/// </remarks>
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentStartup : StartupBase
+{
+    /// <summary>
+    /// Registers the Stripe settings deployment source, step and step display driver.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<StripeSettingsDeploymentSource, StripeSettingsDeploymentStep>();
+        services.AddDisplayDriver<DeploymentStep, StripeSettingsDeploymentStepDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the recipe step that imports the Stripe settings and protects the secrets it carries.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    /// <summary>
+    /// Registers the Stripe settings recipe step.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<StripeSettingsStep>();
     }
 }
 
