@@ -161,6 +161,62 @@ public sealed class CheckoutDiscountTests
         Assert.Single(invoice.Discounts);
     }
 
+    /// <summary>
+    /// Paying off an outstanding transaction is not a purchase. The transaction's total does not change, so a
+    /// discount would leave it partly unpaid (and a 100% code would complete the session with no payment)
+    /// while still using up the code.
+    /// </summary>
+    [Fact]
+    public async Task ApplyDiscountsAsync_ForASettlementCheckout_AppliesNothing()
+    {
+        // Arrange
+        var invoice = CreateInvoice(oneTime: 100m, firstCycle: 0m);
+        var service = CreateService(new DiscountLine { Code = "FREE100", Amount = 100m, Target = DiscountTarget.OneTime });
+        var flow = new CheckoutFlow(new CheckoutSession { SettlesExistingBalance = true });
+
+        // Act
+        await service.ApplyDiscountsAsync(invoice, flow, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(100m, invoice.InitialPaymentAmount);
+        Assert.Equal(100m, invoice.DueNow);
+        Assert.Equal(0m, invoice.DiscountTotal);
+        Assert.Empty(invoice.Discounts);
+    }
+
+    [Fact]
+    public async Task ApplyDiscountsAsync_ForASettlementCheckout_ClearsDiscountsAppliedEarlier()
+    {
+        // Arrange
+        var invoice = CreateInvoice(oneTime: 100m, firstCycle: 0m);
+        invoice.Discounts = [new DiscountLine { Code = "STALE", Amount = 25m, Target = DiscountTarget.OneTime }];
+        var service = CreateService(new DiscountLine { Code = "TEN", Amount = 10m, Target = DiscountTarget.OneTime });
+        var flow = new CheckoutFlow(new CheckoutSession { SettlesExistingBalance = true });
+
+        // Act
+        await service.ApplyDiscountsAsync(invoice, flow, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(invoice.Discounts);
+        Assert.Equal(100m, invoice.DueNow);
+    }
+
+    [Fact]
+    public async Task ApplyDiscountsAsync_ForANewPurchase_StillAppliesDiscounts()
+    {
+        // Arrange
+        var invoice = CreateInvoice(oneTime: 100m, firstCycle: 0m);
+        var service = CreateService(new DiscountLine { Code = "TEN", Amount = 10m, Target = DiscountTarget.OneTime });
+        var flow = new CheckoutFlow(new CheckoutSession { SettlesExistingBalance = false });
+
+        // Act
+        await service.ApplyDiscountsAsync(invoice, flow, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(90m, invoice.DueNow);
+        Assert.Equal(10m, invoice.DiscountTotal);
+    }
+
     private static CheckoutInvoice CreateInvoice(decimal oneTime, decimal firstCycle)
         => new()
         {
