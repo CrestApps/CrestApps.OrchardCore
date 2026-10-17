@@ -8,3 +8,12 @@
         <span class="hint">@T["Stock counts as low at this many available units or fewer, for products without their own threshold. Low stock is flagged under Commerce > Inventory."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="HoldMinutes">
+    <label asp-for="HoldMinutes" class="ocat-label">@T["Hold stock for (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="HoldMinutes" type="number" min="1" class="form-control" />
+        <span asp-validation-for="HoldMinutes"></span>
+        <span class="hint">@T["When a buyer starts checkout, the units they're buying are held for them this long. A payment that arrives later still sells them."]</span>
+    </div>
+</div>

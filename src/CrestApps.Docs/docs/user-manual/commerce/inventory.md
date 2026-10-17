@@ -57,9 +57,25 @@ The history lists every change, newest first, with when it happened, what it was
 
 Two people changing the same line at once can't overwrite each other: the second waits a moment, or is asked to try again.
 
+## When customers buy
+
+With **Orders** enabled, stock follows each order:
+
+1. **Checkout starts:** the units the buyer is getting are held for them, so nobody else can buy them while they pay. The held units show as **Reserved**, and the item's page lists the orders holding stock and until when.
+2. **Not enough left:** if a counted product doesn't have enough available units, and doesn't allow backorders, the buyer is sent back to the cart with a message such as *Only 1 of Mug left. Lower the quantity to check out.* or *Mug is out of stock. Remove it to check out.* Nothing is held for that order.
+3. **Paid:** the held units are sold. They leave **On hand**, and the history shows **Sold** with the order.
+4. **Not paid:** when the checkout is canceled, declined or abandoned, or the hold runs out, the units are released and can be bought again. A payment that arrives after the hold ran out still sells the units, even if that takes the count below zero.
+
+Two buyers can't both get the last unit: the second is told to try again.
+
 ## Settings
 
-Under **Settings > Commerce > Inventory**, **Low-stock threshold** is the default for products without their own: stock counts as low at this many available units or fewer (5 to start with). Changing it updates every product that uses the default.
+Under **Settings > Commerce > Inventory**:
+
+| Setting | What it does | Default |
+| --- | --- | --- |
+| **Low-stock threshold** | Stock counts as low at this many available units or fewer, for products without their own. Changing it updates every product that uses the default. | 5 |
+| **Hold stock for (minutes)** | How long units stay held for a buyer who started checkout and hasn't paid. | 60 |
 
 ## Related pages
 

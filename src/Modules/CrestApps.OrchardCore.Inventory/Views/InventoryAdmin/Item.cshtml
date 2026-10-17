@@ -83,6 +83,21 @@
     </div>
 
     <div class="col-lg-8">
+        @if (Model.Holds.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T.Plural(Model.Holds.Count, "Held for 1 order being paid for", "Held for {0} orders being paid for")</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var hold in Model.Holds)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <a asp-route="OrdersDetail" asp-route-orderId="@hold.OrderId">@T["Order"]</a>
+                            <span>@T.Plural(hold.Quantity, "1 unit", "{0} units") · @T["until {0:g}", hold.ExpiresUtc]</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>@T.Plural(Model.MovementCount, "1 change", "{0} changes")</span>
