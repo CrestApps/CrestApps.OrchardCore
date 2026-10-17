@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -29,8 +31,12 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// look at them. An operator asked "did this customer actually pay?" had to read the database. This screen
 /// answers that question, and is the only place a refund can be started, so refunds always go through the
 /// service that keeps the ledger, the tax allocation, and the gateway in agreement.
+/// <para>
+/// The attempts and refunds it lists are Checkout's, so it is routed only where Checkout is enabled, like its menu.
+/// </para>
 /// </remarks>
 [Admin("payments/{action}/{itemId?}", "Payments{action}")]
+[RequireFeatures(CheckoutConstants.Features.Area)]
 public sealed class PaymentsAdminController : Controller
 {
     private readonly IPaymentAttemptStore _attemptStore;
