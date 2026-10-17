@@ -9,6 +9,7 @@ namespace CrestApps.OrchardCore.Addresses.Services;
 /// subscriptions keep working against the flat, string-based <see cref="Address"/> model even though the
 /// geographic components are captured as content-item selectors.
 /// </summary>
+[Obsolete(AddressConstants.ObsoleteGeography)]
 public interface IAddressResolver
 {
     /// <summary>

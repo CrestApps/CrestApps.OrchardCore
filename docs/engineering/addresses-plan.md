@@ -157,12 +157,13 @@ addresses to it. A script copies the data into the repo, and we refresh it when 
 | Slice | Scope | Exit gate |
 | --- | --- | --- |
 | **AD1 Country rules** | `Address` gains two fields; `AddressFormat`, provider, validator, formatter; Addresses.Core with the embedded data, the import script and the notice | Formats, checks and printing are right for the United States, Canada, the United Kingdom, Germany, France, Japan, Brazil and a country with no data; tests pin each. |
-| **AD2 Module split and shapes** | Base feature without content dependencies; Countries feature; `AddressPart`, resolver and the other geography types removed; `AddressEditor` and `AddressDisplay` with the re-layout script; docs | Choosing a country in the editor shows its fields, labels and regions; a bad postal code is refused on the server; the docs build. |
+| **AD2a Module split** | Base feature without content dependencies; Address Countries feature; `AddressPart`, resolver and the other geography types removed; docs | A site with only Addresses lists the ISO countries; enabling Address Countries seeds and lists Country content. |
+| **AD2b Shared editor** | `AddressEditor` and `AddressDisplay` shapes, the formats endpoint and the re-layout script | Choosing a country in the editor shows its fields, labels and regions; a bad postal code is refused on the server; the docs build. |
 | **AD3 Customers on the shared address** | `CustomerAddress` wraps `Address`; My Account and the admin use the editor; #923 amended before it merges | The live pass from CU2 passes again, with a Japanese and a British address. |
 | **CU3** (Customers plan) | The checkout contact step, using the editor | As in the Customers plan. |
 | **AD4 Address Field** | `AddressField` feature, settings, index, Liquid, schemas, docs | A content type with Home and Work address fields saves, prints and lists by city. |
 
-AD1 to AD3 come before CU3. AD4 can follow CU3.
+AD1 to AD3 come before CU3. AD4 can follow CU3. AD2 was split in two to keep each PR reviewable.
 
 ### AD1 as built
 
@@ -179,6 +180,30 @@ AD1 to AD3 come before CU3. AD4 can follow CU3.
   territories, most of them French overseas, still use the sorting code.
 - Printing: text before a line's first part belongs to it (Monaco's `MC-`), and text between parts is written only
   between two that have a value. A part the country doesn't use is not printed.
+
+### AD2a as built
+
+- Compatibility for sites on earlier 3.0 previews (added before merging, at Mike's request not to break anyone):
+  `IAddressResolver`, `DefaultAddressResolver` and the removed `AddressConstants` names are back, `[Obsolete]`, with
+  the resolver registered by Address Countries; `GeographicAreaIndexProvider` still indexes Region, County, City and
+  District items. `AddressCountriesUpgradeMigrations` (base feature) turns Address Countries on for a site whose
+  data migration record has the old `AddressMigrations`; it returns 0 until the feature is on, so it retries on the next
+  start, and enables it through `HttpBackgroundJob` because migrations run during activation in a scope that runs no
+  deferred tasks and can't reload the tenant.
+- Gotcha: `IExtensionManager.GetFeatures(ids)` returns the features with their dependencies, so `FirstOrDefault()`
+  picks a dependency. Find a feature by id in `IShellFeaturesManager.GetAvailableFeaturesAsync()`.
+
+- `CrestApps.OrchardCore.Addresses` keeps its id with no dependencies and only calls `AddAddressesCore()`. The new
+  `CrestApps.OrchardCore.Addresses.Countries` ("Address Countries") holds the Country type, its seed,
+  `GeographicAreaIndex` (now countries only) and `ContentCountryService`.
+- `AddressMigrations` keeps its class name and version 3, so sites that ran it don't run it again; new sites get the
+  Country type only. Sites that ran the earlier steps keep the old Region, County, City, District and `AddressPart`
+  definitions until someone removes them; nothing reads them.
+- Removed: `AddressPart`, `IAddressResolver`, `DefaultAddressResolver` and its tests, and the obsolete constants.
+- Found while testing: `CountryContentHandler.ValidatingAsync` never ran for the admin editor, because Orchard
+  Core's content admin creates and publishes without calling `ContentManager.ValidateAsync`. Duplicate and
+  malformed codes were saved. `CountryCodeValidator` now holds the rule, `CountryCodeDisplayDriver` applies it in
+  the editor, and the handler still covers recipes and the content API.
 
 ## Out of scope
 
