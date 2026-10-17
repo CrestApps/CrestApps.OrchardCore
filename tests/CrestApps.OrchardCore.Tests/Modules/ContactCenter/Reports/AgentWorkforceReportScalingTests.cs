@@ -61,7 +61,10 @@ public sealed class AgentWorkforceReportScalingTests
     private static int _sequence;
 
     [Fact]
-    public async Task WorkforceReports_OverAMonthOfABusyLog_ReadWholeDaysFromTheSummaries_AndShowWhatTheWholeLogShows()
+    public Task WorkforceReports_OverAMonthOfABusyLog_ReadWholeDaysFromTheSummaries_AndShowWhatTheWholeLogShows()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(WorkforceReports_OverAMonthOfABusyLog_ReadWholeDaysFromTheSummaries_AndShowWhatTheWholeLogShowsCoreAsync);
+
+    private static async Task WorkforceReports_OverAMonthOfABusyLog_ReadWholeDaysFromTheSummaries_AndShowWhatTheWholeLogShowsCoreAsync()
     {
         // Arrange
         var log = SyntheticLog();
@@ -117,7 +120,10 @@ public sealed class AgentWorkforceReportScalingTests
     /// recomputes it once it finds the disagreement.
     /// </summary>
     [Fact]
-    public async Task WorkforceReports_AfterALateChangeToASummarizedDay_StillShowWhatTheWholeLogShows()
+    public Task WorkforceReports_AfterALateChangeToASummarizedDay_StillShowWhatTheWholeLogShows()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(WorkforceReports_AfterALateChangeToASummarizedDay_StillShowWhatTheWholeLogShowsCoreAsync);
+
+    private static async Task WorkforceReports_AfterALateChangeToASummarizedDay_StillShowWhatTheWholeLogShowsCoreAsync()
     {
         // Arrange
         var log = SyntheticLog();

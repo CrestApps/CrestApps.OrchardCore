@@ -14,14 +14,6 @@ public sealed class CiFailureAnnotationAttribute : BeforeAfterTestAttribute
 {
     private static readonly ConcurrentDictionary<string, ConcurrentQueue<string>> _failures = new(StringComparer.Ordinal);
 
-    private static readonly string[] _watched =
-    [
-        "AgentWorkforceReportScalingTests",
-        "AgentActivityTimelineSelectionTests",
-        "WorkforceReportRangeTests",
-        "InteractionEventWindowPersistenceTests",
-    ];
-
     static CiFailureAnnotationAttribute()
     {
         AppDomain.CurrentDomain.FirstChanceException += (_, args) =>
@@ -33,20 +25,30 @@ public sealed class CiFailureAnnotationAttribute : BeforeAfterTestAttribute
                 return;
             }
 
-            var watched = _watched.Any(name => test.TestDisplayName.Contains(name, StringComparison.Ordinal));
-
-            var exceptionNamespace = args.Exception.GetType().Namespace ?? string.Empty;
-            var noise = exceptionNamespace.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal) ||
-                exceptionNamespace.StartsWith("YesSql", StringComparison.Ordinal) ||
-                args.Exception is OperationCanceledException ||
-                args.Exception is IOException ||
-                args.Exception is UnauthorizedAccessException;
-
-            if (exceptionNamespace == "Xunit.Sdk" || (watched && !noise))
+            if (args.Exception.GetType().Namespace == "Xunit.Sdk")
             {
-                queue.Enqueue(args.Exception.GetType().Name + ": " + args.Exception.Message + " @ " + args.Exception.StackTrace);
+                queue.Enqueue(args.Exception.GetType().Name + ": " + args.Exception.Message);
             }
         };
+    }
+
+    /// <summary>
+    /// Runs a test body and reports an unexpected exception as a CI annotation.
+    /// </summary>
+    /// <param name="body">The test body.</param>
+    /// <returns>A task.</returns>
+    public static async Task AnnotateAsync(Func<Task> body)
+    {
+        ArgumentNullException.ThrowIfNull(body);
+
+        try
+        {
+            await body();
+        }
+        catch (Exception exception) when (exception.GetType().Namespace != "Xunit.Sdk")
+        {
+            throw new InvalidOperationException(Environment.NewLine + "::error::" + Escape(TestContext.Current?.Test?.TestDisplayName + " -> " + exception), exception);
+        }
     }
 
     /// <inheritdoc/>
@@ -61,17 +63,18 @@ public sealed class CiFailureAnnotationAttribute : BeforeAfterTestAttribute
             return;
         }
 
-        var text = test.TestDisplayName + " -> " + string.Join(" || ", queue);
+        throw new InvalidOperationException(Environment.NewLine + "::error::" + Escape(test.TestDisplayName + " -> " + string.Join(" || ", queue)));
+    }
 
+    private static string Escape(string text)
+    {
         if (text.Length > 6000)
         {
             text = text.Substring(0, 6000);
         }
 
-        text = text.Replace("%", "%25", StringComparison.Ordinal)
+        return text.Replace("%", "%25", StringComparison.Ordinal)
             .Replace("\r", "%0D", StringComparison.Ordinal)
             .Replace("\n", "%0A", StringComparison.Ordinal);
-
-        throw new InvalidOperationException(Environment.NewLine + "::error::" + text);
     }
 }

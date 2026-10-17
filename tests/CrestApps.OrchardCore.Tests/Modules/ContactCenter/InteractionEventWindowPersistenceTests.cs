@@ -193,7 +193,10 @@ public sealed class InteractionEventWindowPersistenceTests
     }
 
     [Fact]
-    public async Task LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriod()
+    public Task LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriod()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriodCoreAsync);
+
+    private static async Task LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriodCoreAsync()
     {
         // Arrange
         var databasePath = DatabasePath("latest-before");
@@ -260,7 +263,10 @@ public sealed class InteractionEventWindowPersistenceTests
     /// every page boundary here, which is where a cursor on the time alone would skip or repeat them.
     /// </summary>
     [Fact]
-    public async Task Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirst()
+    public Task Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirst()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirstCoreAsync);
+
+    private static async Task Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirstCoreAsync()
     {
         // Arrange
         var databasePath = DatabasePath("window-pages");
@@ -306,7 +312,10 @@ public sealed class InteractionEventWindowPersistenceTests
     /// still gets its own latest change, across more agents than one statement holds.
     /// </summary>
     [Fact]
-    public async Task LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChange()
+    public Task LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChange()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChangeCoreAsync);
+
+    private static async Task LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChangeCoreAsync()
     {
         // Arrange
         var databasePath = DatabasePath("latest-batches");
