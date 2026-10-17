@@ -14,11 +14,12 @@ public interface IOrderService
 {
     /// <summary>
     /// Freezes a priced cart into a draft order. Orders made from the same cart earlier and not paid are canceled,
-    /// so the customer pays for what the cart holds now.
+    /// so the customer pays for what the cart holds now. Every <see cref="IOrderEventHandler"/> then hears of the new
+    /// order; when one refuses it, such as for want of stock, the order is canceled and the result says why.
     /// </summary>
     /// <param name="pricing">The cart, priced now. Every line must be available.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<Order> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default);
+    Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Cancels an order that was not paid, records why, and tells every <see cref="IOrderEventHandler"/>. A paid or
@@ -46,7 +47,7 @@ public sealed class OrderService : IOrderService
         _logger = logger;
     }
 
-    public async Task<Order> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default)
+    public async Task<OrderCreationResult> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(pricing);
 
@@ -97,7 +98,19 @@ public sealed class OrderService : IOrderService
 
         await _store.CreateAsync(order, cancellationToken);
 
-        return order;
+        var created = new OrderCreatedContext(order);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.CreatedAsync(created, cancellationToken);
+        }
+
+        if (created.Problems.Count > 0)
+        {
+            await CancelAsync(order, OrderCancelReason.Unavailable, cancellationToken);
+        }
+
+        return new OrderCreationResult(order, created.Problems);
     }
 
     public async Task<bool> CancelAsync(Order order, OrderCancelReason reason, CancellationToken cancellationToken = default)

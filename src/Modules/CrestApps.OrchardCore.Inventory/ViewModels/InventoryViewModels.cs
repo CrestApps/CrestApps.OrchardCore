@@ -26,6 +26,8 @@ public class InventoryPartViewModel
 public class InventorySettingsViewModel
 {
     public int DefaultLowStockThreshold { get; set; }
+
+    public int HoldMinutes { get; set; }
 }
 
 public class InventoryIndexOptions
@@ -56,6 +58,8 @@ public class StockItemViewModel
     public StockItem Item { get; set; }
 
     public IReadOnlyList<StockMovement> Movements { get; set; } = [];
+
+    public IReadOnlyList<StockReservation> Holds { get; set; } = [];
 
     public int MovementCount { get; set; }
 
