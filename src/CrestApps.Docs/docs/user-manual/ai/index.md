@@ -11,9 +11,7 @@ The AI features let you build assistants that answer questions, chat with your w
 
 This section explains each feature in plain words. For installation, configuration files and the technical details, see the [Technical Manual AI overview](../../ai/index.md).
 
-<video controls preload="metadata" width="100%" aria-label="Screencast touring the AI provider connections, deployments, and profiles admin screens">
-  <source src="/img/docs/ai-overview.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Screencast touring the AI provider connections, deployments, and profiles admin screens" start={7} end={23} />
 
 ## What each feature does
 

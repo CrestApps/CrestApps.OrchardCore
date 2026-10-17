@@ -19,15 +19,11 @@ A **subject flow** is the list of actions a subject takes for each disposition. 
 
 The two screencasts below build the flows for a pair of subjects that work together. The outbound *Test Drive Follow-up* call finishes when a drive is booked or the customer is not interested, and tries again when nobody answers or the customer asks for a call back:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of building an outbound subject flow with Finish and Try Again actions for four dispositions">
-  <source src="/img/docs/um-flow-outbound.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of building an outbound subject flow with Finish and Try Again actions for four dispositions" start={824} end={903} />
 
 The inbound *Sales Inquiry* call finishes when the question is answered, and when the caller books a test drive it creates a **New Activity** for the *Test Drive Follow-up* subject, scheduled 48 hours later with a higher urgency:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of building an inbound subject flow whose disposition creates an outbound follow-up activity for another subject">
-  <source src="/img/docs/um-flow-inbound.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of building an inbound subject flow whose disposition creates an outbound follow-up activity for another subject" start={772} end={821} />
 
 ## Add actions to a flow
 
@@ -51,9 +47,7 @@ To change or remove an action, use **Edit** or **Delete** on its row. Subjects w
 
 The screencast below builds this flow for the *Spring Lead Drive* campaign of a made-up *X Company*:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of configuring a subject flow with disposition actions">
-  <source src="/img/docs/omni-subject-flow.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of configuring a subject flow with disposition actions" start={906} end={957} />
 
 ## Action types
 

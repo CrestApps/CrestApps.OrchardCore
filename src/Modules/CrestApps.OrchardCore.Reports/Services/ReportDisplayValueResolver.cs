@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Reports.Models;
 using OrchardCore.DisplayManagement;
 
@@ -8,7 +9,7 @@ namespace CrestApps.OrchardCore.Reports.Services;
 /// <summary>
 /// Resolves typed report values through the Orchard display pipeline before display or export.
 /// </summary>
-public sealed class ReportDisplayValueResolver
+public sealed partial class ReportDisplayValueResolver
 {
     private readonly IShapeFactory _shapeFactory;
     private readonly IDisplayHelper _displayHelper;
@@ -136,9 +137,14 @@ public sealed class ReportDisplayValueResolver
 
         content.WriteTo(writer, HtmlEncoder.Default);
 
-        displayName = WebUtility.HtmlDecode(writer.ToString()).Trim();
+        // Shape tracing wraps rendered shapes in <!--shape-start ...--> / <!--shape-end ...--> markers.
+        // They are markup, not part of the value, so drop them before the text reaches an export.
+        displayName = WebUtility.HtmlDecode(HtmlCommentRegex().Replace(writer.ToString(), string.Empty)).Trim();
         userDisplayNames[userName] = displayName;
 
         return displayName;
     }
+
+    [GeneratedRegex(@"<!--.*?-->", RegexOptions.Singleline)]
+    private static partial Regex HtmlCommentRegex();
 }

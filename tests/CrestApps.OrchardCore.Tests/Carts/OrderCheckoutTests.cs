@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
@@ -110,6 +111,32 @@ public sealed class OrderCheckoutTests
         Assert.Equal(1.98m, order.TaxAmount);
         Assert.Equal("avery@example.com", order.CustomerEmail);
         Assert.Empty(_carts.Carts);
+    }
+
+    [Fact]
+    public async Task CompletingTheCheckout_KeepsWhoTheOrderIsFor_AndItsOwnCopyOfTheBillingAddress()
+    {
+        var cart = CreateCart(("mug", 1, 12m));
+        _carts.Carts.Add(cart);
+
+        var order = await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+
+        // A signed-in buyer's account name, replaced by what they entered for this order.
+        order.CustomerName = "avery_l";
+
+        var session = await StartCheckoutAsync(order);
+        var billing = new Address { Name = "Avery Lee", AddressLine1 = "1 Main St", City = "Springfield", Region = "IL", PostalCode = "62701", Country = "US" };
+
+        session.Put(new CheckoutContactInfo { DisplayName = "Avery Lee", Email = "avery@example.com", Phone = "555-0100", BillingAddress = billing });
+        session.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 12m, LineItems = [new CheckoutLineItem { ItemId = "mug", Quantity = 1, UnitPrice = 12m }] });
+
+        await CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        Assert.Equal("Avery Lee", order.CustomerName);
+        Assert.Equal("avery@example.com", order.CustomerEmail);
+        Assert.Equal("555-0100", order.CustomerPhone);
+        Assert.Equal("Springfield", order.BillingAddress.City);
+        Assert.NotSame(billing, order.BillingAddress);
     }
 
     [Fact]

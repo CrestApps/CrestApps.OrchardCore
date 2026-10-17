@@ -1,0 +1,16 @@
+@model CustomerAddressViewModel
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.IsNew ? "MyAccountAddressCreate" : "MyAccountAddressEdit")" title="@(Model.IsNew ? T["Add address"] : T["Edit address"])">
+        <breadcrumb-item id="MyAccount" action="Index" controller="MyAccount" area="CrestApps.OrchardCore.Customers">@T["My Account"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="@(Model.IsNew ? "AddressCreate" : "AddressEdit")" asp-route-addressId="@Model.AddressId" method="post" class="no-multisubmit">
+    <partial name="_CustomerAddressFields" model="Model" />
+
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary save">@T["Save"]</button>
+        <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

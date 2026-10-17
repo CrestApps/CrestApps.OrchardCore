@@ -86,6 +86,16 @@
                         <dt>@T["Paid"]</dt>
                         <dd>@order.PaidUtc.Value.ToString("f")</dd>
                     }
+                    @if (order.BillingAddress is not null)
+                    {
+                        <dt>@T["Billed to"]</dt>
+                        <dd>
+                            @foreach (var line in await BillingLinesAsync(order.BillingAddress))
+                            {
+                                <div>@line</div>
+                            }
+                        </dd>
+                    }
                     @if (Model.CanManage)
                     {
                         <dt>@T["Customer"]</dt>
@@ -96,7 +106,11 @@
                             }
                             @if (!string.IsNullOrEmpty(order.CustomerEmail))
                             {
-                                <a href="mailto:@order.CustomerEmail">@order.CustomerEmail</a>
+                                <div><a href="mailto:@order.CustomerEmail">@order.CustomerEmail</a></div>
+                            }
+                            @if (!string.IsNullOrEmpty(order.CustomerPhone))
+                            {
+                                <div><a href="tel:@order.CustomerPhone">@order.CustomerPhone</a></div>
                             }
                             @if (string.IsNullOrEmpty(order.CustomerName) && string.IsNullOrEmpty(order.CustomerEmail))
                             {
@@ -114,3 +128,20 @@
         </div>
     </div>
 </div>
+
+@functions {
+    // Printed the way the address's country writes it when the Addresses feature is on, plainly otherwise.
+    private async Task<IReadOnlyList<string>> BillingLinesAsync(CrestApps.OrchardCore.Addresses.Models.Address address)
+    {
+        var formatter = Context.RequestServices.GetService(typeof(CrestApps.OrchardCore.Addresses.Services.IAddressFormatter)) as CrestApps.OrchardCore.Addresses.Services.IAddressFormatter;
+
+        if (formatter is not null)
+        {
+            return await formatter.GetLinesAsync(address);
+        }
+
+        return new[] { address.Name, address.Company, address.AddressLine1, address.AddressLine2, string.Join(" ", new[] { address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrWhiteSpace(part))), address.Country }
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+    }
+}

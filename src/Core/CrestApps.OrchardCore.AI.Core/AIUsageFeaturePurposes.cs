@@ -32,4 +32,14 @@ public static class AIUsageFeaturePurposes
     /// A one-off completion requested through the utility completion API.
     /// </summary>
     public const string Utility = "Utility";
+
+    /// <summary>
+    /// Rewriting an AI Profile Builder session's instructions from the author's feedback.
+    /// </summary>
+    public const string ProfileBuilderCoaching = "ProfileBuilderCoaching";
+
+    /// <summary>
+    /// Replaying and judging the replies an AI Profile Builder author gave feedback on.
+    /// </summary>
+    public const string ProfileBuilderReplay = "ProfileBuilderReplay";
 }

@@ -162,7 +162,7 @@ account requires otherwise.
 | **Credential lifetime (minutes)** | `180` | How long a browser SIP telephony credential is valid. Kept short so a lost session cannot register indefinitely; renewal is deferred during a live call so media is never dropped mid-call. |
 | **Audio test destination** | — | Optional Telnyx number or SIP URI that echoes audio back, used by the diagnostics **Run audio test** action and the health canary to verify round-trip audio without a second person. When empty, the audio test is unavailable. |
 | **Calls with no local record** | Report | What to do when the connection has a call up that the platform has no interaction for, such as one placed immediately before a restart. **Report** records it and leaves it connected; **End call** speaks an apology and hangs up. |
-| **Answering machine detection** | Premium | How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone. **Premium** and **Standard** are billed by Telnyx per call. With **Off**, a voicemail is still recognised from its greeting or from a line nobody speaks on. |
+| **Answering machine detection** | Premium | How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone. **Premium** and **Standard** are billed by Telnyx per call. With **Off**, a voicemail is still recognised from its greeting or from a line nobody speaks on. A caller who rang in is never taken for a voicemail. |
 | **Text-to-speech voice** | `female` | The voice the platform's spoken prompts use: entry-point phone menus, the voicemail greeting, queue announcements, a queue's callback offer and its confirmation, the AI voice agent's key collection, and the apology read to an orphaned call. `female`, `male`, or a Telnyx voice name in the form `Provider.Model.VoiceId`, such as `AWS.Polly.Joanna-Neural`. Telnyx requires a voice on every `speak` and `gather_using_speak` and refuses the command without one. |
 | **Text-to-speech language** | `en-US` | The language those prompts are spoken in, such as `en-US` or `es-ES`. Telnyx ignores it for `AWS.Polly` voices, which carry their own language. |
 | **SIP WebSocket URL** | `wss://sip.telnyx.com:7443` | The SIP-over-WebSocket signaling endpoint the browser registers against. Telnyx SIP-over-WSS is on **:7443** (not :443); a wrong port produces a `1006` socket close. |
@@ -730,11 +730,17 @@ acts on next:
 - The model is offered **the dispositions the subject's own actions are wired to**, so whatever it picks always
   has somewhere to lead. A subject with no actions configured falls back to every disposition on the site, so a
   call is never left unclassified.
-- It is **held to that list**. A disposition it invents, or one belonging to a different subject, is discarded in
-  favour of the first choice it was offered.
-- A call **nobody spoke on** — rang out, declined, answered and hung up — is never sent for review. Asked to
-  summarize an empty transcript the model writes a plausible account of a conversation that did not happen, and
-  that account would be saved as fact; such a call is recorded as having produced no conversation.
+- It is **held to that list**, and it decides from what the customer said: the assistant's read-back, thanks or
+  goodbye is not the customer's agreement. A disposition it invents, or one belonging to a different subject, is
+  discarded, and so is a call on which the customer decided nothing the list records: the model is told to choose
+  none rather than the closest. Such a call takes the disposition the subject's **Try Again** action is wired to, so
+  the customer is called again, and failing that one with the *Disconnected* outcome (see
+  [Dispositions](../user-manual/dispositions.md#outcomes)); only a site with neither falls back to the first choice.
+- A call **the customer never spoke on** — rang out, declined, answered and hung up, or answered by someone who
+  stayed silent through the assistant's prompts — is never sent for review. The assistant talking alone is not a
+  conversation. Asked to summarize such a transcript the model writes a plausible account of a conversation that
+  did not happen, and that account would be saved as fact; such a call is recorded as having produced no
+  conversation, with the disposition for the *No answer* outcome.
 - A call **handed to a live agent** is not concluded here at all. The model's leg ends the moment the caller is
   transferred, and the outcome belongs to the agent who took it.
 

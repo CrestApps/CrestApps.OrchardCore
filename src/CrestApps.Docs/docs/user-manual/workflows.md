@@ -17,9 +17,7 @@ Workflows can react to contact center events and act on them without code. For e
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a workflow that starts on a contact center event and adds contact center tasks">
-  <source src="/img/docs/um-cc-workflows.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a workflow that starts on a contact center event and adds contact center tasks" start={1351} end={1393} />
 
 ## Build a workflow
 

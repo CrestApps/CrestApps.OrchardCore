@@ -2,88 +2,109 @@
 sidebar_label: Addresses
 sidebar_position: 16
 title: Addresses
-description: Country, region, county, city, and district content types with a reusable address part and content-backed country selectors for Orchard Core.
+description: Address formats for every country, with checks and printing built on them, and optional managed countries.
 ---
 
 | | |
 | --- | --- |
-| **Feature Name** | Addresses |
-| **Feature ID** | `CrestApps.OrchardCore.Addresses` |
+| **Features** | Addresses (`CrestApps.OrchardCore.Addresses`), Address Countries (`CrestApps.OrchardCore.Addresses.Countries`) |
+| **Core** | `CrestApps.OrchardCore.Addresses.Core` |
+| **Abstractions** | `CrestApps.OrchardCore.Addresses.Abstractions` |
 | **Category** | Content Management |
 
-Provides address-related content types and reusable parts. The module models every geographic component of an address &mdash; except the postal code &mdash; as managed content, so administrators can maintain countries, regions, counties, cities, and districts through the standard Orchard Core content management experience, and reuse them across checkout, taxation, and any other address-aware feature.
+The Addresses module gives the platform one address structure that works for any country. Customers, checkout, orders and taxation all hold the same `Address` value, and every country's rules decide which parts it has, which are required, and how it is checked and printed.
 
-## Overview
+| Feature | What it adds | Depends on |
+| --- | --- | --- |
+| **Addresses** | Each country's address format, the checks and the printing (`AddAddressesCore()`). Countries come from the ISO list. | Nothing |
+| **Address Countries** | The countries the site serves as `Country` content items, seeded from the ISO list, which administrators can rename, add or remove. | Addresses, `OrchardCore.Contents`, `OrchardCore.ContentFields`, `OrchardCore.Title` |
 
-Rather than shipping a hardcoded, read-only list, the Addresses feature seeds the canonical country list as regular content items. Administrators can then rename, extend, secure, and localize the entries like any other content, and build regions, counties, cities, and districts on top of them.
+## The address value
 
-The feature is built on a small design principle:
+`Address` (in `CrestApps.OrchardCore.Addresses.Abstractions`) is an immutable value: its parts are init-only, and `Clone()` copies it. An order, a shipment or an invoice keeps its own copy, so a later change to the address it came from never changes it.
 
-> **Addresses are content, not configuration.**
-
-Only the postal code stays as free text; every other component of an address is a content item that can be reused and referenced.
-
-## Content types
-
-| Type | Purpose |
+| Part | |
 | --- | --- |
-| **Country** | A country carrying an ISO 3166-1 alpha-2 `Code`. Seeded on enable from the canonical list. |
-| **Region** | A state, province, or region that references its parent country and stores a `Code`. |
-| **County** | A county that references its parent region and stores an optional `Code`. |
-| **City** | A city that references its parent region, an optional county, and stores an optional `Code`. |
-| **District** | A special or tax district that references its parent city and stores an optional `Code`. |
+| `Name`, `Company` | The recipient, and the business at the address. |
+| `AddressLine1`, `AddressLine2` | The street lines. Some countries, such as Japan, write the city and ward here. |
+| `DependentLocality` | The part of a city, for the countries whose post uses one: a suburb, a Brazilian *bairro*, a Chinese or Korean district. |
+| `City` | The city or post town. |
+| `Region` | The state, province, prefecture or other region, stored by its code when the country has a list (below). |
+| `PostalCode`, `SortingCode` | The postal code, and the sorting code a few countries add after the city (the CEDEX of France's overseas departments). |
+| `Country` | The ISO 3166-1 alpha-2 code. |
+| `County`, `District` | For tax: a county, and a special or tax district. |
+| `Phone` | A number for the courier. |
 
-Each type includes a `TitlePart` (with the unique-title editor) for the display name and is `Creatable`, `Listable`, and `Securable`.
+## Address formats
 
-## Reusable parts
+Every country writes an address differently: Germany puts the postal code before the city, the United Kingdom gives the post town and the postcode a line each, and Japan starts with the postal code and goes from the prefecture down. `CrestApps.OrchardCore.Addresses.Core` ships each country's rules and three services built on them, registered with `services.AddAddressesCore()`:
 
-| Part | Purpose |
+| Service | What it does |
 | --- | --- |
-| **CountryPart** | Holds the ISO alpha-2 `Code` for a country. |
-| **RegionPart** | Holds the parent country selector and `Code` for a region. |
-| **CountyPart** | Holds the parent region selector and `Code` for a county. |
-| **CityPart** | Holds the parent region selector, optional county selector, and `Code` for a city. |
-| **DistrictPart** | Holds the parent city selector and `Code` for a district. |
-| **AddressPart** | A reusable, attachable part capturing the recipient name, company, both street lines, phone, and postal code as text, and country, region, county, city, and district as content-item selectors. Attach it to any content type that needs a postal address. |
+| `IAddressFormatProvider` | `GetFormatAsync(countryCode)` returns the country's `AddressFormat`: the lines of the address and the text between the parts (`Layout`, and `LatinLayout` for an address written in Latin letters in Japan, China or Korea), the `Required` and `Uppercase` parts, the `PostalCodePattern` and `PostalCodeExamples`, what the region, city, dependent locality and postal code are called (`RegionLabel` such as `state`, `prefecture` or `emirate`; `PostalCodeLabel` such as `zip`, `pin` or `eircode`; the values are in `AddressLabels`), and the country's `Regions`. A country the data doesn't know gets a generic format with every common part, requiring only the street and the city. |
+| `IAddressValidator` | `ValidateAsync(address)` checks the address against its country: a known country, the parts the country requires, the postal code pattern, a region from the country's list, and a postal code that belongs to that region. It returns `AddressProblem`s, each naming the `AddressComponent` and the `AddressProblemKind` (`Missing`, `Invalid`, `Unknown`, `NotInRegion`), and the address tidied up: trimmed, the country and the postal code in capitals, and a region given by its name stored by its code. It checks the form of an address, not that the place exists. |
+| `IAddressFormatter` | `GetLinesAsync(address, options)` prints the address in its country's order, leaving out empty parts and the text around them. `Envelope` writes in capitals the parts the country's post wants in capitals; `IncludeCountry` adds the country's name. |
 
-Every geographic part standardizes on a money-safe `Code` field. The code is the value that flows into the flat `Address` model consumed by taxation and checkout; when a code is empty, the component's display name is used instead.
+A region in a country with a list of regions is stored by its code: its ISO 3166-2 code without the country (`CA` for California, `13` for Tokyo, `D` for County Dublin), or the key the country's post uses when there is none. `AddressFormat.FindRegion` finds a region by its code, key, name or Latin name. Storing codes is what lets tax jurisdictions match an address whether the customer chose "California" or typed "CA".
 
-## Resolving an address
+### Where the country data comes from
 
-Because the geographic components of an `AddressPart` are content-item selectors, the module ships an `IAddressResolver` that reduces the part to the flat, money-safe `Address` model. Each geographic selector is loaded and reduced to its stable `Code` (falling back to its display name); the recipient `Name`, `Company`, `AddressLine1`, `AddressLine2`, `Phone`, and `PostalCode` are captured as text. Taxation, Checkout, and Subscriptions therefore keep operating on the string-based `Address` contract and never store a content item id.
+The formats come from Google's address data, the data behind [libaddressinput](https://github.com/google/libaddressinput), which is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is free to use and redistribute, commercially included; the credit is in the package's `THIRD-PARTY-NOTICES.md`, which anyone redistributing the package keeps with it.
 
-The flat `Address` is a **money-safe value snapshot**: once it is captured on an order or shipment it is never mutated by a later edit to the customer-editable address content item it was resolved from. It carries the complete postal contract — the recipient/company lines, both street lines, the geographic codes, the postal code, and the delivery phone — so a downstream order billing/shipping snapshot needs no second lookup.
+The data is a snapshot inside the package. A running site never contacts Google, and no address leaves the site. `utilities/address-data/build-address-data.mjs` refreshes the snapshot from Google's Address Data Service when the maintainers choose to.
+
+## The address editor
+
+Every page that asks for an address uses the same editor: the customer address book, the admin, the checkout, and content fields. It asks for the country first and lays the other fields out for it, in the country's order, with its labels (State, Prefecture, Post town, ZIP code, Eircode…), marking what the country requires and offering its regions as a list.
+
+`IAddressEditorService` (in `CrestApps.OrchardCore.Addresses.Core.Editing`) builds and checks it:
+
+| Method | |
+| --- | --- |
+| `BuildAsync(address, options)` | The editor for an address, or for a new one. |
+| `PopulateAsync(model, options)` | Lays a posted editor out again for the country it posted, to show it with its errors. |
+| `ValidateAsync(model, modelState, prefix, options)` | Checks the posted address against its country and the page's options, and adds each problem to `modelState` under `prefix` and the field's name, in the visitor's language. Returns the `AddressValidationResult`, whose `Address` is the tidied value to keep. |
+| `GetLayoutAsync(countryCode)` | The `AddressEditorLayout` of a country: its lines, labels, required parts, regions and an example postal code. |
+
+`AddressEditorOptions` sets what the page asks for besides the country's own parts: `ShowName`, `RequireName`, `ShowCompany`, `ShowPhone`, the `Countries` offered (all the site serves when `null`), and the `DefaultCountry` of a new address. `AddressEditorViewModel.HasAnyValue()` tells an optional address left blank from one started.
+
+The editor is the `AddressEditor` shape, whose model is the `AddressEditorViewModel`. Its fields post under the shape's prefix, so a page binds them back with that prefix:
 
 ```csharp
-public interface IAddressResolver
-{
-    ValueTask<Address> ResolveAsync(ContentItem contentItem);
-}
+// In a controller.
+var editor = await _addressEditor.BuildAsync(customerAddress, options);
+model.AddressEditor = await _shapeFactory.CreateAddressEditorAsync(editor, prefix: "Address");
+
+// On post.
+var posted = new AddressEditorViewModel();
+await TryUpdateModelAsync(posted, "Address");
+var result = await _addressEditor.ValidateAsync(posted, ModelState, "Address", options);
 ```
 
-## Country selectors
+A display driver can return `Initialize<AddressEditorViewModel>("AddressEditor", …)` instead, with its own prefix. `CreateAddressDisplayAsync(address)` gives the `AddressDisplay` shape, which prints an address through `IAddressFormatter`.
 
-When the feature is enabled it registers a content-backed `ICountryService`. Country dropdowns across the platform &mdash; for example the taxation jurisdiction editor &mdash; are populated from the managed `Country` content items and indexed by the shared `GeographicAreaIndex` for efficient lookup. When no country content exists yet, the service falls back to the canonical ISO list so selectors are never empty.
+When the country changes, the editor's script asks `~/addresses/formats/{countryCode}` for the country's layout and re-lays the fields. Fields the country doesn't use are set aside and disabled, so they post nothing. Without the script, the server lays the form out again when it comes back. The layout is the same for everyone, in the visitor's language, so the endpoint needs no sign-in and is cached by the browser for an hour.
 
-When the feature is disabled, the default `ICountryService` returns the canonical ISO list, so dependent features keep working without any address content.
+## Country lists
 
-```csharp
-public interface ICountryService
-{
-    ValueTask<IReadOnlyList<CountryInfo>> GetCountriesAsync();
-}
-```
+`ICountryService.GetCountriesAsync()` lists the countries a site offers. With only the Addresses feature it returns the ISO list from the .NET runtime. With **Address Countries** enabled it returns the published `Country` content items instead, falling back to the ISO list while there are none, so a store can offer only the countries it serves or rename one.
 
-## Indexing
+| Content type | Purpose |
+| --- | --- |
+| **Country** | A country with its ISO 3166-1 alpha-2 code in `CountryPart`'s `Code` field. The ISO list is seeded when the feature is enabled, and no two countries may share a code. |
 
-All five geographic content types share a single `GeographicAreaIndex` map index. Each row records the `ContentItemId`, `ContentType`, money-safe `Code`, `ParentContentItemId`, `DisplayText`, and the `Published`/`Latest` flags. One shared index powers country selectors, ISO code uniqueness for countries, cascading parent/child lookups, and address resolution across the whole hierarchy without loading full content items.
+Countries are indexed by `GeographicAreaIndex` (content item id, content type, code, display text, published and latest flags), so the list never loads whole content items. The address formats always come from the shipped data: managed countries decide which countries are offered and what they are called, not how their addresses are written.
 
 ## Money safety
 
-Taxation stores stable string codes (the ISO alpha-2 country code and the region, county, city, and district codes) on jurisdictions and rules, not a content item id. The `IAddressResolver` maps every `AddressPart` selector to those same codes, so tax matching stays deterministic. Enabling or disabling the Addresses feature therefore never orphans existing tax data: the stored codes keep resolving against both the content-backed and default services.
+Taxation stores codes, not content item ids: the country's ISO code and the region, county, city and district as text. Addresses entered through the address rules carry region codes, so a tax jurisdiction for `CA` matches an address whose customer chose "California". Enabling or disabling either feature never orphans tax data.
 
-## Dependencies
+## Upgrading from an earlier 3.0 preview
 
-- `OrchardCore.Contents`
-- `OrchardCore.ContentFields`
-- `OrchardCore.Title`
+Earlier 3.0 previews kept the Country content in the Addresses feature and had an `AddressPart` whose country, region, county, city and district were content pickers, with Region, County, City and District content types and `IAddressResolver` to read them. A site upgrading from one of those keeps working:
+
+- **Countries.** A site that ran the earlier Addresses migration gets **Address Countries** turned on by itself the first time it starts, so its country list, with any renamed or removed countries, stays as it was. A new site starts without it.
+- **Content.** Content types that have `AddressPart` keep it, with its picker fields, and the Region, County, City and District items stay. Nothing is deleted. They are still indexed in `GeographicAreaIndex`, with their parents.
+- **Code.** `IAddressResolver`, `DefaultAddressResolver` and the `AddressConstants` names for the removed types and parts (`AddressPart`, `Region`, `RegionPart`, `County`, `CountyPart`, `City`, `CityPart`, `District`, `DistrictPart`) are still there, marked `[Obsolete]`, so code that used them builds with a warning. They will be removed in the next major version.
+
+To move to the new address, add an [Address field](content-fields#addressfield) (the ContentFields module's **Address Field** feature) to the content type, copy each item's address into it, and remove `AddressPart`; code reads the field's `Address` value instead of calling `IAddressResolver`.

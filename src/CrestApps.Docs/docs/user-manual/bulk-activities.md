@@ -18,9 +18,7 @@ technical_manual:
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a manager filtering activities, reassigning two of them to another agent, and raising the urgency of every matching activity">
-  <source src="/img/docs/um-manage-activities.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a manager filtering activities, reassigning two of them to another agent, and raising the urgency of every matching activity" start={720} end={767} />
 
 Each row shows who will handle the activity: **Manual** or **Automated (AI)** work and its source, the **AI profile** of an automated conversation, the **dialer profile** and **campaign** of dialed work, and the user it is **assigned to**.
 

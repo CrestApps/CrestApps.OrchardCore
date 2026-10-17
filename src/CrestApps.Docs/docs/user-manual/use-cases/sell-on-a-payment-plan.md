@@ -22,10 +22,7 @@ When it is done:
 - the customer is reminded before each payment and gets a receipt after it;
 - every payment appears under **Commerce > Transactions** and **Commerce > Payments**, where it can be refunded.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-installment-plans.jpg" aria-label="Narrated video of setting up an installment plan and taking the down payment">
-  <source src="/img/docs/commerce-installment-plans.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-installment-plans.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of setting up an installment plan and taking the down payment" start={304} end={363} />
 
 ## Before you start
 

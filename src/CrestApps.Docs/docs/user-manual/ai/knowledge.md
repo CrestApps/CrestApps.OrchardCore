@@ -19,9 +19,7 @@ On its own, an AI model only knows what it learned in general. To answer questio
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of an Elasticsearch-backed AI data source grounding answers on Article content">
-  <source src="/img/docs/ai-elasticsearch-datasource.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of an Elasticsearch-backed AI data source grounding answers on Article content" start={260} end={351} />
 
 ## Choose how to add your knowledge
 

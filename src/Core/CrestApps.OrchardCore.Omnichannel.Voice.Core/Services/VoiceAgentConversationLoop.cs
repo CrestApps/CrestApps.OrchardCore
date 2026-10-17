@@ -311,6 +311,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     // the line is hung up as soon as the message has played, and the call concluded as one that
                     // reached voicemail.
                     EndCallOnVoicemail = () => _endCallTurn.RequestEndCall(VoicemailMessageLeftReason, reachedVoicemail: true),
+                    EndCallOnSilence = () => _endCallTurn.RequestEndCall(SilentLineEndedReason),
 
                     // Only when this call actually has an agent to reach. Telling a model it may transfer, on a
                     // call where nothing can receive the caller, promises the caller a person who is not coming.

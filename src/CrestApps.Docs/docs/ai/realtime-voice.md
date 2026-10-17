@@ -26,8 +26,9 @@ thread. Choosing a speech-to-speech model no longer turns the surface voice-only
    Optionally set the site's default realtime deployment under **Settings → Artificial Intelligence → Default
    Deployments**.
 2. **A surface in conversation mode.**
-   - **AI Chat session** — set the profile's **Chat mode** to **Conversation**. A **Conversation deployment**
-     picker appears beside it; leave it empty to inherit the site default.
+   - **AI Chat session** — set the profile's **Chat mode** to **Conversation**. The profile's **Conversation
+     deployment** names the model; leave it empty to use the site's default realtime deployment. The same field
+     names the model of the phone calls the profile answers or places, whatever its chat mode.
    - **Chat interactions** — an interaction has no chat mode of its own, so set chat interactions to
      **Conversation** site-wide and name the **Conversation deployment** on the interaction. Naming one is
      itself how that interaction asks to speak.

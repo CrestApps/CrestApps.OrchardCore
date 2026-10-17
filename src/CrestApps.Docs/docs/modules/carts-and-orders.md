@@ -75,6 +75,14 @@ The cart page shows **Checkout** when the Orders feature is enabled. Checking ou
 
 The checkout's confirmation page shows the order number.
 
+**Guest access.** `IOrderLinkService` makes a signed, expiring link to one order (data protection with a time limit of 60 days, purpose `CrestApps.OrchardCore.Orders.OrderLink`; the site's base URL first, then the current request). `GET orders/view/{token}` (`OrderViewController`) opens it read-only, with a pay link when a Pay Later transaction for the order is still outstanding; a bad or expired token shows nothing about any order. The confirmation page and a guest's confirmation email carry the link.
+
+**Find my order.** `GET/POST orders/find` takes an email and emails a link to each paid or awaiting-payment order placed with it in the last year (up to 10), finding them through the indexed `OrderIndex.CustomerEmail` (`OrderQuery.CustomerEmail`). The answer is the same whether or not orders exist. Posts are limited per IP and per email through `IPaymentAttemptLimiter`, and carry the `find-order` rate-limit group for the Rate Limits feature.
+
+**Order confirmations.** Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, tax, total, billing address; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings > Commerce > Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
+
+Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
+
 ### Order statuses
 
 | Status | Meaning |
@@ -99,8 +107,8 @@ Carts are the first checkout source with several products, so a `BillingItem` ca
 
 ## Not included
 
-Customer profiles and address books, shipping and fulfillment, inventory, saved carts, carts with recurring prices, and order editing.
+Shipping and fulfillment, inventory, saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature.
 
 ## Getting started
 
-Enable **Carts** to show **Add to cart** and the cart page. Enable **Orders** and a [payment provider](payments) to check carts out. The **Product listing: online store sample** recipe enables Carts.
+Enable **Carts** to show **Add to cart** and the cart page. Enable **Orders** and a [payment provider](payments) to check carts out. The **Product listing: online store sample** recipe enables Carts, Orders and [Customers](customers); add a payment provider to take payments.

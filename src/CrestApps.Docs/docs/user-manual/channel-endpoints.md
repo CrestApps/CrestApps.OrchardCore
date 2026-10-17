@@ -19,9 +19,7 @@ An **omnichannel address** is an address the business owns, such as a phone numb
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding a phone number used for calls and texts, with the agents who dial and text from it">
-  <source src="/img/docs/um-channel-endpoints.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of adding a phone number used for calls and texts, with the agents who dial and text from it" start={115} end={165} />
 
 ## Add an address
 

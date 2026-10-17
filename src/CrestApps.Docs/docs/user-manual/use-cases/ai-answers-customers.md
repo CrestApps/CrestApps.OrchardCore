@@ -20,9 +20,7 @@ When it is done:
 - when the customer asks for a person, looks like a qualified lead, or is frustrated, the AI can hand them to an agent in a queue;
 - you can read every conversation afterwards.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of opening a contact's completed AI call and reading its transcript with Review AI conversation">
-  <source src="/img/docs/um-review-ai.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a contact's completed AI call and reading its transcript with Review AI conversation" start={695} end={717} />
 
 ## Before you start
 

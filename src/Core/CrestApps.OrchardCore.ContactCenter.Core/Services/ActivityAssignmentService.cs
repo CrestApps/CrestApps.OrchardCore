@@ -108,6 +108,11 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         await using var acquiredLock = locker;
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Assigning the next Contact Center item of queue '{QueueId}'.", queueId.SanitizeLogValue());
+        }
+
         return await AssignNextCoreAsync(queueId, cancellationToken);
     }
 
@@ -292,6 +297,11 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading the next routable item of queue '{QueueId}'.", queueId.SanitizeLogValue());
+        }
+
         var topItem = await NextRoutableItemAsync(queue, now, cancellationToken);
 
         if (topItem is null)
@@ -344,6 +354,15 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         var timeout = queue.ReservationTimeoutSeconds > 0
             ? queue.ReservationTimeoutSeconds
             : 30;
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Reserving agent '{AgentId}' for queue item '{QueueItemId}' of queue '{QueueId}'.",
+                decision.Agent.ItemId.SanitizeLogValue(),
+                topItem.ItemId.SanitizeLogValue(),
+                queueId.SanitizeLogValue());
+        }
 
         var reservation = await _reservationService.ReserveAsync(topItem, decision.Agent, timeout, cancellationToken);
 

@@ -1,0 +1,65 @@
+@model CustomerAddressListViewModel
+
+@{
+    var controller = Model.IsOwn ? "MyAccount" : "CustomersAdmin";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-2">
+    <h2 class="h5 mb-0">@T["Addresses"]</h2>
+    @if (Model.CanManage)
+    {
+        <a class="btn btn-sm btn-secondary" asp-controller="@controller" asp-action="AddressCreate" asp-route-customerId="@Model.CustomerId">@T["Add address"]</a>
+    }
+</div>
+
+@if (Model.Addresses.Count == 0)
+{
+    <p class="text-muted">@(Model.IsOwn ? T["You have no saved addresses yet."] : T["No saved addresses."])</p>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var address in Model.Addresses)
+        {
+            <div class="col-md-6 col-xl-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-1 mb-2">
+                            @if (!string.IsNullOrEmpty(address.Label))
+                            {
+                                <strong class="me-1">@address.Label</strong>
+                            }
+                            @if (address.IsDefaultBilling)
+                            {
+                                <span class="badge text-bg-primary">@T["Default billing"]</span>
+                            }
+                            @if (address.IsDefaultShipping)
+                            {
+                                <span class="badge text-bg-info">@T["Default shipping"]</span>
+                            }
+                        </div>
+                        <address class="mb-0">
+                            @for (var i = 0; i < address.Lines.Count; i++)
+                            {
+                                @address.Lines[i]
+                                @if (i < address.Lines.Count - 1)
+                                {
+                                    <br />
+                                }
+                            }
+                        </address>
+                    </div>
+                    @if (Model.CanManage)
+                    {
+                        <div class="card-footer d-flex gap-2">
+                            <a class="btn btn-sm btn-primary" asp-controller="@controller" asp-action="AddressEdit" asp-route-customerId="@Model.CustomerId" asp-route-addressId="@address.AddressId">@T["Edit"]</a>
+                            <form asp-controller="@controller" asp-action="AddressDelete" asp-route-customerId="@Model.CustomerId" asp-route-addressId="@address.AddressId" method="post" class="no-multisubmit">
+                                <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl" data-title="@T["Delete address"]" data-message="@T["Delete this address? Orders that used it keep their own copy."]">@T["Delete"]</button>
+                            </form>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -30,6 +30,7 @@ public sealed class DialerPacingSchedulerTests
         Debounce = TimeSpan.FromMilliseconds(300),
         LockExpiration = TimeSpan.FromSeconds(30),
         LockRetryDelay = TimeSpan.FromSeconds(1),
+        CycleTimeout = TimeSpan.FromMilliseconds(200),
     };
 
     [Fact]
@@ -243,6 +244,30 @@ public sealed class DialerPacingSchedulerTests
         Assert.Equal(clock.UtcNow.Add(_options.Debounce), first);
         Assert.Null(second);
         fixture.DialerService.Verify(service => service.RunCycleAsync(fixture.Profile, _campaignQueue, It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task ACycleThatNeverFinishes_IsAbandonedAndLetsGoOfThePacingLock()
+    {
+        // Arrange: the cycle waits on something that never answers, as a provider call without a timeout would.
+        var clock = new TestClock();
+        var deadlines = new DueRecordingDeadlineScheduler();
+        var scheduler = CreateScheduler(deadlines, clock);
+        var fixture = new RunFixture();
+        fixture.DialerService
+            .Setup(service => service.RunCycleAsync(fixture.Profile, _campaignQueue, It.IsAny<CancellationToken>()))
+            .Returns(() => new TaskCompletionSource<int>().Task);
+
+        scheduler.Request(_campaignQueue);
+
+        // Act
+        var next = await deadlines.RunAsync(DialerPacingScheduler.GetDeadlineKey(_campaignQueue), fixture.BuildServices());
+
+        // Assert: the campaign is not frozen until the application restarts; nothing was committed.
+        Assert.Null(next);
+        Assert.False(fixture.Lock.IsHeld(DialerPacingScheduler.GetPacingLockKey(_campaignQueue)));
+        fixture.Session.Verify(session => session.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        fixture.Session.Verify(session => session.CancelAsync(), Times.Once);
     }
 
     [Fact]

@@ -19,9 +19,7 @@ When it is done:
 - supervisors send the same message to many customers as a broadcast, with each reply coming back as its own conversation;
 - customers who text STOP are opted out automatically.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of starting a new SMS conversation and sending it">
-  <source src="/img/docs/um-messaging-send.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of starting a new SMS conversation and sending it" start={616} end={639} />
 
 ## Before you start
 

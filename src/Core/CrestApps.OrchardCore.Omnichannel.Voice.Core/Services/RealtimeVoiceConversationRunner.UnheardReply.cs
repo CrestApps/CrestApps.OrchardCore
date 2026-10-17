@@ -42,7 +42,8 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     private CallerReplyListener _replyListener;
 
-    // The assistant's last finished line, for the prompt that asks for an answer it did not hear.
+    // The assistant's last line the caller heard with words in it: for the prompt that asks for an answer it did not
+    // hear, and quoted by the idle prompts to keep the call's language.
     private string _lastAssistantLine;
 
     /// <summary>

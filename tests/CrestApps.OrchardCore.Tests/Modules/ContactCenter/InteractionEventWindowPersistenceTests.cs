@@ -52,6 +52,50 @@ public sealed class InteractionEventWindowPersistenceTests
         }
     }
 
+    /// <summary>
+    /// A report over every agent filters on the aggregate type and the period only. The aggregate index leads with the
+    /// aggregate's id, so without this index that read walks every agent's whole history and its cost grows with the
+    /// size of the log rather than the size of the period.
+    /// </summary>
+    [Fact]
+    public async Task UpgradeStep_AddsTheWindowIndex()
+    {
+        // Arrange
+        var databasePath = DatabasePath("window-index");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using (var session = store.CreateSession())
+            {
+                var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
+                var migration = new InteractionEventIndexMigrations(store)
+                {
+                    SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
+                };
+
+                // Act
+                var version = await migration.UpdateFrom6Async();
+                await transaction.CommitAsync(TestContext.Current.CancellationToken);
+
+                Assert.Equal(7, version);
+            }
+
+            await using var connection = new SqliteConnection($"Data Source={databasePath};Pooling=False");
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name LIKE '%IDX_InteractionEventIndex_Window%'";
+            var count = Convert.ToInt32(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken), System.Globalization.CultureInfo.InvariantCulture);
+
+            // Assert
+            Assert.Equal(1, count);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     [Fact]
     public async Task Window_ReturnsOnlyThePeriodsEventsForTheAgentsAndTypesAsked_OldestFirst()
     {

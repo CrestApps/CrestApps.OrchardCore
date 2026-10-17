@@ -29,9 +29,7 @@ Your administrator also connects the SMS provider to the site, so that customers
 
 ## Work the inbox
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the messaging inbox: filtering conversations, opening a thread, claiming it and using a canned response">
-  <source src="/img/docs/um-messaging-inbox.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the messaging inbox: filtering conversations, opening a thread, claiming it and using a canned response" start={558} end={586} />
 
 Open **Messaging > Inbox**. The left side lists your customers, most recent first; the right side shows the conversation you open. A customer who wrote on several channels appears only once, with the unread messages of all their channels added together and an icon for each channel they used.
 
@@ -51,9 +49,7 @@ Open a conversation to read the thread. At the top:
 
 This screencast opens the **Unassigned** view, claims a conversation, closes it (a closed conversation shows *This conversation is closed and cannot be replied to*), and reopens it:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of claiming an unassigned conversation, closing it and reopening it">
-  <source src="/img/docs/um-messaging-actions.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of claiming an unassigned conversation, closing it and reopening it" start={589} end={613} />
 
 In the composer, type your reply and press **Enter** to send (**Shift+Enter** adds a line). **Insert a canned response...** fills in a [template](#templates). A counter shows the characters left when the channel has a limit. The side panel has an **AI summary** of the thread and the **Customer** card, which lists every contact record that matches the customer's address, with **View account** for the linked contact.
 
@@ -114,9 +110,7 @@ Who can transfer and to whom:
 
 ## Start a new conversation
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of starting a new SMS conversation and sending it">
-  <source src="/img/docs/um-messaging-send.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of starting a new SMS conversation and sending it" start={616} end={639} />
 
 1. Click the **New conversation** (pencil) button.
 2. Pick **From**, the number you send from (it decides the channel).
@@ -129,9 +123,7 @@ You can also click the **Send SMS** button beside any phone field on admin pages
 
 ## Templates
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a message template and sending a broadcast">
-  <source src="/img/docs/um-messaging-templates-broadcasts.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of creating a message template and sending a broadcast" start={642} end={692} />
 
 Templates are canned responses agents insert into a reply. Use them for answers you give often, such as your opening hours.
 

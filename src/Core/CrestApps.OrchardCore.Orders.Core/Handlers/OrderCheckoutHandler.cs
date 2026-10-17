@@ -123,10 +123,14 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.Total = invoice.GrandTotal;
         order.TaxAmount = invoice.TaxAmount;
 
+        // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's
+        // name or email for it.
         if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutContactInfo>(session, out var contact))
         {
-            order.CustomerName ??= contact.DisplayName;
-            order.CustomerEmail ??= contact.Email;
+            order.CustomerName = Prefer(contact.DisplayName, order.CustomerName);
+            order.CustomerEmail = Prefer(contact.Email, order.CustomerEmail);
+            order.CustomerPhone = Prefer(contact.Phone, order.CustomerPhone);
+            order.BillingAddress = contact.BillingAddress?.Clone() ?? order.BillingAddress;
         }
 
         await _orderStore.UpdateAsync(order);
@@ -175,6 +179,9 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
         await _cartStore.UpdateAsync(cart);
     }
+
+    private static string Prefer(string value, string fallback)
+        => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
 
     private static bool IsOrder(CheckoutSession session)
         => string.Equals(session?.ReferenceType, CheckoutReferenceTypes.Order, StringComparison.Ordinal);

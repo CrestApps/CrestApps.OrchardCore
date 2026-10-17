@@ -4,9 +4,11 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -17,6 +19,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -89,6 +92,24 @@ public sealed class DataSourceStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionDataSourceDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers services and configuration for the AI Profile Builder feature.
+/// </summary>
+[Feature(ChatInteractionsConstants.Feature.ProfileBuilder)]
+public sealed class ProfileBuilderStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IProfileBuilderSessionStore, ProfileBuilderSessionStore>()
+            .AddIndexProvider<ProfileBuilderSessionIndexProvider>()
+            .AddDataMigration<ProfileBuilderSessionIndexMigrations>()
+            .AddScoped<ProfileBuilderCoach>()
+            .AddScoped<ProfileBuilderService>()
+            .AddNavigationProvider<ProfileBuilderAdminMenu>();
     }
 }
 

@@ -33,9 +33,7 @@ An **automatic** activity load creates activities that an **AI profile** works b
 
 ## Load automated SMS activities
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities">
-  <source src="/img/docs/um-load-ai-sms.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities" start={1231} end={1290} />
 
 1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Automatic**.
 2. Enter a **Title**, pick the **Subject content type** and the **Campaign**.
@@ -54,9 +52,7 @@ While the conversation runs:
 
 ## Load automated voice calls
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic voice activity load with an AI profile, background office sound and reply delay">
-  <source src="/img/docs/um-load-ai-voice.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an automatic voice activity load with an AI profile, background office sound and reply delay" start={1293} end={1348} />
 
 Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
 
@@ -65,6 +61,10 @@ Follow the same steps with **Phone** as the channel and an address used for voic
 When a voicemail or answering machine answers, the AI does not talk to the recording. It lets the greeting and the tone finish, leaves one short message (who is calling, why, and that it will try again, with no questions) and hangs up. On a profile that holds the call as a live conversation, the message is spoken in the same voice and the same language as the rest of the call. The activity is completed with the disposition for the *Answering machine* outcome when the subject flow has one (see [Dispositions](dispositions.md#outcomes)), and its notes say the call reached voicemail and left a message.
 
 The AI is told who answered by your phone system's **Answering machine detection** setting (see [Telephony settings](telephony-settings.md)). With it off, the AI has to recognise the greeting for what it is before it leaves its message, so turn detection on for campaigns that reach many voicemails.
+
+### When the line goes quiet
+
+When nobody speaks for 8 seconds, the AI asks whether the person is still there. It asks twice, 8 seconds apart, and after another 8 seconds of silence it says goodbye and hangs up, about half a minute after its last word. Anything the person says starts the count again. Calls the AI answers work the same way.
 
 ## Let the AI answer incoming calls
 
@@ -76,6 +76,8 @@ An automatic load is for conversations the AI starts. To have an AI profile **an
 4. Optionally, give the number an inbound **Phone** [subject](subjects.md) whose **Address** is that number. Its subject, campaign and [subject flow](subject-flows.md) are used for the call: the dispositions the AI picks from, and whether it may hand the caller to a person.
 
 While the entry point is open, the AI picks up every call to the number, greets the caller with the profile's opening message and holds the conversation. The welcome message, phone menu and queue are not used. While the entry point is closed, callers go to voicemail, or are refused when its closed action is **Reject**. Each call is an automated activity with the AI's transcript. It reaches an agent only if the AI hands the caller over. See [AI voice agent](entry-points-and-ivr.md#ai-voice-agent).
+
+A caller who says nothing at first is never taken for a voicemail, as a silent line on a call the AI placed can be: only a call the platform places can reach one.
 
 This needs the **Telnyx AI Voice Agent** feature, which adds **AI voice agent** to the **Route to** list.
 
@@ -112,13 +114,11 @@ This needs the **SMS Omnichannel Automation** and **SMS Messaging Channel** feat
 
 ## When the conversation ends
 
-The AI picks a disposition using your hints, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. Open **Review AI conversation** on the activity to read the full transcript.
+The AI picks a disposition using your hints and what the customer said, the summary is saved as the activity's notes, and the subject flow runs exactly as if an agent had completed it. When the customer never spoke, or decided nothing your dispositions record, no disposition is picked for them: the call takes the one for its outcome, such as the one wired to **Try Again** so the contact is called again, or the one for *No answer* or *Disconnected* (see [Dispositions](dispositions.md#outcomes)). Open **Review AI conversation** on the activity to read the full transcript.
 
 To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of opening a contact's completed AI call and reading its transcript with Review AI conversation">
-  <source src="/img/docs/um-review-ai.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a contact's completed AI call and reading its transcript with Review AI conversation" start={695} end={717} />
 
 ### When an AI call is cut off
 

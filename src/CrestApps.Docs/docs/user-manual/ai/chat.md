@@ -18,9 +18,7 @@ Every AI assistant on the site is an [AI profile](profiles.md). The chat page le
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a chat AI profile and chatting with the model">
-  <source src="/img/docs/ai-chat.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of creating a chat AI profile and chatting with the model" start={46} end={75} />
 
 ## Open an assistant
 
@@ -82,9 +80,7 @@ Deleting a chat also deletes the files you attached to it.
 
 When the assistant allows it, you can attach documents or pictures and ask about them, for example "What is the cancellation fee in this contract?".
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of uploading a PDF to a chat and receiving an answer that cites the file">
-  <source src="/img/docs/ai-chat-attachments-pdf.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of uploading a PDF to a chat and receiving an answer that cites the file" start={133} end={201} />
 
 1. Click **Attach files** (the paperclip) above the message box, or drag files onto the message box.
 2. Each file shows as a small label while it uploads. Click the **x** on a label to remove that file.

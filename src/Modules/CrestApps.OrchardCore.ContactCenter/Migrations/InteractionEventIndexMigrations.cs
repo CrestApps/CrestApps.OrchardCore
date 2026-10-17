@@ -192,6 +192,25 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
     }
 
     /// <summary>
+    /// Adds the index an unfiltered window read uses: every event of one aggregate type, such as every agent's state
+    /// changes, inside a time range. The aggregate index leads with the aggregate's own id, so without an id filter
+    /// it can seek only on the type and has to walk every aggregate's whole history to apply the range, which makes the
+    /// cost of a workforce report grow with the size of the log instead of the size of the period. This index seeks on
+    /// the type and the range together and carries the event type, so the read touches only the period's rows.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            "IDX_InteractionEventIndex_Window",
+            ContactCenterStorage.CollectionName,
+            "AggregateType", "OccurredUtc", "EventType", "DocumentId");
+
+        return 7;
+    }
+
+    /// <summary>
     /// Adds the portable idempotency claim column and unique constraint to existing interaction event indexes.
     /// </summary>
     /// <returns>The migration version number.</returns>

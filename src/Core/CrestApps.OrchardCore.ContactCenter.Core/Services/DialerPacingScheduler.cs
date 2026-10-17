@@ -205,13 +205,41 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         var session = services.GetRequiredService<ISession>();
         int started;
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Pacing queue '{QueueId}' with dialer profile '{Profile}'.", queueId.SanitizeLogValue(), profile.Name);
+        }
+
+        using var cycleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var cycleToken = cycleCancellation.Token;
+
+        // The cycle is bounded because the lock it holds never expires in-process: a cycle waiting on something that never
+        // answers would otherwise stop the campaign dialing until the application restarts.
+        var cycle = RunCycleAsync();
+
         try
         {
-            started = await services.GetRequiredService<IDialerService>().RunCycleAsync(profile, queueId, cancellationToken);
+            started = await cycle.WaitAsync(_options.CycleTimeout, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            await cycleCancellation.CancelAsync();
 
-            // Committed before the lock is released: the next cycle, here or on another node, reads the agents this one
-            // reserved.
-            await session.SaveChangesAsync(cancellationToken);
+            // The abandoned cycle may still finish or fail later; its outcome is observed so it never goes unobserved.
+            _ = cycle.ContinueWith(
+                static task => _ = task.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+
+            _logger.LogWarning(
+                "A pacing run of queue '{QueueId}' did not finish within {Timeout}; it was abandoned and none of its calls were placed. The minute dialer pacing task paces it again.",
+                queueId.SanitizeLogValue(),
+                _options.CycleTimeout);
+
+            await session.CancelAsync();
+
+            return null;
         }
         catch (ConcurrencyException)
         {
@@ -242,5 +270,16 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         }
 
         return started > 0 ? _clock.UtcNow.Add(_options.Debounce) : null;
+
+        async Task<int> RunCycleAsync()
+        {
+            var placed = await services.GetRequiredService<IDialerService>().RunCycleAsync(profile, queueId, cycleToken);
+
+            // Committed before the lock is released: the next cycle, here or on another node, reads the agents this one
+            // reserved.
+            await session.SaveChangesAsync(cycleToken);
+
+            return placed;
+        }
     }
 }

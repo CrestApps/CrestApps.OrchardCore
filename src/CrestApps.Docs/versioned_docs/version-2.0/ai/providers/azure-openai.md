@@ -14,9 +14,7 @@ Provides AI services using Azure OpenAI models.
 
 The screencast below shows the Azure OpenAI provider connection and the chat, utility, and embedding deployments it exposes in the admin dashboard.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of the Azure OpenAI provider connection and its chat, utility, and embedding deployments">
-  <source src="/img/docs/ai-provider-azure-openai.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of the Azure OpenAI provider connection and its chat, utility, and embedding deployments" start={26} end={43} />
 
 ## Overview
 

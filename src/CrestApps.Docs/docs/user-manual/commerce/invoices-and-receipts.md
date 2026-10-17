@@ -17,10 +17,7 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-invoices.jpg" aria-label="Narrated video of an invoice, its pay link, and a customer paying through the link">
-  <source src="/img/docs/commerce-invoices.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-invoices.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of an invoice, its pay link, and a customer paying through the link" start={452} end={501} />
 
 ## Invoice numbers
 

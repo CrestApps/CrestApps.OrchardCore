@@ -32,4 +32,11 @@ public sealed class ContactCenterDialerPacingOptions
     /// shorter than <see cref="LockExpiration"/>.
     /// </summary>
     public TimeSpan LockRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// Gets or sets how long one pacing cycle may run before it is abandoned. An in-process lock never expires on its own,
+    /// so a cycle that waits on something that never answers would otherwise hold the campaign's pacing lock, and stop the
+    /// campaign dialing, until the application restarts.
+    /// </summary>
+    public TimeSpan CycleTimeout { get; set; } = TimeSpan.FromMinutes(2);
 }

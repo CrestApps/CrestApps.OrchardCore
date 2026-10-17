@@ -3,9 +3,8 @@ using YesSql.Indexes;
 namespace CrestApps.OrchardCore.Addresses.Indexes;
 
 /// <summary>
-/// Indexes every geographic content item (country, region, county, city, and district) by its content type,
-/// money-safe code, and parent reference. A single shared index powers country selectors, code uniqueness,
-/// cascading parent/child lookups, and address resolution across the whole hierarchy.
+/// Indexes Country content items by their ISO code, for the country lists and the check that no two countries share a
+/// code. The table is named for the wider set of places it once held.
 /// </summary>
 public sealed class GeographicAreaIndex : MapIndex
 {
@@ -25,8 +24,8 @@ public sealed class GeographicAreaIndex : MapIndex
     public string Code { get; set; }
 
     /// <summary>
-    /// Gets or sets the content item identifier of the parent geographic area, or <see langword="null"/> for a
-    /// country.
+    /// Gets or sets the parent place. Countries have none; the column is kept for the rows of sites that indexed
+    /// regions before.
     /// </summary>
     public string ParentContentItemId { get; set; }
 

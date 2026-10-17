@@ -16,9 +16,7 @@ Bulk import creates or updates many content items from one spreadsheet, and bulk
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling Content Transfer, exporting a content type, and starting a bulk import">
-  <source src="/img/docs/content-transfer.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling Content Transfer, exporting a content type, and starting a bulk import" start={221} end={257} />
 
 ## File formats
 

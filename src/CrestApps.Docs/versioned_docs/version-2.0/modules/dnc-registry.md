@@ -14,9 +14,7 @@ The **DNC Registry** module provides a shared compliance layer for Omnichannel c
 
 The screencast below enables the **Local Do Not Call Registry** feature, opens it from the **Interaction Center** menu, and uploads a CSV list of phone numbers for a country.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling the Local Do Not Call Registry and uploading a CSV list">
-  <source src="/img/docs/dnc-registry.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling the Local Do Not Call Registry and uploading a CSV list" start={260} end={286} />
 
 ## Built-in registry integrations
 
@@ -111,9 +109,7 @@ After upload, the request returns immediately and the import continues in the ba
 
 The screencast below uploads a suppression list to the Local DNC Registry and then turns on global enforcement. It opens **Local DNC Registry**, uploads a named CSV list for the United States, then visits **Settings** -> **Content Import** to enable **Enforce do-not-call registry checks globally** and select the **Local Do Not Call Registry** so every contact import automatically scrubs numbers that appear on the list.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of uploading a local DNC list and enforcing it globally">
-  <source src="/img/docs/omni-dnc-local.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of uploading a local DNC list and enforcing it globally" start={289} end={310} />
 
 ### CSV file format
 
