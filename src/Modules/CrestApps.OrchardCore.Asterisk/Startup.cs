@@ -124,6 +124,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAsteriskPjsipDialogTerminator, AsteriskPjsipDialogTerminator>()
             .AddScoped<ISoftPhoneRegistrationConfigContributor, AsteriskSoftPhoneRegistrationConfigContributor>()
             .AddScoped<ISoftPhoneCredentialRevoker, AsteriskSoftPhoneCredentialRevoker>();
+        services.AddSiteSettingsPermission(TelephonyConstants.SettingsGroupId, TelephonyPermissions.ManageTelephonySettings);
 
         services.AddIndexProvider<AsteriskPjsipCredentialLeaseIndexProvider>();
         services.AddDataMigration<AsteriskPjsipCredentialLeaseMigrations>();

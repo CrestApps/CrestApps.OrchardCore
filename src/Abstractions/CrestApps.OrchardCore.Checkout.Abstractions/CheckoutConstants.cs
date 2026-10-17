@@ -35,6 +35,12 @@ public static class CheckoutConstants
         /// The core checkout feature that provides the provider-agnostic checkout and payment framework.
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Checkout";
+
+        /// <summary>
+        /// The development test payment provider. It confirms every payment without moving money, so it is only
+        /// active in the Development environment unless configuration explicitly allows it elsewhere.
+        /// </summary>
+        public const string TestProvider = "CrestApps.OrchardCore.Checkout.TestProvider";
     }
 
     /// <summary>

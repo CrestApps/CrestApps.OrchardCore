@@ -39,6 +39,8 @@ A **`CheckoutSession`** is the provider-agnostic unit of work for any purchase. 
 
 Sessions are persisted by **`ICheckoutSessionStore`**, which enforces ownership: an anonymous session is bound to its originating IP address and user agent so it cannot be resumed by a different visitor.
 
+For access and erasure requests, `ICheckoutSessionStore.GetByCustomerAsync(ownerId, email, skip, take)` returns the sessions owned by a user or whose buyer gave an email (`CheckoutContactInfo.Email`, matched without case sensitivity), oldest first, and `GetManyAsync(sessionIds)` returns sessions by id. Neither enforces ownership or runs the checkout handlers, so their sessions must never resume a customer-facing flow. They read the `CheckoutSessionCustomerIndex` (session id, owner, normalized email and creation time), created by `CheckoutSessionCustomerIndexMigrations`. A session with neither an owner nor an email is not indexed. When the table is created, the sessions saved before it are saved once more in batches of 100 after the migration commits, so they are indexed too. See [Personal data requests](commerce#personal-data-requests).
+
 #### The canonical order reference
 
 The reference triple is intentionally generic so any consumer can drive a checkout, but ecommerce orders use one stable relationship, published as the well-known constants in **`CheckoutReferenceTypes`**:
@@ -53,7 +55,7 @@ The [Orders](carts-and-orders) feature is the consumer of this reference: it che
 
 ### Checkout flow and steps
 
-A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle is `Activating` → `Activated` when the checkout is created, then `Initializing` → `Initialized` → `Loading` → `Loaded` every time it is loaded again, and finally `Completing` → `Completed`, with `Failed` on error.
+A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle is `Activating` → `Activated` when the checkout is created, then `Initializing` → `Initialized` → `Loading` → `Loaded` every time it is loaded again, and finally `Completing` → `Completed`, with `Failed` when the payment is declined. A checkout that ends unpaid also raises `Canceled` (with the caller's reason) when `ICheckoutEngine.CancelAsync` cancels it and `Expired` when the reconciliation sweep expires it; both run after the new status is committed, inside the session lock, and their writes are committed with it.
 
 The load hooks matter because some of what a step carries is true only for one visitor at one moment and so cannot be persisted: whether the account step applies depends on whether *this* request is signed in, and a visitor can sign in on another tab midway through. Deciding that once, when the session was created, would show a signed-in customer a registration step they must not fill in.
 
@@ -86,6 +88,7 @@ Capabilities let the framework select a suitable provider and enforce constraint
 
 - **Pay Later** — provided by the standalone **[Pay Later](pay-later)** module (`CrestApps.OrchardCore.PayLater`). It records an offline commitment instead of moving money through a gateway. Because it never contacts a processor, its verification reports that it is *not* the authoritative source of a charged amount, so the checkout records the commitment on the strength of a recorded transaction id alone — without an amount cross-check — while still flowing through the exact same durable ledger and reconciliation as a real gateway. This keeps the safety guarantees intact and never fabricates a *paid* record a processor could contradict.
 - **Stripe** — provided by the **[Stripe](payments#stripe-as-a-generic-checkout-provider)** module. When both the Stripe and Checkout features are enabled, Stripe registers a generic `ICheckoutPaymentProvider` (and `ICheckoutPaymentRefundProvider`) so *any* checkout — subscriptions today, a storefront tomorrow — can collect and refund a card payment through a Stripe PaymentIntent without depending on the subscription-specific endpoints. It verifies against Stripe's authoritative API and converts every amount through `StripeCurrency`.
+- **Test payments** — the **Test payments** feature (`CrestApps.OrchardCore.Checkout.TestProvider`) in this module. It confirms every payment without moving money, for development and automated tests. See [Test payments](#test-payments).
 
 ## The durable payment ledger
 
@@ -221,6 +224,33 @@ example — it returns `PaymentBeginResult.Decline`. The engine records the atte
 reason, reports it as `PaymentBeginOutcome.Declined` with `ProviderErrorMessage`, and gives the next attempt for the
 same obligation its own idempotency key, so retrying with another card is not answered with the old decline.
 
+### Where the customer returns
+
+The module that starts a checkout can say where the customer goes back to and what the confirmation is called, through three optional `StartCheckoutRequest` properties:
+
+| Property | What it does |
+| --- | --- |
+| `ReturnUrl` | The page the customer returns to, usually the one that started the checkout. The confirmation page shows a **Continue** button to it; the payment step (and the first step, which has no **Back** of its own) and the page of a canceled, expired or failed checkout show a **Back** link to it. |
+| `ReturnText` | The text of that button and link, for example *Back to my payments*. When empty the pages say **Continue** or **Back** (or **Leave checkout** on a payment step that also has a **Back** to the previous step). |
+| `Title` | The confirmation heading, for example *Payment received*, so a checkout that is not an order is not headed *Order confirmation* or thanked for a *purchase*. |
+
+```csharp
+var session = await checkoutEngine.StartAsync(new StartCheckoutRequest
+{
+    ReferenceType = "RegistrationFee",
+    ReferenceId = fee.Id,
+    ReturnUrl = Url.Action("Index", "Payments"),
+    ReturnText = S["Back to my payments"],
+    Title = S["Payment received"],
+});
+```
+
+They are stored on the session as a `CheckoutReturnInfo` and read back with `CheckoutReturnInfo.GetFrom(session)`. `ReturnUrl` must be **local**: a path such as `Url.Action(...)` or `Url.RouteUrl(...)` produces (which includes the tenant's URL prefix), or an application-relative `~/` path. `StartAsync` throws `ArgumentException` for anything else, including absolute and protocol-relative (`//host`) URLs, before the session is created, so a checkout can never send a customer to another site. The rule is `CheckoutReturnInfo.IsLocalUrl`, the same one as ASP.NET Core's `IUrlHelper.IsLocalUrl`, and the pages apply it again when they render the link.
+
+The [Transactions](transactions) pay-link page passes itself as the return URL, with *Back to the payment page* and the heading *Payment received*.
+
+A checkout that is no longer live still has a page rather than a `404`: a completed one redirects to its confirmation, and a canceled, expired or failed one shows *This checkout is no longer available.* with the reason and the **Back** link. The page is only shown to the visitor who owns the checkout, through the same ownership-checked lookup as every other checkout page.
+
 ### Completion never blocks a request
 
 `TryCompleteAsync` returns immediately with one of `Completed`, `AlreadyCompleted`, `Pending`, `Blocked`, `Failed`, or `NotFound`. It never waits in a loop for a provider to make up its mind, because that would tie up a web worker per customer and still time out behind a proxy.
@@ -282,13 +312,92 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 
 A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
 
+## Test payments
+
+| | |
+| --- | --- |
+| **Feature** | `CrestApps.OrchardCore.Checkout.TestProvider` (**Test payments**) |
+| **Category** | Payment Providers |
+| **Dependencies** | `CrestApps.OrchardCore.Checkout` |
+| **Provider key** | `test` |
+
+The **Test payments** feature adds a payment method for development and automated tests. It lets a consumer test a whole checkout, in CI or on a developer's machine, without gateway keys or a browser that can drive a card form. A suite can pay a checkout with two requests:
+
+```http
+POST /checkout/{sessionId}/payment/begin
+Content-Type: application/json
+
+{ "providerKey": "test" }
+```
+
+```http
+POST /checkout/{sessionId}/payment/status
+```
+
+The first request begins the payment and needs no client action (`requiresAction` is `false`). The second completes the checkout, runs the completion handlers, and settles a transaction that the checkout pays.
+
+### When the provider is active
+
+The test method confirms every payment without moving money, so anyone who can open a checkout could take a purchase for free with it. Turning the feature on is therefore not enough on its own:
+
+- In the **Development** environment (`IHostEnvironment.IsDevelopment()`), the provider is registered.
+- In any other environment, the provider is registered only when `CrestApps:Checkout:TestProvider:AllowOutsideDevelopment` is `true`, and a warning is logged at startup that anyone can complete a checkout without paying.
+- Otherwise nothing is registered: the method is not offered on the payment step, a begin request that names `test` is refused like any unknown provider, and a warning is logged that the feature is enabled but inactive.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Checkout": {
+        "TestProvider": {
+          "AllowOutsideDevelopment": true
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
+```
+
+The setting is read when the tenant starts, so a change takes effect after the tenant is reloaded. See the [Configuration reference](../configuration.md#test-payments).
+
+### What it does
+
+`TestCheckoutPaymentProvider` implements `ICheckoutPaymentProvider`, `ICheckoutPaymentRefundProvider`, `ICheckoutSavedPaymentMethodProvider` and `ICheckoutRecurringPaymentProvider` under the key `test`, so it goes through the same ledger, reconciliation and checks as a real gateway:
+
+| Operation | Behavior |
+| --- | --- |
+| `BeginAsync` | Succeeds at once with a `test_pay_…` reference and no client action. A retried begin keeps the attempt's reference. |
+| `VerifyAsync` | Reports `Succeeded` with `ReportsAuthoritativeAmount = true`, the attempt's expected amount and tax, its currency, and `GatewayMode.Testing`. Because the amount is authoritative, the checkout cross-checks it exactly as it does for Stripe. |
+| `CancelAsync` | Always succeeds. |
+| `RefundAsync` | Succeeds for the requested amount with `GatewayMode.Testing`. The refund reference is derived from the idempotency key, so a retried refund returns the same refund. Refunds flow back to the transaction like any other refund. |
+| `GetSavedPaymentMethodAsync` | After a payment begun with `CheckoutPaymentDataKeys.SavePaymentMethod`, returns a saved method (`Test •••• 4242`) whose references a later off-session charge (`CheckoutPaymentDataKeys.ForOffSessionCharge`) accepts. An off-session charge naming any other method fails. |
+| `BeginRecurringAsync` | Establishes an agreement with a `test_sub_…` reference. Cancel, pause and update always succeed. |
+
+The provider declares one-time, recurring and combined payments, refunds and saved payment methods. It declares in-page collection (`SupportsEmbeddedElements`) because its panel is shown on the page, which is what lets the installment plan down payment screen offer it. It does not defer payment, so it can pay off an existing balance.
+
+On the payment step it contributes a one-line panel that says no money moves.
+
+### Magic amounts
+
+The last two digits of what an obligation charges, tax included, in the currency's smallest unit (cents for USD, yen for JPY) choose the outcome, the way gateway test cards do:
+
+| Amount ends in | Outcome |
+| --- | --- |
+| `02` (for example `10.02`) | The payment is **declined** when it begins: the attempt is recorded as failed and the begin request returns an error, as a declined card does. Off-session charges and recurring agreements are declined too. |
+| `05` (for example `10.05`) | The payment stays **pending** for two minutes (`TestCheckoutPaymentProvider.PendingSettlementDelay`) after the attempt was created. The status endpoint reports `Pending` and the browser stops waiting; the reconciliation sweep picks the attempt up once it is that old and completes the checkout. |
+| Anything else | The payment succeeds. |
+
 ## Extending checkout
 
 To use the framework in your own module:
 
 1. Add a reference to `CrestApps.OrchardCore.Checkout.Core` (services) and `CrestApps.OrchardCore.Checkout.Abstractions` (contracts).
 2. Implement **`ICheckoutHandler`** to contribute your steps and billing items and to react to completion.
-3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself.
+3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself. Set `ReturnUrl`, `ReturnText` and `Title` on the request to bring the customer back to your page (see [Where the customer returns](#where-the-customer-returns)).
 4. Render your step by deriving from **`CheckoutFlowDisplayDriver`** and registering it as an `IDisplayDriver<CheckoutFlow>`.
 5. To add a gateway, implement **`ICheckoutPaymentProvider`**, register it, and add an `IDisplayDriver<CheckoutFlowPaymentMethod>` for its panel (grouped with `.OnGroup(yourProviderKey)`); the framework's reconciliation and ledger handle the safety guarantees for you.
 6. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.

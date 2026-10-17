@@ -1637,6 +1637,54 @@ The phone number verification providers have no configuration section. Set them 
 **Settings > Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
 
+## Commerce
+
+### Transaction customer pages
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Transactions:CustomerPages` |
+| **Read by** | Transactions (`CrestApps.OrchardCore.Transactions`), through the tenant configuration |
+| **Controls** | Which customer pages the links in receipt and reminder messages open |
+
+Keys: `LinkTarget`: `Admin` (default) opens the customer pages in the admin (`Admin/my-transactions`, `Admin/transaction-invoices/{itemId}`, `Admin/transaction-receipts/{itemId}/{paymentId}`); `Site` opens the pages in the site theme (`my-transactions`, `my-transactions/invoices/{itemId}`, `my-transactions/receipts/{itemId}/{paymentId}`). Both sets of pages are always available; the key only decides where the links point.
+
+### Test payments
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Checkout:TestProvider` |
+| **Feature** | Test payments (`CrestApps.OrchardCore.Checkout.TestProvider`) |
+| **Controls** | Whether the test payment method is offered outside the Development environment |
+
+Keys: `AllowOutsideDevelopment` (default `false`). The test payment method confirms every payment without moving money. In the Development environment it is offered whenever the feature is on; in any other environment it is offered only when this key is `true`, and a warning is logged at startup. Leave it unset in production. The value is read when the tenant starts.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Transactions": {
+        "CustomerPages": {
+          "LinkTarget": "Site"
+        }
+      },
+      "Checkout": {
+        "TestProvider": {
+          "AllowOutsideDevelopment": true
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
+OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
+```
+
+See [Transactions](modules/transactions.md#links-in-messages) and [Test payments](modules/checkout.md#test-payments).
+
 ## Multi-tenancy
 
 ### Tenant hierarchy

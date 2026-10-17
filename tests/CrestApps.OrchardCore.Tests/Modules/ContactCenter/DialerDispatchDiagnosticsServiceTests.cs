@@ -32,6 +32,22 @@ public sealed class DialerDispatchDiagnosticsServiceTests
         Assert.Equal(DispatchBlocker.NotQueued, blocker);
     }
 
+    // A record a user works from their own list is not in the campaign's queue on purpose.
+    [Fact]
+    public void Evaluate_ARecordAssignedToAUserAndNotQueued_IsAssignedToThem()
+    {
+        // Arrange
+        var activity = CreateActivity();
+        activity.AssignedToId = "user-1";
+
+        // Act
+        var (blocker, _) = DialerDispatchDiagnosticsService.Evaluate(
+            queueItem: null, CreateProfile(), activity, workState: null, lastInteraction: null, suppression: null, _now);
+
+        // Assert
+        Assert.Equal(DispatchBlocker.AssignedToUser, blocker);
+    }
+
     [Fact]
     public void Evaluate_ARecordOfATurnedOffProfile_IsHeldByTheProfile()
     {
@@ -175,12 +191,44 @@ public sealed class DialerDispatchDiagnosticsServiceTests
     [Fact]
     public void Evaluate_ARecordWithNoDialerProfile_IsDialable()
     {
+        // Arrange
+        var queueItem = CreateQueueItem();
+        queueItem.DialerProfileId = null;
+
         // Act
         var (blocker, _) = DialerDispatchDiagnosticsService.Evaluate(
-            CreateQueueItem(), profile: null, CreateActivity(), workState: null, lastInteraction: null, suppression: null, _now);
+            queueItem, profile: null, CreateActivity(), workState: null, lastInteraction: null, suppression: null, _now);
 
         // Assert
         Assert.Equal(DispatchBlocker.DialableNow, blocker);
+    }
+
+    [Fact]
+    public void Evaluate_AQueuedCallback_IsDialable()
+    {
+        // Arrange
+        var queueItem = CreateQueueItem();
+        queueItem.DialerProfileId = QueueCallbackDialerProfile.Id;
+
+        // Act
+        var (blocker, _) = DialerDispatchDiagnosticsService.Evaluate(
+            queueItem, profile: null, CreateActivity(), workState: null, lastInteraction: null, suppression: null, _now);
+
+        // Assert
+        Assert.Equal(DispatchBlocker.DialableNow, blocker);
+    }
+
+    // The pacer reads the profile stamped on the item and finds nothing to dial with, so the record is never dialed.
+    [Fact]
+    public void Evaluate_ARecordStampedWithAProfileThatNoLongerExists_IsHeldBackForIt()
+    {
+        // Act
+        var (blocker, dueUtc) = DialerDispatchDiagnosticsService.Evaluate(
+            CreateQueueItem(), profile: null, CreateActivity(), workState: null, lastInteraction: null, suppression: null, _now);
+
+        // Assert
+        Assert.Equal(DispatchBlocker.ProfileMissing, blocker);
+        Assert.Null(dueUtc);
     }
 
     [Fact]

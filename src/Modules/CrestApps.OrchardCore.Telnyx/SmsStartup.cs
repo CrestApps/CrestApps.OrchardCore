@@ -41,6 +41,7 @@ public sealed class SmsStartup : StartupBase
 
         // The UI-driven settings on the SMS settings screen.
         services.AddSiteDisplayDriver<TelnyxSmsSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SmsSettings.GroupId, SmsPermissions.ManageSmsSettings);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

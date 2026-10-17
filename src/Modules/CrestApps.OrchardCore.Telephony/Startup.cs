@@ -177,6 +177,7 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ResourceManagementOptionsConfiguration>()
             .AddSiteDisplayDriver<TelephonySettingsDisplayDriver>()
             .AddNavigationProvider<TelephonyAdminMenu>();
+        services.AddSiteSettingsPermission(TelephonyConstants.SettingsGroupId, TelephonyPermissions.ManageTelephonySettings);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -220,6 +221,7 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SoftPhoneWidgetSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TelephonyConstants.SettingsGroupId, TelephonyPermissions.ManageTelephonySettings);
 
         services
             .AddContentPart<SoftPhonePart>()

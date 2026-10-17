@@ -468,6 +468,46 @@ public sealed class DefaultCheckoutEngineTests
     }
 
     /// <summary>
+    /// What a checkout held, such as its order, is let go when it is canceled or expires, so handlers hear of both.
+    /// </summary>
+    [Fact]
+    public async Task CancelAsync_TellsTheHandlersWhy()
+    {
+        var handler = new RecordingHandler();
+        var (engine, sessionStore) = CreateEngine(new InMemoryPaymentAttemptStore(), new RecordingProvider(ProviderKey), handler);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.CancelAsync("session-1", "changed my mind", TestContext.Current.CancellationToken);
+        await engine.CancelAsync("session-1", "again", TestContext.Current.CancellationToken);
+
+        Assert.Equal(["changed my mind"], handler.CanceledReasons);
+    }
+
+    [Fact]
+    public async Task ExpireAsync_TellsTheHandlers_ButNotForACompletedCheckout()
+    {
+        var handler = new RecordingHandler();
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var (engine, sessionStore) = CreateEngine(attemptStore, ConfirmingProvider(), handler);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.ExpireAsync("session-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, handler.ExpiredCount);
+        Assert.Equal(CheckoutSessionStatus.Expired, (await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken)).Status);
+
+        var paid = CreateSession(oneTimeAmount: 30m);
+        paid.SessionId = "session-2";
+        sessionStore.Seed(paid);
+        await engine.BeginPaymentAsync("session-2", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        await engine.TryCompleteAsync("session-2", TestContext.Current.CancellationToken);
+
+        await engine.ExpireAsync("session-2", TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, handler.ExpiredCount);
+    }
+
+    /// <summary>
     /// The engine holds a per-session lock so two nodes cannot transition the same checkout at once. The
     /// loser reports pending rather than failing, because the checkout is about to succeed elsewhere.
     /// </summary>
@@ -716,6 +756,24 @@ public sealed class DefaultCheckoutEngineTests
         public int CompletedCount { get; private set; }
 
         public bool FailedCalled { get; private set; }
+
+        public List<string> CanceledReasons { get; } = [];
+
+        public int ExpiredCount { get; private set; }
+
+        public override Task CanceledAsync(CheckoutFlowCanceledContext context)
+        {
+            CanceledReasons.Add(context.Reason);
+
+            return Task.CompletedTask;
+        }
+
+        public override Task ExpiredAsync(CheckoutFlowExpiredContext context)
+        {
+            ExpiredCount++;
+
+            return Task.CompletedTask;
+        }
 
         public override Task CompletingAsync(CheckoutFlowCompletingContext context)
         {

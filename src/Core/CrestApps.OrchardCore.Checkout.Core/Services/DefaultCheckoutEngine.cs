@@ -95,6 +95,15 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrEmpty(request.ReferenceType);
 
+        // A return URL is rendered as a link on pages a guest can reach, so one that leads off the site would turn
+        // the checkout into an open redirect. It is refused before anything is created.
+        if (!string.IsNullOrWhiteSpace(request.ReturnUrl) && !CheckoutReturnInfo.IsLocalUrl(request.ReturnUrl.Trim()))
+        {
+            throw new ArgumentException($"The return URL '{request.ReturnUrl}' is not a local URL. Only a path on this site can be used as a checkout's return URL.", nameof(request));
+        }
+
+        var returnInfo = CreateReturnInfo(request);
+
         var session = await _sessionStore.NewAsync(
             request.ReferenceType,
             request.ReferenceId,
@@ -112,6 +121,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 if (request.Contact is not null && !string.IsNullOrEmpty(request.Contact.Email))
                 {
                     newSession.Put(request.Contact);
+                }
+
+                if (returnInfo is not null)
+                {
+                    newSession.Put(returnInfo);
                 }
 
                 // A session started for someone else belongs to them. Anything the store derived from the
@@ -390,6 +404,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
+            // The cancellation is durable before the handlers hear of it, and a handler that fails can't undo it;
+            // whatever they let go is committed with it, still inside the lock.
+            await _handlers.InvokeAsync((handler, context) => handler.CanceledAsync(context), new CheckoutFlowCanceledContext(new CheckoutFlow(session), reason), _logger);
+            await _session.SaveChangesAsync(cancellationToken);
+
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
     }
@@ -442,8 +461,31 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
+            await _handlers.InvokeAsync((handler, context) => handler.ExpiredAsync(context), new CheckoutFlowExpiredContext(new CheckoutFlow(session)), _logger);
+            await _session.SaveChangesAsync(cancellationToken);
+
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
+    }
+
+    // Captures where the customer returns to and what the confirmation is headed, or null when the caller set none.
+    private static CheckoutReturnInfo CreateReturnInfo(StartCheckoutRequest request)
+    {
+        var returnUrl = string.IsNullOrWhiteSpace(request.ReturnUrl) ? null : request.ReturnUrl.Trim();
+        var returnText = string.IsNullOrWhiteSpace(request.ReturnText) ? null : request.ReturnText.Trim();
+        var title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
+
+        if (returnUrl is null && returnText is null && title is null)
+        {
+            return null;
+        }
+
+        return new CheckoutReturnInfo
+        {
+            ReturnUrl = returnUrl,
+            ReturnText = returnText,
+            Title = title,
+        };
     }
 
     // Begins (or resumes) one obligation. An obligation that already has a non-failed attempt is resumed
@@ -832,6 +874,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         await _session.SaveChangesAsync(cancellationToken);
 
         await _handlers.InvokeAsync((handler, context) => handler.FailedAsync(context), new CheckoutFlowFailedContext(flow), _logger);
+        await _session.SaveChangesAsync(cancellationToken);
 
         return new CheckoutCompletionResult
         {

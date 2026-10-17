@@ -94,6 +94,16 @@ public sealed class Order : CatalogItem
     public DateTime? AnonymizedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the order was canceled without being paid.
+    /// </summary>
+    public DateTime? CanceledUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the order was canceled.
+    /// </summary>
+    public OrderCancelReason? CancelReason { get; set; }
+
+    /// <summary>
     /// Removes who the order was for: the name, email and phone, and the billing address but its country and region,
     /// which tax records need. The lines, totals and dates stay for the store's accounts.
     /// </summary>

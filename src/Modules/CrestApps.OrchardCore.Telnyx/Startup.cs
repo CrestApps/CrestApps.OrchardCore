@@ -79,6 +79,7 @@ public sealed class Startup : StartupBase
             .AddSignalOptionsChangeTokenSource<TelnyxOptions>()
             .AddTelephonyProviderOptionsConfiguration<TelnyxProviderOptionsConfigurations>()
             .AddSiteDisplayDriver<TelnyxSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(TelephonyConstants.SettingsGroupId, TelephonyPermissions.ManageTelephonySettings);
 
         services
             .AddScoped<ITelnyxWebhookService, TelnyxWebhookService>()

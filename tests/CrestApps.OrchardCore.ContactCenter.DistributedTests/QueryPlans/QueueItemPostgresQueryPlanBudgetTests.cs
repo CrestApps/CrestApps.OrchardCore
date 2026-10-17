@@ -199,6 +199,7 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
 
         await migration.CreateAsync();
         await migration.UpdateFrom3Async();
+        await migration.UpdateFrom6Async();
     }
 
     private static IClock CreateClock()

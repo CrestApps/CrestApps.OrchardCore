@@ -433,6 +433,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                         CreatedUtc = now,
                         Type = TransactionEventType.Canceled,
                         Message = S["Canceled because the installment plan was canceled."].Value,
+                        Reason = string.IsNullOrWhiteSpace(reason)
+                            ? S["The installment plan was canceled."].Value
+                            : reason,
                         ActorId = CurrentUserId(),
                         ActorName = CurrentUserName(),
                     });
@@ -776,6 +779,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         {
             payment.NextChargeAttemptUtc = now.Add(delay);
 
+            await MarkCollectionFailedAsync(transaction, reason, cancellationToken);
+
             AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined ({1}). It will be charged again on {2:d}.", payment.Number, reason, payment.NextChargeAttemptUtc.Value].Value, payment.Number);
 
             await NotifyCustomerAsync(
@@ -804,11 +809,37 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             }
             else
             {
+                await MarkCollectionFailedAsync(transaction, reason, cancellationToken);
+
                 AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged by an administrator: {1}", payment.Number, reason].Value, payment.Number, CurrentUserName());
             }
         }
 
         return reason;
+    }
+
+    // A declined charge of a payment that is still collected from the card, by a retry or by an administrator charging it
+    // again: the transaction records that its collection failed. A payment handed to the customer instead becomes
+    // outstanding, and a retry that goes through settles it.
+    private async Task MarkCollectionFailedAsync(Transaction transaction, string reason, CancellationToken cancellationToken)
+    {
+        if (transaction.Status != TransactionStatus.Pending)
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        transaction.Status = TransactionStatus.Failed;
+        transaction.UpdatedUtc = now;
+        transaction.Events.Add(new TransactionEvent
+        {
+            CreatedUtc = now,
+            Type = TransactionEventType.StatusChanged,
+            Message = S["The saved card could not be charged: {0}", reason].Value,
+        });
+
+        await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
     }
 
     // A payment the customer now pays themselves: the transaction is no longer collected automatically and is

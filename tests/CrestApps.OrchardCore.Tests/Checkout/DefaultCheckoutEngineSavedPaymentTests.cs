@@ -233,6 +233,12 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
         public Task<CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
             => Task.FromResult<CheckoutSession>(null);
 
+        public Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CheckoutSession>>([]);
+
+        public Task<IReadOnlyList<CheckoutSession>> GetManyAsync(IEnumerable<string> sessionIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CheckoutSession>>([]);
+
         public Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default)
         {
             var session = new CheckoutSession

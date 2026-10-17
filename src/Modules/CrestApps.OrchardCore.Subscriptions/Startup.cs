@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Reports;
@@ -80,6 +81,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
 
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
         services.AddScoped<SubscriptionDisplayText>();
@@ -108,6 +110,7 @@ public sealed class Startup : StartupBase
         // The gateway is authoritative for a recurring agreement, so its notifications are what keep the
         // local record honest about renewals, failures, and cancellations made outside this application.
         services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, SubscriptionPersonalDataContributor>();
 
         services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
     }
@@ -123,6 +126,7 @@ public sealed class RolesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
 
         // Roles already gate content, features, and permissions across Orchard Core, so granting one for as
         // long as a subscription is current is what makes member-only access enforceable without any of
@@ -170,6 +174,7 @@ public sealed class StripeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
     }
 }
 
@@ -307,8 +312,10 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<IInstallmentPlanStore, InstallmentPlanStore>();
         services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
 
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
 

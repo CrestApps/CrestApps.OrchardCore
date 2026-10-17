@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -298,6 +299,7 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ContactCenterExternalTransferResourceConfiguration>()
             .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
             .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 }
 
@@ -354,6 +356,7 @@ public sealed class ContactCenterAgentNumbersStartup : StartupBase
     {
         services.AddScoped<IAgentAddressResolver, AgentAddressResolver>();
         services.AddSiteDisplayDriver<ContactCenterDefaultAddressSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 }
 
