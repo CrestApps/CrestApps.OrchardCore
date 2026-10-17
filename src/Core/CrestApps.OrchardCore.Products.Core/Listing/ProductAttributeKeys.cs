@@ -45,6 +45,12 @@ public static class ProductAttributeKeys
     public const string Featured = "Product.Featured";
 
     /// <summary>
+    /// Whether some of the product, or of one of its variants, is in stock. Written by a module that counts stock,
+    /// such as Inventory; without one, products have no value and the "In stock" filter doesn't show.
+    /// </summary>
+    public const string InStock = "Product.InStock";
+
+    /// <summary>
     /// Whether the key names a built-in attribute rather than a field.
     /// </summary>
     /// <param name="key">The attribute key.</param>

@@ -405,7 +405,7 @@ return Initialize<MyActionViewModel>("MyAction", model => { /* ... */ })
     .Location("ProductAction", "Actions");
 ```
 
-A module can also add to a product's search record by implementing `IProductSearchDocumentContributor`, which Subscriptions uses to give a plan its billing period and its position.
+A module can also add to a product's search record by implementing `IProductSearchDocumentContributor`, which Subscriptions uses to give a plan its billing period and its position, and Inventory to say whether it is in stock (`ProductAttributeKeys.InStock`, offered as the automatic *In stock* toggle filter). Turning a contributor's feature on or off changes the index fingerprint, so the records are rebuilt. When something other than the product changes what its record holds, call `IProductSearchIndexRefresher.RefreshAsync(contentItemIds)` to rebuild those records now, or `RequestRebuildAsync()` to rebuild them all on the next pass.
 
 Merchandising lives on the **Product** part of every product: **Featured** (`ProductPart.Featured`) and **Position** (`ProductPart.Position`). Every listing offers **Recommended**, which orders by position with products without one last, and **Featured first**, and a *Featured* toggle filter. Ties in any sort go to featured products, then the newest. A contributor can set `ProductSearchDocument.Position` for products without one; Subscriptions does this with a plan's **Sort** value.
 

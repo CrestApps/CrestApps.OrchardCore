@@ -30,7 +30,7 @@ All of these live in the `Inventory` YesSql collection.
 
 ## Services
 
-- **`IInventoryService`** returns a `StockChangeResult`. Its error is `NotFound`, `InvalidQuantity` or `Busy`, the last when the lock wasn't acquired.
+- **`IInventoryService`** returns a `StockChangeResult`. Its error is `NotFound`, `InvalidQuantity` or `Busy`, the last when someone else changed the same item at the same moment.
   - `AdjustAsync(stockItemId, kind, quantity, reason, actor)` takes `Received` with a positive quantity, or `Adjusted` with any non-zero quantity.
   - `SetCountAsync(stockItemId, count, reason, actor)` records a `Counted` movement holding the difference. A count that matches is recorded too, so the history shows when stock was last checked.
   - `RebuildAsync(stockItemId)` sets `OnHand` to the sum of the item's movements.
@@ -48,7 +48,41 @@ All of these live in the `Inventory` YesSql collection.
 
   A product saved before its type had the part is counted with the part's defaults.
 - **`InventoryContentHandler`** notes products as they are updated, published, imported or removed. A deferred task then has `InventorySyncService` sync them against their latest version, so stock can be counted before a product is published.
-- **`InventorySyncService.SyncAllAsync()`** syncs every product whose type has the part. It runs from **Find products to count** and when the default threshold changes.
+- **`InventorySyncService.SyncAllAsync()`** syncs every product whose type has the part. It runs from **Find products to count** and when the default threshold changes. `SyncAsync` returns whether a stock item was added or archived; the products for which one was have their search records refreshed through Products' `IProductSearchIndexRefresher`, when Product Listing is on.
+
+## Stock levels
+
+A stock item's level is `StockLevel.InStock` (more than the threshold available), `Low` (some, up to the threshold) or `Out` (none).
+
+- **`IStockLevelObserver`** hears every change to an item's available units as `DefaultInventoryService` makes it, with the units available before. The module's `StockLevelTracker` notes the first one per item and schedules a deferred task.
+- **`IStockLevelHandler`** is told after the work is committed, in a scope of its own. `StockLevelDispatcher` reads each item again and calls the handlers only when its level changed, so a change that was rolled back raises nothing, and one failing handler doesn't stop the others. `StockLevelChangedContext` has the item, `PreviousAvailable`, `PreviousLevel`, `Level`, and `RanLow` (it dropped to low or out), `SoldOut` and `BackInStock`.
+- Handlers in the module:
+  - `LowStockNotificationHandler` (with **Notifications**) sends `RanLow` changes to the enabled users of `InventorySettings.LowStockNotificationRoles`, at most 100.
+  - `LowStockWorkflowHandler` (with **Workflows**) triggers `LowStockEvent` with the product as `ContentItem`, `StockItem`, `StockItemId`, `ContentItemId`, `VariantId`, `Sku`, `Title`, `Available`, `LowStockThreshold` and `SoldOut`, correlated by the stock item id.
+  - `StockSearchIndexHandler` (with **Product Listing**) refreshes the product's search record when it sold out or came back.
+
+## Listings
+
+With Product Listing on, `InventorySearchDocumentContributor` writes the built-in attribute `ProductAttributeKeys.InStock` (`Product.InStock`) to each product's search record: `true` when any variant has available units, or no `IProductAvailabilityProvider` counts the product; `false` otherwise, backorders included. Listings offer it as the automatic *In stock* toggle filter (URL key `in-stock`), which shows only when a record says `true`, so it stays hidden on sites that don't count stock.
+
+## Import, export and recipes
+
+- **`StockCsv`** writes and reads the CSV: `Sku`, `Title`, `ContentItemId`, `VariantId`, `OnHand`, `Reserved`, `Available`, `LowStockThreshold`. Reading finds columns by name in any case; it needs `OnHand` and `Sku` or `ContentItemId`, and handles quoted values over several lines.
+- **`StockCountImporter`** applies `StockCountRow`s as counts in the caller's unit of work. A row is matched by `ContentItemId` and `VariantId`, else by SKU (`IStockItemStore.FindBySkuAsync`, which finds nothing when two items share it). It returns how many were counted and unchanged, and a `StockCountProblem` per row it couldn't apply: `NotFound`, `InvalidCount`, `Duplicate` or `TooManyRows`.
+- **Admin.** `inventory/export` downloads the CSV with a byte order mark; `inventory/import` (Manage inventory) applies a file of up to 2 MB and 10,000 rows, and discards every count when any row has a problem.
+- **Recipe step `Stock`** (`StockStep`): `Items` with `Sku` or `ContentItemId` and `VariantId`, and `OnHand`. Products named by id that aren't counted yet are synced first. Rows it can't apply are recipe errors.
+
+  ```json
+  {
+    "name": "Stock",
+    "Items": [
+      { "Sku": "MUG", "OnHand": 24 },
+      { "ContentItemId": "4rgryp179mr10m6yvbt42xym8n", "VariantId": "4ydepe37jp6sn68kq7pvr4dh5d", "OnHand": 5 }
+    ]
+  }
+  ```
+
+- **Deployment step `Stock`** (`StockDeploymentStep`, *Commerce*) exports every item that isn't archived with its ids, SKU and `OnHand`.
 
 ## Orders
 
@@ -69,6 +103,7 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 - **Commerce > Inventory** (`inventory`, `InventoryAdminController`) lists stock items, fewest available first.
   - Search matches the start of the SKU or title. Filters: *Low stock*, *Out of stock*, *Backordered*.
   - Each item's page (`inventory/{stockItemId}`) shows its counts and paged movement history, with forms to receive or adjust, count, and recount from history.
+  - **Export CSV** and **Import CSV** download and apply counts.
 - **Product editor.** The Inventory part sets the policy, and shows each variant's availability with a link to its page.
 
 ## Permissions
@@ -82,4 +117,4 @@ Administrators have both by default.
 
 ## Coming next
 
-An in-stock filter for listings, low-stock notifications, and CSV, recipe and deployment steps.
+Shipping zones and rates, a shipping step at checkout, and shipments.

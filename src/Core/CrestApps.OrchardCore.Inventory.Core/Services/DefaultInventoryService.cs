@@ -18,13 +18,20 @@ public sealed class DefaultInventoryService : IInventoryService
     private readonly IStockItemStore _items;
     private readonly IStockMovementStore _movements;
     private readonly IClock _clock;
+    private readonly IStockLevelObserver[] _observers;
 
-    public DefaultInventoryService(ISession session, IStockItemStore items, IStockMovementStore movements, IClock clock)
+    public DefaultInventoryService(
+        ISession session,
+        IStockItemStore items,
+        IStockMovementStore movements,
+        IClock clock,
+        IEnumerable<IStockLevelObserver> observers = null)
     {
         _session = session;
         _items = items;
         _movements = movements;
         _clock = clock;
+        _observers = observers?.ToArray() ?? [];
     }
 
     public Task<StockChangeResult> AdjustAsync(string stockItemId, StockMovementKind kind, int quantity, string reason, StockActor actor, CancellationToken cancellationToken = default)
@@ -64,12 +71,14 @@ public sealed class DefaultInventoryService : IInventoryService
             return StockChangeResult.Fail(StockChangeError.NotFound);
         }
 
+        var previous = item.Available;
+
         item.OnHand = await _movements.SumAsync(stockItemId, cancellationToken);
         item.Reserved = (await QueryReservations(index => index.StockItemId == stockItemId && index.Status == StockReservationStatus.Held)
             .ListAsync(cancellationToken)).Sum(reservation => reservation.Quantity);
         item.ModifiedUtc = _clock.UtcNow;
 
-        await _items.UpdateAsync(item, cancellationToken);
+        await UpdateAsync(item, previous, cancellationToken);
 
         return StockChangeResult.Success(item);
     }
@@ -117,9 +126,11 @@ public sealed class DefaultInventoryService : IInventoryService
 
         foreach (var (item, quantity) in changes)
         {
+            var previous = item.Available;
+
             item.Reserved += quantity;
             item.ModifiedUtc = now;
-            await _items.UpdateAsync(item, cancellationToken);
+            await UpdateAsync(item, previous, cancellationToken);
 
             await SaveReservationAsync(new StockReservation
             {
@@ -168,6 +179,7 @@ public sealed class DefaultInventoryService : IInventoryService
 
             var hold = forItem.FirstOrDefault(reservation => reservation.Status == StockReservationStatus.Held);
             var sold = hold?.Quantity ?? quantity;
+            var previous = item.Available;
 
             if (hold is not null)
             {
@@ -195,7 +207,7 @@ public sealed class DefaultInventoryService : IInventoryService
 
             item.OnHand -= sold;
             item.ModifiedUtc = now;
-            await _items.UpdateAsync(item, cancellationToken);
+            await UpdateAsync(item, previous, cancellationToken);
 
             await _movements.CreateAsync(new StockMovement
             {
@@ -241,9 +253,11 @@ public sealed class DefaultInventoryService : IInventoryService
         {
             if (await _items.FindByIdAsync(reservation.StockItemId, cancellationToken) is { } item)
             {
+                var previous = item.Available;
+
                 item.Reserved = Math.Max(0, item.Reserved - reservation.Quantity);
                 item.ModifiedUtc = now;
-                await _items.UpdateAsync(item, cancellationToken);
+                await UpdateAsync(item, previous, cancellationToken);
             }
 
             reservation.Status = StockReservationStatus.Released;
@@ -267,6 +281,7 @@ public sealed class DefaultInventoryService : IInventoryService
 
         var now = _clock.UtcNow;
         var quantity = delta(item);
+        var previous = item.Available;
 
         item.OnHand += quantity;
         item.ModifiedUtc = now;
@@ -285,9 +300,19 @@ public sealed class DefaultInventoryService : IInventoryService
         };
 
         await _movements.CreateAsync(movement, cancellationToken);
-        await _items.UpdateAsync(item, cancellationToken);
+        await UpdateAsync(item, previous, cancellationToken);
 
         return StockChangeResult.Success(item, movement);
+    }
+
+    private async Task UpdateAsync(StockItem item, int previousAvailable, CancellationToken cancellationToken)
+    {
+        await _items.UpdateAsync(item, cancellationToken);
+
+        foreach (var observer in _observers)
+        {
+            observer.Changed(item, previousAvailable);
+        }
     }
 
     // The stock items the lines need, with the units each needs (lines for the same item added up). Products that

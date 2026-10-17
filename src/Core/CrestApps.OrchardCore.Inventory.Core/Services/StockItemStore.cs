@@ -20,6 +20,17 @@ public interface IStockItemStore
     /// </summary>
     Task<IReadOnlyList<StockItem>> ListByProductAsync(string contentItemId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Finds the stock item, not archived, at a location with this SKU, ignoring case. A SKU that more than one item
+    /// shares finds none, so a count is never applied to the wrong one.
+    /// </summary>
+    Task<StockItem> FindBySkuAsync(string sku, string locationId = InventoryConstants.DefaultLocationId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists a page of the stock items that aren't archived, by title, for an export.
+    /// </summary>
+    Task<IReadOnlyList<StockItem>> ListForExportAsync(int skip, int take, CancellationToken cancellationToken = default);
+
     Task<(int Count, IReadOnlyList<StockItem> Items)> PageAsync(StockItemQuery query, int skip, int take, CancellationToken cancellationToken = default);
 
     ValueTask CreateAsync(StockItem item, CancellationToken cancellationToken = default);
@@ -94,6 +105,36 @@ public sealed class StockItemStore : DocumentCatalog<StockItem, StockItemIndex>,
         }
 
         var items = await Session.Query<StockItem, StockItemIndex>(index => index.ContentItemId == contentItemId, collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return items.ToArray();
+    }
+
+    public async Task<StockItem> FindBySkuAsync(string sku, string locationId = InventoryConstants.DefaultLocationId, CancellationToken cancellationToken = default)
+    {
+        if (StockItemIndexProvider.Normalize(sku) is not { } normalized)
+        {
+            return null;
+        }
+
+        locationId ??= InventoryConstants.DefaultLocationId;
+
+        var items = (await Session.Query<StockItem, StockItemIndex>(index =>
+                index.NormalizedSku == normalized && !index.Archived && index.LocationId == locationId,
+                collection: CollectionName)
+            .Take(2)
+            .ListAsync(cancellationToken)).ToArray();
+
+        return items.Length == 1 ? items[0] : null;
+    }
+
+    public async Task<IReadOnlyList<StockItem>> ListForExportAsync(int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var items = await Session.Query<StockItem, StockItemIndex>(index => !index.Archived, collection: CollectionName)
+            .OrderBy(index => index.NormalizedTitle)
+            .ThenBy(index => index.Id)
+            .Skip(skip)
+            .Take(take)
             .ListAsync(cancellationToken);
 
         return items.ToArray();

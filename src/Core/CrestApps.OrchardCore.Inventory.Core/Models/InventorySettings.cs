@@ -15,4 +15,10 @@ public sealed class InventorySettings
     /// later still sells the units, below zero if they were sold to someone else meanwhile.
     /// </summary>
     public int HoldMinutes { get; set; } = 60;
+
+    /// <summary>
+    /// Gets or sets the roles whose users are notified when a product runs low or sells out. Notifications need
+    /// Orchard Core's Notifications feature.
+    /// </summary>
+    public string[] LowStockNotificationRoles { get; set; } = ["Administrator"];
 }

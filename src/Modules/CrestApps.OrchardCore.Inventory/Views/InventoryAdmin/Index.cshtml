@@ -16,6 +16,15 @@
                         <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by SKU or product"]" type="search" autocomplete="off" />
                     </div>
                 </div>
+                <div class="col-auto">
+                    <div class="btn-group">
+                        <a asp-action="Export" class="btn btn-secondary">@T["Export CSV"]</a>
+                        @if (Model.CanManage)
+                        {
+                            <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#inventory-import" aria-expanded="false" aria-controls="inventory-import">@T["Import CSV"]</button>
+                        }
+                    </div>
+                </div>
                 @if (Model.CanManage)
                 {
                     <div class="col-auto">
@@ -30,6 +39,17 @@
 @if (Model.CanManage)
 {
     <form asp-action="Sync" method="post" id="inventory-sync" class="no-multisubmit"></form>
+
+    <div class="collapse mb-3" id="inventory-import">
+        <form asp-action="Import" method="post" enctype="multipart/form-data" class="card card-body no-multisubmit">
+            <label for="inventory-import-file" class="form-label">@T["CSV file"]</label>
+            <div class="input-group">
+                <input type="file" name="file" id="inventory-import-file" class="form-control" accept=".csv,text/csv" required />
+                <button type="submit" class="btn btn-primary">@T["Import"]</button>
+            </div>
+            <span class="hint">@T["Sets the units on hand from the OnHand column, as counts, finding each item by its ContentItemId and VariantId or by its SKU. Export the stock to get a file to start from. If any line has a problem, nothing is imported."]</span>
+        </form>
+    </div>
 }
 
 <ul class="list-group">
