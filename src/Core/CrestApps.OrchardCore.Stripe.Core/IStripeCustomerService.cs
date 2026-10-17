@@ -28,4 +28,12 @@ public interface IStripeCustomerService
     /// <param name="model">The customer values to update.</param>
     /// <returns>The result of the update operation.</returns>
     Task<UpdateCustomerResponse> UpdateAsync(string id, UpdateCustomerRequest model);
+
+    /// <summary>
+    /// Lists the Stripe customers whose email is exactly the given one. Stripe matches the email with case
+    /// sensitivity.
+    /// </summary>
+    /// <param name="email">The email to match.</param>
+    /// <returns>The matching customers, at most 100.</returns>
+    Task<IReadOnlyList<CustomerResponse>> ListByEmailAsync(string email);
 }
