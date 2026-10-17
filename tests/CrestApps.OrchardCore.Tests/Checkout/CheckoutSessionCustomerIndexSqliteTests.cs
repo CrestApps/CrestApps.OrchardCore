@@ -99,7 +99,7 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
 
             Assert.Equal(new[] { "s1" }, byEmail.Select(item => item.SessionId));
             Assert.Equal(new[] { "s2" }, byOwner.Select(item => item.SessionId));
-            Assert.Equal(3, all.Count());
+            Assert.Equal(3, all.Count);
         }
         finally
         {
