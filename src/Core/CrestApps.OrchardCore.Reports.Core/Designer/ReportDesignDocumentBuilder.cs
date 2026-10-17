@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -95,7 +96,7 @@ public sealed class ReportDesignDocumentBuilder
 
             foreach (var columnId in visual.ValueColumnIds.Where(byId.ContainsKey))
             {
-                if (visual.Type != ReportVisualType.Table && !ReportDataValues.IsNumeric(byId[columnId].DataType))
+                if (visual.Type != ReportVisualType.Table && !DataValues.IsNumeric(byId[columnId].DataType))
                 {
                     errors.Add(S["The visual '{0}' plots the column '{1}', which is not a number.", name, byId[columnId].Label]);
                 }
@@ -210,7 +211,7 @@ public sealed class ReportDesignDocumentBuilder
 
         string Key(object[] values, int level)
         {
-            return string.Join('\u001F', dimensions.Take(level + 1).Select(index => ReportDataValues.ToKey(values[index])));
+            return string.Join('\u001F', dimensions.Take(level + 1).Select(index => DataValues.ToKey(values[index])));
         }
 
         // The subtotals of each level, by the values of the dimensions up to it.
@@ -438,12 +439,12 @@ public sealed class ReportDesignDocumentBuilder
 
         return result.IsAggregated
             ? column.IsMeasure
-            : ReportDataValues.IsNumeric(column.DataType) && column.Transform == ReportFieldTransform.None;
+            : DataValues.IsNumeric(column.DataType) && column.Transform == DataFieldTransform.None;
     }
 
     private static ReportColumnAlign Align(ReportResultColumn column)
     {
-        return ReportDataValues.IsNumeric(column.DataType) && column.Transform is not (ReportFieldTransform.Year or ReportFieldTransform.DayOfWeek or ReportFieldTransform.MonthOfYear)
+        return DataValues.IsNumeric(column.DataType) && column.Transform is not (DataFieldTransform.Year or DataFieldTransform.DayOfWeek or DataFieldTransform.MonthOfYear)
             ? ReportColumnAlign.End
             : ReportColumnAlign.Start;
     }
@@ -471,12 +472,12 @@ public sealed class ReportDesignDocumentBuilder
 
     private static string Key(object value)
     {
-        return ReportDataValues.ToKey(value);
+        return DataValues.ToKey(value);
     }
 
     private static double ToDouble(object value)
     {
-        return ReportDataValues.Coerce(value, ReportDataType.Decimal) is decimal number
+        return DataValues.Coerce(value, DataFieldType.Decimal) is decimal number
             ? (double)number
             : 0d;
     }

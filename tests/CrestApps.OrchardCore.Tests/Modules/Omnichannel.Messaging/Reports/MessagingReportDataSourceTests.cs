@@ -11,14 +11,14 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
+using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.DataSources;
 using OrchardCore.Security;
 using YesSql;
 using YesSql.Indexes;
@@ -179,13 +179,13 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session, canViewAll: false);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
         var conversationsSchema = await source.GetSchemaAsync(MessagingReportDataSource.ConversationsDataSet, context, TestContext.Current.CancellationToken);
         var messagesSchema = await source.GetSchemaAsync(MessagingReportDataSource.MessagesDataSet, context, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query(MessagingReportDataSource.ConversationsDataSet), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(MessagingReportDataSource.ConversationsDataSet), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(dataSets);
@@ -200,7 +200,7 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
@@ -231,7 +231,7 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         var source = Source(session);
 
         // Act
-        var table = await source.QueryAsync(Query(MessagingReportDataSource.ConversationsDataSet), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(MessagingReportDataSource.ConversationsDataSet), TestContext.Current.CancellationToken);
 
         // Assert
         var rows = Rows(table);
@@ -282,13 +282,13 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         var from = _start.AddDays(1).AddMinutes(10);
         var to = _start.AddDays(2).AddMinutes(10);
         var between = Query(MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.ConversationIdField);
-        between.Conditions.Add(Condition(MessagingConversationsReportDataSet.LastMessageUtcField, ReportFilterOperator.Between, from, to));
+        between.Conditions.Add(Condition(MessagingConversationsReportDataSet.LastMessageUtcField, DataFilterOperator.Between, from, to));
         var upper = Query(MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.ConversationIdField);
-        upper.Conditions.Add(Condition(MessagingConversationsReportDataSet.LastMessageUtcField, ReportFilterOperator.LessThan, from));
+        upper.Conditions.Add(Condition(MessagingConversationsReportDataSet.LastMessageUtcField, DataFilterOperator.LessThan, from));
 
         // Act
-        var betweenRows = Rows(await source.QueryAsync(between, TestContext.Current.CancellationToken));
-        var upperRows = Rows(await source.QueryAsync(upper, TestContext.Current.CancellationToken));
+        var betweenRows = Rows(await ReportDesignerTestServices.ReadAsync(source, between, TestContext.Current.CancellationToken));
+        var upperRows = Rows(await ReportDesignerTestServices.ReadAsync(source, upper, TestContext.Current.CancellationToken));
 
         // Assert
         // The bounds are inclusive, so the rows on them stay; the report applies the strict comparison itself.
@@ -307,7 +307,7 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         query.MaxRows = 2;
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["conversation-3", "conversation-2"], Rows(table).Select(row => row[MessagingReportDataSource.ConversationIdField]));
@@ -321,11 +321,11 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var schema = await source.GetSchemaAsync(MessagingReportDataSource.MessagesDataSet, context, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query(MessagingReportDataSource.MessagesDataSet), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(MessagingReportDataSource.MessagesDataSet), TestContext.Current.CancellationToken);
 
         // Assert
         var conversationReference = Assert.Single(schema.FindField("ConversationId").References);
@@ -362,17 +362,17 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var source = Source(session);
         var query = Query(MessagingReportDataSource.MessagesDataSet, "Id");
-        query.Conditions.Add(Condition(MessagingMessagesReportDataSet.CreatedUtcField, ReportFilterOperator.GreaterThan, _start.AddDays(1).AddMinutes(1)));
+        query.Conditions.Add(Condition(MessagingMessagesReportDataSet.CreatedUtcField, DataFilterOperator.GreaterThan, _start.AddDays(1).AddMinutes(1)));
 
         // Act
-        var rows = Rows(await source.QueryAsync(query, TestContext.Current.CancellationToken));
+        var rows = Rows(await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Equal(["message-2", "message-1"], rows.Select(row => row["Id"]));
     }
 
     [Fact]
-    public async Task ReportsStartup_RegistersTheDataSource()
+    public async Task DataSourcesStartup_RegistersTheDataSource()
     {
         // Arrange
         await using var session = _store.CreateSession();
@@ -381,17 +381,17 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         services.AddSingleton(session);
         services.AddSingleton(AgentStore().Object);
         services.AddSingleton(Authorization(canViewAll: true));
-        services.AddSingleton(typeof(IStringLocalizer<>), typeof(ContentReportTestLocalizer<>));
+        services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
 
         // Act
-        new CrestApps.OrchardCore.Omnichannel.Messaging.ReportsStartup().ConfigureServices(services);
+        new CrestApps.OrchardCore.Omnichannel.Messaging.DataSourcesStartup().ConfigureServices(services);
 
         await using var provider = services.BuildServiceProvider();
-        var source = Assert.IsType<MessagingReportDataSource>(Assert.Single(provider.GetServices<IReportDataSource>()));
-        var dataSets = await source.GetDataSetsAsync(new ReportDataSourceContext { User = _user }, TestContext.Current.CancellationToken);
+        var source = provider.GetRequiredService<MessagingReportDataSource>();
+        var dataSets = await source.GetDataSetsAsync(new DataSourceContext { User = _user }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(MessagingReportDataSource.SourceName, source.Name);
+        Assert.Equal(MessagingReportDataSource.SourceName, MessagingReportDataSource.Name);
         Assert.Equal([MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.MessagesDataSet], dataSets.Select(dataSet => dataSet.Name));
     }
 
@@ -402,9 +402,8 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         agentProfileStore ??= AgentStore().Object;
 
         return new MessagingReportDataSource(
-            new MessagingConversationsReportDataSet(session, agentProfileStore, authorizationService, new ContentReportTestLocalizer<MessagingConversationsReportDataSet>()),
-            new MessagingMessagesReportDataSet(session, agentProfileStore, authorizationService, new ContentReportTestLocalizer<MessagingMessagesReportDataSet>()),
-            new ContentReportTestLocalizer<MessagingReportDataSource>());
+            new MessagingConversationsReportDataSet(session, agentProfileStore, authorizationService, new PassThroughStringLocalizer<MessagingConversationsReportDataSet>()),
+            new MessagingMessagesReportDataSet(session, agentProfileStore, authorizationService, new PassThroughStringLocalizer<MessagingMessagesReportDataSet>()));
     }
 
     private static IAuthorizationService Authorization(bool canViewAll)
@@ -435,9 +434,9 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         return agents;
     }
 
-    private static ReportDataCondition Condition(string field, ReportFilterOperator filterOperator, params object[] values)
+    private static DataCondition Condition(string field, DataFilterOperator filterOperator, params object[] values)
     {
-        return new ReportDataCondition
+        return new DataCondition
         {
             Field = field,
             Operator = filterOperator,
@@ -445,18 +444,18 @@ public sealed class MessagingReportDataSourceTests : IAsyncLifetime
         };
     }
 
-    private static ReportDataSourceQuery Query(string dataSet, params string[] fields)
+    private static DataSourceQuery Query(string dataSet, params string[] fields)
     {
-        return new ReportDataSourceQuery
+        return new DataSourceQuery
         {
             DataSet = dataSet,
             Fields = new HashSet<string>(fields, StringComparer.Ordinal),
             MaxRows = 100,
-            Context = new ReportDataSourceContext { User = _user },
+            Context = new DataSourceContext { User = _user },
         };
     }
 
-    private static List<Dictionary<string, object>> Rows(ReportDataTable table)
+    private static List<Dictionary<string, object>> Rows(DataRowSet table)
     {
         return table.Rows
             .Select(row => table.Fields.Select((field, index) => (field.Name, Value: row[index])).ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal))

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -62,11 +62,11 @@ public static class ReportDesignNormalizer
             {
                 filter.Operator = filter.Control switch
                 {
-                    ReportFilterControl.DateRange or ReportFilterControl.NumberRange => ReportFilterOperator.Between,
-                    ReportFilterControl.MultiSelect when filter.Operator != ReportFilterOperator.NotIn => ReportFilterOperator.In,
-                    ReportFilterControl.Select when filter.Operator != ReportFilterOperator.NotEquals => ReportFilterOperator.Equals,
-                    ReportFilterControl.Boolean => ReportFilterOperator.Equals,
-                    ReportFilterControl.RelativeDate => ReportFilterOperator.InLastDays,
+                    ReportFilterControl.DateRange or ReportFilterControl.NumberRange => DataFilterOperator.Between,
+                    ReportFilterControl.MultiSelect when filter.Operator != DataFilterOperator.NotIn => DataFilterOperator.In,
+                    ReportFilterControl.Select when filter.Operator != DataFilterOperator.NotEquals => DataFilterOperator.Equals,
+                    ReportFilterControl.Boolean => DataFilterOperator.Equals,
+                    ReportFilterControl.RelativeDate => DataFilterOperator.InLastDays,
                     _ => filter.Operator,
                 };
             }

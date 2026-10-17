@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -45,7 +45,7 @@ public sealed class ReportViewRunner
     /// <param name="context">The context of the reader, whose access plans the query.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The plan, which may be invalid.</returns>
-    public Task<ReportQueryPlan> PlanAsync(ReportView view, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public Task<ReportQueryPlan> PlanAsync(ReportView view, DataSourceContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(view);
         ArgumentNullException.ThrowIfNull(context);
@@ -61,7 +61,7 @@ public sealed class ReportViewRunner
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The valid plan.</returns>
     /// <exception cref="ReportQueryException">The view cannot run.</exception>
-    public async Task<ReportQueryPlan> PlanValidAsync(ReportView view, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public async Task<ReportQueryPlan> PlanValidAsync(ReportView view, DataSourceContext context, CancellationToken cancellationToken = default)
     {
         var plan = await PlanAsync(view, context, cancellationToken);
 
@@ -81,12 +81,12 @@ public sealed class ReportViewRunner
     /// <param name="maxRows">The most rows to return.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The view's result as a data table, with date-times in UTC.</returns>
-    public async Task<ReportDataTable> ExecuteAsync(ReportQueryPlan plan, ReportDataSourceContext context, int maxRows, CancellationToken cancellationToken = default)
+    public async Task<DataRowSet> ExecuteAsync(ReportQueryPlan plan, DataSourceContext context, int maxRows, CancellationToken cancellationToken = default)
     {
         return (await ExecuteCoreAsync(plan, context, maxRows, cancellationToken)).Table;
     }
 
-    private async Task<ReportViewRunResult> ExecuteCoreAsync(ReportQueryPlan plan, ReportDataSourceContext context, int maxRows, CancellationToken cancellationToken)
+    private async Task<ReportViewRunResult> ExecuteCoreAsync(ReportQueryPlan plan, DataSourceContext context, int maxRows, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(context);
@@ -97,7 +97,7 @@ public sealed class ReportViewRunner
 
         var result = await _engine.Value.ExecuteAsync(plan, executionContext, cancellationToken);
         var fields = result.Columns
-            .Select(column => new ReportFieldDescriptor(column.Id, column.Label, column.DataType))
+            .Select(column => new DataField(column.Id, column.Label, column.DataType))
             .ToList();
         var rows = new List<object[]>(result.Rows.Count);
 
@@ -107,7 +107,7 @@ public sealed class ReportViewRunner
 
             for (var index = 0; index < source.Length; index++)
             {
-                row[index] = result.Columns[index].DataType == ReportDataType.DateTime && source[index] is DateTime local
+                row[index] = result.Columns[index].DataType == DataFieldType.DateTime && source[index] is DateTime local
                     ? executionContext.ToUtc(local)
                     : source[index];
             }
@@ -117,7 +117,7 @@ public sealed class ReportViewRunner
 
         return new ReportViewRunResult
         {
-            Table = new ReportDataTable
+            Table = new DataRowSet
             {
                 Fields = fields,
                 Rows = rows,
@@ -136,7 +136,7 @@ public sealed class ReportViewRunner
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The view's result as a data table, with date-times in UTC, and the warnings of the run.</returns>
     /// <exception cref="ReportQueryException">The view reads itself or cannot run.</exception>
-    public Task<ReportViewRunResult> RunAsync(ReportView view, ReportDataSourceContext context, int maxRows, CancellationToken cancellationToken = default)
+    public Task<ReportViewRunResult> RunAsync(ReportView view, DataSourceContext context, int maxRows, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(view);
         ArgumentNullException.ThrowIfNull(context);
@@ -159,7 +159,7 @@ public sealed class ReportViewRunner
     /// <param name="action">The action.</param>
     /// <returns>The action's result.</returns>
     /// <exception cref="ReportQueryException">The view reads itself, or views are nested too deeply.</exception>
-    public async Task<T> EnterAsync<T>(ReportView view, ReportDataSourceContext context, Func<Task<T>> action)
+    public async Task<T> EnterAsync<T>(ReportView view, DataSourceContext context, Func<Task<T>> action)
     {
         ArgumentNullException.ThrowIfNull(view);
         ArgumentNullException.ThrowIfNull(context);
@@ -198,15 +198,15 @@ public sealed class ReportViewRunner
     /// </summary>
     /// <param name="plan">The plan of the view's query.</param>
     /// <returns>The fields.</returns>
-    public static List<ReportFieldDescriptor> DescribeFields(ReportQueryPlan plan)
+    public static List<DataField> DescribeFields(ReportQueryPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
 
         return plan.Columns
-            .Select(column => new ReportFieldDescriptor(column.Definition.Id, column.Label, column.DataType)
+            .Select(column => new DataField(column.Definition.Id, column.Label, column.DataType)
             {
                 IsIdentifier = column.Field.Kind == PlannedFieldKind.DataSetField &&
-                    column.Definition.Aggregate == ReportAggregate.None &&
+                    column.Definition.Aggregate == DataAggregate.None &&
                     column.Field.FieldName.EndsWith("Id", StringComparison.Ordinal),
             })
             .ToList();
@@ -221,7 +221,7 @@ public sealed class ReportViewRunResult
     /// <summary>
     /// Gets or sets the view's result as a data table, with date-times in UTC.
     /// </summary>
-    public ReportDataTable Table { get; set; }
+    public DataRowSet Table { get; set; }
 
     /// <summary>
     /// Gets or sets the warnings of the run, such as a data set that was read only in part.

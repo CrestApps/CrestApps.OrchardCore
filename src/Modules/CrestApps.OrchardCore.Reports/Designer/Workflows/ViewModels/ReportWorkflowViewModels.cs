@@ -85,11 +85,15 @@ public class EmailReportTaskViewModel : ReportTaskViewModel
 /// </summary>
 public class CreateReportShareLinkTaskViewModel : ReportTaskViewModel
 {
+    public string Recipients { get; set; }
+
     public string Note { get; set; }
 
     public int ExpiresAfterDays { get; set; }
 
+    public int MaxUses { get; set; }
+
     public bool AllowExport { get; set; }
 
-    public bool RequireSignIn { get; set; }
+    public bool NotifyByEmail { get; set; }
 }

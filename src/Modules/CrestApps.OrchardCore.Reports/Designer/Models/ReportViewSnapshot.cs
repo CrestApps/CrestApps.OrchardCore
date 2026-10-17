@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Models;
 
@@ -90,5 +90,5 @@ public sealed class ReportViewSnapshotField
     /// <summary>
     /// Gets or sets the data type of the field's values.
     /// </summary>
-    public ReportDataType DataType { get; set; }
+    public DataFieldType DataType { get; set; }
 }

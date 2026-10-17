@@ -1,11 +1,13 @@
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
+using OrchardCore.DataSources;
 using OrchardCore.Security.Permissions;
-using System.Reflection;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -15,17 +17,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 /// <summary>
 /// A Contact Center data set whose rows are the documents of one record type in the Contact Center collection. Only a
 /// principal that may view Contact Center reports, and holds every extra permission the data set asks for, may read
-/// it. Records are read newest first through their index, and only the date range the report's conditions put on the
-/// data set's date column is pushed down to the store.
+/// it. Records are read newest first through their index, a page at a time, and only the date range the conditions put
+/// on the data set's date column, and the keys of a join, are pushed down to the store.
 /// </summary>
 /// <typeparam name="TRecord">The record type.</typeparam>
 /// <typeparam name="TIndex">The index the records are queried through.</typeparam>
-public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecordDataSet<TRecord>, IContactCenterReportDataSet, IReportAggregateDataSet
+public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSet<TRecord>, IContactCenterReportDataSet, IAggregateRecordDataSet
     where TRecord : class
     where TIndex : CatalogItemIndex
 {
     // Bounds are widened by this much before they reach the store, so a date the store keeps with less precision
-    // than the record never falls outside a bound the record itself is inside. The report filters every row again.
+    // than the record never falls outside a bound the record itself is inside. The consumer filters every row again.
     private static readonly TimeSpan _boundSlack = TimeSpan.FromSeconds(1);
 
     // YesSql's IN operator, found from a sample expression so it can be applied to any key column.
@@ -44,7 +46,7 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="permissions">The permissions a principal needs besides viewing Contact Center reports.</param>
     protected ContactCenterReportDataSet(
-        ReportDataSetDescriptor descriptor,
+        DataSetDescriptor descriptor,
         ISession session,
         IAuthorizationService authorizationService,
         params Permission[] permissions)
@@ -61,9 +63,6 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     /// </summary>
     protected virtual (string Field, Expression<Func<TIndex, DateTime>> Column)? DateColumn => null;
 
-    /// <inheritdoc/>
-    public override string DefaultDateField => DateColumn?.Field;
-
     /// <summary>
     /// Gets the index columns a join can narrow the read on, by field name. Every data set has its <c>ItemId</c>;
     /// data sets add the foreign keys their index holds.
@@ -74,9 +73,6 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
             ["ItemId"] = index => index.ItemId,
         };
 
-    /// <inheritdoc/>
-    protected override IEnumerable<string> KeyFilterableFields => KeyColumns.Keys;
-
     /// <summary>
     /// Gets a value indicating whether the data set can group and aggregate itself in the database. Data sets that
     /// restrict which records a principal reads (<see cref="RestrictAsync"/>) cannot, since the grouping statement
@@ -85,11 +81,11 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     protected virtual bool CanAggregate => true;
 
     /// <inheritdoc/>
-    public Task<ReportAggregateTable> AggregateAsync(ReportAggregateQuery query, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<object[]>> AggregateAsync(DataAggregateQuery query, CancellationToken cancellationToken = default)
     {
         if (!CanAggregate)
         {
-            return Task.FromResult<ReportAggregateTable>(null);
+            return Task.FromResult<IReadOnlyList<object[]>>(null);
         }
 
         // The index copies these fields from the record unchanged, so a field with an index column of the same name
@@ -100,7 +96,7 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
     }
 
     /// <inheritdoc/>
-    public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
+    public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         if (context?.User is null ||
             !await _authorizationService.AuthorizeAsync(context.User, ContactCenterPermissions.ViewReports))
@@ -119,74 +115,97 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : ReportRecord
         return true;
     }
 
-    /// <inheritdoc/>
-    protected override async Task<IEnumerable<TRecord>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
+    /// <summary>
+    /// Finishes describing the data set once its constructor added its fields: its date field, the fields a join can
+    /// narrow the read on, and the data sets its fields reference.
+    /// </summary>
+    protected void CompleteDescription()
     {
-        var records = await RestrictAsync(
-            _session.Query<TRecord, TIndex>(collection: ContactCenterStorage.CollectionName),
-            query.Context,
-            cancellationToken);
+        Descriptor.DefaultDateField = DateColumn?.Field;
+        Fields.MarkKeyFilterable(KeyColumns.Keys);
+        Descriptor.AddReferencesOf(Fields);
+    }
 
-        if (records is null)
+    /// <inheritdoc/>
+    protected override async IAsyncEnumerable<TRecord> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var restrict = await RestrictAsync(query.Context, cancellationToken);
+
+        if (restrict is null)
         {
-            return [];
+            yield break;
         }
+
+        var keyFilters = new List<(Expression<Func<TIndex, string>> Column, string[] Values)>();
 
         foreach (var (field, column) in KeyColumns)
         {
-            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
+            if (DataConditions.Keys(query.Conditions, field) is not { } keys)
             {
                 continue;
             }
 
             if (keys.Count == 0)
             {
-                return [];
+                yield break;
             }
 
-            records = records.Where(In(column, keys.ToArray()));
+            keyFilters.Add((column, keys.Select(key => key?.ToString()).ToArray()));
         }
 
-        if (DateColumn is { } dateColumn)
+        var dateColumn = DateColumn;
+        var (from, to) = dateColumn is { } dated
+            ? DataConditions.DateRange(query.Conditions, dated.Field)
+            : (null, null);
+
+        IQuery<TRecord> Query()
         {
-            var (from, to) = ReportDateRange.For(query.Conditions, dateColumn.Field);
+            var records = restrict(_session.Query<TRecord, TIndex>(collection: ContactCenterStorage.CollectionName));
+
+            foreach (var (column, values) in keyFilters)
+            {
+                records = records.Where(In(column, values));
+            }
+
+            if (dateColumn is not { } date)
+            {
+                return records.OrderByDescending(index => index.Id);
+            }
 
             if (from.HasValue)
             {
-                records = records.Where(Compare(dateColumn.Column, ExpressionType.GreaterThanOrEqual, Earlier(from.Value)));
+                records = records.Where(Compare(date.Column, ExpressionType.GreaterThanOrEqual, Earlier(from.Value)));
             }
 
             if (to.HasValue)
             {
-                records = records.Where(Compare(dateColumn.Column, ExpressionType.LessThanOrEqual, Later(to.Value)));
+                records = records.Where(Compare(date.Column, ExpressionType.LessThanOrEqual, Later(to.Value)));
             }
 
-            records = records
-                .OrderByDescending(Boxed(dateColumn.Column))
+            return records
+                .OrderByDescending(Boxed(date.Column))
                 .ThenByDescending(index => index.Id);
         }
-        else
-        {
-            records = records.OrderByDescending(index => index.Id);
-        }
 
-        return await records.Take(take).ListAsync(cancellationToken);
+        await foreach (var record in ReportIndexPages.ReadAsync(_session, Query, ContactCenterStorage.CollectionName, cancellationToken))
+        {
+            yield return record;
+        }
     }
 
     /// <summary>
-    /// Narrows the query to the records the principal may read, when the data set's permission alone does not decide
-    /// it. The default reads every record.
+    /// Decides which records the principal may read, when the data set's permission alone does not decide it. The
+    /// default reads every record.
     /// </summary>
-    /// <param name="records">The query.</param>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The narrowed query, or <see langword="null"/> when the principal may read no record.</returns>
-    protected virtual Task<IQuery<TRecord, TIndex>> RestrictAsync(
-        IQuery<TRecord, TIndex> records,
-        ReportDataSourceContext context,
+    /// <returns>A function that narrows a query to the records the principal may read, or <see langword="null"/> when
+    /// it may read no record.</returns>
+    protected virtual Task<Func<IQuery<TRecord, TIndex>, IQuery<TRecord, TIndex>>> RestrictAsync(
+        DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult(records);
+        return Task.FromResult<Func<IQuery<TRecord, TIndex>, IQuery<TRecord, TIndex>>>(records => records);
     }
 
     /// <summary>

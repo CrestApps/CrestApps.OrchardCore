@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Tests.Core.Services.Catalogs.Services;
 using Microsoft.AspNetCore.Authorization;
 using Moq;
+using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.Security;
 using YesSql;
 
@@ -91,4 +92,55 @@ internal static class ReportDesignerPrincipals
     {
         return new ReportViewSnapshotStore(Mock.Of<ISession>());
     }
+}
+
+/// <summary>
+/// Keeps shared links in memory, to tell which links of a report a service deletes.
+/// </summary>
+internal sealed class InMemorySharedLinkManager : ISharedLinkManager
+{
+    public List<SharedLink> Links { get; } = [];
+
+    public Task<SharedLinkResult> CreateAsync(SharedLinkRequest request, CancellationToken cancellationToken = default)
+    {
+        var link = new SharedLink
+        {
+            LinkId = Guid.NewGuid().ToString("n")[..26],
+            Kind = request.Kind,
+            ResourceId = request.ResourceId,
+            Title = request.Title,
+            Properties = new Dictionary<string, string>(request.Properties, StringComparer.Ordinal),
+            RecipientNames = [.. request.Recipients],
+        };
+
+        Links.Add(link);
+
+        return Task.FromResult(new SharedLinkResult { Link = link, Url = "/SharedLinks/" + link.LinkId + "?token=secret" });
+    }
+
+    public Task<SharedLink> GetAsync(string linkId, CancellationToken cancellationToken = default)
+        => Task.FromResult(Links.FirstOrDefault(link => link.LinkId == linkId));
+
+    public Task<(SharedLinkAccessResult Result, SharedLink Link)> UseAsync(string linkId, string token, ClaimsPrincipal user, CancellationToken cancellationToken = default)
+        => throw new NotSupportedException();
+
+    public Task RevokeAsync(SharedLink link, CancellationToken cancellationToken = default)
+    {
+        link.RevokedUtc ??= DateTime.UtcNow;
+
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteAsync(SharedLink link, CancellationToken cancellationToken = default)
+    {
+        Links.Remove(link);
+
+        return Task.CompletedTask;
+    }
+
+    public Task<(IReadOnlyList<SharedLink> Links, int Count)> ListAsync(string search, int skip, int take, CancellationToken cancellationToken = default)
+        => Task.FromResult<(IReadOnlyList<SharedLink>, int)>((Links.Skip(skip).Take(take).ToList(), Links.Count));
+
+    public Task<IReadOnlyList<SharedLink>> ListAsync(string kind, string resourceId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<SharedLink>>(Links.Where(link => link.Kind == kind && link.ResourceId == resourceId).Reverse().ToList());
 }

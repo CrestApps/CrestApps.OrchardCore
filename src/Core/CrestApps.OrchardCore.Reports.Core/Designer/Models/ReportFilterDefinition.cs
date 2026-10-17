@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -29,7 +29,7 @@ public sealed class ReportFilterDefinition
     /// <summary>
     /// Gets or sets the comparison operator.
     /// </summary>
-    public ReportFilterOperator Operator { get; set; }
+    public DataFilterOperator Operator { get; set; }
 
     /// <summary>
     /// Gets or sets the comparison values, written with the invariant culture (dates as <c>yyyy-MM-dd</c> or

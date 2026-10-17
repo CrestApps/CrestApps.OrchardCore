@@ -187,6 +187,17 @@ public class DesignedReportViewModel
     public string FormAction { get; set; }
 
     /// <summary>
+    /// Gets or sets the name of the form field that carries the format of an export, when the export URL is the same for
+    /// every format, or <see langword="null"/> when <see cref="ExportUrl"/> holds the format.
+    /// </summary>
+    public string ExportFormatField { get; set; }
+
+    /// <summary>
+    /// Gets the fields the filter form submits with the filters, such as the token of a shared link.
+    /// </summary>
+    public IDictionary<string, string> HiddenFields { get; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+    /// <summary>
     /// Gets or sets the URL of the designer, when the viewer may change the report.
     /// </summary>
     public string EditUrl { get; set; }

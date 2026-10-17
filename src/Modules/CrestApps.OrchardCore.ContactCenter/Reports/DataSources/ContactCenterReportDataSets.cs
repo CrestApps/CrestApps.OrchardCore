@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 
@@ -99,20 +99,20 @@ public static class ContactCenterReportDataSets
     /// </summary>
     /// <param name="dataSet">The technical name of the referenced data set.</param>
     /// <returns>The reference.</returns>
-    public static ReportFieldReference Reference(string dataSet)
+    public static DataFieldReference Reference(string dataSet)
         => new(Source, dataSet, ItemIdField);
 
     /// <summary>
     /// Creates a reference to the identifier of an Omnichannel activity.
     /// </summary>
     /// <returns>The reference.</returns>
-    public static ReportFieldReference ActivityReference()
+    public static DataFieldReference ActivityReference()
         => new(OmnichannelSource, OmnichannelActivities, ItemIdField);
 
     /// <summary>
     /// Creates a reference to the identifier of a user.
     /// </summary>
     /// <returns>The reference.</returns>
-    public static ReportFieldReference UserReference()
+    public static DataFieldReference UserReference()
         => new(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField);
 }

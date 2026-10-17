@@ -1,7 +1,11 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Reports.DataSources;
+using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports.Designer;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.DataSources.Operations;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 
@@ -21,34 +25,113 @@ internal sealed class PassThroughStringLocalizer<T> : IStringLocalizer<T>
 }
 
 /// <summary>
-/// A report data source over in-memory tables that records every query it receives.
+/// A localizer factory whose localizers return the English source text.
 /// </summary>
-internal sealed class InMemoryReportDataSource : IReportDataSource
+internal sealed class PassThroughStringLocalizerFactory : IStringLocalizerFactory
 {
-    private readonly Dictionary<string, (ReportDataSetSchema Schema, List<object[]> Rows)> _dataSets = new(StringComparer.Ordinal);
+    public IStringLocalizer Create(Type resourceSource)
+    {
+        return new PassThroughStringLocalizer<object>();
+    }
 
-    public InMemoryReportDataSource(string name = "Memory")
+    public IStringLocalizer Create(string baseName, string location)
+    {
+        return new PassThroughStringLocalizer<object>();
+    }
+}
+
+/// <summary>
+/// A data source a test resolves by a name of its choice, rather than by the static name of the data source's class.
+/// </summary>
+internal sealed class TestDataSourceEntry
+{
+    public TestDataSourceEntry(string name, IDataSource dataSource)
+        : this(name, dataSource.GetType(), () => dataSource)
+    {
+    }
+
+    // The data source is resolved when it is used, like Orchard Core does, so it may depend on the manager.
+    public TestDataSourceEntry(string name, Type type, Func<object> resolve)
     {
         Name = name;
+        Type = type;
+        Resolve = resolve;
     }
 
     public string Name { get; }
 
-    public LocalizedString DisplayName => new(Name, Name);
+    public Type Type { get; }
 
-    public LocalizedString Description => new(Name, Name);
+    public Func<object> Resolve { get; }
+}
 
-    public List<ReportDataSourceQuery> Queries { get; } = [];
+/// <summary>
+/// Resolves the data sources of a test by the names the test gave them.
+/// </summary>
+internal sealed class TestDataSourceManager : IDataSourceManager
+{
+    private readonly Dictionary<string, (DataSourceDescriptor Descriptor, TestDataSourceEntry Entry)> _dataSources = new(StringComparer.OrdinalIgnoreCase);
+
+    public TestDataSourceManager(IEnumerable<TestDataSourceEntry> dataSources)
+    {
+        foreach (var entry in dataSources)
+        {
+            var label = LocalizationSource.Create(entry.Name);
+
+            _dataSources[entry.Name] = (new DataSourceDescriptor(entry.Name, label, label, entry.Type), entry);
+        }
+    }
+
+    public IReadOnlyList<DataSourceDescriptor> GetDataSources()
+    {
+        return _dataSources.Values.Select(entry => entry.Descriptor).ToArray();
+    }
+
+    public DataSourceDescriptor GetDescriptor(string name)
+    {
+        return name is not null && _dataSources.TryGetValue(name, out var entry) ? entry.Descriptor : null;
+    }
+
+    public IDataSource GetDataSource(string name)
+    {
+        return name is not null && _dataSources.TryGetValue(name, out var entry) ? (IDataSource)entry.Entry.Resolve() : null;
+    }
+}
+
+/// <summary>
+/// A data source over in-memory tables that records every query it receives.
+/// </summary>
+internal sealed class InMemoryReportDataSource : IDataSource
+{
+    private readonly Dictionary<string, (DataSetSchema Schema, List<object[]> Rows)> _dataSets = new(StringComparer.Ordinal);
+
+    public InMemoryReportDataSource(string sourceName = "Memory")
+    {
+        SourceName = sourceName;
+    }
+
+    public static string Name => "Memory";
+
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create("Memory");
+
+    public static LocalizationSource Description { get; } = LocalizationSource.Create("Memory");
+
+    /// <summary>
+    /// Gets the name the test resolves the data source by.
+    /// </summary>
+    public string SourceName { get; }
+
+    public List<DataSourceQuery> Queries { get; } = [];
 
     public HashSet<string> DeniedDataSets { get; } = new(StringComparer.Ordinal);
 
     public bool ApplyConditions { get; set; }
 
-    public InMemoryReportDataSource Add(string dataSet, IEnumerable<ReportFieldDescriptor> fields, params object[][] rows)
+    public InMemoryReportDataSource Add(string dataSet, IEnumerable<DataField> fields, params object[][] rows)
     {
-        var schema = new ReportDataSetSchema
+        var schema = new DataSetSchema
         {
-            DataSet = new ReportDataSetDescriptor(dataSet, dataSet),
+            DataSet = new DataSetDescriptor(dataSet, dataSet),
             Fields = [.. fields],
         };
 
@@ -57,14 +140,14 @@ internal sealed class InMemoryReportDataSource : IReportDataSource
         return this;
     }
 
-    public (ReportDataSetSchema Schema, List<object[]> Rows) Table(string dataSet)
+    public (DataSetSchema Schema, List<object[]> Rows) Table(string dataSet)
     {
         return _dataSets[dataSet];
     }
 
-    public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
-        IReadOnlyList<ReportDataSetDescriptor> dataSets = _dataSets
+        IReadOnlyList<DataSetDescriptor> dataSets = _dataSets
             .Where(entry => !DeniedDataSets.Contains(entry.Key))
             .Select(entry => entry.Value.Schema.DataSet)
             .ToArray();
@@ -72,18 +155,20 @@ internal sealed class InMemoryReportDataSource : IReportDataSource
         return Task.FromResult(dataSets);
     }
 
-    public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
     {
         if (dataSet is null || DeniedDataSets.Contains(dataSet) || !_dataSets.TryGetValue(dataSet, out var entry))
         {
-            return Task.FromResult<ReportDataSetSchema>(null);
+            return Task.FromResult<DataSetSchema>(null);
         }
 
         return Task.FromResult(entry.Schema);
     }
 
-    public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        await Task.Yield();
+
         Queries.Add(query);
 
         var (schema, rows) = _dataSets[query.DataSet];
@@ -97,22 +182,17 @@ internal sealed class InMemoryReportDataSource : IReportDataSource
 
                 selected = selected.Where(row => condition.Operator switch
                 {
-                    ReportFilterOperator.In => condition.Values.Any(value => ReportDataValues.AreEqual(row[index], value)),
-                    ReportFilterOperator.GreaterThanOrEqual => ReportDataValues.Compare(row[index], condition.Values[0]) >= 0,
-                    ReportFilterOperator.LessThanOrEqual => ReportDataValues.Compare(row[index], condition.Values[0]) <= 0,
+                    DataFilterOperator.In => condition.Values.Any(value => DataValues.AreEqual(row[index], value)),
+                    DataFilterOperator.GreaterThanOrEqual => DataValues.Compare(row[index], condition.Values[0]) >= 0,
+                    DataFilterOperator.LessThanOrEqual => DataValues.Compare(row[index], condition.Values[0]) <= 0,
                     _ => true,
                 });
             }
         }
 
-        var list = selected.ToList();
+        var kept = (query.MaxRows > 0 ? selected.Take(query.MaxRows) : selected).ToList();
 
-        return Task.FromResult(new ReportDataTable
-        {
-            Fields = schema.Fields,
-            Rows = list.Take(query.MaxRows).ToList(),
-            Truncated = list.Count > query.MaxRows,
-        });
+        yield return new DataBatch(schema.Fields.ToArray(), kept);
     }
 }
 
@@ -123,12 +203,26 @@ internal static class ReportDesignerTestServices
 {
     public static ReportValueFormatter Formatter { get; } = new(new PassThroughStringLocalizer<ReportValueFormatter>());
 
-    public static ReportQueryPlanner Planner(params IReportDataSource[] dataSources)
+    public static ReportQueryPlanner Planner(params InMemoryReportDataSource[] dataSources)
     {
-        return new ReportQueryPlanner(new ReportDataSourceManager(dataSources), new PassThroughStringLocalizer<ReportQueryPlanner>());
+        return Planner(dataSources.Select(dataSource => new TestDataSourceEntry(dataSource.SourceName, dataSource)).ToArray());
     }
 
-    public static ReportQueryEngine Engine(params IReportDataSource[] dataSources)
+    public static ReportQueryPlanner Planner(params TestDataSourceEntry[] dataSources)
+    {
+        return new ReportQueryPlanner(
+            new TestDataSourceManager(dataSources),
+            ExpressionFunctionCatalog.BuiltIn,
+            new PassThroughStringLocalizerFactory(),
+            new PassThroughStringLocalizer<ReportQueryPlanner>());
+    }
+
+    public static ReportQueryEngine Engine(params InMemoryReportDataSource[] dataSources)
+    {
+        return new ReportQueryEngine(Planner(dataSources), Formatter, new PassThroughStringLocalizer<ReportQueryEngine>());
+    }
+
+    public static ReportQueryEngine Engine(params TestDataSourceEntry[] dataSources)
     {
         return new ReportQueryEngine(Planner(dataSources), Formatter, new PassThroughStringLocalizer<ReportQueryEngine>());
     }
@@ -136,6 +230,14 @@ internal static class ReportDesignerTestServices
     public static ReportDesignDocumentBuilder DocumentBuilder()
     {
         return new ReportDesignDocumentBuilder(Formatter, new PassThroughStringLocalizer<ReportDesignDocumentBuilder>());
+    }
+
+    /// <summary>
+    /// Reads the rows a query asks a data source for, within the query's row limit.
+    /// </summary>
+    public static Task<DataRowSet> ReadAsync(IDataSource dataSource, DataSourceQuery query, CancellationToken cancellationToken = default)
+    {
+        return dataSource.ReadRowsAsync(query, query.MaxRows > 0 ? query.MaxRows : int.MaxValue, cancellationToken);
     }
 
     public static ReportQueryExecutionContext Context(DateTime? utcNow = null)
@@ -155,10 +257,10 @@ internal static class ReportDesignerTestServices
             .Add(
                 "Customer",
                 [
-                    new ReportFieldDescriptor("Id", "Id", ReportDataType.Text) { IsIdentifier = true },
-                    new ReportFieldDescriptor("Name", "Name", ReportDataType.Text),
-                    new ReportFieldDescriptor("Region", "Region", ReportDataType.Text),
-                    new ReportFieldDescriptor("Active", "Active", ReportDataType.Boolean),
+                    new DataField("Id", "Id", DataFieldType.Text) { IsIdentifier = true },
+                    new DataField("Name", "Name", DataFieldType.Text),
+                    new DataField("Region", "Region", DataFieldType.Text),
+                    new DataField("Active", "Active", DataFieldType.Boolean),
                 ],
                 ["c1", "Acme", "West", true],
                 ["c2", "Globex", "East", true],
@@ -167,11 +269,11 @@ internal static class ReportDesignerTestServices
             .Add(
                 "Order",
                 [
-                    new ReportFieldDescriptor("Id", "Id", ReportDataType.Text) { IsIdentifier = true },
-                    new ReportFieldDescriptor("CustomerId", "Customer", ReportDataType.Text) { IsIdentifier = true },
-                    new ReportFieldDescriptor("Total", "Total", ReportDataType.Decimal),
-                    new ReportFieldDescriptor("Quantity", "Quantity", ReportDataType.Integer),
-                    new ReportFieldDescriptor("PlacedUtc", "Placed", ReportDataType.DateTime),
+                    new DataField("Id", "Id", DataFieldType.Text) { IsIdentifier = true },
+                    new DataField("CustomerId", "Customer", DataFieldType.Text) { IsIdentifier = true },
+                    new DataField("Total", "Total", DataFieldType.Decimal),
+                    new DataField("Quantity", "Quantity", DataFieldType.Integer),
+                    new DataField("PlacedUtc", "Placed", DataFieldType.DateTime),
                 ],
                 ["o1", "c1", 100m, 1L, new DateTime(2026, 1, 10, 15, 0, 0, DateTimeKind.Utc)],
                 ["o2", "c1", 50m, 2L, new DateTime(2026, 2, 5, 9, 0, 0, DateTimeKind.Utc)],
@@ -180,7 +282,7 @@ internal static class ReportDesignerTestServices
                 ["o5", "c9", 75m, 5L, new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc)]);
     }
 
-    public static ReportQueryDefinition CustomersWithOrders(ReportJoinType joinType = ReportJoinType.Inner)
+    public static ReportQueryDefinition CustomersWithOrders(DataJoinType joinType = DataJoinType.Inner)
     {
         return new ReportQueryDefinition
         {
@@ -201,7 +303,7 @@ internal static class ReportDesignerTestServices
         };
     }
 
-    public static ReportColumnDefinition Column(string id, string field, ReportAggregate aggregate = ReportAggregate.None, ReportFieldTransform transform = ReportFieldTransform.None)
+    public static ReportColumnDefinition Column(string id, string field, DataAggregate aggregate = DataAggregate.None, DataFieldTransform transform = DataFieldTransform.None)
     {
         return new ReportColumnDefinition
         {

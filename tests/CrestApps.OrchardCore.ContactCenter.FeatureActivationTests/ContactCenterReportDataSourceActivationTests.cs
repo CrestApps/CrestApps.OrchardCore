@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
@@ -28,7 +28,7 @@ public sealed class ContactCenterReportDataSourceActivationTests
         // Act
         var (sources, dataSets) = await host.ExecuteInTenantScopeAsync(tenant, serviceProvider =>
         {
-            var sourceNames = serviceProvider.GetServices<IReportDataSource>().Select(source => source.Name).ToArray();
+            var sourceNames = serviceProvider.GetRequiredService<IDataSourceManager>().GetDataSources().Select(source => source.Name).ToArray();
             var dataSetNames = serviceProvider.GetServices<IContactCenterReportDataSet>().Select(dataSet => dataSet.Descriptor.Name).ToArray();
 
             return Task.FromResult((sourceNames, dataSetNames));

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -23,7 +24,7 @@ public sealed class QueueGroupReportDataSet : ContactCenterReportDataSet<Activit
         IAuthorizationService authorizationService,
         IStringLocalizer<QueueGroupReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.QueueGroups,
                 stringLocalizer["Queue groups"],
                 stringLocalizer["One row per queue group."]),
@@ -33,10 +34,12 @@ public sealed class QueueGroupReportDataSet : ContactCenterReportDataSet<Activit
         var S = stringLocalizer;
         var group = S["Queue group"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Queue group ID"], ReportDataType.Text, record => record.ItemId, group, isIdentifier: true);
-        AddField(nameof(ActivityQueueGroup.Name), S["Name"], ReportDataType.Text, record => record.Name, group);
-        AddField(nameof(ActivityQueueGroup.Description), S["Description"], ReportDataType.Text, record => record.Description, group);
-        AddField(nameof(ActivityQueueGroup.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, group);
-        AddField(nameof(ActivityQueueGroup.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, group);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Queue group ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
+        AddField(nameof(ActivityQueueGroup.Name), S["Name"], DataFieldType.Text, record => record.Name, group);
+        AddField(nameof(ActivityQueueGroup.Description), S["Description"], DataFieldType.Text, record => record.Description, group);
+        AddField(nameof(ActivityQueueGroup.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, group);
+        AddField(nameof(ActivityQueueGroup.ModifiedUtc), S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc, group);
+
+        CompleteDescription();
     }
 }

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -33,7 +34,7 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
         ISharedVoicemailAuthorizationService sharedVoicemailAuthorizationService,
         IStringLocalizer<SharedVoicemailReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.SharedVoicemails,
                 stringLocalizer["Shared voicemails"],
                 stringLocalizer["One row per message left in a queue's shared voicemail box, and how it was worked."]),
@@ -47,28 +48,30 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
         var message = S["Message"].Value;
         var handling = S["Handling"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Voicemail ID"], ReportDataType.Text, record => record.ItemId, message, isIdentifier: true);
-        AddField(nameof(SharedVoicemail.InteractionId), S["Interaction ID"], ReportDataType.Text, record => record.InteractionId, message, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
-        AddField(nameof(SharedVoicemail.QueueId), S["Queue ID"], ReportDataType.Text, record => record.QueueId, message, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
-        AddField(nameof(SharedVoicemail.CallerNumber), S["Caller number"], ReportDataType.Text, record => record.CallerNumber, message);
-        AddField(nameof(SharedVoicemail.CallerName), S["Caller name"], ReportDataType.Text, record => record.CallerName, message);
-        AddField(nameof(SharedVoicemail.ContactContentItemId), S["Contact ID"], ReportDataType.Text, record => record.ContactContentItemId, message, isIdentifier: true);
-        AddField(nameof(SharedVoicemail.ContactContentType), S["Contact type"], ReportDataType.Text, record => record.ContactContentType, message);
-        AddField(nameof(SharedVoicemail.ReceivedUtc), S["Received"], ReportDataType.DateTime, record => record.ReceivedUtc, message);
-        AddField(nameof(SharedVoicemail.Status), S["Status"], ReportDataType.Text, record => record.Status, message);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Voicemail ID"], DataFieldType.Text, record => record.ItemId, message).Identifier();
+        AddField(nameof(SharedVoicemail.InteractionId), S["Interaction ID"], DataFieldType.Text, record => record.InteractionId, message).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
+        AddField(nameof(SharedVoicemail.QueueId), S["Queue ID"], DataFieldType.Text, record => record.QueueId, message).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
+        AddField(nameof(SharedVoicemail.CallerNumber), S["Caller number"], DataFieldType.Text, record => record.CallerNumber, message);
+        AddField(nameof(SharedVoicemail.CallerName), S["Caller name"], DataFieldType.Text, record => record.CallerName, message);
+        AddField(nameof(SharedVoicemail.ContactContentItemId), S["Contact ID"], DataFieldType.Text, record => record.ContactContentItemId, message).Identifier();
+        AddField(nameof(SharedVoicemail.ContactContentType), S["Contact type"], DataFieldType.Text, record => record.ContactContentType, message);
+        AddField(nameof(SharedVoicemail.ReceivedUtc), S["Received"], DataFieldType.DateTime, record => record.ReceivedUtc, message);
+        AddField(nameof(SharedVoicemail.Status), S["Status"], DataFieldType.Text, record => record.Status, message);
 
-        AddField(nameof(SharedVoicemail.ClaimedByUserId), S["Claimed by user ID"], ReportDataType.Text, record => record.ClaimedByUserId, handling, isIdentifier: true, ContactCenterReportDataSets.UserReference());
-        AddField(nameof(SharedVoicemail.ClaimedByUserName), S["Claimed by"], ReportDataType.Text, record => record.ClaimedByUserName, handling);
-        AddField(nameof(SharedVoicemail.ClaimedUtc), S["Claimed"], ReportDataType.DateTime, record => record.ClaimedUtc, handling);
-        AddField(nameof(SharedVoicemail.ResolvedByUserId), S["Resolved by user ID"], ReportDataType.Text, record => record.ResolvedByUserId, handling, isIdentifier: true, ContactCenterReportDataSets.UserReference());
-        AddField(nameof(SharedVoicemail.ResolvedByUserName), S["Resolved by"], ReportDataType.Text, record => record.ResolvedByUserName, handling);
-        AddField(nameof(SharedVoicemail.ResolvedUtc), S["Resolved"], ReportDataType.DateTime, record => record.ResolvedUtc, handling);
-        AddField(nameof(SharedVoicemail.ResolutionNote), S["Resolution note"], ReportDataType.Text, record => record.ResolutionNote, handling);
-        AddField(nameof(SharedVoicemail.CallbackRequestId), S["Callback ID"], ReportDataType.Text, record => record.CallbackRequestId, handling, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.CallbackRequests));
-        AddField(nameof(SharedVoicemail.CallbackRequestedUtc), S["Callback requested"], ReportDataType.DateTime, record => record.CallbackRequestedUtc, handling);
-        AddField("ResponseSeconds", S["Time to resolve (seconds)"], ReportDataType.Decimal, record => SecondsBetween(record.ReceivedUtc, record.ResolvedUtc), handling);
-        AddField(nameof(SharedVoicemail.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, handling);
-        AddField(nameof(SharedVoicemail.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, handling);
+        AddField(nameof(SharedVoicemail.ClaimedByUserId), S["Claimed by user ID"], DataFieldType.Text, record => record.ClaimedByUserId, handling).Identifier(ContactCenterReportDataSets.UserReference());
+        AddField(nameof(SharedVoicemail.ClaimedByUserName), S["Claimed by"], DataFieldType.Text, record => record.ClaimedByUserName, handling);
+        AddField(nameof(SharedVoicemail.ClaimedUtc), S["Claimed"], DataFieldType.DateTime, record => record.ClaimedUtc, handling);
+        AddField(nameof(SharedVoicemail.ResolvedByUserId), S["Resolved by user ID"], DataFieldType.Text, record => record.ResolvedByUserId, handling).Identifier(ContactCenterReportDataSets.UserReference());
+        AddField(nameof(SharedVoicemail.ResolvedByUserName), S["Resolved by"], DataFieldType.Text, record => record.ResolvedByUserName, handling);
+        AddField(nameof(SharedVoicemail.ResolvedUtc), S["Resolved"], DataFieldType.DateTime, record => record.ResolvedUtc, handling);
+        AddField(nameof(SharedVoicemail.ResolutionNote), S["Resolution note"], DataFieldType.Text, record => record.ResolutionNote, handling);
+        AddField(nameof(SharedVoicemail.CallbackRequestId), S["Callback ID"], DataFieldType.Text, record => record.CallbackRequestId, handling).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.CallbackRequests));
+        AddField(nameof(SharedVoicemail.CallbackRequestedUtc), S["Callback requested"], DataFieldType.DateTime, record => record.CallbackRequestedUtc, handling);
+        AddField("ResponseSeconds", S["Time to resolve (seconds)"], DataFieldType.Decimal, record => SecondsBetween(record.ReceivedUtc, record.ResolvedUtc), handling);
+        AddField(nameof(SharedVoicemail.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, handling);
+        AddField(nameof(SharedVoicemail.ModifiedUtc), S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc, handling);
+
+        CompleteDescription();
     }
 
     /// <inheritdoc/>
@@ -81,9 +84,8 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
         => (nameof(SharedVoicemail.ReceivedUtc), index => index.ReceivedUtc);
 
     /// <inheritdoc/>
-    protected override async Task<IQuery<SharedVoicemail, SharedVoicemailIndex>> RestrictAsync(
-        IQuery<SharedVoicemail, SharedVoicemailIndex> records,
-        ReportDataSourceContext context,
+    protected override async Task<Func<IQuery<SharedVoicemail, SharedVoicemailIndex>, IQuery<SharedVoicemail, SharedVoicemailIndex>>> RestrictAsync(
+        DataSourceContext context,
         CancellationToken cancellationToken)
     {
         var access = await _sharedVoicemailAuthorizationService.GetAccessAsync(context?.User, cancellationToken);
@@ -95,11 +97,11 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
 
         if (access.AllQueues)
         {
-            return records;
+            return records => records;
         }
 
         var queueIds = access.QueueIds?.Where(queueId => !string.IsNullOrEmpty(queueId)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
 
-        return queueIds.Length == 0 ? null : records.Where(index => index.QueueId.IsIn(queueIds));
+        return queueIds.Length == 0 ? null : records => records.Where(index => index.QueueId.IsIn(queueIds));
     }
 }

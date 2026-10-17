@@ -6,14 +6,14 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
-using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
+using OrchardCore.Localization;
 using OrchardCore.Security;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -97,12 +97,12 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session, canViewReports: false);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
         var schema = await source.GetSchemaAsync("Activities", context, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query("Activities"), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query("Activities"), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(dataSets);
@@ -116,7 +116,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
@@ -138,7 +138,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var source = Source(session);
 
         // Act
-        var table = await source.QueryAsync(Query("Activities"), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query("Activities"), TestContext.Current.CancellationToken);
 
         // Assert
         var rows = Rows(table);
@@ -164,11 +164,11 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         query.MaxRows = 2;
         query.Conditions =
         [
-            new ReportDataCondition { Field = "CreatedUtc", Operator = ReportFilterOperator.Between, Values = [_day.AddDays(1), _day.AddDays(3)] },
+            new DataCondition { Field = "CreatedUtc", Operator = DataFilterOperator.Between, Values = [_day.AddDays(1), _day.AddDays(3)] },
         ];
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["a3", "a2"], Rows(table).Select(row => row["ItemId"]));
@@ -182,13 +182,13 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var source = Source(session);
         var query = Query("Activities");
-        query.Conditions = [new ReportDataCondition { Field = "ItemId", Operator = ReportFilterOperator.In, Values = ["a1", "a3", "missing"], IsJoinKey = true }];
+        query.Conditions = [new DataCondition { Field = "ItemId", Operator = DataFilterOperator.In, Values = ["a1", "a3", "missing"], IsJoinKey = true }];
         var empty = Query("Activities");
-        empty.Conditions = [new ReportDataCondition { Field = "AssignedToId", Operator = ReportFilterOperator.In, Values = [], IsJoinKey = true }];
+        empty.Conditions = [new DataCondition { Field = "AssignedToId", Operator = DataFilterOperator.In, Values = [], IsJoinKey = true }];
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
-        var none = await source.QueryAsync(empty, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
+        var none = await ReportDesignerTestServices.ReadAsync(source, empty, TestContext.Current.CancellationToken);
         var schema = await source.GetSchemaAsync("Activities", query.Context, TestContext.Current.CancellationToken);
 
         // Assert
@@ -205,18 +205,18 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
     {
         ["Count by status and channel"] = () => Activities(Column("status", "A.Status"), Column("channel", "A.Channel"), Column("n", "$count")),
         ["Attempts by local day"] = () => Activities(
-            Column("day", "A.CreatedUtc", transform: ReportFieldTransform.Day),
-            Column("attempts", "A.Attempts", ReportAggregate.Sum),
-            Column("average", "A.Attempts", ReportAggregate.Average),
-            Column("first", "A.ScheduledUtc", ReportAggregate.Min)),
+            Column("day", "A.CreatedUtc", transform: DataFieldTransform.Day),
+            Column("attempts", "A.Attempts", DataAggregate.Sum),
+            Column("average", "A.Attempts", DataAggregate.Average),
+            Column("first", "A.ScheduledUtc", DataAggregate.Min)),
         ["By month, completed only"] = () => Filtered(
-            Activities(Column("month", "A.CreatedUtc", transform: ReportFieldTransform.Month), Column("n", "$count")),
-            new ReportFilterDefinition { Id = "done", Field = "A.Status", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.Equals, Values = ["completed"] }),
+            Activities(Column("month", "A.CreatedUtc", transform: DataFieldTransform.Month), Column("n", "$count")),
+            new ReportFilterDefinition { Id = "done", Field = "A.Status", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Equals, Values = ["completed"] }),
         ["By agent, last days, not SMS"] = () => Filtered(
             Filtered(
-                Activities(Column("agent", "A.AssignedToId"), Column("n", "$count"), Column("max", "A.Attempts", ReportAggregate.Max)),
-                new ReportFilterDefinition { Id = "recent", Field = "A.CreatedUtc", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.Between, Values = ["2026-05-02", "2026-05-04"] }),
-            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.NotEquals, Values = ["sms"] }),
+                Activities(Column("agent", "A.AssignedToId"), Column("n", "$count"), Column("max", "A.Attempts", DataAggregate.Max)),
+                new ReportFilterDefinition { Id = "recent", Field = "A.CreatedUtc", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Between, Values = ["2026-05-02", "2026-05-04"] }),
+            new ReportFilterDefinition { Id = "channel", Field = "A.Channel", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["sms"] }),
     };
 
     [Theory]
@@ -236,8 +236,8 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var rowsOnly = new RowsOnly(grouping);
 
         // Act
-        var expected = await ReportDesignerTestServices.Engine(rowsOnly).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
-        var actual = await ReportDesignerTestServices.Engine(grouping).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
+        var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
+        var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(actual.GroupedBySource, "The database should have grouped the report.");
@@ -252,7 +252,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
 
         // Act: the disposition name is looked up, not stored in the index.
-        var result = await ReportDesignerTestServices.Engine(Source(session)).ExecuteAsync(
+        var result = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, Source(session))).ExecuteAsync(
             Activities(Column("disposition", "A.Disposition"), Column("n", "$count")),
             LocalContext(),
             TestContext.Current.CancellationToken);
@@ -270,7 +270,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var source = Source(session);
 
         // Act
-        var table = await source.QueryAsync(Query("Dispositions"), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query("Dispositions"), TestContext.Current.CancellationToken);
 
         // Assert
         var row = Assert.Single(Rows(table));
@@ -310,7 +310,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
             campaigns.Object,
             groups.Object,
             authorizationService.Object,
-            new ContentReportTestLocalizer<OmnichannelReportDataSource>());
+            new PassThroughStringLocalizer<OmnichannelReportDataSource>());
     }
 
     // The tenant is five hours behind UTC, so local days differ from UTC ones.
@@ -318,7 +318,7 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
     {
         var context = ReportDesignerTestServices.Context(_day.AddDays(4));
 
-        context.DataSourceContext = new ReportDataSourceContext { User = _user };
+        context.DataSourceContext = new DataSourceContext { User = _user };
         context.ToLocal = utc => DateTime.SpecifyKind(utc.AddHours(-5), DateTimeKind.Unspecified);
         context.ToUtc = local => DateTime.SpecifyKind(local.AddHours(5), DateTimeKind.Utc);
 
@@ -341,48 +341,48 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         return query;
     }
 
-    private static ReportColumnDefinition Column(string id, string field, ReportAggregate aggregate = ReportAggregate.None, ReportFieldTransform transform = ReportFieldTransform.None)
+    private static ReportColumnDefinition Column(string id, string field, DataAggregate aggregate = DataAggregate.None, DataFieldTransform transform = DataFieldTransform.None)
     {
         return ReportDesignerTestServices.Column(id, field, aggregate, transform);
     }
 
     // The same source without its grouping, so the engine reads rows.
-    private sealed class RowsOnly : IReportDataSource
+    private sealed class RowsOnly : IDataSource
     {
-        private readonly IReportDataSource _inner;
+        private readonly IDataSource _inner;
 
-        public RowsOnly(IReportDataSource inner)
+        public RowsOnly(IDataSource inner)
         {
             _inner = inner;
         }
 
-        public string Name => _inner.Name;
+        public static string Name => "RowsOnly";
 
-        public LocalizedString DisplayName => _inner.DisplayName;
+        public static LocalizationSource DisplayName { get; } = LocalizationSource.Create("Rows only");
 
-        public LocalizedString Description => _inner.Description;
+        public static LocalizationSource Description { get; } = LocalizationSource.Create("Rows only");
 
-        public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
             => _inner.GetDataSetsAsync(context, cancellationToken);
 
-        public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
             => _inner.GetSchemaAsync(dataSet, context, cancellationToken);
 
-        public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
-            => _inner.QueryAsync(query, cancellationToken);
+        public IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, CancellationToken cancellationToken = default)
+            => _inner.ReadAsync(query, cancellationToken);
     }
 
-    private static ReportDataSourceQuery Query(string dataSet)
+    private static DataSourceQuery Query(string dataSet)
     {
-        return new ReportDataSourceQuery
+        return new DataSourceQuery
         {
             DataSet = dataSet,
             MaxRows = 100,
-            Context = new ReportDataSourceContext { User = _user },
+            Context = new DataSourceContext { User = _user },
         };
     }
 
-    private static List<Dictionary<string, object>> Rows(ReportDataTable table)
+    private static List<Dictionary<string, object>> Rows(DataRowSet table)
     {
         return table.Rows
             .Select(row => table.Fields.Select((field, index) => (field.Name, Value: row[index])).ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal))

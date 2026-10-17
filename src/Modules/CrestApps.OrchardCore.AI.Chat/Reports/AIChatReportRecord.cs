@@ -1,5 +1,5 @@
 using CrestApps.Core.AI.Profiles;
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.AI.Chat.Reports;
 
@@ -50,7 +50,7 @@ internal static class AIChatReportProfileNames
     /// <returns>The names, empty when the query does not use them.</returns>
     public static async Task<IReadOnlyDictionary<string, string>> LoadAsync(
         IAIProfileManager profileManager,
-        ReportDataSourceQuery query,
+        DataSourceQuery query,
         CancellationToken cancellationToken)
     {
         var names = new Dictionary<string, string>(StringComparer.Ordinal);

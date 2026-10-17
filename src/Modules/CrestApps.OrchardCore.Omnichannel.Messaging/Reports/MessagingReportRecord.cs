@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
 
@@ -55,7 +55,7 @@ internal static class MessagingReportAgents
     /// <returns>The agent profiles keyed by identifier, empty when the query does not use them.</returns>
     public static async Task<IReadOnlyDictionary<string, AgentProfile>> LoadAsync(
         IAgentProfileStore agentProfileStore,
-        ReportDataSourceQuery query,
+        DataSourceQuery query,
         IEnumerable<string> agentIds,
         IEnumerable<string> agentFields,
         CancellationToken cancellationToken)

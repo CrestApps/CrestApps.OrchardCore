@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -10,7 +10,7 @@ public sealed class ReportQueryExecutionContext
     /// <summary>
     /// Gets or sets the caller context passed to the data sources.
     /// </summary>
-    public ReportDataSourceContext DataSourceContext { get; set; } = new();
+    public DataSourceContext DataSourceContext { get; set; } = new();
 
     /// <summary>
     /// Gets the values the person running the report entered for exposed filters, by filter identifier. When a filter

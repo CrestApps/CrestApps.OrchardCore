@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -27,7 +28,7 @@ public sealed class CallRecordingReportDataSet : ContactCenterReportDataSet<Call
         IAuthorizationService authorizationService,
         IStringLocalizer<CallRecordingReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.CallRecordings,
                 stringLocalizer["Call recordings"],
                 stringLocalizer["One row per call recording: its call, agent, length, and whether it is stored or erased."]),
@@ -38,23 +39,25 @@ public sealed class CallRecordingReportDataSet : ContactCenterReportDataSet<Call
         var S = stringLocalizer;
         var group = S["Recording"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Recording ID"], ReportDataType.Text, record => record.ItemId, group, isIdentifier: true);
-        AddField(nameof(CallRecording.Source), S["Recorded by"], ReportDataType.Text, record => record.Source, group);
-        AddField(nameof(CallRecording.ProviderName), S["Provider"], ReportDataType.Text, record => record.ProviderName, group);
-        AddField(nameof(CallRecording.Format), S["Format"], ReportDataType.Text, record => record.Format, group);
-        AddField(nameof(CallRecording.InteractionId), S["Interaction ID"], ReportDataType.Text, record => record.InteractionId, group, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
-        AddField(nameof(CallRecording.ActivityItemId), S["Activity ID"], ReportDataType.Text, record => record.ActivityItemId, group, isIdentifier: true, ContactCenterReportDataSets.ActivityReference());
-        AddField(nameof(CallRecording.AgentUserId), S["Agent user ID"], ReportDataType.Text, record => record.AgentUserId, group, isIdentifier: true, ContactCenterReportDataSets.UserReference());
-        AddField(nameof(CallRecording.CustomerAddress), S["Customer address"], ReportDataType.Text, record => record.CustomerAddress, group);
-        AddField(nameof(CallRecording.Direction), S["Direction"], ReportDataType.Text, record => record.Direction, group);
-        AddField(nameof(CallRecording.StartedUtc), S["Started"], ReportDataType.DateTime, record => record.StartedUtc, group);
-        AddField(nameof(CallRecording.EndedUtc), S["Ended"], ReportDataType.DateTime, record => record.EndedUtc, group);
-        AddField(nameof(CallRecording.DurationSeconds), S["Length (seconds)"], ReportDataType.Decimal, record => record.DurationSeconds, group);
-        AddField("IsStored", S["Stored"], ReportDataType.Boolean, record => record.StoredUtc.HasValue, group);
-        AddField(nameof(CallRecording.StoredUtc), S["Stored on"], ReportDataType.DateTime, record => record.StoredUtc, group);
-        AddField("IsErased", S["Erased"], ReportDataType.Boolean, record => record.ErasedUtc.HasValue, group);
-        AddField(nameof(CallRecording.ErasedUtc), S["Erased on"], ReportDataType.DateTime, record => record.ErasedUtc, group);
-        AddField(nameof(CallRecording.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, group);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Recording ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
+        AddField(nameof(CallRecording.Source), S["Recorded by"], DataFieldType.Text, record => record.Source, group);
+        AddField(nameof(CallRecording.ProviderName), S["Provider"], DataFieldType.Text, record => record.ProviderName, group);
+        AddField(nameof(CallRecording.Format), S["Format"], DataFieldType.Text, record => record.Format, group);
+        AddField(nameof(CallRecording.InteractionId), S["Interaction ID"], DataFieldType.Text, record => record.InteractionId, group).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
+        AddField(nameof(CallRecording.ActivityItemId), S["Activity ID"], DataFieldType.Text, record => record.ActivityItemId, group).Identifier(ContactCenterReportDataSets.ActivityReference());
+        AddField(nameof(CallRecording.AgentUserId), S["Agent user ID"], DataFieldType.Text, record => record.AgentUserId, group).Identifier(ContactCenterReportDataSets.UserReference());
+        AddField(nameof(CallRecording.CustomerAddress), S["Customer address"], DataFieldType.Text, record => record.CustomerAddress, group);
+        AddField(nameof(CallRecording.Direction), S["Direction"], DataFieldType.Text, record => record.Direction, group);
+        AddField(nameof(CallRecording.StartedUtc), S["Started"], DataFieldType.DateTime, record => record.StartedUtc, group);
+        AddField(nameof(CallRecording.EndedUtc), S["Ended"], DataFieldType.DateTime, record => record.EndedUtc, group);
+        AddField(nameof(CallRecording.DurationSeconds), S["Length (seconds)"], DataFieldType.Decimal, record => record.DurationSeconds, group);
+        AddField("IsStored", S["Stored"], DataFieldType.Boolean, record => record.StoredUtc.HasValue, group);
+        AddField(nameof(CallRecording.StoredUtc), S["Stored on"], DataFieldType.DateTime, record => record.StoredUtc, group);
+        AddField("IsErased", S["Erased"], DataFieldType.Boolean, record => record.ErasedUtc.HasValue, group);
+        AddField(nameof(CallRecording.ErasedUtc), S["Erased on"], DataFieldType.DateTime, record => record.ErasedUtc, group);
+        AddField(nameof(CallRecording.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, group);
+
+        CompleteDescription();
     }
 
     /// <inheritdoc/>

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -25,7 +26,7 @@ public sealed class CallSessionReportDataSet : ContactCenterReportDataSet<CallSe
         IAuthorizationService authorizationService,
         IStringLocalizer<CallSessionReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.CallSessions,
                 stringLocalizer["Call sessions"],
                 stringLocalizer["One row per voice call: its provider call, state, parties and timings."]),
@@ -36,32 +37,34 @@ public sealed class CallSessionReportDataSet : ContactCenterReportDataSet<CallSe
         var call = S["Call"].Value;
         var timeline = S["Timeline"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Call session ID"], ReportDataType.Text, record => record.ItemId, call, isIdentifier: true);
-        AddField(nameof(CallSession.InteractionId), S["Interaction ID"], ReportDataType.Text, record => record.InteractionId, call, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
-        AddField(nameof(CallSession.ActivityItemId), S["Activity ID"], ReportDataType.Text, record => record.ActivityItemId, call, isIdentifier: true, ContactCenterReportDataSets.ActivityReference());
-        AddField(nameof(CallSession.ProviderName), S["Provider"], ReportDataType.Text, record => record.ProviderName, call);
-        AddField(nameof(CallSession.ProviderCallId), S["Provider call ID"], ReportDataType.Text, record => record.ProviderCallId, call, isIdentifier: true);
-        AddField(nameof(CallSession.DeliveryModel), S["Delivery model"], ReportDataType.Text, record => record.DeliveryModel, call);
-        AddField(nameof(CallSession.Direction), S["Direction"], ReportDataType.Text, record => record.Direction, call);
-        AddField(nameof(CallSession.State), S["State"], ReportDataType.Text, record => record.State, call);
-        AddField(nameof(CallSession.HangupCause), S["Hangup cause"], ReportDataType.Text, record => record.HangupCause, call);
-        AddField(nameof(CallSession.AgentId), S["Agent ID"], ReportDataType.Text, record => record.AgentId, call, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentProfiles));
-        AddField(nameof(CallSession.AgentSessionId), S["Agent session ID"], ReportDataType.Text, record => record.AgentSessionId, call, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentSessions));
-        AddField(nameof(CallSession.QueueId), S["Queue ID"], ReportDataType.Text, record => record.QueueId, call, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
-        AddField(nameof(CallSession.FromAddress), S["From"], ReportDataType.Text, record => record.FromAddress, call);
-        AddField(nameof(CallSession.ToAddress), S["To"], ReportDataType.Text, record => record.ToAddress, call);
-        AddField(nameof(CallSession.RecordingState), S["Recording state"], ReportDataType.Text, record => record.RecordingState, call);
-        AddField(nameof(CallSession.IsOnHold), S["On hold"], ReportDataType.Boolean, record => record.IsOnHold, call);
-        AddField(nameof(CallSession.IsMuted), S["Muted"], ReportDataType.Boolean, record => record.IsMuted, call);
-        AddField("LegCount", S["Legs"], ReportDataType.Integer, record => record.Legs?.Count ?? 0, call);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Call session ID"], DataFieldType.Text, record => record.ItemId, call).Identifier();
+        AddField(nameof(CallSession.InteractionId), S["Interaction ID"], DataFieldType.Text, record => record.InteractionId, call).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
+        AddField(nameof(CallSession.ActivityItemId), S["Activity ID"], DataFieldType.Text, record => record.ActivityItemId, call).Identifier(ContactCenterReportDataSets.ActivityReference());
+        AddField(nameof(CallSession.ProviderName), S["Provider"], DataFieldType.Text, record => record.ProviderName, call);
+        AddField(nameof(CallSession.ProviderCallId), S["Provider call ID"], DataFieldType.Text, record => record.ProviderCallId, call).Identifier();
+        AddField(nameof(CallSession.DeliveryModel), S["Delivery model"], DataFieldType.Text, record => record.DeliveryModel, call);
+        AddField(nameof(CallSession.Direction), S["Direction"], DataFieldType.Text, record => record.Direction, call);
+        AddField(nameof(CallSession.State), S["State"], DataFieldType.Text, record => record.State, call);
+        AddField(nameof(CallSession.HangupCause), S["Hangup cause"], DataFieldType.Text, record => record.HangupCause, call);
+        AddField(nameof(CallSession.AgentId), S["Agent ID"], DataFieldType.Text, record => record.AgentId, call).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentProfiles));
+        AddField(nameof(CallSession.AgentSessionId), S["Agent session ID"], DataFieldType.Text, record => record.AgentSessionId, call).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentSessions));
+        AddField(nameof(CallSession.QueueId), S["Queue ID"], DataFieldType.Text, record => record.QueueId, call).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
+        AddField(nameof(CallSession.FromAddress), S["From"], DataFieldType.Text, record => record.FromAddress, call);
+        AddField(nameof(CallSession.ToAddress), S["To"], DataFieldType.Text, record => record.ToAddress, call);
+        AddField(nameof(CallSession.RecordingState), S["Recording state"], DataFieldType.Text, record => record.RecordingState, call);
+        AddField(nameof(CallSession.IsOnHold), S["On hold"], DataFieldType.Boolean, record => record.IsOnHold, call);
+        AddField(nameof(CallSession.IsMuted), S["Muted"], DataFieldType.Boolean, record => record.IsMuted, call);
+        AddField("LegCount", S["Legs"], DataFieldType.Integer, record => record.Legs?.Count ?? 0, call);
 
-        AddField(nameof(CallSession.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, timeline);
-        AddField(nameof(CallSession.StartedUtc), S["Started"], ReportDataType.DateTime, record => record.StartedUtc, timeline);
-        AddField(nameof(CallSession.AnsweredUtc), S["Answered"], ReportDataType.DateTime, record => record.AnsweredUtc, timeline);
-        AddField(nameof(CallSession.EndedUtc), S["Ended"], ReportDataType.DateTime, record => record.EndedUtc, timeline);
-        AddField(nameof(CallSession.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, timeline);
-        AddField(nameof(CallSession.TalkSeconds), S["Talk (seconds)"], ReportDataType.Decimal, record => record.TalkSeconds, timeline);
-        AddField(nameof(CallSession.HoldSeconds), S["Hold (seconds)"], ReportDataType.Decimal, record => record.HoldSeconds, timeline);
+        AddField(nameof(CallSession.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, timeline);
+        AddField(nameof(CallSession.StartedUtc), S["Started"], DataFieldType.DateTime, record => record.StartedUtc, timeline);
+        AddField(nameof(CallSession.AnsweredUtc), S["Answered"], DataFieldType.DateTime, record => record.AnsweredUtc, timeline);
+        AddField(nameof(CallSession.EndedUtc), S["Ended"], DataFieldType.DateTime, record => record.EndedUtc, timeline);
+        AddField(nameof(CallSession.ModifiedUtc), S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc, timeline);
+        AddField(nameof(CallSession.TalkSeconds), S["Talk (seconds)"], DataFieldType.Decimal, record => record.TalkSeconds, timeline);
+        AddField(nameof(CallSession.HoldSeconds), S["Hold (seconds)"], DataFieldType.Decimal, record => record.HoldSeconds, timeline);
+
+        CompleteDescription();
     }
 
     /// <inheritdoc/>

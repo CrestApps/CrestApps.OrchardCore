@@ -1,8 +1,9 @@
+using System.Runtime.CompilerServices;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -12,13 +13,12 @@ namespace CrestApps.OrchardCore.Reports.Designer.Services;
 /// through other views, is refused. A scheduled view is read from its stored result while that result still has the
 /// view's fields; otherwise, and for a live view, the view runs.
 /// </summary>
-public sealed class ReportViewsDataSource : IReportDataSource
+public sealed class ReportViewsDataSource : IDataSource
 {
     private readonly ICatalog<ReportView> _views;
     private readonly IAuthorizationService _authorizationService;
     private readonly ReportViewRunner _runner;
     private readonly ReportViewSnapshotStore _snapshots;
-    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportViewsDataSource"/> class.
@@ -27,42 +27,39 @@ public sealed class ReportViewsDataSource : IReportDataSource
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="runner">The view runner.</param>
     /// <param name="snapshots">The store of scheduled views' results.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
     public ReportViewsDataSource(
         ICatalog<ReportView> views,
         IAuthorizationService authorizationService,
         ReportViewRunner runner,
-        ReportViewSnapshotStore snapshots,
-        IStringLocalizer<ReportViewsDataSource> stringLocalizer)
+        ReportViewSnapshotStore snapshots)
     {
         _views = views;
         _authorizationService = authorizationService;
         _runner = runner;
         _snapshots = snapshots;
-        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    public string Name => ReportsConstants.ViewsDataSource;
+    public static string Name => ReportsConstants.ViewsDataSource;
 
     /// <inheritdoc/>
-    public LocalizedString DisplayName => S["Report views"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ReportViewsDataSource>("Report views");
 
     /// <inheritdoc/>
-    public LocalizedString Description => S["Reusable views saved in the report builder."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ReportViewsDataSource>("Reusable views saved in the report builder.");
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var dataSets = new List<ReportDataSetDescriptor>();
+        var dataSets = new List<DataSetDescriptor>();
 
         foreach (var view in await _views.GetAllAsync(cancellationToken))
         {
             if (await CanReadAsync(context, view))
             {
-                dataSets.Add(new ReportDataSetDescriptor(view.ItemId, view.DisplayText, view.Description));
+                dataSets.Add(new DataSetDescriptor(view.ItemId, view.DisplayText, view.Description));
             }
         }
 
@@ -72,7 +69,7 @@ public sealed class ReportViewsDataSource : IReportDataSource
     }
 
     /// <inheritdoc/>
-    public async Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public async Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -86,22 +83,36 @@ public sealed class ReportViewsDataSource : IReportDataSource
         // The schema is always the view's planned one, so designs keep working whether the view is live or scheduled.
         var plan = await _runner.EnterAsync(view, context, () => _runner.PlanValidAsync(view, context, cancellationToken));
 
-        return new ReportDataSetSchema
+        return new DataSetSchema
         {
-            DataSet = new ReportDataSetDescriptor(view.ItemId, view.DisplayText, view.Description),
+            DataSet = new DataSetDescriptor(view.ItemId, view.DisplayText, view.Description),
             Fields = ReportViewRunner.DescribeFields(plan),
         };
     }
 
     /// <inheritdoc/>
-    public async Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var view = await FindReadableAsync(query.DataSet, query.Context, cancellationToken) ??
-            throw new ReportQueryException(S["The view '{0}' does not exist or is not available.", query.DataSet]);
+        var view = await FindReadableAsync(query.DataSet, query.Context, cancellationToken);
 
-        return await _runner.EnterAsync(view, query.Context, async () =>
+        if (view is null)
+        {
+            yield break;
+        }
+
+        // A view's result is computed whole, so it is returned as one batch.
+        var result = await ReadViewAsync(view, query, cancellationToken);
+
+        yield return new DataBatch(result.Fields, [.. result.Rows]);
+    }
+
+    private Task<DataRowSet> ReadViewAsync(ReportView view, DataSourceQuery query, CancellationToken cancellationToken)
+    {
+        var maxRows = query.MaxRows > 0 ? query.MaxRows : int.MaxValue;
+
+        return _runner.EnterAsync(view, query.Context, async () =>
         {
             var plan = await _runner.PlanAsync(view, query.Context, cancellationToken);
 
@@ -113,15 +124,15 @@ public sealed class ReportViewsDataSource : IReportDataSource
                 // refresh. A view whose first refresh has not happened yet runs too.
                 if (snapshot?.RefreshedUtc is not null && ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)))
                 {
-                    return ReportViewSnapshotData.ToTable(snapshot, query.Fields, query.MaxRows);
+                    return ReportViewSnapshotData.ToTable(snapshot, query.Fields, maxRows);
                 }
             }
 
-            return await _runner.ExecuteAsync(plan, query.Context, query.MaxRows, cancellationToken);
+            return await _runner.ExecuteAsync(plan, query.Context, maxRows, cancellationToken);
         });
     }
 
-    private async Task<ReportView> FindReadableAsync(string viewId, ReportDataSourceContext context, CancellationToken cancellationToken)
+    private async Task<ReportView> FindReadableAsync(string viewId, DataSourceContext context, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(viewId))
         {
@@ -133,7 +144,7 @@ public sealed class ReportViewsDataSource : IReportDataSource
         return view is not null && await CanReadAsync(context, view) ? view : null;
     }
 
-    private async Task<bool> CanReadAsync(ReportDataSourceContext context, ReportView view)
+    private async Task<bool> CanReadAsync(DataSourceContext context, ReportView view)
     {
         return context.User is not null &&
             await _authorizationService.AuthorizeAsync(context.User, ReportDesignerPermissions.ViewAllReportDesigns, view);

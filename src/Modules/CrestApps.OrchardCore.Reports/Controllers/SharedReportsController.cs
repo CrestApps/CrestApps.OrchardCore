@@ -3,48 +3,36 @@ using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Reports.Controllers;
 
 /// <summary>
-/// Shows designed reports outside the admin: to the people and roles a report is shared with (including anonymous
-/// visitors when it is shared with the Anonymous role), and to anyone holding an active share link.
+/// Shows designed reports outside the admin to the people and roles a report is shared with, including anonymous
+/// visitors when it is shared with the Anonymous role. Shared links open reports through
+/// <see cref="ReportSharedLinkHandler"/>.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
 public sealed class SharedReportsController : Controller
 {
     private readonly ReportDesignService _designService;
-    private readonly ReportShareLinkService _shareLinks;
     private readonly DesignedReportPresenter _presenter;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IClock _clock;
-    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SharedReportsController"/> class.
     /// </summary>
     /// <param name="designService">The design service.</param>
-    /// <param name="shareLinks">The share link service.</param>
     /// <param name="presenter">The report presenter.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="logger">The logger.</param>
     public SharedReportsController(
         ReportDesignService designService,
-        ReportShareLinkService shareLinks,
         DesignedReportPresenter presenter,
-        IAuthorizationService authorizationService,
-        IClock clock,
-        ILogger<SharedReportsController> logger)
+        IAuthorizationService authorizationService)
     {
         _designService = designService;
-        _shareLinks = shareLinks;
         _presenter = presenter;
         _authorizationService = authorizationService;
-        _clock = clock;
-        _logger = logger;
     }
 
     /// <summary>
@@ -93,96 +81,9 @@ public sealed class SharedReportsController : Controller
             return NotFoundOrChallenge();
         }
 
-        return await ExportAsync(design, format, ReportEventSource.Shared);
-    }
+        var file = await _presenter.ExportAsync(design, Request.Query, format, HttpContext.RequestAborted, ReportEventSource.Shared, User.Identity?.Name);
 
-    /// <summary>
-    /// Shows the report a share link opens.
-    /// </summary>
-    /// <param name="token">The secret token of the link.</param>
-    /// <returns>The report page.</returns>
-    [HttpGet("reports/shared/{token}", Name = "ReportsSharedLink")]
-    public async Task<IActionResult> Link(string token)
-    {
-        var (link, design, failure) = await ResolveLinkAsync(token);
-
-        if (failure is not null)
-        {
-            return failure;
-        }
-
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Share link '{LinkId}' opened designed report '{ReportId}' for '{UserName}'.", link.ItemId, design.ItemId, User.Identity?.Name ?? "anonymous");
-        }
-
-        var model = await _presenter.BuildAsync(
-            design,
-            Request.Query,
-            link.AllowExport,
-            format => Url.RouteUrl("ReportsSharedLinkExport", new { token, format }),
-            Url.RouteUrl("ReportsSharedLink", new { token }),
-            HttpContext.RequestAborted,
-            ReportEventSource.Link,
-            User.Identity?.Name);
-
-        model.IsPublic = true;
-        Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
-        Response.Headers["Referrer-Policy"] = "no-referrer";
-
-        return View("Report", model);
-    }
-
-    /// <summary>
-    /// Exports the report a share link opens, when the link allows it.
-    /// </summary>
-    /// <param name="token">The secret token of the link.</param>
-    /// <param name="format">The export format name.</param>
-    /// <returns>The exported file.</returns>
-    [HttpGet("reports/shared/{token}/export/{format}", Name = "ReportsSharedLinkExport")]
-    public async Task<IActionResult> LinkExport(string token, string format)
-    {
-        var (link, design, failure) = await ResolveLinkAsync(token);
-
-        if (failure is not null)
-        {
-            return failure;
-        }
-
-        if (!link.AllowExport)
-        {
-            return NotFound();
-        }
-
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("Share link '{LinkId}' exported designed report '{ReportId}' as '{Format}'.", link.ItemId, design.ItemId, format?.Replace("\r", string.Empty, StringComparison.Ordinal).Replace("\n", string.Empty, StringComparison.Ordinal));
-        }
-
-        return await ExportAsync(design, format, ReportEventSource.Link);
-    }
-
-    private async Task<(ReportShareLink Link, ReportDesign Design, IActionResult Failure)> ResolveLinkAsync(string token)
-    {
-        var link = await _shareLinks.FindActiveAsync(token);
-
-        if (link is null)
-        {
-            _logger.LogInformation("A request used an unknown, expired, or revoked report share link.");
-
-            return (null, null, NotFound());
-        }
-
-        if (link.RequireSignIn && User.Identity?.IsAuthenticated != true)
-        {
-            return (null, null, Challenge());
-        }
-
-        var design = await _designService.FindAsync(link.ReportId);
-
-        return design is null
-            ? (null, null, NotFound())
-            : (link, design, null);
+        return file is null ? NotFound() : File(file.Content, file.ContentType, file.FileName);
     }
 
     private async Task<ReportDesign> FindViewableAsync(string id)
@@ -195,13 +96,6 @@ public sealed class SharedReportsController : Controller
         }
 
         return design;
-    }
-
-    private async Task<IActionResult> ExportAsync(ReportDesign design, string format, ReportEventSource source)
-    {
-        var file = await _presenter.ExportAsync(design, Request.Query, format, HttpContext.RequestAborted, source, User.Identity?.Name);
-
-        return file is null ? NotFound() : File(file.Content, file.ContentType, file.FileName);
     }
 
     private IActionResult NotFoundOrChallenge()

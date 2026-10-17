@@ -1,17 +1,18 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DataSources;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging;
 
 /// <summary>
-/// Exposes the messaging workspace's conversations and their messages to the report builder when it is enabled.
+/// Exposes the messaging workspace's conversations and their messages as a data source of Orchard Core, for reports and
+/// data pipelines.
 /// </summary>
 [Feature(MessagingConstants.Feature.Workspace)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class ReportsStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DataSourcesStartup : StartupBase
 {
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
@@ -19,6 +20,6 @@ public sealed class ReportsStartup : StartupBase
         services
             .AddScoped<MessagingConversationsReportDataSet>()
             .AddScoped<MessagingMessagesReportDataSet>()
-            .AddScoped<IReportDataSource, MessagingReportDataSource>();
+            .AddDataSource<MessagingReportDataSource>();
     }
 }

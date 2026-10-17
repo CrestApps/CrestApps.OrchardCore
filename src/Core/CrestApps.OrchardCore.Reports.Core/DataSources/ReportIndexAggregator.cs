@@ -1,13 +1,13 @@
 using System.Data.Common;
 using System.Globalization;
 using System.Text;
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 
 /// <summary>
-/// Answers an <see cref="ReportAggregateQuery"/> with one <c>GROUP BY</c> statement over a YesSql map index table, for
+/// Answers an <see cref="DataAggregateQuery"/> with one <c>GROUP BY</c> statement over a YesSql map index table, for
 /// data sets whose fields are columns of their index. It declines (returns <see langword="null"/>) whenever it cannot
 /// answer exactly the way the report engine would:
 /// <list type="bullet">
@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.Reports.Designer.DataSources;
 /// <item><description>a text comparison other than equality, or equality on non-ASCII text (the engine ignores case,
 /// and databases only fold the case of ASCII letters alike);</description></item>
 /// <item><description>an empty-text test on a text column (the engine treats blank text as empty);</description></item>
-/// <item><description>more groups than <see cref="ReportAggregateQuery.MaxGroups"/>.</description></item>
+/// <item><description>more groups than <see cref="DataAggregateQuery.MaxGroups"/>.</description></item>
 /// </list>
 /// Enum columns, which YesSql stores as numbers, are compared and grouped by name. Date buckets are written as a
 /// <c>CASE</c> expression over UTC boundaries, which every database understands. The statement runs in the session's
@@ -33,10 +33,10 @@ public static class ReportIndexAggregator
     /// <param name="columns">The index column of each report field that can be grouped, aggregated, or filtered.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The groups, or <see langword="null"/> when the query cannot be answered exactly.</returns>
-    public static async Task<ReportAggregateTable> AggregateAsync<TIndex>(
+    public static async Task<IReadOnlyList<object[]>> AggregateAsync<TIndex>(
         ISession session,
         string collection,
-        ReportAggregateQuery query,
+        DataAggregateQuery query,
         IReadOnlyDictionary<string, string> columns,
         CancellationToken cancellationToken = default)
     {
@@ -67,21 +67,21 @@ public static class ReportIndexAggregator
             command.Parameters.Add(parameter);
         }
 
-        var table = new ReportAggregateTable();
+        var rows = new List<object[]>();
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         while (await reader.ReadAsync(cancellationToken))
         {
-            if (table.Rows.Count >= Math.Max(1, query.MaxGroups))
+            if (rows.Count >= Math.Max(1, query.MaxGroups))
             {
                 return null;
             }
 
-            table.Rows.Add(ReadRow(reader, statement));
+            rows.Add(ReadRow(reader, statement));
         }
 
-        return table;
+        return rows;
     }
 
     /// <summary>
@@ -117,7 +117,7 @@ public static class ReportIndexAggregator
     public static ReportIndexStatement Build<TIndex>(
         IConfiguration configuration,
         string collection,
-        ReportAggregateQuery query,
+        DataAggregateQuery query,
         IReadOnlyDictionary<string, string> columns)
     {
         ArgumentNullException.ThrowIfNull(configuration);
@@ -193,7 +193,7 @@ public static class ReportIndexAggregator
         {
             if (measure.Field is null)
             {
-                if (measure.Kind != ReportAggregateKind.Count)
+                if (measure.Function != DataAggregate.Count)
                 {
                     return null;
                 }
@@ -205,20 +205,20 @@ public static class ReportIndexAggregator
             }
 
             if (!TryColumn(measure.Field, out var column, out var type) ||
-                (type.IsEnum && measure.Kind != ReportAggregateKind.Count) ||
-                (type == typeof(string) && measure.Kind is ReportAggregateKind.Sum))
+                (type.IsEnum && measure.Function != DataAggregate.Count) ||
+                (type == typeof(string) && measure.Function is DataAggregate.Sum))
             {
                 return null;
             }
 
-            selects.Add(measure.Kind switch
+            selects.Add(measure.Function switch
             {
-                ReportAggregateKind.Count => $"COUNT({column})",
-                ReportAggregateKind.Sum => $"SUM({column})",
-                ReportAggregateKind.Min => $"MIN({column})",
+                DataAggregate.Count => $"COUNT({column})",
+                DataAggregate.Sum => $"SUM({column})",
+                DataAggregate.Min => $"MIN({column})",
                 _ => $"MAX({column})",
             });
-            statement.Columns.Add(measure.Kind == ReportAggregateKind.Count ? typeof(long) : type);
+            statement.Columns.Add(measure.Function == DataAggregate.Count ? typeof(long) : type);
         }
 
         foreach (var condition in query.Conditions)
@@ -253,7 +253,7 @@ public static class ReportIndexAggregator
     }
 
     // One exact condition as SQL, or null when it cannot be written exactly.
-    private static string Where(ReportDataCondition condition, string column, Type type, Func<object, string> parameter)
+    private static string Where(DataCondition condition, string column, Type type, Func<object, string> parameter)
     {
         var isText = type == typeof(string);
         var values = new List<object>();
@@ -289,28 +289,28 @@ public static class ReportIndexAggregator
 
         switch (condition.Operator)
         {
-            case ReportFilterOperator.IsEmpty:
+            case DataFilterOperator.IsEmpty:
                 return isText ? null : $"{column} IS NULL";
 
-            case ReportFilterOperator.IsNotEmpty:
+            case DataFilterOperator.IsNotEmpty:
                 return isText ? null : $"{column} IS NOT NULL";
 
-            case ReportFilterOperator.Equals:
+            case DataFilterOperator.Equals:
                 return values.Count == 0 ? "1 = 0" : Compared(values[0]);
 
-            case ReportFilterOperator.NotEquals:
+            case DataFilterOperator.NotEquals:
                 return values.Count == 0 ? "1 = 1" : $"({column} IS NULL OR NOT ({Compared(values[0])}))";
 
-            case ReportFilterOperator.In:
+            case DataFilterOperator.In:
                 return values.Count == 0 ? "1 = 0" : Listed();
 
-            case ReportFilterOperator.NotIn:
+            case DataFilterOperator.NotIn:
                 return values.Count == 0 ? "1 = 1" : $"({column} IS NULL OR NOT ({Listed()}))";
 
-            case ReportFilterOperator.GreaterThan:
-            case ReportFilterOperator.GreaterThanOrEqual:
-            case ReportFilterOperator.LessThan:
-            case ReportFilterOperator.LessThanOrEqual:
+            case DataFilterOperator.GreaterThan:
+            case DataFilterOperator.GreaterThanOrEqual:
+            case DataFilterOperator.LessThan:
+            case DataFilterOperator.LessThanOrEqual:
                 if (isText || type.IsEnum || type == typeof(bool) || values.Count == 0)
                 {
                     return null;
@@ -318,9 +318,9 @@ public static class ReportIndexAggregator
 
                 var comparison = condition.Operator switch
                 {
-                    ReportFilterOperator.GreaterThan => ">",
-                    ReportFilterOperator.GreaterThanOrEqual => ">=",
-                    ReportFilterOperator.LessThan => "<",
+                    DataFilterOperator.GreaterThan => ">",
+                    DataFilterOperator.GreaterThanOrEqual => ">=",
+                    DataFilterOperator.LessThan => "<",
                     _ => "<=",
                 };
 
@@ -344,7 +344,7 @@ public static class ReportIndexAggregator
 
         if (type.IsEnum)
         {
-            if (Enum.TryParse(type, ReportDataValues.ToText(value), ignoreCase: true, out var member) && Enum.IsDefined(type, member))
+            if (Enum.TryParse(type, DataValues.ToText(value), ignoreCase: true, out var member) && Enum.IsDefined(type, member))
             {
                 converted = Convert.ToInt32(member, CultureInfo.InvariantCulture);
 
@@ -356,7 +356,7 @@ public static class ReportIndexAggregator
 
         if (type == typeof(string))
         {
-            var text = ReportDataValues.ToText(value);
+            var text = DataValues.ToText(value);
 
             if (text is null || !Ascii.IsValid(text))
             {
@@ -370,7 +370,7 @@ public static class ReportIndexAggregator
 
         if (type == typeof(DateTime))
         {
-            if (ReportDataValues.Coerce(value, ReportDataType.DateTime) is not DateTime date)
+            if (DataValues.Coerce(value, DataFieldType.DateTime) is not DateTime date)
             {
                 return false;
             }
@@ -382,21 +382,21 @@ public static class ReportIndexAggregator
 
         if (type == typeof(bool))
         {
-            converted = ReportDataValues.Coerce(value, ReportDataType.Boolean);
+            converted = DataValues.Coerce(value, DataFieldType.Boolean);
 
             return converted is not null;
         }
 
         if (type == typeof(int) || type == typeof(long) || type == typeof(short))
         {
-            converted = ReportDataValues.Coerce(value, ReportDataType.Integer);
+            converted = DataValues.Coerce(value, DataFieldType.Integer);
 
             return converted is not null;
         }
 
         if (type == typeof(decimal) || type == typeof(double) || type == typeof(float))
         {
-            converted = ReportDataValues.Coerce(value, ReportDataType.Decimal);
+            converted = DataValues.Coerce(value, DataFieldType.Decimal);
 
             return converted is not null;
         }

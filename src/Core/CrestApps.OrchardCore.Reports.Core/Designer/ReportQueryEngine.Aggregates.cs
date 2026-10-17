@@ -1,10 +1,11 @@
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Reports.Designer.Expressions;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
-/// Lets a data source group and aggregate a simple report itself (see <see cref="IReportAggregateDataSource"/>). The
+/// Lets a data source group and aggregate a simple report itself (see <see cref="IDataAggregateSource"/>). The
 /// source returns, per group, the row count and the count, sum, smallest, and largest value of each measured field;
 /// the engine turns each group into one row that stands for its rows, and merges these partial aggregates wherever it
 /// would have aggregated rows, so sorting, result filters, totals, charts, and pivots give the same result as reading
@@ -34,13 +35,13 @@ public sealed partial class ReportQueryEngine
             plan.Joins.Count > 0 ||
             plan.RowCalculations.Count > 0 ||
             !plan.IsAggregated ||
-            plan.DataSets[0].Source is not IReportAggregateDataSource source)
+            plan.DataSets[0].Source is not IDataAggregateSource source)
         {
             return null;
         }
 
         var dataSet = plan.DataSets[0];
-        var query = new ReportAggregateQuery
+        var query = new DataAggregateQuery
         {
             DataSet = dataSet.Reference.DataSet,
             Context = context.DataSourceContext,
@@ -58,7 +59,7 @@ public sealed partial class ReportQueryEngine
                 return null;
             }
 
-            var conditions = ReportFilterPredicates.BuildExactConditions(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc, today);
+            var conditions = DataFilterPredicates.BuildExactConditions(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc, today);
 
             if (conditions is null)
             {
@@ -98,7 +99,7 @@ public sealed partial class ReportQueryEngine
         }
 
         // Measures: the row count, and counts, sums, smallest and largest values of data set fields.
-        var measured = new Dictionary<PlannedField, HashSet<ReportAggregateKind>>();
+        var measured = new Dictionary<PlannedField, HashSet<DataAggregate>>();
 
         foreach (var column in plan.Columns.Where(column => column.IsMeasure))
         {
@@ -108,19 +109,19 @@ public sealed partial class ReportQueryEngine
             }
 
             if (column.Field.Kind != PlannedFieldKind.DataSetField ||
-                column.Definition.Transform != ReportFieldTransform.None ||
+                column.Definition.Transform != DataFieldTransform.None ||
                 dimensions.ContainsKey(column.Field))
             {
                 return null;
             }
 
-            ReportAggregateKind[] kinds = column.Definition.Aggregate switch
+            DataAggregate[] kinds = column.Definition.Aggregate switch
             {
-                ReportAggregate.Count => [ReportAggregateKind.Count],
-                ReportAggregate.Sum => [ReportAggregateKind.Count, ReportAggregateKind.Sum],
-                ReportAggregate.Average => [ReportAggregateKind.Count, ReportAggregateKind.Sum],
-                ReportAggregate.Min => [ReportAggregateKind.Count, ReportAggregateKind.Min],
-                ReportAggregate.Max => [ReportAggregateKind.Count, ReportAggregateKind.Max],
+                DataAggregate.Count => [DataAggregate.Count],
+                DataAggregate.Sum => [DataAggregate.Count, DataAggregate.Sum],
+                DataAggregate.Average => [DataAggregate.Count, DataAggregate.Sum],
+                DataAggregate.Min => [DataAggregate.Count, DataAggregate.Min],
+                DataAggregate.Max => [DataAggregate.Count, DataAggregate.Max],
                 _ => null,
             };
 
@@ -144,7 +145,7 @@ public sealed partial class ReportQueryEngine
         {
             if (dimensions[field] is not BucketSize size)
             {
-                query.Groups.Add(new ReportAggregateGroup { Field = field.FieldName });
+                query.Groups.Add(new DataAggregateGroup { Field = field.FieldName });
 
                 continue;
             }
@@ -156,36 +157,36 @@ public sealed partial class ReportQueryEngine
                 return null;
             }
 
-            query.Groups.Add(new ReportAggregateGroup { Field = field.FieldName, Boundaries = boundaries.Utc });
+            query.Groups.Add(new DataAggregateGroup { Field = field.FieldName, Boundaries = boundaries.Utc });
             bucketStarts[field] = boundaries.Local;
         }
 
-        query.Measures.Add(new ReportAggregateMeasure { Kind = ReportAggregateKind.Count });
+        query.Measures.Add(new DataAggregateMeasure { Function = DataAggregate.Count });
 
-        var measures = new List<(PlannedField Field, ReportAggregateKind Kind)>();
+        var measures = new List<(PlannedField Field, DataAggregate Kind)>();
 
         foreach (var (field, kinds) in measured)
         {
             foreach (var kind in kinds.Order())
             {
-                query.Measures.Add(new ReportAggregateMeasure { Field = field.FieldName, Kind = kind });
+                query.Measures.Add(new DataAggregateMeasure { Field = field.FieldName, Function = kind });
                 measures.Add((field, kind));
             }
         }
 
         var table = await source.AggregateAsync(query, cancellationToken);
 
-        if (table?.Rows is null || table.Rows.Any(row => row is null || row.Length != query.Groups.Count + query.Measures.Count))
+        if (table is null || table.Any(row => row is null || row.Length != query.Groups.Count + query.Measures.Count))
         {
             return null;
         }
 
-        var rows = new List<object[]>(table.Rows.Count);
+        var rows = new List<object[]>(table.Count);
         long total = 0;
 
-        foreach (var sourceRow in table.Rows)
+        foreach (var sourceRow in table)
         {
-            if (ReportDataValues.Coerce(sourceRow[query.Groups.Count], ReportDataType.Integer) is not long weight || weight <= 0)
+            if (DataValues.Coerce(sourceRow[query.Groups.Count], DataFieldType.Integer) is not long weight || weight <= 0)
             {
                 continue;
             }
@@ -198,11 +199,11 @@ public sealed partial class ReportQueryEngine
                 var value = sourceRow[index];
 
                 row[field.Slot] = bucketStarts.TryGetValue(field, out var starts)
-                    ? (ReportDataValues.Coerce(value, ReportDataType.Integer) is long bucket && bucket >= 0 && bucket < starts.Count ? starts[(int)bucket] : null)
+                    ? (DataValues.Coerce(value, DataFieldType.Integer) is long bucket && bucket >= 0 && bucket < starts.Count ? starts[(int)bucket] : null)
                     : Normalize(value, field.DataType, context.ToLocal);
             }
 
-            var parts = new Dictionary<PlannedField, ReportPartialAggregate>();
+            var parts = new Dictionary<PlannedField, DataPartialAggregate>();
 
             for (var index = 0; index < measures.Count; index++)
             {
@@ -211,25 +212,25 @@ public sealed partial class ReportQueryEngine
 
                 if (!parts.TryGetValue(field, out var part))
                 {
-                    parts[field] = part = new ReportPartialAggregate();
+                    parts[field] = part = new DataPartialAggregate();
                     row[field.Slot] = part;
                 }
 
                 switch (kind)
                 {
-                    case ReportAggregateKind.Count:
-                        part.Count = ReportDataValues.Coerce(value, ReportDataType.Integer) is long count ? count : 0;
+                    case DataAggregate.Count:
+                        part.Count = DataValues.Coerce(value, DataFieldType.Integer) is long count ? count : 0;
                         break;
 
-                    case ReportAggregateKind.Sum:
-                        part.Sum = ReportDataValues.Coerce(value, field.DataType == ReportDataType.Integer ? ReportDataType.Integer : ReportDataType.Decimal);
+                    case DataAggregate.Sum:
+                        part.Sum = DataValues.Coerce(value, field.DataType == DataFieldType.Integer ? DataFieldType.Integer : DataFieldType.Decimal);
                         break;
 
-                    case ReportAggregateKind.Min:
+                    case DataAggregate.Min:
                         part.Min = Normalize(value, field.DataType, context.ToLocal);
                         break;
 
-                    case ReportAggregateKind.Max:
+                    case DataAggregate.Max:
                         part.Max = Normalize(value, field.DataType, context.ToLocal);
                         break;
                 }
@@ -262,22 +263,22 @@ public sealed partial class ReportQueryEngine
 
     // How a dimension groups a field: by its value (no transform), or by local hour, day, or month for a date transform;
     // false for transforms the source cannot group exactly (text and number transforms change the value).
-    private static bool TryGetBucketSize(ReportFieldTransform transform, ReportDataType dataType, out BucketSize? size)
+    private static bool TryGetBucketSize(DataFieldTransform transform, DataFieldType dataType, out BucketSize? size)
     {
         size = transform switch
         {
-            ReportFieldTransform.Hour => BucketSize.Hour,
-            ReportFieldTransform.Day or ReportFieldTransform.DayOfWeek or ReportFieldTransform.Week => BucketSize.Day,
-            ReportFieldTransform.Month or ReportFieldTransform.MonthOfYear or ReportFieldTransform.Quarter or ReportFieldTransform.Year => BucketSize.Month,
+            DataFieldTransform.Hour => BucketSize.Hour,
+            DataFieldTransform.Day or DataFieldTransform.DayOfWeek or DataFieldTransform.Week => BucketSize.Day,
+            DataFieldTransform.Month or DataFieldTransform.MonthOfYear or DataFieldTransform.Quarter or DataFieldTransform.Year => BucketSize.Month,
             _ => null,
         };
 
-        if (transform == ReportFieldTransform.None)
+        if (transform == DataFieldTransform.None)
         {
             return true;
         }
 
-        return size is not null && ReportDataValues.IsTemporal(dataType) && (size != BucketSize.Hour || dataType == ReportDataType.DateTime);
+        return size is not null && DataValues.IsTemporal(dataType) && (size != BucketSize.Hour || dataType == DataFieldType.DateTime);
     }
 
     // The bucket boundaries of a date dimension over the range the conditions allow, or the range of the data when they
@@ -285,14 +286,14 @@ public sealed partial class ReportQueryEngine
     // local starts give each bucket its value; the UTC boundaries are what the source compares. Null when there would
     // be too many buckets.
     private static async Task<BucketBoundaries> BucketBoundariesAsync(
-        IReportAggregateDataSource source,
-        ReportAggregateQuery query,
+        IDataAggregateSource source,
+        DataAggregateQuery query,
         PlannedField field,
         BucketSize size,
         ReportQueryExecutionContext context,
         CancellationToken cancellationToken)
     {
-        var isDateTime = field.DataType == ReportDataType.DateTime;
+        var isDateTime = field.DataType == DataFieldType.DateTime;
         DateTime? lower = null;
         DateTime? upper = null;
 
@@ -303,11 +304,11 @@ public sealed partial class ReportQueryEngine
                 continue;
             }
 
-            if (condition.Operator is ReportFilterOperator.GreaterThan or ReportFilterOperator.GreaterThanOrEqual)
+            if (condition.Operator is DataFilterOperator.GreaterThan or DataFilterOperator.GreaterThanOrEqual)
             {
                 lower = lower is null || value > lower ? value : lower;
             }
-            else if (condition.Operator is ReportFilterOperator.LessThan or ReportFilterOperator.LessThanOrEqual)
+            else if (condition.Operator is DataFilterOperator.LessThan or DataFilterOperator.LessThanOrEqual)
             {
                 upper = upper is null || value < upper ? value : upper;
             }
@@ -315,7 +316,7 @@ public sealed partial class ReportQueryEngine
 
         if (lower is null || upper is null)
         {
-            var range = new ReportAggregateQuery
+            var range = new DataAggregateQuery
             {
                 DataSet = query.DataSet,
                 Context = query.Context,
@@ -327,20 +328,20 @@ public sealed partial class ReportQueryEngine
                 range.Conditions.Add(condition);
             }
 
-            range.Measures.Add(new ReportAggregateMeasure { Field = field.FieldName, Kind = ReportAggregateKind.Min });
-            range.Measures.Add(new ReportAggregateMeasure { Field = field.FieldName, Kind = ReportAggregateKind.Max });
+            range.Measures.Add(new DataAggregateMeasure { Field = field.FieldName, Function = DataAggregate.Min });
+            range.Measures.Add(new DataAggregateMeasure { Field = field.FieldName, Function = DataAggregate.Max });
 
             var table = await source.AggregateAsync(range, cancellationToken);
 
-            if (table?.Rows is null)
+            if (table is null)
             {
                 return null;
             }
 
-            var row = table.Rows.FirstOrDefault();
+            var row = table.Count > 0 ? table[0] : null;
 
-            lower ??= ReportDataValues.Coerce(row?.ElementAtOrDefault(0), ReportDataType.DateTime) as DateTime?;
-            upper ??= ReportDataValues.Coerce(row?.ElementAtOrDefault(1), ReportDataType.DateTime) as DateTime?;
+            lower ??= DataValues.Coerce(row?.ElementAtOrDefault(0), DataFieldType.DateTime) as DateTime?;
+            upper ??= DataValues.Coerce(row?.ElementAtOrDefault(1), DataFieldType.DateTime) as DateTime?;
 
             // No dated rows: every row falls in the group without a date.
             if (lower is null || upper is null)

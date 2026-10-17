@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -18,7 +18,7 @@ public static class ReportViewSnapshotData
     /// <param name="snapshot">The snapshot to fill.</param>
     /// <param name="table">The view's result.</param>
     /// <param name="maxRows">The most rows to keep.</param>
-    public static void Fill(ReportViewSnapshot snapshot, ReportDataTable table, int maxRows)
+    public static void Fill(ReportViewSnapshot snapshot, DataRowSet table, int maxRows)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(table);
@@ -43,7 +43,7 @@ public static class ReportViewSnapshotData
             {
                 Name = field.Name,
                 Label = field.DisplayName,
-                DataType = field.DataType,
+                DataType = field.Type,
             })
             .ToList();
         snapshot.Rows = rows;
@@ -58,7 +58,7 @@ public static class ReportViewSnapshotData
     /// <param name="snapshot">The snapshot.</param>
     /// <param name="fields">The fields the view has now.</param>
     /// <returns><see langword="true"/> when the snapshot matches.</returns>
-    public static bool Matches(ReportViewSnapshot snapshot, IList<ReportFieldDescriptor> fields)
+    public static bool Matches(ReportViewSnapshot snapshot, IList<DataField> fields)
     {
         ArgumentNullException.ThrowIfNull(fields);
 
@@ -70,7 +70,7 @@ public static class ReportViewSnapshotData
         for (var index = 0; index < fields.Count; index++)
         {
             if (!string.Equals(snapshot.Fields[index].Name, fields[index].Name, StringComparison.Ordinal) ||
-                snapshot.Fields[index].DataType != fields[index].DataType)
+                snapshot.Fields[index].DataType != fields[index].Type)
             {
                 return false;
             }
@@ -86,7 +86,7 @@ public static class ReportViewSnapshotData
     /// <param name="requestedFields">The fields to return, or an empty set for all of them.</param>
     /// <param name="maxRows">The most rows to return.</param>
     /// <returns>The table, whose values have the CLR types of their fields and whose date-times are in UTC.</returns>
-    public static ReportDataTable ToTable(ReportViewSnapshot snapshot, ISet<string> requestedFields, int maxRows)
+    public static DataRowSet ToTable(ReportViewSnapshot snapshot, ISet<string> requestedFields, int maxRows)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -121,10 +121,10 @@ public static class ReportViewSnapshotData
             rows.Add(row);
         }
 
-        return new ReportDataTable
+        return new DataRowSet
         {
             Fields = selected
-                .Select(entry => new ReportFieldDescriptor(entry.Field.Name, entry.Field.Label, entry.Field.DataType))
+                .Select(entry => new DataField(entry.Field.Name, entry.Field.Label, entry.Field.DataType))
                 .ToList(),
             Rows = rows,
             Truncated = snapshot.Truncated || source.Count > limit,
@@ -167,12 +167,12 @@ public static class ReportViewSnapshotData
     /// <param name="node">The stored JSON.</param>
     /// <param name="dataType">The field's data type.</param>
     /// <returns>The value, or <see langword="null"/>.</returns>
-    public static object FromNode(JsonNode node, ReportDataType dataType)
+    public static object FromNode(JsonNode node, DataFieldType dataType)
     {
-        var value = ReportDataValues.Coerce(node, dataType);
+        var value = DataValues.Coerce(node, dataType);
 
         // A view hands its date-times back in UTC.
-        return dataType == ReportDataType.DateTime && value is DateTime date && date.Kind != DateTimeKind.Utc
+        return dataType == DataFieldType.DateTime && value is DateTime date && date.Kind != DateTimeKind.Utc
             ? (date.Kind == DateTimeKind.Local ? date.ToUniversalTime() : DateTime.SpecifyKind(date, DateTimeKind.Utc))
             : value;
     }

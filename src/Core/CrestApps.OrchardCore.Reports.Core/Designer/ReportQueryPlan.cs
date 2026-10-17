@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Reports.Designer.Expressions;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -83,12 +83,12 @@ public sealed class PlannedDataSet
     /// <summary>
     /// Gets or sets the data source.
     /// </summary>
-    public IReportDataSource Source { get; set; }
+    public IDataSource Source { get; set; }
 
     /// <summary>
     /// Gets or sets the schema of the data set.
     /// </summary>
-    public ReportDataSetSchema Schema { get; set; }
+    public DataSetSchema Schema { get; set; }
 
     /// <summary>
     /// Gets the slot of each field the query reads, by field name.
@@ -141,7 +141,7 @@ public sealed class PlannedField
     /// <summary>
     /// Gets or sets the type of the field values.
     /// </summary>
-    public ReportDataType DataType { get; set; }
+    public DataFieldType DataType { get; set; }
 
     /// <summary>
     /// Gets or sets where the values come from.
@@ -187,7 +187,7 @@ public sealed class PlannedJoin
     /// <summary>
     /// Gets or sets the join type.
     /// </summary>
-    public ReportJoinType Type { get; set; }
+    public DataJoinType Type { get; set; }
 
     /// <summary>
     /// Gets the slot pairs that must be equal, with whether the pair compares as text because the types differ.
@@ -218,7 +218,7 @@ public sealed class PlannedFilter
     /// <summary>
     /// Gets or sets the type of the values compared.
     /// </summary>
-    public ReportDataType DataType { get; set; }
+    public DataFieldType DataType { get; set; }
 }
 
 /// <summary>
@@ -244,7 +244,7 @@ public sealed class PlannedColumn
     /// <summary>
     /// Gets or sets the type of the column values.
     /// </summary>
-    public ReportDataType DataType { get; set; }
+    public DataFieldType DataType { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the column is a measure.

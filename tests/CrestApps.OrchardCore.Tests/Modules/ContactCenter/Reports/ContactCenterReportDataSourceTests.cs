@@ -10,16 +10,17 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 using CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
-using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
@@ -100,13 +101,13 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session, allowedPermissions: []);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
         var schema = await source.GetSchemaAsync(ContactCenterReportDataSets.Interactions, context, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query(ContactCenterReportDataSets.Interactions), TestContext.Current.CancellationToken);
-        var withoutUser = await source.GetDataSetsAsync(new ReportDataSourceContext(), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(ContactCenterReportDataSets.Interactions), TestContext.Current.CancellationToken);
+        var withoutUser = await source.GetDataSetsAsync(new DataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(dataSets);
@@ -121,7 +122,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session, allowedPermissions: [ContactCenterPermissions.ViewReports]);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
@@ -142,7 +143,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         var source = Source(session);
 
         // Act
-        var schema = await source.GetSchemaAsync(ContactCenterReportDataSets.Interactions, new ReportDataSourceContext { User = _user }, TestContext.Current.CancellationToken);
+        var schema = await source.GetSchemaAsync(ContactCenterReportDataSets.Interactions, new DataSourceContext { User = _user }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(schema.FindField(ContactCenterReportDataSets.ItemIdField).IsIdentifier);
@@ -150,9 +151,9 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         AssertReference(schema.FindField(nameof(Interaction.QueueId)), ContactCenterReportDataSets.Source, ContactCenterReportDataSets.Queues, ContactCenterReportDataSets.ItemIdField);
         AssertReference(schema.FindField(nameof(Interaction.ActivityItemId)), "Omnichannel", "Activities", ContactCenterReportDataSets.ItemIdField);
         AssertReference(schema.FindField(nameof(Interaction.CreatedById)), ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField);
-        Assert.Equal(ReportDataType.DateTime, schema.FindField(nameof(Interaction.CreatedUtc)).DataType);
-        Assert.Equal(ReportDataType.Decimal, schema.FindField("TalkSeconds").DataType);
-        Assert.Equal(ReportDataType.Integer, schema.FindField("Dialer.AttemptNumber").DataType);
+        Assert.Equal(DataFieldType.DateTime, schema.FindField(nameof(Interaction.CreatedUtc)).Type);
+        Assert.Equal(DataFieldType.Decimal, schema.FindField("TalkSeconds").Type);
+        Assert.Equal(DataFieldType.Integer, schema.FindField("Dialer.AttemptNumber").Type);
         Assert.Contains(schema.DataSet.References, reference => reference.DataSet == ContactCenterReportDataSets.AgentProfiles);
         Assert.DoesNotContain(schema.Fields, field => field.Name is nameof(Interaction.TechnicalMetadata) or nameof(Interaction.HandoffSummary) or nameof(Interaction.RecordingReference));
     }
@@ -183,7 +184,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
             "Dialer.AgentJoinedUtc");
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(16, table.Fields.Count);
@@ -227,7 +228,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         query.MaxRows = 2;
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["interaction-newest", "interaction-middle"], Rows(table).Select(row => row[ContactCenterReportDataSets.ItemIdField]));
@@ -243,22 +244,22 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         var rowsOnly = new ReportDataSourceWithoutGrouping(grouping);
         var query = new ReportQueryDefinition
         {
-            DataSets = [new ReportDataSetReference { Alias = "I", Source = grouping.Name, DataSet = ContactCenterReportDataSets.Interactions }],
+            DataSets = [new ReportDataSetReference { Alias = "I", Source = ContactCenterReportDataSets.Source, DataSet = ContactCenterReportDataSets.Interactions }],
             Columns =
             [
-                ReportDesignerTestServices.Column("day", "I.CreatedUtc", transform: ReportFieldTransform.Day),
+                ReportDesignerTestServices.Column("day", "I.CreatedUtc", transform: DataFieldTransform.Day),
                 ReportDesignerTestServices.Column("direction", "I.Direction"),
                 ReportDesignerTestServices.Column("n", "$count"),
             ],
         };
         var context = ReportDesignerTestServices.Context(_midnight.AddDays(1));
-        context.DataSourceContext = new ReportDataSourceContext { User = _user };
+        context.DataSourceContext = new DataSourceContext { User = _user };
         context.ToLocal = utc => DateTime.SpecifyKind(utc.AddHours(-5), DateTimeKind.Unspecified);
         context.ToUtc = local => DateTime.SpecifyKind(local.AddHours(5), DateTimeKind.Utc);
 
         // Act
-        var expected = await ReportDesignerTestServices.Engine(rowsOnly).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
-        var actual = await ReportDesignerTestServices.Engine(grouping).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+        var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(ContactCenterReportDataSets.Source, rowsOnly)).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
+        var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(ContactCenterReportDataSets.Source, grouping)).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(actual.GroupedBySource);
@@ -266,29 +267,29 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         Assert.Equal(expected.Rows, actual.Rows);
     }
 
-    private sealed class ReportDataSourceWithoutGrouping : IReportDataSource
+    private sealed class ReportDataSourceWithoutGrouping : IDataSource
     {
-        private readonly IReportDataSource _inner;
+        private readonly IDataSource _inner;
 
-        public ReportDataSourceWithoutGrouping(IReportDataSource inner)
+        public ReportDataSourceWithoutGrouping(IDataSource inner)
         {
             _inner = inner;
         }
 
-        public string Name => _inner.Name;
+        public static string Name => "RowsOnly";
 
-        public LocalizedString DisplayName => _inner.DisplayName;
+        public static LocalizationSource DisplayName { get; } = LocalizationSource.Create("Rows only");
 
-        public LocalizedString Description => _inner.Description;
+        public static LocalizationSource Description { get; } = LocalizationSource.Create("Rows only");
 
-        public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
             => _inner.GetDataSetsAsync(context, cancellationToken);
 
-        public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
             => _inner.GetSchemaAsync(dataSet, context, cancellationToken);
 
-        public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
-            => _inner.QueryAsync(query, cancellationToken);
+        public IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, CancellationToken cancellationToken = default)
+            => _inner.ReadAsync(query, cancellationToken);
     }
 
     [Fact]
@@ -298,11 +299,11 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var source = Source(session);
         var query = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
-        query.Conditions.Add(new ReportDataCondition { Field = ContactCenterReportDataSets.ItemIdField, Operator = ReportFilterOperator.In, Values = ["interaction-middle", "missing"], IsJoinKey = true });
+        query.Conditions.Add(new DataCondition { Field = ContactCenterReportDataSets.ItemIdField, Operator = DataFilterOperator.In, Values = ["interaction-middle", "missing"], IsJoinKey = true });
         var schema = await source.GetSchemaAsync(ContactCenterReportDataSets.Interactions, query.Context, TestContext.Current.CancellationToken);
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["interaction-middle"], Rows(table).Select(row => row[ContactCenterReportDataSets.ItemIdField]));
@@ -312,18 +313,18 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(ReportFilterOperator.GreaterThanOrEqual)]
-    [InlineData(ReportFilterOperator.GreaterThan)]
-    public async Task Interactions_LowerBound_KeepsTheRowOnTheBound_AndLeavesOutOlderRows(ReportFilterOperator filterOperator)
+    [InlineData(DataFilterOperator.GreaterThanOrEqual)]
+    [InlineData(DataFilterOperator.GreaterThan)]
+    public async Task Interactions_LowerBound_KeepsTheRowOnTheBound_AndLeavesOutOlderRows(DataFilterOperator filterOperator)
     {
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
         var query = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
-        query.Conditions.Add(new ReportDataCondition { Field = nameof(Interaction.CreatedUtc), Operator = filterOperator, Values = [_midnight] });
+        query.Conditions.Add(new DataCondition { Field = nameof(Interaction.CreatedUtc), Operator = filterOperator, Values = [_midnight] });
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         // A strict bound is pushed down as an inclusive one: the report drops the row on the bound itself, the store
@@ -341,16 +342,16 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var source = Source(session);
         var between = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
-        between.Conditions.Add(new ReportDataCondition { Field = nameof(Interaction.CreatedUtc), Operator = ReportFilterOperator.Between, Values = [_midnight, _middle] });
+        between.Conditions.Add(new DataCondition { Field = nameof(Interaction.CreatedUtc), Operator = DataFilterOperator.Between, Values = [_midnight, _middle] });
         var before = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
-        before.Conditions.Add(new ReportDataCondition { Field = nameof(Interaction.CreatedUtc), Operator = ReportFilterOperator.LessThan, Values = [_middle] });
+        before.Conditions.Add(new DataCondition { Field = nameof(Interaction.CreatedUtc), Operator = DataFilterOperator.LessThan, Values = [_middle] });
         var otherField = Query(ContactCenterReportDataSets.Interactions, ContactCenterReportDataSets.ItemIdField);
-        otherField.Conditions.Add(new ReportDataCondition { Field = nameof(Interaction.EndedUtc), Operator = ReportFilterOperator.GreaterThan, Values = [_newest.AddYears(1)] });
+        otherField.Conditions.Add(new DataCondition { Field = nameof(Interaction.EndedUtc), Operator = DataFilterOperator.GreaterThan, Values = [_newest.AddYears(1)] });
 
         // Act
-        var betweenRows = Rows(await source.QueryAsync(between, TestContext.Current.CancellationToken));
-        var beforeRows = Rows(await source.QueryAsync(before, TestContext.Current.CancellationToken));
-        var otherFieldRows = Rows(await source.QueryAsync(otherField, TestContext.Current.CancellationToken));
+        var betweenRows = Rows(await ReportDesignerTestServices.ReadAsync(source, between, TestContext.Current.CancellationToken));
+        var beforeRows = Rows(await ReportDesignerTestServices.ReadAsync(source, before, TestContext.Current.CancellationToken));
+        var otherFieldRows = Rows(await ReportDesignerTestServices.ReadAsync(source, otherField, TestContext.Current.CancellationToken));
 
         // Assert
         Assert.Equal(["interaction-middle", "interaction-midnight"], betweenRows.Select(row => row[ContactCenterReportDataSets.ItemIdField]));
@@ -371,8 +372,8 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
             new SharedVoicemailAccess { CanAccess = true, QueueIds = ["queue-entitled"] });
 
         // Act
-        var dataSets = await source.GetDataSetsAsync(new ReportDataSourceContext { User = _user }, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query(ContactCenterReportDataSets.SharedVoicemails, ContactCenterReportDataSets.ItemIdField, nameof(SharedVoicemail.QueueId)), TestContext.Current.CancellationToken);
+        var dataSets = await source.GetDataSetsAsync(new DataSourceContext { User = _user }, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(ContactCenterReportDataSets.SharedVoicemails, ContactCenterReportDataSets.ItemIdField, nameof(SharedVoicemail.QueueId)), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(dataSets, dataSet => dataSet.Name == ContactCenterReportDataSets.SharedVoicemails);
@@ -389,20 +390,20 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         var services = new ServiceCollection();
         services.AddScoped(_ => Mock.Of<ISession>());
         services.AddSingleton(Authorization(_allPermissions));
-        services.AddSingleton(typeof(IStringLocalizer<>), typeof(ContentReportTestLocalizer<>));
-        new ReportBuilderStartup().ConfigureServices(services);
-        new RecordingReportBuilderStartup().ConfigureServices(services);
+        services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
+        new DataSourcesStartup().ConfigureServices(services);
+        new RecordingDataSourcesStartup().ConfigureServices(services);
 
         await using var provider = services.BuildServiceProvider();
         await using var scope = provider.CreateAsyncScope();
-        var source = Assert.Single(scope.ServiceProvider.GetServices<IReportDataSource>());
+        var source = scope.ServiceProvider.GetRequiredService<ContactCenterReportDataSource>();
 
         // Act
-        var dataSets = await source.GetDataSetsAsync(new ReportDataSourceContext { User = _user }, TestContext.Current.CancellationToken);
-        var queues = await source.GetSchemaAsync(ContactCenterReportDataSets.Queues, new ReportDataSourceContext { User = _user }, TestContext.Current.CancellationToken);
+        var dataSets = await source.GetDataSetsAsync(new DataSourceContext { User = _user }, TestContext.Current.CancellationToken);
+        var queues = await source.GetSchemaAsync(ContactCenterReportDataSets.Queues, new DataSourceContext { User = _user }, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(ContactCenterReportDataSets.Source, source.Name);
+        Assert.Equal(ContactCenterReportDataSets.Source, ContactCenterReportDataSource.Name);
         Assert.Equal(
             [
                 ContactCenterReportDataSets.Interactions,
@@ -416,14 +417,14 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData(typeof(ReportBuilderStartup), null)]
-    [InlineData(typeof(QueuesReportBuilderStartup), ContactCenterConstants.Feature.Queues)]
-    [InlineData(typeof(DialerReportBuilderStartup), ContactCenterConstants.Feature.Dialer)]
-    [InlineData(typeof(RecordingReportBuilderStartup), ContactCenterConstants.Feature.Recording)]
-    [InlineData(typeof(AgentServicesReportBuilderStartup), ContactCenterConstants.Feature.AgentServices)]
-    [InlineData(typeof(AgentsReportBuilderStartup), ContactCenterConstants.Feature.Agents)]
-    [InlineData(typeof(InboundVoiceReportBuilderStartup), ContactCenterConstants.Feature.InboundVoice)]
-    public void Startups_BelongToTheFeatureThatStoresTheirRecords_AndRequireTheReportBuilder(Type startupType, string featureId)
+    [InlineData(typeof(DataSourcesStartup), null)]
+    [InlineData(typeof(QueuesDataSourcesStartup), ContactCenterConstants.Feature.Queues)]
+    [InlineData(typeof(DialerDataSourcesStartup), ContactCenterConstants.Feature.Dialer)]
+    [InlineData(typeof(RecordingDataSourcesStartup), ContactCenterConstants.Feature.Recording)]
+    [InlineData(typeof(AgentServicesDataSourcesStartup), ContactCenterConstants.Feature.AgentServices)]
+    [InlineData(typeof(AgentsDataSourcesStartup), ContactCenterConstants.Feature.Agents)]
+    [InlineData(typeof(InboundVoiceDataSourcesStartup), ContactCenterConstants.Feature.InboundVoice)]
+    public void Startups_BelongToTheFeatureThatStoresTheirRecords_AndRequireDataPipelinesCore(Type startupType, string featureId)
     {
         // Arrange
         // A startup without a feature attribute belongs to the module's base feature.
@@ -435,7 +436,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         // Assert
         Assert.Equal(featureId, feature?.FeatureName);
         Assert.NotNull(required);
-        Assert.Equal([ReportsConstants.BuilderFeature], required.RequiredFeatureNames);
+        Assert.Equal(["OrchardCore.DataPipelines.Core"], required.RequiredFeatureNames);
     }
 
     [Fact]
@@ -445,13 +446,13 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         var services = new ServiceCollection();
 
         // Act
-        new ReportBuilderStartup().ConfigureServices(services);
-        new QueuesReportBuilderStartup().ConfigureServices(services);
-        new DialerReportBuilderStartup().ConfigureServices(services);
-        new RecordingReportBuilderStartup().ConfigureServices(services);
-        new AgentServicesReportBuilderStartup().ConfigureServices(services);
-        new AgentsReportBuilderStartup().ConfigureServices(services);
-        new InboundVoiceReportBuilderStartup().ConfigureServices(services);
+        new DataSourcesStartup().ConfigureServices(services);
+        new QueuesDataSourcesStartup().ConfigureServices(services);
+        new DialerDataSourcesStartup().ConfigureServices(services);
+        new RecordingDataSourcesStartup().ConfigureServices(services);
+        new AgentServicesDataSourcesStartup().ConfigureServices(services);
+        new AgentsDataSourcesStartup().ConfigureServices(services);
+        new InboundVoiceDataSourcesStartup().ConfigureServices(services);
 
         // Assert
         var dataSetTypes = services
@@ -490,13 +491,13 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
 
         IContactCenterReportDataSet[] dataSets =
         [
-            new InteractionReportDataSet(session, authorizationService, new ContentReportTestLocalizer<InteractionReportDataSet>()),
-            new CallRecordingReportDataSet(session, authorizationService, new ContentReportTestLocalizer<CallRecordingReportDataSet>()),
-            new CallSessionReportDataSet(session, authorizationService, new ContentReportTestLocalizer<CallSessionReportDataSet>()),
-            new SharedVoicemailReportDataSet(session, authorizationService, voicemailAuthorization.Object, new ContentReportTestLocalizer<SharedVoicemailReportDataSet>()),
+            new InteractionReportDataSet(session, authorizationService, new PassThroughStringLocalizer<InteractionReportDataSet>()),
+            new CallRecordingReportDataSet(session, authorizationService, new PassThroughStringLocalizer<CallRecordingReportDataSet>()),
+            new CallSessionReportDataSet(session, authorizationService, new PassThroughStringLocalizer<CallSessionReportDataSet>()),
+            new SharedVoicemailReportDataSet(session, authorizationService, voicemailAuthorization.Object, new PassThroughStringLocalizer<SharedVoicemailReportDataSet>()),
         ];
 
-        return new ContactCenterReportDataSource(dataSets, new ContentReportTestLocalizer<ContactCenterReportDataSource>());
+        return new ContactCenterReportDataSource(dataSets);
     }
 
     private static IAuthorizationService Authorization(IEnumerable<Permission> allowedPermissions)
@@ -565,18 +566,18 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         };
     }
 
-    private static ReportDataSourceQuery Query(string dataSet, params string[] fields)
+    private static DataSourceQuery Query(string dataSet, params string[] fields)
     {
-        return new ReportDataSourceQuery
+        return new DataSourceQuery
         {
             DataSet = dataSet,
             Fields = new HashSet<string>(fields, StringComparer.Ordinal),
             MaxRows = 100,
-            Context = new ReportDataSourceContext { User = _user },
+            Context = new DataSourceContext { User = _user },
         };
     }
 
-    private static void AssertReference(ReportFieldDescriptor field, string source, string dataSet, string fieldName)
+    private static void AssertReference(DataField field, string source, string dataSet, string fieldName)
     {
         Assert.True(field.IsIdentifier);
 
@@ -586,7 +587,7 @@ public sealed class ContactCenterReportDataSourceTests : IAsyncLifetime
         Assert.Equal(fieldName, reference.Field);
     }
 
-    private static List<Dictionary<string, object>> Rows(ReportDataTable table)
+    private static List<Dictionary<string, object>> Rows(DataRowSet table)
     {
         return table.Rows
             .Select(row => table.Fields.Select((field, index) => (field.Name, Value: row[index])).ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal))

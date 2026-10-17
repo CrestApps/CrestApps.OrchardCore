@@ -1,24 +1,24 @@
 using CrestApps.OrchardCore.ContactCenter.Reports.DataSources;
 using CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DataSources;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
-/// Exposes the Contact Center to the report builder when it is enabled: the Contact Center data source, and the data
+/// Exposes the Contact Center as a data source of Orchard Core, for reports and data pipelines: the data source, and the data
 /// sets of the records the base feature stores (interactions, their events, call sessions, and call quality). Every
 /// other feature registers the data sets of its own records, so a data set is listed only while its feature is on.
 /// </summary>
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class ReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IReportDataSource, ContactCenterReportDataSource>()
+            .AddDataSource<ContactCenterReportDataSource>()
             .AddScoped<IContactCenterReportDataSet, InteractionReportDataSet>()
             .AddScoped<IContactCenterReportDataSet, InteractionEventReportDataSet>()
             .AddScoped<IContactCenterReportDataSet, CallSessionReportDataSet>()
@@ -27,11 +27,11 @@ public sealed class ReportBuilderStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the report builder data sets of the work distribution feature: queues, queue groups, and queue items.
+/// Registers the data sets of the work distribution feature: queues, queue groups, and queue items.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Queues)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class QueuesReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class QueuesDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -43,11 +43,11 @@ public sealed class QueuesReportBuilderStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the report builder data sets of the outbound dialer feature: dialer profiles and callback requests.
+/// Registers the data sets of the outbound dialer feature: dialer profiles and callback requests.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Dialer)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class DialerReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DialerDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -58,11 +58,11 @@ public sealed class DialerReportBuilderStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the report builder data set of the call recording feature.
+/// Registers the data set of the call recording feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Recording)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class RecordingReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class RecordingDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -71,11 +71,11 @@ public sealed class RecordingReportBuilderStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the report builder data set of the agent services feature: agent profiles.
+/// Registers the data set of the agent services feature: agent profiles.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.AgentServices)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class AgentServicesReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class AgentServicesDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -84,11 +84,11 @@ public sealed class AgentServicesReportBuilderStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the report builder data set of the agents feature: agent sessions.
+/// Registers the data set of the agents feature: agent sessions.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Agents)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class AgentsReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class AgentsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -97,11 +97,11 @@ public sealed class AgentsReportBuilderStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the report builder data set of the inbound voice feature: shared voicemails.
+/// Registers the data set of the inbound voice feature: shared voicemails.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.InboundVoice)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class InboundVoiceReportBuilderStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class InboundVoiceDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {

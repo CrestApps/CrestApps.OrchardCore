@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 
@@ -16,11 +16,11 @@ public sealed class ReportDesignNormalizerTests
         {
             Joins =
             [
-                new ReportJoinDefinition { Alias = "Customer", Type = ReportJoinType.Left, Conditions = [new ReportJoinCondition()] },
+                new ReportJoinDefinition { Alias = "Customer", Type = DataJoinType.Left, Conditions = [new ReportJoinCondition()] },
                 new ReportJoinDefinition
                 {
                     Alias = "customer",
-                    Type = ReportJoinType.Inner,
+                    Type = DataJoinType.Inner,
                     Conditions =
                     [
                         new ReportJoinCondition { LeftField = "Users.UserId", RightField = "Customer.Owner" },
@@ -37,7 +37,7 @@ public sealed class ReportDesignNormalizerTests
         // Assert
         Assert.Equal(["Customer", "Order"], normalized.Joins.Select(join => join.Alias));
         var customer = normalized.Joins[0];
-        Assert.Equal(ReportJoinType.Left, customer.Type);
+        Assert.Equal(DataJoinType.Left, customer.Type);
         var condition = Assert.Single(customer.Conditions);
         Assert.Equal("Users.UserId", condition.LeftField);
         Assert.Equal("Customer.Owner", condition.RightField);
@@ -49,14 +49,14 @@ public sealed class ReportDesignNormalizerTests
         // Arrange
         var query = new ReportQueryDefinition
         {
-            Filters = [new ReportFilterDefinition { Id = "f1", Field = "A.CreatedUtc", Exposed = true, Control = ReportFilterControl.RelativeDate, Operator = ReportFilterOperator.Between, Values = ["30"] }],
+            Filters = [new ReportFilterDefinition { Id = "f1", Field = "A.CreatedUtc", Exposed = true, Control = ReportFilterControl.RelativeDate, Operator = DataFilterOperator.Between, Values = ["30"] }],
         };
 
         // Act
         var filter = Assert.Single(ReportDesignNormalizer.Normalize(query).Filters);
 
         // Assert
-        Assert.Equal(ReportFilterOperator.InLastDays, filter.Operator);
+        Assert.Equal(DataFilterOperator.InLastDays, filter.Operator);
     }
 
     [Fact]

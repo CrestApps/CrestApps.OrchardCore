@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -30,7 +31,7 @@ public sealed class InteractionReportDataSet : ContactCenterReportDataSet<Intera
         IAuthorizationService authorizationService,
         IStringLocalizer<InteractionReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.Interactions,
                 stringLocalizer["Interactions"],
                 stringLocalizer["One row per interaction: a call, message, or other communication attempt, with its routing and timeline."]),
@@ -42,47 +43,49 @@ public sealed class InteractionReportDataSet : ContactCenterReportDataSet<Intera
         var timeline = S["Timeline"].Value;
         var dialer = S["Dialer"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Interaction ID"], ReportDataType.Text, record => record.ItemId, interaction, isIdentifier: true);
-        AddField(nameof(Interaction.Channel), S["Channel"], ReportDataType.Text, record => record.Channel, interaction);
-        AddField(nameof(Interaction.Direction), S["Direction"], ReportDataType.Text, record => record.Direction, interaction);
-        AddField(nameof(Interaction.Status), S["Status"], ReportDataType.Text, record => record.Status, interaction);
-        AddField(nameof(Interaction.ActivityItemId), S["Activity ID"], ReportDataType.Text, record => record.ActivityItemId, interaction, isIdentifier: true, ContactCenterReportDataSets.ActivityReference());
-        AddField(nameof(Interaction.ProviderName), S["Provider"], ReportDataType.Text, record => record.ProviderName, interaction);
-        AddField(nameof(Interaction.CustomerAddress), S["Customer address"], ReportDataType.Text, record => record.CustomerAddress, interaction);
-        AddField(nameof(Interaction.QueueId), S["Queue ID"], ReportDataType.Text, record => record.QueueId, interaction, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
-        AddField(nameof(Interaction.AgentId), S["Agent ID"], ReportDataType.Text, record => record.AgentId, interaction, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentProfiles));
-        AddField(nameof(Interaction.CorrelationId), S["Correlation ID"], ReportDataType.Text, record => record.CorrelationId, interaction, isIdentifier: true);
-        AddField(nameof(Interaction.RecordingState), S["Recording state"], ReportDataType.Text, record => record.RecordingState, interaction);
-        AddField(nameof(Interaction.RecordingLegalHold), S["Recording on legal hold"], ReportDataType.Boolean, record => record.RecordingLegalHold, interaction);
-        AddField(nameof(Interaction.HandoffReason), S["Handoff reason"], ReportDataType.Text, record => record.HandoffReason, interaction);
-        AddField("TransferCount", S["Transfers"], ReportDataType.Integer, record => record.TransferHistory?.Count ?? 0, interaction);
-        AddField(nameof(Interaction.CreatedById), S["Created by user ID"], ReportDataType.Text, record => record.CreatedById, interaction, isIdentifier: true, ContactCenterReportDataSets.UserReference());
-        AddField(nameof(Interaction.CreatedByUserName), S["Created by"], ReportDataType.Text, record => record.CreatedByUserName, interaction);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Interaction ID"], DataFieldType.Text, record => record.ItemId, interaction).Identifier();
+        AddField(nameof(Interaction.Channel), S["Channel"], DataFieldType.Text, record => record.Channel, interaction);
+        AddField(nameof(Interaction.Direction), S["Direction"], DataFieldType.Text, record => record.Direction, interaction);
+        AddField(nameof(Interaction.Status), S["Status"], DataFieldType.Text, record => record.Status, interaction);
+        AddField(nameof(Interaction.ActivityItemId), S["Activity ID"], DataFieldType.Text, record => record.ActivityItemId, interaction).Identifier(ContactCenterReportDataSets.ActivityReference());
+        AddField(nameof(Interaction.ProviderName), S["Provider"], DataFieldType.Text, record => record.ProviderName, interaction);
+        AddField(nameof(Interaction.CustomerAddress), S["Customer address"], DataFieldType.Text, record => record.CustomerAddress, interaction);
+        AddField(nameof(Interaction.QueueId), S["Queue ID"], DataFieldType.Text, record => record.QueueId, interaction).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
+        AddField(nameof(Interaction.AgentId), S["Agent ID"], DataFieldType.Text, record => record.AgentId, interaction).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentProfiles));
+        AddField(nameof(Interaction.CorrelationId), S["Correlation ID"], DataFieldType.Text, record => record.CorrelationId, interaction).Identifier();
+        AddField(nameof(Interaction.RecordingState), S["Recording state"], DataFieldType.Text, record => record.RecordingState, interaction);
+        AddField(nameof(Interaction.RecordingLegalHold), S["Recording on legal hold"], DataFieldType.Boolean, record => record.RecordingLegalHold, interaction);
+        AddField(nameof(Interaction.HandoffReason), S["Handoff reason"], DataFieldType.Text, record => record.HandoffReason, interaction);
+        AddField("TransferCount", S["Transfers"], DataFieldType.Integer, record => record.TransferHistory?.Count ?? 0, interaction);
+        AddField(nameof(Interaction.CreatedById), S["Created by user ID"], DataFieldType.Text, record => record.CreatedById, interaction).Identifier(ContactCenterReportDataSets.UserReference());
+        AddField(nameof(Interaction.CreatedByUserName), S["Created by"], DataFieldType.Text, record => record.CreatedByUserName, interaction);
 
-        AddField(nameof(Interaction.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, timeline);
-        AddField(nameof(Interaction.StartedUtc), S["Started"], ReportDataType.DateTime, record => record.StartedUtc, timeline);
-        AddField(nameof(Interaction.AnsweredUtc), S["Answered"], ReportDataType.DateTime, record => record.AnsweredUtc, timeline);
-        AddField(nameof(Interaction.EndedUtc), S["Ended"], ReportDataType.DateTime, record => record.EndedUtc, timeline);
-        AddField(nameof(Interaction.WrapUpStartedUtc), S["Wrap-up started"], ReportDataType.DateTime, record => record.WrapUpStartedUtc, timeline);
-        AddField(nameof(Interaction.WrapUpCompletedUtc), S["Wrap-up completed"], ReportDataType.DateTime, record => record.WrapUpCompletedUtc, timeline);
-        AddField(nameof(Interaction.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, timeline);
+        AddField(nameof(Interaction.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, timeline);
+        AddField(nameof(Interaction.StartedUtc), S["Started"], DataFieldType.DateTime, record => record.StartedUtc, timeline);
+        AddField(nameof(Interaction.AnsweredUtc), S["Answered"], DataFieldType.DateTime, record => record.AnsweredUtc, timeline);
+        AddField(nameof(Interaction.EndedUtc), S["Ended"], DataFieldType.DateTime, record => record.EndedUtc, timeline);
+        AddField(nameof(Interaction.WrapUpStartedUtc), S["Wrap-up started"], DataFieldType.DateTime, record => record.WrapUpStartedUtc, timeline);
+        AddField(nameof(Interaction.WrapUpCompletedUtc), S["Wrap-up completed"], DataFieldType.DateTime, record => record.WrapUpCompletedUtc, timeline);
+        AddField(nameof(Interaction.ModifiedUtc), S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc, timeline);
 
         // The same measures the Contact Center reports use, left empty when the interaction never reached the point
         // they are measured from, so an average counts only the interactions that have one.
-        AddField("WaitSeconds", S["Wait (seconds)"], ReportDataType.Decimal, record => SecondsBetween(record.CreatedUtc, record.AnsweredUtc), timeline);
-        AddField("TalkSeconds", S["Talk (seconds)"], ReportDataType.Decimal, record => SecondsBetween(record.AnsweredUtc, record.EndedUtc), timeline);
-        AddField("WrapUpSeconds", S["Wrap-up (seconds)"], ReportDataType.Decimal, record => SecondsBetween(record.WrapUpStartedUtc, record.WrapUpCompletedUtc), timeline);
+        AddField("WaitSeconds", S["Wait (seconds)"], DataFieldType.Decimal, record => SecondsBetween(record.CreatedUtc, record.AnsweredUtc), timeline);
+        AddField("TalkSeconds", S["Talk (seconds)"], DataFieldType.Decimal, record => SecondsBetween(record.AnsweredUtc, record.EndedUtc), timeline);
+        AddField("WrapUpSeconds", S["Wrap-up (seconds)"], DataFieldType.Decimal, record => SecondsBetween(record.WrapUpStartedUtc, record.WrapUpCompletedUtc), timeline);
 
-        AddField(DialerPrefix + "ProfileId", S["Dialer profile ID"], ReportDataType.Text, DialerCallMetadata.GetDialerProfileId, dialer, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.DialerProfiles));
-        AddField(DialerPrefix + "IsCampaignDial", S["Campaign dial"], ReportDataType.Boolean, record => DialerCallMetadata.IsCampaignDial(record), dialer);
-        AddField(DialerPrefix + "AttemptNumber", S["Dial attempt"], ReportDataType.Integer, record => DialerCallMetadata.GetAttemptNumber(record), dialer);
-        AddField(DialerPrefix + "MaxAttempts", S["Dial attempts allowed"], ReportDataType.Integer, record => DialerCallMetadata.GetMaxAttempts(record), dialer);
-        AddField(DialerPrefix + "Outcome", S["Dial outcome"], ReportDataType.Text, DialerCallMetadata.GetOutcome, dialer);
-        AddField(DialerPrefix + "AnswerClassification", S["Answered by (machine detection)"], ReportDataType.Text, record => Metadata(record, ContactCenterConstants.TelephonyMetadata.AnswerClassification), dialer);
-        AddField(DialerPrefix + "AbandonedReason", S["Abandoned reason"], ReportDataType.Text, DialerCallMetadata.GetAbandonedReason, dialer);
-        AddField(DialerPrefix + "PacingModel", S["Pacing"], ReportDataType.Text, record => Metadata(record, DialerCallMetadata.PacingModelKey), dialer);
-        AddField(DialerPrefix + "LiveAnsweredUtc", S["Person answered"], ReportDataType.DateTime, record => DialerCallMetadata.GetLiveAnsweredUtc(record), dialer);
-        AddField(DialerPrefix + "AgentJoinedUtc", S["Agent joined"], ReportDataType.DateTime, record => DialerCallMetadata.GetAgentJoinedUtc(record), dialer);
+        AddField(DialerPrefix + "ProfileId", S["Dialer profile ID"], DataFieldType.Text, DialerCallMetadata.GetDialerProfileId, dialer).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.DialerProfiles));
+        AddField(DialerPrefix + "IsCampaignDial", S["Campaign dial"], DataFieldType.Boolean, record => DialerCallMetadata.IsCampaignDial(record), dialer);
+        AddField(DialerPrefix + "AttemptNumber", S["Dial attempt"], DataFieldType.Integer, record => DialerCallMetadata.GetAttemptNumber(record), dialer);
+        AddField(DialerPrefix + "MaxAttempts", S["Dial attempts allowed"], DataFieldType.Integer, record => DialerCallMetadata.GetMaxAttempts(record), dialer);
+        AddField(DialerPrefix + "Outcome", S["Dial outcome"], DataFieldType.Text, DialerCallMetadata.GetOutcome, dialer);
+        AddField(DialerPrefix + "AnswerClassification", S["Answered by (machine detection)"], DataFieldType.Text, record => Metadata(record, ContactCenterConstants.TelephonyMetadata.AnswerClassification), dialer);
+        AddField(DialerPrefix + "AbandonedReason", S["Abandoned reason"], DataFieldType.Text, DialerCallMetadata.GetAbandonedReason, dialer);
+        AddField(DialerPrefix + "PacingModel", S["Pacing"], DataFieldType.Text, record => Metadata(record, DialerCallMetadata.PacingModelKey), dialer);
+        AddField(DialerPrefix + "LiveAnsweredUtc", S["Person answered"], DataFieldType.DateTime, record => DialerCallMetadata.GetLiveAnsweredUtc(record), dialer);
+        AddField(DialerPrefix + "AgentJoinedUtc", S["Agent joined"], DataFieldType.DateTime, record => DialerCallMetadata.GetAgentJoinedUtc(record), dialer);
+
+        CompleteDescription();
     }
 
     /// <inheritdoc/>

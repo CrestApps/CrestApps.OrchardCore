@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -25,7 +26,7 @@ public sealed class ReportResultColumn
     /// <summary>
     /// Gets or sets the type of the column values.
     /// </summary>
-    public ReportDataType DataType { get; set; }
+    public DataFieldType DataType { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the column is a measure.
@@ -35,12 +36,12 @@ public sealed class ReportResultColumn
     /// <summary>
     /// Gets or sets the aggregate the column applies.
     /// </summary>
-    public ReportAggregate Aggregate { get; set; }
+    public DataAggregate Aggregate { get; set; }
 
     /// <summary>
     /// Gets or sets the transform the column applies.
     /// </summary>
-    public ReportFieldTransform Transform { get; set; }
+    public DataFieldTransform Transform { get; set; }
 
     /// <summary>
     /// Gets or sets the display format.

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
@@ -5,9 +6,11 @@ using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.DataSources;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -18,12 +21,15 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 /// The <c>ChatSessions</c> data set: one row per AI chat session. Only principals allowed to view AI chat analytics
 /// read it. The client's remote address and its hash are never exposed.
 /// </summary>
-public sealed class AIChatSessionsReportDataSet : ReportRecordDataSet<AIChatReportRecord<AIChatSession>>, IAIChatReportDataSet
+public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportRecord<AIChatSession>>, IAIChatReportDataSet
 {
     /// <summary>
     /// The technical name of the last activity field, which reads are narrowed by.
     /// </summary>
     public const string LastActivityUtcField = "LastActivityUtc";
+
+    // The index columns a join can narrow the read on.
+    private static readonly string[] _keyFields = [AIChatReportDataSource.SessionIdField, "UserId"];
 
     private readonly ISession _session;
     private readonly IAIProfileManager _profileManager;
@@ -44,10 +50,13 @@ public sealed class AIChatSessionsReportDataSet : ReportRecordDataSet<AIChatRepo
         IAuthorizationService authorizationService,
         IOptions<YesSqlStoreOptions> storeOptions,
         IStringLocalizer<AIChatSessionsReportDataSet> stringLocalizer)
-        : base(new ReportDataSetDescriptor(
+        : base(new DataSetDescriptor(
             AIChatReportDataSource.ChatSessionsDataSet,
             stringLocalizer["Chat sessions"],
-            stringLocalizer["One row per AI chat session."]))
+            stringLocalizer["One row per AI chat session."])
+        {
+            DefaultDateField = LastActivityUtcField,
+        })
     {
         _session = session;
         _profileManager = profileManager;
@@ -59,86 +68,89 @@ public sealed class AIChatSessionsReportDataSet : ReportRecordDataSet<AIChatRepo
         var activity = S["Activity"].Value;
         var processing = S["Processing"].Value;
 
-        AddField(AIChatReportDataSource.SessionIdField, S["Session ID"], ReportDataType.Text, record => record.Document.SessionId, details, isIdentifier: true);
-        AddField("ProfileId", S["Profile ID"], ReportDataType.Text, record => record.Document.ProfileId, details, isIdentifier: true);
-        AddField(AIChatReportProfileNames.ProfileNameField, S["Profile"], ReportDataType.Text, record => record.ProfileName, details);
-        AddField("Title", S["Title"], ReportDataType.Text, record => record.Document.Title, details);
+        AddField(AIChatReportDataSource.SessionIdField, S["Session ID"], DataFieldType.Text, record => record.Document.SessionId, details).Identifier();
+        AddField("ProfileId", S["Profile ID"], DataFieldType.Text, record => record.Document.ProfileId, details).Identifier();
+        AddField(AIChatReportProfileNames.ProfileNameField, S["Profile"], DataFieldType.Text, record => record.ProfileName, details);
+        AddField("Title", S["Title"], DataFieldType.Text, record => record.Document.Title, details);
         AddField(
             ReportsConstants.UserIdField,
             S["User ID"],
-            ReportDataType.Text,
-            record => record.Document.UserId,
-            details,
-            isIdentifier: true,
-            new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
-        AddField("Status", S["Status"], ReportDataType.Text, record => record.Document.Status, details);
-        AddField("ResponseHandlerName", S["Response handler"], ReportDataType.Text, record => record.Document.ResponseHandlerName, details);
-        AddField("CreatedUtc", S["Created"], ReportDataType.DateTime, record => record.Document.CreatedUtc, activity);
-        AddField("ModifiedUtc", S["Modified"], ReportDataType.DateTime, record => record.Document.ModifiedUtc, activity);
-        AddField(LastActivityUtcField, S["Last activity"], ReportDataType.DateTime, record => record.Document.LastActivityUtc, activity);
-        AddField("ClosedAtUtc", S["Closed"], ReportDataType.DateTime, record => record.Document.ClosedAtUtc, activity);
-        AddField("PostSessionProcessingStatus", S["Post-session processing"], ReportDataType.Text, record => record.Document.PostSessionProcessingStatus, processing);
+            DataFieldType.Text,
+            record => record.Document.UserId, details).Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+        AddField("Status", S["Status"], DataFieldType.Text, record => record.Document.Status, details);
+        AddField("ResponseHandlerName", S["Response handler"], DataFieldType.Text, record => record.Document.ResponseHandlerName, details);
+        AddField("CreatedUtc", S["Created"], DataFieldType.DateTime, record => record.Document.CreatedUtc, activity);
+        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, record => record.Document.ModifiedUtc, activity);
+        AddField(LastActivityUtcField, S["Last activity"], DataFieldType.DateTime, record => record.Document.LastActivityUtc, activity);
+        AddField("ClosedAtUtc", S["Closed"], DataFieldType.DateTime, record => record.Document.ClosedAtUtc, activity);
+        AddField("PostSessionProcessingStatus", S["Post-session processing"], DataFieldType.Text, record => record.Document.PostSessionProcessingStatus, processing);
+
+        Fields.MarkKeyFilterable(_keyFields);
+        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>
-    /// <inheritdoc/>
-    public override string DefaultDateField => LastActivityUtcField;
-
-    public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
+    public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         return context?.User is not null &&
             await _authorizationService.AuthorizeAsync(context.User, ChatAnalyticsPermissionProvider.ViewChatAnalytics);
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<string> KeyFilterableFields => ["SessionId", "UserId"];
-
-    /// <inheritdoc/>
-    protected override async Task<IEnumerable<AIChatReportRecord<AIChatSession>>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<AIChatReportRecord<AIChatSession>> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var (from, to) = ReportDateRange.For(query.Conditions, LastActivityUtcField);
-        var sessions = _session.Query<AIChatSession, AIChatSessionIndex>(collection: _storeOptions.AICollectionName);
+        var (from, to) = DataConditions.DateRange(query.Conditions, LastActivityUtcField);
+        var keyFilters = new List<(string Field, string[] Values)>();
 
-        foreach (var field in KeyFilterableFields)
+        foreach (var field in _keyFields)
         {
-            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
+            if (DataConditions.Keys(query.Conditions, field) is not { } keys)
             {
                 continue;
             }
 
             if (keys.Count == 0)
             {
-                return [];
+                yield break;
             }
 
-            var values = keys.ToArray();
-
-            sessions = field == "SessionId"
-                ? sessions.Where(index => index.SessionId.IsIn(values))
-                : sessions.Where(index => index.UserId.IsIn(values));
+            keyFilters.Add((field, keys.Select(key => key?.ToString()).ToArray()));
         }
 
-        if (from.HasValue)
+        IQuery<AIChatSession> Query()
         {
-            var earliest = from.Value;
-            sessions = sessions.Where(index => index.LastActivityUtc >= earliest);
+            var sessions = _session.Query<AIChatSession, AIChatSessionIndex>(collection: _storeOptions.AICollectionName);
+
+            foreach (var (field, values) in keyFilters)
+            {
+                sessions = field == AIChatReportDataSource.SessionIdField
+                    ? sessions.Where(index => index.SessionId.IsIn(values))
+                    : sessions.Where(index => index.UserId.IsIn(values));
+            }
+
+            if (from.HasValue)
+            {
+                var earliest = from.Value;
+                sessions = sessions.Where(index => index.LastActivityUtc >= earliest);
+            }
+
+            if (to.HasValue)
+            {
+                var latest = to.Value;
+                sessions = sessions.Where(index => index.LastActivityUtc <= latest);
+            }
+
+            return sessions
+                .OrderByDescending(index => index.LastActivityUtc)
+                .ThenByDescending(index => index.Id);
         }
 
-        if (to.HasValue)
-        {
-            var latest = to.Value;
-            sessions = sessions.Where(index => index.LastActivityUtc <= latest);
-        }
-
-        var documents = await sessions
-            .OrderByDescending(index => index.LastActivityUtc)
-            .ThenByDescending(index => index.Id)
-            .Take(take)
-            .ListAsync(cancellationToken);
         var profileNames = await AIChatReportProfileNames.LoadAsync(_profileManager, query, cancellationToken);
 
-        return documents
-            .Select(document => new AIChatReportRecord<AIChatSession>(document, AIChatReportProfileNames.Find(profileNames, document.ProfileId)))
-            .ToArray();
+        await foreach (var document in ReportIndexPages.ReadAsync(_session, Query, _storeOptions.AICollectionName, cancellationToken))
+        {
+            yield return new AIChatReportRecord<AIChatSession>(document, AIChatReportProfileNames.Find(profileNames, document.ProfileId));
+        }
     }
+
 }

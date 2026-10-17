@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
 using CrestApps.OrchardCore.Reports.Designer.Models;
@@ -8,6 +7,8 @@ using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DataPipelines.SharedLinks;
+using OrchardCore.DataSources;
 using OrchardCore.Modules;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module.ReportDesignerPrincipals;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.ReportDesignerTestServices;
@@ -32,7 +33,7 @@ public sealed class ReportViewsAndDesignServiceTests
             Columns =
             [
                 Column("region", "v.region"),
-                Column("revenue", "v.revenue", ReportAggregate.Sum),
+                Column("revenue", "v.revenue", DataAggregate.Sum),
             ],
             Sorts = [new ReportSortDefinition { ColumnId = "revenue", Descending = true }],
         };
@@ -56,16 +57,16 @@ public sealed class ReportViewsAndDesignServiceTests
             ItemId = "v2",
             DisplayText = "Last order",
             OwnerId = "designer",
-            Query = WithColumns(Column("name", "c.Name"), Column("last", "o.PlacedUtc", ReportAggregate.Max)),
+            Query = WithColumns(Column("name", "c.Name"), Column("last", "o.PlacedUtc", DataAggregate.Max)),
         };
         var (_, source) = Build(view);
 
         // Act
-        var table = await source.QueryAsync(new ReportDataSourceQuery
+        var table = await ReadAsync(source, new DataSourceQuery
         {
             DataSet = "v2",
             MaxRows = 100,
-            Context = new ReportDataSourceContext { User = _designer },
+            Context = new DataSourceContext { User = _designer },
         }, TestContext.Current.CancellationToken);
 
         // Assert
@@ -118,7 +119,7 @@ public sealed class ReportViewsAndDesignServiceTests
     {
         // Arrange
         var (_, source) = Build(RevenueByRegionView("v1"));
-        var context = new ReportDataSourceContext { User = User("viewer", "Viewer") };
+        var context = new DataSourceContext { User = User("viewer", "Viewer") };
 
         // Act & Assert
         Assert.Empty(await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken));
@@ -239,7 +240,7 @@ public sealed class ReportViewsAndDesignServiceTests
             ItemId = id,
             DisplayText = "Revenue by region",
             OwnerId = "designer",
-            Query = WithColumns(Column("region", "c.Region"), Column("revenue", "o.Total", ReportAggregate.Sum)),
+            Query = WithColumns(Column("region", "c.Region"), Column("revenue", "o.Total", DataAggregate.Sum)),
         };
     }
 
@@ -274,10 +275,9 @@ public sealed class ReportViewsAndDesignServiceTests
             Catalog(views),
             authorization,
             runner,
-            NoSnapshots(),
-            new PassThroughStringLocalizer<ReportViewsDataSource>());
+            NoSnapshots());
 
-        planner = new ReportQueryPlanner(new ReportDataSourceManager([SalesData(), source]), new PassThroughStringLocalizer<ReportQueryPlanner>());
+        planner = Planner(new TestDataSourceEntry("Memory", SalesData()), new TestDataSourceEntry(ReportsConstants.ViewsDataSource, source));
         engine = new ReportQueryEngine(planner, Formatter, new PassThroughStringLocalizer<ReportQueryEngine>());
 
         return (engine, source);
@@ -317,7 +317,7 @@ public sealed class ReportViewsAndDesignServiceTests
         var service = new ReportDesignService(
             designs,
             Catalog(views ?? []),
-            new ReportShareLinkService(Catalog<ReportShareLink>(), clock.Object),
+            new InMemorySharedLinkManager(),
             NoSnapshots(),
             Planner(SalesData()),
             DocumentBuilder(),

@@ -1,7 +1,8 @@
 using System.Globalization;
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Reports.Designer.Expressions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -34,17 +35,17 @@ public sealed class ReportValueFormatter
 
         if (value is not null && !column.IsMeasure)
         {
-            if (column.Transform == ReportFieldTransform.DayOfWeek && ExpressionOperations.ToInteger(value) is long day && day is >= 1 and <= 7)
+            if (column.Transform == DataFieldTransform.DayOfWeek && ExpressionOperations.ToInteger(value) is long day && day is >= 1 and <= 7)
             {
                 return CultureInfo.CurrentCulture.DateTimeFormat.GetDayName((DayOfWeek)(day % 7));
             }
 
-            if (column.Transform == ReportFieldTransform.MonthOfYear && ExpressionOperations.ToInteger(value) is long month && month is >= 1 and <= 12)
+            if (column.Transform == DataFieldTransform.MonthOfYear && ExpressionOperations.ToInteger(value) is long month && month is >= 1 and <= 12)
             {
                 return CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName((int)month);
             }
 
-            if (column.Transform == ReportFieldTransform.Month && string.IsNullOrEmpty(column.Format))
+            if (column.Transform == DataFieldTransform.Month && string.IsNullOrEmpty(column.Format))
             {
                 return Format(value, column.DataType, "Y");
             }
@@ -60,7 +61,7 @@ public sealed class ReportValueFormatter
     /// <param name="dataType">The type of the value.</param>
     /// <param name="format">The .NET format string, or <see langword="null"/> for the default of the type.</param>
     /// <returns>The formatted text; empty when the value is missing.</returns>
-    public string Format(object value, ReportDataType dataType, string format = null)
+    public string Format(object value, DataFieldType dataType, string format = null)
     {
         if (value is null)
         {
@@ -88,16 +89,16 @@ public sealed class ReportValueFormatter
             }
         }
 
-        return ReportDataValues.ToText(value);
+        return DataValues.ToText(value);
     }
 
-    private static string DefaultFormat(ReportDataType dataType, object value)
+    private static string DefaultFormat(DataFieldType dataType, object value)
     {
         return value switch
         {
-            DateTime => dataType == ReportDataType.Date || ((DateTime)value).TimeOfDay == TimeSpan.Zero ? "d" : "g",
+            DateTime => dataType == DataFieldType.Date || ((DateTime)value).TimeOfDay == TimeSpan.Zero ? "d" : "g",
             long or int => "N0",
-            decimal or double or float => dataType == ReportDataType.Integer ? "N0" : "#,##0.##",
+            decimal or double or float => dataType == DataFieldType.Integer ? "N0" : "#,##0.##",
             _ => null,
         };
     }

@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.DataSources;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
@@ -241,7 +241,7 @@ public sealed class ReportViewSnapshotRefresher
             throw new ReportQueryException(S["The owner of the view '{0}' can no longer read it.", view.DisplayText]);
         }
 
-        return await _runner.RunAsync(view, new ReportDataSourceContext { User = owner }, maxRows, cancellationToken);
+        return await _runner.RunAsync(view, new DataSourceContext { User = owner }, maxRows, cancellationToken);
     }
 
     private static string LockKey(string viewId)

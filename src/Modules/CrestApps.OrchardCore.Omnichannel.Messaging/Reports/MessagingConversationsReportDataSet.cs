@@ -1,11 +1,14 @@
+using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -16,7 +19,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
 /// The <c>Conversations</c> data set: one row per messaging conversation. Only principals allowed to view every
 /// messaging conversation read it. The last message preview, the AI summary, and the history are never exposed.
 /// </summary>
-public sealed class MessagingConversationsReportDataSet : ReportRecordDataSet<MessagingReportRecord<MessagingConversation>>
+public sealed class MessagingConversationsReportDataSet : RecordDataSet<MessagingReportRecord<MessagingConversation>>
 {
     /// <summary>
     /// The technical name of the last message field, which reads are narrowed by.
@@ -24,6 +27,9 @@ public sealed class MessagingConversationsReportDataSet : ReportRecordDataSet<Me
     public const string LastMessageUtcField = "LastMessageUtc";
 
     private static readonly string[] _agentFields = ["AssignedAgentUserId", "AssignedAgentName"];
+
+    // The index columns a join can narrow the read on.
+    private static readonly string[] _keyFields = [MessagingReportDataSource.ConversationIdField];
 
     private readonly ISession _session;
     private readonly IAgentProfileStore _agentProfileStore;
@@ -41,10 +47,13 @@ public sealed class MessagingConversationsReportDataSet : ReportRecordDataSet<Me
         IAgentProfileStore agentProfileStore,
         IAuthorizationService authorizationService,
         IStringLocalizer<MessagingConversationsReportDataSet> stringLocalizer)
-        : base(new ReportDataSetDescriptor(
+        : base(new DataSetDescriptor(
             MessagingReportDataSource.ConversationsDataSet,
             stringLocalizer["Conversations"],
-            stringLocalizer["One row per messaging conversation."]))
+            stringLocalizer["One row per messaging conversation."])
+        {
+            DefaultDateField = LastMessageUtcField,
+        })
     {
         _session = session;
         _agentProfileStore = agentProfileStore;
@@ -56,109 +65,105 @@ public sealed class MessagingConversationsReportDataSet : ReportRecordDataSet<Me
         var activity = S["Activity"].Value;
         var firstResponse = S["First response"].Value;
 
-        AddField(MessagingReportDataSource.ConversationIdField, S["Conversation ID"], ReportDataType.Text, record => record.Document.ItemId, details, isIdentifier: true);
-        AddField("Channel", S["Channel"], ReportDataType.Text, record => record.Document.Channel, details);
-        AddField("ServiceAddress", S["Service address"], ReportDataType.Text, record => record.Document.ServiceAddress, details);
-        AddField("ContactAddress", S["Contact address"], ReportDataType.Text, record => record.Document.ContactAddress, details);
-        AddField("ContactContentItemId", S["Contact ID"], ReportDataType.Text, record => record.Document.ContactContentItemId, details, isIdentifier: true);
-        AddField("Status", S["Status"], ReportDataType.Text, record => record.Document.Status, details);
+        AddField(MessagingReportDataSource.ConversationIdField, S["Conversation ID"], DataFieldType.Text, record => record.Document.ItemId, details).Identifier();
+        AddField("Channel", S["Channel"], DataFieldType.Text, record => record.Document.Channel, details);
+        AddField("ServiceAddress", S["Service address"], DataFieldType.Text, record => record.Document.ServiceAddress, details);
+        AddField("ContactAddress", S["Contact address"], DataFieldType.Text, record => record.Document.ContactAddress, details);
+        AddField("ContactContentItemId", S["Contact ID"], DataFieldType.Text, record => record.Document.ContactContentItemId, details).Identifier();
+        AddField("Status", S["Status"], DataFieldType.Text, record => record.Document.Status, details);
         AddField(
             "AISessionId",
             S["AI session ID"],
-            ReportDataType.Text,
-            record => record.Document.AISessionId,
-            details,
-            isIdentifier: true,
-            new ReportFieldReference(MessagingReportDataSource.AIChatSource, MessagingReportDataSource.AIChatSessionsDataSet, MessagingReportDataSource.AIChatSessionIdField));
-        AddField("OwnerType", S["Owner type"], ReportDataType.Text, record => record.Document.OwnerType, assignment);
-        AddField("OwnerId", S["Owner ID"], ReportDataType.Text, record => record.Document.OwnerId, assignment, isIdentifier: true);
-        AddField("AssignedAgentId", S["Assigned agent ID"], ReportDataType.Text, record => record.Document.AssignedAgentId, assignment, isIdentifier: true);
+            DataFieldType.Text,
+            record => record.Document.AISessionId, details).Identifier(new DataFieldReference(MessagingReportDataSource.AIChatSource, MessagingReportDataSource.AIChatSessionsDataSet, MessagingReportDataSource.AIChatSessionIdField));
+        AddField("OwnerType", S["Owner type"], DataFieldType.Text, record => record.Document.OwnerType, assignment);
+        AddField("OwnerId", S["Owner ID"], DataFieldType.Text, record => record.Document.OwnerId, assignment).Identifier();
+        AddField("AssignedAgentId", S["Assigned agent ID"], DataFieldType.Text, record => record.Document.AssignedAgentId, assignment).Identifier();
         AddField(
             "AssignedAgentUserId",
             S["Assigned agent user ID"],
-            ReportDataType.Text,
-            record => record.Agent?.UserId,
-            assignment,
-            isIdentifier: true,
-            new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
-        AddField("AssignedAgentName", S["Assigned agent"], ReportDataType.Text, record => record.AgentName, assignment);
-        AddField("AssignmentStatus", S["Assignment status"], ReportDataType.Text, record => record.Document.AssignmentStatus, assignment);
-        AddField("AssignedUtc", S["Assigned"], ReportDataType.DateTime, record => record.Document.AssignedUtc, assignment);
-        AddField("ReassignmentAttempts", S["Reassignment attempts"], ReportDataType.Integer, record => record.Document.ReassignmentAttempts, assignment);
-        AddField("CreatedUtc", S["Created"], ReportDataType.DateTime, record => record.Document.CreatedUtc, activity);
-        AddField("ModifiedUtc", S["Modified"], ReportDataType.DateTime, record => record.Document.ModifiedUtc, activity);
-        AddField(LastMessageUtcField, S["Last message"], ReportDataType.DateTime, record => record.Document.LastMessageUtc, activity);
-        AddField("IsRead", S["Read"], ReportDataType.Boolean, record => record.Document.IsRead, activity);
-        AddField("UnreadCount", S["Unread messages"], ReportDataType.Integer, record => record.Document.UnreadCount, activity);
-        AddField("FirstResponseDueUtc", S["First response due"], ReportDataType.DateTime, record => record.Document.FirstResponseDueUtc, firstResponse);
-        AddField("FirstRespondedUtc", S["First responded"], ReportDataType.DateTime, record => record.Document.FirstRespondedUtc, firstResponse);
-        AddField("FirstResponseBreached", S["First response breached"], ReportDataType.Boolean, record => record.Document.FirstResponseBreached, firstResponse);
-        AddField("FirstResponseSeconds", S["First response time (seconds)"], ReportDataType.Decimal, record => FirstResponseSeconds(record.Document), firstResponse);
+            DataFieldType.Text,
+            record => record.Agent?.UserId, assignment).Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+        AddField("AssignedAgentName", S["Assigned agent"], DataFieldType.Text, record => record.AgentName, assignment);
+        AddField("AssignmentStatus", S["Assignment status"], DataFieldType.Text, record => record.Document.AssignmentStatus, assignment);
+        AddField("AssignedUtc", S["Assigned"], DataFieldType.DateTime, record => record.Document.AssignedUtc, assignment);
+        AddField("ReassignmentAttempts", S["Reassignment attempts"], DataFieldType.Integer, record => record.Document.ReassignmentAttempts, assignment);
+        AddField("CreatedUtc", S["Created"], DataFieldType.DateTime, record => record.Document.CreatedUtc, activity);
+        AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, record => record.Document.ModifiedUtc, activity);
+        AddField(LastMessageUtcField, S["Last message"], DataFieldType.DateTime, record => record.Document.LastMessageUtc, activity);
+        AddField("IsRead", S["Read"], DataFieldType.Boolean, record => record.Document.IsRead, activity);
+        AddField("UnreadCount", S["Unread messages"], DataFieldType.Integer, record => record.Document.UnreadCount, activity);
+        AddField("FirstResponseDueUtc", S["First response due"], DataFieldType.DateTime, record => record.Document.FirstResponseDueUtc, firstResponse);
+        AddField("FirstRespondedUtc", S["First responded"], DataFieldType.DateTime, record => record.Document.FirstRespondedUtc, firstResponse);
+        AddField("FirstResponseBreached", S["First response breached"], DataFieldType.Boolean, record => record.Document.FirstResponseBreached, firstResponse);
+        AddField("FirstResponseSeconds", S["First response time (seconds)"], DataFieldType.Decimal, record => FirstResponseSeconds(record.Document), firstResponse);
+
+        Fields.MarkKeyFilterable(_keyFields);
+        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>
-    /// <inheritdoc/>
-    public override string DefaultDateField => LastMessageUtcField;
-
-    public override Task<bool> CanReadAsync(ReportDataSourceContext context)
+    public override Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         return MessagingReportPermissions.CanReadAsync(_authorizationService, context);
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<string> KeyFilterableFields => ["ItemId"];
-
-    /// <inheritdoc/>
-    protected override async Task<IEnumerable<MessagingReportRecord<MessagingConversation>>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<MessagingReportRecord<MessagingConversation>> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var (from, to) = ReportDateRange.For(query.Conditions, LastMessageUtcField);
-        var conversations = _session.Query<MessagingConversation, MessagingConversationIndex>(collection: MessagingStorage.CollectionName);
+        var (from, to) = DataConditions.DateRange(query.Conditions, LastMessageUtcField);
+        string[] conversationIds = null;
 
-        foreach (var field in KeyFilterableFields)
+        if (DataConditions.Keys(query.Conditions, MessagingReportDataSource.ConversationIdField) is { } keys)
         {
-            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
-            {
-                continue;
-            }
-
             if (keys.Count == 0)
             {
-                return [];
+                yield break;
             }
 
-            var values = keys.ToArray();
-
-            conversations = conversations.Where(index => index.ItemId.IsIn(values));
+            conversationIds = keys.Select(key => key?.ToString()).ToArray();
         }
 
-        if (from.HasValue)
+        IQuery<MessagingConversation> Query()
         {
-            var earliest = from.Value;
-            conversations = conversations.Where(index => index.LastMessageUtc >= earliest);
+            var conversations = _session.Query<MessagingConversation, MessagingConversationIndex>(collection: MessagingStorage.CollectionName);
+
+            if (conversationIds is not null)
+            {
+                conversations = conversations.Where(index => index.ItemId.IsIn(conversationIds));
+            }
+
+            if (from.HasValue)
+            {
+                var earliest = from.Value;
+                conversations = conversations.Where(index => index.LastMessageUtc >= earliest);
+            }
+
+            if (to.HasValue)
+            {
+                var latest = to.Value;
+                conversations = conversations.Where(index => index.LastMessageUtc <= latest);
+            }
+
+            return conversations
+                .OrderByDescending(index => index.LastMessageUtc)
+                .ThenByDescending(index => index.Id);
         }
 
-        if (to.HasValue)
+        await foreach (var documents in ReportIndexPages.ReadPagesAsync(_session, Query, MessagingStorage.CollectionName, cancellationToken))
         {
-            var latest = to.Value;
-            conversations = conversations.Where(index => index.LastMessageUtc <= latest);
+            var agents = await MessagingReportAgents.LoadAsync(
+                _agentProfileStore,
+                query,
+                documents.Select(document => document.AssignedAgentId),
+                _agentFields,
+                cancellationToken);
+
+            foreach (var document in documents)
+            {
+                yield return new MessagingReportRecord<MessagingConversation>(document, MessagingReportAgents.Find(agents, document.AssignedAgentId));
+            }
         }
-
-        var documents = (await conversations
-            .OrderByDescending(index => index.LastMessageUtc)
-            .ThenByDescending(index => index.Id)
-            .Take(take)
-            .ListAsync(cancellationToken))
-            .ToArray();
-        var agents = await MessagingReportAgents.LoadAsync(
-            _agentProfileStore,
-            query,
-            documents.Select(document => document.AssignedAgentId),
-            _agentFields,
-            cancellationToken);
-
-        return documents
-            .Select(document => new MessagingReportRecord<MessagingConversation>(document, MessagingReportAgents.Find(agents, document.AssignedAgentId)))
-            .ToArray();
     }
 
     // The time from the conversation's start to the first reply, when it has had one.

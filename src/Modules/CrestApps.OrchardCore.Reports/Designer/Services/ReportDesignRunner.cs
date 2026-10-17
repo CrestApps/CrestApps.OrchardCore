@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
 
@@ -165,7 +165,7 @@ public sealed class ReportDesignRunner
     /// <param name="filter">The filter.</param>
     /// <param name="dataType">The type of the filtered values.</param>
     /// <returns>The control to render.</returns>
-    public static ReportFilterControl ResolveControl(ReportFilterDefinition filter, ReportDataType dataType)
+    public static ReportFilterControl ResolveControl(ReportFilterDefinition filter, DataFieldType dataType)
     {
         ArgumentNullException.ThrowIfNull(filter);
 
@@ -174,19 +174,19 @@ public sealed class ReportDesignRunner
             return filter.Control;
         }
 
-        if (dataType == ReportDataType.Boolean)
+        if (dataType == DataFieldType.Boolean)
         {
             return ReportFilterControl.Boolean;
         }
 
-        if (filter.Operator == ReportFilterOperator.Between)
+        if (filter.Operator == DataFilterOperator.Between)
         {
-            return ReportDataValues.IsTemporal(dataType) ? ReportFilterControl.DateRange : ReportFilterControl.NumberRange;
+            return DataValues.IsTemporal(dataType) ? ReportFilterControl.DateRange : ReportFilterControl.NumberRange;
         }
 
         if (ReportQueryEngine.UsesOptions(filter, dataType))
         {
-            return filter.Operator is ReportFilterOperator.In or ReportFilterOperator.NotIn
+            return filter.Operator is DataFilterOperator.In or DataFilterOperator.NotIn
                 ? ReportFilterControl.MultiSelect
                 : ReportFilterControl.Select;
         }
@@ -249,7 +249,7 @@ public sealed class ReportExposedFilter
     /// <summary>
     /// Gets or sets the type of the filtered values.
     /// </summary>
-    public ReportDataType DataType { get; set; }
+    public DataFieldType DataType { get; set; }
 
     /// <summary>
     /// Gets or sets the control to render.

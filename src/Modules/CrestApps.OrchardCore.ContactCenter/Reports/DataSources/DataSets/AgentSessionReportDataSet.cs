@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -25,7 +26,7 @@ public sealed class AgentSessionReportDataSet : ContactCenterReportDataSet<Agent
         IAuthorizationService authorizationService,
         IStringLocalizer<AgentSessionReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.AgentSessions,
                 stringLocalizer["Agent sessions"],
                 stringLocalizer["One row per agent session: who signed in, to which queues and campaigns, and when they were last seen."]),
@@ -35,19 +36,21 @@ public sealed class AgentSessionReportDataSet : ContactCenterReportDataSet<Agent
         var S = stringLocalizer;
         var group = S["Agent session"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Agent session ID"], ReportDataType.Text, record => record.ItemId, group, isIdentifier: true);
-        AddField(nameof(AgentSession.UserId), S["User ID"], ReportDataType.Text, record => record.UserId, group, isIdentifier: true, ContactCenterReportDataSets.UserReference());
-        AddField(nameof(AgentSession.UserName), S["User name"], ReportDataType.Text, record => record.UserName, group);
-        AddField(nameof(AgentSession.DisplayName), S["Display name"], ReportDataType.Text, record => record.DisplayName, group);
-        AddField(nameof(AgentSession.IsOnline), S["Online"], ReportDataType.Boolean, record => record.IsOnline, group);
-        AddField("ConnectionCount", S["Connections"], ReportDataType.Integer, record => record.ConnectionIds?.Count ?? 0, group);
-        AddField(nameof(AgentSession.QueueIds), S["Queue IDs"], ReportDataType.Text, record => Join(record.QueueIds), group);
-        AddField(nameof(AgentSession.CampaignIds), S["Campaign IDs"], ReportDataType.Text, record => Join(record.CampaignIds), group);
-        AddField(nameof(AgentSession.ConnectedUtc), S["Connected"], ReportDataType.DateTime, record => record.ConnectedUtc, group);
-        AddField(nameof(AgentSession.LastHeartbeatUtc), S["Last seen"], ReportDataType.DateTime, record => record.LastHeartbeatUtc, group);
-        AddField(nameof(AgentSession.LastDisconnectedUtc), S["Last disconnected"], ReportDataType.DateTime, record => record.LastDisconnectedUtc, group);
-        AddField(nameof(AgentSession.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, group);
-        AddField(nameof(AgentSession.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, group);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Agent session ID"], DataFieldType.Text, record => record.ItemId, group).Identifier();
+        AddField(nameof(AgentSession.UserId), S["User ID"], DataFieldType.Text, record => record.UserId, group).Identifier(ContactCenterReportDataSets.UserReference());
+        AddField(nameof(AgentSession.UserName), S["User name"], DataFieldType.Text, record => record.UserName, group);
+        AddField(nameof(AgentSession.DisplayName), S["Display name"], DataFieldType.Text, record => record.DisplayName, group);
+        AddField(nameof(AgentSession.IsOnline), S["Online"], DataFieldType.Boolean, record => record.IsOnline, group);
+        AddField("ConnectionCount", S["Connections"], DataFieldType.Integer, record => record.ConnectionIds?.Count ?? 0, group);
+        AddField(nameof(AgentSession.QueueIds), S["Queue IDs"], DataFieldType.Text, record => Join(record.QueueIds), group);
+        AddField(nameof(AgentSession.CampaignIds), S["Campaign IDs"], DataFieldType.Text, record => Join(record.CampaignIds), group);
+        AddField(nameof(AgentSession.ConnectedUtc), S["Connected"], DataFieldType.DateTime, record => record.ConnectedUtc, group);
+        AddField(nameof(AgentSession.LastHeartbeatUtc), S["Last seen"], DataFieldType.DateTime, record => record.LastHeartbeatUtc, group);
+        AddField(nameof(AgentSession.LastDisconnectedUtc), S["Last disconnected"], DataFieldType.DateTime, record => record.LastDisconnectedUtc, group);
+        AddField(nameof(AgentSession.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, group);
+        AddField(nameof(AgentSession.ModifiedUtc), S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc, group);
+
+        CompleteDescription();
     }
 
     /// <inheritdoc/>

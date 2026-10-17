@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Reports.DataSources;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.AI.Chat.Reports;
 
@@ -6,6 +6,6 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 /// A data set of the <see cref="AIChatReportDataSource"/>. Each feature registers its own data sets as this service,
 /// so a data set whose feature is disabled is never listed.
 /// </summary>
-public interface IAIChatReportDataSet : IReportRecordDataSet
+public interface IAIChatReportDataSet : IRecordDataSet
 {
 }

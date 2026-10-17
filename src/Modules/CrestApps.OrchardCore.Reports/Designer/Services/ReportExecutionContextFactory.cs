@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.Extensions.Options;
+using OrchardCore.DataSources;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
@@ -37,7 +37,7 @@ public sealed class ReportExecutionContextFactory
     /// <param name="dataUser">The principal whose access reads the data.</param>
     /// <param name="dataSourceContext">An existing data source context to share, such as the one of an outer run.</param>
     /// <returns>The run context.</returns>
-    public async Task<ReportQueryExecutionContext> CreateAsync(ClaimsPrincipal dataUser, ReportDataSourceContext dataSourceContext = null)
+    public async Task<ReportQueryExecutionContext> CreateAsync(ClaimsPrincipal dataUser, DataSourceContext dataSourceContext = null)
     {
         var timeZone = await _localClock.GetLocalTimeZoneAsync();
         TimeZoneInfo zone = null;
@@ -51,7 +51,7 @@ public sealed class ReportExecutionContextFactory
 
         return new ReportQueryExecutionContext
         {
-            DataSourceContext = dataSourceContext ?? new ReportDataSourceContext
+            DataSourceContext = dataSourceContext ?? new DataSourceContext
             {
                 User = dataUser,
             },

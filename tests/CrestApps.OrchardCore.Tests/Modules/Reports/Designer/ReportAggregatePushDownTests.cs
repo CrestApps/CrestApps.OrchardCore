@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
-using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
+using OrchardCore.Localization;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.ReportDesignerTestServices;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
@@ -23,31 +24,31 @@ public sealed class ReportAggregatePushDownTests
         ["Count by customer"] = () => Orders(Column("customer", "o.CustomerId"), Column("n", "$count")),
         ["Sum, average, min and max by customer"] = () => Orders(
             Column("customer", "o.CustomerId"),
-            Column("total", "o.Total", ReportAggregate.Sum),
-            Column("avg", "o.Total", ReportAggregate.Average),
-            Column("qty", "o.Quantity", ReportAggregate.Sum),
-            Column("min", "o.PlacedUtc", ReportAggregate.Min),
-            Column("max", "o.Total", ReportAggregate.Max),
-            Column("count", "o.Total", ReportAggregate.Count)),
-        ["Grand totals only"] = () => Orders(Column("n", "$count"), Column("total", "o.Total", ReportAggregate.Sum)),
-        ["By local month"] = () => Orders(Column("month", "o.PlacedUtc", transform: ReportFieldTransform.Month), Column("n", "$count"), Column("total", "o.Total", ReportAggregate.Sum)),
+            Column("total", "o.Total", DataAggregate.Sum),
+            Column("avg", "o.Total", DataAggregate.Average),
+            Column("qty", "o.Quantity", DataAggregate.Sum),
+            Column("min", "o.PlacedUtc", DataAggregate.Min),
+            Column("max", "o.Total", DataAggregate.Max),
+            Column("count", "o.Total", DataAggregate.Count)),
+        ["Grand totals only"] = () => Orders(Column("n", "$count"), Column("total", "o.Total", DataAggregate.Sum)),
+        ["By local month"] = () => Orders(Column("month", "o.PlacedUtc", transform: DataFieldTransform.Month), Column("n", "$count"), Column("total", "o.Total", DataAggregate.Sum)),
         ["By local day and weekday"] = () => Orders(
-            Column("day", "o.PlacedUtc", transform: ReportFieldTransform.Day),
-            Column("weekday", "o.PlacedUtc", transform: ReportFieldTransform.DayOfWeek),
+            Column("day", "o.PlacedUtc", transform: DataFieldTransform.Day),
+            Column("weekday", "o.PlacedUtc", transform: DataFieldTransform.DayOfWeek),
             Column("n", "$count")),
         ["By year, filtered on a date range"] = () => WithFilter(
-            Orders(Column("year", "o.PlacedUtc", transform: ReportFieldTransform.Year), Column("total", "o.Total", ReportAggregate.Sum)),
-            new ReportFilterDefinition { Id = "placed", Field = "o.PlacedUtc", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.Between, Values = ["2026-02-01", "2026-03-01"] }),
+            Orders(Column("year", "o.PlacedUtc", transform: DataFieldTransform.Year), Column("total", "o.Total", DataAggregate.Sum)),
+            new ReportFilterDefinition { Id = "placed", Field = "o.PlacedUtc", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Between, Values = ["2026-02-01", "2026-03-01"] }),
         ["Filtered on a number and an exact customer"] = () => WithFilter(
             WithFilter(
                 Orders(Column("customer", "o.CustomerId"), Column("n", "$count")),
-                new ReportFilterDefinition { Id = "big", Field = "o.Total", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.GreaterThan, Values = ["40"] }),
-            new ReportFilterDefinition { Id = "who", Field = "o.CustomerId", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.NotEquals, Values = ["C2"] }),
+                new ReportFilterDefinition { Id = "big", Field = "o.Total", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.GreaterThan, Values = ["40"] }),
+            new ReportFilterDefinition { Id = "who", Field = "o.CustomerId", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.NotEquals, Values = ["C2"] }),
         ["Result filter and sort on a measure"] = () =>
         {
             var query = WithFilter(
-                Orders(Column("customer", "o.CustomerId"), Column("total", "o.Total", ReportAggregate.Sum)),
-                new ReportFilterDefinition { Id = "result", Field = "total", Stage = ReportFilterStage.Result, Operator = ReportFilterOperator.GreaterThanOrEqual, Values = ["70"] });
+                Orders(Column("customer", "o.CustomerId"), Column("total", "o.Total", DataAggregate.Sum)),
+                new ReportFilterDefinition { Id = "result", Field = "total", Stage = ReportFilterStage.Result, Operator = DataFilterOperator.GreaterThanOrEqual, Values = ["70"] });
 
             query.Sorts = [new ReportSortDefinition { ColumnId = "total", Descending = true }];
 
@@ -66,7 +67,7 @@ public sealed class ReportAggregatePushDownTests
 
         // Act
         var expected = await Engine(rowsOnly).ExecuteAsync(query(), LocalContext(), TestContext.Current.CancellationToken);
-        var actual = await Engine(grouping).ExecuteAsync(query(), LocalContext(), TestContext.Current.CancellationToken);
+        var actual = await Engine(new TestDataSourceEntry("Memory", grouping)).ExecuteAsync(query(), LocalContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(actual.GroupedBySource, "The source should have grouped the report.");
@@ -91,9 +92,9 @@ public sealed class ReportAggregatePushDownTests
         // Arrange: a median, a text "contains" filter, and an upper-case transform cannot be grouped exactly.
         var queries = new[]
         {
-            Orders(Column("customer", "o.CustomerId"), Column("median", "o.Total", ReportAggregate.Median)),
-            WithFilter(Orders(Column("customer", "o.CustomerId"), Column("n", "$count")), new ReportFilterDefinition { Id = "c", Field = "o.CustomerId", Stage = ReportFilterStage.Rows, Operator = ReportFilterOperator.Contains, Values = ["1"] }),
-            Orders(Column("customer", "o.CustomerId", transform: ReportFieldTransform.Upper), Column("n", "$count")),
+            Orders(Column("customer", "o.CustomerId"), Column("median", "o.Total", DataAggregate.Median)),
+            WithFilter(Orders(Column("customer", "o.CustomerId"), Column("n", "$count")), new ReportFilterDefinition { Id = "c", Field = "o.CustomerId", Stage = ReportFilterStage.Rows, Operator = DataFilterOperator.Contains, Values = ["1"] }),
+            Orders(Column("customer", "o.CustomerId", transform: DataFieldTransform.Upper), Column("n", "$count")),
             Orders(Column("order", "o.Id"), Column("total", "o.Total")),
         };
 
@@ -102,7 +103,7 @@ public sealed class ReportAggregatePushDownTests
             var grouping = new GroupingDataSource(SalesData());
 
             // Act
-            var result = await Engine(grouping).ExecuteAsync(query, LocalContext(), TestContext.Current.CancellationToken);
+            var result = await Engine(new TestDataSourceEntry("Memory", grouping)).ExecuteAsync(query, LocalContext(), TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(result.GroupedBySource);
@@ -117,7 +118,7 @@ public sealed class ReportAggregatePushDownTests
         var grouping = new GroupingDataSource(SalesData()) { Decline = true };
 
         // Act
-        var result = await Engine(grouping).ExecuteAsync(Orders(Column("customer", "o.CustomerId"), Column("n", "$count")), LocalContext(), TestContext.Current.CancellationToken);
+        var result = await Engine(new TestDataSourceEntry("Memory", grouping)).ExecuteAsync(Orders(Column("customer", "o.CustomerId"), Column("n", "$count")), LocalContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.GroupedBySource);
@@ -152,10 +153,10 @@ public sealed class ReportAggregatePushDownTests
     }
 
     /// <summary>
-    /// Groups the in-memory rows by the <see cref="IReportAggregateDataSource"/> contract, as a database would: exact
+    /// Groups the in-memory rows by the <see cref="IDataAggregateSource"/> contract, as a database would: exact
     /// conditions, buckets by UTC boundaries, and per-group counts, sums, smallest and largest values.
     /// </summary>
-    private sealed class GroupingDataSource : IReportDataSource, IReportAggregateDataSource
+    private sealed class GroupingDataSource : IDataSource, IDataAggregateSource
     {
         private readonly InMemoryReportDataSource _inner;
 
@@ -168,28 +169,28 @@ public sealed class ReportAggregatePushDownTests
 
         public int AggregateCalls { get; private set; }
 
-        public string Name => _inner.Name;
+        public static string Name => InMemoryReportDataSource.Name;
 
-        public LocalizedString DisplayName => _inner.DisplayName;
+        public static LocalizationSource DisplayName => InMemoryReportDataSource.DisplayName;
 
-        public LocalizedString Description => _inner.Description;
+        public static LocalizationSource Description => InMemoryReportDataSource.Description;
 
-        public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
             => _inner.GetDataSetsAsync(context, cancellationToken);
 
-        public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
             => _inner.GetSchemaAsync(dataSet, context, cancellationToken);
 
-        public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
-            => _inner.QueryAsync(query, cancellationToken);
+        public IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, CancellationToken cancellationToken = default)
+            => _inner.ReadAsync(query, cancellationToken);
 
-        public Task<ReportAggregateTable> AggregateAsync(ReportAggregateQuery query, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<object[]>> AggregateAsync(DataAggregateQuery query, CancellationToken cancellationToken = default)
         {
             AggregateCalls++;
 
             if (Decline)
             {
-                return Task.FromResult<ReportAggregateTable>(null);
+                return Task.FromResult<IReadOnlyList<object[]>>(null);
             }
 
             var (schema, rows) = _inner.Table(query.DataSet);
@@ -201,7 +202,7 @@ public sealed class ReportAggregatePushDownTests
             foreach (var row in kept)
             {
                 var keys = query.Groups.Select(group => Key(row[Index(group.Field)], group.Boundaries)).ToArray();
-                var key = string.Join('\u001F', keys.Select(ReportDataValues.ToKey));
+                var key = string.Join('\u001F', keys.Select(DataValues.ToKey));
 
                 if (!groups.TryGetValue(key, out var group))
                 {
@@ -218,16 +219,13 @@ public sealed class ReportAggregatePushDownTests
 
             if (groups.Count > query.MaxGroups)
             {
-                return Task.FromResult<ReportAggregateTable>(null);
+                return Task.FromResult<IReadOnlyList<object[]>>(null);
             }
 
-            var table = new ReportAggregateTable
-            {
-                Rows = groups.Values.Select(group => group.Keys
-                    .Concat(query.Measures.Select(measure => Measure(group.Rows, measure.Field is null ? -1 : Index(measure.Field), measure.Kind)))
-                    .ToArray())
-                    .ToList(),
-            };
+            IReadOnlyList<object[]> table = groups.Values.Select(group => group.Keys
+                .Concat(query.Measures.Select(measure => Measure(group.Rows, measure.Field is null ? -1 : Index(measure.Field), measure.Function)))
+                .ToArray())
+                .ToList();
 
             return Task.FromResult(table);
         }
@@ -255,7 +253,7 @@ public sealed class ReportAggregatePushDownTests
             return null;
         }
 
-        private static object Measure(List<object[]> rows, int index, ReportAggregateKind kind)
+        private static object Measure(List<object[]> rows, int index, DataAggregate kind)
         {
             if (index < 0)
             {
@@ -266,29 +264,29 @@ public sealed class ReportAggregatePushDownTests
 
             return kind switch
             {
-                ReportAggregateKind.Count => (long)values.Count,
-                ReportAggregateKind.Sum => values.Count == 0 ? null : ReportAggregations.Sum(values),
-                ReportAggregateKind.Min => values.Count == 0 ? null : values.Aggregate((left, right) => ReportDataValues.Compare(left, right) <= 0 ? left : right),
-                _ => values.Count == 0 ? null : values.Aggregate((left, right) => ReportDataValues.Compare(left, right) >= 0 ? left : right),
+                DataAggregate.Count => (long)values.Count,
+                DataAggregate.Sum => values.Count == 0 ? null : DataAggregations.Sum(values),
+                DataAggregate.Min => values.Count == 0 ? null : values.Aggregate((left, right) => DataValues.Compare(left, right) <= 0 ? left : right),
+                _ => values.Count == 0 ? null : values.Aggregate((left, right) => DataValues.Compare(left, right) >= 0 ? left : right),
             };
         }
 
-        private static bool Matches(object value, ReportDataCondition condition)
+        private static bool Matches(object value, DataCondition condition)
         {
             var first = condition.Values.FirstOrDefault();
 
             return condition.Operator switch
             {
-                ReportFilterOperator.IsEmpty => ReportDataValues.IsEmpty(value),
-                ReportFilterOperator.IsNotEmpty => !ReportDataValues.IsEmpty(value),
-                ReportFilterOperator.Equals => value is not null && ReportDataValues.AreEqual(value, first),
-                ReportFilterOperator.NotEquals => value is null || !ReportDataValues.AreEqual(value, first),
-                ReportFilterOperator.In => value is not null && condition.Values.Any(candidate => ReportDataValues.AreEqual(value, candidate)),
-                ReportFilterOperator.NotIn => value is null || !condition.Values.Any(candidate => ReportDataValues.AreEqual(value, candidate)),
-                ReportFilterOperator.GreaterThan => value is not null && ReportDataValues.Compare(value, first) > 0,
-                ReportFilterOperator.GreaterThanOrEqual => value is not null && ReportDataValues.Compare(value, first) >= 0,
-                ReportFilterOperator.LessThan => value is not null && ReportDataValues.Compare(value, first) < 0,
-                ReportFilterOperator.LessThanOrEqual => value is not null && ReportDataValues.Compare(value, first) <= 0,
+                DataFilterOperator.IsEmpty => DataValues.IsEmpty(value),
+                DataFilterOperator.IsNotEmpty => !DataValues.IsEmpty(value),
+                DataFilterOperator.Equals => value is not null && DataValues.AreEqual(value, first),
+                DataFilterOperator.NotEquals => value is null || !DataValues.AreEqual(value, first),
+                DataFilterOperator.In => value is not null && condition.Values.Any(candidate => DataValues.AreEqual(value, candidate)),
+                DataFilterOperator.NotIn => value is null || !condition.Values.Any(candidate => DataValues.AreEqual(value, candidate)),
+                DataFilterOperator.GreaterThan => value is not null && DataValues.Compare(value, first) > 0,
+                DataFilterOperator.GreaterThanOrEqual => value is not null && DataValues.Compare(value, first) >= 0,
+                DataFilterOperator.LessThan => value is not null && DataValues.Compare(value, first) < 0,
+                DataFilterOperator.LessThanOrEqual => value is not null && DataValues.Compare(value, first) <= 0,
                 _ => throw new InvalidOperationException($"The engine sent a condition the contract does not allow: {condition.Operator}."),
             };
         }

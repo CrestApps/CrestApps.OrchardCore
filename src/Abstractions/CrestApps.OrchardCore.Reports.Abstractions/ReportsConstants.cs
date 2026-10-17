@@ -27,29 +27,23 @@ public static class ReportsConstants
     public const string ViewsDataSource = "ReportViews";
 
     /// <summary>
-    /// The technical name of the data source that exposes content types as data sets. It is registered when the report
-    /// designer and Orchard Core Contents are both enabled.
+    /// The kind of the shared links of Orchard Core that open a designed report.
     /// </summary>
-    public const string ContentsDataSource = "Contents";
+    public const string SharedLinkKind = "Reports.Report";
 
     /// <summary>
-    /// The technical name of the data source that exposes saved Orchard Core queries as data sets. It is registered when
-    /// the report builder and Orchard Core Queries are both enabled.
-    /// </summary>
-    public const string QueriesDataSource = "Queries";
-
-    /// <summary>
-    /// The technical name of the data source that exposes the users of the site.
+    /// The technical name of Orchard Core's data source of the users of the site, which data sets reference to join
+    /// their user identifiers to the users.
     /// </summary>
     public const string UsersDataSource = "Users";
 
     /// <summary>
-    /// The technical name of the users data set of the users data source.
+    /// The technical name of the users data set of Orchard Core's users data source.
     /// </summary>
     public const string UsersDataSet = "Users";
 
     /// <summary>
-    /// The technical name of the users data set's identifier field, which content owners and user pickers reference.
+    /// The technical name of the identifier field of Orchard Core's users data set.
     /// </summary>
     public const string UserIdField = "UserId";
 

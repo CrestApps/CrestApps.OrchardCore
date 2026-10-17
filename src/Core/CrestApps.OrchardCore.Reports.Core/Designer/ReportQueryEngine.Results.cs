@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Reports.Designer.Expressions;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -55,7 +56,7 @@ public sealed partial class ReportQueryEngine
             Label = column.Label,
             DataType = column.DataType,
             IsMeasure = column.IsMeasure,
-            Aggregate = column.Field.IsAggregate ? ReportAggregate.None : column.Definition.Aggregate,
+            Aggregate = column.Field.IsAggregate ? DataAggregate.None : column.Definition.Aggregate,
             Transform = column.Definition.Transform,
             Format = column.Definition.Format,
             Hidden = column.Definition.Hidden,
@@ -76,7 +77,7 @@ public sealed partial class ReportQueryEngine
 
     private static object ColumnValue(PlannedColumn column, object[] row)
     {
-        return ReportTransforms.Apply(column.Definition.Transform, row[column.Field.Slot]);
+        return DataFieldTransforms.Apply(column.Definition.Transform, row[column.Field.Slot]);
     }
 
     private static List<Output> Group(
@@ -96,7 +97,7 @@ public sealed partial class ReportQueryEngine
             for (var index = 0; index < dimensionIndexes.Length; index++)
             {
                 dimensions[index] = ColumnValue(plan.Columns[dimensionIndexes[index]], row);
-                keys[index] = ReportDataValues.ToKey(dimensions[index]);
+                keys[index] = DataValues.ToKey(dimensions[index]);
             }
 
             var key = string.Join('\u001F', keys);
@@ -148,7 +149,7 @@ public sealed partial class ReportQueryEngine
         // Rows a data source grouped itself each stand for several rows; the row count adds them up.
         if (expressionContext.WeightSlot is int weightSlot && column.Field.Key == ReportQueryPlanner.RowCountField)
         {
-            return ReportTransforms.Apply(column.Definition.Transform, rows.Sum(row => row[weightSlot] is long weight ? weight : 0L));
+            return DataFieldTransforms.Apply(column.Definition.Transform, rows.Sum(row => row[weightSlot] is long weight ? weight : 0L));
         }
 
         if (column.Field.IsAggregate)
@@ -158,7 +159,7 @@ public sealed partial class ReportQueryEngine
 
             try
             {
-                return ReportTransforms.Apply(column.Definition.Transform, SafeEvaluate(column.Field.Expression, expressionContext));
+                return DataFieldTransforms.Apply(column.Definition.Transform, SafeEvaluate(column.Field.Expression, expressionContext));
             }
             finally
             {
@@ -173,14 +174,14 @@ public sealed partial class ReportQueryEngine
             values[index] = ColumnValue(column, rows[index]);
         }
 
-        return ReportAggregations.Compute(column.Definition.Aggregate, values);
+        return DataAggregations.Compute(column.Definition.Aggregate, values);
     }
 
     private static List<Output> ApplyResultFilters(List<Output> outputs, IReadOnlyList<ActiveFilter> filters, DateTime today)
     {
         var predicates = filters
             .Where(filter => filter.Filter.Definition.Stage == ReportFilterStage.Result)
-            .Select(filter => (filter.Filter.ColumnIndex, Predicate: ReportFilterPredicates.Build(filter.Filter.Definition.Operator, filter.Filter.DataType, filter.Values, today)))
+            .Select(filter => (filter.Filter.ColumnIndex, Predicate: DataFilterPredicates.Build(filter.Filter.Definition.Operator, filter.Filter.DataType, filter.Values, today)))
             .Where(entry => entry.Predicate is not null)
             .ToArray();
 
@@ -215,7 +216,7 @@ public sealed partial class ReportQueryEngine
         {
             foreach (var (columnIndex, descending) in sorts)
             {
-                var comparison = ReportDataValues.Compare(left.Values[columnIndex], right.Values[columnIndex]);
+                var comparison = DataValues.Compare(left.Values[columnIndex], right.Values[columnIndex]);
 
                 if (comparison != 0)
                 {
@@ -254,7 +255,7 @@ public sealed partial class ReportQueryEngine
 
         foreach (var output in outputs)
         {
-            var key = string.Join('\u001F', dimensions.Select(index => ReportDataValues.ToKey(output.Values[index])));
+            var key = string.Join('\u001F', dimensions.Select(index => DataValues.ToKey(output.Values[index])));
 
             if (!groups.TryGetValue(key, out var values))
             {
@@ -278,8 +279,8 @@ public sealed partial class ReportQueryEngine
 
                 var value = output.Values[index];
 
-                values[index] = ReportDataValues.IsNumeric(plan.Columns[index].DataType)
-                    ? ReportAggregations.Sum([values[index], value])
+                values[index] = DataValues.IsNumeric(plan.Columns[index].DataType)
+                    ? DataAggregations.Sum([values[index], value])
                     : values[index] ?? value;
             }
         }

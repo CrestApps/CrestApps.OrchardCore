@@ -1,3 +1,5 @@
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
 namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
@@ -26,12 +28,12 @@ public sealed class ReportColumnDefinition
     /// <summary>
     /// Gets or sets the aggregate applied to the field.
     /// </summary>
-    public ReportAggregate Aggregate { get; set; }
+    public DataAggregate Aggregate { get; set; }
 
     /// <summary>
     /// Gets or sets the transform applied to each value before grouping and aggregating.
     /// </summary>
-    public ReportFieldTransform Transform { get; set; }
+    public DataFieldTransform Transform { get; set; }
 
     /// <summary>
     /// Gets or sets the .NET format string used to display values (for example <c>N2</c>, <c>C2</c>, <c>P1</c>, or

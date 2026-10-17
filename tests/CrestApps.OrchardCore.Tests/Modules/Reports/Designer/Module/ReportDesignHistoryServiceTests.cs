@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Indexes;
 using CrestApps.OrchardCore.Reports.Designer.Migrations;
@@ -9,6 +10,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -33,6 +35,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
     private readonly string _databasePath = Path.Combine(Path.GetTempPath(), $"report-history-{Guid.NewGuid():N}.db");
     private readonly List<ReportDesignChange> _changes = [];
     private readonly List<ReportEventContext> _published = [];
+    private readonly InMemorySharedLinkManager _sharedLinks = new();
     private IStore _store;
 
     public async ValueTask InitializeAsync()
@@ -270,12 +273,14 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Delete_RemovesTheDraftAndVersions_AndTellsTheEditors()
+    public async Task Delete_RemovesTheDraftVersionsAndSharedLinks_AndTellsTheEditors()
     {
         // Arrange
         var designs = Catalog(Published("Sales"));
         await using var session = _store.CreateSession();
         var history = History(session, designs);
+        await _sharedLinks.CreateAsync(new SharedLinkRequest { Kind = ReportsConstants.SharedLinkKind, ResourceId = "r1", Recipients = ["ada"] }, TestContext.Current.CancellationToken);
+        await _sharedLinks.CreateAsync(new SharedLinkRequest { Kind = ReportsConstants.SharedLinkKind, ResourceId = "other", Recipients = ["ada"] }, TestContext.Current.CancellationToken);
         var published = await history.PublishAsync(Edited("Second title"), await designs.FindByIdAsync("r1", TestContext.Current.CancellationToken), 0, force: false, _ada, canSharePublicly: false);
         await history.SaveDraftAsync(await designs.FindByIdAsync("r1", TestContext.Current.CancellationToken), Edited("Draft"), published.Revision, force: false, _ada);
 
@@ -289,6 +294,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         Assert.Null(await new ReportDesignHistoryStore(session).FindDraftAsync("r1"));
         Assert.Equal(ReportDesignChangeKind.Deleted, _changes[^1].Kind);
         Assert.Equal("Bob", _changes[^1].UserName);
+        Assert.Equal(["other"], _sharedLinks.Links.Select(link => link.ResourceId));
     }
 
     [Fact]
@@ -428,7 +434,7 @@ public sealed class ReportDesignHistoryServiceTests : IAsyncLifetime
         var designService = new ReportDesignService(
             designs,
             Catalog<ReportView>(),
-            new ReportShareLinkService(Catalog<ReportShareLink>(), clock.Object),
+            _sharedLinks,
             new ReportViewSnapshotStore(session),
             Planner(SalesData()),
             DocumentBuilder(),

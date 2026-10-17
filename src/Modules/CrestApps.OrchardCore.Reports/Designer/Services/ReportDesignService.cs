@@ -1,11 +1,12 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.DataPipelines.SharedLinks;
+using OrchardCore.DataSources;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Reports.Designer.Services;
@@ -19,7 +20,7 @@ public sealed class ReportDesignService
 {
     private readonly ICatalog<ReportDesign> _designs;
     private readonly ICatalog<ReportView> _views;
-    private readonly ReportShareLinkService _shareLinks;
+    private readonly ISharedLinkManager _sharedLinks;
     private readonly ReportViewSnapshotStore _snapshots;
     private readonly ReportQueryPlanner _planner;
     private readonly ReportDesignDocumentBuilder _documentBuilder;
@@ -31,7 +32,7 @@ public sealed class ReportDesignService
     /// </summary>
     /// <param name="designs">The report catalog.</param>
     /// <param name="views">The view catalog.</param>
-    /// <param name="shareLinks">The share link service.</param>
+    /// <param name="sharedLinks">The shared links of Orchard Core.</param>
     /// <param name="snapshots">The store of scheduled views' results.</param>
     /// <param name="planner">The query planner.</param>
     /// <param name="documentBuilder">The document builder used to check visuals.</param>
@@ -40,7 +41,7 @@ public sealed class ReportDesignService
     public ReportDesignService(
         ICatalog<ReportDesign> designs,
         ICatalog<ReportView> views,
-        ReportShareLinkService shareLinks,
+        ISharedLinkManager sharedLinks,
         ReportViewSnapshotStore snapshots,
         ReportQueryPlanner planner,
         ReportDesignDocumentBuilder documentBuilder,
@@ -49,7 +50,7 @@ public sealed class ReportDesignService
     {
         _designs = designs;
         _views = views;
-        _shareLinks = shareLinks;
+        _sharedLinks = sharedLinks;
         _snapshots = snapshots;
         _planner = planner;
         _documentBuilder = documentBuilder;
@@ -237,7 +238,7 @@ public sealed class ReportDesignService
     }
 
     /// <summary>
-    /// Deletes a report and its share links.
+    /// Deletes a report and its shared links.
     /// </summary>
     /// <param name="design">The report.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
@@ -245,7 +246,11 @@ public sealed class ReportDesignService
     {
         ArgumentNullException.ThrowIfNull(design);
 
-        await _shareLinks.DeleteAllAsync(design.ItemId);
+        foreach (var link in await _sharedLinks.ListAsync(ReportsConstants.SharedLinkKind, design.ItemId))
+        {
+            await _sharedLinks.DeleteAsync(link);
+        }
+
         await _designs.DeleteAsync(design);
     }
 
@@ -284,7 +289,7 @@ public sealed class ReportDesignService
     {
         try
         {
-            var plan = await _planner.PlanAsync(query, new ReportDataSourceContext { User = user });
+            var plan = await _planner.PlanAsync(query, new DataSourceContext { User = user });
 
             foreach (var error in plan.Errors)
             {

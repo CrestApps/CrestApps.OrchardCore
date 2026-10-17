@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Reports.Designer.Expressions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -154,7 +155,7 @@ public sealed partial class ReportQueryEngine
     // in full: no such pair, keys compared as text across types, or more keys than the limit.
     private static JoinKeyFilter JoinKeys(PlannedJoin join, List<object[]> left, ReportQueryLimits limits)
     {
-        if (join.Type is not (ReportJoinType.Inner or ReportJoinType.Left) || limits.MaxJoinKeys < 1)
+        if (join.Type is not (DataJoinType.Inner or DataJoinType.Left) || limits.MaxJoinKeys < 1)
         {
             return null;
         }
@@ -166,7 +167,7 @@ public sealed partial class ReportQueryEngine
 
             if (compareAsText ||
                 descriptor is not { IsKeyFilterable: true } ||
-                field.DataType is not (ReportDataType.Text or ReportDataType.Integer))
+                field.DataType is not (DataFieldType.Text or DataFieldType.Integer))
             {
                 continue;
             }
@@ -175,14 +176,14 @@ public sealed partial class ReportQueryEngine
 
             foreach (var row in left)
             {
-                var value = ReportDataValues.Coerce(row[leftSlot], field.DataType);
+                var value = DataValues.Coerce(row[leftSlot], field.DataType);
 
-                if (ReportDataValues.IsEmpty(value))
+                if (DataValues.IsEmpty(value))
                 {
                     continue;
                 }
 
-                values.TryAdd(ReportDataValues.ToKey(value), value);
+                values.TryAdd(DataValues.ToKey(value), value);
 
                 if (values.Count > limits.MaxJoinKeys)
                 {
@@ -218,10 +219,10 @@ public sealed partial class ReportQueryEngine
 
             if (batches[index] is { } batch)
             {
-                query.Conditions.Add(new ReportDataCondition
+                query.Conditions.Add(new DataCondition
                 {
                     Field = keys.FieldName,
-                    Operator = ReportFilterOperator.In,
+                    Operator = DataFilterOperator.In,
                     Values = batch,
                     IsJoinKey = true,
                 });
@@ -250,9 +251,9 @@ public sealed partial class ReportQueryEngine
         return rows;
     }
 
-    private static ReportDataSourceQuery CreateQuery(PlannedDataSet dataSet, IReadOnlyList<ActiveFilter> filters, ReportQueryExecutionContext context, int maxRows)
+    private static DataSourceQuery CreateQuery(PlannedDataSet dataSet, IReadOnlyList<ActiveFilter> filters, ReportQueryExecutionContext context, int maxRows)
     {
-        var query = new ReportDataSourceQuery
+        var query = new DataSourceQuery
         {
             DataSet = dataSet.Reference.DataSet,
             Fields = new HashSet<string>(dataSet.UsedFields.Keys, StringComparer.Ordinal),
@@ -274,7 +275,7 @@ public sealed partial class ReportQueryEngine
                     continue;
                 }
 
-                var condition = ReportFilterPredicates.BuildCondition(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc, context.ToLocal(context.UtcNow));
+                var condition = DataFilterPredicates.BuildCondition(field.FieldName, filter.Filter.Definition.Operator, field.DataType, filter.Values, context.ToUtc, context.ToLocal(context.UtcNow));
 
                 if (condition is not null)
                 {
@@ -289,17 +290,17 @@ public sealed partial class ReportQueryEngine
     private static async Task<(List<object[]> Rows, bool Truncated)> ReadTableAsync(
         ReportQueryPlan plan,
         PlannedDataSet dataSet,
-        ReportDataSourceQuery query,
+        DataSourceQuery query,
         ReportQueryExecutionContext context,
         CancellationToken cancellationToken)
     {
-        var table = await dataSet.Source.QueryAsync(query, cancellationToken) ?? new ReportDataTable();
+        var read = await dataSet.Source.ReadRowsAsync(query, query.MaxRows, cancellationToken);
         var mappings = dataSet.UsedFields.Values
-            .Select(field => (field.Slot, SourceIndex: table.IndexOf(field.FieldName), field.DataType))
+            .Select(field => (field.Slot, SourceIndex: read.Fields.IndexOf(field.FieldName), field.DataType))
             .ToArray();
-        var rows = new List<object[]>(Math.Min(table.Rows.Count, query.MaxRows));
+        var rows = new List<object[]>(read.Rows.Count);
 
-        foreach (var sourceRow in table.Rows.Take(query.MaxRows))
+        foreach (var sourceRow in read.Rows)
         {
             var row = new object[plan.Width];
 
@@ -314,10 +315,10 @@ public sealed partial class ReportQueryEngine
             rows.Add(row);
         }
 
-        return (rows, table.Truncated || table.Rows.Count > query.MaxRows);
+        return (rows, read.Truncated);
     }
 
-    private static object Normalize(object value, ReportDataType dataType, Func<DateTime, DateTime> toLocal)
+    private static object Normalize(object value, DataFieldType dataType, Func<DateTime, DateTime> toLocal)
     {
         if (value is null)
         {
@@ -326,8 +327,8 @@ public sealed partial class ReportQueryEngine
 
         switch (dataType)
         {
-            case ReportDataType.DateTime:
-                if (ReportDataValues.Coerce(value, ReportDataType.DateTime) is not DateTime date)
+            case DataFieldType.DateTime:
+                if (DataValues.Coerce(value, DataFieldType.DateTime) is not DateTime date)
                 {
                     return null;
                 }
@@ -339,14 +340,14 @@ public sealed partial class ReportQueryEngine
 
                 return toLocal(DateTime.SpecifyKind(date, DateTimeKind.Utc));
 
-            case ReportDataType.Text when value is string:
-            case ReportDataType.Integer when value is long:
-            case ReportDataType.Decimal when value is decimal:
-            case ReportDataType.Boolean when value is bool:
+            case DataFieldType.Text when value is string:
+            case DataFieldType.Integer when value is long:
+            case DataFieldType.Decimal when value is decimal:
+            case DataFieldType.Boolean when value is bool:
                 return value;
 
             default:
-                return ReportDataValues.Coerce(value, dataType);
+                return DataValues.Coerce(value, dataType);
         }
     }
 
@@ -379,8 +380,8 @@ public sealed partial class ReportQueryEngine
 
         var matchedRight = new bool[right.Count];
         var output = new List<object[]>();
-        var keepLeft = join.Type is ReportJoinType.Left or ReportJoinType.Full;
-        var keepRight = join.Type is ReportJoinType.Right or ReportJoinType.Full;
+        var keepLeft = join.Type is DataJoinType.Left or DataJoinType.Full;
+        var keepRight = join.Type is DataJoinType.Right or DataJoinType.Full;
 
         foreach (var leftRow in left)
         {
@@ -449,14 +450,14 @@ public sealed partial class ReportQueryEngine
             var (leftSlot, rightSlot, compareAsText) = join.Pairs[index];
             var value = row[useRight ? rightSlot : leftSlot];
 
-            if (ReportDataValues.IsEmpty(value))
+            if (DataValues.IsEmpty(value))
             {
                 return null;
             }
 
             parts[index] = compareAsText
-                ? "s:" + ReportDataValues.ToText(value).ToUpperInvariant()
-                : ReportDataValues.ToKey(value);
+                ? "s:" + DataValues.ToText(value).ToUpperInvariant()
+                : DataValues.ToKey(value);
         }
 
         return string.Join('\u001F', parts);
@@ -497,7 +498,7 @@ public sealed partial class ReportQueryEngine
     private static List<object[]> ApplyRowFilters(List<object[]> rows, IEnumerable<ActiveFilter> filters, DateTime today)
     {
         var predicates = filters
-            .Select(filter => (filter.Filter.Field.Slot, Predicate: ReportFilterPredicates.Build(filter.Filter.Definition.Operator, filter.Filter.DataType, filter.Values, today)))
+            .Select(filter => (filter.Filter.Field.Slot, Predicate: DataFilterPredicates.Build(filter.Filter.Definition.Operator, filter.Filter.DataType, filter.Values, today)))
             .Where(entry => entry.Predicate is not null)
             .ToArray();
 
@@ -534,16 +535,16 @@ public sealed partial class ReportQueryEngine
             {
                 var value = row[slot];
 
-                if (!ReportDataValues.IsEmpty(value))
+                if (!DataValues.IsEmpty(value))
                 {
-                    distinct.TryAdd(ReportDataValues.ToKey(value), value);
+                    distinct.TryAdd(DataValues.ToKey(value), value);
                 }
             }
 
             options[definition.Id] = distinct.Values
-                .Order(Comparer<object>.Create(ReportDataValues.Compare))
+                .Order(Comparer<object>.Create(DataValues.Compare))
                 .Take(Math.Max(1, maxOptions))
-                .Select(value => new ReportFilterOption(ReportDataValues.ToText(value), _formatter.Format(value, filter.Filter.DataType)))
+                .Select(value => new ReportFilterOption(DataValues.ToText(value), _formatter.Format(value, filter.Filter.DataType)))
                 .ToArray();
         }
 
@@ -556,14 +557,14 @@ public sealed partial class ReportQueryEngine
     /// <param name="filter">The filter.</param>
     /// <param name="dataType">The type of the filtered values.</param>
     /// <returns><see langword="true"/> for drop-down and multi-select filters.</returns>
-    public static bool UsesOptions(ReportFilterDefinition filter, ReportDataType dataType)
+    public static bool UsesOptions(ReportFilterDefinition filter, DataFieldType dataType)
     {
         ArgumentNullException.ThrowIfNull(filter);
 
         return filter.Control switch
         {
             ReportFilterControl.Select or ReportFilterControl.MultiSelect => true,
-            ReportFilterControl.Auto => dataType == ReportDataType.Text && filter.Operator is ReportFilterOperator.Equals or ReportFilterOperator.In or ReportFilterOperator.NotEquals or ReportFilterOperator.NotIn,
+            ReportFilterControl.Auto => dataType == DataFieldType.Text && filter.Operator is DataFilterOperator.Equals or DataFilterOperator.In or DataFilterOperator.NotEquals or DataFilterOperator.NotIn,
             _ => false,
         };
     }

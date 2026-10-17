@@ -12,6 +12,10 @@
 
 <form method="get" action="@Model.FormAction" class="designed-report">
     <input type="hidden" name="@ReportFilterValueBinder.AppliedField" value="1" />
+    @foreach (var (name, value) in Model.HiddenFields)
+    {
+        <input type="hidden" name="@name" value="@value" />
+    }
 
     <div class="card">
         @if (hasFilters || Model.ExportFormats.Count > 0 || !string.IsNullOrEmpty(Model.EditUrl))
@@ -30,7 +34,7 @@
                         {
                             var exportFormat = Model.ExportFormats[0];
 
-                            <button type="submit" class="btn btn-outline-secondary" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get">
+                            <button type="submit" class="btn btn-outline-secondary" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get" name="@Model.ExportFormatField" value="@(Model.ExportFormatField is null ? null : exportFormat.Name)">
                                 <i class="fa-solid fa-download" aria-hidden="true"></i> @T["Export {0}", exportFormat.DisplayName]
                             </button>
                         }
@@ -44,7 +48,7 @@
                                     @foreach (var exportFormat in Model.ExportFormats)
                                     {
                                         <li>
-                                            <button type="submit" class="dropdown-item" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get">@T["Export {0}", exportFormat.DisplayName]</button>
+                                            <button type="submit" class="dropdown-item" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get" name="@Model.ExportFormatField" value="@(Model.ExportFormatField is null ? null : exportFormat.Name)">@T["Export {0}", exportFormat.DisplayName]</button>
                                         </li>
                                     }
                                 </ul>

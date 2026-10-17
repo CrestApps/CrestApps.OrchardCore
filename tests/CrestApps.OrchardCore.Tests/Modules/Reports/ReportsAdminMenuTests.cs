@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Services;
-using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
+using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -37,7 +37,7 @@ public sealed class ReportsAdminMenuTests
         // The other module's item is added first, so equal priorities would keep its (missing) id.
         var navigationManager = Manager(
             new OtherModuleMenu(),
-            new ReportsAdminMenu(reportManager.Object, new ContentReportTestLocalizer<ReportsAdminMenu>()));
+            new ReportsAdminMenu(reportManager.Object, new PassThroughStringLocalizer<ReportsAdminMenu>()));
 
         // Act
         var menu = await navigationManager.BuildMenuAsync(NavigationConstants.AdminId, ActionContext());

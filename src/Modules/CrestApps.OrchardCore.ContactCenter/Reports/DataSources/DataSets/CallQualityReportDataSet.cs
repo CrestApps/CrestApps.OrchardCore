@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -24,7 +25,7 @@ public sealed class CallQualityReportDataSet : ContactCenterReportDataSet<CallQu
         IAuthorizationService authorizationService,
         IStringLocalizer<CallQualityReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.CallQuality,
                 stringLocalizer["Call quality"],
                 stringLocalizer["One row per measured call leg: its rating, mean opinion score, loss, jitter and round-trip time."]),
@@ -35,24 +36,26 @@ public sealed class CallQualityReportDataSet : ContactCenterReportDataSet<CallQu
         var leg = S["Call leg"].Value;
         var quality = S["Quality"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Measurement ID"], ReportDataType.Text, record => record.ItemId, leg, isIdentifier: true);
-        AddField(nameof(CallQualityRecord.Source), S["Measured by"], ReportDataType.Text, record => record.Source, leg);
-        AddField(nameof(CallQualityRecord.ProviderName), S["Provider"], ReportDataType.Text, record => record.ProviderName, leg);
-        AddField(nameof(CallQualityRecord.InteractionId), S["Interaction ID"], ReportDataType.Text, record => record.InteractionId, leg, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
-        AddField(nameof(CallQualityRecord.CallSessionId), S["Call session ID"], ReportDataType.Text, record => record.CallSessionId, leg, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.CallSessions));
-        AddField(nameof(CallQualityRecord.LegRole), S["Party"], ReportDataType.Text, record => record.LegRole, leg);
-        AddField(nameof(CallQualityRecord.AgentId), S["Agent ID"], ReportDataType.Text, record => record.AgentId, leg, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentProfiles));
-        AddField(nameof(CallQualityRecord.UserId), S["User ID"], ReportDataType.Text, record => record.UserId, leg, isIdentifier: true, ContactCenterReportDataSets.UserReference());
-        AddField(nameof(CallQualityRecord.QueueId), S["Queue ID"], ReportDataType.Text, record => record.QueueId, leg, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
-        AddField(nameof(CallQualityRecord.ObservedUtc), S["Observed"], ReportDataType.DateTime, record => record.ObservedUtc, leg);
-        AddField(nameof(CallQualityRecord.CreatedUtc), S["Recorded"], ReportDataType.DateTime, record => record.CreatedUtc, leg);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Measurement ID"], DataFieldType.Text, record => record.ItemId, leg).Identifier();
+        AddField(nameof(CallQualityRecord.Source), S["Measured by"], DataFieldType.Text, record => record.Source, leg);
+        AddField(nameof(CallQualityRecord.ProviderName), S["Provider"], DataFieldType.Text, record => record.ProviderName, leg);
+        AddField(nameof(CallQualityRecord.InteractionId), S["Interaction ID"], DataFieldType.Text, record => record.InteractionId, leg).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Interactions));
+        AddField(nameof(CallQualityRecord.CallSessionId), S["Call session ID"], DataFieldType.Text, record => record.CallSessionId, leg).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.CallSessions));
+        AddField(nameof(CallQualityRecord.LegRole), S["Party"], DataFieldType.Text, record => record.LegRole, leg);
+        AddField(nameof(CallQualityRecord.AgentId), S["Agent ID"], DataFieldType.Text, record => record.AgentId, leg).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.AgentProfiles));
+        AddField(nameof(CallQualityRecord.UserId), S["User ID"], DataFieldType.Text, record => record.UserId, leg).Identifier(ContactCenterReportDataSets.UserReference());
+        AddField(nameof(CallQualityRecord.QueueId), S["Queue ID"], DataFieldType.Text, record => record.QueueId, leg).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
+        AddField(nameof(CallQualityRecord.ObservedUtc), S["Observed"], DataFieldType.DateTime, record => record.ObservedUtc, leg);
+        AddField(nameof(CallQualityRecord.CreatedUtc), S["Recorded"], DataFieldType.DateTime, record => record.CreatedUtc, leg);
 
-        AddField(nameof(CallQualityRecord.Rating), S["Rating"], ReportDataType.Text, record => record.Rating, quality);
-        AddField(nameof(CallQualityRecord.Mos), S["Mean opinion score"], ReportDataType.Decimal, record => record.Mos, quality);
-        AddField(nameof(CallQualityRecord.LossPercent), S["Packet loss (%)"], ReportDataType.Decimal, record => record.LossPercent, quality);
-        AddField(nameof(CallQualityRecord.JitterMs), S["Jitter (ms)"], ReportDataType.Decimal, record => record.JitterMs, quality);
-        AddField(nameof(CallQualityRecord.RoundTripMs), S["Round trip (ms)"], ReportDataType.Decimal, record => record.RoundTripMs, quality);
-        AddField(nameof(CallQualityRecord.DurationSeconds), S["Measured (seconds)"], ReportDataType.Decimal, record => record.DurationSeconds, quality);
+        AddField(nameof(CallQualityRecord.Rating), S["Rating"], DataFieldType.Text, record => record.Rating, quality);
+        AddField(nameof(CallQualityRecord.Mos), S["Mean opinion score"], DataFieldType.Decimal, record => record.Mos, quality);
+        AddField(nameof(CallQualityRecord.LossPercent), S["Packet loss (%)"], DataFieldType.Decimal, record => record.LossPercent, quality);
+        AddField(nameof(CallQualityRecord.JitterMs), S["Jitter (ms)"], DataFieldType.Decimal, record => record.JitterMs, quality);
+        AddField(nameof(CallQualityRecord.RoundTripMs), S["Round trip (ms)"], DataFieldType.Decimal, record => record.RoundTripMs, quality);
+        AddField(nameof(CallQualityRecord.DurationSeconds), S["Measured (seconds)"], DataFieldType.Decimal, record => record.DurationSeconds, quality);
+
+        CompleteDescription();
     }
 
     /// <inheritdoc/>

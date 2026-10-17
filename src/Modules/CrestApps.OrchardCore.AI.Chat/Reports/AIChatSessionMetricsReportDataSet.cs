@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Data.YesSql;
@@ -5,9 +6,11 @@ using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.DataSources;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -18,7 +21,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 /// feature, with its usage, latency, feedback, and conversion metrics. Only principals allowed to view AI chat
 /// analytics read it. The client's remote address and its hash are never exposed.
 /// </summary>
-public sealed class AIChatSessionMetricsReportDataSet : ReportRecordDataSet<AIChatReportRecord<AIChatSessionEvent>>, IAIChatReportDataSet
+public sealed class AIChatSessionMetricsReportDataSet : RecordDataSet<AIChatReportRecord<AIChatSessionEvent>>, IAIChatReportDataSet
 {
     /// <summary>
     /// The technical name of the session start field, which reads are narrowed by.
@@ -44,10 +47,13 @@ public sealed class AIChatSessionMetricsReportDataSet : ReportRecordDataSet<AICh
         IAuthorizationService authorizationService,
         IOptions<YesSqlStoreOptions> storeOptions,
         IStringLocalizer<AIChatSessionMetricsReportDataSet> stringLocalizer)
-        : base(new ReportDataSetDescriptor(
+        : base(new DataSetDescriptor(
             AIChatReportDataSource.ChatSessionMetricsDataSet,
             stringLocalizer["Chat session metrics"],
-            stringLocalizer["One row per tracked AI chat session, with its usage, feedback, and conversion metrics."]))
+            stringLocalizer["One row per tracked AI chat session, with its usage, feedback, and conversion metrics."])
+        {
+            DefaultDateField = SessionStartedUtcField,
+        })
     {
         _session = session;
         _profileManager = profileManager;
@@ -63,77 +69,75 @@ public sealed class AIChatSessionMetricsReportDataSet : ReportRecordDataSet<AICh
         AddField(
             AIChatReportDataSource.SessionIdField,
             S["Session ID"],
-            ReportDataType.Text,
-            record => record.Document.SessionId,
-            details,
-            isIdentifier: true,
-            new ReportFieldReference(AIChatReportDataSource.SourceName, AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField));
-        AddField("ProfileId", S["Profile ID"], ReportDataType.Text, record => record.Document.ProfileId, details, isIdentifier: true);
-        AddField(AIChatReportProfileNames.ProfileNameField, S["Profile"], ReportDataType.Text, record => record.ProfileName, details);
-        AddField("VisitorId", S["Visitor ID"], ReportDataType.Text, record => record.Document.VisitorId, details, isIdentifier: true);
+            DataFieldType.Text,
+            record => record.Document.SessionId, details).Identifier(new DataFieldReference(AIChatReportDataSource.SourceName, AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField));
+        AddField("ProfileId", S["Profile ID"], DataFieldType.Text, record => record.Document.ProfileId, details).Identifier();
+        AddField(AIChatReportProfileNames.ProfileNameField, S["Profile"], DataFieldType.Text, record => record.ProfileName, details);
+        AddField("VisitorId", S["Visitor ID"], DataFieldType.Text, record => record.Document.VisitorId, details).Identifier();
         AddField(
             ReportsConstants.UserIdField,
             S["User ID"],
-            ReportDataType.Text,
-            record => record.Document.UserId,
-            details,
-            isIdentifier: true,
-            new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
-        AddField("IsAuthenticated", S["Authenticated"], ReportDataType.Boolean, record => record.Document.IsAuthenticated, details);
-        AddField(SessionStartedUtcField, S["Started"], ReportDataType.DateTime, record => record.Document.SessionStartedUtc, details);
-        AddField("SessionEndedUtc", S["Ended"], ReportDataType.DateTime, record => record.Document.SessionEndedUtc, details);
-        AddField("IsResolved", S["Resolved"], ReportDataType.Boolean, record => record.Document.IsResolved, details);
-        AddField("CreatedUtc", S["Recorded"], ReportDataType.DateTime, record => record.Document.CreatedUtc, details);
-        AddField("MessageCount", S["Messages"], ReportDataType.Integer, record => record.Document.MessageCount, usage);
-        AddField("HandleTimeSeconds", S["Handle time (seconds)"], ReportDataType.Decimal, record => record.Document.HandleTimeSeconds, usage);
-        AddField("TotalInputTokens", S["Input tokens"], ReportDataType.Integer, record => record.Document.TotalInputTokens, usage);
-        AddField("TotalOutputTokens", S["Output tokens"], ReportDataType.Integer, record => record.Document.TotalOutputTokens, usage);
-        AddField("AverageResponseLatencyMs", S["Average response latency (ms)"], ReportDataType.Decimal, record => record.Document.AverageResponseLatencyMs, usage);
-        AddField("CompletionCount", S["Completions"], ReportDataType.Integer, record => record.Document.CompletionCount, usage);
-        AddField("UserRating", S["User rating"], ReportDataType.Boolean, record => record.Document.UserRating, feedback);
-        AddField("ThumbsUpCount", S["Thumbs up"], ReportDataType.Integer, record => record.Document.ThumbsUpCount, feedback);
-        AddField("ThumbsDownCount", S["Thumbs down"], ReportDataType.Integer, record => record.Document.ThumbsDownCount, feedback);
-        AddField("ConversionScore", S["Conversion score"], ReportDataType.Integer, record => record.Document.ConversionScore, conversion);
-        AddField("ConversionMaxScore", S["Conversion max score"], ReportDataType.Integer, record => record.Document.ConversionMaxScore, conversion);
+            DataFieldType.Text,
+            record => record.Document.UserId, details).Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+        AddField("IsAuthenticated", S["Authenticated"], DataFieldType.Boolean, record => record.Document.IsAuthenticated, details);
+        AddField(SessionStartedUtcField, S["Started"], DataFieldType.DateTime, record => record.Document.SessionStartedUtc, details);
+        AddField("SessionEndedUtc", S["Ended"], DataFieldType.DateTime, record => record.Document.SessionEndedUtc, details);
+        AddField("IsResolved", S["Resolved"], DataFieldType.Boolean, record => record.Document.IsResolved, details);
+        AddField("CreatedUtc", S["Recorded"], DataFieldType.DateTime, record => record.Document.CreatedUtc, details);
+        AddField("MessageCount", S["Messages"], DataFieldType.Integer, record => record.Document.MessageCount, usage);
+        AddField("HandleTimeSeconds", S["Handle time (seconds)"], DataFieldType.Decimal, record => record.Document.HandleTimeSeconds, usage);
+        AddField("TotalInputTokens", S["Input tokens"], DataFieldType.Integer, record => record.Document.TotalInputTokens, usage);
+        AddField("TotalOutputTokens", S["Output tokens"], DataFieldType.Integer, record => record.Document.TotalOutputTokens, usage);
+        AddField("AverageResponseLatencyMs", S["Average response latency (ms)"], DataFieldType.Decimal, record => record.Document.AverageResponseLatencyMs, usage);
+        AddField("CompletionCount", S["Completions"], DataFieldType.Integer, record => record.Document.CompletionCount, usage);
+        AddField("UserRating", S["User rating"], DataFieldType.Boolean, record => record.Document.UserRating, feedback);
+        AddField("ThumbsUpCount", S["Thumbs up"], DataFieldType.Integer, record => record.Document.ThumbsUpCount, feedback);
+        AddField("ThumbsDownCount", S["Thumbs down"], DataFieldType.Integer, record => record.Document.ThumbsDownCount, feedback);
+        AddField("ConversionScore", S["Conversion score"], DataFieldType.Integer, record => record.Document.ConversionScore, conversion);
+        AddField("ConversionMaxScore", S["Conversion max score"], DataFieldType.Integer, record => record.Document.ConversionMaxScore, conversion);
+
+        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>
-    /// <inheritdoc/>
-    public override string DefaultDateField => SessionStartedUtcField;
-
-    public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
+    public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         return context?.User is not null &&
             await _authorizationService.AuthorizeAsync(context.User, ChatAnalyticsPermissionProvider.ViewChatAnalytics);
     }
 
     /// <inheritdoc/>
-    protected override async Task<IEnumerable<AIChatReportRecord<AIChatSessionEvent>>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<AIChatReportRecord<AIChatSessionEvent>> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var (from, to) = ReportDateRange.For(query.Conditions, SessionStartedUtcField);
-        var events = _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(collection: _storeOptions.AICollectionName);
+        var (from, to) = DataConditions.DateRange(query.Conditions, SessionStartedUtcField);
 
-        if (from.HasValue)
+        IQuery<AIChatSessionEvent> Query()
         {
-            var earliest = from.Value;
-            events = events.Where(index => index.SessionStartedUtc >= earliest);
+            var events = _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(collection: _storeOptions.AICollectionName);
+
+            if (from.HasValue)
+            {
+                var earliest = from.Value;
+                events = events.Where(index => index.SessionStartedUtc >= earliest);
+            }
+
+            if (to.HasValue)
+            {
+                var latest = to.Value;
+                events = events.Where(index => index.SessionStartedUtc <= latest);
+            }
+
+            return events
+                .OrderByDescending(index => index.SessionStartedUtc)
+                .ThenByDescending(index => index.Id);
         }
 
-        if (to.HasValue)
-        {
-            var latest = to.Value;
-            events = events.Where(index => index.SessionStartedUtc <= latest);
-        }
-
-        var documents = await events
-            .OrderByDescending(index => index.SessionStartedUtc)
-            .ThenByDescending(index => index.Id)
-            .Take(take)
-            .ListAsync(cancellationToken);
         var profileNames = await AIChatReportProfileNames.LoadAsync(_profileManager, query, cancellationToken);
 
-        return documents
-            .Select(document => new AIChatReportRecord<AIChatSessionEvent>(document, AIChatReportProfileNames.Find(profileNames, document.ProfileId)))
-            .ToArray();
+        await foreach (var document in ReportIndexPages.ReadAsync(_session, Query, _storeOptions.AICollectionName, cancellationToken))
+        {
+            yield return new AIChatReportRecord<AIChatSessionEvent>(document, AIChatReportProfileNames.Find(profileNames, document.ProfileId));
+        }
     }
+
 }

@@ -1,5 +1,5 @@
 @using System.Globalization
-@using CrestApps.OrchardCore.Reports.DataSources
+@using OrchardCore.DataSources
 @model ReportFiltersViewModel
 
 @if (Model.Filters.Count > 0)
@@ -19,9 +19,9 @@
     var second = values.Count > 1 ? values[1] : string.Empty;
     var inputType = filter.DataType switch
     {
-        ReportDataType.Integer or ReportDataType.Decimal => "number",
-        ReportDataType.Date => "date",
-        ReportDataType.DateTime => "datetime-local",
+        DataFieldType.Integer or DataFieldType.Decimal => "number",
+        DataFieldType.Date => "date",
+        DataFieldType.DateTime => "datetime-local",
         _ => "text",
     };
 
@@ -29,8 +29,8 @@
     {
         case ReportFilterControl.DateRange when !Model.SimpleControls:
             {
-                var from = ReportDataValues.Coerce(first, ReportDataType.DateTime) as DateTime?;
-                var to = ReportDataValues.Coerce(second, ReportDataType.DateTime) as DateTime?;
+                var from = DataValues.Coerce(first, DataFieldType.DateTime) as DateTime?;
+                var to = DataValues.Coerce(second, DataFieldType.DateTime) as DateTime?;
 
                 @await Component.InvokeAsync("DateRangePicker", new
                 {

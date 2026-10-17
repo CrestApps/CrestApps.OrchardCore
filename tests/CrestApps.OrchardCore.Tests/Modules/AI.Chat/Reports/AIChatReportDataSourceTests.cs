@@ -6,8 +6,7 @@ using CrestApps.Core.Data.YesSql.Indexes.AIChat;
 using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Tests.Modules.Reports.Contents;
+using CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
 using CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -15,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DataSources;
 using OrchardCore.Security;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -123,13 +123,13 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session, canViewAnalytics: false);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
         var sessionsSchema = await source.GetSchemaAsync(AIChatReportDataSource.ChatSessionsDataSet, context, TestContext.Current.CancellationToken);
         var metricsSchema = await source.GetSchemaAsync(AIChatReportDataSource.ChatSessionMetricsDataSet, context, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query(AIChatReportDataSource.ChatSessionsDataSet), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(AIChatReportDataSource.ChatSessionsDataSet), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(dataSets);
@@ -144,7 +144,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var context = new ReportDataSourceContext();
+        var context = new DataSourceContext();
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
@@ -161,7 +161,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var dataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
@@ -190,7 +190,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         var source = Source(session);
 
         // Act
-        var table = await source.QueryAsync(Query(AIChatReportDataSource.ChatSessionsDataSet), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(AIChatReportDataSource.ChatSessionsDataSet), TestContext.Current.CancellationToken);
 
         // Assert
         var rows = Rows(table);
@@ -228,7 +228,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         var source = Source(session, profileManager: profileManager.Object);
 
         // Act
-        var table = await source.QueryAsync(Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField, "Status"), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField, "Status"), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal([AIChatReportDataSource.SessionIdField, "Status"], table.Fields.Select(field => field.Name));
@@ -245,16 +245,16 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         var from = _start.AddDays(1).AddMinutes(30);
         var to = _start.AddDays(3).AddMinutes(30);
         var between = Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField, AIChatSessionsReportDataSet.LastActivityUtcField);
-        between.Conditions.Add(Condition(AIChatSessionsReportDataSet.LastActivityUtcField, ReportFilterOperator.Between, from, to));
+        between.Conditions.Add(Condition(AIChatSessionsReportDataSet.LastActivityUtcField, DataFilterOperator.Between, from, to));
         var strict = Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField, AIChatSessionsReportDataSet.LastActivityUtcField);
-        strict.Conditions.Add(Condition(AIChatSessionsReportDataSet.LastActivityUtcField, ReportFilterOperator.GreaterThan, from));
+        strict.Conditions.Add(Condition(AIChatSessionsReportDataSet.LastActivityUtcField, DataFilterOperator.GreaterThan, from));
         var unrelated = Query(AIChatReportDataSource.ChatSessionsDataSet, AIChatReportDataSource.SessionIdField);
-        unrelated.Conditions.Add(Condition("CreatedUtc", ReportFilterOperator.GreaterThan, _start.AddDays(10)));
+        unrelated.Conditions.Add(Condition("CreatedUtc", DataFilterOperator.GreaterThan, _start.AddDays(10)));
 
         // Act
-        var betweenRows = Rows(await source.QueryAsync(between, TestContext.Current.CancellationToken));
-        var strictRows = Rows(await source.QueryAsync(strict, TestContext.Current.CancellationToken));
-        var unrelatedRows = Rows(await source.QueryAsync(unrelated, TestContext.Current.CancellationToken));
+        var betweenRows = Rows(await ReportDesignerTestServices.ReadAsync(source, between, TestContext.Current.CancellationToken));
+        var strictRows = Rows(await ReportDesignerTestServices.ReadAsync(source, strict, TestContext.Current.CancellationToken));
+        var unrelatedRows = Rows(await ReportDesignerTestServices.ReadAsync(source, unrelated, TestContext.Current.CancellationToken));
 
         // Assert
         // The bounds are inclusive, so the rows on them stay; the report applies the strict comparison itself.
@@ -273,7 +273,7 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         query.MaxRows = 2;
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["session-4", "session-3"], Rows(table).Select(row => row[AIChatReportDataSource.SessionIdField]));
@@ -286,11 +286,11 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         // Arrange
         await using var session = _store.CreateSession();
         var source = Source(session);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
         var schema = await source.GetSchemaAsync(AIChatReportDataSource.ChatSessionMetricsDataSet, context, TestContext.Current.CancellationToken);
-        var table = await source.QueryAsync(Query(AIChatReportDataSource.ChatSessionMetricsDataSet), TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, Query(AIChatReportDataSource.ChatSessionMetricsDataSet), TestContext.Current.CancellationToken);
 
         // Assert
         var sessionReference = Assert.Single(schema.FindField(AIChatReportDataSource.SessionIdField).References);
@@ -334,19 +334,19 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var source = Source(session);
         var query = Query(AIChatReportDataSource.ChatSessionMetricsDataSet, AIChatReportDataSource.SessionIdField);
-        query.Conditions.Add(Condition(AIChatSessionMetricsReportDataSet.SessionStartedUtcField, ReportFilterOperator.GreaterThanOrEqual, _start.AddDays(2)));
-        query.Conditions.Add(Condition(AIChatSessionMetricsReportDataSet.SessionStartedUtcField, ReportFilterOperator.LessThan, _start.AddDays(4)));
+        query.Conditions.Add(Condition(AIChatSessionMetricsReportDataSet.SessionStartedUtcField, DataFilterOperator.GreaterThanOrEqual, _start.AddDays(2)));
+        query.Conditions.Add(Condition(AIChatSessionMetricsReportDataSet.SessionStartedUtcField, DataFilterOperator.LessThan, _start.AddDays(4)));
         query.MaxRows = 1;
 
         // Act
-        var table = await source.QueryAsync(query, TestContext.Current.CancellationToken);
+        var table = await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["session-4"], Rows(table).Select(row => row[AIChatReportDataSource.SessionIdField]));
         Assert.True(table.Truncated);
 
         query.MaxRows = 10;
-        var all = Rows(await source.QueryAsync(query, TestContext.Current.CancellationToken));
+        var all = Rows(await ReportDesignerTestServices.ReadAsync(source, query, TestContext.Current.CancellationToken));
         Assert.Equal(["session-4", "session-3", "session-2"], all.Select(row => row[AIChatReportDataSource.SessionIdField]));
     }
 
@@ -357,13 +357,14 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         await using var session = _store.CreateSession();
         var withoutAnalytics = Services(session, analytics: false);
         var withAnalytics = Services(session, analytics: true);
-        var context = new ReportDataSourceContext { User = _user };
+        var context = new DataSourceContext { User = _user };
 
         // Act
-        var source = Assert.IsType<AIChatReportDataSource>(Assert.Single(withoutAnalytics.GetServices<IReportDataSource>()));
+        Assert.Equal(typeof(AIChatReportDataSource), Assert.Single(withoutAnalytics.GetRequiredService<IOptions<DataSourceOptions>>().Value.DataSources).Type);
+        var source = withoutAnalytics.GetRequiredService<AIChatReportDataSource>();
         var withoutAnalyticsDataSets = await source.GetDataSetsAsync(context, TestContext.Current.CancellationToken);
         var hiddenSchema = await source.GetSchemaAsync(AIChatReportDataSource.ChatSessionMetricsDataSet, context, TestContext.Current.CancellationToken);
-        var withAnalyticsDataSets = await withAnalytics.GetRequiredService<IReportDataSource>().GetDataSetsAsync(context, TestContext.Current.CancellationToken);
+        var withAnalyticsDataSets = await withAnalytics.GetRequiredService<AIChatReportDataSource>().GetDataSetsAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal([AIChatReportDataSource.ChatSessionsDataSet], withoutAnalyticsDataSets.Select(dataSet => dataSet.Name));
@@ -379,13 +380,13 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         services.AddSingleton(ProfileManager().Object);
         services.AddSingleton(Authorization(canViewAnalytics: true));
         services.AddSingleton(_storeOptions);
-        services.AddSingleton(typeof(IStringLocalizer<>), typeof(ContentReportTestLocalizer<>));
+        services.AddSingleton(typeof(IStringLocalizer<>), typeof(PassThroughStringLocalizer<>));
 
-        new CrestApps.OrchardCore.AI.Chat.ReportsStartup().ConfigureServices(services);
+        new CrestApps.OrchardCore.AI.Chat.DataSourcesStartup().ConfigureServices(services);
 
         if (analytics)
         {
-            new CrestApps.OrchardCore.AI.Chat.ChatAnalyticsReportsStartup().ConfigureServices(services);
+            new CrestApps.OrchardCore.AI.Chat.ChatAnalyticsDataSourcesStartup().ConfigureServices(services);
         }
 
         return services.BuildServiceProvider();
@@ -399,10 +400,9 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
 
         return new AIChatReportDataSource(
             [
-                new AIChatSessionsReportDataSet(session, profileManager, authorizationService, _storeOptions, new ContentReportTestLocalizer<AIChatSessionsReportDataSet>()),
-                new AIChatSessionMetricsReportDataSet(session, profileManager, authorizationService, _storeOptions, new ContentReportTestLocalizer<AIChatSessionMetricsReportDataSet>()),
-            ],
-            new ContentReportTestLocalizer<AIChatReportDataSource>());
+                new AIChatSessionsReportDataSet(session, profileManager, authorizationService, _storeOptions, new PassThroughStringLocalizer<AIChatSessionsReportDataSet>()),
+                new AIChatSessionMetricsReportDataSet(session, profileManager, authorizationService, _storeOptions, new PassThroughStringLocalizer<AIChatSessionMetricsReportDataSet>()),
+            ]);
     }
 
     private static IAuthorizationService Authorization(bool canViewAnalytics)
@@ -434,9 +434,9 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         return profileManager;
     }
 
-    private static ReportDataCondition Condition(string field, ReportFilterOperator filterOperator, params object[] values)
+    private static DataCondition Condition(string field, DataFilterOperator filterOperator, params object[] values)
     {
-        return new ReportDataCondition
+        return new DataCondition
         {
             Field = field,
             Operator = filterOperator,
@@ -444,18 +444,18 @@ public sealed class AIChatReportDataSourceTests : IAsyncLifetime
         };
     }
 
-    private static ReportDataSourceQuery Query(string dataSet, params string[] fields)
+    private static DataSourceQuery Query(string dataSet, params string[] fields)
     {
-        return new ReportDataSourceQuery
+        return new DataSourceQuery
         {
             DataSet = dataSet,
             Fields = new HashSet<string>(fields, StringComparer.Ordinal),
             MaxRows = 100,
-            Context = new ReportDataSourceContext { User = _user },
+            Context = new DataSourceContext { User = _user },
         };
     }
 
-    private static List<Dictionary<string, object>> Rows(ReportDataTable table)
+    private static List<Dictionary<string, object>> Rows(DataRowSet table)
     {
         return table.Rows
             .Select(row => table.Fields.Select((field, index) => (field.Name, Value: row[index])).ToDictionary(pair => pair.Name, pair => pair.Value, StringComparer.Ordinal))

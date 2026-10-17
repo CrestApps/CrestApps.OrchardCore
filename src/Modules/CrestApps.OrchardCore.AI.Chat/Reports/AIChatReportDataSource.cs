@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Reports.DataSources;
-using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.AI.Chat.Reports;
 
@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Reports;
 /// Exposes AI chat sessions, and their analytics when the AI Chat Session Analytics feature is enabled, to the report
 /// builder. Its data sets are the <see cref="IAIChatReportDataSet"/> services of the enabled features.
 /// </summary>
-public sealed class AIChatReportDataSource : ReportRecordDataSource
+public sealed class AIChatReportDataSource : RecordDataSource, IDataSource
 {
     /// <summary>
     /// The technical name of the data source.
@@ -30,30 +30,25 @@ public sealed class AIChatReportDataSource : ReportRecordDataSource
     public const string SessionIdField = "SessionId";
 
     private readonly IAIChatReportDataSet[] _dataSets;
-    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIChatReportDataSource"/> class.
     /// </summary>
     /// <param name="dataSets">The data sets of the enabled features.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public AIChatReportDataSource(
-        IEnumerable<IAIChatReportDataSet> dataSets,
-        IStringLocalizer<AIChatReportDataSource> stringLocalizer)
+    public AIChatReportDataSource(IEnumerable<IAIChatReportDataSet> dataSets)
     {
         _dataSets = dataSets.ToArray();
-        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    public override string Name => SourceName;
+    public static string Name => SourceName;
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["AI chat"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<AIChatReportDataSource>("AI chat");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["AI chat sessions and their analytics."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<AIChatReportDataSource>("AI chat sessions and their analytics.");
 
     /// <inheritdoc/>
-    protected override IEnumerable<IReportRecordDataSet> DataSets => _dataSets;
+    protected override IEnumerable<IRecordDataSet> DataSets => _dataSets;
 }

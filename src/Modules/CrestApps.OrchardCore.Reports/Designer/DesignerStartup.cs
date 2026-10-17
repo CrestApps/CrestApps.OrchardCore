@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer.BackgroundTasks;
 using CrestApps.OrchardCore.Reports.Designer.Deployments;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
@@ -7,13 +6,13 @@ using CrestApps.OrchardCore.Reports.Designer.Indexes;
 using CrestApps.OrchardCore.Reports.Designer.Migrations;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
-using CrestApps.OrchardCore.Reports.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.Deployment;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
@@ -24,8 +23,8 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
-/// Registers the report builder: the query engine, the stores of designed reports, views, and share links, the
-/// built-in views data source and the scheduled refresh of views, the sharing-aware authorization handler, and the
+/// Registers the report builder: the query engine over the data sources of Orchard Core, the stores of designed reports,
+/// views, and share links, the views data source and the scheduled refresh of views, the sharing-aware authorization handler, and the
 /// admin menu.
 /// </summary>
 [Feature(ReportsConstants.BuilderFeature)]
@@ -51,7 +50,6 @@ public sealed class DesignerStartup : StartupBase
         services.Configure<ReportDesignVersionOptions>(_shellConfiguration.GetSection("CrestApps:Reports:Builder:Versions"));
 
         services
-            .AddScoped<IReportDataSourceManager, ReportDataSourceManager>()
             .AddScoped<ReportQueryPlanner>()
             .AddScoped<ReportQueryEngine>()
             .AddScoped<ReportValueFormatter>()
@@ -64,13 +62,13 @@ public sealed class DesignerStartup : StartupBase
             .AddScoped<ReportDesignHistoryStore>()
             .AddScoped<ReportDesignHistoryService>()
             .AddScoped<ReportDesignRunner>()
-            .AddScoped<ReportShareLinkService>()
             .AddScoped<DesignedReportPresenter>()
             .AddScoped<ReportViewRunner>()
             .AddScoped<ReportViewSnapshotStore>()
-            .AddScoped<ReportViewSnapshotRefresher>()
-            .AddScoped<IReportDataSource, ReportViewsDataSource>()
-            .AddScoped<IReportDataSource, UsersReportDataSource>();
+            .AddScoped<ReportViewSnapshotRefresher>();
+
+        services.AddDataSource<ReportViewsDataSource>();
+        services.AddSharedLinkHandler<ReportSharedLinkHandler>();
 
         services.TryAddScoped<IReportDesignNotifier, NullReportDesignNotifier>();
         services.AddIndexProvider<ReportDesignDraftIndexProvider>();

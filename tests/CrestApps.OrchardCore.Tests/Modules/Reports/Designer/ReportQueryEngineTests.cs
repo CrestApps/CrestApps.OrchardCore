@@ -1,5 +1,6 @@
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Operations;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.ReportDesignerTestServices;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
@@ -12,7 +13,7 @@ public sealed class ReportQueryEngineTests
         // Arrange
         var data = SalesData();
         var query = CustomersWithOrders();
-        query.Columns = [Column("region", "c.Region"), Column("revenue", "o.Total", ReportAggregate.Sum)];
+        query.Columns = [Column("region", "c.Region"), Column("revenue", "o.Total", DataAggregate.Sum)];
 
         // Act
         var result = await Engine(data).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -25,11 +26,11 @@ public sealed class ReportQueryEngineTests
     }
 
     [Theory]
-    [InlineData(ReportJoinType.Inner, 4)]
-    [InlineData(ReportJoinType.Left, 5)]
-    [InlineData(ReportJoinType.Right, 5)]
-    [InlineData(ReportJoinType.Full, 6)]
-    public async Task ExecuteAsync_JoinTypes_KeepTheExpectedUnmatchedRows(ReportJoinType joinType, int expectedRows)
+    [InlineData(DataJoinType.Inner, 4)]
+    [InlineData(DataJoinType.Left, 5)]
+    [InlineData(DataJoinType.Right, 5)]
+    [InlineData(DataJoinType.Full, 6)]
+    public async Task ExecuteAsync_JoinTypes_KeepTheExpectedUnmatchedRows(DataJoinType joinType, int expectedRows)
     {
         // Arrange
         var query = CustomersWithOrders(joinType);
@@ -40,8 +41,8 @@ public sealed class ReportQueryEngineTests
 
         // Assert
         Assert.Equal(expectedRows, result.Rows.Count);
-        Assert.Equal(joinType is ReportJoinType.Left or ReportJoinType.Full, result.Rows.Any(row => (string)row[0] == "Umbrella" && row[1] is null));
-        Assert.Equal(joinType is ReportJoinType.Right or ReportJoinType.Full, result.Rows.Any(row => row[0] is null && (string)row[1] == "o5"));
+        Assert.Equal(joinType is DataJoinType.Left or DataJoinType.Full, result.Rows.Any(row => (string)row[0] == "Umbrella" && row[1] is null));
+        Assert.Equal(joinType is DataJoinType.Right or DataJoinType.Full, result.Rows.Any(row => row[0] is null && (string)row[1] == "o5"));
     }
 
     [Fact]
@@ -49,8 +50,8 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var data = new InMemoryReportDataSource()
-            .Add("A", [new ReportFieldDescriptor("Code", "Code", ReportDataType.Text)], ["7"], ["8"])
-            .Add("B", [new ReportFieldDescriptor("Code", "Code", ReportDataType.Integer), new ReportFieldDescriptor("Label", "Label", ReportDataType.Text)], [7L, "seven"]);
+            .Add("A", [new DataField("Code", "Code", DataFieldType.Text)], ["7"], ["8"])
+            .Add("B", [new DataField("Code", "Code", DataFieldType.Integer), new DataField("Label", "Label", DataFieldType.Text)], [7L, "seven"]);
         var query = new ReportQueryDefinition
         {
             DataSets =
@@ -80,7 +81,7 @@ public sealed class ReportQueryEngineTests
             new ReportCalculatedField { Name = "Big", Expression = "IF([UnitPrice] >= 50, 'Big', 'Small')" },
             new ReportCalculatedField { Name = "AverageOrder", Label = "Average order", Expression = "SUM([o.Total]) / COUNTD([o.Id])" },
         ];
-        query.Columns = [Column("size", "Big"), Column("avg", "AverageOrder"), Column("unit", "UnitPrice", ReportAggregate.Max)];
+        query.Columns = [Column("size", "Big"), Column("avg", "AverageOrder"), Column("unit", "UnitPrice", DataAggregate.Max)];
 
         // Act
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -96,8 +97,8 @@ public sealed class ReportQueryEngineTests
     public async Task ExecuteAsync_RowCountField_CountsRowsOfEachGroup()
     {
         // Arrange
-        var query = CustomersWithOrders(ReportJoinType.Left);
-        query.Columns = [Column("name", "c.Name"), Column("count", ReportQueryPlanner.RowCountField), Column("orders", "o.Id", ReportAggregate.Count)];
+        var query = CustomersWithOrders(DataJoinType.Left);
+        query.Columns = [Column("name", "c.Name"), Column("count", ReportQueryPlanner.RowCountField), Column("orders", "o.Id", DataAggregate.Count)];
 
         // Act
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -114,7 +115,7 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Columns = [Column("region", "c.Region"), Column("name", "c.Name"), Column("avg", "o.Total", ReportAggregate.Average)];
+        query.Columns = [Column("region", "c.Region"), Column("name", "c.Name"), Column("avg", "o.Total", DataAggregate.Average)];
 
         // Act
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -132,8 +133,8 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var data = SalesData();
-        var query = CustomersWithOrders(ReportJoinType.Left);
-        query.Filters = [new ReportFilterDefinition { Id = "f1", Field = "c.Region", Operator = ReportFilterOperator.Equals, Values = ["West"] }];
+        var query = CustomersWithOrders(DataJoinType.Left);
+        query.Filters = [new ReportFilterDefinition { Id = "f1", Field = "c.Region", Operator = DataFilterOperator.Equals, Values = ["West"] }];
         query.Columns = [Column("name", "c.Name")];
 
         // Act
@@ -143,7 +144,7 @@ public sealed class ReportQueryEngineTests
         Assert.Equal(["Acme", "Acme", "Initech"], result.Rows.Select(row => (string)row[0]));
         var customerQuery = data.Queries.Single(candidate => candidate.DataSet == "Customer");
         var condition = Assert.Single(customerQuery.Conditions);
-        Assert.Equal(ReportFilterOperator.In, condition.Operator);
+        Assert.Equal(DataFilterOperator.In, condition.Operator);
         Assert.Equal("Region", condition.Field);
         Assert.Contains("Region", customerQuery.Fields);
         Assert.DoesNotContain("Active", customerQuery.Fields);
@@ -155,11 +156,11 @@ public sealed class ReportQueryEngineTests
         // Arrange
         var data = SalesData();
         data.ApplyConditions = true;
-        var query = CustomersWithOrders(ReportJoinType.Right);
+        var query = CustomersWithOrders(DataJoinType.Right);
         query.Filters =
         [
-            new ReportFilterDefinition { Id = "f1", Field = "c.Region", Operator = ReportFilterOperator.In, Values = ["West"] },
-            new ReportFilterDefinition { Id = "f2", Field = "o.Quantity", Operator = ReportFilterOperator.LessThanOrEqual, Values = ["2"] },
+            new ReportFilterDefinition { Id = "f1", Field = "c.Region", Operator = DataFilterOperator.In, Values = ["West"] },
+            new ReportFilterDefinition { Id = "f2", Field = "o.Quantity", Operator = DataFilterOperator.LessThanOrEqual, Values = ["2"] },
         ];
         query.Columns = [Column("order", "o.Id")];
 
@@ -177,8 +178,8 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Filters = [new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = ReportFilterOperator.In, Values = ["West"], Exposed = true }];
-        query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", ReportAggregate.Sum)];
+        query.Filters = [new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = DataFilterOperator.In, Values = ["West"], Exposed = true }];
+        query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", DataAggregate.Sum)];
         var context = Context();
         context.FilterValues["region"] = ["East"];
 
@@ -194,7 +195,7 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Filters = [new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = ReportFilterOperator.In, Values = ["West"], Exposed = true }];
+        query.Filters = [new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = DataFilterOperator.In, Values = ["West"], Exposed = true }];
         query.Columns = [Column("name", "c.Name")];
         var context = Context();
         context.FilterValues["region"] = [];
@@ -211,7 +212,7 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Filters = [new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = ReportFilterOperator.Equals, Values = ["West"] }];
+        query.Filters = [new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = DataFilterOperator.Equals, Values = ["West"] }];
         query.Columns = [Column("name", "c.Name"), Column("region", "c.Region")];
         var context = Context();
         context.FilterValues["region"] = ["East"];
@@ -227,11 +228,11 @@ public sealed class ReportQueryEngineTests
     public async Task ExecuteAsync_ExposedSelectFilter_ListsTheValuesLeftByFixedFilters()
     {
         // Arrange
-        var query = CustomersWithOrders(ReportJoinType.Left);
+        var query = CustomersWithOrders(DataJoinType.Left);
         query.Filters =
         [
-            new ReportFilterDefinition { Id = "active", Field = "c.Active", Operator = ReportFilterOperator.Equals, Values = ["true"] },
-            new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = ReportFilterOperator.In, Exposed = true, Control = ReportFilterControl.MultiSelect },
+            new ReportFilterDefinition { Id = "active", Field = "c.Active", Operator = DataFilterOperator.Equals, Values = ["true"] },
+            new ReportFilterDefinition { Id = "region", Field = "c.Region", Operator = DataFilterOperator.In, Exposed = true, Control = ReportFilterControl.MultiSelect },
         ];
         query.Columns = [Column("name", "c.Name")];
         var context = Context();
@@ -250,8 +251,8 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Filters = [new ReportFilterDefinition { Id = "big", Field = "total", Stage = ReportFilterStage.Result, Operator = ReportFilterOperator.GreaterThan, Values = ["100"] }];
-        query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", ReportAggregate.Sum)];
+        query.Filters = [new ReportFilterDefinition { Id = "big", Field = "total", Stage = ReportFilterStage.Result, Operator = DataFilterOperator.GreaterThan, Values = ["100"] }];
+        query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", DataAggregate.Sum)];
 
         // Act
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -265,7 +266,7 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", ReportAggregate.Sum)];
+        query.Columns = [Column("name", "c.Name"), Column("total", "o.Total", DataAggregate.Sum)];
         query.Sorts = [new ReportSortDefinition { ColumnId = "total", Descending = true }];
         query.Limit = 2;
 
@@ -282,8 +283,8 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Columns = [Column("day", "o.PlacedUtc", transform: ReportFieldTransform.Day), Column("count", ReportQueryPlanner.RowCountField)];
-        query.Filters = [new ReportFilterDefinition { Id = "o3", Field = "o.Id", Operator = ReportFilterOperator.Equals, Values = ["o3"] }];
+        query.Columns = [Column("day", "o.PlacedUtc", transform: DataFieldTransform.Day), Column("count", ReportQueryPlanner.RowCountField)];
+        query.Filters = [new ReportFilterDefinition { Id = "o3", Field = "o.Id", Operator = DataFilterOperator.Equals, Values = ["o3"] }];
         var context = Context();
         context.ToLocal = value => DateTime.SpecifyKind(value.AddHours(2), DateTimeKind.Unspecified);
 
@@ -299,7 +300,7 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Filters = [new ReportFilterDefinition { Id = "placed", Field = "o.PlacedUtc", Operator = ReportFilterOperator.Between, Values = ["2026-02-01", "2026-02-20"] }];
+        query.Filters = [new ReportFilterDefinition { Id = "placed", Field = "o.PlacedUtc", Operator = DataFilterOperator.Between, Values = ["2026-02-01", "2026-02-20"] }];
         query.Columns = [Column("order", "o.Id")];
 
         // Act
@@ -313,8 +314,8 @@ public sealed class ReportQueryEngineTests
     public async Task ExecuteAsync_InLastDaysFilter_CountsFromTheTenantToday()
     {
         // Arrange
-        var query = CustomersWithOrders(ReportJoinType.Right);
-        query.Filters = [new ReportFilterDefinition { Id = "recent", Field = "o.PlacedUtc", Operator = ReportFilterOperator.InLastDays, Values = ["7"] }];
+        var query = CustomersWithOrders(DataJoinType.Right);
+        query.Filters = [new ReportFilterDefinition { Id = "recent", Field = "o.PlacedUtc", Operator = DataFilterOperator.InLastDays, Values = ["7"] }];
         query.Columns = [Column("order", "o.Id")];
 
         // Act
@@ -346,8 +347,8 @@ public sealed class ReportQueryEngineTests
     {
         // Arrange
         var query = CustomersWithOrders();
-        query.Filters = [new ReportFilterDefinition { Id = "none", Field = "c.Region", Operator = ReportFilterOperator.Equals, Values = ["Nowhere"] }];
-        query.Columns = [Column("count", ReportQueryPlanner.RowCountField), Column("total", "o.Total", ReportAggregate.Sum)];
+        query.Filters = [new ReportFilterDefinition { Id = "none", Field = "c.Region", Operator = DataFilterOperator.Equals, Values = ["Nowhere"] }];
+        query.Columns = [Column("count", ReportQueryPlanner.RowCountField), Column("total", "o.Total", DataAggregate.Sum)];
 
         // Act
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -425,19 +426,19 @@ public sealed class ReportQueryEngineTests
             ],
             Columns =
             [
-                Column("a", "c.Name", ReportAggregate.Sum),
-                Column("b", "Total", ReportAggregate.Max),
+                Column("a", "c.Name", DataAggregate.Sum),
+                Column("b", "Total", DataAggregate.Max),
                 Column("b", "c.Region"),
                 Column("c", "c.Unknown"),
-                Column("d", "c.Name", transform: ReportFieldTransform.Year),
+                Column("d", "c.Name", transform: DataFieldTransform.Year),
             ],
-            Filters = [new ReportFilterDefinition { Id = "f", Field = "Total", Operator = ReportFilterOperator.GreaterThan, Values = ["1"] }],
+            Filters = [new ReportFilterDefinition { Id = "f", Field = "Total", Operator = DataFilterOperator.GreaterThan, Values = ["1"] }],
             Sorts = [new ReportSortDefinition { ColumnId = "zzz" }],
             Limit = 0,
         };
 
         // Act
-        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext(), TestContext.Current.CancellationToken);
+        var plan = await Planner(SalesData()).PlanAsync(query, new DataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(plan.IsValid);
@@ -463,7 +464,7 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("name", "c.Name")];
 
         // Act
-        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext(), TestContext.Current.CancellationToken);
+        var plan = await Planner(SalesData()).PlanAsync(query, new DataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains(plan.Errors, error => error.Contains("must match a field of a data set listed before it", StringComparison.Ordinal));
@@ -480,7 +481,7 @@ public sealed class ReportQueryEngineTests
         };
 
         // Act
-        var plan = await Planner(SalesData()).PlanAsync(query, new ReportDataSourceContext(), TestContext.Current.CancellationToken);
+        var plan = await Planner(SalesData()).PlanAsync(query, new DataSourceContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("Enable the feature", Assert.Single(plan.Errors), StringComparison.Ordinal);

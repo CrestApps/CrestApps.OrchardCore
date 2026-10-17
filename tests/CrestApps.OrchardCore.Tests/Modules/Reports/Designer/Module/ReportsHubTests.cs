@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using OrchardCore.Security;
@@ -107,7 +108,7 @@ public sealed class ReportsHubTests
         var designService = new ReportDesignService(
             Catalog(new ReportDesign { ItemId = "r1", DisplayText = "Sales", OwnerId = "owner" }),
             Catalog<ReportView>(),
-            new ReportShareLinkService(Catalog<ReportShareLink>(), clock.Object),
+            new InMemorySharedLinkManager(),
             NoSnapshots(),
             Planner(SalesData()),
             DocumentBuilder(),

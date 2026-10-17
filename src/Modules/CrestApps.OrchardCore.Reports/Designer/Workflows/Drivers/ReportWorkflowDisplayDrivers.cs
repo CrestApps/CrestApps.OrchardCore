@@ -344,10 +344,12 @@ public sealed class CreateReportShareLinkTaskDisplayDriver : ReportTaskDisplayDr
     /// <inheritdoc/>
     protected override ValueTask EditTaskAsync(CreateReportShareLinkTask activity, CreateReportShareLinkTaskViewModel model)
     {
+        model.Recipients = activity.Recipients;
         model.Note = activity.Note;
         model.ExpiresAfterDays = activity.ExpiresAfterDays;
+        model.MaxUses = activity.MaxUses;
         model.AllowExport = activity.AllowExport;
-        model.RequireSignIn = activity.RequireSignIn;
+        model.NotifyByEmail = activity.NotifyByEmail;
 
         return ValueTask.CompletedTask;
     }
@@ -355,17 +357,30 @@ public sealed class CreateReportShareLinkTaskDisplayDriver : ReportTaskDisplayDr
     /// <inheritdoc/>
     protected override void UpdateTask(CreateReportShareLinkTaskViewModel model, CreateReportShareLinkTask activity, UpdateEditorContext context)
     {
-        if (model.ExpiresAfterDays < 0)
+        if (string.IsNullOrWhiteSpace(model.Recipients))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ExpiresAfterDays), S["Enter 0 for a link that does not expire, or a number of days."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Recipients), S["Enter the user names or emails of the people the link is for."]);
         }
 
+        if (model.ExpiresAfterDays < 1)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ExpiresAfterDays), S["Enter the number of days the link works, 1 at least."]);
+        }
+
+        if (model.MaxUses < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxUses), S["Enter 0 for no limit, or the most times the link may be used."]);
+        }
+
+        ValidateLiquid(model.Recipients, nameof(model.Recipients), context);
         ValidateLiquid(model.Note, nameof(model.Note), context);
 
+        activity.Recipients = model.Recipients?.Trim();
         activity.Note = model.Note?.Trim();
-        activity.ExpiresAfterDays = Math.Max(0, model.ExpiresAfterDays);
+        activity.ExpiresAfterDays = Math.Max(1, model.ExpiresAfterDays);
+        activity.MaxUses = Math.Max(0, model.MaxUses);
         activity.AllowExport = model.AllowExport;
-        activity.RequireSignIn = model.RequireSignIn;
+        activity.NotifyByEmail = model.NotifyByEmail;
     }
 }
 

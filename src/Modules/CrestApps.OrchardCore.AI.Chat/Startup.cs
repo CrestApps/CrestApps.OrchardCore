@@ -22,7 +22,6 @@ using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -32,6 +31,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -168,25 +168,25 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
 }
 
 /// <summary>
-/// Exposes AI chat sessions to the report builder when it is enabled.
+/// Exposes AI chat sessions as a data source of Orchard Core, for reports and data pipelines.
 /// </summary>
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class ReportsStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services
             .AddScoped<IAIChatReportDataSet, AIChatSessionsReportDataSet>()
-            .AddScoped<IReportDataSource, AIChatReportDataSource>();
+            .AddDataSource<AIChatReportDataSource>();
     }
 }
 
 /// <summary>
-/// Adds the chat session metrics data set to the AI chat report data source when the report builder is enabled.
+/// Adds the chat session metrics data set to the AI chat data source.
 /// </summary>
 [Feature(AIConstants.Feature.ChatAnalytics)]
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class ChatAnalyticsReportsStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {

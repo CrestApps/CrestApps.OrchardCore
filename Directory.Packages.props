@@ -50,6 +50,9 @@
     <PackageVersion Include="OrchardCore.Contents.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Contents.TagHelpers" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Data.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataPipelines.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataSources.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.DataSources.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Deployment" Version="$(OrchardCoreVersion)" />

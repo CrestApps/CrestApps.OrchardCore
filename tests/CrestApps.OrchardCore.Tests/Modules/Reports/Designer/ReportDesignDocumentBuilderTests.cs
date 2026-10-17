@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Models;
+using OrchardCore.DataSources;
 using static CrestApps.OrchardCore.Tests.Modules.Reports.Designer.ReportDesignerTestServices;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer;
@@ -167,8 +168,8 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
             new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
             new ReportColumnDefinition { Id = "order", Field = "o.Id", Label = "Order" },
-            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = ReportAggregate.Sum, Format = "0" },
-            new ReportColumnDefinition { Id = "average", Field = "o.Total", Label = "Average", Aggregate = ReportAggregate.Average, Format = "0.00" },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
+            new ReportColumnDefinition { Id = "average", Field = "o.Total", Label = "Average", Aggregate = DataAggregate.Average, Format = "0.00" },
         ];
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
         var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ShowTotals = true, ShowSubtotals = true };
@@ -206,7 +207,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         [
             new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
             new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
-            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = ReportAggregate.Sum, Format = "0" },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
         ];
         query.Sorts = [new ReportSortDefinition { ColumnId = "revenue", Descending = true }];
         var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
@@ -228,7 +229,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         [
             new ReportColumnDefinition { Id = "region", Field = "c.Region", Label = "Region" },
             new ReportColumnDefinition { Id = "customer", Field = "c.Name", Label = "Customer" },
-            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = ReportAggregate.Sum, Format = "0" },
+            new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
         ];
 
         return Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);

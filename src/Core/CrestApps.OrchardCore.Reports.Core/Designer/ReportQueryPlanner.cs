@@ -1,7 +1,8 @@
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.Reports.DataSources;
-using CrestApps.OrchardCore.Reports.Designer.Expressions;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
 
@@ -16,19 +17,27 @@ public sealed partial class ReportQueryPlanner
     /// </summary>
     public const string RowCountField = "$count";
 
-    private readonly IReportDataSourceManager _dataSourceManager;
+    private readonly IDataSourceManager _dataSourceManager;
+    private readonly IExpressionFunctionCatalog _functions;
+    private readonly IStringLocalizerFactory _localizerFactory;
     private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportQueryPlanner"/> class.
     /// </summary>
     /// <param name="dataSourceManager">The data source manager.</param>
+    /// <param name="functions">The functions formulas may call.</param>
+    /// <param name="localizerFactory">The localizer factory, for the names of the data sources.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportQueryPlanner(
-        IReportDataSourceManager dataSourceManager,
+        IDataSourceManager dataSourceManager,
+        IExpressionFunctionCatalog functions,
+        IStringLocalizerFactory localizerFactory,
         IStringLocalizer<ReportQueryPlanner> stringLocalizer)
     {
         _dataSourceManager = dataSourceManager;
+        _functions = functions;
+        _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
 
@@ -41,7 +50,7 @@ public sealed partial class ReportQueryPlanner
     /// <returns>The plan; check <see cref="ReportQueryPlan.Errors"/> before running it.</returns>
     public async Task<ReportQueryPlan> PlanAsync(
         ReportQueryDefinition query,
-        ReportDataSourceContext context,
+        DataSourceContext context,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);
@@ -78,7 +87,7 @@ public sealed partial class ReportQueryPlanner
 
     private async Task PlanDataSetsAsync(
         ReportQueryDefinition query,
-        ReportDataSourceContext context,
+        DataSourceContext context,
         ReportQueryPlan plan,
         CancellationToken cancellationToken)
     {
@@ -107,7 +116,7 @@ public sealed partial class ReportQueryPlanner
                 continue;
             }
 
-            var source = _dataSourceManager.FindDataSource(reference.Source);
+            var source = _dataSourceManager.GetDataSource(reference.Source);
 
             if (source is null)
             {
@@ -120,7 +129,7 @@ public sealed partial class ReportQueryPlanner
 
             if (schema is null)
             {
-                plan.Errors.Add(S["The data set '{0}' of '{1}' does not exist or is not available to you.", reference.DisplayName ?? reference.DataSet, source.DisplayName]);
+                plan.Errors.Add(S["The data set '{0}' of '{1}' does not exist or is not available to you.", reference.DisplayName ?? reference.DataSet, _localizerFactory.Localize(_dataSourceManager.GetDescriptor(reference.Source).DisplayName)]);
 
                 continue;
             }
@@ -142,7 +151,7 @@ public sealed partial class ReportQueryPlanner
                 {
                     Key = key,
                     Label = field.DisplayName ?? field.Name,
-                    DataType = field.DataType,
+                    DataType = field.Type,
                     Kind = PlannedFieldKind.DataSetField,
                     Alias = reference.Alias,
                     FieldName = field.Name,
@@ -157,9 +166,9 @@ public sealed partial class ReportQueryPlanner
         {
             Key = RowCountField,
             Label = S["Number of rows"],
-            DataType = ReportDataType.Integer,
+            DataType = DataFieldType.Integer,
             Kind = PlannedFieldKind.AggregateCalculation,
-            Expression = ExpressionCompiler.Compile("COUNT()", new PlanScope(plan), S),
+            Expression = ExpressionCompiler.Compile("COUNT()", new PlanScope(plan), _functions, S),
         };
     }
 
@@ -229,20 +238,20 @@ public sealed partial class ReportQueryPlanner
                 }
 
                 var compareAsText = left.DataType != right.DataType &&
-                    !(ReportDataValues.IsNumeric(left.DataType) && ReportDataValues.IsNumeric(right.DataType)) &&
-                    !(ReportDataValues.IsTemporal(left.DataType) && ReportDataValues.IsTemporal(right.DataType));
+                    !(DataValues.IsNumeric(left.DataType) && DataValues.IsNumeric(right.DataType)) &&
+                    !(DataValues.IsTemporal(left.DataType) && DataValues.IsTemporal(right.DataType));
 
                 planned.Pairs.Add((left.Slot, right.Slot, compareAsText));
             }
 
             plan.Joins.Add(planned);
 
-            if (join.Type is ReportJoinType.Left or ReportJoinType.Full)
+            if (join.Type is DataJoinType.Left or DataJoinType.Full)
             {
                 dataSet.IsNullSupplying = true;
             }
 
-            if (join.Type is ReportJoinType.Right or ReportJoinType.Full)
+            if (join.Type is DataJoinType.Right or DataJoinType.Full)
             {
                 foreach (var earlier in plan.DataSets.Take(index))
                 {
@@ -278,7 +287,7 @@ public sealed partial class ReportQueryPlanner
 
             try
             {
-                compiled = ExpressionCompiler.Compile(calculated.Expression, scope, S);
+                compiled = ExpressionCompiler.Compile(calculated.Expression, scope, _functions, S);
             }
             catch (ExpressionException exception)
             {
@@ -341,18 +350,18 @@ public sealed partial class ReportQueryPlanner
                 Field = field,
             };
 
-            if (!ReportTransforms.Supports(column.Transform, field.DataType))
+            if (!DataFieldTransforms.Supports(column.Transform, field.DataType))
             {
                 plan.Errors.Add(S["The column '{0}' cannot apply the transform {1} to a {2} field.", column.Label ?? field.Label, column.Transform, field.DataType]);
 
                 continue;
             }
 
-            var transformedType = ReportTransforms.GetResultType(column.Transform, field.DataType);
+            var transformedType = DataFieldTransforms.GetResultType(column.Transform, field.DataType);
 
             if (field.IsAggregate)
             {
-                if (column.Aggregate != ReportAggregate.None)
+                if (column.Aggregate != DataAggregate.None)
                 {
                     plan.Errors.Add(S["The column '{0}' shows a field that is already aggregated, so it cannot apply another aggregate.", column.Label ?? field.Label]);
 
@@ -362,9 +371,9 @@ public sealed partial class ReportQueryPlanner
                 planned.IsMeasure = true;
                 planned.DataType = transformedType;
             }
-            else if (column.Aggregate != ReportAggregate.None)
+            else if (column.Aggregate != DataAggregate.None)
             {
-                if (!ReportAggregations.Supports(column.Aggregate, transformedType))
+                if (!DataAggregations.Supports(column.Aggregate, transformedType))
                 {
                     plan.Errors.Add(S["The column '{0}' cannot apply {1} to a {2} field.", column.Label ?? field.Label, column.Aggregate, transformedType]);
 
@@ -372,7 +381,7 @@ public sealed partial class ReportQueryPlanner
                 }
 
                 planned.IsMeasure = true;
-                planned.DataType = ReportAggregations.GetResultType(column.Aggregate, transformedType);
+                planned.DataType = DataAggregations.GetResultType(column.Aggregate, transformedType);
             }
             else
             {
@@ -440,7 +449,7 @@ public sealed partial class ReportQueryPlanner
                 planned.DataType = field.DataType;
             }
 
-            if (filter.Operator is ReportFilterOperator.InLastDays or ReportFilterOperator.InNextDays && !ReportDataValues.IsTemporal(planned.DataType))
+            if (filter.Operator is DataFilterOperator.InLastDays or DataFilterOperator.InNextDays && !DataValues.IsTemporal(planned.DataType))
             {
                 plan.Errors.Add(S["The filter '{0}' compares days, so it needs a date field.", filter.Label ?? filter.Id]);
 
@@ -470,19 +479,19 @@ public sealed partial class ReportQueryPlanner
 
     private string DefaultLabel(ReportColumnDefinition column, PlannedField field)
     {
-        var label = column.Transform == ReportFieldTransform.None
+        var label = column.Transform == DataFieldTransform.None
             ? field.Label
             : S["{0} ({1})", field.Label, column.Transform].Value;
 
         return column.Aggregate switch
         {
-            ReportAggregate.Count => S["Count of {0}", label],
-            ReportAggregate.CountDistinct => S["Distinct count of {0}", label],
-            ReportAggregate.Sum => S["Sum of {0}", label],
-            ReportAggregate.Average => S["Average {0}", label],
-            ReportAggregate.Min => S["Minimum {0}", label],
-            ReportAggregate.Max => S["Maximum {0}", label],
-            ReportAggregate.Median => S["Median {0}", label],
+            DataAggregate.Count => S["Count of {0}", label],
+            DataAggregate.CountDistinct => S["Distinct count of {0}", label],
+            DataAggregate.Sum => S["Sum of {0}", label],
+            DataAggregate.Average => S["Average {0}", label],
+            DataAggregate.Min => S["Minimum {0}", label],
+            DataAggregate.Max => S["Maximum {0}", label],
+            DataAggregate.Median => S["Median {0}", label],
             _ => label,
         };
     }

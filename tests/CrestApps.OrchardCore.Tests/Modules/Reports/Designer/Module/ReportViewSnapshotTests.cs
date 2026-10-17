@@ -2,7 +2,6 @@ using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.BackgroundTasks;
 using CrestApps.OrchardCore.Reports.Designer.Indexes;
@@ -16,6 +15,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
+using OrchardCore.DataPipelines.SharedLinks;
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Expressions;
+using OrchardCore.Localization;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -86,7 +89,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         // Assert
         Assert.Empty(_sales.Queries);
         Assert.Equal(["revenue"], table.Fields.Select(field => field.Name));
-        Assert.Equal(ReportDataType.Decimal, table.Fields[0].DataType);
+        Assert.Equal(DataFieldType.Decimal, table.Fields[0].Type);
         var row = Assert.Single(table.Rows);
         Assert.Equal(300m, Assert.IsType<decimal>(Assert.Single(row)));
         Assert.True(table.Truncated);
@@ -105,7 +108,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         var query = new ReportQueryDefinition
         {
             DataSets = [new ReportDataSetReference { Alias = "v", Source = ReportsConstants.ViewsDataSource, DataSet = "v1" }],
-            Columns = [Column("region", "v.region"), Column("revenue", "v.revenue", ReportAggregate.Sum)],
+            Columns = [Column("region", "v.region"), Column("revenue", "v.revenue", DataAggregate.Sum)],
             Sorts = [new ReportSortDefinition { ColumnId = "revenue", Descending = true }],
         };
         var context = Context(_now);
@@ -146,7 +149,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
 
         // The view changes outside the builder, which would have dropped the stored result.
         var changed = view.Clone();
-        changed.Query.Columns.Add(Column("orders", "o.Id", ReportAggregate.Count));
+        changed.Query.Columns.Add(Column("orders", "o.Id", DataAggregate.Count));
         await views.UpdateAsync(changed, TestContext.Current.CancellationToken);
         _sales.Queries.Clear();
 
@@ -281,7 +284,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         var afterRename = await StatusesAsync(services);
         var changed = await SaveViewAsync(services, views, existing =>
         {
-            existing.Query.Columns.Add(Column("orders", "o.Id", ReportAggregate.Count));
+            existing.Query.Columns.Add(Column("orders", "o.Id", DataAggregate.Count));
         });
 
         // Assert
@@ -338,16 +341,16 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
     {
         // Arrange
         var placed = new DateTime(2026, 2, 5, 9, 30, 15, DateTimeKind.Utc);
-        var table = new ReportDataTable
+        var table = new DataRowSet
         {
             Fields =
             [
-                new ReportFieldDescriptor("count", "Count", ReportDataType.Integer),
-                new ReportFieldDescriptor("total", "Total", ReportDataType.Decimal),
-                new ReportFieldDescriptor("active", "Active", ReportDataType.Boolean),
-                new ReportFieldDescriptor("placed", "Placed", ReportDataType.DateTime),
-                new ReportFieldDescriptor("name", "Name", ReportDataType.Text),
-                new ReportFieldDescriptor("day", "Day", ReportDataType.Date),
+                new DataField("count", "Count", DataFieldType.Integer),
+                new DataField("total", "Total", DataFieldType.Decimal),
+                new DataField("active", "Active", DataFieldType.Boolean),
+                new DataField("placed", "Placed", DataFieldType.DateTime),
+                new DataField("name", "Name", DataFieldType.Text),
+                new DataField("day", "Day", DataFieldType.Date),
             ],
             Rows =
             [
@@ -364,7 +367,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         }
 
         // Act
-        ReportDataTable read;
+        DataRowSet read;
 
         await using (var session = _store.CreateSession())
         {
@@ -435,17 +438,17 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
             .RefreshAsync(viewId, onlyWhenDue: false, TestContext.Current.CancellationToken);
     }
 
-    private static async Task<ReportDataTable> QueryAsync(ServiceProvider services, string viewId, string[] fields = null, int maxRows = 1000)
+    private static async Task<DataRowSet> QueryAsync(ServiceProvider services, string viewId, string[] fields = null, int maxRows = 1000)
     {
         await using var scope = services.CreateAsyncScope();
-        var source = scope.ServiceProvider.GetServices<IReportDataSource>().OfType<ReportViewsDataSource>().Single();
+        var source = scope.ServiceProvider.GetRequiredService<ReportViewsDataSource>();
 
-        return await source.QueryAsync(new ReportDataSourceQuery
+        return await ReportDesignerTestServices.ReadAsync(source, new DataSourceQuery
         {
             DataSet = viewId,
             Fields = new HashSet<string>(fields ?? [], StringComparer.Ordinal),
             MaxRows = maxRows,
-            Context = new ReportDataSourceContext { User = _designer },
+            Context = new DataSourceContext { User = _designer },
         }, TestContext.Current.CancellationToken);
     }
 
@@ -478,7 +481,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         return new ReportDesignService(
             Catalog<ReportDesign>(),
             views,
-            new ReportShareLinkService(Catalog<ReportShareLink>(), clock),
+            new InMemorySharedLinkManager(),
             services.GetRequiredService<ReportViewSnapshotStore>(),
             services.GetRequiredService<ReportQueryPlanner>(),
             DocumentBuilder(),
@@ -530,12 +533,17 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
         services.AddScoped(_ => _store.CreateSession());
         services.AddSingleton<ICatalog<ReportView>>(views);
         services.AddSingleton(Formatter);
-        services.AddSingleton<IReportDataSource>(_sales);
-        services.AddSingleton<IReportDataSource>(_flaky);
+        services.AddSingleton<IExpressionFunctionCatalog>(ExpressionFunctionCatalog.BuiltIn);
+        services.AddSingleton<IStringLocalizerFactory, PassThroughStringLocalizerFactory>();
 
         services
-            .AddScoped<IReportDataSource, ReportViewsDataSource>()
-            .AddScoped<IReportDataSourceManager, ReportDataSourceManager>()
+            .AddScoped<ReportViewsDataSource>()
+            .AddScoped<IDataSourceManager>(sp => new TestDataSourceManager(
+            [
+                new TestDataSourceEntry(_sales.SourceName, _sales),
+                new TestDataSourceEntry(FlakyReportDataSource.SourceName, _flaky),
+                new TestDataSourceEntry(ReportsConstants.ViewsDataSource, typeof(ReportViewsDataSource), sp.GetRequiredService<ReportViewsDataSource>),
+            ]))
             .AddScoped<ReportQueryPlanner>()
             .AddScoped<ReportQueryEngine>()
             .AddScoped(sp => new Lazy<ReportQueryPlanner>(sp.GetRequiredService<ReportQueryPlanner>))
@@ -552,7 +560,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
     private static ReportView RevenueByRegion(string id, int refreshIntervalMinutes)
     {
         var query = CustomersWithOrders();
-        query.Columns = [Column("region", "c.Region"), Column("revenue", "o.Total", ReportAggregate.Sum)];
+        query.Columns = [Column("region", "c.Region"), Column("revenue", "o.Total", DataAggregate.Sum)];
         query.Sorts = [new ReportSortDefinition { ColumnId = "revenue", Descending = true }];
 
         return new ReportView
@@ -584,34 +592,34 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
     /// <summary>
     /// A data source whose rows can start failing, as a database that went away would.
     /// </summary>
-    private sealed class FlakyReportDataSource : IReportDataSource
+    private sealed class FlakyReportDataSource : IDataSource
     {
         public const string SourceName = "Flaky";
 
         private readonly InMemoryReportDataSource _inner = new InMemoryReportDataSource(SourceName)
-            .Add("Things", [new ReportFieldDescriptor("Name", "Name", ReportDataType.Text)], ["first"], ["second"]);
+            .Add("Things", [new DataField("Name", "Name", DataFieldType.Text)], ["first"], ["second"]);
 
         public bool Fail { get; set; }
 
         public int FailedQueries { get; private set; }
 
-        public string Name => SourceName;
+        public static string Name => SourceName;
 
-        public LocalizedString DisplayName => _inner.DisplayName;
+        public static LocalizationSource DisplayName { get; } = LocalizationSource.Create(SourceName);
 
-        public LocalizedString Description => _inner.Description;
+        public static LocalizationSource Description { get; } = LocalizationSource.Create(SourceName);
 
-        public Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
         {
             return _inner.GetDataSetsAsync(context, cancellationToken);
         }
 
-        public Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+        public Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
         {
             return _inner.GetSchemaAsync(dataSet, context, cancellationToken);
         }
 
-        public Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
+        public IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, CancellationToken cancellationToken = default)
         {
             if (Fail)
             {
@@ -620,7 +628,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
                 throw new InvalidOperationException("The database is not reachable.");
             }
 
-            return _inner.QueryAsync(query, cancellationToken);
+            return _inner.ReadAsync(query, cancellationToken);
         }
     }
 

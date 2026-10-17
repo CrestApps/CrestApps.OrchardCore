@@ -1,3 +1,4 @@
+using OrchardCore.DataSources;
 namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
@@ -13,7 +14,7 @@ public sealed class ReportJoinDefinition
     /// <summary>
     /// Gets or sets how unmatched rows are kept.
     /// </summary>
-    public ReportJoinType Type { get; set; }
+    public DataJoinType Type { get; set; }
 
     /// <summary>
     /// Gets or sets the field pairs that must be equal for two rows to match. Every condition must hold.

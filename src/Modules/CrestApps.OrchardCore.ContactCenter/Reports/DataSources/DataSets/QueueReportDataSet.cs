@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.DataSources.DataSets;
@@ -23,7 +24,7 @@ public sealed class QueueReportDataSet : ContactCenterReportDataSet<ActivityQueu
         IAuthorizationService authorizationService,
         IStringLocalizer<QueueReportDataSet> stringLocalizer)
         : base(
-            new ReportDataSetDescriptor(
+            new DataSetDescriptor(
                 ContactCenterReportDataSets.Queues,
                 stringLocalizer["Queues"],
                 stringLocalizer["One row per queue, with how it routes work and the service targets it keeps."]),
@@ -34,31 +35,33 @@ public sealed class QueueReportDataSet : ContactCenterReportDataSet<ActivityQueu
         var queue = S["Queue"].Value;
         var targets = S["Service targets"].Value;
 
-        AddField(ContactCenterReportDataSets.ItemIdField, S["Queue ID"], ReportDataType.Text, record => record.ItemId, queue, isIdentifier: true);
-        AddField(nameof(ActivityQueue.Name), S["Name"], ReportDataType.Text, record => record.Name, queue);
-        AddField(nameof(ActivityQueue.Description), S["Description"], ReportDataType.Text, record => record.Description, queue);
-        AddField(nameof(ActivityQueue.QueueGroupId), S["Queue group ID"], ReportDataType.Text, record => record.QueueGroupId, queue, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.QueueGroups));
-        AddField(nameof(ActivityQueue.Enabled), S["Enabled"], ReportDataType.Boolean, record => record.Enabled, queue);
-        AddField(nameof(ActivityQueue.DefaultPriority), S["Default priority"], ReportDataType.Text, record => record.DefaultPriority, queue);
-        AddField(nameof(ActivityQueue.RoutingStrategy), S["Routing strategy"], ReportDataType.Text, record => record.RoutingStrategy, queue);
-        AddField(nameof(ActivityQueue.PreferStickyAgent), S["Prefers the last agent"], ReportDataType.Boolean, record => record.PreferStickyAgent, queue);
-        AddField(nameof(ActivityQueue.RequiredSkills), S["Required skills"], ReportDataType.Text, record => Join(record.RequiredSkills), queue);
-        AddField(nameof(ActivityQueue.UnansweredOfferAction), S["Unanswered offer"], ReportDataType.Text, record => record.UnansweredOfferAction, queue);
-        AddField(nameof(ActivityQueue.BusinessHoursCalendarId), S["Business hours calendar ID"], ReportDataType.Text, record => record.BusinessHoursCalendarId, queue, isIdentifier: true);
-        AddField(nameof(ActivityQueue.AfterHoursAction), S["After hours"], ReportDataType.Text, record => record.AfterHoursAction, queue);
-        AddField(nameof(ActivityQueue.OverflowQueueId), S["Overflow queue ID"], ReportDataType.Text, record => record.OverflowQueueId, queue, isIdentifier: true, ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
-        AddField(nameof(ActivityQueue.InboundChannelEndpointId), S["Inbound channel endpoint ID"], ReportDataType.Text, record => record.InboundChannelEndpointId, queue, isIdentifier: true);
-        AddField(nameof(ActivityQueue.CreatedUtc), S["Created"], ReportDataType.DateTime, record => record.CreatedUtc, queue);
-        AddField(nameof(ActivityQueue.ModifiedUtc), S["Modified"], ReportDataType.DateTime, record => record.ModifiedUtc, queue);
+        AddField(ContactCenterReportDataSets.ItemIdField, S["Queue ID"], DataFieldType.Text, record => record.ItemId, queue).Identifier();
+        AddField(nameof(ActivityQueue.Name), S["Name"], DataFieldType.Text, record => record.Name, queue);
+        AddField(nameof(ActivityQueue.Description), S["Description"], DataFieldType.Text, record => record.Description, queue);
+        AddField(nameof(ActivityQueue.QueueGroupId), S["Queue group ID"], DataFieldType.Text, record => record.QueueGroupId, queue).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.QueueGroups));
+        AddField(nameof(ActivityQueue.Enabled), S["Enabled"], DataFieldType.Boolean, record => record.Enabled, queue);
+        AddField(nameof(ActivityQueue.DefaultPriority), S["Default priority"], DataFieldType.Text, record => record.DefaultPriority, queue);
+        AddField(nameof(ActivityQueue.RoutingStrategy), S["Routing strategy"], DataFieldType.Text, record => record.RoutingStrategy, queue);
+        AddField(nameof(ActivityQueue.PreferStickyAgent), S["Prefers the last agent"], DataFieldType.Boolean, record => record.PreferStickyAgent, queue);
+        AddField(nameof(ActivityQueue.RequiredSkills), S["Required skills"], DataFieldType.Text, record => Join(record.RequiredSkills), queue);
+        AddField(nameof(ActivityQueue.UnansweredOfferAction), S["Unanswered offer"], DataFieldType.Text, record => record.UnansweredOfferAction, queue);
+        AddField(nameof(ActivityQueue.BusinessHoursCalendarId), S["Business hours calendar ID"], DataFieldType.Text, record => record.BusinessHoursCalendarId, queue).Identifier();
+        AddField(nameof(ActivityQueue.AfterHoursAction), S["After hours"], DataFieldType.Text, record => record.AfterHoursAction, queue);
+        AddField(nameof(ActivityQueue.OverflowQueueId), S["Overflow queue ID"], DataFieldType.Text, record => record.OverflowQueueId, queue).Identifier(ContactCenterReportDataSets.Reference(ContactCenterReportDataSets.Queues));
+        AddField(nameof(ActivityQueue.InboundChannelEndpointId), S["Inbound channel endpoint ID"], DataFieldType.Text, record => record.InboundChannelEndpointId, queue).Identifier();
+        AddField(nameof(ActivityQueue.CreatedUtc), S["Created"], DataFieldType.DateTime, record => record.CreatedUtc, queue);
+        AddField(nameof(ActivityQueue.ModifiedUtc), S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc, queue);
 
-        AddField(nameof(ActivityQueue.EnableSlaAging), S["Ages by service level"], ReportDataType.Boolean, record => record.EnableSlaAging, targets);
-        AddField(nameof(ActivityQueue.SlaThresholdSeconds), S["Service level threshold (seconds)"], ReportDataType.Integer, record => record.SlaThresholdSeconds, targets);
-        AddField(nameof(ActivityQueue.FirstResponseTargetSeconds), S["First response target (seconds)"], ReportDataType.Integer, record => record.FirstResponseTargetSeconds, targets);
-        AddField(nameof(ActivityQueue.ReservationTimeoutSeconds), S["Offer timeout (seconds)"], ReportDataType.Integer, record => record.ReservationTimeoutSeconds, targets);
-        AddField(nameof(ActivityQueue.OverflowAfterSeconds), S["Overflow after (seconds)"], ReportDataType.Integer, record => record.OverflowAfterSeconds, targets);
-        AddField(nameof(ActivityQueue.MaxWaitSeconds), S["Maximum wait (seconds)"], ReportDataType.Integer, record => record.MaxWaitSeconds, targets);
-        AddField(nameof(ActivityQueue.MaxWaitAction), S["When the wait is too long"], ReportDataType.Text, record => record.MaxWaitAction, targets);
-        AddField(nameof(ActivityQueue.MaxQueueSize), S["Maximum queue size"], ReportDataType.Integer, record => record.MaxQueueSize, targets);
-        AddField(nameof(ActivityQueue.QueueFullAction), S["When the queue is full"], ReportDataType.Text, record => record.QueueFullAction, targets);
+        AddField(nameof(ActivityQueue.EnableSlaAging), S["Ages by service level"], DataFieldType.Boolean, record => record.EnableSlaAging, targets);
+        AddField(nameof(ActivityQueue.SlaThresholdSeconds), S["Service level threshold (seconds)"], DataFieldType.Integer, record => record.SlaThresholdSeconds, targets);
+        AddField(nameof(ActivityQueue.FirstResponseTargetSeconds), S["First response target (seconds)"], DataFieldType.Integer, record => record.FirstResponseTargetSeconds, targets);
+        AddField(nameof(ActivityQueue.ReservationTimeoutSeconds), S["Offer timeout (seconds)"], DataFieldType.Integer, record => record.ReservationTimeoutSeconds, targets);
+        AddField(nameof(ActivityQueue.OverflowAfterSeconds), S["Overflow after (seconds)"], DataFieldType.Integer, record => record.OverflowAfterSeconds, targets);
+        AddField(nameof(ActivityQueue.MaxWaitSeconds), S["Maximum wait (seconds)"], DataFieldType.Integer, record => record.MaxWaitSeconds, targets);
+        AddField(nameof(ActivityQueue.MaxWaitAction), S["When the wait is too long"], DataFieldType.Text, record => record.MaxWaitAction, targets);
+        AddField(nameof(ActivityQueue.MaxQueueSize), S["Maximum queue size"], DataFieldType.Integer, record => record.MaxQueueSize, targets);
+        AddField(nameof(ActivityQueue.QueueFullAction), S["When the queue is full"], DataFieldType.Text, record => record.QueueFullAction, targets);
+
+        CompleteDescription();
     }
 }

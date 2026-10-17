@@ -1,8 +1,8 @@
-using CrestApps.OrchardCore.Reports.DataSources;
 using CrestApps.OrchardCore.Reports.Designer;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using OrchardCore.DataSources;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Designer.Module;
 
@@ -58,13 +58,13 @@ public sealed class ReportFilterValueBinderTests
     [Fact]
     public void ResolveControl_PicksAControlFromTheTypeAndOperator()
     {
-        Assert.Equal(ReportFilterControl.Boolean, ReportDesignRunner.ResolveControl(new ReportFilterDefinition(), ReportDataType.Boolean));
-        Assert.Equal(ReportFilterControl.DateRange, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = ReportFilterOperator.Between }, ReportDataType.DateTime));
-        Assert.Equal(ReportFilterControl.NumberRange, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = ReportFilterOperator.Between }, ReportDataType.Decimal));
-        Assert.Equal(ReportFilterControl.MultiSelect, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = ReportFilterOperator.In }, ReportDataType.Text));
-        Assert.Equal(ReportFilterControl.Select, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = ReportFilterOperator.Equals }, ReportDataType.Text));
-        Assert.Equal(ReportFilterControl.Text, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = ReportFilterOperator.Contains }, ReportDataType.Text));
-        Assert.Equal(ReportFilterControl.Select, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Control = ReportFilterControl.Select }, ReportDataType.Integer));
+        Assert.Equal(ReportFilterControl.Boolean, ReportDesignRunner.ResolveControl(new ReportFilterDefinition(), DataFieldType.Boolean));
+        Assert.Equal(ReportFilterControl.DateRange, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = DataFilterOperator.Between }, DataFieldType.DateTime));
+        Assert.Equal(ReportFilterControl.NumberRange, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = DataFilterOperator.Between }, DataFieldType.Decimal));
+        Assert.Equal(ReportFilterControl.MultiSelect, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = DataFilterOperator.In }, DataFieldType.Text));
+        Assert.Equal(ReportFilterControl.Select, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = DataFilterOperator.Equals }, DataFieldType.Text));
+        Assert.Equal(ReportFilterControl.Text, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Operator = DataFilterOperator.Contains }, DataFieldType.Text));
+        Assert.Equal(ReportFilterControl.Select, ReportDesignRunner.ResolveControl(new ReportFilterDefinition { Control = ReportFilterControl.Select }, DataFieldType.Integer));
     }
 
     [Fact]
@@ -76,9 +76,9 @@ public sealed class ReportFilterValueBinderTests
             DataSets = [null, new ReportDataSetReference { Alias = " c " }],
             Filters =
             [
-                new ReportFilterDefinition { Id = "a", Exposed = true, Control = ReportFilterControl.DateRange, Operator = ReportFilterOperator.Equals },
-                new ReportFilterDefinition { Id = "b", Exposed = true, Control = ReportFilterControl.MultiSelect, Operator = ReportFilterOperator.Contains },
-                new ReportFilterDefinition { Id = "c", Exposed = false, Control = ReportFilterControl.DateRange, Operator = ReportFilterOperator.Equals, Values = null },
+                new ReportFilterDefinition { Id = "a", Exposed = true, Control = ReportFilterControl.DateRange, Operator = DataFilterOperator.Equals },
+                new ReportFilterDefinition { Id = "b", Exposed = true, Control = ReportFilterControl.MultiSelect, Operator = DataFilterOperator.Contains },
+                new ReportFilterDefinition { Id = "c", Exposed = false, Control = ReportFilterControl.DateRange, Operator = DataFilterOperator.Equals, Values = null },
             ],
             Columns = null,
         };
@@ -88,9 +88,9 @@ public sealed class ReportFilterValueBinderTests
 
         // Assert
         Assert.Equal("c", Assert.Single(query.DataSets).Alias);
-        Assert.Equal(ReportFilterOperator.Between, query.Filters[0].Operator);
-        Assert.Equal(ReportFilterOperator.In, query.Filters[1].Operator);
-        Assert.Equal(ReportFilterOperator.Equals, query.Filters[2].Operator);
+        Assert.Equal(DataFilterOperator.Between, query.Filters[0].Operator);
+        Assert.Equal(DataFilterOperator.In, query.Filters[1].Operator);
+        Assert.Equal(DataFilterOperator.Equals, query.Filters[2].Operator);
         Assert.Empty(query.Filters[2].Values);
         Assert.Empty(query.Columns);
     }

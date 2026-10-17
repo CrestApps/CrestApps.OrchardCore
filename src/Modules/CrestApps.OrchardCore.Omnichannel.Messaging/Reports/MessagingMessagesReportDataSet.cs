@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -5,8 +6,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using YesSql;
 using YesSql.Services;
 using ISession = YesSql.ISession;
@@ -17,7 +20,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Reports;
 /// The <c>Messages</c> data set: one row per message of a messaging conversation. Only principals allowed to view
 /// every messaging conversation read it. Message bodies are never exposed; their length is.
 /// </summary>
-public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<MessagingReportRecord<OmnichannelMessage>>
+public sealed class MessagingMessagesReportDataSet : RecordDataSet<MessagingReportRecord<OmnichannelMessage>>
 {
     /// <summary>
     /// The technical name of the creation time field, which reads are narrowed by.
@@ -25,6 +28,9 @@ public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<Messagi
     public const string CreatedUtcField = "CreatedUtc";
 
     private static readonly string[] _agentFields = ["SentByAgentUserId", "SentByAgentName"];
+
+    // The index columns a join can narrow the read on.
+    private static readonly string[] _keyFields = ["ConversationId"];
 
     private readonly ISession _session;
     private readonly IAgentProfileStore _agentProfileStore;
@@ -42,10 +48,13 @@ public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<Messagi
         IAgentProfileStore agentProfileStore,
         IAuthorizationService authorizationService,
         IStringLocalizer<MessagingMessagesReportDataSet> stringLocalizer)
-        : base(new ReportDataSetDescriptor(
+        : base(new DataSetDescriptor(
             MessagingReportDataSource.MessagesDataSet,
             stringLocalizer["Messages"],
-            stringLocalizer["One row per message of a messaging conversation, without its text."]))
+            stringLocalizer["One row per message of a messaging conversation, without its text."])
+        {
+            DefaultDateField = CreatedUtcField,
+        })
     {
         _session = session;
         _agentProfileStore = agentProfileStore;
@@ -55,105 +64,101 @@ public sealed class MessagingMessagesReportDataSet : ReportRecordDataSet<Messagi
         var details = S["Message"].Value;
         var delivery = S["Delivery"].Value;
 
-        AddField("Id", S["Message ID"], ReportDataType.Text, record => record.Document.Id, details, isIdentifier: true);
+        AddField("Id", S["Message ID"], DataFieldType.Text, record => record.Document.Id, details).Identifier();
         AddField(
             "ConversationId",
             S["Conversation ID"],
-            ReportDataType.Text,
-            record => record.Document.ConversationId,
-            details,
-            isIdentifier: true,
-            new ReportFieldReference(MessagingReportDataSource.SourceName, MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.ConversationIdField));
-        AddField("Channel", S["Channel"], ReportDataType.Text, record => record.Document.Channel, details);
-        AddField("CustomerAddress", S["Customer address"], ReportDataType.Text, record => record.Document.CustomerAddress, details);
-        AddField("ServiceAddress", S["Service address"], ReportDataType.Text, record => record.Document.ServiceAddress, details);
-        AddField("IsInbound", S["Inbound"], ReportDataType.Boolean, record => record.Document.IsInbound, details);
-        AddField(CreatedUtcField, S["Sent"], ReportDataType.DateTime, record => record.Document.CreatedUtc, details);
-        AddField("Length", S["Length"], ReportDataType.Integer, record => record.Document.Content?.Length ?? 0, details);
-        AddField("MediaCount", S["Attachments"], ReportDataType.Integer, record => record.Document.MediaReferences?.Count ?? 0, details);
-        AddField("SentByAgentId", S["Sent by agent ID"], ReportDataType.Text, record => record.Document.SentByAgentId, details, isIdentifier: true);
+            DataFieldType.Text,
+            record => record.Document.ConversationId, details).Identifier(new DataFieldReference(MessagingReportDataSource.SourceName, MessagingReportDataSource.ConversationsDataSet, MessagingReportDataSource.ConversationIdField));
+        AddField("Channel", S["Channel"], DataFieldType.Text, record => record.Document.Channel, details);
+        AddField("CustomerAddress", S["Customer address"], DataFieldType.Text, record => record.Document.CustomerAddress, details);
+        AddField("ServiceAddress", S["Service address"], DataFieldType.Text, record => record.Document.ServiceAddress, details);
+        AddField("IsInbound", S["Inbound"], DataFieldType.Boolean, record => record.Document.IsInbound, details);
+        AddField(CreatedUtcField, S["Sent"], DataFieldType.DateTime, record => record.Document.CreatedUtc, details);
+        AddField("Length", S["Length"], DataFieldType.Integer, record => record.Document.Content?.Length ?? 0, details);
+        AddField("MediaCount", S["Attachments"], DataFieldType.Integer, record => record.Document.MediaReferences?.Count ?? 0, details);
+        AddField("SentByAgentId", S["Sent by agent ID"], DataFieldType.Text, record => record.Document.SentByAgentId, details).Identifier();
         AddField(
             "SentByAgentUserId",
             S["Sent by agent user ID"],
-            ReportDataType.Text,
-            record => record.Agent?.UserId,
-            details,
-            isIdentifier: true,
-            new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
-        AddField("SentByAgentName", S["Sent by agent"], ReportDataType.Text, record => record.AgentName, details);
-        AddField("DeliveryStatus", S["Delivery status"], ReportDataType.Text, record => record.Document.DeliveryStatus, delivery);
-        AddField("ErrorCode", S["Error code"], ReportDataType.Text, record => record.Document.ErrorCode, delivery);
+            DataFieldType.Text,
+            record => record.Agent?.UserId, details).Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+        AddField("SentByAgentName", S["Sent by agent"], DataFieldType.Text, record => record.AgentName, details);
+        AddField("DeliveryStatus", S["Delivery status"], DataFieldType.Text, record => record.Document.DeliveryStatus, delivery);
+        AddField("ErrorCode", S["Error code"], DataFieldType.Text, record => record.Document.ErrorCode, delivery);
+
+        Fields.MarkKeyFilterable(_keyFields);
+        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>
-    /// <inheritdoc/>
-    public override string DefaultDateField => CreatedUtcField;
-
-    public override Task<bool> CanReadAsync(ReportDataSourceContext context)
+    public override Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         return MessagingReportPermissions.CanReadAsync(_authorizationService, context);
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<string> KeyFilterableFields => ["ConversationId"];
-
-    /// <inheritdoc/>
-    protected override async Task<IEnumerable<MessagingReportRecord<OmnichannelMessage>>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<MessagingReportRecord<OmnichannelMessage>> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var (from, to) = ReportDateRange.For(query.Conditions, CreatedUtcField);
+        var (from, to) = DataConditions.DateRange(query.Conditions, CreatedUtcField);
+        string[] conversationIds = null;
 
-        // Only the messages of messaging conversations: other channel traffic, such as automated activities, is not
-        // the workspace's to report.
-        var messages = _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
-            index => index.ConversationId != null,
-            collection: OmnichannelConstants.CollectionName);
-
-        foreach (var field in KeyFilterableFields)
+        if (DataConditions.Keys(query.Conditions, "ConversationId") is { } keys)
         {
-            if (ReportJoinKeys.For(query.Conditions, field) is not { } keys)
-            {
-                continue;
-            }
-
             if (keys.Count == 0)
             {
-                return [];
+                yield break;
             }
 
-            var values = keys.ToArray();
-
-            messages = messages.Where(index => index.ConversationId.IsIn(values));
+            conversationIds = keys.Select(key => key?.ToString()).ToArray();
         }
 
-        if (from.HasValue)
+        IQuery<OmnichannelMessage> Query()
         {
-            var earliest = from.Value;
-            messages = messages.Where(index => index.CreatedUtc >= earliest);
+            // Only the messages of messaging conversations: other channel traffic, such as automated activities, is not
+            // the workspace's to report.
+            var messages = _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId != null,
+                collection: OmnichannelConstants.CollectionName);
+
+            if (conversationIds is not null)
+            {
+                messages = messages.Where(index => index.ConversationId.IsIn(conversationIds));
+            }
+
+            if (from.HasValue)
+            {
+                var earliest = from.Value;
+                messages = messages.Where(index => index.CreatedUtc >= earliest);
+            }
+
+            if (to.HasValue)
+            {
+                var latest = to.Value;
+                messages = messages.Where(index => index.CreatedUtc <= latest);
+            }
+
+            return messages
+                .OrderByDescending(index => index.CreatedUtc)
+                .ThenByDescending(index => index.Id);
         }
 
-        if (to.HasValue)
+        await foreach (var documents in ReportIndexPages.ReadPagesAsync(_session, Query, OmnichannelConstants.CollectionName, cancellationToken))
         {
-            var latest = to.Value;
-            messages = messages.Where(index => index.CreatedUtc <= latest);
+            var agents = await MessagingReportAgents.LoadAsync(
+                _agentProfileStore,
+                query,
+                documents.Select(document => document.SentByAgentId),
+                _agentFields,
+                cancellationToken);
+
+            foreach (var document in documents)
+            {
+                yield return new MessagingReportRecord<OmnichannelMessage>(document, MessagingReportAgents.Find(agents, document.SentByAgentId));
+            }
         }
-
-        var documents = (await messages
-            .OrderByDescending(index => index.CreatedUtc)
-            .ThenByDescending(index => index.Id)
-            .Take(take)
-            .ListAsync(cancellationToken))
-            .ToArray();
-        var agents = await MessagingReportAgents.LoadAsync(
-            _agentProfileStore,
-            query,
-            documents.Select(document => document.SentByAgentId),
-            _agentFields,
-            cancellationToken);
-
-        return documents
-            .Select(document => new MessagingReportRecord<OmnichannelMessage>(document, MessagingReportAgents.Find(agents, document.SentByAgentId)))
-            .ToArray();
     }
+
 }
 
 /// <summary>
@@ -167,7 +172,7 @@ internal static class MessagingReportPermissions
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="context">The context of the run.</param>
     /// <returns><see langword="true"/> when it may.</returns>
-    public static async Task<bool> CanReadAsync(IAuthorizationService authorizationService, ReportDataSourceContext context)
+    public static async Task<bool> CanReadAsync(IAuthorizationService authorizationService, DataSourceContext context)
     {
         return context?.User is not null &&
             await authorizationService.AuthorizeAsync(context.User, MessagingPermissions.ViewAllConversations);
