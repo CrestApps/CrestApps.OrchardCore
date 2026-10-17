@@ -20,3 +20,14 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
     ]
 )]
+
+[assembly: Feature(
+    Name = "Test payments",
+    Id = CheckoutConstants.Features.TestProvider,
+    Description = "Adds a test payment method that confirms every checkout payment without moving money, for development and automated tests. It is active only in the Development environment unless configuration allows it.",
+    Category = "Payment Providers",
+    Dependencies =
+    [
+        CheckoutConstants.Features.Area,
+    ]
+)]

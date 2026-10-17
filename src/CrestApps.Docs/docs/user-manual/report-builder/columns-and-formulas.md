@@ -10,10 +10,7 @@ Each column of a report has settings: how its values are combined (added up, cou
 
 Watch the short video, then follow the steps below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-columns-and-formulas.jpg" aria-label="Video: changing how columns add up and are formatted, and adding a calculated field">
-  <source src="/img/docs/report-builder-columns-and-formulas.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-columns-and-formulas.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of changing how columns add up and are formatted, and adding a calculated field" start={203} end={262} />
 
 | | |
 | --- | --- |

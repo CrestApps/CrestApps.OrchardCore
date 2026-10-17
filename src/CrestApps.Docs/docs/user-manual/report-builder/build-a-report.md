@@ -10,10 +10,7 @@ A report starts with one or more **data sets**, such as your customers or the ac
 
 Watch the short video, then follow the steps below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-build-a-report.jpg" aria-label="Video: building a report from a data set, with columns, sorting and a live preview">
-  <source src="/img/docs/report-builder-build-a-report.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-build-a-report.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of building a report from a data set, with columns, sorting and a live preview" start={143} end={204} />
 
 | | |
 | --- | --- |

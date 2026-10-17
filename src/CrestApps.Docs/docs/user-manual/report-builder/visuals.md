@@ -10,10 +10,7 @@ Visuals decide how the people who run a report see its result. Without visuals, 
 
 Watch the short video, then follow the steps below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-visuals.jpg" aria-label="Video: adding a table with subtotals, a chart, metrics and a pivot table to a report">
-  <source src="/img/docs/report-builder-visuals.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-visuals.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of adding a table with subtotals, a chart, metrics and a pivot table to a report" start={297} end={344} />
 
 | | |
 | --- | --- |

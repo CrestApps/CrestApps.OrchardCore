@@ -11,10 +11,7 @@ This page shows how the Report Builder is turned on, where to find it, and how t
 
 Watch the short video, then follow the steps below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-getting-started.jpg" aria-label="Video: turning on the Report Builder and finding your way around the list of reports">
-  <source src="/img/docs/report-builder-getting-started.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-getting-started.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of turning on the Report Builder and finding your way around the list of reports" start={110} end={144} />
 
 | | |
 | --- | --- |

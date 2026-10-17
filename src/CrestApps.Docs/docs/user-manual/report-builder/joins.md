@@ -11,10 +11,7 @@ To report on data that lives in two places (for example customers and their orde
 
 Watch the short video, then follow the steps below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-joins.jpg" aria-label="Video: joining two data sets on the Data model tab and choosing which rows to keep">
-  <source src="/img/docs/report-builder-joins.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-joins.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of joining two data sets on the Data model tab and choosing which rows to keep" start={343} end={389} />
 
 | | |
 | --- | --- |

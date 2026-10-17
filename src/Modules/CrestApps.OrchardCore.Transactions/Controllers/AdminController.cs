@@ -472,6 +472,9 @@ public sealed class AdminController : Controller
             CreatedUtc = now,
             Type = TransactionEventType.Canceled,
             Message = reason,
+            Reason = string.IsNullOrWhiteSpace(note)
+                ? null
+                : note.Trim(),
             ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
             ActorName = await GetCurrentUserNameAsync(),
         });

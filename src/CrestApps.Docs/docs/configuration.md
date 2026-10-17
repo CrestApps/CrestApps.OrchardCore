@@ -1630,6 +1630,38 @@ The phone number verification providers have no configuration section. Set them 
 **Settings > Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
 
+## Commerce
+
+### Test payments
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Checkout:TestProvider` |
+| **Feature** | Test payments (`CrestApps.OrchardCore.Checkout.TestProvider`) |
+| **Controls** | Whether the test payment method is offered outside the Development environment |
+
+Keys: `AllowOutsideDevelopment` (default `false`). The test payment method confirms every payment without moving money. In the Development environment it is offered whenever the feature is on; in any other environment it is offered only when this key is `true`, and a warning is logged at startup. Leave it unset in production. The value is read when the tenant starts.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Checkout": {
+        "TestProvider": {
+          "AllowOutsideDevelopment": true
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
+```
+
+See [Test payments](modules/checkout.md#test-payments).
+
 ## Reports
 
 ### Report builder limits

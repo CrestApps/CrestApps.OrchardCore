@@ -328,6 +328,29 @@ public sealed class DefaultInstallmentPlanServiceTests
     }
 
     [Fact]
+    public async Task ProcessAsync_WhenTheCardIsDeclined_MarksTheTransactionFailedWithOneStatusChange()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var plan = await CreateActivePlanAsync(context, service);
+        var transactionId = plan.Payments[1].TransactionId;
+
+        context.Engine.OnBegin = _ => new PaymentBeginOutcome { Succeeded = false, Declined = true, ProviderErrorMessage = "Your card has insufficient funds." };
+        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
+        context.TransactionEvents.StatusChanges.Clear();
+
+        // Act
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var transaction = await context.Transactions.FindByIdAsync(transactionId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionStatus.Failed, transaction.Status);
+        Assert.Equal([(transactionId, TransactionStatus.Pending, TransactionStatus.Failed)], context.TransactionEvents.StatusChanges);
+    }
+
+    [Fact]
     public async Task ProcessAsync_AfterTheLastRetryFails_HandsThePaymentToTheCustomer()
     {
         // Arrange
@@ -719,6 +742,8 @@ public sealed class DefaultInstallmentPlanServiceTests
     {
         public FakeTransactionStore Transactions { get; } = new();
 
+        public RecordingTransactionEventHandler TransactionEvents { get; } = new();
+
         public InMemoryPaymentAttemptStore Attempts { get; } = new();
 
         public InMemoryInstallmentPlanStore Plans { get; } = new();
@@ -774,7 +799,7 @@ public sealed class DefaultInstallmentPlanServiceTests
             UserManager.Setup(manager => manager.GetUserIdAsync(It.IsAny<IUser>())).ReturnsAsync((IUser user) => ((User)user).UserId ?? "new-user");
             UserManager.Setup(manager => manager.CreateAsync(It.IsAny<IUser>())).ReturnsAsync(IdentityResult.Success);
 
-            var transactionManager = TransactionManagerFactory.Create(Transactions);
+            var transactionManager = TransactionManagerFactory.Create(Transactions, TransactionEvents);
 
             return new DefaultInstallmentPlanService(
                 Plans,
