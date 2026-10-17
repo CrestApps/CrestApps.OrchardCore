@@ -192,6 +192,11 @@ public sealed class DialerAttemptService : IDialerAttemptService
             return false;
         }
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Checking whether activity '{ActivityItemId}' may be dialed.", reservation.ActivityItemId.SanitizeLogValue());
+        }
+
         var eligibility = await _eligibilityService.EvaluateAsync(new DialerEligibilityContext
         {
             Profile = profile,
@@ -222,6 +227,11 @@ public sealed class DialerAttemptService : IDialerAttemptService
         if (acceptedReservation is null)
         {
             return false;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Placing the call for activity '{ActivityItemId}'.", reservation.ActivityItemId.SanitizeLogValue());
         }
 
         try

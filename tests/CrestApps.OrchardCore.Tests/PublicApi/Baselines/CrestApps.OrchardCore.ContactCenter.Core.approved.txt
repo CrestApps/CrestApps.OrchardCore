@@ -1416,6 +1416,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public const string SectionName = "CrestApps:ContactCenter:DialerPacing";
         public ContactCenterDialerPacingOptions() { }
+        public System.TimeSpan CycleTimeout { get; set; }
         public System.TimeSpan Debounce { get; set; }
         public System.TimeSpan LockExpiration { get; set; }
         public System.TimeSpan LockRetryDelay { get; set; }
