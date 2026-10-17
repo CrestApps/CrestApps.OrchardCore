@@ -28,6 +28,29 @@
                 <span>@T.Plural(order.ItemCount, "1 item", "{0} items")</span>
                 @await Html.PartialAsync("_OrderStatus", order.Status)
             </div>
+            @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
+            {
+                <div class="card-body py-2 small text-muted border-bottom">
+                    @switch (cancelReason)
+                    {
+                        case OrderCancelReason.Replaced:
+                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.PaymentFailed:
+                            @T["Canceled {0:g}: the payment was declined.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.CheckoutCanceled:
+                            @T["Canceled {0:g}: the checkout was canceled.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.CheckoutExpired:
+                            @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
+                            break;
+                        default:
+                            @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
+                            break;
+                    }
+                </div>
+            }
             <ul class="list-group list-group-flush">
                 @foreach (var line in order.Lines)
                 {
