@@ -1,0 +1,13 @@
+@model CustomerCheckoutSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="BillingAddress">
+    <label asp-for="BillingAddress" class="ocat-label">@T["Billing address at checkout"]</label>
+    <div class="ocat-end">
+        <select asp-for="BillingAddress" class="form-select">
+            <option value="@BillingAddressRequirement.Optional">@T["Optional: asked for, may be left blank"]</option>
+            <option value="@BillingAddressRequirement.Required">@T["Required: every order has one"]</option>
+            <option value="@BillingAddressRequirement.Off">@T["Off: not asked for"]</option>
+        </select>
+        <span class="hint">@T["Whether an order's Contact step asks for a billing address, laid out for the buyer's country. Require it when you need it for invoices or tax. A checkout keeps the setting it started with."]</span>
+    </div>
+</div>

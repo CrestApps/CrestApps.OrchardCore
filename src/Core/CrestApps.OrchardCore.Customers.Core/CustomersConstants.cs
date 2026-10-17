@@ -7,6 +7,16 @@ public static class CustomersConstants
     /// </summary>
     public const string CollectionName = "Customers";
 
+    /// <summary>
+    /// The key of the checkout step that asks who an order is for and where it is billed.
+    /// </summary>
+    public const string ContactStepKey = "Contact";
+
+    /// <summary>
+    /// The site settings group of the Customers settings.
+    /// </summary>
+    public const string SettingsGroupId = "customers";
+
     public static class Features
     {
         public const string Customers = "CrestApps.OrchardCore.Customers";

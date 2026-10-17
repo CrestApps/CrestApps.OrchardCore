@@ -22,6 +22,8 @@ A customer's sign-in, password and email stay on their **account**, which is man
 
 A customer who signs in and places an order becomes a customer the first time they order. Their customer record starts with their user name and the account's email.
 
+Someone who buys as a guest becomes a **guest** customer with the name, email, phone and billing address they gave at checkout. Each guest checkout makes its own guest customer: an email typed at checkout proves nothing, so it never joins someone else's record.
+
 ## Find a customer
 
 1. Open **Commerce > Customers**. The most recently active customers come first.

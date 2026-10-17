@@ -153,6 +153,22 @@ This is what shipping, guest order lookup and the customer account pages wait on
   country's rules; addresses are listed through `IAddressFormatter`. Customers depends on the Addresses feature,
   which also supplies the country list, so the `DefaultCountryService` fallback is gone.
 
+### CU3 as built
+
+- The **Contact** step (`CustomerContactCheckoutHandler`, `CustomerContactCheckoutFlowDisplayDriver`), registered when
+  Orders is enabled, asks for a name, an email and a phone, and a billing address per `CustomerCheckoutSettings`
+  (Optional by default, Required, Off; Settings › Commerce › Customers). The checkout keeps the setting it started
+  with. The billing address uses the shared `AddressEditor`; a signed-in customer can bill a saved address or save a
+  new one.
+- The step stores a `CheckoutContactInfo` (now with `Phone` and `BillingAddress`). `OrderCheckoutHandler` copies it
+  onto the order when paid: the entered name, email and phone replace the account's, and `Order.BillingAddress` and
+  `Order.CustomerPhone` are new. Pay Later already read the contact for guests.
+- When paid, the order is linked to the signed-in buyer's customer or a new guest customer
+  (`ICustomerService.CreateGuestAsync`), and a guest's billing address becomes their default billing address.
+- Not yet: **an order confirmation email**. Nothing in the store sends one today, for guests or signed-in buyers; the
+  exit gate's "the confirmation reaches the guest" needs it. It comes as its own small step (CU3b) before CU4, whose
+  signed order link goes in that email.
+
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
 
