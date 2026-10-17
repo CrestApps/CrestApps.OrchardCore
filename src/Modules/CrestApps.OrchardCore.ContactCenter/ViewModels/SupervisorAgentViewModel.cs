@@ -31,6 +31,12 @@ public sealed class SupervisorAgentViewModel
     public string PresenceReason { get; set; }
 
     /// <summary>
+    /// Gets or sets when the agent started waiting for work, while they are Available, so the board can show how long they
+    /// have been idle. It is <see langword="null"/> for an agent who is not Available.
+    /// </summary>
+    public DateTime? IdleSinceUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of queues the agent is signed in to.
     /// </summary>
     public int QueueCount { get; set; }
@@ -88,6 +94,11 @@ public sealed class SupervisorAgentViewModel
     public string MonitoringUnavailableReason { get; set; }
 
     /// <summary>
+    /// Gets or sets the stale work the agent is holding -- a call that is over but still on their line, a state nothing
+    /// backs -- so the board can warn the supervisor and offer to free the agent. Empty when there is none.
+    /// </summary>
+    public IList<SupervisorStaleWorkViewModel> StaleWork { get; set; } = [];
+    /// <summary>
     /// Gets or sets the agent's own phone call -- a number they dialed from the keypad, or an extension call -- when they
     /// are on one and on no Contact Center interaction. <see cref="ActiveInteractionId"/> then names it with a phone call
     /// key when it can be monitored.
@@ -119,4 +130,25 @@ public sealed class SupervisorPhoneCallViewModel
     /// Gets or sets when the call started.
     /// </summary>
     public DateTime StartedUtc { get; set; }
+}
+
+/// <summary>
+/// Represents one piece of stale work an agent is holding, on the supervisor dashboard agent board.
+/// </summary>
+public sealed class SupervisorStaleWorkViewModel
+{
+    /// <summary>
+    /// Gets or sets what kind of work it is, by name.
+    /// </summary>
+    public string Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets a short, generic reason the work is considered stale.
+    /// </summary>
+    public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the work began, when that is known.
+    /// </summary>
+    public DateTime? StartedUtc { get; set; }
 }

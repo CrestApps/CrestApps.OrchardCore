@@ -23,10 +23,14 @@ internal static class AnsweredCallBridge
     /// <param name="agentUserId">The agent's user, which call-control authorization is keyed on.</param>
     /// <param name="reservationId">The reservation the agent holds the call under, when there is one.</param>
     /// <param name="standbyReservationId">
-    /// The reservation to tag the agent's leg with, so a phone standing by answers it at once; only for an agent claimed
-    /// without an offer.
+    /// The reservation to tag the agent's leg with, so the agent's phone knows the leg is its own and answers it at once:
+    /// the claim of an agent standing by, or the reservation an agent accepted when the call was placed for them.
     /// </param>
     /// <param name="agentLegTimeoutSeconds">How long the agent's leg may ring, or 0 for the provider's default.</param>
+    /// <param name="preDialedAgentLegId">
+    /// The agent's leg parked while the customer rang, which only has to be joined to the call; <see langword="null"/>
+    /// to ring the agent now.
+    /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The command id, to dispatch after commit.</returns>
     public static async Task<string> RegisterAsync(
@@ -39,6 +43,7 @@ internal static class AnsweredCallBridge
         string reservationId,
         string standbyReservationId,
         int agentLegTimeoutSeconds,
+        string preDialedAgentLegId,
         CancellationToken cancellationToken)
     {
         if (!session.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.CommandId, out var commandId) ||
@@ -68,6 +73,10 @@ internal static class AnsweredCallBridge
                 QueueId = session.QueueId ?? interaction.QueueId,
                 StandbyReservationId = standbyReservationId,
                 AgentLegTimeoutSeconds = agentLegTimeoutSeconds,
+                PreDialedAgentLegId = preDialedAgentLegId,
+
+                // The customer picked the call up: the provider must not try to answer a leg it placed itself.
+                CallerAnswered = true,
             }),
         }, cancellationToken);
 

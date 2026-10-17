@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -90,6 +91,55 @@ public sealed class TelnyxVoiceMediaProvisioner : IVoiceMediaProvisioner
             _logger.LogError(ex, "An error occurred while uploading voice media to Telnyx Media Storage.");
 
             return null;
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<VoiceMediaAvailability> GetAvailabilityAsync(string mediaReference, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(mediaReference))
+        {
+            return VoiceMediaAvailability.Missing;
+        }
+
+        if (!_options.IsConfigured)
+        {
+            return VoiceMediaAvailability.Unknown;
+        }
+
+        try
+        {
+            using var client = CreateClient();
+            using var response = await client.GetAsync($"media/{Uri.EscapeDataString(mediaReference)}", cancellationToken);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return VoiceMediaAvailability.Available;
+            }
+
+            // Telnyx answers 404 for a media_name it does not hold, whether it was deleted, expired, or belongs to
+            // another account. Anything else says nothing about the clip, so the caller keeps its reference.
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return VoiceMediaAvailability.Missing;
+            }
+
+            _logger.LogWarning(
+                "Telnyx returned {StatusCode} when asked whether it holds the voice media {MediaName}.",
+                response.StatusCode,
+                mediaReference.SanitizeLogValue());
+
+            return VoiceMediaAvailability.Unknown;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "An error occurred while asking Telnyx whether it holds the voice media {MediaName}.", mediaReference.SanitizeLogValue());
+
+            return VoiceMediaAvailability.Unknown;
         }
     }
 

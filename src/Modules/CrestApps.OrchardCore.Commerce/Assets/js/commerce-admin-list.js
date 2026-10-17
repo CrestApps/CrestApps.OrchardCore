@@ -1,3 +1,4 @@
+// @ts-check
 /*
  * Shared behavior for the commerce admin lists (coupons, transactions, payments, refunds, installment plans).
  *

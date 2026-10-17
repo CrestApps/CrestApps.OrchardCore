@@ -42,7 +42,8 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// </summary>
     private CallerReplyListener _replyListener;
 
-    // The assistant's last finished line, for the prompt that asks for an answer it did not hear.
+    // The assistant's last line the caller heard with words in it: for the prompt that asks for an answer it did not
+    // hear, and quoted by the idle prompts to keep the call's language.
     private string _lastAssistantLine;
 
     /// <summary>
@@ -91,6 +92,12 @@ public sealed partial class RealtimeVoiceConversationRunner
                 if (listener is null)
                 {
                     continue;
+                }
+
+                // A machine answered: nothing heard on the line from here is an answer, and nobody is there to ask.
+                if (OnAMachine())
+                {
+                    return;
                 }
 
                 var now = DateTime.UtcNow.Ticks;
@@ -225,5 +232,73 @@ public sealed partial class RealtimeVoiceConversationRunner
         }
 
         return Interlocked.Read(ref _providerHeardCallerTicks);
+    }
+
+    /// <summary>
+    /// Says how long the caller waited for an answer, split into the two waits that make it up.
+    /// </summary>
+    /// <remarks>
+    /// A caller who says the assistant is slow to answer is hearing the sum of two things this side cannot see
+    /// otherwise: how long the provider's turn detector waited after they stopped before taking the turn as
+    /// finished, and how long the model then took to produce its first audio. Which one is long decides the fix --
+    /// a more eager detector, or a faster model -- so each answer logs both.
+    /// </remarks>
+    /// <param name="activityId">The call, already sanitized for the log.</param>
+    /// <param name="turnCommittedTicks">When the provider took the caller's turn as finished, in UTC ticks.</param>
+    private void LogAnswerLatency(string activityId, long turnCommittedTicks)
+    {
+        if (turnCommittedTicks == 0 || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        var now = DateTime.UtcNow.Ticks;
+        var lastVoice = _replyListener?.LastVoiceTicks ?? 0;
+
+        // The caller's voice is only tracked once the assistant has finished, so a turn that began by talking over it
+        // has no end on the line to measure from.
+        var detectorWait = lastVoice > 0 && lastVoice <= turnCommittedTicks && turnCommittedTicks - lastVoice < TimeSpan.TicksPerSecond * 10
+            ? (int)((turnCommittedTicks - lastVoice) / TimeSpan.TicksPerMillisecond)
+            : -1;
+
+        _logger.LogInformation(
+            "Answered the caller on activity '{ActivityId}': the turn was taken as finished {DetectorWaitMilliseconds} ms after their voice stopped on the line (-1 when it began over the assistant), and the model's first audio came {ModelMilliseconds} ms after that.",
+            activityId,
+            detectorWait,
+            (int)((now - turnCommittedTicks) / TimeSpan.TicksPerMillisecond));
+    }
+
+    /// <summary>
+    /// Says so when the provider reports the caller starting well after their voice was heard on the line.
+    /// </summary>
+    /// <remarks>
+    /// Live, a caller's "yes" reached the session as it was said and the provider reported it four and a half
+    /// seconds later; the assistant's own request to have it repeated was refused six seconds after it was sent,
+    /// as colliding with the reply to that "yes". To the caller it was eight seconds of silence and then the line
+    /// going dead, and nothing in the log said the provider was behind. The provider normally reports a voice
+    /// within half a second; this measures it against the line, so a slow session shows as one.
+    /// </remarks>
+    /// <param name="activityId">The call, already sanitized for the log.</param>
+    private void LogProviderRunningBehind(string activityId)
+    {
+        var heardOnLine = _replyListener?.LatestReplyStartTicks ?? 0;
+
+        // Only a reply the provider has not reported yet: once it has, later starts are the same reply resuming.
+        if (heardOnLine == 0 || heardOnLine <= Interlocked.Read(ref _providerHeardCallerTicks))
+        {
+            return;
+        }
+
+        var lag = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - heardOnLine);
+
+        if (lag < ProviderLagWorthReporting || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "The realtime session on activity '{ActivityId}' reported the caller starting {LagMilliseconds} ms after their voice was heard on the line; it is running behind the call's audio.",
+            activityId,
+            (int)lag.TotalMilliseconds);
     }
 }

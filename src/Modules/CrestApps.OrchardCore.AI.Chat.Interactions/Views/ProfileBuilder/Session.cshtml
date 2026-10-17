@@ -1,0 +1,304 @@
+@using System.Text.Json
+@using CrestApps.Core.AI.Deployments
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using Microsoft.AspNetCore.Antiforgery
+
+@model ProfileBuilderSessionViewModel
+
+@inject IAIDeploymentManager DeploymentManager
+@inject IAntiforgery Antiforgery
+
+@{
+    var coachDeployments = (await DeploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat))
+        .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+        .OrderBy(deployment => deployment.Name, StringComparer.CurrentCultureIgnoreCase)
+        .ToArray();
+
+    var linkedProfileTitle = Model.Profile is null ? null : (Model.Profile.DisplayText ?? Model.Profile.Name);
+
+    var config = JsonSerializer.Serialize(new
+    {
+        sessionId = Model.Session.ItemId,
+        antiforgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken,
+        urls = new
+        {
+            state = Url.Action("State", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            feedback = Url.Action("Feedback", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            restore = Url.Action("Restore", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            replay = Url.Action("Replay", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            settings = Url.Action("Settings", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+            saveProfile = Url.Action("SaveProfile", "ProfileBuilder", new { area = ChatInteractionsConstants.Feature.ChatInteractions, id = Model.Session.ItemId }),
+        },
+        linkedProfileTitle,
+        strings = new
+        {
+            selectReply = T["Choose Feedback under a reply to comment on it."].Value,
+            commentRequired = T["Write what you would like the assistant to do differently."].Value,
+            working = T["Rewriting the instructions..."].Value,
+            regenerating = T["Instructions updated. Regenerating the reply..."].Value,
+            updated = T["Instructions updated."].Value,
+            approved = T["Marked as a good reply."].Value,
+            approvedBadge = T["Looks good"].Value,
+            feedbackBadge = T["Feedback"].Value,
+            rejectedBadge = T["Rejected"].Value,
+            noFeedback = T["No feedback yet. Role-play a few turns, then give feedback on a reply."].Value,
+            noRevisions = T["No revisions yet."].Value,
+            noReplay = T["No replay has run yet."].Value,
+            replaying = T["Replaying..."].Value,
+            restoreConfirm = T["Make revision {0} the current instructions?"].Value,
+            restored = T["Revision restored."].Value,
+            voiceNotice = T["The instructions changed. End and restart the voice conversation to use them."].Value,
+            regenerateOnlyLatest = T["Only the latest reply can be regenerated."].Value,
+            saved = T["Saved."].Value,
+            error = T["Something went wrong. Try again."].Value,
+            copied = T["Copied."].Value,
+            current = T["current"].Value,
+            pass = T["Pass"].Value,
+            fail = T["Fail"].Value,
+            unknown = T["Unclear"].Value,
+            revision = T["Revision {0}"].Value,
+            sources = new
+            {
+                Initial = T["Start"].Value,
+                Feedback = T["Feedback"].Value,
+                Manual = T["Manual edit"].Value,
+                Restore = T["Restore"].Value,
+            },
+            kinds = new
+            {
+                Feedback = T["Feedback"].Value,
+                FeedbackAndRegenerate = T["Feedback and regenerate"].Value,
+                Approved = T["Looks good"].Value,
+            },
+        },
+    });
+}
+
+<zone Name="Title">
+    <breadcrumb name="AIProfileBuilderSession" title="@T["Profile Builder: {0}", Model.DisplayName]">
+        <breadcrumb-item id="AIProfileBuilder" action="Index" controller="ProfileBuilder" area="@ChatInteractionsConstants.Feature.ChatInteractions" permission="@AIPermissions.ManageAIProfiles.Name">@T["Profile Builder"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="container-fluid px-0 profile-builder-container">
+    <div class="d-flex flex-column flex-xl-row h-100 gap-3">
+        <div class="chat-parameters-panel flex-shrink-0 bg-theme border rounded">
+            <div class="d-flex justify-content-between align-items-center p-2 pb-0">
+                <span class="fw-semibold">@T["Settings"]</span>
+                <span id="settings-save-indicator" class="settings-save-indicator text-muted" data-chat-interaction-save-indicator></span>
+            </div>
+            <div class="chat-parameters-content p-3 pt-2">
+                @await DisplayAsync(Model.Editor.Parameters)
+            </div>
+        </div>
+
+        <div class="d-flex flex-column flex-grow-1 chat-content-area">
+            <div class="chat-main-area flex-grow-1 d-flex flex-column min-h-0">
+                @await DisplayAsync(Model.Editor.Content)
+            </div>
+        </div>
+
+        <div class="profile-builder-panel flex-shrink-0 bg-theme border rounded d-flex flex-column" id="profile-builder-panel" data-profile-builder-config="@config">
+            <div class="d-flex justify-content-between align-items-center p-2 pb-0">
+                <span class="fw-semibold">@T["Builder"]</span>
+            </div>
+            <div class="profile-builder-content p-3 pt-2 flex-grow-1 overflow-y-auto">
+                <ul class="nav nav-tabs flex-column flex-md-row" role="tablist">
+                    <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link active" id="pb-tab-feedback" data-bs-toggle="tab" data-bs-target="#pb-pane-feedback" type="button" role="tab" aria-controls="pb-pane-feedback" aria-selected="true">@T["Feedback"]</button>
+                    </li>
+                    <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link" id="pb-tab-revisions" data-bs-toggle="tab" data-bs-target="#pb-pane-revisions" type="button" role="tab" aria-controls="pb-pane-revisions" aria-selected="false">@T["Revisions"]</button>
+                    </li>
+                    <li class="nav-item pe-md-2" role="presentation">
+                        <button class="nav-item nav-link" id="pb-tab-replay" data-bs-toggle="tab" data-bs-target="#pb-pane-replay" type="button" role="tab" aria-controls="pb-pane-replay" aria-selected="false">@T["Replay"]</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-item nav-link" id="pb-tab-finish" data-bs-toggle="tab" data-bs-target="#pb-pane-finish" type="button" role="tab" aria-controls="pb-pane-finish" aria-selected="false">@T["Finish"]</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="pb-pane-feedback" role="tabpanel" aria-labelledby="pb-tab-feedback">
+                        <div class="mb-3">
+                            <div class="form-label fw-semibold">@T["Reply"]</div>
+                            <div class="profile-builder-selected border rounded p-2 small text-muted" id="pb-selected-reply">@T["Choose Feedback under a reply to comment on it."]</div>
+                        </div>
+                        <div class="mb-2">
+                            <label for="pb-comment" class="form-label fw-semibold">@T["Your feedback"]</label>
+                            <textarea id="pb-comment" class="form-control" rows="4" placeholder="@T["What should the assistant have done differently?"]"></textarea>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-primary" id="pb-send-regenerate" disabled title="@T["Rewrite the instructions, then generate this reply again with them"]">
+                                <i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Feedback & regenerate"]
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" id="pb-send-feedback" disabled title="@T["Rewrite the instructions and keep this reply"]">
+                                @T["Feedback only"]
+                            </button>
+                        </div>
+                        <div class="small mb-3" id="pb-status" role="status" aria-live="polite"></div>
+
+                        <div class="fw-semibold mb-2">@T["Feedback so far"]</div>
+                        <div id="pb-feedback-list" class="d-flex flex-column gap-2 small"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pb-pane-revisions" role="tabpanel" aria-labelledby="pb-tab-revisions">
+                        <p class="small text-muted">@T["Every change to the instructions is kept here. Restore one to make it current again."]</p>
+                        <div id="pb-revision-list" class="d-flex flex-column gap-2 small"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pb-pane-replay" role="tabpanel" aria-labelledby="pb-tab-replay">
+                        <p class="small text-muted">@T["Replay answers every message you gave feedback on again with the current instructions, and checks each answer against that feedback. Tools are not used during a replay."]</p>
+                        <button type="button" class="btn btn-primary mb-3" id="pb-replay">
+                            <i class="fa-solid fa-flask me-1" aria-hidden="true"></i>@T["Run replay"]
+                        </button>
+                        <div id="pb-replay-results" class="d-flex flex-column gap-2 small"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="pb-pane-finish" role="tabpanel" aria-labelledby="pb-tab-finish">
+                        <div class="mb-3">
+                            <label for="pb-initial-prompt" class="form-label fw-semibold">@T["Opening message"]</label>
+                            <textarea id="pb-initial-prompt" class="form-control" rows="3" placeholder="@T["Optional. What the assistant is told when it starts a conversation itself, such as an automated SMS or call."]">@Model.Session.InitialPrompt</textarea>
+                            <div class="d-flex gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="pb-send-opening" title="@T["Send the opening message to see how the assistant opens a conversation"]">@T["Try the opening"]</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="pb-coach-deployment" class="form-label fw-semibold">@T["Coach deployment"]</label>
+                            <select id="pb-coach-deployment" class="form-select">
+                                <option value="">@T["Same as the chat deployment"]</option>
+                                @foreach (var deployment in coachDeployments)
+                                {
+                                    <option value="@deployment.Name" selected="@(string.Equals(deployment.Name, Model.Session.CoachDeploymentName, StringComparison.OrdinalIgnoreCase))">@deployment.Name</option>
+                                }
+                            </select>
+                            <span class="hint dashed">@T["The model that reads your feedback and rewrites the instructions. A capable model gives better rewrites."]</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-secondary mb-4" id="pb-save-settings">@T["Save"]</button>
+
+                        <hr />
+
+                        <div class="fw-semibold mb-2">@T["Use the result"]</div>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="pb-copy-system-message">
+                                <i class="fa-regular fa-copy me-1" aria-hidden="true"></i>@T["Copy system message"]
+                            </button>
+                        </div>
+
+                        @if (Model.Profile is not null)
+                        {
+                            <div class="border rounded p-2 mb-3">
+                                <div class="small mb-2">@T["This session is linked to the AI profile <strong>{0}</strong>.", linkedProfileTitle]</div>
+                                <button type="button" class="btn btn-primary btn-sm" id="pb-update-profile">@T["Update the AI profile"]</button>
+                            </div>
+                        }
+
+                        <div class="border rounded p-2">
+                            <div class="small fw-semibold mb-2">@T["Save as a new AI profile"]</div>
+                            <div class="mb-2">
+                                <label for="pb-profile-display-text" class="form-label small">@T["Title"]</label>
+                                <input id="pb-profile-display-text" class="form-control form-control-sm" value="@Model.DisplayName" />
+                            </div>
+                            <div class="mb-2">
+                                <label for="pb-profile-name" class="form-label small">@T["Technical name"]</label>
+                                <input id="pb-profile-name" class="form-control form-control-sm" />
+                            </div>
+                            <button type="button" class="btn btn-primary btn-sm" id="pb-create-profile">@T["Create AI profile"]</button>
+                        </div>
+                        <div class="small mt-2" id="pb-finish-status" role="status" aria-live="polite"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style at="Head">
+    .profile-builder-container {
+        min-height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px - 2.25rem);
+    }
+    .profile-builder-container .chat-parameters-panel,
+    .profile-builder-container .profile-builder-panel {
+        width: 100%;
+        max-height: 70vh;
+    }
+    .profile-builder-container .chat-parameters-content {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+    }
+    .profile-builder-container .chat-content-area {
+        min-height: 480px;
+        flex: 1;
+    }
+    .profile-builder-container .chat-main-area {
+        min-height: 420px;
+        overflow: hidden;
+    }
+    .profile-builder-container .min-h-0 {
+        min-height: 0;
+    }
+    .profile-builder-content .tab-pane {
+        padding-bottom: 1rem;
+    }
+    .profile-builder-selected {
+        max-height: 10rem;
+        overflow-y: auto;
+        white-space: pre-wrap;
+    }
+    .profile-builder-item {
+        border-left: 3px solid var(--bs-border-color);
+        padding-left: 0.5rem;
+    }
+    .profile-builder-item.is-approved {
+        border-left-color: var(--bs-success);
+    }
+    .profile-builder-item.is-rejected {
+        border-left-color: var(--bs-danger);
+    }
+    .profile-builder-item.is-feedback {
+        border-left-color: var(--bs-warning);
+    }
+    .ai-chat-message-item.profile-builder-selected-message {
+        outline: 2px solid var(--bs-primary);
+        outline-offset: 4px;
+        border-radius: 0.375rem;
+    }
+    .profile-builder-quote {
+        white-space: pre-wrap;
+        max-height: 6rem;
+        overflow: hidden;
+    }
+    .settings-save-indicator {
+        min-width: 5rem;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+    }
+
+    @@media (min-width: 1200px) {
+        .profile-builder-container {
+            height: calc(100vh - var(--oc-top-nav-height, 0) - 1rem - 65px - 2.25rem);
+        }
+        .profile-builder-container .chat-parameters-panel {
+            width: 20rem;
+            max-height: none;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .profile-builder-container .profile-builder-panel {
+            width: 26rem;
+            max-height: none;
+            height: 100%;
+        }
+        .profile-builder-container .chat-content-area,
+        .profile-builder-container .chat-main-area {
+            min-height: 0;
+        }
+    }
+</style>
+
+<script asp-name="ProfileBuilderApp" at="Foot"></script>

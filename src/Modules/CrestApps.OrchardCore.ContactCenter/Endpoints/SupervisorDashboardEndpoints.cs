@@ -26,13 +26,14 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class SupervisorDashboardEndpoints
+internal static partial class SupervisorDashboardEndpoints
 {
     private const int AgentPageSize = 200;
     private const int UserQueryBatchSize = 500;
 
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
+    public const string DispatchRouteName = "ContactCenterSupervisorDashboardDispatch";
 
     public static IEndpointRouteBuilder AddSupervisorDashboardEndpoints(this IEndpointRouteBuilder builder)
     {
@@ -41,6 +42,9 @@ internal static class SupervisorDashboardEndpoints
 
         builder.MapPost("Admin/contact-center/dashboard/engage", HandleEngageAsync)
             .WithName(EngageRouteName);
+
+        builder.MapGet("Admin/contact-center/dashboard/dispatch", HandleDispatchAsync)
+            .WithName(DispatchRouteName);
 
         return builder;
     }
@@ -57,6 +61,7 @@ internal static class SupervisorDashboardEndpoints
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         SupervisorDashboardInterventionDescriber interventions,
+        IStaleAgentWorkService staleWorkService,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -187,6 +192,9 @@ internal static class SupervisorDashboardEndpoints
             scopedAgents.Where(agent => !activeInteractionsByAgent.ContainsKey(agent.ItemId)).Select(agent => agent.UserId),
             httpContext.RequestAborted);
 
+        // Work an agent is wrongly holding -- a call that is over but still on their line -- is looked for once for the
+        // whole scoped set; the provider's answers about calls are reused for a short time between polls.
+        var staleWork = await staleWorkService.DetectAsync(scopedAgents, httpContext.RequestAborted);
         foreach (var agent in scopedAgents)
         {
             activeInteractionsByAgent.TryGetValue(agent.ItemId, out var activeInteraction);
@@ -213,6 +221,9 @@ internal static class SupervisorDashboardEndpoints
                 DisplayName = agentDisplayNames.TryGetValue(agent.ItemId, out var displayName) ? displayName : "Unknown agent",
                 PresenceStatus = agent.PresenceStatus.ToString(),
                 PresenceReason = agent.PresenceReason,
+                IdleSinceUtc = agent.PresenceStatus == AgentPresenceStatus.Available
+                    ? agent.IdleSinceUtc ?? agent.PresenceChangedUtc
+                    : null,
                 QueueCount = agent.QueueIds.Count,
                 QueueIds = agent.QueueIds
                     .Where(queueId => authorizedQueueIds.Contains(queueId) && ContactCenterConstants.CampaignQueue.GetCampaignId(queueId) is null)
@@ -226,6 +237,17 @@ internal static class SupervisorDashboardEndpoints
                     .ToArray(),
             };
 
+            if (staleWork.TryGetValue(agent.ItemId, out var stale))
+            {
+                row.StaleWork = stale.Items
+                    .Select(item => new SupervisorStaleWorkViewModel
+                    {
+                        Kind = item.Kind.ToString(),
+                        Reason = item.Reason,
+                        StartedUtc = item.StartedUtc,
+                    })
+                    .ToArray();
+            }
             await interventions.DescribeAsync(
                 row,
                 canMonitorActiveInteraction ? activeInteraction : null,

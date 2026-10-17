@@ -29,11 +29,25 @@
                 {
                     <span class="badge text-bg-secondary text-uppercase">@Model.Format</span>
                 }
-                @if (!string.IsNullOrWhiteSpace(Model.ProviderName))
+                @if (Model.HasMasterCopy)
                 {
-                    <span class="text-muted ms-1">@T["Hosted by {0}", Model.ProviderName]</span>
+                    <span class="badge text-bg-info">@T["Master copy"]</span>
+                }
+                else
+                {
+                    <span class="badge text-bg-warning">@T["Provider copy only"]</span>
+                }
+                @if (Model.ProviderNames.Count > 0)
+                {
+                    <span class="text-muted ms-1">@T["Hosted by {0}", string.Join(", ", Model.ProviderNames)]</span>
                 }
             </div>
+            @if (!Model.HasMasterCopy)
+            {
+                <div class="alert alert-warning py-2 mb-2">
+                    @T["This clip exists only at the phone provider. Re-upload this clip to protect it: the platform then keeps a master copy and sends it to any provider that needs it."]
+                </div>
+            }
         }
         <input asp-for="Audio" type="file" class="form-control" accept="audio/*" disabled="@(!Model.CanUpload)" />
         <span asp-validation-for="Audio" class="text-danger"></span>
@@ -46,13 +60,13 @@
                 }
                 else
                 {
-                    @T["Upload the audio to store on the telephony provider. MP3, WAV, OGG, or WebM up to 20 MB."]
+                    @T["Upload the audio. The platform keeps a master copy and sends it to the phone provider. MP3, WAV, OGG, or WebM up to 20 MB."]
                 }
             </span>
         }
         else
         {
-            <span class="hint dashed">@T["Audio uploads are unavailable because no telephony provider capable of hosting media is configured."]</span>
+            <span class="hint dashed">@T["Audio uploads are unavailable because no media storage and no telephony provider capable of hosting media is configured."]</span>
         }
     </div>
 </div>

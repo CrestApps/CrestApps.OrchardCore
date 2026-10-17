@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-call-controls.js';
-
-const { planInCallControls } = globalThis.CrestAppsSoftPhone;
+import {
+    planInCallControls,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/in-call-controls.js';
 
 const capable = {
     canHold: true,

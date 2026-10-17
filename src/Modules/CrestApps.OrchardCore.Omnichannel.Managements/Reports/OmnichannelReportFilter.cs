@@ -12,6 +12,8 @@ internal static class OmnichannelReportFilter
     public const string Channel = "Channel";
     public const string Source = "Source";
     public const string Status = "Status";
+    public const string DispositionIds = "DispositionIds";
+    public const string Page = "Page";
 
     public static async Task<OmnichannelReportCriteria> GetCriteriaAsync(
         ReportFilter filter,
@@ -26,6 +28,8 @@ internal static class OmnichannelReportFilter
             Channel = filter.GetOrDefault<string>(Channel),
             Source = filter.GetOrDefault<string>(Source),
             Status = filter.TryGet<ActivityStatus>(Status, out var status) ? status : null,
+            DispositionIds = GetDispositionIds(filter),
+            Page = filter.TryGet<int>(Page, out var page) ? Math.Max(1, page) : 1,
         };
 
         if (!string.IsNullOrEmpty(criteria.Source))
@@ -44,6 +48,26 @@ internal static class OmnichannelReportFilter
 
         return criteria;
     }
+
+    private static HashSet<string> GetDispositionIds(ReportFilter filter)
+    {
+        // Several dispositions can be picked together, so the filter stores them as an array.
+        var dispositionIds = filter.GetOrDefault<string[]>(DispositionIds);
+
+        if (dispositionIds is null)
+        {
+            return null;
+        }
+
+        var selected = dispositionIds
+            .Where(dispositionId => !string.IsNullOrWhiteSpace(dispositionId))
+            .Select(dispositionId => dispositionId.Trim())
+            .ToHashSet(StringComparer.Ordinal);
+
+        return selected.Count > 0
+            ? selected
+            : null;
+    }
 }
 
 internal sealed class OmnichannelReportCriteria
@@ -61,4 +85,15 @@ internal sealed class OmnichannelReportCriteria
     public IReadOnlySet<string> Sources { get; set; }
 
     public ActivityStatus? Status { get; set; }
+
+    /// <summary>
+    /// The dispositions to keep, or <see langword="null"/> when every disposition is kept. An activity with no
+    /// disposition never matches a selection.
+    /// </summary>
+    public IReadOnlySet<string> DispositionIds { get; set; }
+
+    /// <summary>
+    /// The one-based page of rows a report that pages its rows shows. Reports that do not page ignore it.
+    /// </summary>
+    public int Page { get; set; } = 1;
 }

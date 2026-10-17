@@ -63,6 +63,18 @@ public sealed class BulkManageActivitiesViewModel
     public string NewDialerProfileId { get; set; }
 
     /// <summary>
+    /// Gets or sets the campaign to move the activities to when a dialer profile is applied (for ChangeDialerProfile
+    /// action). Empty keeps each activity's current campaign.
+    /// </summary>
+    public string NewDialerCampaignId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the campaign to move the activities to (for ChangeCampaign action). Empty takes them out of any
+    /// campaign.
+    /// </summary>
+    public string NewCampaignId { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether current assignment and reservation state should be cleared.
     /// </summary>
     public bool ClearCurrentAssignment { get; set; }

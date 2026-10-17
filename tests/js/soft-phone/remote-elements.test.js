@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/remote-elements.js';
-
-const {
-    createRemoteElementPool,
+import {
     acquireRemoteElement,
-    remoteElementFor,
+    createRemoteElementPool,
     rekeyRemoteElement,
-    releaseRemoteElement,
     releaseAllRemoteElements,
-} = globalThis.CrestAppsSoftPhone;
+    releaseRemoteElement,
+    remoteElementFor,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/remote-elements.js';
 
 function createPool() {
     const primary = { name: 'page element' };

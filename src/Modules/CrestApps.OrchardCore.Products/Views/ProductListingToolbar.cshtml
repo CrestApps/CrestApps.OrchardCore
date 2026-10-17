@@ -1,0 +1,84 @@
+@using CrestApps.OrchardCore.Products.Core.Listing
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@{
+    var listing = Model.Listing;
+    var activeCount = listing.ActiveFilters.Count;
+}
+
+<div class="product-listing-toolbar d-flex flex-wrap align-items-center gap-2 mb-3">
+    @if (listing.ShowFilters)
+    {
+        <button type="button" class="btn btn-outline-secondary btn-sm d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#@listing.FormId-filters" aria-controls="@listing.FormId-filters">
+            <span class="fa-solid fa-sliders" aria-hidden="true"></span>
+            @T["Filters"]
+            @if (activeCount > 0)
+            {
+                <span class="badge rounded-pill bg-primary">@activeCount</span>
+            }
+        </button>
+    }
+
+    <div class="me-auto text-muted small" data-product-listing-summary data-first="@listing.FirstItem" data-last="@listing.LastItem" data-total="@listing.Total" data-template="@T["{0}–{1} of {2} results"].Value">
+        @if (listing.Total == 0)
+        {
+            @T["No results"]
+        }
+        else if (listing.TotalPages > 1)
+        {
+            @T["{0}–{1} of {2} results", listing.FirstItem, listing.LastItem, listing.Total]
+        }
+        else if (listing.Total == 1)
+        {
+            @T["1 result"]
+        }
+        else
+        {
+            @T["{0} results", listing.Total]
+        }
+    </div>
+
+    @if (listing.Sorts.Count > 1)
+    {
+        <div class="d-flex align-items-center gap-2">
+            <label for="@listing.FormId-sort" class="small text-muted text-nowrap mb-0">@T["Sort by"]</label>
+            <select class="form-select form-select-sm w-auto" id="@listing.FormId-sort" name="sort" form="@listing.FormId" data-default="@listing.DefaultSort">
+                @foreach (var sort in listing.Sorts)
+                {
+                    <option value="@sort.Key" selected="@sort.Selected">@sort.Label</option>
+                }
+            </select>
+        </div>
+    }
+
+    @if (listing.PageSizes.Count > 1)
+    {
+        <label for="@listing.FormId-size" class="visually-hidden">@T["Items per page"]</label>
+        <select class="form-select form-select-sm w-auto" id="@listing.FormId-size" name="page-size" form="@listing.FormId" data-default="@listing.DefaultPageSize">
+            @foreach (var size in listing.PageSizes)
+            {
+                <option value="@size" selected="@(size == listing.PageSize)">@T["{0} per page", size]</option>
+            }
+        </select>
+    }
+
+    <noscript>
+        <button type="submit" class="btn btn-outline-secondary btn-sm" form="@listing.FormId">@T["Apply"]</button>
+    </noscript>
+
+    @if (listing.AllowViewSwitching)
+    {
+        <div class="btn-group btn-group-sm" role="group" aria-label="@T["Layout"]">
+            <a href="@listing.GridUrl" class="btn btn-outline-secondary @(listing.View == ProductListingView.Grid ? "active" : null)" aria-current="@(listing.View == ProductListingView.Grid ? "true" : null)" title="@T["Grid"]" data-product-listing-link>
+                <span class="fa-solid fa-table-cells-large" aria-hidden="true"></span>
+                <span class="visually-hidden">@T["Grid"]</span>
+            </a>
+            <a href="@listing.ListUrl" class="btn btn-outline-secondary @(listing.View == ProductListingView.List ? "active" : null)" aria-current="@(listing.View == ProductListingView.List ? "true" : null)" title="@T["List"]" data-product-listing-link>
+                <span class="fa-solid fa-list" aria-hidden="true"></span>
+                <span class="visually-hidden">@T["List"]</span>
+            </a>
+        </div>
+    }
+</div>

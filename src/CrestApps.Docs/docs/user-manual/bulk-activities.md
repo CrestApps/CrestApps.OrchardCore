@@ -2,7 +2,7 @@
 sidebar_label: Managing Activities in Bulk
 sidebar_position: 19.5
 title: Managing Activities in Bulk
-description: Filter every open activity and reassign, reschedule, purge, re-prioritize or move many of them to another subject, source or dialer profile at once.
+description: Filter every open activity and reassign, reschedule, purge, re-prioritize or move many of them to another subject, source, campaign or dialer profile at once.
 technical_manual:
   - omnichannel/management
   - contact-center/agents-queues-dialer
@@ -18,9 +18,7 @@ technical_manual:
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a manager filtering activities, reassigning two of them to another agent, and raising the urgency of every matching activity">
-  <source src="/img/docs/um-manage-activities.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a manager filtering activities, reassigning two of them to another agent, and raising the urgency of every matching activity" start={720} end={767} />
 
 Each row shows who will handle the activity: **Manual** or **Automated (AI)** work and its source, the **AI profile** of an automated conversation, the **dialer profile** and **campaign** of dialed work, and the user it is **assigned to**.
 
@@ -48,6 +46,7 @@ Click **Filters** to open or close the filter panel; the page remembers your cho
 | **Status** | One of the open statuses listed above. |
 | **Assignment status** | Unassigned, available, reserved, assigned, in-progress or released work. |
 | **Campaign** | Activities of one campaign. |
+| **Dialer profile** | Activities dialed under one dialer profile. Shown when dialer profiles exist. |
 | **Assigned to users** | Activities owned by one or more users. It searches all users, not only agents. |
 | **Urgency level** | Activities of one urgency. A row's urgency also shows as an icon. |
 | **Scheduled** / **Created** | Activities scheduled or created within a date range. |
@@ -87,8 +86,23 @@ In the screencast, the manager filters by subject and assignment status, ticks t
 | **Change Subject** | Moves them to another subject and applies that subject's campaign, channel and address. Subject field values are cleared. |
 | **Clear Assignment** | Removes the owner and any reservation so the work can be routed or dialed again. |
 | **Change Source** | Sets the source to **Manual** or **Automatic**, and by default clears assignment and reservation. The dialer sources are not offered here. |
-| **Change Dialer Profile** | Hands them to another dialer profile's mode, makes them agent-handled calls, and queues them for the dialer on their campaign. Each activity keeps its campaign. Shown when dialer profiles exist. |
+| **Change Campaign** | Moves them to another campaign, or to no campaign. Activities waiting for the dialer move to the new campaign's dialer queue with them. Shown when campaigns exist. |
+| **Change Dialer Profile** | Hands them to another dialer profile's mode, makes them agent-handled calls, and queues them for the dialer on their campaign. Pick a **Campaign** to move them all to it at the same time, or keep each one's current campaign. Shown when dialer profiles exist. |
 
 To turn assigned manual work into dialer work, use **Change Dialer Profile**. It clears each activity's assignment, because the dialer offers every activity to whichever agent signed in to the campaign is free. Use the same action to have outbound activities dialed in a different mode without creating them again.
 
-The dialer reaches an activity through its campaign, so an activity with no campaign is left unchanged. A campaign's waiting dialer activities must all use one dialer profile: if the campaign already has activities waiting under another profile, the change is refused and the message names that profile. Select those activities too, or move these to another campaign.
+The dialer reaches an activity through its campaign, so an activity with no campaign is left unchanged unless you pick a campaign with the profile. A campaign's waiting dialer activities must all use one dialer profile: if the campaign already has activities waiting under another profile, the change is refused and the message names that profile. Select those activities too, or move these to another campaign.
+
+## Change the campaign
+
+A subject's campaign is only the default for activities created from it: it does not tie the subject to that campaign. Moving activities to another campaign is safe:
+
+- The activities report under the new campaign from then on.
+- Follow-ups created from them, such as a **Try Again**, stay in the new campaign.
+- Activities waiting for the dialer leave the old campaign's dialer queue and wait in the new one, under the dialer profile they already had. Agents signed in to the new campaign get them; agents of the old campaign no longer do.
+
+The dialer needs a campaign, so dialer activities cannot be moved to no campaign. The rule that a campaign's waiting dialer activities share one dialer profile applies here too: dialer activities using different profiles are refused when moved together, and so are activities whose profile differs from the one already waiting in the new campaign. Move one profile's activities at a time, or use **Change Dialer Profile** with a campaign to change both at once.
+
+## Activities the dialer is working
+
+An activity the dialer is dialing right now, ringing an agent with, or that an agent is on a call for is left unchanged by every bulk action, **Purge** included, and the message says how many. Changing it under the dialer would pull it out from under a live call. Run the action again once those calls end.

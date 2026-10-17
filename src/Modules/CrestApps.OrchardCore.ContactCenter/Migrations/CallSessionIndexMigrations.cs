@@ -497,4 +497,20 @@ internal sealed class CallSessionIndexMigrations : DataMigration
                 "The Contact Center call session index contains multiple call sessions for one provider-call identity. Resolve the duplicate legacy call sessions before enabling the provider-call uniqueness constraint.");
         }
     }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
+            SchemaBuilder,
+            "IDX_CallSessionIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 6;
+    }
 }

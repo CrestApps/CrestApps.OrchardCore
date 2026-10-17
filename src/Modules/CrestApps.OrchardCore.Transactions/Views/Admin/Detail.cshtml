@@ -58,7 +58,7 @@
                     <dd class="col-sm-8"><strong>@transaction.Currency @CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)</strong></dd>
 
                     <dt class="col-sm-4">@T["Created"]</dt>
-                    <dd class="col-sm-8">@transaction.CreatedUtc.ToString("g")</dd>
+                    <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.CreatedUtc, Format: "g"))</dd>
 
                     @if (transaction.DueUtc.HasValue)
                     {
@@ -84,7 +84,7 @@
                     @if (transaction.SettledUtc.HasValue)
                     {
                         <dt class="col-sm-4">@T["Settled"]</dt>
-                        <dd class="col-sm-8">@transaction.SettledUtc.Value.ToString("g") (@DisplayText.SettlementMethodName(transaction.SettlementMethod))</dd>
+                        <dd class="col-sm-8">@await DisplayAsync(await New.DateTime(Utc: transaction.SettledUtc.Value, Format: "g")) (@DisplayText.SettlementMethodName(transaction.SettlementMethod))</dd>
                     }
 
                     <dt class="col-sm-4">@T["Reminders sent"]</dt>
@@ -103,7 +103,7 @@
                         <li class="list-group-item">
                             <div class="d-flex justify-content-between">
                                 <strong>@DisplayText.EventTypeName(evt.Type)</strong>
-                                <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
+                                <span class="text-muted small">@await DisplayAsync(await New.DateTime(Utc: evt.CreatedUtc, Format: "g"))</span>
                             </div>
                             <div>@evt.Message</div>
                             @if (Model.ShowReceipts && evt.Type == TransactionEventType.PaymentRecorded && !string.IsNullOrEmpty(evt.Id))

@@ -35,6 +35,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IDialerAbandonmentTracker _abandonmentTracker;
+    private readonly Lazy<IAgentPreDialCoordinator> _preDialCoordinator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderVoiceEventService"/> class.
@@ -55,6 +56,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="abandonmentTracker">The tracker that records when a person answers a dialer call and whether an agent reached them in time.</param>
+    /// <param name="preDialCoordinator">The coordinator holding the agent leg parked while a dialed customer rings, when there is one.</param>
     public ProviderVoiceEventService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
@@ -71,7 +73,8 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         IVoiceIngressGate ingressGate,
         IClock clock,
         ILogger<ProviderVoiceEventService> logger,
-        IDialerAbandonmentTracker abandonmentTracker)
+        IDialerAbandonmentTracker abandonmentTracker,
+        Lazy<IAgentPreDialCoordinator> preDialCoordinator = null)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
@@ -89,6 +92,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         _clock = clock;
         _logger = logger;
         _abandonmentTracker = abandonmentTracker;
+        _preDialCoordinator = preDialCoordinator;
     }
 
     /// <inheritdoc/>
@@ -312,6 +316,13 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         if (endedWithoutAgent)
         {
             await _abandonmentTracker.RecordEndedWithoutAgentAsync(interaction, now, cancellationToken);
+        }
+
+        // An agent leg parked while the customer rang has nobody to wait for once the call is over: it rang out, was busy,
+        // a machine answered, or the customer hung up first.
+        if (IsTerminalState(providerEvent.State))
+        {
+            ScheduleParkedAgentLegRelease(interaction);
         }
 
         var handledCallEnded = IsTerminalState(providerEvent.State) &&

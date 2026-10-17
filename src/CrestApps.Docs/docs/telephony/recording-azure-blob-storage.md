@@ -2,7 +2,7 @@
 sidebar_label: Recording — Azure Blob Storage
 sidebar_position: 5
 title: Telephony - Azure Blob Storage for Recordings
-description: Store Contact Center call recordings in Azure Blob Storage instead of the local tenant application-data folder, keeping the same encryption at rest.
+description: Store Contact Center call recordings and voice media master copies in Azure Blob Storage instead of the local tenant application-data folder, keeping the same encryption at rest.
 ---
 
 | | |
@@ -10,15 +10,15 @@ description: Store Contact Center call recordings in Azure Blob Storage instead 
 | **Feature Name** | Telephony - Azure Blob Storage |
 | **Feature ID** | `CrestApps.OrchardCore.Telephony.Azure` |
 
-Provides an optional storage backend for Contact Center call recordings. When enabled and configured, the feature replaces the default local encrypted recording store with an Azure Blob Storage backend — while keeping the exact same encryption at rest.
+Provides an optional storage backend for the Telephony media store, which holds Contact Center call recordings and the master copy of every voice media clip (hold music, IVR prompts and agent voicemail greetings). When enabled and configured, the feature replaces the default local encrypted store with an Azure Blob Storage backend — while keeping the exact same encryption at rest.
 
 ## Overview
 
-By default, call recordings are stored on the local file system under a tenant-scoped application-data folder:
+By default, call recordings and voice media master copies are stored on the local file system under a tenant-scoped application-data folder:
 
 `App_Data\Sites\<tenant-name>\RecordingMedia`
 
-Recordings are ingested there by any voice provider that records calls (for example [Telnyx](telnyx.md) and [Asterisk](asterisk.md)): the provider records the call on its side, and the provider-specific ingest downloads the finished recording into the store. The recording bytes are always encrypted at rest with the tenant data-protection key and are never stored inside the Contact Center orchestration data.
+Recordings are ingested there by any voice provider that records calls (for example [Telnyx](telnyx.md) and [Asterisk](asterisk.md)): the provider records the call on its side, and the provider-specific ingest downloads the finished recording into the store. A voice media clip is written there when it is uploaded on the **Voice Media** screen or recorded as an agent's greeting, and read back whenever a telephony provider has to be given a copy; see [Voice Routing](../contact-center/voice-routing.md#prompts). The bytes are always encrypted at rest with the tenant data-protection key and are never stored inside the Contact Center orchestration data.
 
 If you want those recordings to live in Azure Blob Storage instead, enable `CrestApps.OrchardCore.Telephony.Azure`.
 
@@ -26,7 +26,7 @@ If you want those recordings to live in Azure Blob Storage instead, enable `Cres
 
 When the feature is enabled and valid Azure settings are present:
 
-- call recordings are written to Azure Blob Storage instead of the tenant application-data folder
+- call recordings and voice media master copies are written to Azure Blob Storage instead of the tenant application-data folder
 - the default `IRecordingMediaStore` file backend is replaced with an Orchard Core `BlobFileStore`
 - **encryption at rest is unchanged**: recordings are still encrypted with the tenant data-protection key *before* they are written to Azure, so Azure only ever holds ciphertext
 - Orchard Core can create the blob container automatically when the tenant starts
@@ -34,14 +34,14 @@ When the feature is enabled and valid Azure settings are present:
 
 If the Azure configuration is missing or incomplete, the default local encrypted storage remains active.
 
-This feature changes **only where the encrypted recording bytes are stored**. Recording orchestration — start/stop/pause governance, recording-state events, right-to-erasure deletion, and audit — is owned by the Contact Center Call Recording feature (`CrestApps.OrchardCore.ContactCenter.Recording`) and is unaffected. Live bidirectional media streaming (Voice Media) is a separate, ephemeral capability and stores nothing.
+This feature changes **only where the encrypted bytes are stored**. Recording orchestration — start/stop/pause governance, recording-state events, right-to-erasure deletion, and audit — is owned by the Contact Center Call Recording feature (`CrestApps.OrchardCore.ContactCenter.Recording`) and is unaffected, as is the voice media provisioning that gives each telephony provider its copy of a clip. Live bidirectional media streaming (the Contact Center Voice Media feature) is a separate, ephemeral capability and stores nothing.
 
 ## Getting started
 
 1. Enable the `Telephony - Azure Blob Storage` feature in Orchard Core.
 2. Add the `CrestApps:Telephony:AzureRecordings` settings under the tenant's `OrchardCore` configuration section.
 3. Restart the tenant or application if needed so the updated configuration is applied.
-4. Record calls normally through the Contact Center Call Recording feature.
+4. Record calls normally through the Contact Center Call Recording feature, and upload voice media normally; both land in the container.
 
 ## Configuration
 

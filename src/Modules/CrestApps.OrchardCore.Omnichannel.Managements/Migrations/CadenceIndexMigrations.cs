@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -46,6 +47,29 @@ internal sealed class CadenceIndexMigrations : OmnichannelIndexMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<CadenceIndex>(table => table
+            .CreateIndex(
+                "IDX_CadenceIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<CadenceIndex>(
+            SchemaBuilder,
+            "IDX_CadenceIndex_ItemId",
+            OmnichannelConstants.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 2;
     }
 }

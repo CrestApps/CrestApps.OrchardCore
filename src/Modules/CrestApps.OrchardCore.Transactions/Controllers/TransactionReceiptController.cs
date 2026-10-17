@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.Modules;
 
@@ -18,26 +19,21 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// </summary>
 [Admin("transaction-receipts/{itemId}/{paymentId}", "TransactionReceipt")]
 [CustomerAdminPage]
-[Feature(TransactionsConstants.Features.Receipts)]
 public sealed class TransactionReceiptController : Controller
 {
     private readonly ITransactionManager _transactionManager;
-    private readonly ITransactionReceiptBuilder _receiptBuilder;
     private readonly IAuthorizationService _authorizationService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionReceiptController"/> class.
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
-    /// <param name="receiptBuilder">The receipt builder.</param>
     /// <param name="authorizationService">The authorization service.</param>
     public TransactionReceiptController(
         ITransactionManager transactionManager,
-        ITransactionReceiptBuilder receiptBuilder,
         IAuthorizationService authorizationService)
     {
         _transactionManager = transactionManager;
-        _receiptBuilder = receiptBuilder;
         _authorizationService = authorizationService;
     }
 
@@ -48,7 +44,10 @@ public sealed class TransactionReceiptController : Controller
     /// <param name="paymentId">The identifier of the timeline event that recorded the payment.</param>
     public async Task<IActionResult> Index(string itemId, string paymentId)
     {
-        if (string.IsNullOrEmpty(itemId) || string.IsNullOrEmpty(paymentId))
+        // The receipt is built by the Receipts module, so without it there is no receipt to show.
+        if (string.IsNullOrEmpty(itemId) ||
+            string.IsNullOrEmpty(paymentId) ||
+            HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not { } receiptBuilder)
         {
             return NotFound();
         }
@@ -78,7 +77,7 @@ public sealed class TransactionReceiptController : Controller
             return NotFound();
         }
 
-        var receipt = await _receiptBuilder.BuildAsync(transaction, payment, HttpContext.RequestAborted);
+        var receipt = await receiptBuilder.BuildAsync(transaction, payment, HttpContext.RequestAborted);
 
         if (receipt is null)
         {

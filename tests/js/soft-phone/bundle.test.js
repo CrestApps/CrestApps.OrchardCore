@@ -1,52 +1,56 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import path from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
 
-const moduleDirectory = 'src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone';
-const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.Telephony/Assets.json', 'utf8'));
-const softPhoneGroup = assets.find(group => group.output === 'wwwroot/scripts/soft-phone.js');
+const scripts = 'src/Modules/CrestApps.OrchardCore.Telephony/Assets/js';
 
-// The bundle is a concatenation, not a module graph: the helper files have to be listed, and listed first, or
-// they are simply not in the browser and every call through them is `undefined` — a soft phone that loads,
-// renders, and then fails on the first number it formats. Nothing else would catch that until an agent did.
-describe('the soft phone asset group', () => {
-    it('is still declared', () => {
-        expect(softPhoneGroup).toBeDefined();
-    });
+// The files a module reaches through its static imports, itself included.
+function reachableFrom(entry) {
+    const seen = new Set();
+    const visit = file => {
+        if (seen.has(file)) {
+            return;
+        }
 
-    it('includes every helper module', () => {
-        const listed = softPhoneGroup.inputs;
+        seen.add(file);
 
-        readdirSync(moduleDirectory)
+        for (const match of readFileSync(file, 'utf8').matchAll(/^import\s[^;]*?from\s+'(\.[^']+)';/gms)) {
+            visit(path.posix.join(path.posix.dirname(file), match[1]));
+        }
+    };
+
+    visit(entry);
+
+    return seen;
+}
+
+// The soft phone is built from soft-phone.js and what it imports. A helper file nothing imports is not in the browser
+// at all, so its tests would pass while the phone never ran it.
+describe('the soft phone bundle', () => {
+    it('reaches every helper module through its imports', () => {
+        const reached = reachableFrom(`${scripts}/soft-phone.js`);
+
+        readdirSync(`${scripts}/soft-phone`)
             .filter(file => file.endsWith('.js'))
-            .forEach(file => expect(listed).toContain(`${moduleDirectory.replace('src/Modules/CrestApps.OrchardCore.Telephony/', '')}/${file}`));
-    });
-
-    it('concatenates the helpers ahead of the script that uses them', () => {
-        const inputs = softPhoneGroup.inputs;
-        const mainIndex = inputs.indexOf('Assets/js/soft-phone.js');
-
-        expect(mainIndex).toBe(inputs.length - 1);
+            .forEach(file => expect(reached, file).toContain(`${scripts}/soft-phone/${file}`));
     });
 });
 
-describe('the telephony client asset group', () => {
-    const clientGroup = assets.find(group => group.output === 'wwwroot/scripts/telephony-client.js');
+// The agent workspace renders call history through the telephony client and has no soft phone on the page. Without
+// the formatter on the client it fell back to raw digits — +17024445506 where a person expects (702) 444-5506 — with
+// nothing failing to say so. Every surface that shows a duration reads the shared call timer off it too.
+describe('the telephony client', () => {
+    it('carries the phone formatter and the call timer for the other bundles', async () => {
+        vi.resetModules();
+        globalThis.window = {};
+        globalThis.document = { createElement: () => ({ textContent: '', innerHTML: '' }) };
 
-    it('carries the phone formatter, so every surface shows a number the same way', () => {
-        // The agent workspace renders call history through this bundle and has no soft phone on the page. Without
-        // the formatter here it silently fell back to raw digits — +17024445506 where a person expects
-        // (702) 444-5506 — with nothing failing to say so.
-        const inputs = clientGroup.inputs;
+        await import('../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js');
 
-        expect(inputs).toContain('Assets/js/soft-phone/format.js');
-        expect(inputs.indexOf('Assets/js/soft-phone/format.js')).toBeLessThan(inputs.indexOf('Assets/js/telephony-client.js'));
-    });
+        expect(globalThis.window.telephonyClient.formatPhoneNumber('7024445506')).toBe('(702) 444-5506');
+        expect(globalThis.window.telephonyClient.formatDuration(3725)).toBe('1:02:05');
 
-    it('concatenates the shared call timer ahead of the client that re-exports it', () => {
-        // Every surface that shows a call duration reads it off this client. If the timer is not in the bundle
-        // ahead of it, the export is undefined and every call on screen shows a blank timer.
-        const inputs = clientGroup.inputs;
-
-        expect(inputs.indexOf('Assets/js/shared/call-timer.js')).toBeLessThan(inputs.indexOf('Assets/js/telephony-client.js'));
+        delete globalThis.window;
+        delete globalThis.document;
     });
 });

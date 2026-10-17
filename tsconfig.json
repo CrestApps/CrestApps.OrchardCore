@@ -1,0 +1,20 @@
+{
+  // Type-checks the browser scripts that opt in with a `// @ts-check` comment on their first line. Run with `npm run check`.
+  // Nothing is emitted: Vite builds the scripts (see .scripts/assets), and this only reports type errors.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "types": []
+  },
+  "include": ["src/*/*/Assets/**/*.js", "src/*/*/Assets/**/*.d.ts"],
+  // The docs site's build output also matches the pattern on a case-insensitive file system.
+  "exclude": ["src/CrestApps.Docs/**", "**/node_modules/**", "**/wwwroot/**"]
+}

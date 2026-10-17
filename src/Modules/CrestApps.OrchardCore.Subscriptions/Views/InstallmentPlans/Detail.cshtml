@@ -140,7 +140,7 @@
                                         {
                                             <span class="me-3 text-nowrap" title="@T["Received"]">
                                                 <i class="fa-solid fa-check" aria-hidden="true"></i><span class="visually-hidden">@T["Received"]</span>
-                                                @T["Received {0:d}", payment.PaidUtc.Value]
+                                                @T["Received"] @await DisplayAsync(await New.DateTime(Utc: payment.PaidUtc.Value, Format: "d"))
                                             </span>
                                         }
                                         @if (isOutstanding && payment.NextChargeAttemptUtc.HasValue)

@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js';
+import {
+    NO_ACTIVE_INTERACTION,
+    activeInteractionSignature,
+    createChangeGate,
+    emptyStateHtml,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/workspace-panels.js';
 
-const { activeInteractionSignature, createChangeGate, emptyStateHtml, NO_ACTIVE_INTERACTION } = globalThis.CrestAppsContactCenter;
-
-const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Assets.json', 'utf8'));
 const workspaceSource = readFileSync('src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/agent-workspace.js', 'utf8');
 
 // Bug: the workspace's "Active interaction" card opened blank. It redrew only when the interaction's signature
@@ -46,6 +48,26 @@ describe('activeInteractionSignature', () => {
     it('names the empty card', () => {
         expect(activeInteractionSignature(null)).toBe(NO_ACTIVE_INTERACTION);
         expect(activeInteractionSignature(undefined)).toBe(NO_ACTIVE_INTERACTION);
+    });
+
+    // A power dial's card moves from dialing to screening to connecting without the agent being on the call; each step
+    // has to redraw it.
+    it('redraws the card for a dial the agent is held for as it moves on', () => {
+        const dialing = activeInteractionSignature(null, { interactionId: 'i1', phase: 'Dialing' });
+        const screening = activeInteractionSignature(null, { interactionId: 'i1', phase: 'Screening' });
+
+        expect(dialing).not.toBe(NO_ACTIVE_INTERACTION);
+        expect(screening).not.toBe(dialing);
+    });
+
+    it('lets the call the agent is on win over a dial', () => {
+        const call = { interactionId: 'i1', status: 'Connected' };
+
+        expect(activeInteractionSignature(call, { interactionId: 'i1', phase: 'Connecting' })).toBe(activeInteractionSignature(call));
+    });
+
+    it('names the empty card for a dial with no phase', () => {
+        expect(activeInteractionSignature(null, { interactionId: 'i1', phase: '' })).toBe(NO_ACTIVE_INTERACTION);
     });
 
     it('changes with the status and the recording state', () => {
@@ -93,13 +115,6 @@ describe('emptyStateHtml', () => {
 });
 
 describe('the agent workspace', () => {
-    const group = assets.find(candidate => candidate.output === 'wwwroot/scripts/agent-workspace.js');
-
-    it('bundles the panel helper ahead of the workspace script', () => {
-        expect(group.inputs).toContain('Assets/js/shared/workspace-panels.js');
-        expect(group.inputs.indexOf('Assets/js/shared/workspace-panels.js')).toBeLessThan(group.inputs.indexOf('Assets/js/agent-workspace.js'));
-    });
-
     it('gates the active card with a change gate rather than a null-seeded signature', () => {
         expect(workspaceSource).toContain('createChangeGate()');
         expect(workspaceSource).not.toMatch(/var activeSignature = null/);

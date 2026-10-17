@@ -1,10 +1,11 @@
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 
@@ -134,7 +135,28 @@ internal sealed class MessagingMigrations : DataMigration
         // which deadlocks SQLite.
         ShellScope.AddDeferredTask(scope => LegacySmsPortalImport.ImportAsync(scope.ServiceProvider));
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<MessageTemplateIndex>(table => table
+            .CreateIndex(
+                "IDX_MessageTemplateIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingBroadcastIndex>(table => table
+            .CreateIndex(
+                "IDX_MessagingBroadcastIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        await SchemaBuilder.AlterIndexTableAsync<MessagingConversationIndex>(table => table
+            .CreateIndex(
+                "IDX_MessagingConversationIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: MessagingStorage.CollectionName);
+
+        return 2;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -159,5 +181,33 @@ internal sealed class MessagingMigrations : DataMigration
                 "Could not create the unique index '{IndexName}' on the messaging conversation table. Merge duplicate conversations that share a channel, service address and contact address, then re-run the migration.",
                 MessagingStorage.ConversationAddressesUniqueIndexName);
         }
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessageTemplateIndex>(
+            SchemaBuilder,
+            "IDX_MessageTemplateIndex_ItemId",
+            MessagingStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingBroadcastIndex>(
+            SchemaBuilder,
+            "IDX_MessagingBroadcastIndex_ItemId",
+            MessagingStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_ItemId",
+            MessagingStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 2;
     }
 }

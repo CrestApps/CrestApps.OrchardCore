@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-
-const {
-    readOfferLegTag,
+import {
     classifyOfferLeg,
-    rememberAcceptedOffer,
     forgetAcceptedOffer,
     isOfferAccepted,
-} = globalThis.CrestAppsSoftPhone;
+    readOfferLegTag,
+    rememberAcceptedOffer,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
 
 const clientState = state => Buffer.from(JSON.stringify(state), 'utf8').toString('base64');
 

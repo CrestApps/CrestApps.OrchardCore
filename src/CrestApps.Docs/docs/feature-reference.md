@@ -162,12 +162,17 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.ContentFields` | CrestApps Content Fields | [Content Fields](./modules/content-fields) |
+| `CrestApps.OrchardCore.ContentFields.Address` | Address Field | [Content Fields](./modules/content-fields#addressfield) |
 | `CrestApps.OrchardCore.ContentAccessControl` | Content Access Control | [Content Access Control](./modules/content-access-control) |
 | `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.OpenXml` | Content Transfer (OpenXml) | [Content Transfer](./modules/content-transfer) |
 | `CrestApps.OrchardCore.ContentTransfer.Azure` | Content Transfer - Azure Blob Storage | [Content Transfer](./modules/content-transfer#store-import-and-export-files-in-azure-blob-storage) |
 | `CrestApps.OrchardCore.Addresses` | Addresses | [Addresses](./modules/addresses) |
+| `CrestApps.OrchardCore.Addresses.Countries` | Address Countries | [Addresses](./modules/addresses#country-lists) |
 | `CrestApps.OrchardCore.Products` | Products | [Products](./modules/products) |
+| `CrestApps.OrchardCore.Products.Elasticsearch` | Product Search (Elasticsearch) | [Products](./modules/products#search-servers) |
+| `CrestApps.OrchardCore.Products.Lucene` | Product Search (Lucene) | [Products](./modules/products#search-servers) |
+| `CrestApps.OrchardCore.Products.AzureAI` | Product Search (Azure AI Search) | [Products](./modules/products#search-servers) |
 | `CrestApps.OrchardCore.Wizard` | Wizard | [Wizard](./modules/wizard) |
 
 ## Reporting
@@ -182,6 +187,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
+| `CrestApps.OrchardCore.Customers` | Customers | [Customers](./modules/customers) |
 | `CrestApps.OrchardCore.Commerce` | Commerce (dependency only) | [Commerce](./modules/commerce) |
 | `CrestApps.OrchardCore.Checkout` | Checkout | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.PayLater` | Pay Later | [Pay Later](./modules/pay-later) |
@@ -189,7 +195,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Taxation` | Taxation | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Transactions` | Transactions | [Transactions](./modules/transactions) |
 | `CrestApps.OrchardCore.Transactions.Notification` | Transaction Reminders | [Transactions](./modules/transactions) |
-| `CrestApps.OrchardCore.Transactions.Receipts` | Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
+| `CrestApps.OrchardCore.Transactions.Receipts` | Send Payment Receipts | [Transactions](./modules/transactions#payment-receipts) |
 
 ## Payment Providers
 

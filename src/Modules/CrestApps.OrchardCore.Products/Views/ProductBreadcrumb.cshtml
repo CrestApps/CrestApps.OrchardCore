@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@using OrchardCore.DisplayManagement.Html
+
+@model ProductDetailsShapeViewModel
+
+@*
+    The trail above a product's title: Home › listing › categories. It renders Orchard Core's Breadcrumb shapes, so a
+    theme can restyle every trail at once with Breadcrumb.cshtml and BreadcrumbItem.cshtml.
+*@
+
+@{
+    var breadcrumb = Model.Product?.Breadcrumb;
+}
+
+@if (breadcrumb is not null)
+{
+    <div class="product-breadcrumb">
+        <breadcrumb name="@breadcrumb.Name" title="@(new HtmlContentString(breadcrumb.Title ?? string.Empty))" page-title="false">
+            @foreach (var item in breadcrumb.Items)
+            {
+                <breadcrumb-item id="@item.Id" url="@item.Url">@item.Label</breadcrumb-item>
+            }
+        </breadcrumb>
+    </div>
+}

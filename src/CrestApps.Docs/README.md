@@ -66,7 +66,7 @@ Write for someone who has never seen the screen and has never written code.
    <AskYourAdmin />
    ```
 
-4. **Screencast** when one exists: `<video controls preload="metadata" width="100%" aria-label="Screencast of ...">` with a `<source src="/img/docs/....mp4" type="video/mp4" />`.
+4. **Video** when one exists: `<YouTube video="<slug>" title="Video of ..." />` (the slug names a video in `src/data/videos.json`), with `start` and `end` in seconds to show one chapter of a longer video. Videos live on the CrestApps YouTube channel, never in this repository (see `AGENTS.md`).
 5. **Tasks:** one heading per task, named after what the reader wants to do ("Create a queue"), with numbered steps.
 6. **Fields:** a `| Field | What it does |` table per card or tab.
 7. **Tips and troubleshooting** where readers commonly get stuck.
@@ -143,7 +143,7 @@ When a task touches the docs site, in addition to everything above:
 - Keep the User Manual free of code and IDs; put those in the Technical Manual and link across.
 - Keep both sidebars, the front matter links and `docs/feature-reference.md` in sync with the pages.
 - Do not hard-wrap Markdown prose; keep each paragraph or list item on one line.
-- Do not record or regenerate screencasts unless the user asks for them (see `AGENTS.md`).
+- Do not record or regenerate videos unless the user asks for them (see `AGENTS.md`).
 - Run `npm run check:manuals` and `npm run build`, and report any failure rather than working around it.
 
 ## Markdown is MDX
@@ -202,7 +202,7 @@ src/CrestApps.Docs/
 ├── docusaurus.config.js   # Site configuration, search and redirects
 ├── src/components/        # Manual components, Icon
 ├── src/theme/             # Wrappers around Docusaurus and search plugin components
-└── static/                # Images, screencasts, icons
+└── static/                # Images and icons (videos are on YouTube)
 ```
 
 ## Local development

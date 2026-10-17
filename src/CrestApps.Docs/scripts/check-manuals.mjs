@@ -1,4 +1,5 @@
-// Checks the rules that keep the User Manual and the Technical Manual apart and linked together.
+// Checks the rules that keep the User Manual and the Technical Manual apart and linked together, and that no video
+// file is committed to the docs site.
 // Run with `npm run check:manuals`. See the "Writing for the two manuals" section of README.md.
 
 import {readdirSync, readFileSync, statSync} from 'node:fs';
@@ -183,6 +184,29 @@ for (const [id, {file, text, frontMatter}] of docs) {
 
     if (hasAccessTable && counterparts.length === 0) {
         fail(file, 'describes a feature but has no "technical_manual" front matter pointing to its Technical Manual page.');
+    }
+}
+
+// Videos are published on the CrestApps YouTube channel and embedded with <YouTube video="..." />, never committed.
+const VIDEO_FILE = /\.(mp4|webm|mov|m4v|ogv)$/i;
+
+function listFiles(dir) {
+    return readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+
+        return statSync(path).isDirectory() ? listFiles(path) : [path];
+    });
+}
+
+for (const path of listFiles(join(siteDir, 'static')).filter((path) => VIDEO_FILE.test(path))) {
+    fail(relative(siteDir, path).split(sep).join('/'), 'is a video file. Publish videos on YouTube and embed them with <YouTube video="..." />.');
+}
+
+for (const dir of ['docs', 'versioned_docs']) {
+    for (const path of listDocs(join(siteDir, dir))) {
+        if (/<video\b|\.(mp4|webm)\b/i.test(readFileSync(path, 'utf8'))) {
+            fail(relative(siteDir, path).split(sep).join('/'), 'embeds a video file. Embed videos from YouTube with <YouTube video="..." />.');
+        }
     }
 }
 

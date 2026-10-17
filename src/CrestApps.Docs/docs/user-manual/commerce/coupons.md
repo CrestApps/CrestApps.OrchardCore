@@ -16,10 +16,7 @@ A **coupon** is a promotion code a buyer types at checkout to get a discount, fo
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-coupons.jpg" aria-label="Narrated video of creating a coupon">
-  <source src="/img/docs/commerce-coupons.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-coupons.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of creating a coupon" start={130} end={161} />
 
 ## Find a coupon
 

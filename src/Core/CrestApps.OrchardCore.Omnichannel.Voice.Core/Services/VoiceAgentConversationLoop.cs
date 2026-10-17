@@ -16,8 +16,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
-using Fluid;
-using Fluid.Values;
+
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -54,6 +53,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IAICompletionService _completionService;
     private readonly IOmnichannelHandoffTurn _handoffTurn;
     private readonly IVoiceCallEndTurn _endCallTurn;
+    private readonly IAnsweringMachineSignals _answeringMachineSignals;
     private readonly IRealtimeCallCompletionRunner _completionRunner;
 
     // Optional: automated voice runs on tenants with no Contact Center, which have no queue to release.
@@ -72,6 +72,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ITurnBasedSilenceWatchdog _silenceWatchdog;
     private readonly IAIVoiceSessionTracker _sessionTracker;
+    private readonly IAIVoiceCallShutdown _callShutdown;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
@@ -86,6 +87,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IAICompletionService completionService,
         IOmnichannelHandoffTurn handoffTurn,
         IVoiceCallEndTurn endCallTurn,
+        IAnsweringMachineSignals answeringMachineSignals,
         IRealtimeCallCompletionRunner completionRunner,
         IEnumerable<IQueuedCallerAbandonmentHandler> abandonmentHandlers,
         IEnumerable<IAutomatedVoiceCallObserver> callObservers,
@@ -100,6 +102,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeVoiceConversationRunner realtimeRunner,
         ITurnBasedSilenceWatchdog silenceWatchdog,
         IAIVoiceSessionTracker sessionTracker,
+        IAIVoiceCallShutdown callShutdown,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IClock clock,
@@ -112,6 +115,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _completionService = completionService;
         _handoffTurn = handoffTurn;
         _endCallTurn = endCallTurn;
+        _answeringMachineSignals = answeringMachineSignals;
         _completionRunner = completionRunner;
         _abandonmentHandlers = abandonmentHandlers;
         _callObservers = callObservers;
@@ -126,6 +130,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _realtimeRunner = realtimeRunner;
         _silenceWatchdog = silenceWatchdog;
         _sessionTracker = sessionTracker;
+        _callShutdown = callShutdown;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _clock = clock;
@@ -250,9 +255,18 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             // caller says a word. The turn-based loop below re-reads this on every turn instead.
             var (realtimeHandoffService, realtimeFlowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
+            // The provider's word on who answered arrives on a webhook request of its own while this one holds the
+            // call, so it reaches the session through these signals rather than through the activity it also marks.
+            // Watched from here, so a report that beats the session to it is still seen.
+            var answeringMachine = _answeringMachineSignals.Watch(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
+
             var sessionHeldTheCall = false;
             var meter = new AIVoiceSessionMeter(measuresCallerSpeech: true);
             RealtimeVoiceConversationContext realtime = null;
+
+            // Held until the call has been handed on below, so a node that starts shutting down waits for this
+            // caller to be passed to somebody before it goes.
+            using var heldCall = _callShutdown.HoldCall();
 
             try
             {
@@ -288,6 +302,17 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     AssistantSaid = _endCallTurn.AssistantSaid,
                     CustomerAnswered = _endCallTurn.CustomerAnswered,
 
+                    // A voicemail or answering machine answering, as the provider reports it, and the end of its
+                    // greeting: the session stops conversing on the first and leaves its message after the second.
+                    AnsweredByMachine = answeringMachine.MachineDetected,
+                    MachineGreetingEnded = answeringMachine.GreetingEnded,
+
+                    // Ends the call the way the end-call tool does on voicemail once the message has been left, so
+                    // the line is hung up as soon as the message has played, and the call concluded as one that
+                    // reached voicemail.
+                    EndCallOnVoicemail = () => _endCallTurn.RequestEndCall(VoicemailMessageLeftReason, reachedVoicemail: true),
+                    EndCallOnSilence = () => _endCallTurn.RequestEndCall(SilentLineEndedReason),
+
                     // Only when this call actually has an agent to reach. Telling a model it may transfer, on a
                     // call where nothing can receive the caller, promises the caller a person who is not coming.
                     HandoffInstructions = realtimeHandoffService is null
@@ -305,6 +330,10 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
                     // Talk time, silence and interruptions, measured from the session's own audio.
                     Meter = meter,
+
+                    // The session lives in this process, so it ends when the node begins to stop, and the caller is
+                    // handed on below as from any lost session.
+                    NodeStopping = _callShutdown.Stopping,
                 }, cancellationToken);
 
                 // The session is over. Said plainly on the record, because the failure this instrumentation was
@@ -333,6 +362,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 {
                     await VerifyRealtimeRecordingDisclosureAsync(voiceEvent, session.SessionId, recordingDisclosure);
                 }
+
+                // Nothing is watching for the provider's report any more.
+                _answeringMachineSignals.Forget(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
             }
 
             if (sessionHeldTheCall)
@@ -575,6 +607,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private async Task OnHangupAsync(VoiceAgentEvent voiceEvent, CancellationToken cancellationToken)
     {
         ReleaseVoicemailClaim(voiceEvent.ActivityId);
+        _answeringMachineSignals.Forget(voiceEvent.ProviderName, voiceEvent.ProviderCallId);
 
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
@@ -676,37 +709,6 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         return (profile, session);
     }
 
-    private async Task<string> RenderInitialPromptAsync(OmnichannelActivity activity, AIProfile profile, AIChatSession session, CancellationToken cancellationToken)
-    {
-        var metadata = profile.GetOrCreate<AIProfileMetadata>();
-        var pattern = metadata.InitialPrompt?.Trim();
-
-        if (string.IsNullOrWhiteSpace(pattern))
-        {
-            return null;
-        }
-
-        var contact = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
-            ? null
-            : await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-
-        var templateContext = new Dictionary<string, FluidValue>
-        {
-            ["Activity"] = new ObjectValue(activity),
-            ["Profile"] = new ObjectValue(profile),
-            ["Session"] = new ObjectValue(session),
-        };
-
-        if (contact is not null)
-        {
-            templateContext["Contact"] = new ObjectValue(contact);
-        }
-
-        var rendered = await _liquidTemplateManager.RenderStringAsync(pattern, NullEncoder.Default, templateContext);
-
-        return rendered?.Trim();
-    }
-
     private async Task<(string Reply, bool HandoffRequested, string Reason, bool EndCallRequested)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, string turnGuidance, CancellationToken cancellationToken)
     {
         var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
@@ -772,16 +774,5 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         var endCallRequested = _endCallTurn.EndCallRequested && !handoffRequested;
 
         return (reply, handoffRequested, _handoffTurn.Reason, endCallRequested);
-    }
-
-    private static Task<bool> SpeakAsync(IVoiceAgentMediaProvider media, string providerCallId, OmnichannelActivity activity, string text, CancellationToken cancellationToken)
-    {
-        // Honor the configured neural text-to-speech voice for a natural (non-robotic) delivery, falling back to
-        // the provider's own default. The value must be a voice the provider supports for its speak command.
-        var voice = string.IsNullOrWhiteSpace(activity?.TextToSpeechVoiceId)
-            ? media.DefaultVoice
-            : activity.TextToSpeechVoiceId.Trim();
-
-        return media.SpeakAsync(providerCallId, text, voice: voice, language: "en-US", cancellationToken: cancellationToken);
     }
 }

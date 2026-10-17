@@ -1,0 +1,99 @@
+@using CrestApps.OrchardCore.Carts.Core
+@using CrestApps.OrchardCore.Products.Core.Services
+
+@model AddToCartViewModel
+
+@*
+    The Add to cart action on a product's card and page. It is an ordinary form, so it works without JavaScript and
+    returns the visitor to the page they added from.
+*@
+
+@{
+    var formId = "add-to-cart-" + Model.ContentItemId;
+}
+
+@if (Model.Variants.Count > 0 && Model.Options.Count > 0)
+{
+    <script asp-name="product-variant-picker" at="Foot"></script>
+}
+
+<form method="post" asp-route="@CartConstants.RouteNames.Add" class="product-add-to-cart w-100" id="@formId" data-product-variant-form="@(Model.Options.Count > 0 ? "" : null)" data-sku-template="@T["SKU {0}"].Value">
+    <input type="hidden" name="contentItemId" value="@Model.ContentItemId" />
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+
+    @if (Model.Variants.Count > 0)
+    {
+        @* One list per option, shown by the script; without it, the list of variants below is used. *@
+        @if (Model.Options.Count > 0)
+        {
+            <div class="d-none" data-product-variant-options>
+                @for (var i = 0; i < Model.Options.Count; i++)
+                {
+                    var option = Model.Options[i];
+
+                    <div class="mb-2">
+                        <label class="form-label small text-muted" for="@(formId)-option-@i">@option.Name</label>
+                        <select id="@(formId)-option-@i" class="form-select form-select-sm" data-product-option="@option.Name">
+                            @foreach (var value in option.Values)
+                            {
+                                <option value="@value">@value</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="mb-2" data-product-variant-fallback>
+            <label class="form-label small text-muted" for="@(formId)-variant">@T["Choose"]</label>
+            <select name="variantId" id="@(formId)-variant" class="form-select form-select-sm" data-product-variant>
+                @foreach (var variant in Model.Variants)
+                {
+                    <option value="@variant.VariantId" data-sku="@variant.Sku" data-price="@variant.Price" data-image="@variant.ImagePath" data-options="@System.Text.Json.JsonSerializer.Serialize(variant.Options)">
+                        @(string.IsNullOrEmpty(variant.Price) ? variant.Title : variant.Title + " — " + variant.Price)
+                    </option>
+                }
+            </select>
+        </div>
+    }
+
+    @if (Model.Prices.Count > 1)
+    {
+        <div class="mb-2">
+            <label class="form-label small text-muted" for="@(formId)-price">@T["Option"]</label>
+            <select name="priceId" id="@(formId)-price" class="form-select form-select-sm">
+                @foreach (var price in Model.Prices)
+                {
+                    var amount = ProductPriceFormatter.Format(price.Amount, price.Currency);
+
+                    <option value="@price.PriceId" selected="@(price.PriceId == Model.DefaultPriceId)">
+                        @(string.IsNullOrWhiteSpace(price.Name) ? amount : price.Name + " — " + amount)
+                    </option>
+                }
+            </select>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(Model.DefaultPriceId))
+    {
+        <input type="hidden" name="priceId" value="@Model.DefaultPriceId" />
+    }
+
+    <div class="d-flex gap-2">
+        @if (Model.MaxQuantity > 1)
+        {
+            <input type="number"
+                   name="quantity"
+                   id="@(formId)-quantity"
+                   min="1"
+                   max="@Model.MaxQuantity"
+                   value="1"
+                   class="form-control product-add-to-cart-quantity"
+                   style="max-width: 5rem"
+                   aria-label="@T["Quantity"]" />
+        }
+        <button type="submit" class="btn btn-primary flex-grow-1">
+            <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
+            @T["Add to cart"]
+        </button>
+    </div>
+</form>

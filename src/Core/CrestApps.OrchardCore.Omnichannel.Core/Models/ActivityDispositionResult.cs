@@ -21,6 +21,13 @@ public sealed class ActivityDispositionResult
     public string ErrorMessage { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the disposition applied for an outcome the platform reached on its own is one the
+    /// subject's flow is wired to, so the flow's own actions decided what happens next. <see langword="false"/> when
+    /// the flow has no rule for the outcome and a disposition was taken from outside it.
+    /// </summary>
+    public bool HandledBySubjectFlow { get; set; }
+
+    /// <summary>
     /// Creates a successful result for the specified activity.
     /// </summary>
     /// <param name="activity">The dispositioned activity.</param>

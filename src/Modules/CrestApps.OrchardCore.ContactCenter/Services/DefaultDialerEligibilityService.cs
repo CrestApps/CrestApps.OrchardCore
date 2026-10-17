@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -113,13 +114,14 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         var attemptNumber = context.AttemptAlreadyCounted
             ? Math.Max(1, workState?.Attempts ?? activity.Attempts)
             : ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
-        var attemptsExceedLimit = attemptNumber > profile.MaxAttempts;
+        var maxAttempts = DialerAttemptLimit.Resolve(activity, profile);
+        var attemptsExceedLimit = attemptNumber > maxAttempts;
 
         if (attemptsExceedLimit)
         {
             return DialerEligibilityResult.Suppressed(
                 DialerSuppressionReason.MaxAttemptsReached,
-                $"The activity reached the maximum of {profile.MaxAttempts} attempts.");
+                $"The activity reached the maximum of {maxAttempts} attempts.");
         }
 
         var coolDown = await EvaluateRetryCoolDownAsync(profile, activity, cancellationToken);

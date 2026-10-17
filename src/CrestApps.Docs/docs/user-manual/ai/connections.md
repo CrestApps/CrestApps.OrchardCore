@@ -19,9 +19,7 @@ Before anyone can chat with an assistant, the site needs to reach an AI service,
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the Azure OpenAI provider connection and its chat, utility, and embedding deployments">
-  <source src="/img/docs/ai-provider-azure-openai.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of the Azure OpenAI provider connection and its chat, utility, and embedding deployments" start={26} end={43} />
 
 Your technical team can also set up connections and deployments in the site's configuration files. Those show in the lists under **Configuration-based connections** or **Configuration-based deployments** with a **Read-only** badge, and can only be changed there. See the [Technical Manual provider pages](../../ai/providers/index.md).
 
@@ -105,6 +103,7 @@ Open **Settings > Artificial Intelligence** and fill in the **Default Deployment
 | **Default speech-to-text deployment** | Dictation and spoken conversations. |
 | **Default text-to-speech deployment** | Reading answers aloud and spoken conversations. |
 | **Default text-to-speech voice** | The voice used when a profile does not pick one. The list loads after you pick a text-to-speech deployment. |
+| **Default realtime deployment** | Spoken conversations, in the chat and on phone calls, of profiles that name no **Conversation deployment**. Left empty, the first realtime-capable deployment is used. |
 
 Click **Save**.
 

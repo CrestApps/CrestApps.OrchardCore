@@ -66,6 +66,25 @@ public sealed class DialerPacedStartup : StartupBase
 
         services.AddSingleton<IValidateOptions<ContactCenterPredictiveDialingOptions>, ContactCenterPredictiveDialingOptionsValidator>();
 
+        // Event-driven pacing of the modes that reserve an agent before each call: a campaign is paced as soon as an agent
+        // may be free for it or work arrives, rather than waiting for the minute dialer pacing task, which stays as the
+        // backstop. Only the timing changes; each cycle applies the profile's own limits.
+        services
+            .AddOptions<ContactCenterDialerPacingOptions>()
+            .Bind(_shellConfiguration.GetSection(ContactCenterDialerPacingOptions.SectionName))
+            .Validate(
+                options => options.Debounce > TimeSpan.Zero &&
+                    options.LockExpiration > TimeSpan.Zero &&
+                    options.LockRetryDelay > TimeSpan.Zero &&
+                    options.LockRetryDelay < options.LockExpiration &&
+                    options.CycleTimeout > TimeSpan.Zero,
+                $"'{ContactCenterDialerPacingOptions.SectionName}' timings must be greater than zero, and 'LockRetryDelay' must be shorter than 'LockExpiration'.")
+            .ValidateOnStart();
+
+        services
+            .AddSingleton<IDialerPacingScheduler, DialerPacingScheduler>()
+            .AddScoped<IContactCenterEventHandler, DialerPacingTriggerHandler>();
+
         services
             .AddSingleton<DialerPacingStatisticsCache>()
             .AddScoped<IDialerPacingStatisticsProvider, InteractionEventDialerPacingStatisticsProvider>();

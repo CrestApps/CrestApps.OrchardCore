@@ -175,6 +175,40 @@ public sealed class FieldSchemaDefinitionTests
     }
 
     [Fact]
+    public async Task AddressFieldSchemaDefinition_FieldSchemaDescribesTheAddress()
+    {
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.AddressField).Assembly;
+        var instance = Activator.CreateInstance(contentFieldsAssembly.GetType(
+            "CrestApps.OrchardCore.ContentFields.Schemas.AddressFieldSchemaDefinition",
+            throwOnError: true));
+
+        var schemaJson = await GetFieldSchemaJsonAsync(instance);
+
+        Assert.Contains("\"Address\"", schemaJson);
+        Assert.Contains("\"AddressLine1\"", schemaJson);
+        Assert.Contains("\"DependentLocality\"", schemaJson);
+        Assert.Contains("\"SortingCode\"", schemaJson);
+        Assert.Contains("\"Country\"", schemaJson);
+    }
+
+    [Fact]
+    public async Task AddressFieldSchemaDefinition_SettingsSchemaListsTheEditorsOptions()
+    {
+        var contentFieldsAssembly = typeof(CrestApps.OrchardCore.ContentFields.Fields.AddressField).Assembly;
+        var instance = (IContentSchemaDefinition)Activator.CreateInstance(contentFieldsAssembly.GetType(
+            "CrestApps.OrchardCore.ContentFields.Schemas.AddressFieldSchemaDefinition",
+            throwOnError: true));
+
+        var schema = await instance.GetSettingsSchemaAsync(TestContext.Current.CancellationToken);
+        var json = schema.Build().Root.Source.GetRawText();
+
+        Assert.Contains("\"AddressFieldSettings\"", json);
+        Assert.Contains("\"Countries\"", json);
+        Assert.Contains("\"DefaultCountry\"", json);
+        Assert.Contains("\"ShowPhone\"", json);
+    }
+
+    [Fact]
     public async Task PhoneFieldSchemaDefinition_FieldSchemaContainsCountryCodeEnum()
     {
         // Arrange — resolve the internal PhoneFieldSchemaDefinition via reflection.

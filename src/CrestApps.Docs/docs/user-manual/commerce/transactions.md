@@ -38,10 +38,7 @@ The report lists every transaction on the site, newest first.
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-transactions.jpg" aria-label="Narrated video of the Transactions report, a transaction, and the reminder settings">
-  <source src="/img/docs/commerce-transactions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-transactions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of the Transactions report, a transaction, and the reminder settings" start={408} end={454} />
 
 ### Find a transaction
 
@@ -83,13 +80,13 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | **Outstanding** | How much is still owed. |
 | **Created** | When the transaction was recorded. |
 | **Due** | When the payment is due, if it has a due date. |
-| **Invoice** | The invoice number, such as *INV-1001*, once the customer has been sent an invoice. With the **Payment Receipts** feature on, it opens the [printable invoice](invoices-and-receipts.md#print-an-invoice). |
+| **Invoice** | The invoice number, such as *INV-1001*, once the customer has been sent an invoice. With the **Receipts** feature on, it opens the [printable invoice](invoices-and-receipts.md#print-an-invoice). |
 | **Settled** | When the transaction was settled, and how: *Paid online* or *Recorded by hand*. |
 | **Reminders sent** | How many payment reminders the customer has been sent. |
 
 ### Timeline
 
-The **Timeline** lists everything that happened to the transaction, newest first. Each entry is headed **Created**, **Payment received**, **Reminder sent**, **Status changed**, **Canceled**, **Refunded** or **Note**, and shows who did it, when a person did. A payment entry has a **View receipt** link when the **Payment Receipts** feature is on; see [Invoices and Receipts](invoices-and-receipts.md).
+The **Timeline** lists everything that happened to the transaction, newest first. Each entry is headed **Created**, **Payment received**, **Reminder sent**, **Status changed**, **Canceled**, **Refunded** or **Note**, and shows who did it, when a person did. A payment entry has a **View receipt** link when the **Receipts** feature is on; see [Invoices and Receipts](invoices-and-receipts.md).
 
 ### Record a payment taken outside the site
 
@@ -100,7 +97,7 @@ Use this when the customer paid by cash, check or bank transfer.
 3. Optionally, describe how the payment was received in **Note**.
 4. Click **Record payment**, then click **Record payment** again in the confirmation box.
 
-If the payment covers the balance, the transaction becomes **Paid**. If it covers part of it, the transaction becomes **Partially paid**. An amount larger than the balance is recorded as the balance, so the customer never owes a negative amount. With the **Payment Receipts** feature on, the customer is sent a receipt.
+If the payment covers the balance, the transaction becomes **Paid**. If it covers part of it, the transaction becomes **Partially paid**. An amount larger than the balance is recorded as the balance, so the customer never owes a negative amount. With the **Send Payment Receipts** feature on, the customer is sent a receipt.
 
 :::note[The customer sees the note]
 The note you type on a recorded payment becomes part of the payment's entry in the customer's history. Write it for the customer, for example *Paid by bank transfer*. For something only staff should read, use **Add a note** instead.
@@ -115,7 +112,7 @@ Use this to settle the whole balance at once, for example when the customer paid
 1. Open the transaction.
 2. Click **Mark as paid**, then click **Mark as paid** in the confirmation box.
 
-The remaining balance is recorded as an offline payment and the transaction becomes **Paid**. With the **Payment Receipts** feature on, the customer is sent a receipt for that amount.
+The remaining balance is recorded as an offline payment and the transaction becomes **Paid**. With the **Send Payment Receipts** feature on, the customer is sent a receipt for that amount.
 
 ### Cancel a transaction
 

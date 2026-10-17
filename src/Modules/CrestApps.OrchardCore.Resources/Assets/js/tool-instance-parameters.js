@@ -26,8 +26,10 @@
             reservedMap = {};
         }
 
+        // A page without a source picker edits a single source, which the list names. Without this, every
+        // placement option looks like it belongs to another source and is hidden.
         function selectedSource() {
-            return sourceSelect ? sourceSelect.value : '';
+            return sourceSelect ? sourceSelect.value : (list.dataset.source || '');
         }
 
         function reservedNames() {

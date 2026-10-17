@@ -1,71 +1,40 @@
 {
   "name": "crestapps.orchardcore",
   "private": true,
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
+  "workspaces": [
+    "src/Modules/*",
+    "src/Startup/*"
+  ],
   "scripts": {
-    "build": "gulp build",
+    "build": "node .scripts/assets/cli.mjs build",
+    "rebuild": "node .scripts/assets/cli.mjs build --force",
+    "watch": "node .scripts/assets/cli.mjs watch",
+    "clean": "node .scripts/assets/cli.mjs clean",
+    "dry-run": "node .scripts/assets/cli.mjs dry-run",
     "test": "vitest run",
     "test:watch": "vitest",
-    "rebuild": "gulp rebuild",
-    "watch": "gulp watch",
-    "postinstall": "node .scripts/install.js",
-    "install-projects": "node .scripts/install.js",
-    "update-projects": "node .scripts/update.js",
-    "install-project": "node .scripts/project.js install",
-    "update-project": "node .scripts/project.js update",
-    "cleanup": "node .scripts/cleanup.js"
+    "cleanup": "node .scripts/cleanup.js",
+    "lint": "eslint .",
+    "check": "tsc -p tsconfig.json"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.6",
-    "@babel/preset-env": "^8.0.6",
-    "@babel/preset-flow": "8.0.1",
-    "child_process": "^1.0.2",
-    "es6-promise": "4.2.8",
-    "fancy-log": "^2.0.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
     "glob": "^13.0.6",
-    "graceful-fs": "4.2.11",
-    "gulp": "^5.0.1",
-    "gulp-babel": "8.1.0",
-    "gulp-concat": "2.6.1",
-    "gulp-dart-sass": "1.1.0",
-    "gulp-eol": "0.2.0",
-    "gulp-header": "^2.0.12",
-    "gulp-if": "3.0.0",
-    "gulp-less": "5.0.0",
-    "gulp-minifier": "^3.5.0",
-    "gulp-newer": "1.4.0",
-    "gulp-plumber": "1.2.1",
-    "gulp-postcss": "^10.0.0",
-    "gulp-rename": "2.1.0",
-    "gulp-terser": "2.1.0",
-    "gulp-typescript": "^5.0.1",
-    "merge-stream": "2.0.0",
-    "path-posix": "1.0.0",
-    "postcss": "^8.5.28",
-    "postcss-rtl": "^2.0.0",
-    "rtlcss": "4.3.0",
-    "source-map": "^0.8.0",
+    "globals": "^17.13.0",
+    "sass": "^1.102.0",
     "typescript": "^6.0.3",
+    "vite": "^8.3.2",
     "vitest": "^5.0.3"
-  },
-  "dependencies": {
-    "@microsoft/signalr": "10.0.11",
-    "@telnyx/webrtc": "2.27.10",
-    "chart.js": "^4.5.1",
-    "extendable-media-recorder": "^9.2.40",
-    "sip.js": "0.21.2"
   },
   "overrides": {
     "brace-expansion": "^5.0.5",
     "lodash": "^4.17.24",
-    "gulp-match": {
-      "minimatch": "^10.0.1"
-    },
-    "gulp-newer": {
-      "minimatch": "^10.0.1"
-    },
-    "gulp-typescript": {
-      "minimatch": "^10.0.1"
-    },
     "yaml": "^2.8.3"
   },
   "allowScripts": {

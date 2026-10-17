@@ -24,6 +24,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     private readonly ITelephonyService _telephonyService;
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
+    private readonly IVoiceMediaCopyRecorder _copyRecorder;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterWorkStateService _workStateService;
@@ -36,6 +38,9 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     /// </summary>
     /// <param name="telephonyServices">The optional telephony services used to execute the provider action.</param>
     /// <param name="interactionManager">The interaction manager used to validate and project linked interactions.</param>
+    /// <param name="agentProfileManager">The agent profile manager the recipient agent's voicemail greeting is read from.</param>
+    /// <param name="voiceMediaProvisioning">The service that gives the call's provider a copy of the recipient agent's recorded greeting.</param>
+    /// <param name="copyRecorder">Records a greeting copy the provider was given on the agent's profile, outside this command's unit of work.</param>
     /// <param name="queueService">The queue service used to restore live work after a definitive action failure.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
@@ -46,6 +51,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         IEnumerable<ITelephonyService> telephonyServices,
         IInteractionManager interactionManager,
         IAgentProfileManager agentProfileManager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
+        IVoiceMediaCopyRecorder copyRecorder,
         IActivityQueueService queueService,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
@@ -56,6 +63,8 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         _telephonyService = telephonyServices.FirstOrDefault();
         _interactionManager = interactionManager;
         _agentProfileManager = agentProfileManager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
+        _copyRecorder = copyRecorder;
         _callControlAuthorizationService = callControlAuthorizationService;
         _queueService = queueService;
         _workStateService = workStateService;
@@ -244,7 +253,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             var recipientAgent = await _agentProfileManager.FindByIdAsync(recipientAgentId, cancellationToken);
             greetingText = recipientAgent?.VoicemailGreetingText;
             greetingMediaUrl = recipientAgent?.VoicemailGreetingMediaUrl;
-            greetingMediaName = recipientAgent?.VoicemailGreetingMediaName;
+            greetingMediaName = await ResolveGreetingMediaAsync(recipientAgent, interaction.ProviderName, cancellationToken);
         }
 
         // Fall back to the entry point's default spoken greeting (stamped on the interaction when the call arrived)
@@ -260,6 +269,39 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
 
         return (greetingText, greetingMediaUrl, greetingMediaName);
+    }
+
+    // The provider this call is on is given a copy of the greeting from the master copy when it has none, so a
+    // greeting recorded while another provider was in use is still heard. Only a copy this provider holds is handed
+    // over: a reference it does not hold would be refused, and the caller would hear nothing instead of the spoken
+    // greeting. The copy is recorded on the agent's profile outside this command: the profile is written constantly
+    // by presence changes, and a write that collided here would fail the command and leave the caller without a
+    // greeting.
+    private async Task<string> ResolveGreetingMediaAsync(AgentProfile agent, string providerName, CancellationToken cancellationToken)
+    {
+        if (agent is null || string.IsNullOrEmpty(providerName))
+        {
+            return null;
+        }
+
+        if (agent.VoicemailGreetingMedia is null)
+        {
+            // A greeting recorded before master copies were kept names a copy at whichever provider received it, and
+            // the profile does not say which. It is offered to this provider only once this provider confirms it
+            // holds it; otherwise the spoken greeting is used.
+            return await _voiceMediaProvisioning.VerifyProviderCopyAsync(providerName, agent.VoicemailGreetingMediaName, cancellationToken)
+                ? agent.VoicemailGreetingMediaName
+                : null;
+        }
+
+        var provisioned = await _voiceMediaProvisioning.EnsureProvisionedAsync(agent.VoicemailGreetingMedia, providerName, cancellationToken);
+
+        if (provisioned.Changed)
+        {
+            _copyRecorder.RecordGreetingCopy(agent.ItemId, agent.VoicemailGreetingMedia.MasterStorageReference, provisioned.ProviderName, provisioned.Reference, provisioned.ReplacedReference);
+        }
+
+        return provisioned.Reference;
     }
 
     private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)

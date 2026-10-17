@@ -39,9 +39,9 @@
             <option value="@DispositionOutcome.AnsweringMachine">@T["Answering machine (dialer and automated calls)"]</option>
             <option value="@DispositionOutcome.Rejected">@T["Rejected (dialer)"]</option>
             <option value="@DispositionOutcome.Failed">@T["Call failed (dialer)"]</option>
-            <option value="@DispositionOutcome.Disconnected">@T["Disconnected before an agent joined (dialer)"]</option>
+            <option value="@DispositionOutcome.Disconnected">@T["Disconnected before an agent joined or a decision was made (dialer and automated calls)"]</option>
         </select>
         <span asp-validation-for="Outcome" class="text-danger"></span>
-        <span class="hint">@T["Set this only when the platform should apply the disposition on its own. When a call ends in a way nobody chose, the disposition with the matching outcome in the subject's flow is applied: a number not in service, a call nobody answered, that found the line busy, that reached voicemail, that the network rejected or failed, or that the customer hung up before an agent joined. The dialer applies these to every attempt that did not reach an agent, so the agent never sees it. For a number not in service, any disposition with that outcome is used when the flow has none, and picking it also stops the number from being dialed again."]</span>
+        <span class="hint">@T["Set this only when the platform should apply the disposition on its own. When a call ends in a way nobody chose, the disposition with the matching outcome in the subject's flow is applied: a number not in service, a call nobody answered, that found the line busy, that reached voicemail, that the network rejected or failed, or that the customer hung up before an agent joined or, on an automated call, before deciding anything. The dialer applies these to every attempt that did not reach an agent, so the agent never sees it. For a number not in service, any disposition with that outcome is used when the flow has none, and picking it also stops the number from being dialed again."]</span>
     </div>
 </div>

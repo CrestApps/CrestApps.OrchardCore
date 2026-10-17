@@ -1,23 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-const moduleSources = [
-    'src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js',
-    'src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/diagnostics.js',
-    'src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/level-probe.js'
-];
+import * as diagnostics from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/diagnostics.js';
+import * as levelProbe from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/level-probe.js';
+import * as quality from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js';
 
-let softPhone;
-
-beforeAll(() => {
-    moduleSources.forEach(source => {
-        // The helpers attach to a namespace on the global rather than exporting, because in the browser they are
-        // concatenated into one file. Evaluating them here runs the same code the browser runs.
-        new Function(readFileSync(source, 'utf8'))();
-    });
-
-    softPhone = globalThis.CrestAppsSoftPhone;
-});
+const softPhone = { ...quality, ...diagnostics, ...levelProbe };
 
 /**
  * Builds an RTCStatsReport-alike from a list of stats: a Map already satisfies the forEach the parser uses.

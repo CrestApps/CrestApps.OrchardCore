@@ -1,9 +1,13 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
-
-const { classifyInbound, maxTicks, rowMatchesFilter, selectNewBubbles, tabBadgeCount, unseenInboundCount } = globalThis.CrestAppsMessaging;
+import {
+    classifyInbound,
+    maxTicks,
+    rowMatchesFilter,
+    selectNewBubbles,
+    tabBadgeCount,
+    unseenInboundCount,
+} from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-state.js';
 
 // A customer's message that lands in the open thread while the agent is scrolled up, or on another browser tab, is still
 // waiting for them, so the open channel's tab must count it rather than treat the thread on screen as read.
@@ -97,18 +101,5 @@ describe('rowMatchesFilter', () => {
 
     it('matches everything for an empty search', () => {
         expect(rowMatchesFilter('anything', '   ')).toBe(true);
-    });
-});
-
-// The bundles are concatenations, not a module graph: a helper not listed ahead of the script that calls it is not in
-// the browser at all.
-describe('the messaging workspace bundle', () => {
-    const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets.json', 'utf8'));
-    const group = assets.find(candidate => candidate.output === 'wwwroot/scripts/messaging-workspace.js');
-
-    it('carries the state helpers ahead of the workspace script', () => {
-        expect(group).toBeDefined();
-        expect(group.inputs.indexOf('Assets/js/shared/messaging-state.js'))
-            .toBeLessThan(group.inputs.indexOf('Assets/js/messaging-workspace.js'));
     });
 });

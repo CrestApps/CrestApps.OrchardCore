@@ -1,14 +1,14 @@
 [
   {
-    "inputs": [
-      "Assets/js/activity-query-builder.js"
-    ],
-    "output": "wwwroot/scripts/activity-query-builder.js"
+    "action": "vite",
+    "name": "activity-query-builder.js",
+    "source": "Assets/js/activity-query-builder.js",
+    "dest": "wwwroot/scripts/activity-query-builder.js"
   },
   {
-    "inputs": [
-      "Assets/js/subject-action-assignment-toggle.js"
-    ],
-    "output": "wwwroot/scripts/subject-action-assignment-toggle.js"
+    "action": "vite",
+    "name": "subject-action-assignment-toggle.js",
+    "source": "Assets/js/subject-action-assignment-toggle.js",
+    "dest": "wwwroot/scripts/subject-action-assignment-toggle.js"
   }
 ]

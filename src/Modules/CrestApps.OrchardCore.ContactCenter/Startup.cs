@@ -152,7 +152,16 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.DrainTimeoutSeconds is >= 1 and <= 300,
                 "The Contact Center feature drain timeout must be between 1 and 300 seconds.")
+            .Validate(
+                options => options.ShutdownDrainTimeoutSeconds is >= 0 and <= 60,
+                "The Contact Center shutdown drain timeout must be between 0 and 60 seconds.")
             .ValidateOnStart();
+
+        // A node that is shutting down stops offering, assigning and dialing the moment the host says so, so it
+        // does not start routing work it will not be alive to finish. A singleton, so the registration on the host's
+        // stopping token goes with the shell; activation is what makes the registration.
+        services.AddSingleton<ContactCenterShutdownDrain>();
+        services.AddScoped<IModularTenantEvents>(sp => sp.GetRequiredService<ContactCenterShutdownDrain>());
 
         services
             .AddScoped<ContactCenterFeatureLifecycleCoordinator>()
@@ -201,9 +210,15 @@ public sealed class Startup : StartupBase
 
         // The reusable voice media library (hold music, greetings, prompts) referenced by queues, campaigns, and
         // entry points. Registered in the base feature so the library is available wherever those are configured.
+        // The provisioning service keeps each clip's master copy and gives a provider its copy on first use; the
+        // availability cache is per tenant and spares the provider a question before every play.
         services
             .AddScoped<IVoiceMediaItemStore, VoiceMediaItemStore>()
             .AddScoped<IVoiceMediaItemManager, VoiceMediaItemManager>()
+            .AddScoped<IVoiceMediaProvisioningService, VoiceMediaProvisioningService>()
+            .AddSingleton<IVoiceMediaAvailabilityCache, VoiceMediaAvailabilityCache>()
+            .AddSingleton<IVoiceMediaUploadCoordinator, VoiceMediaUploadCoordinator>()
+            .AddScoped<IVoiceMediaCopyRecorder, DeferredVoiceMediaCopyRecorder>()
             .AddScoped<ICatalogEntryHandler<VoiceMediaItem>, VoiceMediaItemHandler>()
             .AddDisplayDriver<VoiceMediaItem, VoiceMediaItemDisplayDriver>()
             .AddIndexProvider<VoiceMediaItemIndexProvider>()

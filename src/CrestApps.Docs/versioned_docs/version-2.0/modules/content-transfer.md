@@ -24,9 +24,7 @@ By default, content types appear in the import and export screens automatically.
 
 The screencast below enables **Content Transfer** and the optional **OpenXml** format, configures a bulk export for the Blog Post type as an Excel workbook, and opens the bulk import screen with its upload form, template downloads, and column requirements.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Content Transfer, exporting a content type, and starting a bulk import">
-  <source src="/img/docs/content-transfer.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling Content Transfer, exporting a content type, and starting a bulk import" start={221} end={257} />
 
 ## Supported file formats
 

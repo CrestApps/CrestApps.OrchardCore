@@ -73,6 +73,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
 
         return 2;
     }
+
     /// <summary>
     /// Adds the covering index the retention purge scans. Without it every terminating batch of the drain loop
     /// is a full scan of a table that grows with traffic, which is exactly the table size retention exists for.
@@ -172,6 +173,41 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the index an event is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the whole log.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            "IDX_InteractionEventIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 6;
+    }
+
+    /// <summary>
+    /// Adds the index an unfiltered window read uses: every event of one aggregate type, such as every agent's state
+    /// changes, inside a time range. The aggregate index leads with the aggregate's own id, so without an id filter
+    /// it can seek only on the type and has to walk every aggregate's whole history to apply the range, which makes the
+    /// cost of a workforce report grow with the size of the log instead of the size of the period. This index seeks on
+    /// the type and the range together and carries the event type, so the read touches only the period's rows.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            "IDX_InteractionEventIndex_Window",
+            ContactCenterStorage.CollectionName,
+            "AggregateType", "OccurredUtc", "EventType", "DocumentId");
+
+        return 7;
     }
 
     /// <summary>

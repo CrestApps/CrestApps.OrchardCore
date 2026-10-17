@@ -17,9 +17,7 @@ Templates save you from setting up the same thing twice. A **profile template** 
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an AI profile template with reusable defaults">
-  <source src="/img/docs/ai-profile-templates.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of creating an AI profile template with reusable defaults" start={204} end={226} />
 
 ## Create a template
 
@@ -67,9 +65,7 @@ Create one profile template per kind of assistant your teams need, for example *
 
 With the **AI Prompt Templates** feature on, profiles, profile templates, chat interactions and AI workflow tasks have a **Prompt templates** field next to their instructions. The selected templates are added, in order, before your own instructions.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of attaching reusable prompt templates to an AI profile">
-  <source src="/img/docs/ai-prompt-templates.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of attaching reusable prompt templates to an AI profile" start={229} end={257} />
 
 1. In the profile editor, find **Prompt templates** in the **Instructions** card (in a chat interaction, on the **Settings** tab).
 2. Click **Add prompt template**, type in **Search prompt templates...**, and pick a template. The list is grouped by category.

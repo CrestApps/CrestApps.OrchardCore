@@ -366,6 +366,7 @@ public sealed partial class PredictiveAgentConnector : IPredictiveAgentConnector
                             // provider gives up on the leg a little after the deadline that releases the agent.
                             standbyReservationId: claimed.ItemId,
                             agentLegTimeoutSeconds: AgentLegProviderTimeoutSeconds(),
+                            preDialedAgentLegId: null,
                             cancellationToken);
                     }
                     else

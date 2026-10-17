@@ -1,0 +1,55 @@
+@using CrestApps.OrchardCore.Products.Core.Listing
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductFacetViewModel
+
+@*
+    A filter drawn as color swatches. Each option's color comes from the field's Swatch colors, then the color field
+    on its term, then its own name when that is a CSS color name or a hex value (Black, Navy, Light Blue, #1e90ff).
+    An option with no color shows an empty swatch.
+*@
+
+@{
+    var id = $"facet-{Model.Key}";
+    var expanded = !Model.Collapsed || Model.HasSelection;
+    var inputType = Model.Kind == ProductFacetKind.Radio ? "radio" : "checkbox";
+}
+
+<section class="product-facet" data-facet="@Model.Key">
+    <h3 class="product-facet-heading">
+        <button class="product-facet-toggle @(expanded ? null : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id" aria-expanded="@(expanded ? "true" : "false")" aria-controls="@id">
+            <span>
+                @Model.Label
+                @if (Model.SelectedCount > 0)
+                {
+                    <span class="badge rounded-pill bg-primary ms-1">@Model.SelectedCount<span class="visually-hidden"> @T["selected"]</span></span>
+                }
+            </span>
+            <span class="fa-solid fa-chevron-down product-facet-chevron" aria-hidden="true"></span>
+        </button>
+    </h3>
+    <div class="collapse @(expanded ? "show" : null)" id="@id">
+        <fieldset class="product-facet-body">
+            <legend class="visually-hidden">@Model.Label</legend>
+            <div class="product-facet-swatches">
+                @for (var i = 0; i < Model.Options.Count; i++)
+                {
+                    var option = Model.Options[i];
+                    var optionId = $"{id}-{i}";
+
+                    <div class="product-facet-swatch">
+                        <input type="@inputType" class="product-facet-swatch-input" name="@Model.Key" value="@option.Value" id="@optionId" checked="@option.Selected" />
+                        <label for="@optionId" title="@T["{0} ({1})", option.Label, option.Count]">
+                            <span class="product-facet-swatch-color" style="@(option.Color is null ? null : $"--product-swatch-color: {option.Color}")" aria-hidden="true"></span>
+                            <span class="product-facet-swatch-label">@option.Label</span>
+                        </label>
+                    </div>
+                }
+            </div>
+        </fieldset>
+        @if (Model.HasSelection)
+        {
+            <a href="@Model.ClearUrl" class="product-facet-clear small" data-product-listing-link>@T["Clear"]</a>
+        }
+    </div>
+</section>

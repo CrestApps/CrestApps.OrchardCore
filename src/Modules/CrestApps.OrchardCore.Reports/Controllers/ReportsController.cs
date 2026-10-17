@@ -135,7 +135,7 @@ public sealed class ReportsController : Controller
         }
 
         var filter = await BuildFilterAsync(id);
-        var document = await report.RunAsync(new ReportContext(filter), HttpContext.RequestAborted);
+        var document = await report.RunAsync(new ReportContext(filter, ReportRunMode.Export), HttpContext.RequestAborted);
         document.Title = report.DisplayName.Value;
 
         await _displayValueResolver.ResolveAsync(document);

@@ -29,15 +29,11 @@ To set the display name format, navigate to **Settings** → **User Display Name
 
 The screencast below enables **User Display Name**, selects the *First Middle Last name* format with required first and last names, and shows the matching name fields appearing on the user editor.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling User Display Name, choosing a format, and editing a user">
-  <source src="/img/docs/users.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling User Display Name, choosing a format, and editing a user" start={105} end={135} />
 
 The next screencast shows the full effect end to end. It configures the *First Middle Last name* format with **First name** and **Last name** set to **Required**, edits the current user's own profile to set those names, then opens the **Content Items** list where the author badge that previously showed only the username now shows the user's full name.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of configuring the display name, setting a profile, and the content item author badge showing the full name">
-  <source src="/img/docs/users-display-name.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of configuring the display name, setting a profile, and the content item author badge showing the full name" start={138} end={187} />
 
 If you want to display the user display name in your project via code, you may do so by using the `IDisplayNameProvider` interface.
 

@@ -7,6 +7,24 @@
  * (endpoint URLs, the antiforgery token, and localized strings) from the root element's data-config
  * attribute and depends on the shared "contact-center-realtime" helper for the hub connection.
  */
+import {
+    activeInteractionSignature,
+    createChangeGate,
+    emptyStateHtml,
+    signInsHtml,
+} from './shared/workspace-panels.js';
+import { coalesceRefresh } from './shared/coalesced-refresh.js';
+import {
+    agentStatusLabel,
+    breakChoiceLabel,
+    dialPhaseHint,
+    dialPhaseLabel,
+    normalizeDialPhase,
+    normalizePresenceStatus,
+    pendingPresenceLabel,
+} from './shared/agent-presence.js';
+import { showOfferAccepting, withOfferAcceptTimeout } from './shared/offer-actions.js';
+
 (function (window, document) {
     'use strict';
 
@@ -90,9 +108,13 @@
     }
 
     // Everything but the id and status is left out of the log line, so a number or a name never lands in it.
-    function describeActive(active) {
-        return active
-            ? { interactionId: active.interactionId, direction: active.direction, status: active.status }
+    function describeActive(active, pendingDial) {
+        if (active) {
+            return { interactionId: active.interactionId, direction: active.direction, status: active.status };
+        }
+
+        return pendingDial
+            ? { interactionId: pendingDial.interactionId, dialPhase: normalizeDialPhase(pendingDial) }
             : { interactionId: null };
     }
 
@@ -101,8 +123,7 @@
         var strings = config.strings;
         var state = null;
         var serverOffsetMs = 0;
-        var panels = window.CrestAppsContactCenter;
-        var activeChanged = panels.createChangeGate();
+        var activeChanged = createChangeGate();
         var offerSignature = null;
         var queuesSignature = null;
         var connectionStatusKey = null;
@@ -166,7 +187,7 @@
         }
 
         // One state fetch at a time: a burst of hub events folds into it (see shared/coalesced-refresh.js).
-        var refresh = window.CrestAppsContactCenter.coalesceRefresh(function () {
+        var refresh = coalesceRefresh(function () {
             return fetch(config.stateUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
                 .then(function (response) { return response.ok ? response.json() : null; })
                 .then(function (data) {
@@ -193,17 +214,17 @@
                 return;
             }
 
-            // Read the same way on every agent screen (see shared/agent-presence.js).
-            var presence = window.CrestAppsContactCenter;
+            // Read the same way on every agent screen (see shared/agent-presence.js): while the dialer is placing a call
+            // for the agent, what it is doing rather than "On a call".
             var current = state.presence || {};
-            var status = (presence ? presence.normalizePresenceStatus(current.status) : current.status) || 'Offline';
-            var label = presence ? presence.presenceLabel(current, config.presenceLabels) : (current.reason || status);
-            var pending = presence ? presence.pendingPresenceLabel(current, config.presenceLabels) : '';
+            var status = normalizePresenceStatus(current.status) || 'Offline';
+            var label = agentStatusLabel(current, state.pendingDial, config.presenceLabels);
+            var pending = pendingPresenceLabel(current, config.presenceLabels);
             refs.presenceLabel.textContent = pending ? label + ' · ' + pending : label;
 
             // The break choice starts a break now, or only requests one while the agent's work holds them.
-            if (presence && refs.presenceMenu) {
-                var breakChoice = presence.breakChoiceLabel(current, config.presenceLabels);
+            if (refs.presenceMenu) {
+                var breakChoice = breakChoiceLabel(current, config.presenceLabels);
 
                 Array.prototype.forEach.call(refs.presenceMenu.querySelectorAll('[data-cc-break-choice]'), function (element) {
                     element.textContent = breakChoice;
@@ -221,7 +242,7 @@
                 return;
             }
 
-            var queuesHtml = panels.signInsHtml(state.queues || [], state.campaigns || [], {
+            var queuesHtml = signInsHtml(state.queues || [], state.campaigns || [], {
                 queues: label('signInQueues', 'Queues'),
                 campaigns: label('signInCampaigns', 'Campaigns'),
                 noSignIns: label('noSignIns', 'You are not signed in to any queue or campaign.'),
@@ -289,17 +310,24 @@
             }
 
             var active = state.activeInteraction;
+            var pendingDial = !active && normalizeDialPhase(state.pendingDial) ? state.pendingDial : null;
 
             // The first state always draws, so a workspace opened with nothing to do shows the empty card rather
             // than a blank one (see shared/workspace-panels.js).
-            if (!activeChanged(panels.activeInteractionSignature(active))) {
+            if (!activeChanged(activeInteractionSignature(active, pendingDial && { interactionId: pendingDial.interactionId, phase: normalizeDialPhase(pendingDial) }))) {
                 return;
             }
 
-            diagnostic('active-interaction-shown', describeActive(active));
+            diagnostic('active-interaction-shown', describeActive(active, pendingDial));
+
+            if (pendingDial) {
+                refs.active.innerHTML = pendingDialHtml(pendingDial);
+
+                return;
+            }
 
             if (!active) {
-                refs.active.innerHTML = panels.emptyStateHtml({
+                refs.active.innerHTML = emptyStateHtml({
                     icon: 'fa-solid fa-headset',
                     title: label('noActiveCall', 'No active interactions right now'),
                     hint: label('noActiveCallHint', 'Incoming calls and messages you accept will appear here.')
@@ -373,14 +401,40 @@
                 '</div>';
         }
 
+        // A call the dialer is placing for the agent, before they are on it: who is being called and what the dialer is
+        // doing. Nothing on it is the agent's to act on yet, so it has no actions; it becomes the call once they are
+        // connected.
+        function pendingDialHtml(pendingDial) {
+            var phase = normalizeDialPhase(pendingDial);
+            var hint = dialPhaseHint(pendingDial, config.presenceLabels);
+
+            return '<div class="cc-active cc-active--pending is-' + escapeHtml(phase.toLowerCase()) + '" data-cc-pending-dial="' + escapeHtml(phase) + '">' +
+                '<div class="cc-active__headline">' +
+                    '<span class="cc-active__dir"><i class="fa-solid fa-phone-volume" aria-hidden="true"></i></span>' +
+                    '<div>' +
+                        '<div class="cc-active__customer">' + escapeHtml(pendingDial.customerLabel || pendingDial.customerAddress || label('unknownCaller', 'Unknown caller')) + '</div>' +
+                        '<div class="cc-active__sub">' +
+                            escapeHtml(label('outbound', 'Outbound')) +
+                            (pendingDial.queueName ? ' &middot; ' + escapeHtml(pendingDial.queueName) : '') +
+                            (pendingDial.customerAddress ? ' &middot; ' + escapeHtml(pendingDial.customerAddress) : '') +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="cc-active__stats">' +
+                    '<div class="cc-stat"><div class="cc-stat__label">' + escapeHtml(label('status', 'Status')) + '</div><div class="cc-stat__value" data-cc-dial-phase>' + escapeHtml(dialPhaseLabel(pendingDial, config.presenceLabels)) + '</div></div>' +
+                '</div>' +
+                (hint ? '<div class="cc-active__pending-hint">' + escapeHtml(hint) + '</div>' : '') +
+            '</div>';
+        }
+
         // The number as a person would read it out. The formatter is shared with the soft phone rather than
         // reimplemented, so a number looks the same wherever an agent sees it; an unrecognized value is shown as
         // it came, which is better than hiding it.
         function formatCustomer(value) {
-            var shared = window.CrestAppsSoftPhone;
+            var format = window.telephonyClient && window.telephonyClient.formatPhoneNumber;
 
-            if (shared && typeof shared.formatPhoneNumber === 'function') {
-                return shared.formatPhoneNumber(value) || value;
+            if (typeof format === 'function') {
+                return format(value) || value;
             }
 
             return value;
@@ -390,9 +444,7 @@
         // A call that was never answered has no talk time, and showing "0:00" for it would read as a call that
         // connected and said nothing — so it shows nothing at all and the status carries the outcome.
         function formatTalkTime(entry) {
-            var shared = window.CrestAppsTelephonyShared;
-
-            if (!entry || !shared || typeof shared.formatDuration !== 'function') {
+            if (!entry || typeof formatDuration !== 'function') {
                 return '';
             }
 
@@ -403,7 +455,7 @@
                 return '';
             }
 
-            return shared.formatDuration(Math.round((ended - answered) / 1000));
+            return formatDuration(Math.round((ended - answered) / 1000));
         }
 
         function renderHistory() {
@@ -414,7 +466,7 @@
             var history = state.recentHistory || [];
 
             if (!history.length) {
-                refs.history.innerHTML = panels.emptyStateHtml({
+                refs.history.innerHTML = emptyStateHtml({
                     icon: 'fa-solid fa-clock-rotate-left',
                     title: label('noHistory', 'No recent interactions'),
                     hint: label('noHistoryHint', 'Calls and messages you finish will be listed here.')
@@ -481,11 +533,10 @@
             }
 
             // "Answering..." with a spinner from the first click, every offer button disabled (shared/offer-actions.js).
-            var offerActions = window.CrestAppsContactCenter;
             var answeringLabels = { accept: label('accept', 'Accept'), answering: label('answering', 'Answering…') };
-            offerActions.showOfferAccepting(refs.offer, { pending: true }, answeringLabels);
+            showOfferAccepting(refs.offer, { pending: true }, answeringLabels);
 
-            offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
+            withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
                 .then(function (response) {
                     if (!response.ok) {
                         showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
@@ -501,7 +552,7 @@
                         : label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
                 })
                 .finally(function () {
-                    offerActions.showOfferAccepting(refs.offer, { pending: false }, answeringLabels);
+                    showOfferAccepting(refs.offer, { pending: false }, answeringLabels);
                 });
         }
 
@@ -851,7 +902,8 @@
                         interactionId: notification.interactionId,
                         eventType: notification.eventType,
                         direction: notification.direction,
-                        status: notification.status
+                        status: notification.status,
+                        dialPhase: notification.dialPhase
                     } : {});
 
                     // The agent was just connected to a call the dialer placed: open its record now. Before this the

@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@{
+    var listing = Model.Listing;
+}
+
+<div class="product-listing-search mb-3" role="search">
+    <label for="@listing.FormId-q" class="visually-hidden">@T["Search"]</label>
+    <div class="input-group">
+        <input type="search" class="form-control" id="@listing.FormId-q" name="q" value="@listing.Keyword" placeholder="@T["Search"]" maxlength="200" />
+        <button type="submit" class="btn btn-outline-secondary">
+            <span class="fa-solid fa-magnifying-glass" aria-hidden="true"></span>
+            <span class="visually-hidden">@T["Search"]</span>
+        </button>
+    </div>
+</div>

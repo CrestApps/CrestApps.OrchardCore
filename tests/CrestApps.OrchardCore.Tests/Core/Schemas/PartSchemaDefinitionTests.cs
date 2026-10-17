@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.ContentAccessControl.Schemas;
@@ -353,6 +354,8 @@ public sealed class PartSchemaDefinitionTests
         Assert.Contains("Good", settingsJson);
         Assert.Contains("Service", settingsJson);
         Assert.Contains("Digital", settingsJson);
+        Assert.Contains("ListingOnly", settingsJson);
+        Assert.Contains("OnRequest", settingsJson);
 
         var partSchema = await ((IContentPartSchemaDefinition)definition).GetPartSchemaAsync(
             CreatePartContext(definition.Name),
@@ -361,7 +364,15 @@ public sealed class PartSchemaDefinitionTests
 
         Assert.Contains("Price", partJson);
         Assert.Contains("Sku", partJson);
-        Assert.Contains("\"type\":\"number\"", partJson);
+        Assert.Contains("CompareAtPrice", partJson);
+        Assert.Contains("IsPurchasable", partJson);
+
+        // A listed product whose price is not shown has no price, so the price may be null.
+        var priceTypes = JsonDocument.Parse(partJson).RootElement
+            .GetProperty("properties").GetProperty("Price").GetProperty("type")
+            .EnumerateArray().Select(type => type.GetString()).ToArray();
+        Assert.Contains("number", priceTypes);
+        Assert.Contains("null", priceTypes);
     }
 
     [Fact]

@@ -237,6 +237,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
             .Column<string>("ContactContentItemId", column => column.WithLength(26))
             .Column<string>("ContactContentType", column => column.WithLength(255))
             .Column<string>("CampaignId", column => column.WithLength(26))
+            .Column<string>("DialerProfileId", column => column.Nullable().WithLength(26))
             .Column<string>("SubjectContentType", column => column.WithLength(26))
             .Column<DateTime>("ScheduledUtc", column => column.NotNull())
             .Column<DateTime>("CompletedUtc")

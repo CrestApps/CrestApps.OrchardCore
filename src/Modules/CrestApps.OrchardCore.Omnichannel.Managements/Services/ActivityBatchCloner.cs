@@ -41,6 +41,9 @@ internal static class ActivityBatchCloner
         copy.Status = OmnichannelActivityBatchStatus.New;
         copy.ResetLoadCounts();
 
+        // A copy of a load that stalled or failed must not resume from its cursor or show its error.
+        copy.ResetLoadProgress();
+
         // A batch that has never been loaded has no totals at all; zero would read as a load that found nothing.
         copy.TotalLoaded = null;
         copy.TotalMatched = null;

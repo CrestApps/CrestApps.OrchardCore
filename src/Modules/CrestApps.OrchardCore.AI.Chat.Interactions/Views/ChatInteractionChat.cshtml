@@ -81,6 +81,9 @@
     var realtimeVoiceGroupHtmlId = ChatInteractionsConstants.ElementIds.RealtimeVoiceGroup;
     var realtimeVoiceSelectHtmlId = ChatInteractionsConstants.ElementIds.RealtimeVoiceSelect;
     var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
+
+    // A page that reuses this editor, such as the AI Profile Builder, can change how the chat is presented.
+    var clientOverrides = Context.Features.Get<ChatInteractionChatClientOverrides>();
 }
 
 <div class="d-flex flex-column h-100">
@@ -88,7 +91,7 @@
         <div class="w-100 ai-chat-messages">
             <div id="@placeholderHtmlId" class="text-center p-3@(Model.Prompts.Count > 0 ? " d-none" : string.Empty)">
                 <h1>
-                    @T["What do you want to know?"]
+                    @(string.IsNullOrEmpty(clientOverrides?.PlaceholderHeading) ? T["What do you want to know?"].Value : clientOverrides.PlaceholderHeading)
                 </h1>
             </div>
 
@@ -104,7 +107,7 @@
             @* Typing stays available whatever the voice toggle is doing: a typed message ends the voice
                session and is sent as an ordinary text turn into the same interaction. The client hides it
                only while a session is actually live, and gives it straight back when the session ends. *@
-            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@(string.IsNullOrEmpty(clientOverrides?.PromptPlaceholder) ? T["Message AI Chat"].Value : clientOverrides.PromptPlaceholder) ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
             @* Single flex row: whichever voice button is live takes the space the message box and send leave
                behind. The shared realtime-audio controller inserts its settings gear as a sibling of the
@@ -167,7 +170,7 @@
         }
     }
 
-    var chatInteractionConfigJson = JsonSerializer.Serialize(new
+    var chatInteractionConfig = JsonSerializer.SerializeToNode(new
     {
         signalRHubUrl = Html.SignalRHubUrl<ChatInteractionHub>(),
         appElementSelector = $"#{chatAppHtmlId}",
@@ -205,6 +208,13 @@
         realtimeVoiceGroupElementSelector = $"#{realtimeVoiceGroupHtmlId}",
         realtimeVoicesUrl,
     }, JOptions.CamelCase);
+
+    if (!string.IsNullOrEmpty(clientOverrides?.MessageTemplate))
+    {
+        chatInteractionConfig["messageTemplate"] = clientOverrides.MessageTemplate;
+    }
+
+    var chatInteractionConfigJson = chatInteractionConfig.ToJsonString();
 }
 
 <style at="Head">

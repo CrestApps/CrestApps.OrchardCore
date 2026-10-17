@@ -1,10 +1,20 @@
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.ContentTransfer.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Moq;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Builders;
+using OrchardCore.Documents;
 using OrchardCore.Modules;
 using YesSql;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 
@@ -131,6 +141,107 @@ public sealed class LeadImportProviderTests
         {
             TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
         }
+    }
+
+    [Fact]
+    public async Task GetOptionsAsync_ListsImportsThePastImportBackfillHasNotReached_UntilItFinishes()
+    {
+        // Arrange
+        // The past imports are recorded on their leads a few thousand leads a minute, in document order, so after an
+        // upgrade the pick list showed only some of the files while the rest waited for the backfill to reach them.
+        var databasePath = LeadTestStore.DatabasePath("import-indexing");
+        var store = await LeadTestStore.CreateAsync($"Data Source={databasePath};Pooling=False");
+
+        try
+        {
+            store.RegisterIndexes([new ContentTransferEntryIndexProvider()]);
+
+            await using (var schemaSession = store.CreateSession())
+            {
+                var transaction = await schemaSession.BeginTransactionAsync(TestContext.Current.CancellationToken);
+
+                await new SchemaBuilder(store.Configuration, transaction).CreateMapIndexTableAsync<ContentTransferEntryIndex>(table => table
+                    .Column<string>("EntryId", column => column.WithLength(26))
+                    .Column<string>("Status", column => column.NotNull().WithLength(25))
+                    .Column<ContentTransferDirection>("Direction")
+                    .Column<DateTime>("CreatedUtc", column => column.NotNull())
+                    .Column<string>("ContentType", column => column.WithLength(255))
+                    .Column<string>("Owner", column => column.WithLength(26)));
+
+                await transaction.CommitAsync(TestContext.Current.CancellationToken);
+            }
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await LeadTestStore.SaveLeadAsync(seedSession, Import("august", "August2020.csv", _august));
+                await seedSession.SaveAsync(Entry("august", "August2020.csv", _august, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+                await seedSession.SaveAsync(Entry("july", "July2020.csv", _july, ContentTransferDirection.Import), cancellationToken: TestContext.Current.CancellationToken);
+                await seedSession.SaveAsync(Entry("export", "Leads.csv", _july, ContentTransferDirection.Export), cancellationToken: TestContext.Current.CancellationToken);
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var backfillState = new OmnichannelBackfillState();
+
+            // Act
+            IList<SelectListItem> whileIndexing, afterIndexing;
+
+            await using (var session = store.CreateSession())
+            {
+                whileIndexing = await CreateProvider(session, backfillState).GetOptionsAsync(null);
+            }
+
+            backfillState.Completed.Add(LeadImportBackfillBackgroundTask.BackfillName);
+
+            await using (var session = store.CreateSession())
+            {
+                afterIndexing = await CreateProvider(session, backfillState).GetOptionsAsync(null);
+            }
+
+            // Assert
+            Assert.Equal(["august", "july"], whileIndexing.Select(option => option.Value));
+            Assert.Contains("1 lead", whileIndexing[0].Text);
+            Assert.StartsWith("July2020.csv", whileIndexing[1].Text);
+            Assert.Contains("still being indexed", whileIndexing[1].Text);
+            Assert.Equal(["august"], afterIndexing.Select(option => option.Value));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static ContentTransferEntry Entry(string entryId, string fileName, DateTime createdUtc, ContentTransferDirection direction)
+        => new()
+        {
+            EntryId = entryId,
+            ContentType = LeadTestStore.LeadContentType,
+            UploadedFileName = fileName,
+            CreatedUtc = createdUtc,
+            ProcessSaveUtc = createdUtc.AddMinutes(5),
+            Status = ContentTransferEntryStatus.Completed,
+            Direction = direction,
+        };
+
+    private static LeadImportProvider CreateProvider(ISession session, OmnichannelBackfillState backfillState)
+    {
+        var localClock = new Mock<ILocalClock>();
+        localClock
+            .Setup(clock => clock.ConvertToLocalAsync(It.IsAny<DateTimeOffset>()))
+            .ReturnsAsync((DateTimeOffset value) => value);
+
+        var state = new Mock<IDocumentManager<OmnichannelBackfillState>>();
+        state.Setup(manager => manager.GetOrCreateImmutableAsync(It.IsAny<Func<Task<OmnichannelBackfillState>>>()))
+            .ReturnsAsync(backfillState);
+
+        var definitions = new Mock<IContentDefinitionManager>();
+        definitions.Setup(manager => manager.ListTypeDefinitionsAsync())
+            .ReturnsAsync([new ContentTypeDefinitionBuilder()
+                .WithName(LeadTestStore.LeadContentType)
+                .WithPart(OmnichannelConstants.ContentParts.Lead)
+                .Build()]);
+
+        return new LeadImportProvider(session, localClock.Object, new PassThroughStringLocalizer<LeadImportProvider>(), state.Object, definitions.Object);
     }
 
     private static LeadImport Import(string entryId, string fileName, DateTime importedUtc)

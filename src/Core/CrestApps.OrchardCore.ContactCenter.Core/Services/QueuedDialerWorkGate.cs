@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -82,7 +83,7 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
         // A turned-off profile places no calls. Its records used to be offered to agents anyway -- the pacer skips a
         // disabled profile, but agent-driven (Preview and Manual) inventory is offered by routing, which never looked.
         // They wait at the back of the queue, untouched, until the profile is turned back on.
-        if (!profile.Enabled)
+        if (DialerWorkHoldEvaluator.EvaluateProfile(profile) == DispatchBlocker.ProfileDisabled)
         {
             await SendToBackAsync(queueItem, utcNow, cancellationToken);
 
@@ -102,26 +103,21 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
         var nextAttempt = ContactCenterWorkState.NextAttemptNumber(workState, activity.Attempts);
         var lastInteraction = await _interactionManager.FindByActivityIdAsync(activity.ItemId, cancellationToken);
 
-        if (nextAttempt > profile.MaxAttempts)
+        var lastOutcome = lastInteraction is null ? null : DialerCallMetadata.GetOutcome(lastInteraction);
+        var (blocker, dueUtc) = DialerWorkHoldEvaluator.EvaluateRecord(
+            profile,
+            activity,
+            nextAttempt,
+            lastInteraction?.EndedUtc,
+            string.Equals(lastOutcome, DialerAttemptOutcomes.Answered, StringComparison.Ordinal),
+            utcNow);
+
+        if (blocker == DispatchBlocker.AttemptsExhausted)
         {
-            return await TakeOutExhaustedAsync(queueItem, activity, lastInteraction, nextAttempt, profile, cancellationToken);
+            return await TakeOutExhaustedAsync(queueItem, activity, nextAttempt, profile, cancellationToken);
         }
 
-        // A record scheduled for later -- a follow-up the subject's "Try again" action or a workflow set to call back
-        // after the retry delay -- and one still inside the retry cool-down after its last call wait their turn.
-        DateTime? dueUtc = activity.ScheduledUtc > utcNow ? activity.ScheduledUtc : null;
-
-        if (profile.RetryDelayMinutes > 0 && lastInteraction?.EndedUtc is { } endedUtc)
-        {
-            var coolDownEndsUtc = endedUtc.AddMinutes(profile.RetryDelayMinutes);
-
-            if (coolDownEndsUtc > utcNow && (dueUtc is null || coolDownEndsUtc > dueUtc))
-            {
-                dueUtc = coolDownEndsUtc;
-            }
-        }
-
-        if (dueUtc is null)
+        if (dueUtc is not { } due)
         {
             return false;
         }
@@ -134,7 +130,7 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
                 "Held back campaign record '{ActivityId}' in queue '{QueueId}' without reserving an agent: it is not due until {DueUtc:O}.",
                 activity.ItemId.SanitizeLogValue(),
                 queueItem.QueueId.SanitizeLogValue(),
-                dueUtc.Value);
+                due);
         }
 
         return true;
@@ -149,19 +145,10 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
     private async Task<bool> TakeOutExhaustedAsync(
         QueueItem queueItem,
         OmnichannelActivity activity,
-        Interaction lastInteraction,
         int nextAttempt,
         DialerProfile profile,
         CancellationToken cancellationToken)
     {
-        var lastOutcome = lastInteraction is null ? null : DialerCallMetadata.GetOutcome(lastInteraction);
-
-        // A record whose last call reached an agent is the agent's work; the attempt limit is left to the dial itself.
-        if (string.Equals(lastOutcome, DialerAttemptOutcomes.Answered, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
         queueItem.ReservationId = null;
         queueItem.AgentId = null;
         await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
@@ -169,11 +156,11 @@ public sealed class QueuedDialerWorkGate : IQueuedDialerWorkGate
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Took campaign record '{ActivityId}' out of queue '{QueueId}' without reserving an agent: attempt {AttemptNumber} would exceed the {MaxAttempts} attempts dialer profile '{Profile}' allows.",
+                "Took campaign record '{ActivityId}' out of queue '{QueueId}' without reserving an agent: attempt {AttemptNumber} would exceed the {MaxAttempts} attempts allowed (dialer profile '{Profile}', or the subject's own maximum).",
                 activity.ItemId.SanitizeLogValue(),
                 queueItem.QueueId.SanitizeLogValue(),
                 nextAttempt,
-                profile.MaxAttempts,
+                DialerAttemptLimit.Resolve(activity, profile),
                 profile.Name);
         }
 

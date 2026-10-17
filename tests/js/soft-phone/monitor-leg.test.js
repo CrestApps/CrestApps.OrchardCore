@@ -1,29 +1,23 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/auto-answer.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/quality.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/monitor-leg.js';
-
-const {
+import {
     MONITOR_ARM_WAIT_MS,
     MONITOR_ARM_WINDOW_MS,
-    createMonitorLegArms,
+    anyMonitorLegTalks,
     armMonitorLeg,
-    disarmMonitorLeg,
-    readMonitorLegTag,
     claimMonitorLegArm,
+    createMonitorLegArms,
+    describeMonitorLegMedia,
+    disarmMonitorLeg,
+    holdsMonitorLeg,
     monitorLegAction,
     monitorLegReplaces,
-    planMonitorLegPromotion,
-    planMonitorCallPromotion,
     monitorLegTalks,
-    anyMonitorLegTalks,
-    holdsMonitorLeg,
+    planMonitorCallPromotion,
+    planMonitorLegPromotion,
     readMonitorLegMedia,
-    describeMonitorLegMedia,
-} = globalThis.CrestAppsSoftPhone;
+    readMonitorLegTag,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/monitor-leg.js';
 
 const now = 9_000_000;
 const encode = state => Buffer.from(JSON.stringify(state)).toString('base64');
@@ -98,18 +92,6 @@ describe('the monitor-leg arm', () => {
 
     it('refuses an arm without a token', () => {
         expect(armMonitorLeg(createMonitorLegArms(), '', now)).toBe(false);
-    });
-});
-
-// A monitor leg is never one the ordinary auto-answer takes: an arm left for an offer must not answer it.
-describe('the soft phone bundle', () => {
-    const assets = JSON.parse(readFileSync('src/Modules/CrestApps.OrchardCore.Telephony/Assets.json', 'utf8'));
-    const group = assets.find(candidate => candidate.output === 'wwwroot/scripts/soft-phone.js');
-
-    it('carries the monitor-leg helper after the client-state reader it uses and ahead of the soft phone', () => {
-        expect(group.inputs).toContain('Assets/js/soft-phone/monitor-leg.js');
-        expect(group.inputs.indexOf('Assets/js/soft-phone/offer-leg.js')).toBeLessThan(group.inputs.indexOf('Assets/js/soft-phone/monitor-leg.js'));
-        expect(group.inputs.indexOf('Assets/js/soft-phone/monitor-leg.js')).toBeLessThan(group.inputs.indexOf('Assets/js/soft-phone.js'));
     });
 });
 

@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -342,14 +343,26 @@ public sealed class TelnyxIvrProviderTests
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 
-        var mediaManager = new Mock<IVoiceMediaItemManager>();
-        mediaManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns<string, CancellationToken>((id, _) => ValueTask.FromResult(media is not null && id == media.ItemId ? media : null));
+        var provisioning = new Mock<IVoiceMediaProvisioningService>();
+        provisioning.Setup(x => x.ResolveAsync(It.IsAny<string>(), TelnyxConstants.ProviderTechnicalName, It.IsAny<CancellationToken>()))
+            .Returns<string, string, CancellationToken>((id, _, _) => Task.FromResult(Resolve(media is not null && id == media.ItemId ? media : null)));
 
         return new TelnyxIvrProvider(
             apiClient,
-            mediaManager.Object,
+            provisioning.Object,
             new TestOptionsMonitor<TelnyxOptions>(options ?? new TelnyxOptions()),
             NullLogger<TelnyxIvrProvider>.Instance);
     }
+
+    // What the provisioning service answers for a clip that is, or is not, in the catalog: the catalog double here
+    // holds clips that exist only as the copy Telnyx was given at upload.
+    private static VoiceMediaResolution Resolve(VoiceMediaItem item)
+        => new()
+        {
+            Item = item,
+            Reference = item?.MediaReference,
+            Status = item is null || string.IsNullOrEmpty(item.MediaReference)
+                ? VoiceMediaProvisioningStatus.NoAudio
+                : VoiceMediaProvisioningStatus.ProviderCopyOnly,
+        };
 }

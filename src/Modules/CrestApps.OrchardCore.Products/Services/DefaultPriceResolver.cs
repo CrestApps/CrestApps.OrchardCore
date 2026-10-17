@@ -51,8 +51,10 @@ public sealed class DefaultPriceResolver : IPriceResolver
         }
 
         // A product that lists its own prices is priced from the one the buyer chose. Falling through to
-        // the product part's single price would silently charge them something they never selected.
-        if (context.ContentItem is not null &&
+        // the product part's single price would silently charge them something they never selected. A chosen
+        // variant carries its own price instead.
+        if (product.VariantId is null &&
+            context.ContentItem is not null &&
             context.ContentItem.TryGet<ProductPricePart>(out var pricing) &&
             pricing.Prices is { Count: > 0 })
         {

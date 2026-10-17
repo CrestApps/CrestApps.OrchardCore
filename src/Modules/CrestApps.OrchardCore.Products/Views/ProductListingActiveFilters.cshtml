@@ -1,0 +1,24 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductListingShapeViewModel
+
+@{
+    var listing = Model.Listing;
+}
+
+@if (listing.ActiveFilters.Count > 0)
+{
+    <ul class="product-listing-active-filters list-unstyled d-flex flex-wrap align-items-center gap-2 mb-3">
+        @foreach (var filter in listing.ActiveFilters)
+        {
+            <li>
+                <a href="@filter.RemoveUrl" class="product-listing-chip" data-product-listing-link>
+                    <span>@filter.Label</span>
+                    <span class="fa-solid fa-xmark" aria-hidden="true"></span>
+                    <span class="visually-hidden">@T["Remove this filter"]</span>
+                </a>
+            </li>
+        }
+        <li><a href="@listing.ClearAllUrl" class="small" data-product-listing-link>@T["Clear all"]</a></li>
+    </ul>
+}

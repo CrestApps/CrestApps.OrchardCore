@@ -1,10 +1,11 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -75,7 +76,14 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             "ProviderName",
             "DeliveryId");
 
-        return 3;
+        await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table
+            .CreateIndex(
+                "IDX_ProviderWebhookInboxMessageIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 4;
     }
 
     /// <summary>
@@ -206,5 +214,21 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             throw new InvalidOperationException(
                 "The Contact Center provider webhook inbox contains multiple messages for one provider delivery. Resolve the duplicate legacy inbox messages before enabling the provider-delivery uniqueness constraint.");
         }
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<ProviderWebhookInboxMessageIndex>(
+            SchemaBuilder,
+            "IDX_ProviderWebhookInboxMessageIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 4;
     }
 }

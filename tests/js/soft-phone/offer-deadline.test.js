@@ -1,14 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-deadline.js';
-
-const {
+import {
     OFFER_RING_STOP_GRACE_MS,
-    computeServerOffsetMs,
     computeOfferRingStopDelayMs,
+    computeServerOffsetMs,
     offerRingStopDelayMs,
-} = globalThis.CrestAppsSoftPhone;
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-deadline.js';
 
 const serverNow = Date.parse('2026-09-24T21:12:20.000Z');
 const deadline = '2026-09-24T21:12:50.000Z';

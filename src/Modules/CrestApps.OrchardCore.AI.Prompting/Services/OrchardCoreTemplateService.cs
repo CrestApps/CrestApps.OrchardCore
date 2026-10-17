@@ -11,9 +11,12 @@ namespace CrestApps.OrchardCore.AI.Prompting.Services;
 /// <summary>
 /// OrchardCore-aware prompt template service that filters templates
 /// based on enabled features in the current shell and caches parsed templates.
-/// Templates are cached in memory for the lifetime of the tenant shell.
+/// Templates from providers that are not <see cref="IDynamicTemplateProvider"/>s are cached
+/// in memory for the lifetime of the tenant shell.
 /// The <see cref="IMemoryCache"/> is scoped per tenant, so entries are
 /// automatically cleared when the shell is released or the application restarts.
+/// Dynamic providers, such as the one for System Prompt AI templates, are read once per scope,
+/// so an edited template renders on the next request.
 /// </summary>
 public sealed class OrchardCoreTemplateService : DefaultTemplateService
 {
@@ -46,48 +49,36 @@ public sealed class OrchardCoreTemplateService : DefaultTemplateService
 
     public override async Task<IReadOnlyList<Template>> ListAsync(CancellationToken cancellationToken = default)
     {
-        if (!_memoryCache.TryGetValue(CacheKey, out IReadOnlyList<Template> allTemplates))
-        {
-            allTemplates = await base.ListAsync(cancellationToken);
-            _memoryCache.Set(CacheKey, allTemplates);
-        }
+        var allTemplates = await base.ListAsync(cancellationToken);
 
         var enabledFeatures = await GetEnabledFeatureIdsAsync();
 
-        var filteredTemplates = allTemplates
-            .Where(t => string.IsNullOrEmpty(t.FeatureId) || enabledFeatures.Contains(t.FeatureId));
-
-        var deduplicatedTemplates = new List<Template>();
-        var seenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var template in filteredTemplates)
-        {
-            if (string.IsNullOrWhiteSpace(template.Id) || !seenIds.Add(template.Id))
-            {
-                continue;
-            }
-
-            deduplicatedTemplates.Add(template);
-        }
-
-        return deduplicatedTemplates;
+        return allTemplates
+            .Where(t => string.IsNullOrEmpty(t.FeatureId) || enabledFeatures.Contains(t.FeatureId))
+            .ToList();
     }
 
     public override async Task<Template> GetAsync(string id, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(id);
-
-        var allTemplates = await ListAsync(cancellationToken);
-
-        var template = allTemplates.FirstOrDefault(t =>
-        string.Equals(t.Id, id, StringComparison.OrdinalIgnoreCase));
+        var template = await base.GetAsync(id, cancellationToken);
 
         if (template == null)
         {
-            _logger.LogWarning("template with ID '{TemplateId}' was not found. There are {Count} templates available.", id, allTemplates.Count);
+            _logger.LogWarning("template with ID '{TemplateId}' was not found.", id);
         }
 
         return template;
+    }
+
+    protected override async Task<IReadOnlyList<Template>> GetStaticTemplatesAsync(CancellationToken cancellationToken = default)
+    {
+        if (!_memoryCache.TryGetValue(CacheKey, out IReadOnlyList<Template> staticTemplates))
+        {
+            staticTemplates = await base.GetStaticTemplatesAsync(cancellationToken);
+            _memoryCache.Set(CacheKey, staticTemplates);
+        }
+
+        return staticTemplates;
     }
 
     private async Task<HashSet<string>> GetEnabledFeatureIdsAsync()

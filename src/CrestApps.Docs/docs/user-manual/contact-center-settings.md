@@ -19,9 +19,7 @@ The **Contact Center** settings page holds the rules that apply to every queue a
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture">
-  <source src="/img/docs/um-cc-settings.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture" start={75} end={112} />
 
 The page has up to four tabs. A tab only appears when its feature is enabled.
 

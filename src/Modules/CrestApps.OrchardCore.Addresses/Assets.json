@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "address-editor.js",
+    "source": "Assets/js/address-editor.js",
+    "dest": "wwwroot/scripts/address-editor.js"
+  }
+]

@@ -44,6 +44,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<string>("ContactContentItemId", column => column.WithLength(26))
             .Column<string>("ContactContentType", column => column.WithLength(255))
             .Column<string>("CampaignId", column => column.WithLength(26))
+            .Column<string>("DialerProfileId", column => column.Nullable().WithLength(26))
             .Column<string>("SubjectContentType", column => column.WithLength(26))
             .Column<DateTime>("ScheduledUtc", column => column.NotNull())
             .Column<DateTime>("CompletedUtc")
@@ -109,7 +110,15 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 7;
+        // This SQL index is for locating an activity by its own identifier.
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
+            .CreateIndex("IDX_OmnichannelActivityIndex_ItemId",
+        "ItemId",
+        "DocumentId"),
+        collection: OmnichannelConstants.CollectionName
+        );
+
+        return 9;
     }
 
     /// <summary>
@@ -313,5 +322,38 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 7;
+    }
+
+    /// <summary>
+    /// Adds the index an activity is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned every activity.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityIndex_ItemId",
+            OmnichannelConstants.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 8;
+    }
+
+    /// <summary>
+    /// Adds the dialer profile an activity is dialed under, so Manage Activities can filter by it. Activities saved
+    /// before this step are filled in by <see cref="BackgroundTasks.ActivityDialerProfileIndexBackfillBackgroundTask"/>, outside
+    /// activation, because re-indexing every open dialer record during activation would hold up the tenant.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom8Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.AddColumn<string>("DialerProfileId", column => column.Nullable().WithLength(26));
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 9;
     }
 }

@@ -61,6 +61,10 @@ public sealed class AgentStateTransitionService : IAgentStateTransitionService
 
         ClearStaleReasonOnReady(profile, state, context);
 
+        // Here rather than in each writer, so no path back to Available can leave the agent's place in the
+        // longest-idle line as it was before the work it just did.
+        AgentPresenceUtilities.ApplyIdleState(profile, previousState, changedUtc, context.KeepsIdlePlace);
+
         if (previousState == state && !context.RecordWhenUnchanged)
         {
             return null;

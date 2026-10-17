@@ -5,7 +5,6 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
-using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -91,36 +90,54 @@ internal sealed class VoiceMediaItemHandler : CatalogEntryHandlerBase<VoiceMedia
     /// <inheritdoc/>
     public override Task DeletingAsync(DeletingContext<VoiceMediaItem> context, CancellationToken cancellationToken = default)
     {
-        // Best-effort, deferred cleanup so a deleted clip does not leave orphaned media in the provider's storage.
-        // Running after the entry is deleted keeps a failed delete from removing media a still-present clip relies on.
-        var reference = context.Model.MediaReference;
+        // Best-effort, deferred cleanup so a deleted clip leaves neither its master copy nor a provider's copy behind.
+        // It runs after the request's unit of work and checks the entry is gone first, so a delete that did not
+        // commit never removes audio an entry still relies on.
+        VoiceMediaItemCompatibility.FoldLegacyReference(context.Model);
 
-        if (!string.IsNullOrWhiteSpace(reference))
+        var copies = new VoiceMediaAsset
         {
-            ShellScope.AddDeferredTask(scope => DeleteProviderMediaAsync(scope, reference));
+            MasterStorageReference = context.Model.MasterStorageReference,
+            ContentType = context.Model.ContentType,
+            Format = context.Model.Format,
+            ProviderReferences = new Dictionary<string, string>(context.Model.ProviderReferences),
+        };
+
+        if (!string.IsNullOrWhiteSpace(copies.MasterStorageReference) || copies.ProviderReferences.Count > 0)
+        {
+            var itemId = context.Model.ItemId;
+
+            ShellScope.AddDeferredTask(scope => DeleteCopiesAsync(scope, itemId, copies));
         }
 
         return Task.CompletedTask;
     }
 
-    private static async Task DeleteProviderMediaAsync(ShellScope scope, string mediaReference)
+    private static async Task DeleteCopiesAsync(ShellScope scope, string itemId, VoiceMediaAsset copies)
     {
-        var provisioner = scope.ServiceProvider.GetService<IVoiceMediaProvisioner>();
-
-        if (provisioner is null)
-        {
-            return;
-        }
-
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<VoiceMediaItemHandler>>();
 
         try
         {
-            await provisioner.DeleteAsync(mediaReference);
+            if (!string.IsNullOrEmpty(itemId))
+            {
+                var store = scope.ServiceProvider.GetRequiredService<IVoiceMediaItemStore>();
+
+                if (await store.FindByIdAsync(itemId) is not null)
+                {
+                    logger.LogWarning("The voice media entry {ItemId} is still stored, so its audio was not deleted.", itemId.SanitizeLogValue());
+
+                    return;
+                }
+            }
+
+            var provisioning = scope.ServiceProvider.GetRequiredService<IVoiceMediaProvisioningService>();
+
+            await provisioning.DeleteEverywhereAsync(copies);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to delete voice media {MediaReference} from the provider after the clip was removed.", mediaReference.SanitizeLogValue());
+            logger.LogWarning(ex, "Failed to delete the audio of the removed voice media entry {ItemId}.", itemId.SanitizeLogValue());
         }
     }
 }

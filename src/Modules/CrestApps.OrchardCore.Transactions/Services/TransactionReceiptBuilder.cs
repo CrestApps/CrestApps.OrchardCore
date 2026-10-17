@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Receipts.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Transactions.Services;
 
@@ -90,7 +91,8 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
                 ? payment.ReceiptNumber
                 : string.IsNullOrEmpty(payment.Id) ? transaction.ItemId : $"{transaction.ItemId}-{payment.Id}",
             SourceLabel = S["Receipt"].Value,
-            IssuedAt = payment.CreatedUtc,
+            // The document prints its date as is, so it is given in the site's time zone, not in UTC.
+            IssuedAt = await DocumentDates.ToSiteTimeAsync(_serviceProvider.GetService<ILocalClock>(), payment.CreatedUtc),
             Currency = currency,
             LineItems =
             [

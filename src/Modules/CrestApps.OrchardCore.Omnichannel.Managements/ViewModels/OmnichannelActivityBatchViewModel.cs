@@ -28,6 +28,16 @@ public class OmnichannelActivityBatchViewModel
     public string SourceDisplayName { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the batch being edited, which the record count reads the saved batch by.
+    /// </summary>
+    public string BatchId { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the last load of the batch stopped without loading, if it did.
+    /// </summary>
+    public string LoadError { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the selected source requires user assignment while loading.
     /// </summary>
     [BindNever]
@@ -161,6 +171,11 @@ public class OmnichannelActivityBatchViewModel
     /// Gets or sets the disposition identifier of the last completed activity to filter leads by.
     /// </summary>
     public string LastActivityDispositionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the attempt numbers the last completed activity must have been on, such as 4, 4+, 4- or 2..5.
+    /// </summary>
+    public string LastActivityAttempts { get; set; }
 
     /// <summary>
     /// Gets or sets the status.

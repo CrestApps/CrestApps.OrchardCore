@@ -1159,9 +1159,12 @@ See [Base-voice deployment acceptance](contact-center/production-support.md#base
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:FeatureLifecycle` |
-| **Controls** | How long a Contact Center feature waits for running work to finish when it is disabled |
+| **Controls** | How long Contact Center waits for running work to finish when a feature is disabled, or when the node shuts down |
 
-Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
+| Key | Default | Range | What it does |
+| --- | --- | --- | --- |
+| `DrainTimeoutSeconds` | `30` | `1` to `300` | How long disabling a feature waits for its running work to finish. |
+| `ShutdownDrainTimeoutSeconds` | `5` | `0` to `60` | How long a shutting-down node waits for routing work it already started. The wait holds up shutdown, so keep it short. `0` stops new routing work without waiting. |
 
 ```json
 {
@@ -1169,7 +1172,8 @@ Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
     "CrestApps": {
       "ContactCenter": {
         "FeatureLifecycle": {
-          "DrainTimeoutSeconds": 60
+          "DrainTimeoutSeconds": 60,
+          "ShutdownDrainTimeoutSeconds": 5
         }
       }
     }
@@ -1179,6 +1183,7 @@ Key: `DrainTimeoutSeconds` (default `30`, from `1` to `300`).
 
 ```text
 OrchardCore__CrestApps__ContactCenter__FeatureLifecycle__DrainTimeoutSeconds=60
+OrchardCore__CrestApps__ContactCenter__FeatureLifecycle__ShutdownDrainTimeoutSeconds=5
 ```
 
 See [Feature lifecycle contract](contact-center/production-support.md#feature-lifecycle-contract).
@@ -1188,14 +1193,17 @@ See [Feature lifecycle contract](contact-center/production-support.md#feature-li
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:Coordination` |
-| **Controls** | Lock waits and leases for inbound calls, assignments and reservations, and agent pre-dial timing |
+| **Controls** | Lock waits and leases for inbound calls, assignments and reservations, agent pre-dial timing, and the agent line held while a dialed customer rings |
 
 Keys: `InboundLockTimeout` (default `00:00:10`), `InboundLockExpiration` (`00:01:00`),
 `AssignmentLockTimeout` (`00:00:10`), `AssignmentLockExpiration` (`00:00:30`), `ReservationLockTimeout`
 (`00:00:10`), `ReservationLockExpiration` (`00:00:30`), `AgentPreDialEnabled` (`true`),
-`AgentPreDialRingGrace` (`00:00:05`), `AgentPreDialMinimumOfferRemaining` (`00:00:02`), `ReclaimLockWait`
+`AgentPreDialRingGrace` (`00:00:05`), `AgentPreDialMinimumOfferRemaining` (`00:00:02`),
+`DialerAgentParkingEnabled` (`true`), `DialerAgentParkWindow` (`00:10:00`), `ReclaimLockWait`
 (`00:00:00.050`), `ExpiryPageSize` (`100`), `QueuedWorkSyncLease` (`00:00:02`),
-`QueuedWorkSyncFallbackInterval` (`00:00:30`).
+`QueuedWorkSyncFallbackInterval` (`00:00:30`). `DialerAgentParkingEnabled` rings a reserved agent while the dialed
+customer is still ringing, so the answer only joins the two (see
+[Answer to agent time](user-manual/dialer-profiles.md#answer-to-agent-time)).
 
 ```json
 {
@@ -1315,6 +1323,48 @@ OrchardCore__CrestApps__ContactCenter__Compliance__ManualDialing__RespectDoNotCa
 
 See [Outbound compliance gate](contact-center/agents-queues-dialer.md#outbound-compliance-gate) and
 [Manual soft-phone screening](contact-center/agents-queues-dialer.md#manual-soft-phone-screening).
+
+### Dialer pacing
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:ContactCenter:DialerPacing` |
+| **Feature** | Contact Center Paced Dialing |
+| **Controls** | How soon a Power, Progressive or reserved-per-call Predictive campaign is paced after an agent frees up or work arrives |
+
+Every value is validated on start, and an invalid one stops the tenant.
+
+| Key | Default | Rule |
+| --- | --- | --- |
+| `Debounce` | `00:00:00.300` | Greater than zero. |
+| `LockExpiration` | `00:00:30` | Greater than zero. |
+| `LockRetryDelay` | `00:00:01` | Greater than zero and shorter than `LockExpiration`. |
+
+`Debounce` is how long a pacing request waits for others before the campaign is paced, so a burst of agent and call
+changes paces it once. `LockExpiration` bounds the per-campaign pacing lock should a node stop while holding it, and
+`LockRetryDelay` is how soon a campaign is paced again when its lock was held by another run. These change only when a
+campaign is paced; how many calls each cycle places stays with the dialer profile. The minute dialer pacing task stays
+on as the backstop.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "ContactCenter": {
+        "DialerPacing": {
+          "Debounce": "00:00:00.500"
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__ContactCenter__DialerPacing__Debounce=00:00:00.500
+```
+
+See [Pacing cadence](contact-center/agents-queues-dialer.md#pacing-cadence).
 
 ### Predictive dialing
 

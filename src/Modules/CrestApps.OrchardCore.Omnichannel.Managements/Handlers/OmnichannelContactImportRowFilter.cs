@@ -37,6 +37,8 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private string[] _selectedRegistryKeys = [];
     private Dictionary<string, SeenPhoneOwnerState> _seenPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string[]> _existingPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
+    private Func<Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>? _duplicateScope;
+    private Dictionary<int, List<PhoneEntry>> _batchPhoneEntries = [];
     private Dictionary<int, string> _batchSkipReasons = [];
 
     /// <summary>
@@ -112,27 +114,38 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             return false;
         }
 
-        if (_ignoreDuplicates)
-        {
-            var include = await GetDuplicateScopeAsync(context.ContentTypeDefinition.Name, options);
-
-            _existingPhoneOwners = include is null
-                ? await _duplicateLookupService.GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken.None)
-                : await _duplicateLookupService.GetExistingNormalizedPhoneNumberOwnersAsync(include, CancellationToken.None);
-        }
+        // The stored numbers are looked up a batch of rows at a time. Every stored number used to be read into
+        // memory here, at the start of every run of the import, and on a tenant with hundreds of thousands of
+        // records that ran the process out of memory.
+        _existingPhoneOwners = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        _batchPhoneEntries = [];
+        _duplicateScope = _ignoreDuplicates
+            ? await GetDuplicateScopeAsync(context.ContentTypeDefinition.Name, options)
+            : null;
 
         return true;
     }
 
     /// <inheritdoc/>
-    public Task PrepareBatchAsync(ContentImportRowFilterBatchContext context)
+    public async Task PrepareBatchAsync(ContentImportRowFilterBatchContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(context.Rows);
 
         _batchSkipReasons = [];
+        _batchPhoneEntries = [];
 
-        return Task.CompletedTask;
+        if (!_ignoreDuplicates)
+        {
+            return;
+        }
+
+        foreach (var row in context.Rows)
+        {
+            _batchPhoneEntries[row.RowIndex] = ExtractPhoneEntries(row.Row, row.Columns);
+        }
+
+        _existingPhoneOwners = await LoadExistingOwnersAsync(_batchPhoneEntries.Values.SelectMany(entries => entries), context.CancellationToken);
     }
 
     /// <inheritdoc/>
@@ -147,7 +160,9 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             return true;
         }
 
-        var phoneEntries = ExtractPhoneEntries(context.Row, context.Columns);
+        var preparedInBatch = _batchPhoneEntries.TryGetValue(context.RowIndex, out var phoneEntries);
+
+        phoneEntries ??= ExtractPhoneEntries(context.Row, context.Columns);
 
         if (phoneEntries.Count == 0)
         {
@@ -156,6 +171,12 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
 
         if (_ignoreDuplicates)
         {
+            // A row the batch did not prepare is looked up on its own.
+            if (!preparedInBatch)
+            {
+                _existingPhoneOwners = await LoadExistingOwnersAsync(phoneEntries, CancellationToken.None);
+            }
+
             var contentItemId = GetContentItemId(context.Row, context.Columns);
 
             foreach (var entry in phoneEntries)
@@ -314,6 +335,20 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             ContactImportDuplicateScope.SameType => index => string.Equals(index.ContentType, contentType, StringComparison.Ordinal),
             _ => leadTypes.Count == 0 ? null : index => !IsLead(index),
         };
+    }
+
+    private async Task<Dictionary<string, string[]>> LoadExistingOwnersAsync(IEnumerable<PhoneEntry> phoneEntries, CancellationToken cancellationToken)
+    {
+        var keys = phoneEntries
+            .SelectMany(entry => entry.ComparisonKeys)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (keys.Count == 0)
+        {
+            return new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return await _duplicateLookupService.GetPhoneNumberOwnersAsync(keys, _duplicateScope, cancellationToken);
     }
 
     private List<PhoneEntry> ExtractPhoneEntries(DataRow row, DataColumnCollection columns)

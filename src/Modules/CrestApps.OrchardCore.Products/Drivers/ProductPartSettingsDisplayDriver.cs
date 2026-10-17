@@ -33,6 +33,22 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
 
             model.Type = settings.Type;
             model.DefaultCurrency = settings.DefaultCurrency;
+            model.SalesMode = settings.SalesMode;
+            model.PriceDisplay = settings.PriceDisplay;
+            model.OnRequestLabel = settings.OnRequestLabel;
+            model.AllowPriceDisplayOverride = settings.AllowPriceDisplayOverride;
+            model.SalesModes =
+            [
+                new SelectListItem(S["Purchasable: every product can be bought online"], nameof(ProductSalesMode.Purchasable)),
+                new SelectListItem(S["Listing only: products are listed but never sold online"], nameof(ProductSalesMode.ListingOnly)),
+                new SelectListItem(S["Per item: each product decides"], nameof(ProductSalesMode.PerItem)),
+            ];
+            model.PriceDisplays =
+            [
+                new SelectListItem(S["Show the price"], nameof(ProductPriceDisplay.Show)),
+                new SelectListItem(S["Show on request (a label instead of the price)"], nameof(ProductPriceDisplay.OnRequest)),
+                new SelectListItem(S["Hide the price"], nameof(ProductPriceDisplay.Hidden)),
+            ];
             model.Types =
             [
                 new SelectListItem(S["Undefined"], nameof(ProductType.Undefined)),
@@ -62,6 +78,10 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
         {
             Type = model.Type,
             DefaultCurrency = normalizedCurrency,
+            SalesMode = model.SalesMode,
+            PriceDisplay = model.PriceDisplay,
+            OnRequestLabel = model.OnRequestLabel?.Trim(),
+            AllowPriceDisplayOverride = model.AllowPriceDisplayOverride,
         });
 
         return Edit(contentTypePartDefinition, context);

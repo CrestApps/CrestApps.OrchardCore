@@ -49,9 +49,7 @@ In Orchard editors, prompt templates appear through a picker in the relevant AI 
 
 The screencast below enables the feature, opens an AI profile editor, and uses the prompt-template picker to attach reusable fragments — **Use Markdown Syntax** and **Chat Session Summarizer** — discovered from enabled modules.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of attaching reusable prompt templates to an AI profile">
-  <source src="/img/docs/ai-prompt-templates.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of attaching reusable prompt templates to an AI profile" start={229} end={257} />
 
 ## Core documentation
 

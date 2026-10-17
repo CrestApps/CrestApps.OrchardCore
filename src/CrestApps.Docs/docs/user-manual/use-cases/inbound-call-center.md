@@ -18,9 +18,7 @@ When it is done:
 - after hours, callers hear a closed message and are held, sent to voicemail, moved to another queue or refused, as you choose;
 - agents answer in the soft phone and record the outcome; supervisors watch the queues live, listen in, and read reports.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding a voice calls entry point that routes a number's calls to a queue, with business hours and voicemail settings">
-  <source src="/img/docs/um-entry-point.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of adding a voice calls entry point that routes a number's calls to a queue, with business hours and voicemail settings" start={420} end={473} />
 
 ## Before you start
 

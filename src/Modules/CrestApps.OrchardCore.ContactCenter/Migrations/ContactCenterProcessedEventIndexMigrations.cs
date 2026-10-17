@@ -1,8 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -87,5 +88,21 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<ContactCenterProcessedEventIndex>(
+            SchemaBuilder,
+            "IDX_ContactCenterProcessedEventIndex_ItemId",
+            ContactCenterStorage.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 3;
     }
 }

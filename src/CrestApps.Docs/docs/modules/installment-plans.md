@@ -20,10 +20,7 @@ The feature owns no payment code. Every payment on a plan is an ordinary [transa
 
 For the admin screens, see the User Manual page [Installment Plans](../user-manual/commerce/installment-plans.md).
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-installment-plans.jpg" aria-label="Narrated video of setting up an installment plan and taking the down payment">
-  <source src="/img/docs/commerce-installment-plans.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-installment-plans.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of setting up an installment plan and taking the down payment" start={304} end={363} />
 
 ## Requirements
 
@@ -32,7 +29,7 @@ For the admin screens, see the User Manual page [Installment Plans](../user-manu
 | A payment provider that can **keep a card** and show its card form **on the page** | The down payment is taken on the plan's own admin page, and the card is kept for the schedule. In the checkout's terms, the provider sets both `PaymentProviderCapabilities.SupportsSavedPaymentMethods` and `SupportsEmbeddedElements` and registers an `ICheckoutSavedPaymentMethodProvider`. The [Stripe](payments) provider does all three. Without one, a new plan is refused with a message saying so. |
 | **Transactions** | Each payment is a transaction with the source `installment-plan`. |
 | **Transaction Reminders** (optional) | Tells the customer before each payment falls due and chases overdue ones. Invoiced payments rely on it: it sends the invoice and its pay link. See [Reminders](transactions#reminders). |
-| **Payment Receipts** (optional) | Sends a receipt after every payment and adds the printable invoice page. See [Payment receipts](transactions#payment-receipts). |
+| **Send Payment Receipts** (optional) | Sends a receipt after every payment and a notice after every refund. Printable receipts and invoices need only the Receipts module, which Subscriptions already enables. See [Payment receipts](transactions#payment-receipts). |
 | A public **Base URL** (**Settings > General**) | Pay links in reminders are absolute URLs built from it. When it is empty, a link made outside a request (by the background task) is left out. |
 | Background tasks running | The schedule is driven by a background task. See [The background task](#the-background-task). |
 
@@ -73,10 +70,7 @@ The permission is deliberately separate from the other subscription permissions,
 
 ## How a plan runs
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-manage-plans.jpg" aria-label="Narrated video of managing installment plans: Charge now, Cancel the plan, and the list">
-  <source src="/img/docs/commerce-manage-plans.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-manage-plans.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of managing installment plans: Charge now, Cancel the plan, and the list" start={362} end={409} />
 
 ### Creating a plan
 
@@ -215,10 +209,10 @@ Like every Orchard Core background task, its schedule can be changed, or the tas
 | *Your payment is overdue* | The last retry was declined. | Installment Plans |
 | *Your payment plan was canceled* | A started plan was canceled. | Installment Plans |
 | Upcoming payment reminder, naming the card for a payment that is charged | A few days before each due date. | Transaction Reminders |
-| Invoice with a pay link | The first time the customer is told about an invoiced payment. | Transaction Reminders and Payment Receipts |
+| Invoice with a pay link | The first time the customer is told about an invoiced payment. | Transaction Reminders |
 | Overdue reminders | While a payment the customer pays is overdue. | Transaction Reminders |
-| Receipt | After every payment, the down payment included. | Payment Receipts |
-| Refund notice | When a refund of a plan payment succeeds. | Payment Receipts |
+| Receipt | After every payment, the down payment included. | Send Payment Receipts |
+| Refund notice | When a refund of a plan payment succeeds. | Send Payment Receipts |
 
 The Installment Plans notices go through Orchard Core's `INotificationService` when the Notifications feature is enabled, so they honor each user's preferred notification methods.
 

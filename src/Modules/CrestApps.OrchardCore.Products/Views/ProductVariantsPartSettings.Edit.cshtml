@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductVariantsPartSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Options">
+    <label class="ocat-label">@T["Options"]</label>
+    <div class="ocat-end">
+        <table class="table table-sm align-middle mb-1">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Name"]</th>
+                    <th scope="col">@T["Filterable"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Options.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="Options[i].Name" class="form-control form-control-sm" placeholder="@T["Size"]" aria-label="@T["Option name"]" /></td>
+                        <td><input type="checkbox" asp-for="Options[i].Filterable" class="form-check-input" aria-label="@T["Listings can filter on this option"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span class="hint">@T["What the products of this type come in, such as Size and Color. Each product enters its own values and gets one variant per combination. A filterable option can be offered as a filter on listings. Clear a name to remove the option; save to get more empty rows."]</span>
+        <span asp-validation-for="Options"></span>
+    </div>
+</div>

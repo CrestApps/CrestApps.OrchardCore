@@ -51,10 +51,7 @@ Every method takes a `CancellationToken`, which the Stripe webhook endpoint thre
 
 ## The Stripe provider
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-payment-setup.jpg" aria-label="Narrated video of connecting Stripe and choosing currencies">
-  <source src="/img/docs/commerce-payment-setup.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-payment-setup.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of connecting Stripe and choosing currencies" start={100} end={131} />
 
 The **Stripe** feature (`CrestApps.OrchardCore.Stripe`, category *Payment Providers*) implements the framework against Stripe. Configure it under **Settings → Payments → Stripe**.
 
@@ -217,10 +214,7 @@ inside a native iOS or Android app, and cannot be done from a web page.
 
 ### Refunds
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-payments-refunds.jpg" aria-label="Narrated video of the Payments list, a partial refund, and the Refunds list">
-  <source src="/img/docs/commerce-payments-refunds.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-payments-refunds.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of the Payments list, a partial refund, and the Refunds list" start={500} end={534} />
 
 The same provider implements **`ICheckoutPaymentRefundProvider`**, so a settled Stripe payment can be refunded through the checkout's durable refund ledger (`ICheckoutRefundService`) rather than by calling Stripe directly. Refunds are recorded before Stripe is contacted, carry the refund's idempotency key so a retry never double-refunds, and allocate tax from the original payment's immutable snapshot. See [Checkout → Refunds](checkout#refunds--the-durable-refund-ledger) for the full model. The refund itself runs through the `IStripeRefundService`, which converts the major-unit amount to the currency's minor units with `StripeCurrency`.
 

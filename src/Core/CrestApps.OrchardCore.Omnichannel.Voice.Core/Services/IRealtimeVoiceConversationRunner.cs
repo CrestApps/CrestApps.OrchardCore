@@ -115,6 +115,39 @@ public sealed class RealtimeVoiceConversationContext
     public Action CustomerAnswered { get; set; }
 
     /// <summary>
+    /// Gets or sets a token that is cancelled when the telephony provider reports that a voicemail or answering
+    /// machine answered the call.
+    /// </summary>
+    /// <remarks>
+    /// The report arrives on a webhook request of its own while the session holds the call in another, so it is
+    /// carried here through <see cref="IAnsweringMachineSignals"/>. Once it fires the session stops conversing: what
+    /// the model says to the greeting is kept off the line, one message is left once the greeting is over, and the
+    /// call is ended through <see cref="EndCallOnVoicemail"/>. Left unset, a machine is treated like anybody else who
+    /// answers, and only the model can notice it.
+    /// </remarks>
+    public CancellationToken AnsweredByMachine { get; set; }
+
+    /// <summary>
+    /// Gets or sets a token that is cancelled when the provider hears the machine's greeting end, which is the moment
+    /// to leave the message. Left unset, or never fired, the message is left once the line has been quiet for a moment.
+    /// </summary>
+    public CancellationToken MachineGreetingEnded { get; set; }
+
+    /// <summary>
+    /// Gets or sets what is told when the session has left its message on the machine, or has given up on one, so
+    /// the call is ended exactly as the end-call tool ends it with voicemail reported: <see cref="EndCallRequested"/>
+    /// fires and <see cref="ReachedVoicemail"/> reads <see langword="true"/>.
+    /// </summary>
+    public Action EndCallOnVoicemail { get; set; }
+
+    /// <summary>
+    /// Gets or sets what is told when the session has said goodbye on a line that stayed quiet through its prompts,
+    /// so the call is ended exactly as the end-call tool ends it: <see cref="EndCallRequested"/> fires, the goodbye
+    /// plays, and the line closes. Left unset, the session stops asking and the line stays open.
+    /// </summary>
+    public Action EndCallOnSilence { get; set; }
+
+    /// <summary>
     /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
     /// <see langword="null"/> when this call has nowhere to hand them.
     /// </summary>
@@ -164,6 +197,21 @@ public sealed class RealtimeVoiceConversationContext
     /// one provider error ended the session and the caller sat in fifty seconds of silence before hanging up.
     /// </remarks>
     public bool SessionLost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the token that fires when this node begins to shut down.
+    /// </summary>
+    /// <remarks>
+    /// The conversation runs in this process, so it cannot outlive it. When the token fires the session is ended
+    /// and reported lost, which hands the caller on the way a lost session always does, rather than leaving them
+    /// on a line that falls silent when the process exits.
+    /// </remarks>
+    public CancellationToken NodeStopping { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the session was ended because this node is shutting down.
+    /// </summary>
+    public bool EndedByShutdown { get; set; }
 
     /// <summary>
     /// Gets or sets what the session measures from its audio for the usage report: started once the live session

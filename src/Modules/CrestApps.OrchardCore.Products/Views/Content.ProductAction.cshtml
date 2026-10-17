@@ -1,0 +1,14 @@
+@using OrchardCore.DisplayManagement
+
+@*
+    A product's ProductAction display: what modules offer to do with it, shown on its card and on its page. A module
+    places a shape in the Actions zone, for example .Location("ProductAction", "Actions"). Only that zone is shown,
+    so shapes that other parts place everywhere never leak into the actions.
+*@
+
+@if (Model.Actions is IShape actions && actions.Items.Count > 0)
+{
+    <div class="product-action-list">
+        @await DisplayAsync(actions)
+    </div>
+}

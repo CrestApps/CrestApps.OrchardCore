@@ -20,15 +20,30 @@ public sealed class VoiceMediaItemStore : DocumentCatalog<VoiceMediaItem, VoiceM
         CollectionName = ContactCenterStorage.CollectionName;
     }
 
+    /// <summary>
+    /// Folds the single provider copy an entry recorded before copies were tracked per provider into
+    /// <see cref="VoiceMediaItem.ProviderReferences"/>, so every reader sees one record of the copies that exist.
+    /// </summary>
+    /// <param name="record">The entry read from storage.</param>
+    /// <returns>A completed task.</returns>
+    protected override ValueTask LoadingAsync(VoiceMediaItem record)
+    {
+        VoiceMediaItemCompatibility.FoldLegacyReference(record);
+
+        return ValueTask.CompletedTask;
+    }
+
     /// <inheritdoc/>
     public async Task<VoiceMediaItem> FindByNameAsync(string name, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
 
-        return await Session.Query<VoiceMediaItem, VoiceMediaItemIndex>(
+        var item = await Session.Query<VoiceMediaItem, VoiceMediaItemIndex>(
             index => index.Name == name,
             collection: ContactCenterStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
+
+        return await LoadedAsync(item);
     }
 
     /// <inheritdoc/>
@@ -39,6 +54,6 @@ public sealed class VoiceMediaItemStore : DocumentCatalog<VoiceMediaItem, VoiceM
             .OrderBy(index => index.Name)
             .ListAsync(cancellationToken);
 
-        return items.ToArray();
+        return await LoadedAsync(items);
     }
 }

@@ -2,13 +2,9 @@
   "name": "crestapps.orchardcore.ai.chat",
   "version": "1.0.0",
   "description": "Provides Chat UI to interact with AI models",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.215"
-  }
+    "@crestapps/ai-chat-ui": "2.0.0-preview.226"
+  },
+  "private": true
 }

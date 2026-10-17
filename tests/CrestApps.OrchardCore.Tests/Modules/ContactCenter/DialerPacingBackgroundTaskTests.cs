@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -17,11 +18,11 @@ public sealed class DialerPacingBackgroundTaskTests
     private static readonly string _queue2 = ContactCenterConstants.CampaignQueue.CreateId("camp-2");
 
     [Fact]
-    public async Task DoWorkAsync_PacesEveryCampaignQueueWithWaitingWork()
+    public async Task DoWorkAsync_RequestsPacingOfEveryCampaignQueueWithWaitingWork()
     {
         // Arrange: two campaign queues each hold waiting inventory loaded under its own profile.
-        var profile1 = new DialerProfile { ItemId = "dp1", Name = "profile-1" };
-        var profile2 = new DialerProfile { ItemId = "dp2", Name = "profile-2" };
+        var profile1 = new DialerProfile { ItemId = "dp1", Name = "profile-1", Mode = DialerMode.Power };
+        var profile2 = new DialerProfile { ItemId = "dp2", Name = "profile-2", Mode = DialerMode.Progressive };
 
         var dialerManager = new Mock<IDialerProfileManager>();
         dialerManager.Setup(m => m.FindByIdAsync("dp1", It.IsAny<CancellationToken>())).ReturnsAsync(profile1);
@@ -31,18 +32,19 @@ public sealed class DialerPacingBackgroundTaskTests
             (_queue1, "dp1"),
             (_queue2, "dp2"));
 
-        var dialerService = new Mock<IDialerService>();
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
-        await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock);
 
         // Act
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
-        // Assert
-        dialerService.Verify(service => service.RunCycleAsync(profile1, _queue1, It.IsAny<CancellationToken>()), Times.Once);
-        dialerService.Verify(service => service.RunCycleAsync(profile2, _queue2, It.IsAny<CancellationToken>()), Times.Once);
+        // Assert: the minute task is the backstop; each queue is paced by its own run, under its own pacing lock.
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue1), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue2), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.Request(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -52,19 +54,17 @@ public sealed class DialerPacingBackgroundTaskTests
         // not paced as outbound inventory.
         var dialerManager = new Mock<IDialerProfileManager>();
         var queueItemStore = CreateQueueItemStore((_queue1, null));
-        var dialerService = new Mock<IDialerService>();
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
-        await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock);
 
         // Act
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert
-        dialerService.Verify(
-            service => service.RunCycleAsync(It.IsAny<DialerProfile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -73,19 +73,17 @@ public sealed class DialerPacingBackgroundTaskTests
         // Arrange: a plain (inbound) queue with waiting work must not be paced by the outbound dialer.
         var dialerManager = new Mock<IDialerProfileManager>();
         var queueItemStore = CreateQueueItemStore(("inbound-queue", "dp1"));
-        var dialerService = new Mock<IDialerService>();
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
-        await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock);
 
         // Act
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert
-        dialerService.Verify(
-            service => service.RunCycleAsync(It.IsAny<DialerProfile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -94,14 +92,14 @@ public sealed class DialerPacingBackgroundTaskTests
         // Arrange
         var dialerManager = new Mock<IDialerProfileManager>();
         var queueItemStore = new Mock<IQueueItemStore>();
-        var dialerService = new Mock<IDialerService>();
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         var workManager = new TestContactCenterFeatureWorkManager();
         workManager.Quiesce(ContactCenterConstants.Feature.DialerPaced);
 
-        await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock, workManager);
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock, workManager);
 
         // Act
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
@@ -110,9 +108,7 @@ public sealed class DialerPacingBackgroundTaskTests
         queueItemStore.Verify(
             store => store.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()),
             Times.Never);
-        dialerService.Verify(
-            service => service.RunCycleAsync(It.IsAny<DialerProfile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
@@ -126,8 +122,8 @@ public sealed class DialerPacingBackgroundTaskTests
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(() => current);
 
-        var profile1 = new DialerProfile { ItemId = "dp1", Name = "profile-1" };
-        var profile2 = new DialerProfile { ItemId = "dp2", Name = "profile-2" };
+        var profile1 = new DialerProfile { ItemId = "dp1", Name = "profile-1", Mode = DialerMode.Power };
+        var profile2 = new DialerProfile { ItemId = "dp2", Name = "profile-2", Mode = DialerMode.Progressive };
 
         var dialerManager = new Mock<IDialerProfileManager>();
         dialerManager.Setup(m => m.FindByIdAsync("dp1", It.IsAny<CancellationToken>())).ReturnsAsync(profile1);
@@ -137,20 +133,19 @@ public sealed class DialerPacingBackgroundTaskTests
             (_queue1, "dp1"),
             (_queue2, "dp2"));
 
-        var dialerService = new Mock<IDialerService>();
-        dialerService
-            .Setup(service => service.RunCycleAsync(profile1, _queue1, It.IsAny<CancellationToken>()))
-            .Callback(() => current = current.AddMilliseconds(100_000))
-            .ReturnsAsync(0);
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
+        pacingScheduler
+            .Setup(scheduler => scheduler.RequestBackstop(_queue1))
+            .Callback(() => current = current.AddMilliseconds(100_000));
 
-        await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock);
 
         // Act
         await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
 
         // Assert
-        dialerService.Verify(service => service.RunCycleAsync(profile1, _queue1, It.IsAny<CancellationToken>()), Times.Once);
-        dialerService.Verify(service => service.RunCycleAsync(profile2, _queue2, It.IsAny<CancellationToken>()), Times.Never);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue1), Times.Once);
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue2), Times.Never);
     }
 
     [Fact]
@@ -160,20 +155,20 @@ public sealed class DialerPacingBackgroundTaskTests
         using var cancellationSource = new CancellationTokenSource();
         await cancellationSource.CancelAsync();
 
-        var profile = new DialerProfile { ItemId = "dp1", Name = "profile-1" };
+        var profile = new DialerProfile { ItemId = "dp1", Name = "profile-1", Mode = DialerMode.Power };
         var dialerManager = new Mock<IDialerProfileManager>();
         dialerManager.Setup(m => m.FindByIdAsync("dp1", It.IsAny<CancellationToken>())).ReturnsAsync(profile);
 
         var queueItemStore = CreateQueueItemStore((_queue1, "dp1"));
 
-        var dialerService = new Mock<IDialerService>();
-        dialerService
-            .Setup(service => service.RunCycleAsync(It.IsAny<DialerProfile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        queueItemStore
+            .Setup(store => store.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException(cancellationSource.Token));
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
-        await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock);
 
         // Act & Assert
         await Assert.ThrowsAsync<OperationCanceledException>(() =>
@@ -240,14 +235,14 @@ public sealed class DialerPacingBackgroundTaskTests
 
     private static ServiceProvider CreateServiceProvider(
         Mock<IDialerProfileManager> dialerManager,
-        Mock<IDialerService> dialerService,
+        Mock<IDialerPacingScheduler> pacingScheduler,
         Mock<IQueueItemStore> queueItemStore,
         Mock<IClock> clock,
         IContactCenterFeatureWorkManager workManager = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(dialerManager.Object);
-        services.AddSingleton(dialerService.Object);
+        services.AddSingleton(pacingScheduler.Object);
         services.AddSingleton(queueItemStore.Object);
         services.AddSingleton(clock.Object);
         services.AddSingleton(workManager ?? new TestContactCenterFeatureWorkManager());

@@ -29,7 +29,7 @@ A plan type is a content type whose items are plans. You create it once, then cr
 1. Open **Content > Content Definition > Content Types** and click **Create new type**.
 2. Enter a **Display Name** such as *Membership Plan* and click **Create**.
 3. In the type's settings, set **Stereotype** to *Subscription* and click **Save**. The **Subscription** part is added to the type for you, with the billing fields described below.
-4. Click **Add Parts** and add **Title** (so each plan has a name) and **Product** (so each plan has a price). To offer the same plan at more than one price, add **Product prices** as well; see [Offer more than one price](#offer-more-than-one-price).
+4. Click **Add Parts** and add **Title** (so each plan has a name). The **Product** part, which gives each plan its price, is added with the stereotype. To offer the same plan at more than one price, add **Product prices** as well; see [Offer more than one price](#offer-more-than-one-price).
 5. Optionally add **Subscription Entitlements** to give subscribers roles while they are subscribed; see [Give subscribers access](#give-subscribers-access).
 6. Click **Save**.
 
@@ -37,7 +37,7 @@ A plan type is a content type whose items are plans. You create it once, then cr
 
 1. Open **Content > Content Items** and create a new item of your plan type, for example *Membership Plan*.
 2. Enter the **Title**, the **Price** on the **Product** part, and the billing terms on the **Subscription** part.
-3. Click **Publish**. Published plans are listed on the public **Service plans** page of your site, each with a **Sign up** button.
+3. Click **Publish**. To show your plans to visitors, list them on a page of your site; see [Show your plans on your site](#show-your-plans-on-your-site).
 
 The **Subscription** part has these fields:
 
@@ -50,7 +50,7 @@ The **Subscription** part has these fields:
 | **Free trial days** | Give the subscriber this many days free before the first cycle is billed. The payment method is still collected up front, so the trial converts without asking them to buy again. Leave it empty for no trial. |
 | **Subscription day delay** | Delay the first recurring payment by this many days after sign-up. Leave it empty or set it to 0 to start billing immediately. |
 
-The **Product** part has the **Price**, its **Currency** (empty uses the default currency) and an optional **SKU**. See [Products and currencies](products-and-currencies.md).
+The **Product** part has the **Price**, its **Currency** (empty uses the default currency), an optional **SKU**, and **Featured** and **Position**. **Position** is where the plan appears among your plans when a listing sorts them by **Recommended**: lower numbers come first, and plans without a position come after them. See [Products and currencies](products-and-currencies.md).
 
 :::tip[Free trial or delayed start?]
 Both collect the subscriber's payment method today and start billing later. A plan in a free trial shows the status **Trial**, and the subscriber has full access during it. A trial does not use up a cycle: a plan limited to three cycles still bills three.
@@ -61,6 +61,20 @@ Both collect the subscriber's payment method today and start billing later. A pl
 Add the **Product prices** part to the plan type to sell the same plan several ways, for example monthly and yearly, per seat, or for an amount the buyer chooses. Each row under **Prices** is one way to buy, with its own **Name**, **Amount**, whether it is **Charged** once or **Recurring**, how often it renews (**Every** and **Interval**), its **Cycles**, **Trial days**, **Start after**, **Setup fee**, and whether it is **Offered**. Click **Add a price** for another row.
 
 On the plan's card on your site, the buyer picks one under **Choose your plan** before clicking **Sign up**, and is charged the terms of the price they picked. See [Products and currencies](products-and-currencies.md) for every field.
+
+### Show your plans on your site
+
+Plans are products, so you show them to visitors with a [product listing](product-listings.md), like any other product. Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button.
+
+1. Make sure the **Product Listing** feature is on.
+2. Open **Commerce > Product Listings**, click **New**, and give the page a **Title** such as *Plans* and a **Permalink** such as *plans*.
+3. Under **Products**, choose **Only these product types** and tick your plan type.
+4. Plans rarely need filters: untick **Show filters** and **Let visitors change the sort**, and set **Default sort** to **Recommended** to show the plans in the order of their **Position**.
+5. Click **Publish**, and add the page to your site's menu.
+
+To give each plan a page of its own with the same details, edit the **Product** part of the plan type, tick **Show product details on the product page**, and add the **Autoroute** part for a readable address. See [Lay out the product pages](product-listings.md#lay-out-the-product-pages).
+
+The **Commerce starter** recipe sets all of this up, with a **Plans** page at */plans*.
 
 ### Give subscribers access
 
@@ -80,10 +94,7 @@ The site-wide settings are under **Settings > Subscriptions**, with the **Manage
 
 This video shows a visitor signing up to a plan, then the Agreements screen:
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
-  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
 ## Manage subscriptions
 
@@ -194,6 +205,7 @@ At the bottom of the page, the note *Cancelling stops the next payment. You keep
 
 - **A subscriber lost access after a failed payment.** Access lasts through the grace period after a failed renewal. Once it runs out, the subscription is **Expired** and the plan's roles are removed. The subscriber can subscribe again.
 - **A subscriber still has access after cancelling.** That is expected when the subscription was cancelled at the end of the period: access lasts until **Paid through**.
+- **Visitors can't find the plans.** Plans are shown only on a product listing that lists their type; see [Show your plans on your site](#show-your-plans-on-your-site).
 - **The plan has no Sign up button.** Make sure the plan is published and has a price on its **Product** or **Product prices** part.
 - **Visitors see *This plan can't be bought right now* after Sign up.** The plan has no price the site can charge: usually it has no currency, and its content type sets no default currency, or its price is charged once rather than every period. Nothing is charged and no account is created. Give the plan a currency (or set a **Default currency** on the **Product** part of its content type) and a price that recurs, then publish it again.
 - **Visitors are asked to register before they can subscribe.** Tick **Allow guest sign-up** in **Settings > Subscriptions** to let them subscribe without an account.

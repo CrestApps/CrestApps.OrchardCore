@@ -20,3 +20,40 @@
         <span asp-validation-for="DefaultCurrency"></span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SalesMode">
+    <label asp-for="SalesMode" class="ocat-label">@T["Sales mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="SalesMode" asp-items="Model.SalesModes" class="form-select"></select>
+        <span class="hint">@T["Whether products of this type can be bought online. Listed products are still shown, filtered and opened, but cannot be checked out."]</span>
+        <span asp-validation-for="SalesMode"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PriceDisplay">
+    <label asp-for="PriceDisplay" class="ocat-label">@T["Price display"]</label>
+    <div class="ocat-end">
+        <select asp-for="PriceDisplay" asp-items="Model.PriceDisplays" class="form-select"></select>
+        <span class="hint">@T["How the price of products of this type is shown to visitors."]</span>
+        <span asp-validation-for="PriceDisplay"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OnRequestLabel">
+    <label asp-for="OnRequestLabel" class="ocat-label">@T["On-request label"]</label>
+    <div class="ocat-end">
+        <input type="text" asp-for="OnRequestLabel" class="form-control" placeholder="@T["Call for price"]" />
+        <span class="hint">@T["The text shown instead of the price when the price is shown on request."]</span>
+        <span asp-validation-for="OnRequestLabel"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowPriceDisplayOverride" />
+            <label class="form-check-label" asp-for="AllowPriceDisplayOverride">@T["Let each product choose how its price is shown"]</label>
+            <span class="hint dashed">@T["Adds a price display option to the product editor that overrides the setting above."]</span>
+        </div>
+    </div>
+</div>

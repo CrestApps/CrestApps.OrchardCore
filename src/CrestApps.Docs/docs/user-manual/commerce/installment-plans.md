@@ -22,10 +22,7 @@ An **installment plan** lets you sell something on a payment plan without the cu
 Installment plans need a payment provider that can keep a card for later payments and show its card form on the page, such as Stripe. Without one, **New plan** shows the warning *No payment provider that can keep a card for later payments is enabled*. See [Payment providers](payment-providers.md).
 :::
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-installment-plans.jpg" aria-label="Narrated video of setting up an installment plan and taking the down payment">
-  <source src="/img/docs/commerce-installment-plans.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-installment-plans.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of setting up an installment plan and taking the down payment" start={304} end={363} />
 
 ## How a plan works
 
@@ -104,10 +101,7 @@ If the card used for the down payment cannot be kept for later payments, the pla
 
 ## Manage a plan
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-manage-plans.jpg" aria-label="Narrated video of managing installment plans: Charge now, Cancel the plan, and the list">
-  <source src="/img/docs/commerce-manage-plans.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-manage-plans.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of managing installment plans: Charge now, Cancel the plan, and the list" start={362} end={409} />
 
 Open a plan by clicking its title or **Manage** in the list. The plan page has these cards:
 
@@ -184,7 +178,7 @@ The list shows one row per plan, with its title, status and these badges: **Cust
 | When a charge is declined | A notice that the payment could not be taken and when it will be tried again, then an overdue notice once no retries are left. |
 | When a started plan is canceled | A notice that the plan was canceled and how much was received. |
 
-The customer can also see every payment of the plan in **My Transactions** and pay what is due from there. When they pay online from a phone with Apple Pay or Google Pay set up, they can pay with the wallet. Reminders need the **Transaction Reminders** feature and receipts need the **Payment Receipts** feature. See [Transactions](transactions.md) and [Invoices and receipts](invoices-and-receipts.md).
+The customer can also see every payment of the plan in **My Transactions** and pay what is due from there. When they pay online from a phone with Apple Pay or Google Pay set up, they can pay with the wallet. Reminders need the **Transaction Reminders** feature and receipts are sent with the **Send Payment Receipts** feature. See [Transactions](transactions.md) and [Invoices and receipts](invoices-and-receipts.md).
 
 ## Change the plan defaults
 

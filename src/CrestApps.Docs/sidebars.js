@@ -60,6 +60,7 @@ const sidebars = {
                 'user-manual/ai/chat',
                 'user-manual/ai/chat-widgets',
                 'user-manual/ai/chat-interactions',
+                'user-manual/ai/profile-builder',
                 'user-manual/ai/prompt-templates',
                 'user-manual/ai/knowledge',
                 'user-manual/ai/tools-and-agents',
@@ -154,8 +155,11 @@ const sidebars = {
             items: [
                 'user-manual/commerce/payment-providers',
                 'user-manual/commerce/products-and-currencies',
+                'user-manual/commerce/product-listings',
                 'user-manual/commerce/taxes',
                 'user-manual/commerce/coupons',
+                'user-manual/commerce/carts-and-orders',
+                'user-manual/commerce/customers',
                 'user-manual/commerce/checkout',
                 'user-manual/commerce/subscriptions',
                 'user-manual/commerce/sites',
@@ -198,6 +202,7 @@ const sidebars = {
     technicalSidebar: [
         { type: 'doc', id: 'intro', className: icon('compass') },
         { type: 'doc', id: 'getting-started', className: icon('rocket') },
+        { type: 'doc', id: 'building-assets', className: icon('wrench') },
         { type: 'doc', id: 'configuration', className: icon('file-cog') },
         { type: 'doc', id: 'feature-reference', className: icon('tags') },
         {
@@ -212,6 +217,7 @@ const sidebars = {
                 'ai/chat-analytics',
                 'ai/usage-analytics',
                 'ai/chat-interactions',
+                'ai/profile-builder',
                 'ai/chat-notifications',
                 'ai/copilot',
                 'ai/claude',
@@ -351,6 +357,8 @@ const sidebars = {
             link: { type: 'doc', id: 'modules/commerce' },
             items: [
                 'modules/products',
+                'modules/carts-and-orders',
+                'modules/customers',
                 'modules/checkout',
                 'modules/payments',
                 'modules/pay-later',

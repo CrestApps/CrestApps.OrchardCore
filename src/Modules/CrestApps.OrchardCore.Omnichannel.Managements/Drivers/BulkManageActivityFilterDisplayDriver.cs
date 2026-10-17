@@ -79,6 +79,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             model.Status = filter.Status?.ToString();
             model.AssignmentStatus = filter.AssignmentStatus?.ToString();
             model.CampaignId = filter.CampaignId;
+            model.DialerProfileId = filter.DialerProfileId;
             model.AssignedToUserIds = filter.AssignedToUserIds ?? [];
             model.UrgencyLevel = filter.UrgencyLevel?.ToString();
             model.ScheduledFrom = filter.ScheduledFrom;
@@ -138,6 +139,10 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
             model.Statuses = _optionsProvider.GetStatusOptions(model.Status, "Any active status");
             model.AssignmentStatuses = _optionsProvider.GetAssignmentStatusOptions(model.AssignmentStatus, "Any assignment status");
             model.Campaigns = await _optionsProvider.GetCampaignOptionsAsync(filter.CampaignId, "Any campaign");
+
+            // Only the empty choice comes back when no dialer is available, and then there is nothing to filter by.
+            var dialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(filter.DialerProfileId, "Any dialer profile");
+            model.DialerProfiles = dialerProfiles.Count > 1 ? dialerProfiles : [];
 
             model.PhoneNumberMatchTypes =
             [
@@ -201,6 +206,7 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         filter.SourceValues = _optionsProvider.GetStoredSourceValues(model.Source);
         filter.AttemptFilter = model.AttemptFilter;
         filter.CampaignId = model.CampaignId;
+        filter.DialerProfileId = string.IsNullOrWhiteSpace(model.DialerProfileId) ? null : model.DialerProfileId.Trim();
         filter.AssignedToUserIds = model.AssignedToUserIds;
         filter.ContactIsPublished = null;
         filter.InteractionType = null;
@@ -297,6 +303,11 @@ internal sealed class BulkManageActivityFilterDisplayDriver : DisplayDriver<Bulk
         if (!string.IsNullOrEmpty(filter.CampaignId))
         {
             filter.RouteValues.TryAdd(Prefix + ".CampaignId", filter.CampaignId);
+        }
+
+        if (!string.IsNullOrEmpty(filter.DialerProfileId))
+        {
+            filter.RouteValues.TryAdd(Prefix + ".DialerProfileId", filter.DialerProfileId);
         }
 
         if (filter.UrgencyLevel.HasValue)

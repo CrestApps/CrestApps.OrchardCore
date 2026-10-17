@@ -13,21 +13,19 @@ For the admin screens, see the User Manual's [Commerce](../user-manual/commerce/
 
 This video walks through the commerce modules, their screens, configuration and extension points:
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce.jpg" aria-label="Narrated video overview of the CrestApps Commerce modules">
-  <source src="/img/docs/commerce.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video overview of the CrestApps Commerce modules" />
 
 ## The modules
 
 | Module | Feature | What it owns | Page |
 | --- | --- | --- | --- |
 | Commerce | Commerce | The **Commerce** admin menu, the shared admin list UI, and the default financial-document policy. Enabled by dependency only. | This page |
-| Products | Products | The `ProductPart`, prices, and the managed **Currencies** catalog. | [Products](products) |
+| Products | Products, Product Listing | The `ProductPart`, prices, the managed **Currencies** catalog, whether products are sold online or only listed, and front-end listing pages with filters, sorting and product pages. | [Products](products) |
 | Checkout | Checkout | The checkout engine: sessions, steps, the durable payment and refund ledgers, coupons, and the public checkout. | [Checkout](checkout) |
 | Stripe | Stripe | The Stripe payment provider: cards, saved cards, Apple Pay and Google Pay, Connect, webhooks. | [Payments](payments) |
 | Pay Later | Pay Later | An offline "pay later" payment option that records the balance as a transaction. | [Pay Later](pay-later) |
-| Transactions | Transactions, Transaction Reminders, Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
+| Customers | Customers | A record for everyone who buys, a person or a business, with an account or as a guest, linked to their Orchard Core user. | [Customers](customers) |
+| Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
 | Receipts | Receipts | The reusable printable receipt and its branding settings. | [Receipts](receipts) |
 | Subscriptions | Subscriptions, Subscriptions - Sites, Subscriptions - Installment Plans | Recurring plans and their agreements, selling sites, and administrator-made payment plans. | [Subscriptions](subscriptions), [Installment Plans](installment-plans) |
 | Taxation | Taxation | Tax categories, jurisdictions, rules and calculation. | [Taxation](taxation) |
@@ -40,7 +38,7 @@ Every way of taking money goes through the same path, so there is one ledger to 
 2. **The buyer completes the steps.** The checkout collects what the steps need, prices the order (products, coupons, taxes), and opens the payment step.
 3. **A payment provider takes the money.** The payment is begun through the provider (for example Stripe) and recorded as a durable payment attempt before anything else happens.
 4. **The checkout settles.** A confirmed attempt completes the session, which applies the payment to its transaction (`ITransactionSettlementService`).
-5. **Handlers react.** Checkout handlers (`CheckoutHandlerBase`) let the seller finish the purchase, for example Subscriptions activates or renews an agreement and queues a site. When the payment settles a transaction, `ITransactionPaymentHandler` tells every interested module once per payment: Installment Plans moves its schedule, and Payment Receipts numbers and sends the receipt.
+5. **Handlers react.** Checkout handlers (`CheckoutHandlerBase`) let the seller finish the purchase, for example Subscriptions activates or renews an agreement and queues a site. When the payment settles a transaction, `ITransactionPaymentHandler` tells every interested module once per payment: Installment Plans moves its schedule, and Send Payment Receipts numbers and sends the receipt.
 
 Refunds follow the same pattern through the durable refund ledger, and `IPaymentRefundHandler` is raised once per refund, however it finished.
 
@@ -104,10 +102,9 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 ### The shared admin list UI
 
-The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. The Commerce feature provides two pieces that a module's list can reuse:
+The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. A module's list can reuse the Commerce feature's **`commerce-admin-list` script**: a `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
 
-- **The `commerce-admin-list` script.** A `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.
-- **A page size selector that renders on every admin theme.** The feature adds the `Pager_PageSizeSelector__Properties` alternate, which reads the page sizes from the shape's properties. It works around an Orchard Core issue where the admin theme's selector template read an empty list, fixed upstream in [OrchardCMS/OrchardCore#20007](https://github.com/OrchardCMS/OrchardCore/pull/20007).
+The page size selector is Orchard Core's own `Pager_PageSizeSelector` shape. It appears when **Allow users to change the page size** is on in the pager settings.
 
 Build the pager with `new Pager(pagerParameters, pagerOptions.Value)` and carry `pageSize` through the filter post, so the selected page size survives a filter change.
 

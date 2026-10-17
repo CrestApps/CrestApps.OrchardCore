@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.0" />
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.6.1" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -20,6 +20,10 @@
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.Redis" />
     <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" />
+    <!-- Aspire.Hosting 13.6.1 brings MessagePack 2.5.302, which has a known vulnerability (GHSA-qhrr-8q5h-9q3h).
+         Lift it to a patched 2.5.x here only: the Orchard Core projects already resolve MessagePack 3.x, so a
+         central transitive pin would downgrade them. Remove this once Aspire ships a patched MessagePack. -->
+    <PackageReference Include="MessagePack" VersionOverride="2.5.307" />
   </ItemGroup>
 
   <ItemGroup>

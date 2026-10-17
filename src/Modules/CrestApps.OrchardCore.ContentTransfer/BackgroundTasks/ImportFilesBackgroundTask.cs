@@ -487,6 +487,7 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         var indexOfKeyColumn = dataTable.Columns.IndexOf(nameof(ContentItem.ContentItemId));
         var newRecords = new Dictionary<int, DataRow>();
         var existingRows = new Dictionary<string, KeyValuePair<int, DataRow>>(StringComparer.OrdinalIgnoreCase);
+        var pendingRows = new List<ContentImportRowFilterContext>();
 
         var rowIndex = 1;
         var hasFilters = activeRowFilters.Count > 0;
@@ -515,6 +516,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
             // new, and start over the same way for ever; each run now reads at least one row before it stops.
             if (clock.UtcNow >= runDeadlineUtc && progressPart.CurrentRow > firstRowOfRun)
             {
+                await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken);
+
                 var progressSaved = await BackgroundWorkPacer.RunBatchAsync(
                     token => ProcessBatchAsync(
                         serviceProvider,
@@ -575,66 +578,38 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
 
             if (!isEmpty)
             {
-                var shouldSkip = false;
-                string filterSkipReason = null;
+                var rowContext = new ContentImportRowFilterContext()
+                {
+                    Row = dataRow,
+                    Columns = dataTable.Columns,
+                    ContentTypeDefinition = contentTypeDefinition,
+                    Entry = entry,
+                    RowIndex = rowIndex,
+                };
 
                 if (hasFilters)
                 {
-                    var filterContext = new ContentImportRowFilterContext()
-                    {
-                        Row = dataRow,
-                        Columns = dataTable.Columns,
-                        ContentTypeDefinition = contentTypeDefinition,
-                        Entry = entry,
-                        RowIndex = rowIndex,
-                    };
-
-                    // A filter may call out of the application, such as a do-not-call registry, so the watchdog
-                    // watches this work as it watches the import of the row.
-                    monitor.BeginRow(rowIndex);
-
-                    try
-                    {
-                        foreach (var filter in activeRowFilters)
-                        {
-                            if (await filter.ShouldSkipRowAsync(filterContext))
-                            {
-                                shouldSkip = true;
-                                filterSkipReason = filterContext.SkipReason;
-                                break;
-                            }
-                        }
-                    }
-                    finally
-                    {
-                        monitor.EndRow();
-                    }
-                }
-
-                if (shouldSkip)
-                {
-                    if (!string.IsNullOrWhiteSpace(filterSkipReason))
-                    {
-                        AddRowError(progressPart, rowIndex, filterSkipReason);
-                    }
-
-                    rowIndex++;
-                    continue;
-                }
-
-                var contentItemId = GetImportContentItemId(dataRow, indexOfKeyColumn);
-
-                if (!string.IsNullOrEmpty(contentItemId))
-                {
-                    existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowIndex, dataRow);
+                    // The rows are filtered a batch at a time, so a filter can look up what it needs for the whole
+                    // batch at once instead of reading everything it might need when the import starts.
+                    pendingRows.Add(rowContext);
                 }
                 else
                 {
-                    newRecords[rowIndex] = dataRow;
+                    AddRowToBatch(rowContext, indexOfKeyColumn, newRecords, existingRows);
                 }
             }
 
-            if (newRecords.Count + existingRows.Count >= batchSize)
+            var filtered = false;
+
+            if (pendingRows.Count >= batchSize)
+            {
+                await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken);
+                filtered = true;
+            }
+
+            // The rows a filtered batch keeps are imported at once, even when the filters skipped some of them.
+            if (newRecords.Count + existingRows.Count >= batchSize ||
+                (filtered && newRecords.Count + existingRows.Count > 0))
             {
                 // Batches used to run back to back, holding the database at its limit for the whole import. The
                 // batch runs through the gate every tenant's bulk work shares, which keeps that work to its share.
@@ -674,6 +649,8 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         {
             return ImportRunResult.Stopped;
         }
+
+        await FilterPendingRowsAsync(pendingRows, activeRowFilters, contentTypeDefinition, entry, progressPart, indexOfKeyColumn, newRecords, existingRows, monitor, cancellationToken);
 
         if (newRecords.Count + existingRows.Count > 0)
         {
@@ -802,6 +779,104 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         return true;
     }
 
+    /// <summary>
+    /// Runs the rows read since the last batch through the row filters and adds the rows they keep to the batch. Each
+    /// filter first prepares for the rows together, then decides on each row in file order.
+    /// </summary>
+    internal static async Task FilterPendingRowsAsync(
+        List<ContentImportRowFilterContext> pendingRows,
+        IReadOnlyList<IContentImportRowFilter> rowFilters,
+        ContentTypeDefinition contentTypeDefinition,
+        ContentTransferEntry entry,
+        ImportFileProcessStatsPart progressPart,
+        int indexOfKeyColumn,
+        Dictionary<int, DataRow> newRecords,
+        Dictionary<string, KeyValuePair<int, DataRow>> existingRows,
+        ImportRunMonitor monitor,
+        CancellationToken cancellationToken)
+    {
+        if (pendingRows.Count == 0)
+        {
+            return;
+        }
+
+        // A filter may call out of the application, such as a do-not-call registry or the database, so the watchdog
+        // watches this work as it watches the import of a row.
+        monitor?.BeginRow(pendingRows[0].RowIndex);
+
+        try
+        {
+            var batchContext = new ContentImportRowFilterBatchContext()
+            {
+                ContentTypeDefinition = contentTypeDefinition,
+                Entry = entry,
+                Rows = pendingRows,
+                CancellationToken = cancellationToken,
+            };
+
+            foreach (var filter in rowFilters)
+            {
+                await filter.PrepareBatchAsync(batchContext);
+            }
+        }
+        finally
+        {
+            monitor?.EndRow();
+        }
+
+        foreach (var rowContext in pendingRows)
+        {
+            var shouldSkip = false;
+
+            monitor?.BeginRow(rowContext.RowIndex);
+
+            try
+            {
+                foreach (var filter in rowFilters)
+                {
+                    if (await filter.ShouldSkipRowAsync(rowContext))
+                    {
+                        shouldSkip = true;
+                        break;
+                    }
+                }
+            }
+            finally
+            {
+                monitor?.EndRow();
+            }
+
+            if (!shouldSkip)
+            {
+                AddRowToBatch(rowContext, indexOfKeyColumn, newRecords, existingRows);
+            }
+            else if (!string.IsNullOrWhiteSpace(rowContext.SkipReason))
+            {
+                AddRowError(progressPart, rowContext.RowIndex, rowContext.SkipReason);
+            }
+        }
+
+        pendingRows.Clear();
+    }
+
+    private static void AddRowToBatch(
+        ContentImportRowFilterContext rowContext,
+        int indexOfKeyColumn,
+        Dictionary<int, DataRow> newRecords,
+        Dictionary<string, KeyValuePair<int, DataRow>> existingRows)
+    {
+        var contentItemId = GetImportContentItemId(rowContext.Row, indexOfKeyColumn);
+
+        if (!string.IsNullOrEmpty(contentItemId))
+        {
+            existingRows[contentItemId] = new KeyValuePair<int, DataRow>(rowContext.RowIndex, rowContext.Row);
+        }
+        else
+        {
+            newRecords[rowContext.RowIndex] = rowContext.Row;
+        }
+    }
+
     internal static string GetImportContentItemId(DataRow dataRow, int indexOfKeyColumn)
         => indexOfKeyColumn > -1
             ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
@@ -878,12 +953,19 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         }
     }
 
-    private static void AddRowError(ImportFileProcessStatsPart progressPart, int rowIndex, string errorMessage)
+    internal static void AddRowError(ImportFileProcessStatsPart progressPart, int rowIndex, string errorMessage)
     {
         progressPart.Errors ??= [];
         progressPart.ErrorMessages ??= [];
 
         progressPart.Errors.Add(rowIndex);
+
+        if (progressPart.ErrorMessages.Count >= ImportFileProcessStatsPart.MaxStoredErrorMessages
+            && !progressPart.ErrorMessages.ContainsKey(rowIndex))
+        {
+            return;
+        }
+
         progressPart.ErrorMessages[rowIndex] = string.IsNullOrWhiteSpace(errorMessage)
             ? "The row failed to import."
             : errorMessage;

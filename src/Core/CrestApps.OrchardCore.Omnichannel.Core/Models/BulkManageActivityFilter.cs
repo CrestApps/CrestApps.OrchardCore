@@ -67,6 +67,11 @@ public sealed class BulkManageActivityFilter : Entity
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the dialer profile identifier to filter by.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the user IDs to filter activities assigned to.
     /// </summary>
     public string[] AssignedToUserIds { get; set; }

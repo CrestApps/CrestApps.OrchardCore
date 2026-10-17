@@ -520,6 +520,26 @@ public sealed partial class VoiceAgentConversationLoopTests
         Assert.Equal(1, harness.Media.Hangups);
     }
 
+    [Fact]
+    public async Task AnInboundCallerWhoHasNotSpokenYet_IsAskedIfTheyAreStillThere_NotLeftAVoicemailMessage()
+    {
+        // Arrange
+        // Only a call this platform placed can reach a voicemail. Live, an inbound caller who said nothing at first was
+        // told "Sorry we missed you. We were calling about your recent inquiry" and hung up on.
+        var harness = new LoopHarness();
+        harness.Activity.Source = ActivitySources.Inbound;
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.Loop.OnListeningTimedOutAsync(harness.SilenceWatchdog.Armed[^1], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken[^1]);
+        Assert.False(harness.Activity.TryGet<VoicemailReached>(out _));
+        Assert.Equal(0, harness.Media.Hangups);
+    }
+
     // ---- The provider says who answered ----
 
     [Fact]
@@ -1351,6 +1371,8 @@ public sealed partial class VoiceAgentConversationLoopTests
             CompletionRunner = new RecordingCompletionRunner();
             AbandonmentHandler = new RecordingAbandonmentHandler();
 
+            AnsweringMachine = new AnsweringMachineSignals(Clock);
+
             Loop = new VoiceAgentConversationLoop(
                 activityStore.Object,
                 sessionManager.Object,
@@ -1358,6 +1380,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 completionService.Object,
                 handoffTurn,
                 endCallTurn,
+                AnsweringMachine,
                 CompletionRunner,
                 [AbandonmentHandler],
                 [CallObserver],
@@ -1373,6 +1396,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 Realtime,
                 SilenceWatchdog,
                 SessionTracker,
+                CallShutdown,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
                 Clock,
@@ -1392,6 +1416,16 @@ public sealed partial class VoiceAgentConversationLoopTests
         public FakeVoiceAgentMediaProvider Media { get; } = new();
 
         public RecordingRealtimeRunner Realtime { get; } = new();
+
+        /// <summary>
+        /// The provider's answering-machine reports, carried from the webhook that receives them to the live session.
+        /// </summary>
+        public AnsweringMachineSignals AnsweringMachine { get; }
+
+        /// <summary>
+        /// What a node that is shutting down waits on, so a test can see whether the call was held and stop the node.
+        /// </summary>
+        public FakeAIVoiceCallShutdown CallShutdown { get; } = new();
 
         /// <summary>
         /// What the loop measured and handed over to be written as the call's usage summary.

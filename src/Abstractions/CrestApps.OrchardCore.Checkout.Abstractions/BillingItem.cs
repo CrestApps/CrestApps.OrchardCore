@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Taxation.Models;
+
 namespace CrestApps.OrchardCore.Checkout;
 
 /// <summary>
@@ -17,9 +19,14 @@ public sealed class BillingItem
     public string Description { get; set; }
 
     /// <summary>
-    /// The amount to charge. For a recurring item this is the amount charged every billing cycle.
+    /// The amount to charge for one unit. For a recurring item this is the amount charged every billing cycle.
     /// </summary>
     public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many units are bought. The item charges <see cref="Amount"/> for each.
+    /// </summary>
+    public int Quantity { get; set; } = 1;
 
     /// <summary>
     /// The recurring plan for this item, or <see langword="null"/> for a one-time charge.
@@ -42,4 +49,27 @@ public sealed class BillingItem
     /// own tax; taxing it again would charge the tax twice.
     /// </summary>
     public bool ExcludeFromTax { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stock keeping unit of the product the item is for, when it is for one.
+    /// </summary>
+    public string Sku { get; set; }
+
+    /// <summary>
+    /// Gets or sets the item's tax category, such as the product's. The checkout's default category is used
+    /// when it is empty.
+    /// </summary>
+    public string TaxCategoryCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the item's tax classification. The checkout's default classification is used when it is
+    /// empty.
+    /// </summary>
+    public string TaxClassificationCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets what kind of thing the item is for tax purposes. When it is empty, a one-time item is taxed as
+    /// a physical good and a recurring one as a service.
+    /// </summary>
+    public TaxableItemKind? TaxableKind { get; set; }
 }

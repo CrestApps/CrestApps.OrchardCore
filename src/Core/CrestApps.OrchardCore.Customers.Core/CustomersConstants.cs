@@ -1,0 +1,32 @@
+namespace CrestApps.OrchardCore.Customers.Core;
+
+public static class CustomersConstants
+{
+    /// <summary>
+    /// The YesSql collection customer records and their index live in.
+    /// </summary>
+    public const string CollectionName = "Customers";
+
+    /// <summary>
+    /// The key of the checkout step that asks who an order is for and where it is billed.
+    /// </summary>
+    public const string ContactStepKey = "Contact";
+
+    /// <summary>
+    /// The site settings group of the Customers settings.
+    /// </summary>
+    public const string SettingsGroupId = "customers";
+
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates guest and business customers.
+        /// </summary>
+        public const string Customers = "Customers";
+    }
+
+    public static class Features
+    {
+        public const string Customers = "CrestApps.OrchardCore.Customers";
+    }
+}

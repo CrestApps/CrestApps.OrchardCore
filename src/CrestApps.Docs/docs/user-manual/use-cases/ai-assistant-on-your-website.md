@@ -18,9 +18,7 @@ When it is done:
 - the same kind of assistant can sit on every admin page for your staff, if you want;
 - reports show how visitors use the chat.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding the AI chat widget to the website with an always-on layer and chatting with it from the home page">
-  <source src="/img/docs/ai-frontend-widget.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of adding the AI chat widget to the website with an always-on layer and chatting with it from the home page" start={577} end={615} />
 
 ## Before you start
 

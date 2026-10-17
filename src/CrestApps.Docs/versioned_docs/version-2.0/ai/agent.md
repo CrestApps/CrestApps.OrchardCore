@@ -16,9 +16,7 @@ The Orchard agent module surfaces agent profiles inside Orchard Core so they can
 
 The screencast below enables the feature, creates an Agent-type AI profile on the `gpt-4.1-mini` deployment, and grants it Orchard-aware tool categories from the profile's Capabilities tab.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling AI Agents and creating an agent profile with Orchard-aware tools">
-  <source src="/img/docs/ai-agent.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling AI Agents and creating an agent profile with Orchard-aware tools" start={388} end={422} />
 
 ## What this module adds in Orchard Core
 

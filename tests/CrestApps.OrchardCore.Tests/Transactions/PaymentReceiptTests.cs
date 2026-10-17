@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Email;
+using OrchardCore.Modules;
 using OrchardCore.Infrastructure;
 using OrchardCore.Notifications;
 using OrchardCore.Users;
@@ -265,7 +266,32 @@ public sealed class PaymentReceiptTests
             TotalAmount = 108m,
         };
 
-    private static TransactionReceiptBuilder CreateBuilder()
+    /// <summary>
+    /// A receipt prints its date as is, so it must be in the site's time zone: printed in UTC, a payment taken in the
+    /// evening carried the next day's date.
+    /// </summary>
+    [Fact]
+    public async Task BuildAsync_DatesTheReceiptInTheSitesTimeZone()
+    {
+        // Arrange: a site seven hours behind UTC.
+        var clock = new Mock<ILocalClock>();
+        clock
+            .Setup(c => c.ConvertToLocalAsync(It.IsAny<DateTimeOffset>()))
+            .ReturnsAsync((DateTimeOffset value) => value.ToOffset(TimeSpan.FromHours(-7)));
+
+        var services = new ServiceCollection().AddSingleton(clock.Object).BuildServiceProvider();
+        var builder = CreateBuilder(services);
+        var paidUtc = new DateTime(2026, 10, 13, 2, 30, 0, DateTimeKind.Utc);
+        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(paidUtc, 54m, TransactionsConstants.SettlementMethods.Offline, "Paid by check.");
+
+        // Act
+        var receipt = await builder.BuildAsync(CreateTransaction(), payment, TestContext.Current.CancellationToken);
+
+        // Assert: the evening of the 12th, not the morning of the 13th.
+        Assert.Equal(new DateTime(2026, 10, 12, 19, 30, 0), receipt.IssuedAt);
+    }
+
+    private static TransactionReceiptBuilder CreateBuilder(IServiceProvider services = null)
     {
         var contacts = new Mock<ICustomerContactResolver>();
         contacts
@@ -288,12 +314,13 @@ public sealed class PaymentReceiptTests
                 Subtotal = request.Total - request.TaxAmount,
                 Status = request.Status,
                 Notes = request.Notes,
+                IssuedAt = request.IssuedAt,
             });
 
         return new TransactionReceiptBuilder(
             receipts.Object,
             contacts.Object,
-            new ServiceCollection().BuildServiceProvider(),
+            services ?? new ServiceCollection().BuildServiceProvider(),
             new PassThroughStringLocalizer<TransactionReceiptBuilder>());
     }
 

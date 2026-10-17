@@ -51,10 +51,8 @@ dotnet --version  # Should show 10.0.x
 # Install npm dependencies - TAKES 2-3 MINUTES, NEVER CANCEL
 npm install
 
-# Build frontend assets - TAKES 4 SECONDS
+# Build frontend assets - TAKES ABOUT 6 SECONDS
 npm run rebuild
-# OR
-gulp rebuild
 ```
 
 #### .NET Solution Build (Network Dependent)
@@ -289,7 +287,8 @@ tests/
 - `Directory.Packages.props` - Centralized NuGet package versions
 - `NuGet.config` - Package source configuration (includes CloudSmith feed for Orchard Core previews)
 - `package.json` - npm dependencies and scripts
-- `gulpfile.js` - Asset build configuration
+- `.scripts/assets/` - Asset build CLI (Vite); see `docs/engineering/assets-pipeline.md`
+- `.node-version` - The Node.js major the asset build and CI use
 - `.editorconfig` - Code style and formatting rules
 
 ## Common Development Tasks
@@ -375,7 +374,7 @@ whenever a video is asked for, and never change its specification for a single v
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories
-- TypeScript/JavaScript files are built using the gulp pipeline
+- JavaScript and SCSS files are built with Vite by the asset CLI in `.scripts/assets/`
 - Run `npm run rebuild` after any frontend changes
 - Use `npm run watch` for development with auto-rebuild
 
@@ -405,11 +404,11 @@ The dividing rule: if it can be done in the browser, it belongs in the User Manu
 2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 3. **Validate the docs** – run `npm run check:manuals` and `npm run build` in `src/CrestApps.Docs`. The build fails on any broken link or anchor, and CI runs both checks; failing to validate locally will cause workflow failures.
 
-### Documentation Screencasts
+### Documentation Videos
 
-- **Only produce screencasts when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
-- When asked to record documentation screencasts, capture them **full-screen at 1600×1000** resolution to match the existing docs videos.
-- Deliver screencasts as **MP4** (`H.264`, even width/height, `-pix_fmt yuv420p`) stored under `src/CrestApps.Docs/static/img/docs/`, and embed them with an HTML `<video controls preload="metadata" width="100%">` player rather than a GIF.
+- **Only produce videos when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
+- **Never commit a video file** (`.mp4`, `.webm`, or its captions and poster) to this repository. Videos are published on the CrestApps YouTube channel, and their sources (storyboards, recorder scenes, YouTube metadata) live in the private `CrestApps/CrestApps.Videos` repository, together with the `crestapps-video-producer` skill that makes them.
+- Embed a video by name with the `<YouTube video="<slug>" title="..." />` component (`src/CrestApps.Docs/src/components/YouTube`), available on every page without an import. The slug is the video's folder name in `CrestApps.Videos`; its YouTube id comes from `src/CrestApps.Docs/src/data/videos.json`, which the `CrestApps.Videos` publish workflow updates by pull request. Until the slug is in that map the embed renders nothing, so a page can include it before the video is published. To show one chapter of a longer video, add `start` and `end` in seconds: `<YouTube video="<slug>" title="..." start={99} end={146} />`.
 
 ## Documentation expectations
 
@@ -427,7 +426,7 @@ When a change affects public behavior, configuration, setup, or project guidance
 ### Build Issues
 - **NU1301 errors**: Network connectivity to CloudSmith required, expected in restricted environments
 - **SDK version errors**: Ensure .NET 10.0.100+ is installed via `dotnet --version`
-- **npm install failures**: Node.js 15+ required (check with `node --version`)
+- **npm install failures**: Node.js 24 required, as pinned in `.node-version` (check with `node --version`)
 
 ### Runtime Issues  
 - **Database**: Uses SQLite by default, no external DB required for development
@@ -628,44 +627,54 @@ The CI pipeline validates builds on both Ubuntu and Windows, so test locally on 
 ## Frontend Development Guidelines
 
 ### Asset Management
-- Frontend assets are managed using **Gulp** build system
-- Assets are defined in `Assets.json` files within each module
-- Built assets are output to `wwwroot/` directory
+- Frontend assets are built by a small CLI in `.scripts/assets/` that runs **Vite**, the only bundler
+- Asset groups are defined in `Assets.json` files within each module (`action`, `name`, `source`, `dest`, optional `tags` and `global`)
+- Built assets are output to the module's `wwwroot/` directory and committed
+- The repository is one npm workspace: a module that ships a third-party library declares it in its own `package.json`, and `npm install` at the root installs every module
+- Full reference: `docs/engineering/assets-pipeline.md`
 
 ### Build Commands
 ```bash
 # Install dependencies (run once or when package.json changes)
 npm install
 
-# Build assets incrementally (only changed files)
+# Build asset groups whose sources changed (content-hashed)
 npm run build
+
+# Build only some groups, by name or by tag (every group is tagged with its module, e.g. Telephony)
+npm run build -- -n soft-phone.js
+npm run build -- -t Telephony
 
 # Full rebuild (all assets)
 npm run rebuild
 
-# Watch mode for development (auto-rebuild on changes)
+# Watch mode for development (auto-rebuild on changes; copies do not watch)
 npm run watch
+
+# List the selected groups and the files each one writes, without building
+npm run dry-run -- -t vendor
+
+# Lint every module's scripts (ESLint), and type-check the ones marked // @ts-check (TypeScript, no output)
+npm run lint
+npm run check
 ```
 
 ### Supported Asset Types
-- **JavaScript**: Transpiled with Babel, minified with Terser
-- **TypeScript**: Compiled to JavaScript
-- **SCSS/Sass**: Compiled to CSS with Dart Sass
-- **LESS**: Compiled to CSS
-- **CSS**: PostCSS with RTL support
+- **JavaScript**: Bundled by Vite (Rolldown) into a classic IIFE script, minified with Oxc; targets modern browsers
+- **SCSS/Sass and CSS**: Compiled by Vite with Dart Sass, minified with Lightning CSS
+- **Vendored libraries**: `copy` groups copy a package's own `dist` files; a `vite` group with `global` bundles an ES module or CommonJS package into a script that sets `window[global]`
 
 ### Asset Build Process
 1. Source files are in module `Assets/` directory
-2. Gulp processes files based on `Assets.json` configuration
-3. Compiled output goes to module `wwwroot/` directory
-4. Source maps are generated for debugging
-5. Minification is applied to production builds
+2. Each `vite` group's `source` is its main script; helpers are ES modules the script `import`s, and the build follows the imports. Never attach helpers to a `window` namespace; a bundle offers other bundles only a deliberate page API such as `window.telephonyClient`
+3. Each group writes its readable `dest` file and a `.min` sibling, the pair the resource manifest's `SetUrl` points at
+4. Every built file is written with LF line endings, and only when its contents changed
 
 ### Frontend Best Practices
 - Always run `npm run rebuild` after modifying frontend code
 - Commit compiled assets (wwwroot) along with source files
 - Use `npm run watch` during active development
-- Check for TypeScript/JavaScript errors before committing
+- Run `npm run lint` and `npm run check` before committing; CI fails on any error
 - Follow existing patterns for module-specific assets
 
 ## Pull Request Guidelines

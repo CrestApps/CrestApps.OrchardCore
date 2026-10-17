@@ -28,50 +28,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// </remarks>
 public sealed partial class RealtimeVoiceConversationRunner
 {
-    /// <summary>
-    /// Tells the session it is on a telephone, not a headset.
-    /// </summary>
-    /// <remarks>
-    /// The provider's default turn detection assumes clean, close-mic audio. A call is 8 kHz, companded, and
-    /// carries line noise and whatever leaks back from the far end's earpiece — so on the defaults the model
-    /// decides the caller has started and stopped talking when they have done neither. Live calls showed it
-    /// answering phantom turns ("Thank you." transcribed before anyone had spoken), transcribing the same
-    /// utterance twice, and restarting its own question mid-sentence — which reads as the assistant talking to
-    /// itself and never letting the caller speak.
-    /// <para>
-    /// Interruption stays on: being talked over is the other half of sounding like a machine.
-    /// </para>
-    /// <para>
-    /// What this can and cannot change depends on the detector the session runs, and that is the tenant's
-    /// realtime transport setting, not ours. Under the default (<c>semantic_vad</c>, eagerness <c>auto</c>) the
-    /// Core conversation re-sends the semantic detector and <em>ignores</em> the silence and threshold passed here —
-    /// semantic detection has neither. They only take effect on a tenant configured for <c>server_vad</c>. So on a
-    /// default tenant this call keeps interruption on and nothing else; the phantom turns the comments above
-    /// describe are held back by <see cref="CallerEchoGuard"/> before the audio reaches the detector at all.
-    /// </para>
-    /// </remarks>
-    private async Task ApplyTelephonyTurnDetectionAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
-    {
-        try
-        {
-            // The detector type is left as the session already has it: the valid values belong to the provider,
-            // and naming one here would be a guess that fails closed on a live call. Core offers no way to set
-            // semantic eagerness or input noise reduction from here, which is why neither is tuned.
-            await conversation.UpdateTurnDetectionAsync(
-                allowInterruption: true,
-                silenceDurationMs: TelephonySilenceDurationMilliseconds,
-                vadThreshold: TelephonyVadThreshold,
-                turnDetectionType: null,
-                cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            // Tuning is an improvement, not a precondition. A provider that will not accept it still carries
-            // the call on its defaults.
-            _logger.LogWarning(ex, "Could not apply telephony turn detection to a realtime voice session; the provider defaults stay in effect.");
-        }
-    }
-
     private async Task PumpCallerAudioAsync(
         IContactCenterVoiceMediaSession media,
         LiveConversation live,
@@ -107,6 +63,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                 var assistantPlaysUntil = Interlocked.Read(ref _assistantSpeechEndsTicks);
                 guard.Process(audio, now, assistantPlaysUntil, released);
                 _replyListener?.Hear(audio.Span, now, assistantPlaysUntil);
+
+                // The machine's greeting, as the line carries it: its message is left once this has been quiet for a
+                // moment. Voice heard in this frame is stamped with this instant.
+                if (_replyListener?.LastVoiceTicks == now)
+                {
+                    HeardTheMachine();
+                }
 
                 // Recorded before the audio goes to the model, so that by the time the provider reports the caller
                 // starting, the other pump already knows it was a voice over the assistant and not its echo.
@@ -371,6 +334,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                             break;
                         }
 
+                        // A machine answered, and what the model says to its greeting stays off the line: the
+                        // recording would keep it. Only the message asked for once the greeting is over plays.
+                        if (!MayReachTheLine())
+                        {
+                            break;
+                        }
+
                         // The rest of a line the caller talked over. The model had produced more of it than was
                         // queued when they started, and playing it now would restart the assistant mid-sentence
                         // on a line that had just been cleared for them.
@@ -442,6 +412,23 @@ public sealed partial class RealtimeVoiceConversationRunner
                             _logger.LogWarning(ex, "Could not commit the usage of a realtime response on activity '{ActivityId}'; the call carries on.", activityId);
                         }
 
+                        // The message asked for on a machine has been said. It is the last thing the recording hears:
+                        // the call is ended as the end-call tool ends it on voicemail, and anything the model says
+                        // next stays off the line.
+                        if (TheVoicemailMessageIsOver())
+                        {
+                            goodbyeSaid = true;
+
+                            if (_logger.IsEnabled(LogLevel.Information))
+                            {
+                                _logger.LogInformation(
+                                    "The assistant left its message on the machine that answered activity '{ActivityId}'; the call is being ended.",
+                                    activityId);
+                            }
+
+                            EndTheCallOnVoicemail(context);
+                        }
+
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:
@@ -452,23 +439,28 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // The first start since the last transcript: a pause mid-sentence starts speech again, but
                         // the line it belongs to began at the first one.
                         callerLineStartedUtc ??= _clock.UtcNow;
+                        HeardTheMachine();
 
                         // First, while it is still known whether the line being talked over is the closing one:
                         // a caller talking over the assistant has to stop hearing it, and the provider stopping
-                        // the model does not do that on its own.
+                        // the model does not do that on its own. On a machine the message is the closing line.
                         await StopSpeakingWhenTalkedOverAsync(
                             media,
                             conversation,
                             bargeIn,
-                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested,
+                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested || OnAMachine(),
                             activityId,
                             cancellationToken);
 
-                        // They are talking, so the call is not over after all and the assistant may answer.
-                        goodbyeSaid = false;
-                        closingRequested = false;
-                        Volatile.Write(ref spokeSinceCaller, false);
-                        Volatile.Write(ref _goodbyeAlreadySaid, false);
+                        // They are talking, so the call is not over after all and the assistant may answer. Not on
+                        // a machine: its tone, and the rest of its greeting, are not somebody taking the call back.
+                        if (!OnAMachine())
+                        {
+                            goodbyeSaid = false;
+                            closingRequested = false;
+                            Volatile.Write(ref spokeSinceCaller, false);
+                            Volatile.Write(ref _goodbyeAlreadySaid, false);
+                        }
 
                         // The first syllable, not the finished sentence. A transcript only exists once the caller
                         // has stopped talking and the provider has transcribed them, which is seconds later --
@@ -485,6 +477,15 @@ public sealed partial class RealtimeVoiceConversationRunner
                         {
                             assistantLineStartedUtc = null;
                             ResponseInFlight(true);
+
+                            // The response asked for once a machine's greeting ended is the message, and the one
+                            // line the machine is let hear -- whatever the model decided before it, including
+                            // ending the call on a message that was kept off the line.
+                            if (TheVoicemailMessageIsStarting())
+                            {
+                                goodbyeSaid = false;
+                                Volatile.Write(ref _goodbyeAlreadySaid, false);
+                            }
                         }
 
                         // The detector commits the caller's turn once it hears them stop, which is the only end of
@@ -495,6 +496,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                             awaitingFirstAudio = true;
                             _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
                             ProviderHeardCaller(turnOpen: false);
+                            HeardTheMachine();
                             await LeaveOpeningTurnDetectionAsync(conversation, cancellationToken);
                         }
 
@@ -519,7 +521,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                         if (!string.IsNullOrWhiteSpace(conversationEvent.Text))
                         {
                             Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
-                            context.CustomerAnswered?.Invoke();
+                            HeardTheMachine();
+
+                            // A recording's greeting is not the customer answering.
+                            if (!OnAMachine())
+                            {
+                                context.CustomerAnswered?.Invoke();
+                            }
                         }
 
                         // Recorded so the call is concluded, summarized and dispositioned exactly the way a
@@ -570,6 +578,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                         var spoken = assistantText.Length > 0 ? assistantText.ToString() : conversationEvent.Text;
                         assistantText.Clear();
 
+                        // A line cut off before it had any words says nothing about the call's language, and taking
+                        // the slot would keep every later line out of it.
+                        if (!string.IsNullOrWhiteSpace(spoken))
+                        {
+                            Interlocked.CompareExchange(ref _openingLine, spoken, null);
+                        }
+
                         var lineStartedUtc = assistantLineStartedUtc;
                         assistantLineStartedUtc = null;
 
@@ -580,12 +595,24 @@ public sealed partial class RealtimeVoiceConversationRunner
                             break;
                         }
 
+                        // Nor is a reply to a machine's greeting, which was kept off the line: see the audio above.
+                        if (!MayReachTheLine())
+                        {
+                            utteranceInFlight = false;
+
+                            break;
+                        }
+
                         await StorePromptAsync(context, ChatRole.Assistant, spoken, lineStartedUtc, cancellationToken);
 
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
                         Volatile.Write(ref lastAssistantLine, spoken);
-                        Volatile.Write(ref _lastAssistantLine, spoken);
+                        if (!string.IsNullOrWhiteSpace(spoken))
+                        {
+                            Volatile.Write(ref _lastAssistantLine, spoken);
+                        }
+
                         context.AssistantSaid?.Invoke(spoken);
 
                         // The line that was in flight when the call was closed is the goodbye, when it is one. It
@@ -715,74 +742,6 @@ public sealed partial class RealtimeVoiceConversationRunner
         // blocked agent presence heartbeats and other webhook deliveries until they timed out. Flushing per turn
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Says how long the caller waited for an answer, split into the two waits that make it up.
-    /// </summary>
-    /// <remarks>
-    /// A caller who says the assistant is slow to answer is hearing the sum of two things this side cannot see
-    /// otherwise: how long the provider's turn detector waited after they stopped before taking the turn as
-    /// finished, and how long the model then took to produce its first audio. Which one is long decides the fix --
-    /// a more eager detector, or a faster model -- so each answer logs both.
-    /// </remarks>
-    /// <param name="activityId">The call, already sanitized for the log.</param>
-    /// <param name="turnCommittedTicks">When the provider took the caller's turn as finished, in UTC ticks.</param>
-    private void LogAnswerLatency(string activityId, long turnCommittedTicks)
-    {
-        if (turnCommittedTicks == 0 || !_logger.IsEnabled(LogLevel.Information))
-        {
-            return;
-        }
-
-        var now = DateTime.UtcNow.Ticks;
-        var lastVoice = _replyListener?.LastVoiceTicks ?? 0;
-
-        // The caller's voice is only tracked once the assistant has finished, so a turn that began by talking over it
-        // has no end on the line to measure from.
-        var detectorWait = lastVoice > 0 && lastVoice <= turnCommittedTicks && turnCommittedTicks - lastVoice < TimeSpan.TicksPerSecond * 10
-            ? (int)((turnCommittedTicks - lastVoice) / TimeSpan.TicksPerMillisecond)
-            : -1;
-
-        _logger.LogInformation(
-            "Answered the caller on activity '{ActivityId}': the turn was taken as finished {DetectorWaitMilliseconds} ms after their voice stopped on the line (-1 when it began over the assistant), and the model's first audio came {ModelMilliseconds} ms after that.",
-            activityId,
-            detectorWait,
-            (int)((now - turnCommittedTicks) / TimeSpan.TicksPerMillisecond));
-    }
-
-    /// <summary>
-    /// Says so when the provider reports the caller starting well after their voice was heard on the line.
-    /// </summary>
-    /// <remarks>
-    /// Live, a caller's "yes" reached the session as it was said and the provider reported it four and a half
-    /// seconds later; the assistant's own request to have it repeated was refused six seconds after it was sent,
-    /// as colliding with the reply to that "yes". To the caller it was eight seconds of silence and then the line
-    /// going dead, and nothing in the log said the provider was behind. The provider normally reports a voice
-    /// within half a second; this measures it against the line, so a slow session shows as one.
-    /// </remarks>
-    /// <param name="activityId">The call, already sanitized for the log.</param>
-    private void LogProviderRunningBehind(string activityId)
-    {
-        var heardOnLine = _replyListener?.LatestReplyStartTicks ?? 0;
-
-        // Only a reply the provider has not reported yet: once it has, later starts are the same reply resuming.
-        if (heardOnLine == 0 || heardOnLine <= Interlocked.Read(ref _providerHeardCallerTicks))
-        {
-            return;
-        }
-
-        var lag = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - heardOnLine);
-
-        if (lag < ProviderLagWorthReporting || !_logger.IsEnabled(LogLevel.Information))
-        {
-            return;
-        }
-
-        _logger.LogInformation(
-            "The realtime session on activity '{ActivityId}' reported the caller starting {LagMilliseconds} ms after their voice was heard on the line; it is running behind the call's audio.",
-            activityId,
-            (int)lag.TotalMilliseconds);
     }
 
     // Whether the model ended the call on voicemail, where its message is the closing line.

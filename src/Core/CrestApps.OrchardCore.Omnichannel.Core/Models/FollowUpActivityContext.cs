@@ -28,6 +28,20 @@ public sealed class FollowUpActivityContext
     public bool HasNamedOwner { get; set; }
 
     /// <summary>
+    /// Gets or sets the most attempts the action creating the follow-up allows, such as a "Try again" action's maximum.
+    /// When set it is the limit, in place of any limit the work's carrier has of its own; <see langword="null"/> leaves
+    /// the carrier's limit, such as the dialer profile's, in force.
+    /// </summary>
+    public int? MaxAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether whatever created the follow-up chose when it is due, such as a date the person picked or a
+    /// "Try again" action's default schedule hours. When <see langword="false"/> the follow-up's due time is only a
+    /// placeholder, and the work's carrier may set its own wait in its place, such as the dialer profile's retry delay.
+    /// </summary>
+    public bool HasChosenSchedule { get; set; }
+
+    /// <summary>
     /// Gets or sets whether a handler refused the follow-up, so it is not created.
     /// </summary>
     public bool Cancel { get; set; }

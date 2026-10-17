@@ -1,7 +1,7 @@
 {
   "name": "CommerceStarter",
   "displayName": "Commerce starter",
-  "description": "Turns on the Commerce suite and creates a Membership subscription plan that grants a Member role, so a new site can take a real recurring payment without wiring anything by hand.",
+  "description": "Turns on the Commerce suite and creates a Membership subscription plan that grants a Member role, and a Plans page at /plans that lists it, so a new site can take a real recurring payment without wiring anything by hand.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -13,6 +13,8 @@
       "name": "feature",
       "enable": [
         "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Products.Listing",
+        "OrchardCore.Autoroute",
         "CrestApps.OrchardCore.Checkout",
         "CrestApps.OrchardCore.Transactions",
         "CrestApps.OrchardCore.PayLater",
@@ -61,11 +63,27 @@
               }
             },
             {
+              "PartName": "AutoroutePart",
+              "Name": "AutoroutePart",
+              "Settings": {
+                "ContentTypePartSettings": {
+                  "Position": "1"
+                },
+                "AutoroutePartSettings": {
+                  "AllowCustomPath": true,
+                  "Pattern": "plans/{{ ContentItem | display_text | slugify }}"
+                }
+              }
+            },
+            {
               "PartName": "ProductPart",
               "Name": "ProductPart",
               "Settings": {
                 "ContentTypePartSettings": {
                   "Position": "1"
+                },
+                "ProductPageSettings": {
+                  "ShowDetails": true
                 }
               }
             },
@@ -96,6 +114,9 @@
           "TitlePart": {
             "Title": "Membership"
           },
+          "AutoroutePart": {
+            "Path": "plans/membership"
+          },
           "ProductPart": {
             "Price": 10.0,
             "Currency": "USD"
@@ -107,6 +128,33 @@
           },
           "SubscriptionEntitlementPart": {
             "RoleNames": [ "Member" ]
+          }
+        },
+        {
+          "ContentType": "ProductListing",
+          "ContentItemId": "commercestarterplanslisting",
+          "ContentItemVersionId": "commercestarterplanslistv0",
+          "DisplayText": "Plans",
+          "Latest": true,
+          "Published": true,
+          "TitlePart": {
+            "Title": "Plans"
+          },
+          "AutoroutePart": {
+            "Path": "plans"
+          },
+          "ProductListingPart": {
+            "ContentTypes": [ "MembershipPlan" ],
+            "ShowFilters": false,
+            "AutomaticFacets": true,
+            "ShowSorting": false,
+            "AutomaticSorts": true,
+            "DefaultSort": "recommended",
+            "DefaultView": "Grid",
+            "AllowViewSwitching": false,
+            "PageSizes": [ 12 ],
+            "DefaultPageSize": 12,
+            "EnableKeywordSearch": false
           }
         }
       ]

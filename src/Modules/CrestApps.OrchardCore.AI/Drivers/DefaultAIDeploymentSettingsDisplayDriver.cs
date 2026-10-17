@@ -51,6 +51,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultSpeechToTextDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultSpeechToTextDeploymentName);
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
+            model.DefaultRealtimeDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultRealtimeDeploymentName);
 
             model.ChatDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Chat);
             model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
@@ -59,6 +60,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
             model.SpeechToTextDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.SpeechToText);
             model.TextToSpeechDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.TextToSpeech);
+            model.RealtimeDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Realtime);
         }).Location("Content:2%Default Deployments;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -83,6 +85,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
         settings.DefaultSpeechToTextDeploymentName = model.DefaultSpeechToTextDeploymentName;
         settings.DefaultTextToSpeechDeploymentName = model.DefaultTextToSpeechDeploymentName;
         settings.DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim();
+        settings.DefaultRealtimeDeploymentName = model.DefaultRealtimeDeploymentName;
 
         return Edit(site, settings, context);
     }

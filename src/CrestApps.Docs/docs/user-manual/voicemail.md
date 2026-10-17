@@ -25,9 +25,7 @@ Your greeting is what callers hear before they leave you a message.
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the My voicemail greeting page with record, upload and preview controls">
-  <source src="/img/docs/um-voicemail-greeting.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the My voicemail greeting page with record, upload and preview controls" start={266} end={285} />
 
 1. Open **Interaction Center > My voicemail greeting**.
 2. Choose how to add the greeting:
@@ -52,7 +50,7 @@ You can play and delete exactly the voicemails in your own Voicemail tab. Nobody
 | --- | --- |
 | A call to you (your extension, or your personal line) that you did not answer | Yours. |
 | You clicked **Voicemail** on a ringing call | Yours. |
-| A queue call offered to you that you let ring out, on a queue whose **Unanswered offer action** is **Send to voicemail** | Yours, whatever the entry point says. |
+| A queue call offered to you that you let ring out, or that you accepted while your phone could not be reached, on a queue whose **Unanswered offer action** is **Send to voicemail** | Yours, whatever the entry point says. |
 | A queue call that reached the queue's voicemail after its maximum wait, after an offer to you ran out | Yours, as the last agent it was offered to. |
 | Any other queue call that reached voicemail (the caller chose voicemail in the phone menu, the queue was full, or they waited too long before anyone was offered the call) | The agent set as the entry point's **Voicemail inbox**. With nobody set, the message is recorded but is in nobody's inbox. |
 
@@ -72,9 +70,7 @@ A queue's shared voicemail box lets a team share the messages left on a line: an
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the shared voicemail list with queue and status filters and the claim, call back and mark done actions">
-  <source src="/img/docs/um-shared-voicemail.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the shared voicemail list with queue and status filters and the claim, call back and mark done actions" start={288} end={322} />
 
 1. Open **Interaction Center > Shared voicemail**.
 2. Filter by queue (*All my queues* by default) and status: **Open (new and claimed)**, **New**, **Claimed**, **Done** or **All**, then click **Filter**.

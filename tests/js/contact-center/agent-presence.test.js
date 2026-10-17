@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
-
-const { presenceLabel, pendingPresenceLabel, breakChoiceLabel, isOwnPresence, isOwnOfferNotification, normalizePresenceStatus } = globalThis.CrestAppsContactCenter;
+import {
+    agentStatusLabel,
+    breakChoiceLabel,
+    dialPhaseHint,
+    dialPhaseLabel,
+    normalizeDialPhase,
+    isOwnOfferNotification,
+    isOwnPresence,
+    normalizePresenceStatus,
+    pendingPresenceLabel,
+    presenceLabel,
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
 
 // Live: a colleague's extension call was answered by itself, silently, ~20 s after this user's phone heard that
 // ANOTHER agent had accepted a Contact Center offer. The server sends "offer revoked" to the agent, to the offer's queue
@@ -129,5 +138,50 @@ describe('normalizePresenceStatus', () => {
         expect(normalizePresenceStatus('Busy')).toBe('Busy');
         expect(normalizePresenceStatus(5)).toBe('Break');
         expect(normalizePresenceStatus(undefined)).toBe('Offline');
+    });
+});
+
+// Live: a power dial with answering-machine screening held the agent Busy from the moment it was placed, so the bar read
+// "On a call" while the customer only rang and again while their answer was screened; the tester did not answer their
+// phone. The status says what the dialer is doing until the agent is connected.
+describe('agentStatusLabel', () => {
+    it('says what the dialer is doing while it places a call for the held agent', () => {
+        expect(agentStatusLabel({ status: 'Busy' }, { phase: 'Dialing' })).toBe('Dialing…');
+        expect(agentStatusLabel({ status: 'Busy' }, { phase: 'Screening' })).toBe('Screening…');
+        expect(agentStatusLabel({ status: 'Reserved' }, { phase: 'Connecting' })).toBe('Connecting…');
+    });
+
+    it('reads "On a call" only once the agent is connected', () => {
+        expect(agentStatusLabel({ status: 'Busy' }, null)).toBe('On a call');
+        expect(agentStatusLabel({ status: 'Busy' }, { phase: 'None' })).toBe('On a call');
+    });
+
+    // A released attempt sends the agent straight back to ready; a pending dial read late must not hide that.
+    it('shows any other state as it is', () => {
+        expect(agentStatusLabel({ status: 'Available' }, { phase: 'Dialing' })).toBe('Available');
+        expect(agentStatusLabel({ status: 'WrapUp' }, { phase: 'Screening' })).toBe('Wrap-up');
+    });
+
+    it('uses the localized labels', () => {
+        expect(agentStatusLabel({ status: 'Busy' }, { phase: 'Screening' }, { dialPhaseScreening: 'Filtrage…' })).toBe('Filtrage…');
+    });
+});
+
+describe('dialPhaseLabel and dialPhaseHint', () => {
+    it('reads the numeric form of the phase', () => {
+        expect(normalizeDialPhase({ phase: 2 })).toBe('Screening');
+        expect(normalizeDialPhase({ phase: '1' })).toBe('Dialing');
+        expect(normalizeDialPhase({ phase: 0 })).toBe('');
+    });
+
+    it('is empty without a dial', () => {
+        expect(dialPhaseLabel(null)).toBe('');
+        expect(dialPhaseHint(undefined)).toBe('');
+        expect(dialPhaseLabel({ phase: 'Bogus' })).toBe('');
+    });
+
+    it('tells the agent to wait while the answer is screened', () => {
+        expect(dialPhaseHint({ phase: 'Screening' })).toMatch(/answering machine/);
+        expect(dialPhaseHint({ phase: 'Dialing' }, { dialPhaseDialingHint: 'Appel en cours' })).toBe('Appel en cours');
     });
 });

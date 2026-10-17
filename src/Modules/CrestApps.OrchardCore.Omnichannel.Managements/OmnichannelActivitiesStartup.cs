@@ -62,8 +62,11 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
 
         services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
         services.AddScoped<DefaultContactActivityBatchLoader>();
+        services.AddSingleton<ActivityBatchLoadRegistry>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ActivityBatchLoadWatchdogBackgroundTask>());
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ActivityDialerProfileIndexBackfillBackgroundTask>());
 
         // Shared with the Contact Center's outbound screening, so the loader and the dialler answer "may we reach
         // them?" the same way. Whichever feature registers it first provides it.

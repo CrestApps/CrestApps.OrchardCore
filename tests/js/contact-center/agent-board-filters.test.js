@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-board-filters.js';
-
-const {
+import {
+    agentBoardFiltersActive,
     agentStatusGroup,
     filterSupervisorAgents,
     normalizeAgentBoardFilters,
-    agentBoardFiltersActive,
-} = globalThis.CrestAppsContactCenter;
+} from '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-board-filters.js';
 
 const agent = overrides => ({
     agentId: 'agent-1',

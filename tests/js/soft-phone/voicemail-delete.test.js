@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js';
-
-const {
-    voicemailDeleteFailureReason,
+import {
     deleteVoicemailsInTurn,
-    voicemailDeleteFailureText,
     describeVoicemailDeleteFailures,
-} = globalThis.CrestAppsSoftPhone;
+    voicemailDeleteFailureReason,
+    voicemailDeleteFailureText,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/voicemail-delete.js';
 
 const answer = (status, extra) => Object.assign({ status, ok: status >= 200 && status < 300, type: 'basic', redirected: false }, extra);
 

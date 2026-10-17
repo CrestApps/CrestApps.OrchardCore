@@ -1,0 +1,34 @@
+@model OrderConfirmationViewModel
+
+@*
+    The order number on the checkout's confirmation page. A guest gets a link to the order, also in their confirmation
+    email, and an invitation to create an account.
+*@
+
+<div class="alert alert-light border text-center mb-4" role="status">
+    <div class="small text-muted">@T["Order number"]</div>
+    <div class="h4 mb-1 font-monospace">@Model.OrderNumber</div>
+    @if (Model.IsSignedIn)
+    {
+        <a asp-area="CrestApps.OrchardCore.Orders" asp-controller="OrdersAdmin" asp-action="Detail" asp-route-orderId="@Model.OrderId" class="small">@T["View your order"]</a>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Model.GuestOrderUrl))
+        {
+            <a href="@Model.GuestOrderUrl" class="small">@T["View your order"]</a>
+            <div class="small text-muted">@T["Keep this link to come back to your order."]</div>
+        }
+        else
+        {
+            <div class="small text-muted">@T["Keep this number if you need to contact us about your order."]</div>
+        }
+        @if (!string.IsNullOrEmpty(Model.RegisterUrl))
+        {
+            <div class="small mt-2">
+                @T["Create an account with the same email to see this order and future ones under My Orders."]
+                <a href="@Model.RegisterUrl">@T["Create an account"]</a>
+            </div>
+        }
+    }
+</div>

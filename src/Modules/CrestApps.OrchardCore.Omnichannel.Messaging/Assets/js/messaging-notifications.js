@@ -7,13 +7,22 @@
  * connection as presence, so an agent who is only browsing other admin pages does not count as being at the
  * workspace, and routed distribution does not push conversations at somebody with no inbox on screen.
  */
+import {
+    assignmentToastTitle,
+    classifyAssignment,
+    createRecentNotifications,
+    formatText,
+    notificationKey,
+    sameOriginUrl,
+} from './shared/messaging-state.js';
+import { createAttentionBadge } from './shared/messaging-attention-badge.js';
+
 (function (root) {
     'use strict';
 
-    var messaging = root.CrestAppsMessaging;
     var host = document.querySelector('[data-messaging-notifications]');
 
-    if (!messaging || !host) {
+    if (!host) {
         return;
     }
 
@@ -40,15 +49,15 @@
     var toastDelayMs = 8000;
 
     // A recipient can hear the same event through two of their groups; it is announced once.
-    var recent = messaging.createRecentNotifications(5000);
-    var badge = messaging.createAttentionBadge(host.getAttribute('data-attention-url'));
+    var recent = createRecentNotifications(5000);
+    var badge = createAttentionBadge(host.getAttribute('data-attention-url'));
 
     function conversationHref(conversationId) {
         if (!conversationId || !conversationUrlTemplate) {
             return null;
         }
 
-        return messaging.sameOriginUrl(
+        return sameOriginUrl(
             conversationUrlTemplate.replace('__ID__', encodeURIComponent(conversationId)),
             root.location.href);
     }
@@ -137,12 +146,12 @@
     function onInbound(notification) {
         badge.schedule();
 
-        if (!notification || !recent.isNew(messaging.notificationKey('inbound', notification))) {
+        if (!notification || !recent.isNew(notificationKey('inbound', notification))) {
             return;
         }
 
         showToast(
-            notification.contactAddress ? messaging.formatText(newMessageFromText, [notification.contactAddress]) : newMessageText,
+            notification.contactAddress ? formatText(newMessageFromText, [notification.contactAddress]) : newMessageText,
             notification.preview || '',
             conversationHref(notification.conversationId));
     }
@@ -150,14 +159,14 @@
     function onAssigned(notification) {
         badge.schedule();
 
-        var kind = messaging.classifyAssignment(notification, view);
+        var kind = classifyAssignment(notification, view);
 
         // A claim, a routed assignment or the agent's own transfer only changes the count.
-        if ((kind !== 'to-me' && kind !== 'to-queue') || !recent.isNew(messaging.notificationKey(kind, notification))) {
+        if ((kind !== 'to-me' && kind !== 'to-queue') || !recent.isNew(notificationKey(kind, notification))) {
             return;
         }
 
-        showToast(messaging.assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
+        showToast(assignmentToastTitle(kind, notification, transferTexts), '', conversationHref(notification.conversationId));
     }
 
     badge.start();

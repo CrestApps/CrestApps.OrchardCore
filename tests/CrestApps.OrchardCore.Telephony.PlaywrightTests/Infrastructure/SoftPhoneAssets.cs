@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
 using OrchardCore.ResourceManagement;
 
@@ -7,7 +5,7 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 
 /// <summary>
 /// Works out which scripts the browser harness has to load from the same sources the real widget uses: the module's
-/// resource manifest (what the page registers) and its <c>Assets.json</c> (what each served bundle is built from).
+/// resource manifest (what the page registers).
 /// <para>
 /// The harness used to carry its own hand-written copy of that list. When the soft phone grew helper files and new
 /// dependencies the copy did not, and the browser suite kept exercising a phone that no longer existed. Deriving the
@@ -15,7 +13,7 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests.Infrastructure;
 /// or the harness refuses to start.
 /// </para>
 /// </summary>
-public static partial class SoftPhoneAssets
+public static class SoftPhoneAssets
 {
     /// <summary>
     /// The script resource the soft phone widget registers (see <c>SoftPhoneWidgetPresenter.RegisterResources</c>).
@@ -121,44 +119,6 @@ public static partial class SoftPhoneAssets
         return path;
     }
 
-    /// <summary>
-    /// Every name each helper file of a served bundle exports on its shared namespace, read from the module's
-    /// <c>Assets.json</c> inputs, keyed by the input file. A bundle that is missing one of these was not rebuilt after
-    /// the helper was added or changed.
-    /// </summary>
-    public static IReadOnlyList<HelperExport> ReadHelperExports(string bundleOutput)
-    {
-        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(ModuleDirectory, "Assets.json")));
-        var group = document.RootElement.EnumerateArray()
-            .FirstOrDefault(element => element.GetProperty("output").GetString() == bundleOutput);
-
-        if (group.ValueKind == JsonValueKind.Undefined)
-        {
-            throw new InvalidOperationException($"Assets.json has no asset group for '{bundleOutput}'.");
-        }
-
-        var exports = new List<HelperExport>();
-
-        foreach (var input in group.GetProperty("inputs").EnumerateArray().Select(element => element.GetString()))
-        {
-            var source = File.ReadAllText(Path.Combine(ModuleDirectory, input));
-
-            foreach (Match alias in NamespaceAliasPattern().Matches(source))
-            {
-                var variable = alias.Groups["alias"].Value;
-                var ns = alias.Groups["namespace"].Value;
-                var exportPattern = new Regex(@"^\s*" + Regex.Escape(variable) + @"\.(?<name>[A-Za-z_$][\w$]*)\s*=(?!=)", RegexOptions.Multiline);
-
-                foreach (Match export in exportPattern.Matches(source))
-                {
-                    exports.Add(new HelperExport(input, ns, export.Groups["name"].Value));
-                }
-            }
-        }
-
-        return exports;
-    }
-
     private static void Visit(
         string name,
         IDictionary<string, IList<ResourceDefinition>> scripts,
@@ -220,16 +180,4 @@ public static partial class SoftPhoneAssets
         throw new DirectoryNotFoundException(
             $"Could not find {ModuleRelativePath} above {AppContext.BaseDirectory}. The browser harness serves the module's built scripts from the repository.");
     }
-
-    // var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
-    [GeneratedRegex(@"var\s+(?<alias>[A-Za-z_$][\w$]*)\s*=\s*root\.(?<namespace>[A-Za-z_$][\w$]*)\s*=\s*root\.\k<namespace>\s*\|\|\s*\{\s*\}")]
-    private static partial Regex NamespaceAliasPattern();
 }
-
-/// <summary>
-/// A name a helper file exports on a shared browser namespace.
-/// </summary>
-/// <param name="Input">The <c>Assets.json</c> input that defines it.</param>
-/// <param name="Namespace">The global namespace it is attached to.</param>
-/// <param name="Name">The exported name.</param>
-public sealed record HelperExport(string Input, string Namespace, string Name);

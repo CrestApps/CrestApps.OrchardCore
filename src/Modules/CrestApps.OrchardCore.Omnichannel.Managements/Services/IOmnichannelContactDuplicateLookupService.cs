@@ -1,7 +1,11 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 /// <summary>
-/// Looks up existing omnichannel contact phone numbers for duplicate detection during import.
+/// Looks up existing omnichannel contact phone numbers for duplicate detection during import. Every lookup reads only
+/// the records holding one of the numbers asked about; there is deliberately no way to read every stored number, which
+/// on a tenant with hundreds of thousands of records ran an import out of memory.
 /// </summary>
 public interface IOmnichannelContactDuplicateLookupService
 {
@@ -16,31 +20,17 @@ public interface IOmnichannelContactDuplicateLookupService
         CancellationToken cancellationToken);
 
     /// <summary>
-    /// Returns all normalized phone numbers currently stored across all omnichannel contacts.
-    /// Used to pre-load the full set for duplicate detection during import.
+    /// Returns, for each of <paramref name="phoneNumberKeys"/> that a stored record the predicate accepts holds, the
+    /// records that hold it. Only the records holding one of the keys are read, a bounded number of keys per query, so
+    /// an import checks a batch of rows without reading every stored record into memory.
     /// </summary>
+    /// <param name="phoneNumberKeys">The comparison keys of the numbers to look for.</param>
+    /// <param name="include">Decides, from the record's contact index row, whether its numbers count, or
+    /// <see langword="null"/> to count every record.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A set of all existing normalized phone numbers.</returns>
-    Task<HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Returns all normalized phone numbers currently stored across all omnichannel contacts,
-    /// along with the content item identifiers that own each number.
-    /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A mapping of normalized phone numbers to owning content item identifiers.</returns>
-    Task<Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Returns the normalized phone numbers of the stored records the predicate accepts, with the records that own
-    /// each number. An import uses it to compare against only the records its duplicate scope covers, such as
-    /// contacts but not leads.
-    /// </summary>
-    /// <param name="include">Decides, from the record's contact index row, whether its numbers count.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A mapping of normalized phone numbers to owning content item identifiers.</returns>
-    async Task<Dictionary<string, string[]>> GetExistingNormalizedPhoneNumberOwnersAsync(
-        Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include,
-        CancellationToken cancellationToken)
-        => await GetAllExistingNormalizedPhoneNumberOwnersAsync(cancellationToken);
+    /// <returns>A mapping of the matching keys to owning content item identifiers.</returns>
+    Task<Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(
+        IReadOnlyCollection<string> phoneNumberKeys,
+        Func<OmnichannelContactIndex, bool> include,
+        CancellationToken cancellationToken);
 }

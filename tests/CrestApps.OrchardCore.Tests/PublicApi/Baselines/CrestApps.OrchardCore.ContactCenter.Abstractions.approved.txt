@@ -166,6 +166,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string SharedVoicemailResolved = "SharedVoicemailResolved";
             public const string SupervisorChangedRecording = "SupervisorChangedRecording";
             public const string SupervisorEndedCall = "SupervisorEndedCall";
+            public const string SupervisorFreedAgent = "SupervisorFreedAgent";
             public const string SupervisorMessagedAgent = "SupervisorMessagedAgent";
             public const string SupervisorMonitorModeChanged = "SupervisorMonitorModeChanged";
             public const string SupervisorMonitorStarted = "SupervisorMonitorStarted";
@@ -284,8 +285,10 @@ namespace CrestApps.OrchardCore.ContactCenter
     public sealed class ContactCenterFeatureLifecycleOptions
     {
         public const int DefaultDrainTimeoutSeconds = 30;
+        public const int DefaultShutdownDrainTimeoutSeconds = 5;
         public ContactCenterFeatureLifecycleOptions() { }
         public int DrainTimeoutSeconds { get; set; }
+        public int ShutdownDrainTimeoutSeconds { get; set; }
     }
     public enum ContactCenterHandlerReplaySafety
     {
@@ -520,6 +523,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
         public bool AutoOpenActivity { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.DialAttemptPhase DialPhase { get; set; }
         public string Direction { get; set; }
         public string EventType { get; set; }
         public string InteractionId { get; set; }
@@ -662,6 +666,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string AgentEndpoint { get; set; }
         public string AgentId { get; set; }
         public string AgentUserId { get; set; }
+        public bool AnswerOnArrival { get; set; }
         public string InteractionId { get; set; }
         public string ProviderCallId { get; set; }
         public string ReplacesAgentLegId { get; set; }
@@ -686,6 +691,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string AgentId { get; set; }
         public int AgentLegTimeoutSeconds { get; set; }
         public string AgentUserId { get; set; }
+        public bool CallerAnswered { get; set; }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string PreDialedAgentLegId { get; set; }
@@ -838,6 +844,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public ContactCenterVoiceRecordingRequest() { }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.RecordingState PreviousState { get; set; }
         public string ProviderCallId { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.RecordingState State { get; set; }
     }
@@ -851,6 +858,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string Target { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferType TransferType { get; set; }
+    }
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+    public enum DialAttemptPhase
+    {
+        None = 0,
+        Dialing = 1,
+        Screening = 2,
+        Connecting = 3,
     }
     public enum DialerMode
     {

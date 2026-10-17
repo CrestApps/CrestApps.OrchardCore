@@ -1,0 +1,147 @@
+@using CrestApps.OrchardCore.Orders
+@using CrestApps.OrchardCore.Products.Core.Services
+
+@model OrderDetailViewModel
+
+@{
+    var order = Model.Order;
+    string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
+}
+
+<zone Name="Title">
+    <breadcrumb name="OrdersDetail" title="@T["Order {0}", order.OrderNumber]">
+        @if (Model.CanManage)
+        {
+            <breadcrumb-item id="OrdersIndex" action="Index" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" permission="@OrderPermissions.ManageOrders.Name">@T["Orders"]</breadcrumb-item>
+        }
+        else
+        {
+            <breadcrumb-item id="MyOrders" action="Mine" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders">@T["My Orders"]</breadcrumb-item>
+        }
+    </breadcrumb>
+</zone>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T.Plural(order.ItemCount, "1 item", "{0} items")</span>
+                @await Html.PartialAsync("_OrderStatus", order.Status)
+            </div>
+            <ul class="list-group list-group-flush">
+                @foreach (var line in order.Lines)
+                {
+                    <li class="list-group-item d-flex justify-content-between gap-3">
+                        <div>
+                            <div class="fw-semibold">@line.Title</div>
+                            <div class="small text-muted">
+                                @if (!string.IsNullOrEmpty(line.PriceName))
+                                {
+                                    <span>@line.PriceName · </span>
+                                }
+                                @if (!string.IsNullOrEmpty(line.Sku))
+                                {
+                                    <span>@T["SKU {0}", line.Sku] · </span>
+                                }
+                                <span>@T["{0} × {1}", line.Quantity, Format(line.UnitPrice)]</span>
+                            </div>
+                        </div>
+                        <div class="text-nowrap fw-semibold">@Format(line.LineTotal)</div>
+                    </li>
+                }
+            </ul>
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <span>@T["Subtotal"]</span>
+                    <span>@Format(order.Subtotal)</span>
+                </div>
+                @if (order.TaxAmount > 0)
+                {
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>@T["Tax"]</span>
+                        <span>@Format(order.TaxAmount.Value)</span>
+                    </div>
+                }
+                @if (order.Total.HasValue)
+                {
+                    <div class="d-flex justify-content-between fw-semibold border-top mt-2 pt-2">
+                        <span>@T["Total paid"]</span>
+                        <span>@Format(order.Total.Value)</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <dl class="mb-0">
+                    <dt>@T["Order number"]</dt>
+                    <dd>@order.OrderNumber</dd>
+                    <dt>@T["Placed"]</dt>
+                    <dd>@order.CreatedUtc.ToString("f")</dd>
+                    @if (order.PaidUtc.HasValue)
+                    {
+                        <dt>@T["Paid"]</dt>
+                        <dd>@order.PaidUtc.Value.ToString("f")</dd>
+                    }
+                    @if (order.BillingAddress is not null)
+                    {
+                        <dt>@T["Billed to"]</dt>
+                        <dd>
+                            @foreach (var line in await BillingLinesAsync(order.BillingAddress))
+                            {
+                                <div>@line</div>
+                            }
+                        </dd>
+                    }
+                    @if (Model.CanManage)
+                    {
+                        <dt>@T["Customer"]</dt>
+                        <dd>
+                            @if (!string.IsNullOrEmpty(order.CustomerName))
+                            {
+                                <div>@order.CustomerName</div>
+                            }
+                            @if (!string.IsNullOrEmpty(order.CustomerEmail))
+                            {
+                                <div><a href="mailto:@order.CustomerEmail">@order.CustomerEmail</a></div>
+                            }
+                            @if (!string.IsNullOrEmpty(order.CustomerPhone))
+                            {
+                                <div><a href="tel:@order.CustomerPhone">@order.CustomerPhone</a></div>
+                            }
+                            @if (string.IsNullOrEmpty(order.CustomerName) && string.IsNullOrEmpty(order.CustomerEmail))
+                            {
+                                <span class="text-muted">@(order.UserId is null ? T["A guest"] : T["A signed-in user"])</span>
+                            }
+                        </dd>
+                        @if (!string.IsNullOrEmpty(order.CheckoutSessionId))
+                        {
+                            <dt>@T["Checkout session"]</dt>
+                            <dd class="font-monospace small">@order.CheckoutSessionId</dd>
+                        }
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    // Printed the way the address's country writes it when the Addresses feature is on, plainly otherwise.
+    private async Task<IReadOnlyList<string>> BillingLinesAsync(CrestApps.OrchardCore.Addresses.Models.Address address)
+    {
+        var formatter = Context.RequestServices.GetService(typeof(CrestApps.OrchardCore.Addresses.Services.IAddressFormatter)) as CrestApps.OrchardCore.Addresses.Services.IAddressFormatter;
+
+        if (formatter is not null)
+        {
+            return await formatter.GetLinesAsync(address);
+        }
+
+        return new[] { address.Name, address.Company, address.AddressLine1, address.AddressLine2, string.Join(" ", new[] { address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrWhiteSpace(part))), address.Country }
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+    }
+}

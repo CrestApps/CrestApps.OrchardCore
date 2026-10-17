@@ -45,6 +45,10 @@ public class Startup : StartupBase
         services.AddNavigationProvider<AdminMenu>();
         services.AddScoped<IPermissionProvider, StripePermissionsProvider>();
 
+        // Lets a role that holds only the Stripe permission open Settings > Payments > Stripe,
+        // not just users who hold the global ManageSettings permission.
+        services.AddSiteSettingsPermission(StripeSettingsDisplayDriver.GroupId, StripePermissions.ManageStripeSettings);
+
         services.AddScoped<IStripeConnectService, StripeConnectService>();
         services.AddScoped<StripeWorkflowNotifier>();
         services.AddTransient<StripeApiFailureHandler>();

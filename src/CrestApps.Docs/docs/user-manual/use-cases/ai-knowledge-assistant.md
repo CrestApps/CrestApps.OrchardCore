@@ -18,9 +18,7 @@ When it is done:
 - if you want, an assistant that answers **only** from your knowledge and says so when it cannot find the answer;
 - the same knowledge available wherever that profile is used: the admin chat, the website widget, or an AI agent answering customers.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an AI data source from a site content index, restricting a profile to the indexed data and asking it a question">
-  <source src="/img/docs/ai-elasticsearch-datasource.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of creating an AI data source from a site content index, restricting a profile to the indexed data and asking it a question" start={260} end={351} />
 
 ## Before you start
 

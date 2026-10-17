@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-report.js';
-
-const {
-    planOfferCallReport,
-    rememberUnacceptedOfferCall,
+import {
+    rememberAcceptedOffer,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-leg.js';
+import {
+    UNACCEPTED_OFFER_CALL_TTL_MS,
     forgetUnacceptedOfferCall,
     isUnacceptedOfferCall,
-    rememberAcceptedOffer,
-    UNACCEPTED_OFFER_CALL_TTL_MS,
-} = globalThis.CrestAppsSoftPhone;
+    planOfferCallReport,
+    rememberUnacceptedOfferCall,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/offer-report.js';
 
 const now = 1_000_000;
 const ringing = { callId: 'call-2', reservationId: 'res-2', accepting: false };

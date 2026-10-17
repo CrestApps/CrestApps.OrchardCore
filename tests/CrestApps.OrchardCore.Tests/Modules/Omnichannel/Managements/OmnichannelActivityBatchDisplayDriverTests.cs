@@ -207,6 +207,12 @@ public sealed class OmnichannelActivityBatchDisplayDriverTests
     /// </summary>
     private sealed class StubDialerContributor : IActivityDialerContributor
     {
+        public Task<ActivityDialerCampaignMoveResult> MoveToCampaignAsync(string activityId, string campaignId, CancellationToken cancellationToken = default)
+            => Task.FromResult(ActivityDialerCampaignMoveResult.NotQueued);
+
+        public Task<IReadOnlySet<string>> GetActivitiesInFlightAsync(IEnumerable<string> activityIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlySet<string>>(new HashSet<string>(StringComparer.Ordinal));
+
         private readonly IReadOnlyCollection<ActivityDialerWaitingRecord> _waitingRecords;
 
         public StubDialerContributor(IReadOnlyCollection<ActivityDialerWaitingRecord> waitingRecords)

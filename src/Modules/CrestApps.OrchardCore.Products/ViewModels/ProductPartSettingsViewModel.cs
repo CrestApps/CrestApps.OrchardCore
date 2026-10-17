@@ -10,9 +10,23 @@ public class ProductPartSettingsViewModel
 
     public string DefaultCurrency { get; set; }
 
+    public ProductSalesMode SalesMode { get; set; }
+
+    public ProductPriceDisplay PriceDisplay { get; set; }
+
+    public string OnRequestLabel { get; set; }
+
+    public bool AllowPriceDisplayOverride { get; set; }
+
     [BindNever]
     public IEnumerable<SelectListItem> Types { get; set; }
 
     [BindNever]
     public IEnumerable<SelectListItem> Currencies { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> SalesModes { get; set; }
+
+    [BindNever]
+    public IEnumerable<SelectListItem> PriceDisplays { get; set; }
 }

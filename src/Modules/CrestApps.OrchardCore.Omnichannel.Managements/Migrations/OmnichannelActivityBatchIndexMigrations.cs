@@ -1,10 +1,11 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
-using YesSql;
 using YesSql.Sql;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
@@ -49,7 +50,14 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 4;
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
+            .CreateIndex(
+                "IDX_OmnichannelActivityBatchIndex_ItemId",
+                "ItemId",
+                "DocumentId"),
+            collection: OmnichannelConstants.CollectionName);
+
+        return 5;
     }
 
     /// <summary>
@@ -106,5 +114,21 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
             "ensure the 'CreatedUtc' column exists on the omnichannel activity batch index");
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the index a record is found by when it is read by its own identifier. Every catalog lookup by id
+    /// filters on <c>ItemId</c>, and no existing index leads with it, so each such read scanned the table.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityBatchIndex>(
+            SchemaBuilder,
+            "IDX_OmnichannelActivityBatchIndex_ItemId",
+            OmnichannelConstants.CollectionName,
+            "ItemId", "DocumentId");
+
+        return 5;
     }
 }

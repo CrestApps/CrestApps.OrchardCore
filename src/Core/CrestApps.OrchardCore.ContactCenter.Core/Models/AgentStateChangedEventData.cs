@@ -122,6 +122,9 @@ public static class AgentStateChangeSources
     /// <summary>A reservation ended without the work being taken: declined, expired, cancelled or compensated.</summary>
     public const string Released = "Released";
 
+    /// <summary>A supervisor released stale work the agent was holding and returned them to their ready state.</summary>
+    public const string StaleWorkReleased = "StaleWorkReleased";
+
     /// <summary>Wrap-up began when the call ended.</summary>
     public const string WrapUpStarted = "WrapUpStarted";
 
@@ -164,4 +167,7 @@ public static class AgentReleaseReasons
 
     /// <summary>Routing undid a reservation it could not complete, such as a dial that failed.</summary>
     public const string Compensated = "Compensated";
+
+    /// <summary>The agent accepted the offer, but the leg rung to their phone was refused or never answered.</summary>
+    public const string Unreachable = "Unreachable";
 }

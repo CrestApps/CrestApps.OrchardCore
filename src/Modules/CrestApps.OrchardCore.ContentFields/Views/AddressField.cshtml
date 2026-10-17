@@ -1,0 +1,26 @@
+@model CrestApps.OrchardCore.ContentFields.ViewModels.DisplayAddressFieldViewModel
+@using OrchardCore.ContentManagement.Metadata.Models
+@using OrchardCore.Mvc.Utilities
+@inject CrestApps.OrchardCore.Addresses.Services.IAddressFormatter AddressFormatter
+@{
+    var lines = Model.Field.Address is null
+        ? []
+        : await AddressFormatter.GetLinesAsync(Model.Field.Address);
+    var name = $"{Model.PartFieldDefinition.PartDefinition.Name}-{Model.PartFieldDefinition.Name}".HtmlClassify();
+}
+@if (lines.Count > 0)
+{
+    <div class="field field-type-addressfield field-name-@name">
+        <span class="name">@Model.PartFieldDefinition.DisplayName()</span>
+        <address class="value mb-0">
+            @for (var i = 0; i < lines.Count; i++)
+            {
+                @lines[i]
+                if (i < lines.Count - 1)
+                {
+                    <br />
+                }
+            }
+        </address>
+    </div>
+}

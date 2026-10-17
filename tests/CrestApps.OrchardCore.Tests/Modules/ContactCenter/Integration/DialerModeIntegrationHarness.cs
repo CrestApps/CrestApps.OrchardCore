@@ -141,7 +141,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// <summary>
     /// The provider reports a machine answered the screened call of the activity.
     /// </summary>
-    public async Task RaiseMachineAnswerAsync(string activityId)
+    public Task RaiseMachineAnswerAsync(string activityId)
+        => RaiseAnswerVerdictAsync(activityId, AnswerClassification.Machine);
+
+    /// <summary>
+    /// The provider reports who answered the screened call of the activity.
+    /// </summary>
+    public async Task RaiseAnswerVerdictAsync(string activityId, AnswerClassification classification)
     {
         var interaction = await FindInteractionByActivityAsync(activityId);
 
@@ -150,9 +156,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             ProviderName = ProviderName,
             ProviderCallId = interaction.ProviderInteractionId,
             State = VoiceCallState.Connected,
-            AnswerClassification = AnswerClassification.Machine,
+            AnswerClassification = classification,
             OccurredUtc = _clock.UtcNow,
-            IdempotencyKey = $"{interaction.ProviderInteractionId}:machine",
+            IdempotencyKey = $"{interaction.ProviderInteractionId}:{classification.ToString().ToLowerInvariant()}",
         }, TestContext.Current.CancellationToken);
 
         await DrainAsync();
@@ -180,7 +186,14 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     public async Task RaiseCallEndedAsync(string activityId)
     {
         await RaiseCallStateAsync(activityId, VoiceCallState.Ended, "ended");
+        await ReleaseEndedCallAsync(activityId);
+    }
 
+    /// <summary>
+    /// Releases the routing of the activity's ended call as the host's event handler does, when the harness registers it.
+    /// </summary>
+    public async Task ReleaseEndedCallAsync(string activityId)
+    {
         var interaction = await FindInteractionByActivityAsync(activityId);
         var synchronization = _provider.GetService<IProviderVoiceOfferSynchronizationService>();
 
@@ -260,7 +273,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// abandoned-call message, a voice provider that joins the agent through a leg of its own, and recording pacing and
     /// deadline schedulers. Off by default, so every other flow is exactly what it always was.
     /// </param>
-    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false, bool predictive = false)
+    /// <param name="releasesEndedCalls">
+    /// Whether a harness that is not predictive registers the release of an ended call's routing that the host's event
+    /// handlers run, so <see cref="ReleaseEndedCallAsync"/> can drive it. Off by default: without it an agent whose call
+    /// ended without them stays Busy until recovery, which is what the stuck-Busy tests rely on.
+    /// </param>
+    /// <param name="configure">Adds or replaces services of the harness, as a feature the host enables would.</param>
+    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null, bool durableEventHistory = false, bool predictive = false, bool releasesEndedCalls = false, Action<IServiceCollection> configure = null)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"cc-dialer-integration-{Guid.NewGuid():N}.db");
         var connectionString = busyTimeoutSeconds.HasValue
@@ -290,8 +309,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
         var session = store.CreateSession();
         var clock = new TestClock();
-        var shared = new HarnessShared(predictive);
-        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory, shared);
+        var shared = new HarnessShared(predictive) { ReleasesEndedCalls = releasesEndedCalls };
+        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock(), durableEventHistory, shared, configure);
 
         // Late-bind the harness scope executor and command processor to the built container so their deferred
         // work can resolve the real services.
@@ -619,6 +638,12 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         else
         {
             services.AddSingleton(Mock.Of<IDialerAbandonmentTracker>());
+
+            if (shared.ReleasesEndedCalls)
+            {
+                services.AddSingleton(sp => new Lazy<IContactCenterAuditRecorder>(sp.GetRequiredService<IContactCenterAuditRecorder>));
+                services.AddSingleton<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>();
+            }
         }
 
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();

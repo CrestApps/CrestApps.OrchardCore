@@ -82,7 +82,7 @@ internal static partial class AgentWorkspaceEndpoints
         };
     }
 
-    private static async Task<WorkspaceActiveInteractionViewModel> BuildActiveInteractionAsync(
+    private static async Task<(WorkspaceActiveInteractionViewModel ActiveInteraction, WorkspacePendingDialViewModel PendingDial)> BuildActiveInteractionAsync(
         AgentProfile profile,
         IReadOnlyCollection<Interaction> recentInteractions,
         DateTime now,
@@ -107,28 +107,53 @@ internal static partial class AgentWorkspaceEndpoints
             interaction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, now, wrapUpWindow, cancellationToken);
         }
 
+        // The agent is still held, but the attempt they were held for has ended: their release is on its way. Until it
+        // lands they keep seeing what the dialer was doing, never a call they were not on.
+        interaction ??= FindEndingDialAttempt(profile, recentInteractions, now);
+
         if (interaction is null)
         {
-            return null;
+            return default;
         }
 
         var activity = string.IsNullOrEmpty(interaction.ActivityItemId)
             ? null
             : await activityManager.FindByIdAsync(interaction.ActivityItemId, cancellationToken);
 
-        // While the dialer is still reaching the customer for an automatic dial, the call is the dialer's, not the
-        // agent's: the agent is only held for it, and sees it once a customer is connected to them.
-        if (DialerCallMetadata.IsAwaitingAgent(interaction) &&
-            AgentOfferKindHelper.FromActivitySource(activity?.Source) == AgentOfferKind.AutoDial)
-        {
-            return null;
-        }
-
         var queue = string.IsNullOrEmpty(interaction.QueueId)
             ? null
             : await queueManager.FindByIdAsync(interaction.QueueId, cancellationToken);
 
-        return new WorkspaceActiveInteractionViewModel
+        // While the dialer is still reaching the customer for an automatic dial, the call is the dialer's, not the
+        // agent's: the agent is only held for it. They see what the dialer is doing -- dialing, screening the answer,
+        // joining them -- and the call itself once a customer is connected to them.
+        if (DialerCallMetadata.IsAwaitingAgent(interaction) &&
+            AgentOfferKindHelper.FromActivitySource(activity?.Source) == AgentOfferKind.AutoDial)
+        {
+            var phase = DialerCallMetadata.GetAttemptPhase(interaction);
+
+            if (phase == DialAttemptPhase.None || (interaction.IsSettled && !IsHeldForDial(profile)))
+            {
+                return default;
+            }
+
+            return (null, new WorkspacePendingDialViewModel
+            {
+                InteractionId = interaction.ItemId,
+                Phase = phase,
+                CustomerLabel = await ResolveCustomerLabelAsync(activity, interaction.CustomerAddress, contentManager),
+                CustomerAddress = interaction.CustomerAddress,
+                QueueName = queue?.Name,
+                StartedUtc = interaction.StartedUtc,
+            });
+        }
+
+        if (interaction.IsSettled && DialerCallMetadata.IsAwaitingAgent(interaction))
+        {
+            return default;
+        }
+
+        return (new WorkspaceActiveInteractionViewModel
         {
             InteractionId = interaction.ItemId,
             ActivityItemId = interaction.ActivityItemId,
@@ -145,7 +170,48 @@ internal static partial class AgentWorkspaceEndpoints
             IsRecordingPaused = interaction.RecordingState == RecordingState.Paused,
             SupportsSecurePause = SupportsSecurePause(interaction, voiceProviderResolver),
             RecordingDisclosure = await ResolveOwedRecordingDisclosureAsync(interaction, httpContext, cancellationToken),
-        };
+        }, null);
+    }
+
+    // How long after an unconnected dialer attempt ends the agent's screens keep showing it while the agent's release
+    // is still on its way. The release follows the call's end within moments; this only bounds a release that never came.
+    private static readonly TimeSpan EndingDialAttemptWindow = TimeSpan.FromSeconds(30);
+
+    private static bool IsHeldForDial(AgentProfile profile)
+        => profile.PresenceStatus is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy;
+
+    // The dialer attempt the agent is still held for although it has ended: the newest of their calls, never connected
+    // to them, that ended after the agent last changed state. A state change since then -- the release, or the next
+    // reservation -- means the agent has moved on from it.
+    private static Interaction FindEndingDialAttempt(
+        AgentProfile profile,
+        IReadOnlyCollection<Interaction> recentInteractions,
+        DateTime now)
+    {
+        if (!IsHeldForDial(profile))
+        {
+            return null;
+        }
+
+        var latest = recentInteractions.FirstOrDefault();
+
+        if (latest is null ||
+            !latest.IsSettled ||
+            !DialerCallMetadata.IsAwaitingAgent(latest))
+        {
+            return null;
+        }
+
+        var endedUtc = latest.EndedUtc ?? latest.ModifiedUtc;
+
+        if (endedUtc is null ||
+            endedUtc.Value + EndingDialAttemptWindow < now ||
+            (profile.PresenceChangedUtc.HasValue && profile.PresenceChangedUtc.Value > endedUtc.Value))
+        {
+            return null;
+        }
+
+        return latest;
     }
 
     // The disclosure the agent reads out on a live call whose customer has not been told it is recorded: an outbound

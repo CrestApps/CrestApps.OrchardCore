@@ -33,7 +33,7 @@ Payment options are contributed by other modules rather than by dedicated Subscr
 
 ## The Subscription part
 
-Attach **`SubscriptionPart`** to any content type (it depends on [Products](products), so the type typically also carries `ProductPart`). The part defines the recurring billing terms:
+Set a content type's stereotype to **Subscription** and it gets both **`SubscriptionPart`** and **`ProductPart`**, added automatically and kept on the type. Attaching `SubscriptionPart` by hand sets the stereotype. Every plan is therefore a product, which [lists, filters and shows](#listing-your-plans) like any other. The part defines the recurring billing terms:
 
 | Property | Description |
 | --- | --- |
@@ -44,16 +44,26 @@ Attach **`SubscriptionPart`** to any content type (it depends on [Products](prod
 | `BillingCycleLimit` | Optional cap on how many cycles are billed before payments stop. |
 | `SubscriptionDayDelay` | Optional number of days to delay the start of the subscription. |
 | `TrialDays` | Optional free trial, in days, before the first cycle is billed. Not the same as a delayed start — see [Free trials](#free-trials). |
-| `Sort` | Sort order used when listing subscription options. |
+| `Sort` | A stored order for the plan. A plan whose **Product** part has no **Position** is placed by it in a listing's **Recommended** sort. |
 
 Each content item of that type becomes a purchasable plan, editable and securable like any other Orchard Core content.
 
+## Listing your plans
+
+Plans are listed by the [Product Listing](products#product-listing) feature, like any other product. There is no built-in plans page. To publish one:
+
+1. Enable **Product Listing** under **Tools → Features**.
+2. Create a **Product Listing** content item (**Commerce → Product Listings** or **Content → New → Product Listing**), give it a title and a permalink such as `plans`, choose **Only these product types** and tick your plan content types.
+3. Choose its default sort. **Recommended** orders the plans by the **Position** on their **Product** part (or their `Sort` value when they have none); *Price: low to high* is the other common choice.
+4. Plans rarely need filters, so untick **Show filters** and **Let visitors change the sort**, then publish it.
+
+Each plan shows its price with its billing period, such as *$10 / month*, and its **Sign up** button, or the price chooser when it offers [more than one price](#offering-more-than-one-price). To give each plan a page of its own with the same details, turn on **Show product details on the product page** in the type's Product part settings, and add an **Autoroute** part for a readable address.
+
+The [Commerce starter](#getting-started-quickly) recipe sets all of this up, with a **Plans** page at `/plans`.
+
 ## Buying a plan
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
-  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
 ### Offering more than one price
 
@@ -95,7 +105,7 @@ Turn on **Allow guest sign-up** in the subscription settings to let somebody buy
 
 ## Receipts
 
-Receipts come from the **Payment Receipts** feature of the [Transactions](transactions#payment-receipts) module, which sends one for every payment applied to a ledger transaction: an installment plan's payments, a Pay Later balance, or anything settled online or recorded by hand. A plan bought by card at the checkout is recorded on the payment ledger rather than as a transaction, and is not receipted by that feature.
+Receipts come from the **Send Payment Receipts** feature of the [Transactions](transactions#payment-receipts) module, which sends one for every payment applied to a ledger transaction: an installment plan's payments, a Pay Later balance, or anything settled online or recorded by hand. A plan bought by card at the checkout is recorded on the payment ledger rather than as a transaction, and is not receipted by that feature.
 
 ## Admin management
 
@@ -225,9 +235,10 @@ nothing, so a customer is not told their payment failed every time something tou
 ## Getting started quickly
 
 The **Commerce starter** recipe (under **Configuration → Recipes**) enables the suite, creates a `Member`
-role, defines a **Membership Plan** content type carrying a price and an entitlement, and publishes a `$10`
-monthly plan that grants the `Member` role. It is a starting point to edit rather than a production
-configuration: pick your own currency, price, and roles before selling anything.
+role, defines a **Membership Plan** content type carrying a price and an entitlement, publishes a `$10`
+monthly plan that grants the `Member` role, and publishes a **Plans** page at `/plans` that lists it. It is a
+starting point to edit rather than a production configuration: pick your own currency, price, and roles before
+selling anything.
 
 ## Free trials
 
@@ -241,10 +252,7 @@ A delayed start (`SubscriptionDayDelay`) is handled the same way. To the money t
 
 ## Selling sites
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-sites.jpg" aria-label="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning">
-  <source src="/img/docs/commerce-sites.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-sites.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning" start={231} end={305} />
 
 With **Subscriptions - Sites** enabled on the default tenant, a plan can sell a whole Orchard Core site. The customer names their site and its administrator during checkout, and gets a running site once they have paid.
 

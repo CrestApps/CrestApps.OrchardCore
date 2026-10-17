@@ -1,0 +1,77 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductVariantsPartViewModel
+
+<fieldset class="mb-3">
+    <legend class="h6">@T["Variants"]</legend>
+
+    @if (Model.Options.Count == 0)
+    {
+        <p class="hint">@T["This product type has no options yet. Add options such as Size or Color in the Variants part settings of the content type."]</p>
+    }
+    else
+    {
+        <div class="row g-2 mb-2">
+            @for (var i = 0; i < Model.Options.Count; i++)
+            {
+                <div class="col-md-6">
+                    <input type="hidden" asp-for="Options[i].Name" />
+                    <label asp-for="Options[i].Values" class="form-label">@Model.Options[i].Name</label>
+                    <input asp-for="Options[i].Values" class="form-control" placeholder="@T["S, M, L"]" />
+                </div>
+            }
+        </div>
+        <span class="hint d-block mb-3">@T["Separate values with commas, then save: every combination becomes a variant. A variant keeps its SKU and prices while its combination stays."]</span>
+
+        @if (Model.Variants.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Sold"]</th>
+                            <th scope="col">@T["Variant"]</th>
+                            <th scope="col">@T["SKU"]</th>
+                            <th scope="col">@T["Price"]</th>
+                            <th scope="col">@T["Compare-at price"]</th>
+                            <th scope="col">@T["Image"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var i = 0; i < Model.Variants.Count; i++)
+                        {
+                            <tr>
+                                <td>
+                                    <input type="hidden" asp-for="Variants[i].VariantId" />
+                                    <input type="checkbox" asp-for="Variants[i].Enabled" class="form-check-input" aria-label="@T["Sell {0}", Model.Variants[i].Title]" />
+                                </td>
+                                <td>@Model.Variants[i].Title</td>
+                                <td><input asp-for="Variants[i].Sku" class="form-control form-control-sm" placeholder="@Model.ProductSku" aria-label="@T["SKU of {0}", Model.Variants[i].Title]" /></td>
+                                <td><input type="number" min="0" step="0.01" asp-for="Variants[i].Price" class="form-control form-control-sm" placeholder="@Model.ProductPrice" aria-label="@T["Price of {0}", Model.Variants[i].Title]" /></td>
+                                <td><input type="number" min="0" step="0.01" asp-for="Variants[i].CompareAtPrice" class="form-control form-control-sm" aria-label="@T["Compare-at price of {0}", Model.Variants[i].Title]" /></td>
+                                <td>
+                                    @{
+                                        var imagePath = Model.Variants[i].ImagePath;
+                                    }
+                                    <select asp-for="Variants[i].ImagePath" class="form-select form-select-sm" aria-label="@T["Image of {0}", Model.Variants[i].Title]">
+                                        <option value="">@T["The product's images"]</option>
+                                        @foreach (var image in Model.Images)
+                                        {
+                                            <option value="@image" selected="@(string.Equals(image, imagePath, StringComparison.Ordinal))">@System.IO.Path.GetFileName(image)</option>
+                                        }
+                                        @if (!string.IsNullOrEmpty(imagePath) && !Model.Images.Contains(imagePath))
+                                        {
+                                            <option value="@imagePath" selected>@System.IO.Path.GetFileName(imagePath)</option>
+                                        }
+                                    </select>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <span class="hint">@T["An empty SKU or price uses the product's. A variant's image is one of the product's own photos: add every photo to the product, save, then pick the one each variant shows. Untick Sold to stop selling a variant without losing it."]</span>
+        }
+    }
+    <span asp-validation-for="Variants"></span>
+</fieldset>

@@ -17,16 +17,14 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer profile and switching between preview, power and progressive modes">
-  <source src="/img/docs/um-dialer-profiles.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a dialer profile and switching between preview, power and progressive modes" start={1001} end={1067} />
 
 ## The dialing modes
 
 | Mode | Who presses dial | What the agent sees |
 | --- | --- | --- |
 | **Preview** | The agent. The record is offered to an agent signed in to the campaign; the agent reviews it and clicks **Dial** (or **Skip**). The server then places the call after the compliance checks. | The record opens, then the call starts when they choose Dial. |
-| **Power** | The system. Every minute the dialer reserves available agents in the campaign and places up to **Calls per agent** calls for the campaign, each with its own reserved agent. | The record pops up when the call starts; there is nothing to press. |
+| **Power** | The system. As soon as an agent in the campaign is available, the dialer reserves available agents and places up to **Calls per agent** calls for the campaign, each with its own reserved agent. | The record pops up when the call starts; there is nothing to press. |
 | **Progressive** | The system, like Power, reserving one agent per call, with up to 100 calls per pacing cycle. | Same as Power. |
 | **Predictive** | The system, like Power: every call reserves its own available agent before it is placed, and fewer calls are placed per cycle as the abandonment rate approaches the cap. See [Predictive dialing](#predictive-dialing). | Same as Power. |
 
@@ -34,19 +32,31 @@ Older profiles saved as *Manual* are shown and saved as **Preview**.
 
 ### Preview dialing, start to finish
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a live preview-dial call: the offer arrives, the agent clicks Dial, uses mute, hold, keypad and transfer, hangs up and completes the activity">
-  <source src="/img/docs/um-preview-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a live preview-dial call: the offer arrives, the agent clicks Dial, uses mute, hold, keypad and transfer, hangs up and completes the activity" start={172} end={222} />
 
 The agent is signed in to the campaign in the soft phone (right). The record is offered in the docked bar and the workspace; the agent clicks **Dial**, the customer answers, and when the call ends the agent is in **Wrap-up** until the activity is completed.
 
 ### Power dialing, start to finish
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed">
-  <source src="/img/docs/um-power-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed" start={225} end={263} />
 
-With a Power profile the agent only signs in and stays **Available**. Within a minute the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
+With a Power profile the agent only signs in and stays **Available**. Within about a second the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
+
+### When calls are placed
+
+Power, Progressive and Predictive campaigns are dialed as soon as there is a record to dial and an agent free to take the call. The dialer looks at the campaign again, within about a second, whenever:
+
+- an agent signs in to the campaign, or sets themselves **Available**,
+- an agent comes back to **Available** after a call or after wrap-up,
+- a call the dialer placed ends without reaching an agent (no answer, busy, an answering machine, or a failed call),
+- an offer is released or runs out,
+- records are loaded into the campaign.
+
+So when numbers keep going unanswered, the next number is dialed right after the last one ends, instead of the agent waiting for the next minute. A burst of changes at the same moment, such as several agents signing in together, is handled as one look, and the campaign keeps being dialed while calls are being placed.
+
+Each look follows the profile's own limits exactly: **Calls per agent**, the Progressive limit, and the Predictive abandonment rules. Only how soon the dialer looks changes, not how many calls it places.
+
+The dialer still looks at every campaign once a minute as well, whatever else is going on. That is a safety net: if a change is missed, for example while the site restarts, the campaign is dialed again within a minute.
 
 ## Create a profile
 
@@ -56,9 +66,9 @@ With a Power profile the agent only signs in and stays **Available**. Within a m
 
    | Field | Modes | What it does |
    | --- | --- | --- |
-   | **Calls per agent** | Power, Predictive | Calls started per pacing cycle for the campaign, 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
-   | **Max attempts** | Power, Progressive, Predictive | How many attempts one contact may get, counting the first call and every follow-up activity created to try again. Default 3. |
-   | **Retry delay (minutes)** | Power, Progressive, Predictive | The shortest wait after an attempt before the next attempt is dialed. Default 60. |
+   | **Calls per agent** | Power, Predictive | Calls started each time the dialer looks at the campaign (see [When calls are placed](#when-calls-are-placed)), 1 to 3. Each call reserves its own agent, so it never dials more calls than there are available agents. |
+   | **Max attempts** | Power, Progressive, Predictive | The fallback limit on how many attempts one contact may get, counting the first call and every follow-up activity created to try again. It applies when the subject flow sets no maximum of its own; see [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 3. |
+   | **Retry delay (minutes)** | Power, Progressive, Predictive | The wait after an attempt before the next attempt is dialed when the subject flow does not say when, and the shortest wait when it does. See [Retries and the attempt limit](#retries-and-the-attempt-limit). Default 60. |
    | **Ring time (seconds)** | Power, Progressive, Predictive | How long a call rings before it is given up as unanswered, from 15 to 120. Default 30. A call never rings for less than 15 seconds. |
    | **Screen out answering machines** | Power, Progressive, Predictive | **Off** (default), **Standard detection** or **Premium detection**. When on, the agent is connected only after the provider hears a person. A call answered by a voicemail or fax machine is hung up, the agent goes straight back to Ready without wrap-up or a pop, and the dialer completes the activity with the *Answering machine* disposition. The person who answers hears a few seconds of silence while the call is screened. Telnyx only. |
 
@@ -128,6 +138,21 @@ With Power, Progressive and Predictive dialing, the customer is dialed first and
 
 These settings support the common abandoned-call rules for automated dialing. Confirm which rules apply to your calls; the settings do not make a campaign compliant on their own.
 
+### Answer to agent time
+
+When a call is placed for an agent who is already reserved for it (Preview, Power, Progressive, and Predictive with one call per reserved agent), the agent's soft phone is rung while the customer's phone is still ringing. The soft phone answers at once, without a click, and the agent hears silence until the customer answers. The agent's line is then joined to the customer, which takes well under a second, so the person who answers hears the agent almost at once.
+
+- **Without answering-machine screening**, the agent is joined as soon as the customer answers.
+- **With answering-machine screening**, the agent is joined as soon as the provider says a person answered. The two seconds are measured from that verdict, not from the answer: the person spends the screening time saying hello, and the agent never hears a voicemail greeting.
+- **When a machine answers, nobody answers, or the customer hangs up first**, the agent's line is hung up. The agent goes straight back to Ready, with no wrap-up and no record opened.
+- **When the agent's line drops before the customer answers** (the soft phone was closed, the network dropped), nothing is lost: the answer rings the agent the usual way. That call may take longer than two seconds to connect and count as abandoned.
+
+The application log shows the time for every connected call, for example `connected to an agent 0.4 seconds after the answer, within the abandonment threshold`. A call connected later than two seconds is logged as abandoned.
+
+:::note[Telnyx]
+Holding the agent's line while the customer rings needs the Telnyx soft phone to be open and registered when the call is placed. Your administrator can turn this off with `CrestApps:ContactCenter:Coordination:DialerAgentParkingEnabled`, which rings the agent only once the customer answers, as before.
+:::
+
 ### The abandoned-call message
 
 When the agent cannot be connected, the person hears the profile's **Abandoned call message** straight away, and the call ends when the message has been spoken. If the message is not on, the call is hung up without a word.
@@ -187,7 +212,22 @@ The agent receives a call only when it is something they can act on: a customer 
 
 A number not in service is also added to [Numbers Not In Service](numbers-not-in-service.md) and never dialed again. With answering-machine screening off, a call a voicemail answers is connected to the agent like any answered call, and is theirs to disposition. In Preview mode the agent clicks **Dial**, so they see the call ring; if it ends before they are connected, the dialer dispositions it the same way and the agent goes back to Ready.
 
-The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay, and it is not created once **Max attempts** is used. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again).
+The disposition decides what happens next. Wire **Try Again** to it in the [subject flow](subject-flows.md) to call the contact again: the next attempt is a new activity, put back in the same campaign with the same dialer profile, due no sooner than the retry delay. A workflow can make the same decision with the **Schedule Dialer Retry** task; see [Workflows](workflows.md#call-a-contact-again).
+
+### Retries and the attempt limit
+
+The subject flow decides first, and the dialer profile's **Max attempts** is the fallback:
+
+| The subject flow | What happens |
+| --- | --- |
+| Has a disposition for how the call ended, and its **Try Again** sets **Maximum attempts** | The contact is tried up to that maximum. The profile's **Max attempts** does not apply. |
+| Has a disposition for how the call ended, and its **Try Again** leaves **Maximum attempts** empty | The contact is tried up to the profile's **Max attempts**. |
+| Has a disposition for how the call ended, with no **Try Again** | The contact is not called again: the flow decided. |
+| Has no disposition for how the call ended (for example, nothing has the *No answer* outcome) | The dialer dispositions the call with the matching outcome, such as *No answer*, and calls the contact again after the retry delay, up to the profile's **Max attempts**. |
+
+When the next attempt is dialed follows the same order. A date picked when the call is dispositioned, or the **Try Again** action's **Default schedule hours**, sets it. When neither is set, as when the dialer dispositions a call on its own, the next attempt is dialed after the profile's **Retry delay**. No attempt is dialed sooner than the **Retry delay**.
+
+The dialer retries this way only calls that rang out, were busy, reached a machine, or were answered and dropped before an agent joined. A call the network failed or the far end rejected, and a number not in service, are dispositioned but not retried. Attempts count across the follow-ups for one contact, so a limit of 3 means the first call and two more.
 
 Queue callbacks use a built-in preview profile that skips the do-not-call and calling-window checks, because the customer asked to be called.
 

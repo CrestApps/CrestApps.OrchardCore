@@ -77,11 +77,15 @@ public sealed class CheckoutInvoiceBuilder
                 {
                     ItemId = billingItem.ItemId,
                     Description = billingItem.Description,
-                    Quantity = 1,
+                    Quantity = Math.Max(1, billingItem.Quantity),
                     UnitPrice = billingItem.Amount,
                     Plan = billingItem.Plan,
                     PriceId = billingItem.PriceId,
                     ExcludeFromTax = billingItem.ExcludeFromTax,
+                    Sku = billingItem.Sku,
+                    TaxCategoryCode = billingItem.TaxCategoryCode,
+                    TaxClassificationCode = billingItem.TaxClassificationCode,
+                    TaxableKind = billingItem.TaxableKind,
                 };
 
                 if (billingItem.Plan == null)

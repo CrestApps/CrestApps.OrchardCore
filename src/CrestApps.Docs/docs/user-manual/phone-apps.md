@@ -17,9 +17,7 @@ A phone that lives inside a web page loses its call when you reload or leave the
 
 Both apps show your site's own `/softphone` page, so the call controls are exactly the ones described in [Placing and handling calls](calls.md). They talk only to the site you configure, and they use your normal site sign-in; there is no separate password.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the soft phone window that the browser extension and Windows app open">
-  <source src="/img/docs/um-softphone-page.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the soft phone window that the browser extension and Windows app open" start={81} end={104} />
 
 ## Before you start (administrator)
 

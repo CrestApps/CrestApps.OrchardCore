@@ -199,6 +199,14 @@ public sealed class TelnyxOutboundBridgeState
     public string ActivityId { get; set; }
 
     /// <summary>
+    /// Gets or sets whether an automated AI voice leg is a call the customer placed, answered by an entry point
+    /// routed to an AI voice agent, rather than a call the AI placed (AI-voice state only). Telnyx reports a leg's
+    /// direction on <c>call.initiated</c> only, so the later events of the call read it from here.
+    /// </summary>
+    [JsonPropertyName("in")]
+    public bool? Inbound { get; set; }
+
+    /// <summary>
     /// Gets or sets the destination address to dial once the agent leg answers (agent-leg state only).
     /// </summary>
     [JsonPropertyName("d")]
@@ -290,6 +298,14 @@ public sealed class TelnyxOutboundBridgeState
     /// </summary>
     [JsonPropertyName("db")]
     public string DialedByUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the agent's phone answers this pre-dialed leg on arrival: the leg parked for
+    /// a call the dialer placed, rather than an offer's leg held until the agent accepts. A leg rung again is rung the same
+    /// way.
+    /// </summary>
+    [JsonPropertyName("ao")]
+    public bool? AnswersOnArrival { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether this is the agent leg of a number dialed from the soft phone and connected on

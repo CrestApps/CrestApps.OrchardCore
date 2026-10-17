@@ -5,6 +5,11 @@
 **Planning only.** This document defines the ecommerce architecture and delivery sequence. It does
 not implement runtime behavior.
 
+**Revised 2026-10-12, after PR #6 merged.** The inventory rows for Products, Checkout, Subscription Stripe
+flows, Transactions, Customers, Promotions and the storefront now reflect what shipped. The next step is
+front-end product listing, ahead of Phase 1. The plan for it, and a status summary of the whole suite, is in
+[`docs/engineering/commerce/product-listing-plan.md`](./engineering/commerce/product-listing-plan.md).
+
 This revision re-audits the roadmap against the current branch, including the Transactions, Receipts,
 Commerce, TaxTable, address, checkout, refund, and architecture changes now committed. It keeps
 gaps that still exist, removes gaps already closed, and records the difference between:
@@ -69,10 +74,10 @@ and contracts exist; it does not mean that the capability is complete for ecomme
 
 | Area | Current implementation | Ecommerce meaning |
 | --- | --- | --- |
-| Products | `src/Core/CrestApps.OrchardCore.Products.Core` owns `ProductPart`, `ProductType`, `ISellableProduct`, `SellableProduct`, `ProductSnapshotContext`, and `IProductSnapshotResolver`. The Products module provides the editor, schema, migration, snapshot resolver, and Taxation bridge. | Reusable catalog seam exists. Full catalog, variants, schedules, availability, digital delivery, and shipping metadata do not. |
-| Checkout | `CheckoutSession`, flow/step contracts, durable session store, payment attempts, payment refunds, reconciliation, tax integration, rate limiting, distributed coordination, and a reconciliation background task exist in `Checkout.Abstractions` and `Checkout.Core`. | Reusable payment checkout exists. A checkout session is not an order, cart, quote, or fulfillment record. |
+| Products | `src/Core/CrestApps.OrchardCore.Products.Core` owns `ProductPart`, `ProductPricePart`, `ProductType`, `ISellableProduct`, `SellableProduct`, `ProductSnapshotContext`, `IPriceResolver`, and `IProductSnapshotResolver`. `ProductPricePart` offers several prices per product: one-time or recurring, effective windows, custom amounts, and quantity. The Products module provides editors, the currencies catalog, schema, migration, snapshot resolver, and Taxation bridge. It has no front-end display, and a price is always required. | Reusable catalog and price seam exists. Front-end listing, listing-only products, catalog attributes, variants, availability, digital delivery, and shipping metadata do not. |
+| Checkout | `ICheckoutEngine` is the only component that moves money. `CheckoutSession`, flow/step contracts, durable session store, payment attempts, payment refunds, reconciliation, tax integration, rate limiting, distributed coordination, a hashed guest ownership token, checkout coupons, saved payment methods, and a reconciliation background task exist in `Checkout.Abstractions` and `Checkout.Core`. The Checkout module renders the public checkout at `/Checkout/{sessionId}/{step}` with Stripe and Pay Later panels. | Reusable, driven payment checkout exists. A checkout session is not an order, cart, quote, or fulfillment record. |
 | Generic Stripe checkout | `StripeCheckoutPaymentProvider` is registered when Checkout is enabled. It supports one-time embedded PaymentIntent payments and Stripe refunds. Stripe webhooks now dispatch payment failure/cancellation, refund, refund-update/failure, and dispute events through provider-neutral payment-event and refund-reconciliation contracts. | Reusable one-time card payment and refund-event reconciliation exist. Orders must use this adapter, not subscription-specific endpoints. |
-| Subscription Stripe flows | Stripe services also support products, prices, customers, setup intents, subscriptions, and Checkout Sessions. Subscriptions has its own Payment Elements and hosted Checkout paths, with eligibility rules and return validation. | Hosted and recurring Stripe behavior exists for Subscriptions only. It must not be described as generic ecommerce Checkout capability without a separate design. |
+| Subscription Stripe flows | Subscriptions now buy through the checkout engine. A recurring provider contract (`ICheckoutRecurringPaymentProvider`) has Stripe and Pay Later adapters, and the legacy subscription payment pipeline is retired. Installment plans charge saved cards through the same engine. | Recurring payments are provider-neutral. Orders still need their own one-time flow over the same engine. |
 | Pay Later | `PayLaterCheckoutPaymentProvider` implements the generic checkout provider. It supports one-time, recurring, and combined obligations but no processor refund operation. Its checkout handler now creates idempotent outstanding Transactions entries, and settlement checkouts do not create duplicate debts. | Reusable deferred/offline payment and outstanding-balance tracking exist. Guest ownership, concurrency-safe settlement, and order-specific refund/write-off behavior remain ecommerce integration work. |
 | Taxation | Tax categories, types, jurisdictions, rules, calculation methods, sourcing strategies, exemptions, merchant registrations, snapshots, refund calculation, TaxationPart, product taxable-item integration, recipes, and deployments exist. Calculation methods include percentage, fixed, per-unit, weight, volume, progressive, threshold, and table-driven calculation. | Strong reusable tax foundation exists. Commerce must provide order-line, shipping, discount, fee, and customer/address tax inputs and persist order snapshots. |
 | Tax tables | `TaxTable`/`TaxTableRow`, effective periods, row validation, admin CRUD, protection from deletion while referenced, recipes, deployments, schemas, and tests exist. | TaxTable management is a closed foundation capability. Commerce still supplies order-specific taxable items and immutable order tax snapshots. |
@@ -83,15 +88,15 @@ and contracts exist; it does not mean that the capability is complete for ecomme
 | Receipts | `IReceiptService`, `ReceiptRequest`, `ReceiptDocument`, tax lines, branding settings, permissions, tests, and a reusable printable view exist. Receipts are generated on demand from consumer-supplied data and are not persisted. | Reusable printable receipts are complete. Orders still own order numbers, invoice/credit-note policy, immutable financial documents if required, and order-derived receipt data; no second receipt renderer should be created. |
 | Reports | `IReport`, report filters/date ranges, metric/table/chart documents, CSV export, optional OpenXml export, admin navigation, and report rendering exist. | Commerce reports should be separate `IReport` implementations over order/inventory/shipping/refund data. |
 | Transactions | Provider-neutral `Transaction` ledger, indexes, customer statement, administrator management report, offline/online settlement, registered sources, optional notification reminders, Pay Later integration, migrations, permissions, and tests exist. | This tracks outstanding obligations, not orders, payment attempts, refunds, or fulfillment. Orders must link to it where deferred balances exist. Guest ownership/access, concurrency-safe settlement, order integration, and refund/chargeback semantics remain to be designed. |
-| Customers | Users and subscription customer/provider references exist, but no reusable customer profile, guest identity, merge, address book, tax profile ownership, or customer CRM module exists. | Greenfield reusable block. |
+| Customers | `Customers.Abstractions` and `Customers.Core` provide `CustomerOwner` (user or guest) and `ICustomerContactResolver`. No customer profile, merge, address book, tax profile ownership, or customer module exists. | Contracts exist; the reusable block is still greenfield. |
 | Carts | No durable guest/authenticated cart, merge, expiration, line selection, or cart API exists. | Greenfield reusable block. |
 | Orders | No durable order aggregate, order number, immutable line/address snapshot, order state machine, fulfillment linkage, or order history exists. `SubscriptionOrder` is a subscription-specific model and must not become the generic order. | Greenfield reusable block and the commercial system of record. |
 | Inventory | No stock ledger, SKU availability, reservation, movement history, backorder, restock, or concurrency-safe allocation exists. | Greenfield ecommerce capability. |
 | Shipping | No zones, methods, rates, shipping charges, packages, shipments, carriers, tracking, or fulfillment workflow exists. | Greenfield ecommerce capability. |
-| Promotions | No coupon, campaign, discount allocation, stacking, eligibility, usage counter, or promotion snapshot exists. | Greenfield ecommerce capability. |
+| Promotions | Checkout coupons exist: `Coupon`, `ICheckoutDiscountService`, usage limits, and coupon admin. No campaign, automatic discount, product/category eligibility, stacking policy, or order promotion snapshot exists. | Coupons are reusable at checkout; the Promotions capability is still greenfield. |
 | Digital delivery/services | `ProductType.Digital` and `ProductType.Service` exist, but no download entitlement, license/key delivery, service fulfillment, appointment/resource allocation, or completion evidence exists. | Greenfield fulfillment capabilities. |
 | Reviews | No review, rating, moderation, verified-purchase, abuse, or aggregate model exists. | Greenfield capability. |
-| Generic storefront/API/admin | Existing controllers and endpoints are primarily subscription-specific. There is no generic catalog, cart, checkout, order, customer account, refund, fulfillment, or commerce API surface. | Greenfield presentation and integration layers. |
+| Generic storefront/API/admin | The generic checkout UI, admin payments/refunds screens, **My Plans**, and **My Transactions** exist. There is no product listing, product detail, cart, order, customer account, fulfillment, or commerce API surface. | Product listing is next (see the product listing plan); the remaining presentation layers are greenfield. |
 
 ## What is already closed
 
@@ -756,5 +761,8 @@ Every implementation phase must update:
 - the changelog matching `VersionPrefix`;
 - migration, configuration, security, and operational notes.
 
-Phase 0 is complete. The first coding milestone is the reusable Customers/guest-ownership contract
-and catalog extension work, not a storefront controller or a second payment/refund implementation.
+Phase 0 is complete. The first coding milestone is front-end product listing (browse, filter, sort,
+detail) with listing-only products, as planned in
+[`docs/engineering/commerce/product-listing-plan.md`](./engineering/commerce/product-listing-plan.md). It
+reads published content only and writes no financial records. Customers and the rest of catalog
+completion follow it, before any cart, order, or second payment/refund implementation.

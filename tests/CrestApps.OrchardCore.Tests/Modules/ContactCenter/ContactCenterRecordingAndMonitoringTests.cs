@@ -198,6 +198,47 @@ public sealed class ContactCenterRecordingAndMonitoringTests
         Assert.False(interaction.RecordingLegalHold);
     }
 
+    [Theory]
+    [InlineData(RecordingState.None, false)]
+    [InlineData(RecordingState.Stopped, false)]
+    [InlineData(RecordingState.Paused, true)]
+    public async Task RecordingACall_TellsTheProviderTheStateItWasIn(RecordingState previousState, bool resume)
+    {
+        // Arrange
+        // The provider decides between starting a recording and resuming one from this, because a provider asked to
+        // resume a call that has no recording may answer as if it had.
+        var interaction = CreateInteraction();
+        interaction.RecordingState = previousState;
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var provider = CreateProvider(ContactCenterVoiceProviderCapabilities.Recording);
+        ContactCenterVoiceRecordingRequest sent = null;
+        provider
+            .As<IContactCenterVoiceRecordingProvider>()
+            .Setup(p => p.SetRecordingStateAsync(It.IsAny<ContactCenterVoiceRecordingRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterVoiceRecordingRequest, CancellationToken>((request, _) => sent = request)
+            .ReturnsAsync(new ContactCenterVoiceProviderResult { Succeeded = true });
+
+        var service = new ContactCenterRecordingService(
+            interactionManager.Object,
+            CreateResolver(provider).Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            CreateCommandExecutor(),
+            CreateGovernancePolicy(),
+            new StubClock());
+
+        // Act
+        var changed = resume
+            ? await service.ResumeAsync("int1", TestContext.Current.CancellationToken)
+            : await service.StartAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(changed.Succeeded);
+        Assert.NotNull(sent);
+        Assert.Equal(RecordingState.Recording, sent.State);
+        Assert.Equal(previousState, sent.PreviousState);
+    }
+
     [Fact]
     public async Task StartAsync_WhenGovernanceAllowsWithRetention_StampsRetentionAndLegalHold()
     {

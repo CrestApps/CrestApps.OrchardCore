@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "variant-picker.js",
+    "source": "Assets/js/variant-picker.js",
+    "dest": "wwwroot/Scripts/variant-picker.js"
+  }
+]

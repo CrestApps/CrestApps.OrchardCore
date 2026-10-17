@@ -37,6 +37,8 @@ public sealed class ChatInteractionModelParametersDisplayDriver : DisplayDriver<
             // The interaction persists via the SignalR settings hub, so expose the inputs as namespaced
             // setting-inputs the hub collects and ApplyCoreSettingsAsync stores on AIDeploymentParametersMetadata.
             model.SettingKeyPrefix = ChatInteractionModelParameterSettingKeys.ChatDeployment;
+            // The settings panel stacks each label above its input.
+            model.UseStackedLayout = true;
         }).Location("Parameters:3.5#Settings;1");
     }
 

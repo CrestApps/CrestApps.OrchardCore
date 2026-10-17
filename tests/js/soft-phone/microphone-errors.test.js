@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/microphone-errors.js';
-
-const { classifyMicrophoneError, describeBrowserError, describeMicrophoneFacts } = globalThis.CrestAppsSoftPhone;
+import {
+    classifyMicrophoneError,
+    describeBrowserError,
+    describeMicrophoneFacts,
+} from '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/microphone-errors.js';
 
 const facts = (overrides) => ({
     name: 'NotAllowedError',

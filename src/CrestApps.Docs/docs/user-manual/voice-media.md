@@ -8,38 +8,75 @@ technical_manual:
   - contact-center/configuration-deployment
 ---
 
-The **voice media** library holds the audio your phone system plays: hold music for queues and recorded prompts for IVR menus. Each clip is uploaded to your phone provider so it can be played on live calls.
+The **voice media** library holds the audio your phone system plays: hold music for queues and recorded prompts for IVR menus. The platform keeps a master copy of each clip and sends a copy to your phone provider, so a clip keeps playing when you change provider or the provider loses its copy.
 
 | | |
 | --- | --- |
 | **Menu** | Interaction Center > Management > Voice Media |
 | **Permission** | Manage the Contact Center voice media library |
-| **Feature** | Contact Center, with a phone provider that can host media, such as Telnyx |
+| **Feature** | Contact Center, with the Telephony feature for the master copy and a phone provider that can host media, such as Telnyx |
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the voice media library and the upload form">
-  <source src="/img/docs/um-voice-media.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of the voice media library and the upload form" start={194} end={218} />
 
 ## Add a clip
 
 1. Open **Interaction Center > Management > Voice Media** and click **Add Voice Media**.
 2. Enter a **Name** that people will recognize, such as *Main hold music*, and an optional **Description**.
 3. Under **Audio**, choose an MP3, WAV, OGG or WebM file of up to 20 MB.
-4. Click **Save**. The file is uploaded to the phone provider.
+4. Click **Save**. The platform keeps the file as the clip's master copy and sends a copy to the phone provider.
 
-Uploading a new file to an existing clip replaces the old audio and removes the old file from the provider. The **Audio** field is disabled when no enabled phone provider can host media.
+Uploading a new file to an existing clip replaces the old audio everywhere: the old master copy and every provider's copy are removed once the clip is saved. The **Audio** field is disabled when neither media storage nor a phone provider that can host media is available.
+
+If the phone provider does not accept the upload, the clip is still saved with its master copy and you see a warning. The provider receives the clip the first time a call needs it, or when you click **Re-sync media**.
 
 :::note[About the screencast]
 The demo site is not connected to a phone provider, so the screencast shows the form without uploading a file.
 :::
+
+## What the badges mean
+
+Each clip in the list shows what is stored for it:
+
+| Badge | Meaning |
+| --- | --- |
+| **Master copy** | The platform holds the audio. The clip plays on any phone provider, and a provider that loses its copy is sent a new one automatically, within about ten minutes. |
+| **Provider copy only** | The clip was uploaded before the platform kept master copies, so it exists only at the provider it was uploaded to. It keeps playing there, but it cannot be checked or sent to another provider. |
+| **No audio** | The clip has no audio yet. |
+
+A badge with the provider's name shows which providers hold a copy.
+
+## Protect an older clip
+
+A clip marked **Provider copy only** is lost if you change phone provider, or if the provider deletes it. To protect it:
+
+1. Open the clip. The edit form says *This clip exists only at the phone provider. Re-upload this clip to protect it.*
+2. Under **Audio**, choose the original file again and click **Save**.
+
+The clip now has a master copy, and queues and IVR menus that use it are unchanged.
+
+## Re-sync a clip with the phone provider
+
+Click **Re-sync media** on a clip to check that every enabled phone provider still holds it, and to send it to any provider that does not. Use it after you change provider, or when the provider has deleted a clip and you do not want to wait for the clip to be sent again on its own. You see a message for each provider: that it already held the clip, that it received a copy, or that it did not accept one.
+
+The button appears only on clips with a master copy. A clip with no master copy has nothing to send; upload its audio again instead.
 
 ## Use a clip
 
 - On a queue, pick it as **Hold music** on the *While callers wait* card. See [Queues](queues.md#while-callers-wait).
 - In an IVR menu, pick it as a menu's **Recorded prompt**. See [IVR menus](entry-points-and-ivr.md#build-an-ivr-menu).
 
+The first time a provider plays a clip it has no copy of, it is sent one from the master copy. A caller may notice a short delay on that first call only.
+
+## Delete a clip
+
+Deleting a clip removes its master copy and every provider's copy. Queues and IVR menus that pointed at it fall back to their spoken text or to silence, so update them first.
+
+## Your voicemail greeting
+
+The greeting you record or upload on **My Voicemail Greeting** is kept the same way: the platform holds the master copy and sends it to whichever phone provider a caller reaches you on. A greeting recorded before master copies were kept shows a notice asking you to record or upload it again to protect it.
+
 :::note[Moving to another site]
-Voice media is not included in deployment plans. After importing queues or IVR menus into another site, upload the clips there and pick them again.
+Voice media entries travel in deployment plans, but the audio does not. After importing into another site that does not share this site's media storage and phone provider account, open each imported clip and upload its audio again. Because each clip keeps its identifier, the queues and IVR menus that use it start playing the new audio as soon as it is uploaded.
 :::

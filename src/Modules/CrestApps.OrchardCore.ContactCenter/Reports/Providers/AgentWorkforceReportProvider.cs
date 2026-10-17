@@ -60,7 +60,27 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
 
     public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_definition.Kind);
 
+    /// <summary>
+    /// The most presence-audit rows listed in the browser, so an unfiltered wide period stays readable and renders in
+    /// a bounded time. An export is never cut short.
+    /// </summary>
+    internal const int PresenceAuditEntryLimit = 5000;
+
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await RunCoreAsync(context, cancellationToken);
+        }
+        catch (Exception exception) when (ReportQueryTimeout.IsTimeout(exception))
+        {
+            // A period too wide for the database to read in time is answered with what to change, not with an
+            // unhandled error that held a connection for the whole timeout.
+            return ReportQueryTimeout.Describe(_stringLocalizer);
+        }
+    }
+
+    private async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken)
     {
         var missingFeatures = await _capabilityGuard.GetMissingFeaturesAsync(RequiredFeatureIds, cancellationToken);
 
@@ -106,7 +126,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             AgentWorkforceReportKind.Utilization => BuildUtilization(intervals, agents, occupancy: false),
             AgentWorkforceReportKind.Occupancy => BuildUtilization(intervals, agents, occupancy: true),
             AgentWorkforceReportKind.ReasonBreakdown => BuildReasonBreakdown(intervals),
-            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(timelines, agents, fromUtc, toUtc),
+            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(timelines, agents, fromUtc, toUtc, limitRows: context.Mode != ReportRunMode.Export),
             AgentWorkforceReportKind.QueueMembershipHours => BuildMembershipHours(intervals, queueMembership: true),
             AgentWorkforceReportKind.CampaignMembershipHours => BuildMembershipHours(intervals, queueMembership: false, campaignNames),
             AgentWorkforceReportKind.PayrollTimecard => BuildPayrollTimecard(intervals, agents),
@@ -511,11 +531,12 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             .Add(ReportSection.ForTable(S["Presence reason breakdown"].Value, columns, rows));
     }
 
-    private ReportDocument BuildPresenceAudit(
+    internal ReportDocument BuildPresenceAudit(
         IReadOnlyList<AgentStateTimeline> timelines,
         Dictionary<string, AgentProfile> agents,
         DateTime fromUtc,
-        DateTime toUtc)
+        DateTime toUtc,
+        bool limitRows = false)
     {
         var columns = new[]
         {
@@ -531,10 +552,14 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             new ReportColumn(S["Campaigns"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Event"].Value),
         };
-        var rows = timelines
+        var transitions = timelines
             .SelectMany(timeline => timeline.Transitions)
             .Where(transition => transition.ChangedUtc >= fromUtc && transition.ChangedUtc <= toUtc)
             .OrderByDescending(transition => transition.ChangedUtc)
+            .ToList();
+
+        // The cap is applied before any row is built, so a wide period costs the listed rows, not every change in it.
+        var rows = (limitRows ? transitions.Take(PresenceAuditEntryLimit) : transitions)
             .Select(transition => new ReportRow(
             [
                 AuditReportFormat.Timestamp(transition.ChangedUtc),
@@ -550,8 +575,14 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
                 transition.EventType,
             ]));
 
-        return new ReportDocument()
-            .Add(ReportSection.ForTable(S["Agent presence audit"].Value, columns, rows));
+        var section = ReportSection.ForTable(S["Agent presence audit"].Value, columns, rows);
+
+        if (limitRows && transitions.Count > PresenceAuditEntryLimit)
+        {
+            section.Description = S["The most recent {0} of {1} changes are listed. Choose an agent or a shorter period to see the rest, or export the report for every change.", PresenceAuditEntryLimit, transitions.Count].Value;
+        }
+
+        return new ReportDocument().Add(section);
     }
 
     private ReportDocument BuildMembershipHours(

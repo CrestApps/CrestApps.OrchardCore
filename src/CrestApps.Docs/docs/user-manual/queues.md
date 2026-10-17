@@ -18,9 +18,7 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a queue group and a queue with routing, service level, hours and caller treatment settings">
-  <source src="/img/docs/um-queues.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a queue group and a queue with routing, service level, hours and caller treatment settings" start={257} end={340} />
 
 ## Create a queue group (optional)
 
@@ -59,10 +57,10 @@ To send phone calls to the queue, point an [inbound entry point](entry-points-an
 | Field | What it does |
 | --- | --- |
 | **Default priority** | Lowest, Low, **Normal**, High or Highest. Higher-priority items are offered first. |
-| **Routing strategy** | How the next agent is chosen: **Longest idle** (the agent who has been available the longest, the default), **Round robin** (the agent who least recently got work), or **Least busy** (the agent with the fewest active interactions). |
+| **Routing strategy** | How the next agent is chosen: **Longest idle** (the agent who has been available the longest, the default), **Round robin** (the agent who least recently got work), or **Least busy** (the agent with the fewest active interactions). With longest idle, an agent who finishes a call goes to the back of the line. An agent whose offer or dialed call never reached them (the caller hung up, or nobody answered the dial) keeps their place. An agent who declines an offer or lets it ring out goes to the back. Campaigns always pick agents by longest idle. |
 | **Prefer the last assigned agent (sticky)** | When a returning customer's previous agent is available and eligible, offer them the work first. |
 | **Reservation timeout (seconds)** | How long an offer rings for one agent before the unanswered-offer action applies. Default 30. |
-| **Unanswered offer action** | **Requeue** (offer it to the next agent, the default), **Send to voicemail**, or **Reject call** (end the call). |
+| **Unanswered offer action** | **Requeue** (offer it to the next agent, the default), **Send to voicemail**, or **Reject call** (end the call). It also applies when an agent accepts the offer but their phone cannot be reached: the caller is treated as unanswered, and that agent is set to **Away** with the reason *Phone unreachable* until they set their own state again. |
 
 ### Service levels
 

@@ -62,37 +62,6 @@ public sealed partial class SoftPhoneHarnessTests : SoftPhoneBrowserTest
         }
     }
 
-    [Theory]
-    [InlineData("wwwroot/scripts/soft-phone.js")]
-    [InlineData("wwwroot/scripts/telephony-client.js")]
-    public async Task ServedBundle_CarriesEveryHelperItsAssetGroupIsBuiltFrom(string bundleOutput)
-    {
-        // Arrange
-        // A helper added to Assets.json, or changed, without the bundle being rebuilt is missing from the page: the
-        // phone loads, and then the first call into the helper throws.
-        var exports = SoftPhoneAssets.ReadHelperExports(bundleOutput);
-        var page = await OpenAsync();
-
-        // Act
-        var missing = new List<string>();
-
-        foreach (var export in exports)
-        {
-            var defined = await page.EvaluateAsync<bool>(
-                "([ns, name]) => !!window[ns] && typeof window[ns][name] !== 'undefined'",
-                new[] { export.Namespace, export.Name });
-
-            if (!defined)
-            {
-                missing.Add($"{export.Input}: {export.Namespace}.{export.Name}");
-            }
-        }
-
-        // Assert
-        Assert.NotEmpty(exports);
-        Assert.True(missing.Count == 0, $"The served {bundleOutput} is missing helper exports; run `npx gulp build`:{Environment.NewLine}{string.Join(Environment.NewLine, missing)}");
-    }
-
     [Fact]
     public async Task HarnessPage_BootsThePhoneWithoutAScriptError()
     {

@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attachments.js';
-
-const { attachmentAcceptAttribute, findAttachmentFormat, fitDimensions, needsShrinking, perFileBudget, planAttachments } = globalThis.CrestAppsMessaging;
+import {
+    attachmentAcceptAttribute,
+    findAttachmentFormat,
+    fitDimensions,
+    needsShrinking,
+    perFileBudget,
+    planAttachments,
+} from '../../../src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-attachments.js';
 
 const file = (type, size = 1000, name = 'a') => ({ type, size, name });
 
