@@ -51,7 +51,9 @@ public sealed class AIChatProfilePartDisplayDriver : ContentPartDisplayDriver<AI
 
     public override async Task<IDisplayResult> DisplayAsync(AIProfilePart part, BuildPartDisplayContext context)
     {
-        if (!part.TotalHistory.HasValue || part.TotalHistory.Value < 1)
+        // The history is only placed on the Detail display. Checking first keeps lists, such as the admin content
+        // list, from loading the profile and querying its sessions once per item.
+        if (context.DisplayType != "Detail" || !part.TotalHistory.HasValue || part.TotalHistory.Value < 1)
         {
             return null;
         }
