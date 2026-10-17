@@ -54,6 +54,14 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// <inheritdoc/>
     protected override Task<IDisplayResult> EditStepAsync(CheckoutFlow flow, BuildEditorContext context)
     {
+        if (SettlesExistingBalance(flow))
+        {
+            // Paying off a balance that already exists is not a purchase, so there is no price for a code
+            // to reduce. Offering the box would let a customer redeem a code against a total that does not
+            // change, leaving the balance partly unpaid.
+            return Task.FromResult<IDisplayResult>(null);
+        }
+
         var applied = flow.Session.TryGet<CheckoutCoupon>(out var coupon) ? coupon : null;
 
         return Task.FromResult<IDisplayResult>(Initialize<CouponViewModel>("CheckoutCoupon", model =>
@@ -71,6 +79,13 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// <inheritdoc/>
     protected override async Task<IDisplayResult> UpdateStepAsync(CheckoutFlow flow, UpdateEditorContext context)
     {
+        if (SettlesExistingBalance(flow))
+        {
+            // A code posted to a settlement checkout (a stale form, or a hand-built request) is ignored
+            // rather than stored, so it can never reach the invoice or be redeemed.
+            return null;
+        }
+
         var model = new CouponViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -110,4 +125,7 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 
         return await EditStepAsync(flow, context);
     }
+
+    private static bool SettlesExistingBalance(CheckoutFlow flow)
+        => flow.Session is CheckoutSession { SettlesExistingBalance: true };
 }
