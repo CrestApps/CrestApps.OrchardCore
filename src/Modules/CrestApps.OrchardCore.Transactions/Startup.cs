@@ -14,6 +14,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -26,6 +27,17 @@ namespace CrestApps.OrchardCore.Transactions;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant configuration the customer pages options are read from.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -44,6 +56,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
+
+        // The customer pages in the admin and in the site theme, and the links to them sent in messages.
+        services.Configure<TransactionCustomerPagesOptions>(_shellConfiguration.GetSection(TransactionsConstants.CustomerPagesConfigurationSection));
+        services.AddScoped<ITransactionCustomerPageService, TransactionCustomerPageService>();
+        services.AddScoped<ITransactionCustomerLinkService, TransactionCustomerLinkService>();
     }
 }
 

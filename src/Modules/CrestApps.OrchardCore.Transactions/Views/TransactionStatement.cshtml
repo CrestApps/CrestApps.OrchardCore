@@ -1,0 +1,90 @@
+@using CrestApps.OrchardCore.Payments
+@using OrchardCore.DisplayManagement
+@model TransactionStatementViewModel
+
+@*
+    The TransactionStatement shape: one page of a customer's statement of their own transactions, for the site theme.
+    A theme overrides it with its own TransactionStatement.cshtml.
+*@
+
+<div class="transaction-statement">
+    @if (Model.Entries.Count == 0)
+    {
+        <div class="alert alert-info" role="status">
+            @if (string.IsNullOrEmpty(Model.Search) && !Model.OutstandingOnly)
+            {
+                @T["You have no transactions yet."]
+            }
+            else
+            {
+                @T["You have no transactions that match the current filter."]
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted small mb-2">@T.Plural(Model.TotalCount, "1 transaction", "{0} transactions")</p>
+
+        <ul class="list-group mb-3">
+            @foreach (var entry in Model.Entries)
+            {
+                var transaction = entry.Transaction;
+                var title = string.IsNullOrEmpty(transaction.Title) ? T["Purchase"].Value : transaction.Title;
+                string Money(decimal amount) => $"{transaction.Currency} {CurrencyScale.Format(amount, transaction.Currency)}";
+
+                <li class="list-group-item">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                        <div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="fw-semibold">@title</span>
+                                <partial name="_TransactionStatusBadge" model="transaction.Status" />
+                            </div>
+                            <div class="small text-muted mt-1">
+                                <span>@T["Total: {0}", Money(transaction.TotalAmount)]</span>
+                                @if (transaction.OutstandingAmount > 0m && !string.IsNullOrEmpty(entry.PayUrl))
+                                {
+                                    <span class="ms-2">@T["Outstanding: {0}", Money(transaction.OutstandingAmount)]</span>
+                                }
+                                @if (transaction.DueUtc.HasValue)
+                                {
+                                    <span class="ms-2">@T["Due: {0}", transaction.DueUtc.Value.ToString("d")]</span>
+                                }
+                            </div>
+                            @if (!string.IsNullOrEmpty(entry.InvoiceUrl) || entry.Receipts.Count > 0)
+                            {
+                                <div class="small mt-1">
+                                    @if (!string.IsNullOrEmpty(entry.InvoiceUrl))
+                                    {
+                                        <a class="me-2" href="@entry.InvoiceUrl">@T["Invoice {0}", transaction.InvoiceNumber]</a>
+                                    }
+                                    @foreach (var receipt in entry.Receipts)
+                                    {
+                                        <a class="me-2" href="@receipt.Url">
+                                            @if (string.IsNullOrEmpty(receipt.Payment.ReceiptNumber))
+                                            {
+                                                @T["Receipt for {0}", Money(receipt.Payment.Amount ?? 0m)]
+                                            }
+                                            else
+                                            {
+                                                @T["Receipt {0}", receipt.Payment.ReceiptNumber]
+                                            }
+                                        </a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(entry.PayUrl))
+                        {
+                            <a class="btn btn-success btn-sm" href="@entry.PayUrl">@T["Pay now"]</a>
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (Model.Pager is IShape pager)
+    {
+        @await DisplayAsync(pager)
+    }
+</div>

@@ -1630,6 +1630,38 @@ The phone number verification providers have no configuration section. Set them 
 **Settings > Phone Number Verifications**, or with the recipe `settings` step. See
 [Phone Number Verifications](modules/phone-number-verifications.md).
 
+## Commerce
+
+### Transaction customer pages
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Transactions:CustomerPages` |
+| **Read by** | Transactions (`CrestApps.OrchardCore.Transactions`), through the tenant configuration |
+| **Controls** | Which customer pages the links in receipt and reminder messages open |
+
+Keys: `LinkTarget`: `Admin` (default) opens the customer pages in the admin (`Admin/my-transactions`, `Admin/transaction-invoices/{itemId}`, `Admin/transaction-receipts/{itemId}/{paymentId}`); `Site` opens the pages in the site theme (`my-transactions`, `my-transactions/invoices/{itemId}`, `my-transactions/receipts/{itemId}/{paymentId}`). Both sets of pages are always available; the key only decides where the links point.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Transactions": {
+        "CustomerPages": {
+          "LinkTarget": "Site"
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
+```
+
+See [Transactions](modules/transactions.md#links-in-messages).
+
 ## Multi-tenancy
 
 ### Tenant hierarchy
