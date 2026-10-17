@@ -26,7 +26,7 @@ There is no checkout settings screen. What the checkout offers comes from the pu
 The page has three parts:
 
 - **The steps** across the top, numbered in order. A finished step shows a check mark, and the buyer can click it to go back and change it. Steps not reached yet cannot be opened, so nobody reaches payment with an earlier step unfilled. When the checkout has only one step, the row is not shown.
-- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**. While the payment is being taken it shows **Processing…**.
+- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**. While the payment is being taken it shows **Processing…**. When the buyer started the checkout from a page of your site that asks to be returned to, such as a payment page or a list of payments, the **Payment** step (and the first step) also has a link back to that page, for example **Back to the payment page**. It reads **Back**, or **Leave checkout** when there is also a **Back** to the previous step, unless the page named its own wording.
 - **The order summary** on the right, on every step, so the total is never a surprise.
 
 ### Steps a buyer may see
@@ -102,3 +102,9 @@ Paying an outstanding balance through a payment link needs no account.
 ## The confirmation page
 
 After a successful checkout the buyer sees **Order confirmation** with *Thank you — your purchase is complete.*, followed by the order summary of what they bought.
+
+A checkout that is not an order can carry its own heading instead. Paying from a payment link, for example, shows **Payment received** with *Thank you. A confirmation is shown below.* When the buyer started the checkout from a page that asks to be returned to, the confirmation ends with a button back to it: **Continue**, or the page's own wording such as **Back to the payment page**.
+
+## A checkout that has ended
+
+A checkout that was canceled, expired before it was paid, or could not be completed can't be paid any more. Opening it shows *This checkout is no longer available.* and the reason: *This checkout was canceled.*, *This checkout expired before it was completed.* or *This checkout could not be completed.* When the buyer started the checkout from a page that asks to be returned to, the page has a **Back** link to it (or the page's own wording). Opening a checkout that was already paid shows its confirmation.

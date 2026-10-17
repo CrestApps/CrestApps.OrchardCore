@@ -2,20 +2,44 @@
 
 @model CheckoutViewModel
 
+@{
+    // A checkout that is not an order (a fee, a balance) names itself, so it is not headed "Order confirmation"
+    // and not thanked for a "purchase".
+    var hasTitle = !string.IsNullOrEmpty(Model.Title);
+    var title = hasTitle ? Model.Title : T["Order confirmation"].Value;
+}
+
 <zone Name="Title">
-    <breadcrumb name="CheckoutConfirmation" title="@T["Order confirmation"]" />
+    <breadcrumb name="CheckoutConfirmation" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(title))" />
 </zone>
 
 <div class="text-center my-5">
     <div class="display-6 text-success mb-3">
         <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
     </div>
-    <h1 class="h3">@T["Thank you — your purchase is complete."]</h1>
-    <p class="text-body-secondary">@T["A confirmation of this purchase is shown below."]</p>
+    @if (hasTitle)
+    {
+        <h1 class="h3">@Model.Title</h1>
+        <p class="text-body-secondary">@T["Thank you. A confirmation is shown below."]</p>
+    }
+    else
+    {
+        <h1 class="h3">@T["Thank you — your purchase is complete."]</h1>
+        <p class="text-body-secondary">@T["A confirmation of this purchase is shown below."]</p>
+    }
 </div>
 
 <div class="row justify-content-center">
     <div class="col-lg-8">
         @await DisplayAsync(Model.Content)
+
+        @if (!string.IsNullOrEmpty(Model.ReturnUrl))
+        {
+            <div class="text-center my-4">
+                <a class="btn btn-primary btn-lg" href="@Url.Content(Model.ReturnUrl)" data-checkout-return>
+                    @(string.IsNullOrEmpty(Model.ReturnText) ? T["Continue"].Value : Model.ReturnText)
+                </a>
+            </div>
+        }
     </div>
 </div>
