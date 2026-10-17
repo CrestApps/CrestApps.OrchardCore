@@ -385,7 +385,7 @@ public sealed class DialerCallDetailReportProviderTests
             await SeedNumberedActivitiesAsync(store, 3, cancellationToken);
             await using var session = store.CreateSession();
             var document = await RunAsync(session, cancellationToken, mode: ReportRunMode.Export);
-            var format = new CsvReportExportFormat(new PassThroughStringLocalizer<CsvReportExportFormat>());
+            var format = new CsvReportExportFormat();
 
             // Act
             var csv = Encoding.UTF8.GetString(format.Serialize(document)).TrimStart('﻿');

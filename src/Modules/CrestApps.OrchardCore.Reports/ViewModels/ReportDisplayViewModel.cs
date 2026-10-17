@@ -17,7 +17,7 @@ public sealed class ReportDisplayViewModel
     /// <summary>
     /// Gets or sets the available export formats for the report.
     /// </summary>
-    public IReadOnlyList<IReportExportFormat> ExportFormats { get; set; } = [];
+    public IReadOnlyList<ReportExportFormatDescriptor> ExportFormats { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the rendered filter editor shape.

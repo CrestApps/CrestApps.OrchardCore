@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.Reports.Models;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Reports.OpenXml.Services;
 
@@ -17,28 +17,17 @@ public sealed class ExcelReportExportFormat : IReportExportFormat
     private const string DefaultSheetName = "Report";
     private static readonly char[] _invalidSheetNameCharacters = ['\\', '/', '*', '[', ']', ':', '?'];
 
-    private readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ExcelReportExportFormat"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public ExcelReportExportFormat(IStringLocalizer<ExcelReportExportFormat> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
+    /// <inheritdoc/>
+    public static string Name => ReportsConstants.XlsxExportFormat;
 
     /// <inheritdoc/>
-    public string Name => ReportsConstants.XlsxExportFormat;
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ExcelReportExportFormat>("Excel (.xlsx)");
 
     /// <inheritdoc/>
-    public LocalizedString DisplayName => S["Excel (.xlsx)"];
+    public static string Extension => ".xlsx";
 
     /// <inheritdoc/>
-    public string ContentType => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-    /// <inheritdoc/>
-    public string FileExtension => "xlsx";
+    public static string ContentType => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     /// <inheritdoc/>
     public byte[] Serialize(ReportDocument document)

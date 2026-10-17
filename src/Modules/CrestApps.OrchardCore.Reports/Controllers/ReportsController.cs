@@ -127,9 +127,9 @@ public sealed class ReportsController : Controller
             return Forbid();
         }
 
-        var exportFormat = _exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
+        var descriptor = _exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
 
-        if (exportFormat is null)
+        if (descriptor is null)
         {
             return NotFound();
         }
@@ -139,11 +139,11 @@ public sealed class ReportsController : Controller
         document.Title = report.DisplayName.Value;
 
         await _displayValueResolver.ResolveAsync(document);
-        var content = exportFormat.Serialize(document);
+        var content = _exportManager.GetFormat(descriptor.Name).Serialize(document);
         var range = filter.GetDateRange();
-        var fileName = $"{id}-{range.FromUtc:yyyyMMdd}-to-{range.ToUtc:yyyyMMdd}.{exportFormat.FileExtension}";
+        var fileName = $"{id}-{range.FromUtc:yyyyMMdd}-to-{range.ToUtc:yyyyMMdd}{descriptor.Extension}";
 
-        return File(content, exportFormat.ContentType, fileName);
+        return File(content, descriptor.ContentType, fileName);
     }
 
     private async Task<ReportFilter> BuildFilterAsync(string reportName)

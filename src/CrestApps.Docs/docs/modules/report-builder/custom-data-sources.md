@@ -83,13 +83,12 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
 
         // The customer is a content item of the Customer type; the account manager is a user.
         AddField("CustomerId", S["Customer ID"], DataFieldType.Text, record => record.CustomerContentItemId, people)
-            .Identifier(new DataFieldReference(ReportsConstants.ContentsDataSource, "Customer", "ContentItemId"));
+            .Identifier(new DataFieldReference("Contents", "Customer", "ContentItemId"));
         AddField("AccountManagerId", S["Account manager (user ID)"], DataFieldType.Text, record => record.AccountManagerUserId, people)
             .Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
 
-        // The fields LoadAsync filters exactly when a join sends keys, and the data sets the fields point to.
+        // The fields LoadAsync filters exactly when a join sends keys.
         Fields.MarkKeyFilterable(["InvoiceId", "CustomerId"]);
-        Descriptor.AddReferencesOf(Fields);
     }
 
     public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
@@ -204,7 +203,6 @@ public sealed class DataSourcesStartup : StartupBase
 | --- | --- |
 | `field.Identifier(params DataFieldReference[] references)` | Marks a field as identifying a record (`IsIdentifier`) and adds the data sets its values point to (`References`). |
 | `Fields.MarkKeyFilterable(names)` | Sets `IsKeyFilterable` on the named fields; see [Join keys](#join-keys). |
-| `Descriptor.AddReferencesOf(Fields)` | Copies the fields' references to the data set's descriptor, so the builder can list related data sets under **Related** before reading their fields. Call it last in the constructor. |
 | `ReportIndexPages.ReadAsync(session, () => query, collection, cancellationToken)` | Reads a YesSql query 500 records at a time and detaches each page from the session once it was read, so a long read does not keep every record in memory. The query is created once per page and needs a stable order. |
 | `ReportIndexPages.ReadPagesAsync(...)` | The same, one page at a time, such as to look up what the records of a page refer to in one call. |
 | `ReportIndexAggregator` | Answers an aggregate query with one `GROUP BY` over a map index; see [Grouping in the data source](#grouping-in-the-data-source). |
@@ -411,7 +409,7 @@ The keys arrive as an `In` condition with `IsJoinKey` set, in batches of `JoinKe
 
 A `DataFieldReference(source, dataSet, field)` on a field says that its values identify records of another data set, such as an invoice's customer:
 
-- The builder joins on it automatically when both data sets are in a report, lists the referenced data sets under **Related** in **Add data set**, and suggests the join. Add the references to the data set too (`Descriptor.AddReferencesOf(Fields)`), so **Related** can list them before the fields are read.
+- The builder joins on it automatically when both data sets are in a report, lists the referenced data sets under **Related** in **Add data set**, and suggests the join. A `RecordDataSource` lists the data sets its fields reference on the data set itself (`DataSetDescriptor.References`), so **Related** can list them before the fields are read; a data source that implements `IDataSource` directly sets these references on the descriptors it returns.
 - Reference other modules' data sets by their stable names, such as `new DataFieldReference("ContactCenter", "DialerProfiles", "ItemId")`, or the users data set with `ReportsConstants.UsersDataSource`, `ReportsConstants.UsersDataSet` and `ReportsConstants.UserIdField`. A content type is `new DataFieldReference(ReportsConstants.ContentsDataSource, "{ContentType}", "ContentItemId")`.
 - A reference to a source that is not enabled is simply unused.
 - Declare references only when the source knows them without reading data, for example from definitions.
@@ -499,6 +497,6 @@ A described field type is read only as described, so the names of its fields do 
 - Every value has the CLR type of its field, date-times are UTC, and missing values are `null`.
 - Records are streamed in a stable order, a page at a time, newest first when the data set has a main date.
 - Pushed-down conditions never drop a row the engine would keep; join keys and aggregates are exact or declined.
-- Identifiers are marked, references declared where known and added to the descriptor, and the main date set.
+- Identifiers are marked, references declared where known, and the main date set.
 - The source is registered with `AddDataSource<T>()` in a startup that requires `OrchardCore.DataPipelines.Core`.
 - The source's feature and permissions are listed in the [Feature reference](../../feature-reference.md), and its configuration, if any, in [Configuration](../../configuration.md).

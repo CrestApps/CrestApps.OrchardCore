@@ -181,7 +181,6 @@ internal sealed class ActivitiesDataSet : RecordDataSet<OmnichannelActivity>, IA
         AddField("CadenceId", S["Cadence ID"], DataFieldType.Text, record => record.CadenceId, links).Identifier();
 
         Fields.MarkKeyFilterable(_keyFields);
-        Descriptor.AddReferencesOf(Fields);
     }
 
     // The names of the dispositions and campaigns, read once per query.
@@ -379,8 +378,6 @@ internal sealed class CampaignsDataSet : RecordDataSet<OmnichannelCampaign>
         AddField("Channel", S["Channel"], DataFieldType.Text, record => record.Channel);
         AddField("CreatedUtc", S["Created"], DataFieldType.DateTime, record => record.CreatedUtc);
         AddField("ModifiedUtc", S["Modified"], DataFieldType.DateTime, record => record.ModifiedUtc);
-
-        Descriptor.AddReferencesOf(Fields);
     }
 
     public override Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
@@ -473,8 +470,6 @@ internal sealed class ActivityBatchesDataSet : RecordDataSet<OmnichannelActivity
         AddField("TotalSkippedForNoDestination", S["Skipped without a destination"], DataFieldType.Integer, record => record.TotalSkippedForNoDestination, counts);
         AddField("TotalSkippedAsNotInService", S["Skipped as not in service"], DataFieldType.Integer, record => record.TotalSkippedAsNotInService, counts);
         AddField("TotalSkippedByLimit", S["Skipped by the limit"], DataFieldType.Integer, record => record.TotalSkippedByLimit, counts);
-
-        Descriptor.AddReferencesOf(Fields);
     }
 
     public override Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)

@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 using CrestApps.OrchardCore.Reports.Models;
-using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 
 namespace CrestApps.OrchardCore.Reports.Services;
 
@@ -11,28 +11,17 @@ namespace CrestApps.OrchardCore.Reports.Services;
 /// </summary>
 public sealed class CsvReportExportFormat : IReportExportFormat
 {
-    private readonly IStringLocalizer S;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="CsvReportExportFormat"/> class.
-    /// </summary>
-    /// <param name="stringLocalizer">The string localizer.</param>
-    public CsvReportExportFormat(IStringLocalizer<CsvReportExportFormat> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
+    /// <inheritdoc/>
+    public static string Name => ReportsConstants.CsvExportFormat;
 
     /// <inheritdoc/>
-    public string Name => ReportsConstants.CsvExportFormat;
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CsvReportExportFormat>("CSV");
 
     /// <inheritdoc/>
-    public LocalizedString DisplayName => S["CSV"];
+    public static string Extension => ".csv";
 
     /// <inheritdoc/>
-    public string ContentType => "text/csv";
-
-    /// <inheritdoc/>
-    public string FileExtension => "csv";
+    public static string ContentType => "text/csv";
 
     /// <inheritdoc/>
     public byte[] Serialize(ReportDocument document)

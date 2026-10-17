@@ -116,14 +116,13 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
     }
 
     /// <summary>
-    /// Finishes describing the data set once its constructor added its fields: its date field, the fields a join can
-    /// narrow the read on, and the data sets its fields reference.
+    /// Finishes describing the data set once its constructor added its fields: its date field and the fields a join can
+    /// narrow the read on.
     /// </summary>
     protected void CompleteDescription()
     {
         Descriptor.DefaultDateField = DateColumn?.Field;
         Fields.MarkKeyFilterable(KeyColumns.Keys);
-        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>

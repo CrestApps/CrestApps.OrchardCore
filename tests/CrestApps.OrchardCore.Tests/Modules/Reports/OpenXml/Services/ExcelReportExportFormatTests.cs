@@ -2,8 +2,6 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.OpenXml.Services;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
-using Microsoft.Extensions.Localization;
-using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.OpenXml.Services;
 
@@ -31,7 +29,7 @@ public sealed class ExcelReportExportFormatTests
                 ],
             }));
 
-        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+        var exportFormat = new ExcelReportExportFormat();
 
         // Act
         var content = exportFormat.Serialize(document);
@@ -76,7 +74,7 @@ public sealed class ExcelReportExportFormatTests
             .Add(ReportSection.ForMetrics("Queue/Overview", [new ReportMetric("Calls", "8")]))
             .Add(ReportSection.ForMetrics("Queue:Overview", [new ReportMetric("Calls", "9")]));
 
-        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+        var exportFormat = new ExcelReportExportFormat();
 
         // Act
         var content = exportFormat.Serialize(document);
@@ -105,7 +103,7 @@ public sealed class ExcelReportExportFormatTests
                     new ReportRow(["Customer care", "2"], ReportRowKind.Subtotal),
                     new ReportRow(["All queues", "2"], ReportRowKind.GrandTotal),
                 ]));
-        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+        var exportFormat = new ExcelReportExportFormat();
 
         // Act
         var content = exportFormat.Serialize(document);
@@ -140,7 +138,7 @@ public sealed class ExcelReportExportFormatTests
                 [
                     new ReportRow(["Support", "2"]).WithCellStyle(1, ReportStyle.Create("#FF0000")),
                 ]));
-        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+        var exportFormat = new ExcelReportExportFormat();
 
         // Act
         var content = exportFormat.Serialize(document);
@@ -180,7 +178,7 @@ public sealed class ExcelReportExportFormatTests
                 "Queues",
                 [new ReportColumn("Queue"), new ReportColumn("Count")],
                 [new ReportRow(["All queues", "2"], ReportRowKind.GrandTotal)]));
-        var exportFormat = new ExcelReportExportFormat(Mock.Of<IStringLocalizer<ExcelReportExportFormat>>());
+        var exportFormat = new ExcelReportExportFormat();
 
         // Act
         var content = exportFormat.Serialize(document);

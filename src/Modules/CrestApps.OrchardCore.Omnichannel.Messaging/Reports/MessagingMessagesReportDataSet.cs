@@ -88,7 +88,6 @@ public sealed class MessagingMessagesReportDataSet : RecordDataSet<MessagingRepo
         AddField("ErrorCode", S["Error code"], DataFieldType.Text, record => record.Document.ErrorCode, delivery);
 
         Fields.MarkKeyFilterable(_keyFields);
-        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>

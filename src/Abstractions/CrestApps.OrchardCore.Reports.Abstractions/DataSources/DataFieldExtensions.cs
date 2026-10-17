@@ -29,26 +29,6 @@ public static class DataFieldExtensions
     }
 
     /// <summary>
-    /// Adds the data sets the fields of a data set reference to the data sets it links to, so consumers can tell which
-    /// data sets are related before reading their fields.
-    /// </summary>
-    /// <param name="descriptor">The description of the data set.</param>
-    /// <param name="fields">The fields of the data set.</param>
-    public static void AddReferencesOf(this DataSetDescriptor descriptor, IEnumerable<DataField> fields)
-    {
-        ArgumentNullException.ThrowIfNull(descriptor);
-        ArgumentNullException.ThrowIfNull(fields);
-
-        foreach (var reference in fields.SelectMany(field => field.References))
-        {
-            if (!descriptor.References.Any(existing => existing.Source == reference.Source && existing.DataSet == reference.DataSet))
-            {
-                descriptor.References.Add(reference);
-            }
-        }
-    }
-
-    /// <summary>
     /// Marks the fields a data set loads only the records of a list of keys for, such as the keys of the rows a join
     /// needs. See <see cref="DataConditions.Keys"/>.
     /// </summary>

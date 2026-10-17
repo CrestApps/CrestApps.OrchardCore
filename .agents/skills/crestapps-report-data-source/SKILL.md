@@ -9,7 +9,7 @@ description: >
   Description, the security boundary (only expose what the principal may read), value types and UTC dates, streaming
   page by page, optional condition push-down that must never drop rows, join keys, references, aggregate push-down
   with IAggregateRecordDataSet and ReportIndexAggregator, the CrestApps helpers (Identifier, MarkKeyFilterable,
-  AddReferencesOf, ReportIndexPages), registration with AddDataSource<T>(), tests, and docs. Also covers reading
+  ReportIndexPages), registration with AddDataSource<T>(), tests, and docs. Also covers reading
   custom content parts and fields through Orchard Core's ContentDataSourceOptions. Use this skill whenever the
   request is to "add a report data source", "let the report builder read from <system>", "add a connector for
   reports", implement IDataSource / RecordDataSource for reports, or report on a new content field type.
@@ -111,7 +111,6 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
             .Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
 
         Fields.MarkKeyFilterable(["InvoiceId"]);   // LoadAsync filters these exactly from DataConditions.Keys.
-        Descriptor.AddReferencesOf(Fields);        // So the builder lists related data sets before reading fields.
     }
 
     public override Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default) => ...;
@@ -144,7 +143,8 @@ public sealed class BillingReportDataSource : RecordDataSource, IDataSource   //
   access on every schema, read and aggregate call.
 - `LoadAsync(query, ct)` returns `IAsyncEnumerable<TRecord>` streamed in a stable order, page by page.
 - CrestApps helpers (`CrestApps.OrchardCore.Reports.DataSources`, Reports.Abstractions): `field.Identifier(params
-  DataFieldReference[] references)`, `Fields.MarkKeyFilterable(names)`, `Descriptor.AddReferencesOf(Fields)`.
+  DataFieldReference[] references)`, `Fields.MarkKeyFilterable(names)`. `RecordDataSource` lists the data sets the fields reference on each data set
+  (`DataSetDescriptor.References`), so the builder can show related data sets before reading their fields.
 - YesSql helpers (`CrestApps.OrchardCore.Reports.Designer.DataSources`, Reports.Core):
   `ReportIndexPages.ReadAsync(session, () => query, collection, ct)` and `ReadPagesAsync(...)` read 500 records a
   page and detach each page from the session; the query factory is called once per page and needs a stable order

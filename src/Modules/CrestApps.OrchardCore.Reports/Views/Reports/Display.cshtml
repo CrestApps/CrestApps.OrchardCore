@@ -1,5 +1,6 @@
+@using Microsoft.Extensions.Localization
 @using OrchardCore.DisplayManagement.Html
-
+@inject IStringLocalizerFactory LocalizerFactory
 @model ReportDisplayViewModel
 
 <zone Name="Title">
@@ -39,7 +40,7 @@
                         var exportFormat = Model.ExportFormats[0];
 
                         <button type="submit" class="btn btn-sm btn-outline-secondary" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
-                            <i class="fa-solid fa-download"></i> @T["Export {0}", exportFormat.DisplayName]
+                            <i class="fa-solid fa-download"></i> @T["Export {0}", LocalizerFactory.Localize(exportFormat.DisplayName)]
                         </button>
                     }
                     else if (Model.ExportFormats.Count > 1)
@@ -53,7 +54,7 @@
                                 {
                                     <li>
                                         <button type="submit" class="dropdown-item" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
-                                            @T["Export {0}", exportFormat.DisplayName]
+                                            @T["Export {0}", LocalizerFactory.Localize(exportFormat.DisplayName)]
                                         </button>
                                     </li>
                                 }

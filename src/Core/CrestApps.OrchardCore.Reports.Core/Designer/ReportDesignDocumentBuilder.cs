@@ -211,7 +211,7 @@ public sealed class ReportDesignDocumentBuilder
 
         string Key(object[] values, int level)
         {
-            return string.Join('\u001F', dimensions.Take(level + 1).Select(index => DataValues.ToKey(values[index])));
+            return DataKeys.Build(values, dimensions[..(level + 1)], ignoreCase: false);
         }
 
         // The subtotals of each level, by the values of the dimensions up to it.

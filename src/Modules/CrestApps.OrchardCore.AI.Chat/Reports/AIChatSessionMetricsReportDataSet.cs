@@ -95,8 +95,6 @@ public sealed class AIChatSessionMetricsReportDataSet : RecordDataSet<AIChatRepo
         AddField("ThumbsDownCount", S["Thumbs down"], DataFieldType.Integer, record => record.Document.ThumbsDownCount, feedback);
         AddField("ConversionScore", S["Conversion score"], DataFieldType.Integer, record => record.Document.ConversionScore, conversion);
         AddField("ConversionMaxScore", S["Conversion max score"], DataFieldType.Integer, record => record.Document.ConversionMaxScore, conversion);
-
-        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>

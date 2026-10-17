@@ -86,7 +86,6 @@ public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportReco
         AddField("PostSessionProcessingStatus", S["Post-session processing"], DataFieldType.Text, record => record.Document.PostSessionProcessingStatus, processing);
 
         Fields.MarkKeyFilterable(_keyFields);
-        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>

@@ -174,7 +174,7 @@ public class DesignedReportViewModel
     /// <summary>
     /// Gets or sets the export formats offered, empty when the viewer may not export.
     /// </summary>
-    public IReadOnlyList<IReportExportFormat> ExportFormats { get; set; } = [];
+    public IReadOnlyList<ReportExportFormatDescriptor> ExportFormats { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the function that builds the export URL of a format.

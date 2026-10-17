@@ -1,8 +1,6 @@
 using System.Text;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
-using Microsoft.Extensions.Localization;
-using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Reports.Core.Services;
 
@@ -23,7 +21,7 @@ public sealed class CsvReportExportFormatTests
                     new ReportChartDataset("Answered", [10, 15]),
                 ],
             }));
-        var exportFormat = new CsvReportExportFormat(Mock.Of<IStringLocalizer<CsvReportExportFormat>>());
+        var exportFormat = new CsvReportExportFormat();
 
         // Act
         var content = Encoding.UTF8.GetString(exportFormat.Serialize(document));
@@ -45,7 +43,7 @@ public sealed class CsvReportExportFormatTests
                     new ReportRow(["Customer care", "2"], ReportRowKind.Subtotal),
                     new ReportRow(["All queues", "2"], ReportRowKind.GrandTotal),
                 ]));
-        var exportFormat = new CsvReportExportFormat(Mock.Of<IStringLocalizer<CsvReportExportFormat>>());
+        var exportFormat = new CsvReportExportFormat();
 
         // Act
         var content = Encoding.UTF8.GetString(exportFormat.Serialize(document));

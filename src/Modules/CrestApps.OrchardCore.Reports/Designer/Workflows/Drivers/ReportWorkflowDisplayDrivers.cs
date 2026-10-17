@@ -197,22 +197,26 @@ public sealed class RunReportTaskDisplayDriver : ReportTaskDisplayDriver<RunRepo
 public sealed class ExportReportTaskDisplayDriver : ReportTaskDisplayDriver<ExportReportTask, ExportReportTaskViewModel>
 {
     private readonly IReportExportManager _exportManager;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExportReportTaskDisplayDriver"/> class.
     /// </summary>
     /// <param name="designService">The designed reports.</param>
     /// <param name="exportManager">The export formats.</param>
+    /// <param name="localizerFactory">The localizer factory, for the names of the export formats.</param>
     /// <param name="liquidTemplateManager">The Liquid template manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ExportReportTaskDisplayDriver(
         ReportDesignService designService,
         IReportExportManager exportManager,
+        IStringLocalizerFactory localizerFactory,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<ExportReportTaskDisplayDriver> stringLocalizer)
         : base(designService, liquidTemplateManager, stringLocalizer)
     {
         _exportManager = exportManager;
+        _localizerFactory = localizerFactory;
     }
 
     /// <inheritdoc/>
@@ -223,7 +227,7 @@ public sealed class ExportReportTaskDisplayDriver : ReportTaskDisplayDriver<Expo
     {
         model.Format = activity.Format;
         model.MediaFolder = activity.MediaFolder;
-        model.Formats = ReportWorkflowDisplay.Formats(_exportManager);
+        model.Formats = ReportWorkflowDisplay.Formats(_exportManager, _localizerFactory);
 
         return ValueTask.CompletedTask;
     }
@@ -231,7 +235,7 @@ public sealed class ExportReportTaskDisplayDriver : ReportTaskDisplayDriver<Expo
     /// <inheritdoc/>
     protected override void UpdateTask(ExportReportTaskViewModel model, ExportReportTask activity, UpdateEditorContext context)
     {
-        if (_exportManager.FindFormat(model.Format) is null)
+        if (_exportManager.GetDescriptor(model.Format) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Format), S["Choose an export format."]);
         }
@@ -249,22 +253,26 @@ public sealed class ExportReportTaskDisplayDriver : ReportTaskDisplayDriver<Expo
 public sealed class EmailReportTaskDisplayDriver : ReportTaskDisplayDriver<EmailReportTask, EmailReportTaskViewModel>
 {
     private readonly IReportExportManager _exportManager;
+    private readonly IStringLocalizerFactory _localizerFactory;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailReportTaskDisplayDriver"/> class.
     /// </summary>
     /// <param name="designService">The designed reports.</param>
     /// <param name="exportManager">The export formats.</param>
+    /// <param name="localizerFactory">The localizer factory, for the names of the export formats.</param>
     /// <param name="liquidTemplateManager">The Liquid template manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public EmailReportTaskDisplayDriver(
         ReportDesignService designService,
         IReportExportManager exportManager,
+        IStringLocalizerFactory localizerFactory,
         ILiquidTemplateManager liquidTemplateManager,
         IStringLocalizer<EmailReportTaskDisplayDriver> stringLocalizer)
         : base(designService, liquidTemplateManager, stringLocalizer)
     {
         _exportManager = exportManager;
+        _localizerFactory = localizerFactory;
     }
 
     /// <inheritdoc/>
@@ -280,7 +288,7 @@ public sealed class EmailReportTaskDisplayDriver : ReportTaskDisplayDriver<Email
         model.Body = activity.Body;
         model.AttachmentFormat = activity.AttachmentFormat;
         model.IncludeReport = activity.IncludeReport;
-        model.Formats = ReportWorkflowDisplay.Formats(_exportManager);
+        model.Formats = ReportWorkflowDisplay.Formats(_exportManager, _localizerFactory);
 
         return ValueTask.CompletedTask;
     }
@@ -293,7 +301,7 @@ public sealed class EmailReportTaskDisplayDriver : ReportTaskDisplayDriver<Email
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.To), S["Enter at least one recipient."]);
         }
 
-        if (!string.IsNullOrWhiteSpace(model.AttachmentFormat) && _exportManager.FindFormat(model.AttachmentFormat) is null)
+        if (!string.IsNullOrWhiteSpace(model.AttachmentFormat) && _exportManager.GetDescriptor(model.AttachmentFormat) is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AttachmentFormat), S["Choose an attachment format."]);
         }
@@ -394,10 +402,10 @@ internal static class ReportWorkflowDisplay
             .ToList();
     }
 
-    public static IList<SelectListItem> Formats(IReportExportManager exportManager)
+    public static IList<SelectListItem> Formats(IReportExportManager exportManager, IStringLocalizerFactory localizerFactory)
     {
         return exportManager.GetFormats()
-            .Select(format => new SelectListItem(format.DisplayName.Value, format.Name))
+            .Select(format => new SelectListItem(localizerFactory.Localize(format.DisplayName).Value, format.Name))
             .ToList();
     }
 }

@@ -99,7 +99,6 @@ public sealed class MessagingConversationsReportDataSet : RecordDataSet<Messagin
         AddField("FirstResponseSeconds", S["First response time (seconds)"], DataFieldType.Decimal, record => FirstResponseSeconds(record.Document), firstResponse);
 
         Fields.MarkKeyFilterable(_keyFields);
-        Descriptor.AddReferencesOf(Fields);
     }
 
     /// <inheritdoc/>

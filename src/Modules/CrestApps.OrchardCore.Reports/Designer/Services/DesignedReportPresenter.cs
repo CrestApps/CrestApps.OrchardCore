@@ -152,7 +152,7 @@ public sealed class DesignedReportPresenter
     {
         ArgumentNullException.ThrowIfNull(design);
 
-        if (_exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format) is null)
+        if (_exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format) is null)
         {
             return null;
         }
@@ -181,19 +181,19 @@ public sealed class DesignedReportPresenter
         ArgumentNullException.ThrowIfNull(design);
         ArgumentNullException.ThrowIfNull(run);
 
-        var exportFormat = _exportManager.FindFormat(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
+        var descriptor = _exportManager.GetDescriptor(string.IsNullOrEmpty(format) ? ReportsConstants.CsvExportFormat : format);
 
-        if (exportFormat is null || run.Document is null)
+        if (descriptor is null || run.Document is null)
         {
             return null;
         }
 
         return new ReportExportFile(
-            exportFormat.Serialize(run.Document),
-            exportFormat.ContentType,
-            $"{FileName(design.DisplayText)}-{_clock.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}.{exportFormat.FileExtension}")
+            _exportManager.GetFormat(descriptor.Name).Serialize(run.Document),
+            descriptor.ContentType,
+            $"{FileName(design.DisplayText)}-{_clock.UtcNow.ToString("yyyyMMdd", CultureInfo.InvariantCulture)}{descriptor.Extension}")
         {
-            Format = exportFormat.Name,
+            Format = descriptor.Name,
             RowCount = run.RowCount,
         };
     }

@@ -1,52 +1,53 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+
 namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>
-/// Provides the default implementation of <see cref="IReportExportManager"/> over the registered
-/// export formats.
+/// The default <see cref="IReportExportManager"/>: lists the formats of <see cref="ReportExportFormatOptions"/> and
+/// resolves a format from the services when a report is exported.
 /// </summary>
 public sealed class ReportExportManager : IReportExportManager
 {
-    private readonly IReadOnlyList<IReportExportFormat> _formats;
-    private readonly Dictionary<string, IReportExportFormat> _byName;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IReadOnlyList<ReportExportFormatDescriptor> _formats;
+    private readonly Dictionary<string, ReportExportFormatDescriptor> _byName = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReportExportManager"/> class.
     /// </summary>
-    /// <param name="formats">The registered export formats.</param>
-    public ReportExportManager(IEnumerable<IReportExportFormat> formats)
+    /// <param name="options">The registered export formats.</param>
+    /// <param name="serviceProvider">The services the formats are resolved from.</param>
+    public ReportExportManager(IOptions<ReportExportFormatOptions> options, IServiceProvider serviceProvider)
     {
-        _byName = new Dictionary<string, IReportExportFormat>(StringComparer.OrdinalIgnoreCase);
+        ArgumentNullException.ThrowIfNull(options);
 
-        foreach (var format in formats)
+        _serviceProvider = serviceProvider;
+        _formats = options.Value.Formats;
+
+        foreach (var format in _formats)
         {
-            if (!string.IsNullOrEmpty(format.Name))
+            if (!_byName.TryAdd(format.Name, format))
             {
-                if (!_byName.TryAdd(format.Name, format))
-                {
-                    throw new InvalidOperationException($"A report export format named '{format.Name}' is already registered.");
-                }
+                throw new InvalidOperationException($"A report export format named '{format.Name}' is already registered.");
             }
         }
-
-        _formats = _byName.Values
-            .OrderBy(format => format.DisplayName.Value, StringComparer.CurrentCultureIgnoreCase)
-            .ToArray();
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<IReportExportFormat> GetFormats()
+    public IReadOnlyList<ReportExportFormatDescriptor> GetFormats() => _formats;
+
+    /// <inheritdoc/>
+    public ReportExportFormatDescriptor GetDescriptor(string name)
     {
-        return _formats;
+        return string.IsNullOrEmpty(name) ? null : _byName.GetValueOrDefault(name);
     }
 
     /// <inheritdoc/>
-    public IReportExportFormat FindFormat(string name)
+    public IReportExportFormat GetFormat(string name)
     {
-        if (string.IsNullOrEmpty(name))
-        {
-            return null;
-        }
-
-        return _byName.GetValueOrDefault(name);
+        return GetDescriptor(name) is { } descriptor
+            ? (IReportExportFormat)_serviceProvider.GetRequiredService(descriptor.Type)
+            : null;
     }
 }

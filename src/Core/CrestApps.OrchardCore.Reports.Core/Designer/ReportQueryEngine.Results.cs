@@ -88,19 +88,18 @@ public sealed partial class ReportQueryEngine
     {
         var groups = new Dictionary<string, (object[] Dimensions, List<object[]> Rows)>(StringComparer.Ordinal);
         var order = new List<string>();
+        var positions = Enumerable.Range(0, dimensionIndexes.Length).ToArray();
 
         foreach (var row in rows)
         {
             var dimensions = new object[dimensionIndexes.Length];
-            var keys = new string[dimensionIndexes.Length];
 
             for (var index = 0; index < dimensionIndexes.Length; index++)
             {
                 dimensions[index] = ColumnValue(plan.Columns[dimensionIndexes[index]], row);
-                keys[index] = DataValues.ToKey(dimensions[index]);
             }
 
-            var key = string.Join('\u001F', keys);
+            var key = DataKeys.Build(dimensions, positions, ignoreCase: false);
 
             if (!groups.TryGetValue(key, out var group))
             {
@@ -212,22 +211,9 @@ public sealed partial class ReportQueryEngine
             return outputs;
         }
 
-        var comparer = Comparer<Output>.Create((left, right) =>
-        {
-            foreach (var (columnIndex, descending) in sorts)
-            {
-                var comparison = DataValues.Compare(left.Values[columnIndex], right.Values[columnIndex]);
+        var comparer = DataSorter.CreateComparer(sorts);
 
-                if (comparison != 0)
-                {
-                    return descending ? -comparison : comparison;
-                }
-            }
-
-            return 0;
-        });
-
-        return outputs.Order(comparer).ToList();
+        return outputs.OrderBy(output => output.Values, comparer).ToList();
     }
 
     private static ReportResultGroup[] Regroup(
@@ -255,7 +241,7 @@ public sealed partial class ReportQueryEngine
 
         foreach (var output in outputs)
         {
-            var key = string.Join('\u001F', dimensions.Select(index => DataValues.ToKey(output.Values[index])));
+            var key = DataKeys.Build(output.Values, dimensions, ignoreCase: false);
 
             if (!groups.TryGetValue(key, out var values))
             {

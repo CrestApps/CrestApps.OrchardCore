@@ -1,3 +1,5 @@
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizerFactory LocalizerFactory
 @model DesignedReportViewModel
 
 @{
@@ -35,7 +37,7 @@
                             var exportFormat = Model.ExportFormats[0];
 
                             <button type="submit" class="btn btn-outline-secondary" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get" name="@Model.ExportFormatField" value="@(Model.ExportFormatField is null ? null : exportFormat.Name)">
-                                <i class="fa-solid fa-download" aria-hidden="true"></i> @T["Export {0}", exportFormat.DisplayName]
+                                <i class="fa-solid fa-download" aria-hidden="true"></i> @T["Export {0}", LocalizerFactory.Localize(exportFormat.DisplayName)]
                             </button>
                         }
                         else if (run.Document is not null && Model.ExportFormats.Count > 1)
@@ -48,7 +50,7 @@
                                     @foreach (var exportFormat in Model.ExportFormats)
                                     {
                                         <li>
-                                            <button type="submit" class="dropdown-item" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get" name="@Model.ExportFormatField" value="@(Model.ExportFormatField is null ? null : exportFormat.Name)">@T["Export {0}", exportFormat.DisplayName]</button>
+                                            <button type="submit" class="dropdown-item" formaction="@Model.ExportUrl(exportFormat.Name)" formmethod="get" name="@Model.ExportFormatField" value="@(Model.ExportFormatField is null ? null : exportFormat.Name)">@T["Export {0}", LocalizerFactory.Localize(exportFormat.DisplayName)]</button>
                                         </li>
                                     }
                                 </ul>
