@@ -35,9 +35,10 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports;
 /// </summary>
 public sealed class AgentWorkforceReportScalingTests
 {
-    private const int AgentCount = 16;
+    private const int AgentCount = 20;
     private const int SeedDays = 36;
-    private const int FirstNightAgent = 11;
+    private const int FirstNightAgent = 14;
+    private const int SupersededAgent = 15;
 
     private static readonly DateTime _seedStart = new(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _now = new(2026, 10, 5, 12, 0, 0, DateTimeKind.Utc);
@@ -429,7 +430,7 @@ public sealed class AgentWorkforceReportScalingTests
                 agentLog.Add(State(agentId, at > end ? at.AddSeconds(30) : end, AgentPresenceStatus.Available, AgentPresenceStatus.Offline, AgentStateChangeSources.SignOut, queues, campaigns));
             }
 
-            if (agent == FirstNightAgent)
+            if (agent == SupersededAgent)
             {
                 // The sweep signs the agent off at 23:59:30 by its last heartbeat, but only records it at 00:01; the
                 // reservation routing recorded at 00:00:20 in between does not count.
