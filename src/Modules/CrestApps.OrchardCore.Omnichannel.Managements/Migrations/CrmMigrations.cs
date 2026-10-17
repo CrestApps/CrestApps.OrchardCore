@@ -233,7 +233,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             await IndexTableIndexCreation.CreateIfMissingAsync<LeadIndex>(
                 SchemaBuilder,
                 LeadConvertedIndexName,
-                null,
+                collection: null,
                 "DocumentId",
                 "IsConverted",
                 "Published",
