@@ -42,7 +42,10 @@
 					options,
 					price: option.getAttribute("data-price"),
 					sku: option.getAttribute("data-sku"),
-					image: option.getAttribute("data-image")
+					image: option.getAttribute("data-image"),
+					availability: option.getAttribute("data-availability"),
+					tone: option.getAttribute("data-availability-tone"),
+					buyable: option.getAttribute("data-buyable") !== "false"
 				};
 			});
 		}
@@ -61,6 +64,17 @@
 			if (!variant.image) return;
 			var thumbnail = summary.querySelector(".product-gallery-thumbnails [data-media-path=\"" + CSS.escape(variant.image) + "\"]");
 			if (thumbnail) thumbnail.click();
+		}
+		function showAvailability(form, variant) {
+			var line = form.querySelector("[data-product-availability]");
+			if (!line) return;
+			if (!variant || !variant.availability) {
+				line.hidden = true;
+				return;
+			}
+			line.textContent = variant.availability;
+			line.className = "product-availability small mb-2 text-" + (variant.tone || "success");
+			line.hidden = false;
 		}
 		function setUp(form) {
 			var select = form.querySelector("[data-product-variant]");
@@ -86,7 +100,8 @@
 				});
 				var variant = findVariant(variants, picked);
 				if (variant) select.value = variant.id;
-				if (submit) submit.disabled = !variant;
+				if (submit) submit.disabled = !variant || !variant.buyable;
+				showAvailability(form, variant);
 				showOnPage(form, variant);
 			}
 			var first = variants.find(function(variant) {

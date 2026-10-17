@@ -29,4 +29,9 @@ public enum OrderCancelReason
     /// The order had no checkout left that could pay for it.
     /// </summary>
     Abandoned = 5,
+
+    /// <summary>
+    /// Something the order needed couldn't be held for it when it was made, such as the last units of a product.
+    /// </summary>
+    Unavailable = 6,
 }

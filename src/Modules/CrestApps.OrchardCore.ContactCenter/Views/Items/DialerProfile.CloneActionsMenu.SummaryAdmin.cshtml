@@ -3,13 +3,11 @@
 
 @model ShapeViewModel<DialerProfile>
 
-<li>
-    <a asp-action="Clone"
-       asp-route-id="@Model.Value.ItemId"
-       class="dropdown-item"
-       data-url-af="UnsafeUrl"
-       data-title="@T["Clone"]"
-       data-message="@T["Create a copy of this dialer profile with all of its settings?"]"
-       data-ok-text="@T["Yes"]"
-       data-cancel-text="@T["Cancel"]">@T["Clone"]</a>
-</li>
+<a asp-action="Clone"
+   asp-route-id="@Model.Value.ItemId"
+   class="dropdown-item"
+   data-url-af="UnsafeUrl"
+   data-title="@T["Clone"]"
+   data-message="@T["Create a copy of this dialer profile with all of its settings?"]"
+   data-ok-text="@T["Yes"]"
+   data-cancel-text="@T["Cancel"]">@T["Clone"]</a>

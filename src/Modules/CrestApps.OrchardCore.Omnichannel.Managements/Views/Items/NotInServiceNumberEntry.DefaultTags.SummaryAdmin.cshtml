@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<NotInServiceNumberEntry>
+
+@{
+    var number = Model.Value.Number;
+    var source = number.Source switch
+    {
+        OmnichannelConstants.NotInServiceSources.Dialer => T["Dialer call"].Value,
+        OmnichannelConstants.NotInServiceSources.AutomatedCall => T["Automated call"].Value,
+        OmnichannelConstants.NotInServiceSources.Agent => T["Agent disposition"].Value,
+        OmnichannelConstants.NotInServiceSources.Lookup => T["Number lookup"].Value,
+        OmnichannelConstants.NotInServiceSources.Manual => T["Marked by hand"].Value,
+        _ => number.Source,
+    };
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Found by"]">
+    <i class="fa-solid fa-magnifying-glass text-secondary me-1" aria-hidden="true"></i>@source
+    @if (!string.IsNullOrEmpty(number.MarkedByUsername))
+    {
+        @T["({0})", number.MarkedByUsername]
+    }
+</span>
+
+@if (!string.IsNullOrEmpty(number.Reason))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Reason"]">
+        <i class="fa-solid fa-circle-info text-secondary me-1" aria-hidden="true"></i>@number.Reason
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.CampaignName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Campaign"]">
+        <i class="fa-solid fa-bullhorn text-secondary me-1" aria-hidden="true"></i>@Model.Value.CampaignName
+    </span>
+}

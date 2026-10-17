@@ -1,0 +1,14 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ProfileBuilderSessionEntry>
+
+@{
+    var changedUtc = Model.Value.Session.ModifiedUtc ?? Model.Value.Session.CreatedUtc;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: changedUtc, Format: "g"))">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@changedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: changedUtc))</time>
+</span>

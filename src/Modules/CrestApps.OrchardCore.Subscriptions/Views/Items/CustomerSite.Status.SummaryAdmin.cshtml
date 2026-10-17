@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<CustomerSite>
+
+@* A customer is told where their site stands in their own words, not with the job's stored status. *@
+@switch (Model.Value.Job.Status)
+{
+    case TenantProvisioningStatus.Succeeded:
+        <span class="badge text-bg-success">@T["Ready"]</span>
+        break;
+    case TenantProvisioningStatus.Abandoned:
+        <span class="badge text-bg-danger">@T["Needs help"]</span>
+        break;
+    case TenantProvisioningStatus.Failed:
+        <span class="badge text-bg-warning">@T["Retrying"]</span>
+        break;
+    default:
+        <span class="badge text-bg-secondary">@T["Being created"]</span>
+        break;
+}

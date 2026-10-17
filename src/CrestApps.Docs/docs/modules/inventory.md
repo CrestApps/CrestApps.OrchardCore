@@ -25,7 +25,8 @@ All of these live in the `Inventory` YesSql collection.
 - **`StockMovement`** (append-only): `StockItemId`, `Kind`, `Quantity` (signed), `OnHandAfter`, `Reason`, `OrderId`, `ActorId`, `ActorName`, `Utc`. `StockMovementIndex` maps the stock item, kind, order and time.
   - `Kind` is one of `Received`, `Adjusted`, `Counted`, `Sold` or `Returned`. Sold and returned movements come with checkout reservations.
 - **`InventoryPart`** (attachable): `TrackInventory` (default true), `AllowBackorder`, `LowStockThreshold` (null for the site default).
-- **`InventorySettings`** (Settings › Commerce › Inventory): `DefaultLowStockThreshold`, 5 by default.
+- **`StockReservation`**: `StockItemId`, `OrderId`, `Quantity`, `Status` (`Held`, `Committed`, `Released`), `ExpiresUtc`, `ReleaseReason`. `StockReservationIndex` maps the stock item, order, status and expiry. A committed reservation is also what keeps an order's sale from being recorded twice.
+- **`InventorySettings`** (Settings › Commerce › Inventory): `DefaultLowStockThreshold` (5) and `HoldMinutes` (60).
 
 ## Services
 
@@ -33,7 +34,13 @@ All of these live in the `Inventory` YesSql collection.
   - `AdjustAsync(stockItemId, kind, quantity, reason, actor)` takes `Received` with a positive quantity, or `Adjusted` with any non-zero quantity.
   - `SetCountAsync(stockItemId, count, reason, actor)` records a `Counted` movement holding the difference. A count that matches is recorded too, so the history shows when stock was last checked.
   - `RebuildAsync(stockItemId)` sets `OnHand` to the sum of the item's movements.
-- **Locking.** Each change takes the distributed lock `STOCK_{stockItemId}`, reads the item, writes the movement and the item, and commits, all while holding the lock.
+- **Reservations.**
+  - `ReserveAsync(orderId, lines, expiresUtc)` holds every counted line or none: a line short of available units, on an item that doesn't allow backorders, returns a `StockShortage` and holds nothing. Uncounted products are skipped, and an item the order already holds isn't held again.
+  - `CommitAsync(orderId, lines)` sells what the order holds: `Reserved` and `OnHand` go down and a `Sold` movement records the order. A line with no hold left (expired, or the order was replaced) is sold anyway, and an item already sold for the order is skipped, so a retried completion sells nothing twice.
+  - `ReleaseAsync(orderId, reason)` releases what the order still holds. `ReleaseExpiredAsync(take)` releases holds past `ExpiresUtc`.
+- **Units of work.** Every method works in the caller's YesSql session and is committed with the caller's work.
+  - Stock items are concurrency-checked: when two changes to one item race, the later commit throws `ConcurrencyException` and keeps nothing.
+  - A separate unit of work isn't used. On SQLite, which allows one writer, it would wait for the caller's open transaction while the caller waits for it.
 - **`InventoryProductSynchronizer.SyncAsync(contentItemId, product, typeHasInventory, settings)`** keeps a product's stock items in step with it:
   - one stock item per variant, or one for a product without variants;
   - each item gets the SKU (the variant's, else the product's), the title (`Product (Variant)`), the threshold (the product's, else the site default) and the backorder flag;
@@ -42,6 +49,20 @@ All of these live in the `Inventory` YesSql collection.
   A product saved before its type had the part is counted with the part's defaults.
 - **`InventoryContentHandler`** notes products as they are updated, published, imported or removed. A deferred task then has `InventorySyncService` sync them against their latest version, so stock can be counted before a product is published.
 - **`InventorySyncService.SyncAllAsync()`** syncs every product whose type has the part. It runs from **Find products to count** and when the default threshold changes.
+
+## Orders
+
+With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties stock to orders:
+
+- **Created:** reserves the order's lines for `HoldMinutes`. A shortage refuses the order with a message for the buyer: *Only 1 of Mug left. Lower the quantity to check out.* or *Mug is out of stock. Remove it to check out.*
+- **Paid:** sells them in the checkout's own unit of work. A concurrent change to the same item rolls the completion back, and the checkout's reconciliation sweep retries it.
+- **Canceled:** releases them.
+
+`ExpiredStockHoldsBackgroundTask` releases expired holds every five minutes, up to 500 per run. The cart's **Checkout** commits the order, and what it holds, before the checkout starts, and turns a concurrency conflict into *Someone else is buying the same items right now.* An item's admin page lists the orders holding it.
+
+## Availability
+
+`InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items at the default location: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
 
 ## Admin
 
@@ -61,4 +82,4 @@ Administrators have both by default.
 
 ## Coming next
 
-Reserving stock when checkout starts and selling it when the order is paid, availability on product pages and in the cart, backorders at checkout, low-stock notifications, and CSV, recipe and deployment steps.
+An in-stock filter for listings, low-stock notifications, and CSV, recipe and deployment steps.

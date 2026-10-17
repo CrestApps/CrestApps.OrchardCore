@@ -10,6 +10,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
@@ -65,13 +66,29 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(VoiceMediaItem item, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = item.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("VoiceMediaItem_Fields_SummaryAdmin", item)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("VoiceMediaItem_Buttons_SummaryAdmin", item)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("VoiceMediaItem_Description_SummaryAdmin", item)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrWhiteSpace(item.Description))),
+            View("VoiceMediaItem_DefaultTags_SummaryAdmin", item)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Audio:5"),
+            View("VoiceMediaItem_Buttons_SummaryAdmin", item).Location("Actions:5"),
             View("VoiceMediaItem_DefaultMeta_SummaryAdmin", item)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

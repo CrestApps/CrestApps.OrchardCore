@@ -1,5 +1,7 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Drivers;
+using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
@@ -29,6 +31,7 @@ public sealed class AgentEntitlementsStartup : StartupBase
         // limit an agent to the queues and campaigns granted on their profile.
         services.Replace(ServiceDescriptor.Scoped<IAgentEntitlementPolicy, EnforcingAgentEntitlementPolicy>());
         services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
+        services.AddDisplayDriver<AgentProfile, AgentEntitlementDisplayDriver>();
     }
 }
 

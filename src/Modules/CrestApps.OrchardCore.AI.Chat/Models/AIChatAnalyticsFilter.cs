@@ -21,6 +21,11 @@ public sealed class AIChatAnalyticsFilter : Entity
     public DateTime? EndDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the relative range picked in the date range selector, e.g. <c>last30</c>, so the selector shows it again.
+    /// </summary>
+    public string Range { get; set; }
+
+    /// <summary>
     /// Gets or sets the start date converted to UTC for querying.
     /// </summary>
     public DateTime? StartDateUtc { get; set; }

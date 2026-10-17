@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SharedVoicemailEntry>
+
+@{
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+<form asp-action="Resolve" asp-route-id="@Model.Value.Voicemail.ItemId" method="post" class="no-multisubmit mt-2">
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
+    <div class="input-group input-group-sm" style="max-width: 36rem;">
+        <input type="text" name="note" class="form-control" maxlength="1000" placeholder="@T["Note (optional)"]" aria-label="@T["Note (optional)"]" />
+        <button type="submit" class="btn btn-outline-success">@T["Mark done"]</button>
+    </div>
+</form>

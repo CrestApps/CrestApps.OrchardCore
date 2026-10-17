@@ -5,11 +5,10 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -28,12 +27,11 @@ public sealed class InventoryStockTests : IAsyncLifetime
 
     private readonly string _path = Path.Combine(Path.GetTempPath(), $"crestapps-inventory-{Guid.NewGuid():N}.db");
     private IStore _store;
-    private bool _lockGranted = true;
 
     public async ValueTask InitializeAsync()
     {
         _store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={_path};Pooling=False"));
-        _store.RegisterIndexes([new StockItemIndexProvider(), new StockMovementIndexProvider()], InventoryConstants.CollectionName);
+        _store.RegisterIndexes([new StockItemIndexProvider(), new StockMovementIndexProvider(), new StockReservationIndexProvider()], InventoryConstants.CollectionName);
         await _store.InitializeAsync(TestContext.Current.CancellationToken);
         await _store.InitializeCollectionAsync(InventoryConstants.CollectionName, TestContext.Current.CancellationToken);
 
@@ -58,14 +56,17 @@ public sealed class InventoryStockTests : IAsyncLifetime
         return clock.Object;
     }
 
-    private DefaultInventoryService CreateService(ISession session)
-    {
-        var distributedLock = new Mock<IDistributedLock>();
-        distributedLock
-            .Setup(locking => locking.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
-            .ReturnsAsync(() => (Mock.Of<ILocker>(), _lockGranted));
+    private static DefaultInventoryService CreateService(ISession session)
+        => new(session, new StockItemStore(session), new StockMovementStore(session), Clock());
 
-        return new DefaultInventoryService(new StockItemStore(session), new StockMovementStore(session), distributedLock.Object, session, Clock());
+    // One unit of work, committed, as a request or a checkout would.
+    private async Task<T> InSessionAsync<T>(Func<DefaultInventoryService, Task<T>> work)
+    {
+        await using var session = _store.CreateSession();
+        var result = await work(CreateService(session));
+        await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return result;
     }
 
     private async Task<string> AddItemAsync(string contentItemId = "mug", string variantId = null, int threshold = 5, string title = "Mug", string sku = "MUG")
@@ -92,19 +93,14 @@ public sealed class InventoryStockTests : IAsyncLifetime
     {
         var itemId = await AddItemAsync();
 
-        await using (var session = _store.CreateSession())
-        {
-            var service = CreateService(session);
+        Assert.True((await InSessionAsync(service => service.AdjustAsync(itemId, StockMovementKind.Received, 10, "Delivery 42", _admin, TestContext.Current.CancellationToken))).Succeeded);
 
-            Assert.True((await service.AdjustAsync(itemId, StockMovementKind.Received, 10, "Delivery 42", _admin, TestContext.Current.CancellationToken)).Succeeded);
+        var counted = await InSessionAsync(service => service.SetCountAsync(itemId, 9, "Shelf count", _admin, TestContext.Current.CancellationToken));
+        Assert.Equal(-1, counted.Movement.Quantity);
+        Assert.Equal(9, counted.Item.OnHand);
 
-            var counted = await service.SetCountAsync(itemId, 9, "Shelf count", _admin, TestContext.Current.CancellationToken);
-            Assert.Equal(-1, counted.Movement.Quantity);
-            Assert.Equal(9, counted.Item.OnHand);
-
-            var damaged = await service.AdjustAsync(itemId, StockMovementKind.Adjusted, -2, "Damaged", _admin, TestContext.Current.CancellationToken);
-            Assert.Equal(7, damaged.Item.OnHand);
-        }
+        var damaged = await InSessionAsync(service => service.AdjustAsync(itemId, StockMovementKind.Adjusted, -2, "Damaged", _admin, TestContext.Current.CancellationToken));
+        Assert.Equal(7, damaged.Item.OnHand);
 
         await using (var session = _store.CreateSession())
         {
@@ -127,12 +123,8 @@ public sealed class InventoryStockTests : IAsyncLifetime
     {
         var itemId = await AddItemAsync();
 
-        await using (var session = _store.CreateSession())
-        {
-            var service = CreateService(session);
-            await service.AdjustAsync(itemId, StockMovementKind.Received, 10, null, _admin, TestContext.Current.CancellationToken);
-            await service.AdjustAsync(itemId, StockMovementKind.Adjusted, -3, null, _admin, TestContext.Current.CancellationToken);
-        }
+        await InSessionAsync(service => service.AdjustAsync(itemId, StockMovementKind.Received, 10, null, _admin, TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.AdjustAsync(itemId, StockMovementKind.Adjusted, -3, null, _admin, TestContext.Current.CancellationToken));
 
         // Something wrote a wrong count without a movement.
         await using (var session = _store.CreateSession())
@@ -144,12 +136,9 @@ public sealed class InventoryStockTests : IAsyncLifetime
             await session.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
-        await using (var session = _store.CreateSession())
-        {
-            var rebuilt = await CreateService(session).RebuildAsync(itemId, TestContext.Current.CancellationToken);
+        var rebuilt = await InSessionAsync(service => service.RebuildAsync(itemId, TestContext.Current.CancellationToken));
 
-            Assert.Equal(7, rebuilt.Item.OnHand);
-        }
+        Assert.Equal(7, rebuilt.Item.OnHand);
     }
 
     [Theory]
@@ -161,26 +150,38 @@ public sealed class InventoryStockTests : IAsyncLifetime
     {
         var itemId = await AddItemAsync();
 
-        await using var session = _store.CreateSession();
-
-        var result = await CreateService(session).AdjustAsync(itemId, kind, quantity, null, _admin, TestContext.Current.CancellationToken);
+        var result = await InSessionAsync(service => service.AdjustAsync(itemId, kind, quantity, null, _admin, TestContext.Current.CancellationToken));
 
         Assert.Equal(StockChangeError.InvalidQuantity, result.Error);
     }
 
     [Fact]
-    public async Task ANegativeCount_AMissingItem_AndABusyItem_AreRefused()
+    public async Task ANegativeCount_AndAMissingItem_AreRefused()
     {
         var itemId = await AddItemAsync();
 
-        await using var session = _store.CreateSession();
-        var service = CreateService(session);
+        Assert.Equal(StockChangeError.InvalidQuantity, (await InSessionAsync(service => service.SetCountAsync(itemId, -1, null, _admin, TestContext.Current.CancellationToken))).Error);
+        Assert.Equal(StockChangeError.NotFound, (await InSessionAsync(service => service.SetCountAsync("missing", 3, null, _admin, TestContext.Current.CancellationToken))).Error);
+    }
 
-        Assert.Equal(StockChangeError.InvalidQuantity, (await service.SetCountAsync(itemId, -1, null, _admin, TestContext.Current.CancellationToken)).Error);
-        Assert.Equal(StockChangeError.NotFound, (await service.SetCountAsync("missing", 3, null, _admin, TestContext.Current.CancellationToken)).Error);
+    [Fact]
+    public async Task TwoCheckoutsHoldingTheLastUnitAtTheSameMoment_OnlyTheFirstToCommitKeepsIt()
+    {
+        var itemId = await AddItemAsync();
+        await InSessionAsync(service => service.SetCountAsync(itemId, 1, null, _admin, TestContext.Current.CancellationToken));
 
-        _lockGranted = false;
-        Assert.Equal(StockChangeError.Busy, (await service.SetCountAsync(itemId, 3, null, _admin, TestContext.Current.CancellationToken)).Error);
+        // Both read the item before either commits.
+        await using var first = _store.CreateSession();
+        await using var second = _store.CreateSession();
+        Assert.True((await CreateService(first).ReserveAsync("order-a", [new StockRequest("mug", null, 1)], _now.AddMinutes(60), TestContext.Current.CancellationToken)).Succeeded);
+        Assert.True((await CreateService(second).ReserveAsync("order-b", [new StockRequest("mug", null, 1)], _now.AddMinutes(60), TestContext.Current.CancellationToken)).Succeeded);
+
+        await first.SaveChangesAsync(TestContext.Current.CancellationToken);
+        await Assert.ThrowsAsync<ConcurrencyException>(() => second.SaveChangesAsync(TestContext.Current.CancellationToken));
+
+        var item = await FindAsync(itemId);
+        Assert.Equal(1, item.Reserved);
+        Assert.Equal(0, item.Available);
     }
 
     [Fact]
@@ -191,14 +192,10 @@ public sealed class InventoryStockTests : IAsyncLifetime
         var gone = await AddItemAsync("vase", threshold: 5, title: "Vase", sku: "VASE-1");
         var backordered = await AddItemAsync("bowl", threshold: 5, title: "Bowl", sku: "BOWL-1");
 
-        await using (var session = _store.CreateSession())
-        {
-            var service = CreateService(session);
-            await service.SetCountAsync(low, 3, null, _admin, TestContext.Current.CancellationToken);
-            await service.SetCountAsync(plenty, 40, null, _admin, TestContext.Current.CancellationToken);
-            await service.SetCountAsync(gone, 0, null, _admin, TestContext.Current.CancellationToken);
-            await service.AdjustAsync(backordered, StockMovementKind.Adjusted, -2, null, _admin, TestContext.Current.CancellationToken);
-        }
+        await InSessionAsync(service => service.SetCountAsync(low, 3, null, _admin, TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.SetCountAsync(plenty, 40, null, _admin, TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.SetCountAsync(gone, 0, null, _admin, TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.AdjustAsync(backordered, StockMovementKind.Adjusted, -2, null, _admin, TestContext.Current.CancellationToken));
 
         await using (var session = _store.CreateSession())
         {
@@ -285,6 +282,206 @@ public sealed class InventoryStockTests : IAsyncLifetime
         }
 
         Assert.True(Assert.Single(await ListAsync("mug")).Archived);
+    }
+
+    [Fact]
+    public async Task TwoBuyersRacingForTheLastUnit_OneHoldsIt_AndTheOtherIsToldItSoldOut()
+    {
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 1);
+        var expires = _now.AddMinutes(60);
+
+        var first = await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 1)], expires, TestContext.Current.CancellationToken));
+        var second = await InSessionAsync(service => service.ReserveAsync("order-b", [new StockRequest("mug", null, 1)], expires, TestContext.Current.CancellationToken));
+
+        Assert.True(first.Succeeded);
+        var shortage = Assert.Single(second.Shortages);
+        Assert.Equal(0, shortage.Available);
+        Assert.Equal("Mug", shortage.Item.Title);
+
+        var item = await FindAsync(itemId);
+        Assert.Equal(1, item.OnHand);
+        Assert.Equal(1, item.Reserved);
+        Assert.Equal(0, item.Available);
+    }
+
+    [Fact]
+    public async Task AnOrderShortOfOneItem_HoldsNothing()
+    {
+        var mug = await AddItemAsync("mug");
+        var lamp = await AddItemAsync("lamp", title: "Lamp", sku: "LAMP");
+        await StockedServiceAsync(mug, 5);
+        await InSessionAsync(service => service.SetCountAsync(lamp, 1, null, _admin, TestContext.Current.CancellationToken));
+
+        var result = await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 2), new StockRequest("lamp", null, 3)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(1, Assert.Single(result.Shortages).Available);
+        Assert.Equal(0, (await FindAsync(mug)).Reserved);
+        Assert.Equal(0, (await FindAsync(lamp)).Reserved);
+    }
+
+    [Fact]
+    public async Task BackordersAndUncountedProducts_AreNeverShort()
+    {
+        var itemId = await AddItemAsync();
+
+        await using (var session = _store.CreateSession())
+        {
+            var store = new StockItemStore(session);
+            var item = await store.FindByIdAsync(itemId, TestContext.Current.CancellationToken);
+            item.AllowBackorder = true;
+            await store.UpdateAsync(item, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var result = await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 4), new StockRequest("not-counted", null, 9)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(-4, (await FindAsync(itemId)).Available);
+    }
+
+    [Fact]
+    public async Task PayingSellsWhatWasHeld_Once()
+    {
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 5);
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 2)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+
+        await InSessionAsync(service => service.CommitAsync("order-a", [new StockRequest("mug", null, 2)], TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.CommitAsync("order-a", [new StockRequest("mug", null, 2)], TestContext.Current.CancellationToken));
+
+        var item = await FindAsync(itemId);
+        Assert.Equal(3, item.OnHand);
+        Assert.Equal(0, item.Reserved);
+
+        var movements = await MovementsAsync(itemId);
+        var sold = Assert.Single(movements, movement => movement.Kind == StockMovementKind.Sold);
+        Assert.Equal(-2, sold.Quantity);
+        Assert.Equal("order-a", sold.OrderId);
+        Assert.Equal(3, sold.OnHandAfter);
+    }
+
+    [Fact]
+    public async Task AnOrderPaidAfterItsHoldEnded_IsSoldAnyway_Once()
+    {
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 1);
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 1)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.ReleaseAsync("order-a", "replaced", TestContext.Current.CancellationToken));
+
+        // Someone else bought the unit meanwhile.
+        await InSessionAsync(service => service.ReserveAsync("order-b", [new StockRequest("mug", null, 1)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.CommitAsync("order-b", [new StockRequest("mug", null, 1)], TestContext.Current.CancellationToken));
+
+        await InSessionAsync(service => service.CommitAsync("order-a", [new StockRequest("mug", null, 1)], TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.CommitAsync("order-a", [new StockRequest("mug", null, 1)], TestContext.Current.CancellationToken));
+
+        var item = await FindAsync(itemId);
+        Assert.Equal(-1, item.OnHand);
+        Assert.Equal(0, item.Reserved);
+        Assert.Equal(2, (await MovementsAsync(itemId)).Count(movement => movement.Kind == StockMovementKind.Sold));
+    }
+
+    [Fact]
+    public async Task CancelingLetsTheHoldGo_AndExpiredHoldsAreLetGoBySweeping()
+    {
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 10);
+
+        await InSessionAsync(service => service.ReserveAsync("canceled", [new StockRequest("mug", null, 2)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.ReserveAsync("expired", [new StockRequest("mug", null, 3)], _now.AddMinutes(-1), TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.ReserveAsync("open", [new StockRequest("mug", null, 4)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+        Assert.Equal(9, (await FindAsync(itemId)).Reserved);
+
+        await InSessionAsync(service => service.ReleaseAsync("canceled", "canceled", TestContext.Current.CancellationToken));
+        await InSessionAsync(service => service.ReleaseAsync("canceled", "canceled", TestContext.Current.CancellationToken));
+        Assert.Equal(7, (await FindAsync(itemId)).Reserved);
+
+        Assert.Equal(1, await InSessionAsync(service => service.ReleaseExpiredAsync(100, TestContext.Current.CancellationToken)));
+        Assert.Equal(4, (await FindAsync(itemId)).Reserved);
+
+        // Nothing was sold, so nothing on hand changed.
+        Assert.Equal(10, (await FindAsync(itemId)).OnHand);
+    }
+
+    [Fact]
+    public async Task RebuildingRecountsTheHeldUnitsToo()
+    {
+        var itemId = await AddItemAsync();
+        await StockedServiceAsync(itemId, 10);
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("mug", null, 3)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+
+        await using (var session = _store.CreateSession())
+        {
+            var store = new StockItemStore(session);
+            var item = await store.FindByIdAsync(itemId, TestContext.Current.CancellationToken);
+            item.Reserved = 0;
+            await store.UpdateAsync(item, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        var rebuilt = await InSessionAsync(service => service.RebuildAsync(itemId, TestContext.Current.CancellationToken));
+
+        Assert.Equal(3, rebuilt.Item.Reserved);
+    }
+
+    [Fact]
+    public async Task Availability_ListsAProductsVariants_AndCountsACartsOwnHoldsAsItsOwn()
+    {
+        var red = await AddItemAsync("shirt", "red", threshold: 2, title: "Shirt (Red)", sku: "RED");
+        var blue = await AddItemAsync("shirt", "blue", threshold: 2, title: "Shirt (Blue)", sku: "BLUE");
+        await StockedServiceAsync(red, 3);
+        await StockedServiceAsync(blue, 1);
+
+        // The buyer started checkout: their unpaid order holds 2 red shirts.
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("shirt", "red", 2)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+
+        var orders = new Mock<CrestApps.OrchardCore.Orders.Core.Services.IOrderStore>();
+        orders
+            .Setup(store => store.ListUnpaidByCartAsync("cart-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CrestApps.OrchardCore.Orders.Core.Models.Order { ItemId = "order-a" }]);
+
+        var services = new ServiceCollection()
+            .AddSingleton(orders.Object)
+            .BuildServiceProvider();
+
+        await using var session = _store.CreateSession();
+        var provider = new CrestApps.OrchardCore.Inventory.Services.InventoryAvailabilityProvider(session, services);
+
+        var everyone = await provider.GetAvailabilityAsync(new CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityRequest
+        {
+            Products = [new CrestApps.OrchardCore.Products.Core.Services.ProductStockKey("shirt", null)],
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, everyone.Count);
+        Assert.Equal(1, everyone[new("shirt", "red")].Available);
+        Assert.Equal(CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityStatus.LowStock, everyone[new("shirt", "blue")].Status);
+
+        var theBuyer = await provider.GetAvailabilityAsync(new CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityRequest
+        {
+            Products = [new CrestApps.OrchardCore.Products.Core.Services.ProductStockKey("shirt", "red")],
+            CartId = "cart-1",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, Assert.Single(theBuyer).Value.Available);
+    }
+
+    private Task<StockChangeResult> StockedServiceAsync(string itemId, int onHand)
+        => InSessionAsync(service => service.SetCountAsync(itemId, onHand, null, _admin, TestContext.Current.CancellationToken));
+
+    private async Task<StockItem> FindAsync(string itemId)
+    {
+        await using var session = _store.CreateSession();
+
+        return await new StockItemStore(session).FindByIdAsync(itemId, TestContext.Current.CancellationToken);
+    }
+
+    private async Task<IReadOnlyList<StockMovement>> MovementsAsync(string itemId)
+    {
+        await using var session = _store.CreateSession();
+
+        return (await new StockMovementStore(session).PageAsync(itemId, 0, 100, TestContext.Current.CancellationToken)).Movements;
     }
 
     private async Task SyncAsync(ContentItem product, InventorySettings settings)

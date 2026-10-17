@@ -1,0 +1,36 @@
+@using System.Globalization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContentTransferEntry>
+
+@{
+    var entry = Model.Value;
+    var isImportEntry = entry.Direction == ContentTransferDirection.Import;
+    entry.TryGet<ImportFileProcessStatsPart>(out var statsPart);
+    var errorCount = statsPart?.Errors?.Count ?? 0;
+    var successCount = statsPart?.ImportedCount ?? 0;
+}
+
+@if (statsPart?.TotalProcessed > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@(isImportEntry ? T["Records imported successfully"] : T["Records exported"])">
+        <i class="fa-solid fa-check text-success" aria-hidden="true"></i> @successCount
+    </span>
+
+    @if (errorCount > 0)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Records with errors"]">
+            <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i> @errorCount
+        </span>
+    }
+}
+
+@if (entry.ProcessSaveUtc.HasValue)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last processed at"]">
+        <i class="fa-solid fa-clock text-secondary" aria-hidden="true"></i>
+        <time datetime="@entry.ProcessSaveUtc.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)">
+            @await DisplayAsync(await New.Timespan(Utc: entry.ProcessSaveUtc.Value))
+        </time>
+    </span>
+}

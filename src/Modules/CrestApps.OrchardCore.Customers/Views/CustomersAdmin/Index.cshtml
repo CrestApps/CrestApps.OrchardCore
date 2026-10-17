@@ -9,11 +9,11 @@
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by name, company or email"]" type="search" autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 @if (Model.CanManage)
@@ -25,96 +25,21 @@
             </div>
         </div>
     </div>
+
+    @* The customers, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="Customers" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no customers that match the current filter."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Contact" position="40" title="@T["Contact"]" width="auto" />
+            <admin-list-column name="LastActivity" position="50" title="@T["Last activity"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
-
-<ul class="list-group">
-    <li class="list-group-item text-bg-theme">
-        <div class="row gx-3 align-items-center">
-            <div class="col text-nowrap">
-                @T.Plural(Model.TotalCount, "1 customer", "{0} customers")
-            </div>
-            <div class="col col-md-auto text-end">
-                <div class="btn-group filter">
-                    <select asp-for="Options.Filter" asp-items="Model.Options.Filters" form="customers-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Show"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Show"]"></select>
-                </div>
-            </div>
-        </div>
-    </li>
-    @if (Model.Customers.Count > 0)
-    {
-        @foreach (var customer in Model.Customers)
-        {
-            <li class="list-group-item">
-                <div class="row g-0">
-                    <div class="col-lg col-12 title d-flex align-items-center">
-                        <div class="summary">
-                            <div class="d-flex flex-column flex-md-row align-items-md-center">
-                                <div class="me-2">
-                                    <h5 class="mb-1 mb-md-0"><a asp-action="Edit" asp-route-customerId="@customer.ItemId">@(customer.GetName() ?? T["(no name)"].Value)</a></h5>
-                                </div>
-                                <div class="tags me-1">
-                                    @if (string.IsNullOrEmpty(customer.UserId))
-                                    {
-                                        <span class="badge text-bg-secondary">@T["Guest"]</span>
-                                    }
-                                    @if (customer.Kind == CustomerKind.Business)
-                                    {
-                                        <span class="badge text-bg-info">@T["Business"]</span>
-                                    }
-                                    @if (customer.Status == CustomerStatus.Disabled)
-                                    {
-                                        <span class="badge text-bg-warning">@T["Disabled"]</span>
-                                    }
-                                    else if (customer.Status == CustomerStatus.Anonymized)
-                                    {
-                                        <span class="badge text-bg-dark">@T["Anonymized"]</span>
-                                    }
-                                    else if (customer.Status == CustomerStatus.Merged)
-                                    {
-                                        <span class="badge text-bg-secondary">@T["Merged"]</span>
-                                    }
-                                </div>
-                            </div>
-                            <div class="metadata mt-1">
-                                @if (!string.IsNullOrEmpty(customer.Email))
-                                {
-                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Email"]">
-                                        <i class="fa-regular fa-envelope text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Email"]</span>
-                                        @customer.Email
-                                    </span>
-                                }
-                                @if (customer.Kind == CustomerKind.Business && !string.IsNullOrEmpty(customer.CompanyName) && customer.CompanyName != customer.GetName())
-                                {
-                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Company"]">
-                                        <i class="fa-regular fa-building text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Company"]</span>
-                                        @customer.CompanyName
-                                    </span>
-                                }
-                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Last activity"]">
-                                    <i class="fa-regular fa-clock text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Last activity"]</span>
-                                    @customer.LastActivityUtc.ToString("g")
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
-                        <a class="btn btn-primary btn-sm" asp-action="Edit" asp-route-customerId="@customer.ItemId">@(Model.CanManage ? T["Edit"] : T["View"])</a>
-                    </div>
-                </div>
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0" role="alert">
-                @T["<strong>Nothing here!</strong> There are no customers that match the current filter."]
-            </div>
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="commerce-admin-list" at="Foot"></script>

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Orders.ViewModels;
@@ -20,6 +21,13 @@ public class OrdersIndexViewModel
 
     [BindNever]
     public IShape Pager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the orders, pager and region shapes the <c>admin-list</c> tag renders, in the
+    /// layout (List or Grid) the site or the user picked.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }
 
 public class OrdersIndexOptions

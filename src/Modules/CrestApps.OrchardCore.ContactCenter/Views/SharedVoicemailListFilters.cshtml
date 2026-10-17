@@ -1,0 +1,30 @@
+@*
+    The queue and status filters of the shared voicemail list and its new-message count, passed to the admin list as
+    its 'ToolbarActions' so they render at the end of the list's toolbar. The list sits outside the filter form, since
+    each row carries forms of its own, so the selects and the button name that form.
+*@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    var status = (SharedVoicemailStatusFilter)Model.Status;
+    int newCount = Model.NewCount;
+    var statusOptions = new List<SelectListItem>
+    {
+        new(T["Open (new and claimed)"].Value, nameof(SharedVoicemailStatusFilter.Open), status == SharedVoicemailStatusFilter.Open),
+        new(T["New"].Value, nameof(SharedVoicemailStatusFilter.New), status == SharedVoicemailStatusFilter.New),
+        new(T["Claimed"].Value, nameof(SharedVoicemailStatusFilter.Claimed), status == SharedVoicemailStatusFilter.Claimed),
+        new(T["Done"].Value, nameof(SharedVoicemailStatusFilter.Resolved), status == SharedVoicemailStatusFilter.Resolved),
+        new(T["All"].Value, nameof(SharedVoicemailStatusFilter.All), status == SharedVoicemailStatusFilter.All),
+    };
+}
+
+@if (newCount > 0)
+{
+    <span class="badge text-bg-danger">@(newCount == 1 ? T["1 new voicemail"] : T["{0} new voicemails", newCount])</span>
+}
+<div class="btn-group filter">
+    <select name="queueId" asp-items="(IEnumerable<SelectListItem>)Model.QueueOptions" form="shared-voicemail-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by queue"]" data-dropdown-align-right="auto" aria-label="@T["Queue"]">
+        <option value="">@T["All my queues"]</option>
+    </select>
+    <select name="status" asp-items="statusOptions" form="shared-voicemail-filter" class="selectpicker show-tick me-2" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]"></select>
+    <button type="submit" form="shared-voicemail-filter" class="btn btn-sm btn-secondary">@T["Filter"]</button>
+</div>

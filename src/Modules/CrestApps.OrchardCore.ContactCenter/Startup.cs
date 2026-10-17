@@ -232,7 +232,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
             .AddDataMigration<ContactCenterEventMetricIndexMigrations>()
             .AddIndexProvider<ContactCenterEventMetricDeltaIndexProvider>()
-            .AddDataMigration<ContactCenterEventMetricDeltaIndexMigrations>();
+            .AddDataMigration<ContactCenterEventMetricDeltaIndexMigrations>()
+            .AddIndexProvider<AgentDailyTimeSummaryIndexProvider>()
+            .AddDataMigration<AgentDailyTimeSummaryIndexMigrations>();
 
         services
             .AddIndexProvider<ContactCenterProcessedEventIndexProvider>()

@@ -132,7 +132,6 @@ public sealed class ActivityBatchesController : Controller
 
         var viewModel = new ListOmnichannelActivityBatchViewModel
         {
-            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, totalCount, routeData),
             Sources = _activityBatchSourceOptions.Sources.Values
@@ -140,14 +139,12 @@ public sealed class ActivityBatchesController : Controller
                 .OrderBy(source => source.DisplayName.Value),
         };
 
-        foreach (var model in batches)
+        // The admin-list tag builds a row per record, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<OmnichannelActivityBatch>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<OmnichannelActivityBatch>
-            {
-                Model = model,
-                Shape = await _batchDisplayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = batches,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions = GetBulkActions();
 

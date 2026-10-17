@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
@@ -32,19 +33,15 @@ public class InstallmentPlansIndexOptions
 public class InstallmentPlansIndexViewModel
 {
     /// <summary>
-    /// Gets or sets the plans on this page.
-    /// </summary>
-    public IList<InstallmentPlan> Plans { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the filters.
     /// </summary>
     public InstallmentPlansIndexOptions Options { get; set; }
 
     /// <summary>
-    /// Gets or sets the pager shape.
+    /// Gets or sets the plans on this page, with the toolbar filter and the pager, rendered by the admin list in the
+    /// layout the site or the user picked.
     /// </summary>
-    public dynamic Pager { get; set; }
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>

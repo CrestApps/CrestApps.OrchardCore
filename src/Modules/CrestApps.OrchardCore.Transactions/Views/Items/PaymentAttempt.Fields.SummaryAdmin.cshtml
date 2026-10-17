@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Payments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentAttempt>
+
+@{
+    var attempt = Model.Value;
+    var settled = attempt.State == PaymentAttemptState.Succeeded;
+    var amount = settled ? attempt.ConfirmedAmount : attempt.ExpectedAmount;
+    var tax = settled ? attempt.ConfirmedTaxAmount : attempt.ExpectedTaxAmount;
+    var total = $"{attempt.Currency} {CurrencyScale.Format(amount + tax, attempt.Currency)}";
+    var paysTransaction = string.Equals(attempt.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(attempt.ReferenceId);
+}
+
+@* The amount is the title of the row: a plain link to the transaction it pays, or plain text when it pays none. *@
+@if (paysTransaction)
+{
+    <a asp-action="Detail" asp-controller="Admin" asp-route-itemId="@attempt.ReferenceId">@total</a>
+}
+else
+{
+    @total
+}

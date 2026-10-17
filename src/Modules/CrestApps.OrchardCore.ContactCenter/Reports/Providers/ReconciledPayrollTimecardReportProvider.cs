@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
@@ -28,6 +29,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     private readonly IAgentProfileManager _agentManager;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
+    private readonly ContactCenterReportingOptions _reportingOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReconciledPayrollTimecardReportProvider"/> class.
@@ -38,6 +40,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     /// <param name="agentManager">The agent directory, for agent names.</param>
     /// <param name="clock">The clock, so an agent still signed in is counted up to now and no further.</param>
     /// <param name="localClock">The tenant's clock, whose time zone the days and times of day are in.</param>
+    /// <param name="reportingOptions">The reporting options that bound the period.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReconciledPayrollTimecardReportProvider(
         IContactCenterReportingService reportingService,
@@ -46,6 +49,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
         IAgentProfileManager agentManager,
         IClock clock,
         ILocalClock localClock,
+        IOptions<ContactCenterReportingOptions> reportingOptions,
         IStringLocalizer<ReconciledPayrollTimecardReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
@@ -53,6 +57,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
         _agentManager = agentManager;
         _clock = clock;
         _localClock = localClock;
+        _reportingOptions = reportingOptions.Value;
     }
 
     /// <inheritdoc/>
@@ -83,6 +88,14 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     /// <inheritdoc/>
     protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        // The period was chosen as local dates, so its days are the tenant's days too.
+        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
+
+        if (WorkforceReportRange.TryRefuse(context, _reportingOptions, timeZone, S, out var refusal))
+        {
+            return refusal;
+        }
+
         var range = context.Filter.GetDateRange();
         var fromUtc = range.FromUtc.GetValueOrDefault();
         var toUtc = ContactCenterReportPeriod.ObservedEnd(range.ToUtc, _clock.UtcNow);
@@ -101,8 +114,6 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
             additionalEventTypes: null,
             cancellationToken);
 
-        // The period was chosen as local dates, so its days are the tenant's days too.
-        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
         var days = ReconciledTimecard.Build(AgentStateTimeline.Build(events), fromUtc, toUtc, timeZone);
 
         return Build(days, agentId => ResolveAgentName(agentId, agents), timeZone);

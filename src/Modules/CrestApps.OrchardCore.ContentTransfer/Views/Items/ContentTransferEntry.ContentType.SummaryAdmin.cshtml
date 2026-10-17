@@ -1,0 +1,7 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContentTransferEntry>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Content type"]">
+    <i class="fa-regular fa-file text-secondary" aria-hidden="true"></i> @Model.Value.ContentType
+</span>

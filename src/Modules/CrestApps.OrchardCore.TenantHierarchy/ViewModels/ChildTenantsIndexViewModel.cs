@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -93,4 +95,10 @@ public class ChildTenantsIndexViewModel
     /// Gets or sets the bulk actions.
     /// </summary>
     public List<SelectListItem> BulkActions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the rows, the toolbar and the pager rendered by the admin list.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }

@@ -102,19 +102,17 @@ public sealed class PromptsController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<McpPrompt>>
         {
-            Models = [],
+            Models = result.Entries.Select(model => new CatalogEntryViewModel<McpPrompt> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per prompt, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<McpPrompt>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<McpPrompt>
-            {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

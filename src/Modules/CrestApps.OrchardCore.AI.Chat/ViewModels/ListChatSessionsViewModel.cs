@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.AI.Chat.ViewModels;
@@ -33,4 +34,10 @@ public class ListChatSessionsViewModel
     /// Gets or sets the header.
     /// </summary>
     public IShape Header { get; set; }
+
+    /// <summary>
+    /// Gets or sets the items and pager the <c>admin-list</c> tag renders, in the layout (List or Grid) the
+    /// site or the user picked.
+    /// </summary>
+    public AdminListContext List { get; set; }
 }

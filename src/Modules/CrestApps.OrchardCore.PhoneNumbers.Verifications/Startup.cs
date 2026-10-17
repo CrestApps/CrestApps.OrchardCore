@@ -40,6 +40,7 @@ public sealed class Startup : StartupBase
 
         services.AddSiteDisplayDriver<PhoneNumberVerificationsSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications, PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings);
+        services.AddDisplayDriver<PhoneNumberVerificationRecord, PhoneNumberVerificationRecordDisplayDriver>();
         services.AddNavigationProvider<PhoneNumberVerificationsAdminMenu>();
         services.AddPermissionProvider<PhoneNumberVerificationsPermissionProvider>();
         services.AddScoped<IPhoneNumberVerificationQueueProcessor, PhoneNumberVerificationQueueProcessor>();

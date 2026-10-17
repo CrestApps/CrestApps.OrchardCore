@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<NotInServiceNumberEntry>
+
+@* The bulk actions are applied to the selected phone numbers. *@
+<div class="form-check">
+    <input type="checkbox" class="form-check-input" value="@Model.Value.Number.PhoneNumber" name="itemIds" id="itemIds-@Model.Value.Number.ItemId">
+    <label class="form-check-label" for="itemIds-@Model.Value.Number.ItemId">&nbsp;</label>
+</div>

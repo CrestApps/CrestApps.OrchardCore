@@ -86,19 +86,17 @@ public sealed class TaxTypesController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxType>>
         {
-            Models = [],
+            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxType> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per tax type, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<TaxType>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<TaxType>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions = [];
 

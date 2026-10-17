@@ -1,0 +1,4 @@
+@model ShapeViewModel<StockItem>
+
+@* A plain link to the stock item's page, like the title of a content item in the Manage Content list. *@
+<a asp-controller="InventoryAdmin" asp-action="Item" asp-route-stockItemId="@Model.Value.ItemId">@(Model.Value.Title ?? T["(untitled)"].Value)</a>

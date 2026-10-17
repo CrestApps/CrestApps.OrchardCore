@@ -63,6 +63,9 @@
         price: option.getAttribute('data-price'),
         sku: option.getAttribute('data-sku'),
         image: option.getAttribute('data-image'),
+        availability: option.getAttribute('data-availability'),
+        tone: option.getAttribute('data-availability-tone'),
+        buyable: option.getAttribute('data-buyable') !== 'false',
       };
     });
   }
@@ -106,6 +109,25 @@
     }
   }
 
+  // The stock line under the options says what's left of the chosen variant, for products whose stock is counted.
+  function showAvailability(form, variant) {
+    var line = form.querySelector('[data-product-availability]');
+
+    if (!line) {
+      return;
+    }
+
+    if (!variant || !variant.availability) {
+      line.hidden = true;
+
+      return;
+    }
+
+    line.textContent = variant.availability;
+    line.className = 'product-availability small mb-2 text-' + (variant.tone || 'success');
+    line.hidden = false;
+  }
+
   function setUp(form) {
     var select = form.querySelector('[data-product-variant]');
     var picker = form.querySelector('[data-product-variant-options]');
@@ -147,11 +169,12 @@
         select.value = variant.id;
       }
 
-      // The form cannot be sent until the options make a variant on sale.
+      // The form cannot be sent until the options make a variant on sale that's in stock.
       if (submit) {
-        submit.disabled = !variant;
+        submit.disabled = !variant || !variant.buyable;
       }
 
+      showAvailability(form, variant);
       showOnPage(form, variant);
     }
 

@@ -77,21 +77,21 @@ public sealed class TemplatesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
+        var pagerShape = await shapeFactory.PagerAsync(pager, result.Count, routeData);
+
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<MessageTemplate>>
         {
-            Models = [],
+            Models = result.Entries.Select(model => new CatalogEntryViewModel<MessageTemplate> { Model = model }).ToList(),
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = pagerShape,
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per template, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<MessageTemplate>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<MessageTemplate>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = result.Entries,
+            Pager = pagerShape,
+        };
 
         viewModel.Options.BulkActions =
         [

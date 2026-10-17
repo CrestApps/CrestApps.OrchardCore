@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -37,13 +38,25 @@ internal sealed class TaxRuleDisplayDriver : DisplayDriver<TaxRule>
 
     public override Task<IDisplayResult> DisplayAsync(TaxRule rule, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = rule.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("TaxRule_Fields_SummaryAdmin", rule)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("TaxRule_Buttons_SummaryAdmin", rule)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("TaxRule_DefaultTags_SummaryAdmin", rule)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
+            View("TaxRule_Buttons_SummaryAdmin", rule).Location("Actions:5"),
             View("TaxRule_DefaultMeta_SummaryAdmin", rule)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

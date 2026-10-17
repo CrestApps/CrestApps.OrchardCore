@@ -61,7 +61,7 @@ public sealed class SubscriptionsDashboardReport : SubscriptionReportBase, IRepo
     {
         var range = context.Filter.GetDateRange();
         var nowUtc = _clock.UtcNow;
-        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().ListAsync(cancellationToken);
+        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(collection: SubscriptionConstants.SubscriptionCollectionName).ListAsync(cancellationToken);
         var summary = SubscriptionReportAggregator.SummarizeDashboard(
             subscriptions,
             nowUtc,

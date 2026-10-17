@@ -1,0 +1,3 @@
+@model StockItemButtonsViewModel
+
+<a class="btn btn-primary btn-sm" asp-controller="InventoryAdmin" asp-action="Item" asp-route-stockItemId="@Model.Item.ItemId">@(Model.CanManage ? T["Change"] : T["View"])</a>

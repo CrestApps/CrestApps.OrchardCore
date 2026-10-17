@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
@@ -22,11 +23,28 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
 
     public override Task<IDisplayResult> DisplayAsync(LeadStatus entry, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = entry.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("LeadStatus_Fields_SummaryAdmin", entry)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("LeadStatus_Description_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(entry.Description))),
+            View("LeadStatus_DefaultTags_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Type:5"),
             View("LeadStatus_Buttons_SummaryAdmin", entry)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"));
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Actions:5"));
     }
 
     public override IDisplayResult Edit(LeadStatus entry, BuildEditorContext context)

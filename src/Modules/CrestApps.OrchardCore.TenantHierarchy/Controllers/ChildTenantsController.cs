@@ -137,12 +137,13 @@ public sealed class ChildTenantsController : Controller
 
         var labels = _labelsProvider.GetLabels();
         var enterable = (await _issuer.GetEnterableChildrenAsync(User)).Select(info => info.Entry.EntryId).ToHashSet(StringComparer.Ordinal);
+        var pagerShape = await shapeFactory.PagerAsync(pager, filtered.Count, routeData);
 
         var model = new ChildTenantsIndexViewModel
         {
             Items = filtered.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, filtered.Count, routeData),
+            Pager = pagerShape,
             FilteredCount = filtered.Count,
             TotalCount = all.Count,
             MaxChildren = _manager.GetPolicy().MaxChildren,
@@ -183,6 +184,46 @@ public sealed class ChildTenantsController : Controller
         {
             model.BulkActions.Add(new SelectListItem(S["Remove"], nameof(ChildTenantBulkAction.Remove)));
         }
+
+        // A row per child tenant, with what the user may do with it, so its row shapes need no other lookup.
+        var items = model.Items.Select(info =>
+        {
+            var item = new ChildTenantListItem
+            {
+                Info = info,
+                Labels = labels,
+                CanEnter = info.CanEnter && model.EnterableEntryIds.Contains(info.Entry.EntryId),
+                CanSelect = model.BulkActions.Count > 0,
+                CanCreate = model.CanCreate,
+                CanManage = model.CanManage,
+                CanManageFeatures = model.CanManageFeatures,
+                CanRemove = model.CanRemove,
+                CanManageAccess = model.CanManageAccess,
+            };
+
+            if (item.IsBusy)
+            {
+                item.StatusUrl = Url.Action(nameof(Status), new { id = info.Entry.EntryId });
+            }
+
+            return item;
+        }).ToList();
+
+        // The admin-list tag builds a row per child tenant, in the layout (List or Grid) the site or the user
+        // picked. Its toolbar holds the select-all checkbox, the bulk actions and the state and sort filters.
+        model.List = new AdminListContext<ChildTenantListItem>
+        {
+            Source = items,
+            Pager = pagerShape,
+            BulkActions = model.BulkActions,
+            ShowSelectAll = model.BulkActions.Count > 0,
+            ToolbarActions = await shapeFactory.CreateAsync<ChildTenantsIndexViewModel>("ChildTenantListFilters", filters =>
+            {
+                filters.Options = options;
+                filters.StateOptions = model.StateOptions;
+                filters.SortOptions = model.SortOptions;
+            }),
+        };
 
         return View(model);
     }

@@ -114,11 +114,21 @@ public sealed class SubscriptionAgreementsController : Controller
 
         options.Statuses = BuildStatusItems(options.Status);
 
+        // The status filter renders at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("SubscriptionAgreementsListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         return View(new SubscriptionAgreementsIndexViewModel
         {
             Options = options,
-            Subscriptions = [.. result.Entries],
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            List = new AdminListContext<SubscriptionAgreement>
+            {
+                Source = result.Entries.Select(subscription => new SubscriptionAgreement(subscription)).ToArray(),
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
         });
     }
 

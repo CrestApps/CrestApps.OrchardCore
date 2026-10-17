@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<InstallmentPlan>
+
+@{
+    var plan = Model.Value;
+    var isOpen = plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed);
+    string Money(decimal amount) => $"{plan.Currency} {CurrencyScale.Format(amount, plan.Currency)}";
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Total"]">
+    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Total"]</span>
+    @Money(plan.TotalAmount)
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Received"]">
+    <i class="fa-solid fa-coins text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Received"]</span>
+    @Money(plan.AmountPaid)
+</span>
+@if (isOpen && plan.AmountOutstanding > 0m)
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Outstanding"]">
+        <i class="fa-solid fa-hourglass-half text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
+        @Money(plan.AmountOutstanding)
+    </span>
+}

@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Drivers;
 using CrestApps.OrchardCore.Checkout.Endpoints;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -64,6 +65,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ICouponStore, CouponStore>();
         services.AddScoped<CouponScopeEvaluator>();
+        services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();

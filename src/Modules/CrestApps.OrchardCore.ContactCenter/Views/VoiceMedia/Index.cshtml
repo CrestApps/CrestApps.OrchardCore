@@ -10,14 +10,12 @@
         ListId = "voice-media-list",
         EmptyMessage = T["<strong>Nothing here!</strong> There are no voice media clips at the moment."],
         Options = Model.Options,
-        Pager = Model.Pager,
-        Entries = Model.Models
-            .Select(entry => new CatalogListEntry
-            {
-                Shape = entry.Shape,
-                FilterValue = entry.Model.Name?.ToLowerInvariant(),
-            })
-            .ToList(),
+        ListName = "ContactCenterVoiceMedia",
+        List = Model.List,
+        Columns =
+        {
+            new CatalogListColumn { Name = "Audio", Title = T["Audio"] },
+        },
     };
 }
 

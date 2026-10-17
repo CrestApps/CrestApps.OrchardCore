@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 using static CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports.AuditEvents;
@@ -193,6 +194,7 @@ public sealed class ReconciledTimecardTests
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<IClock>(),
             Mock.Of<ILocalClock>(),
+            Options.Create(new ContactCenterReportingOptions()),
             new PassThroughLocalizer<ReconciledPayrollTimecardReportProvider>());
 
         // Act

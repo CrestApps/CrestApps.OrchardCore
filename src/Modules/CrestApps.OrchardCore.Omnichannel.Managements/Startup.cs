@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Tools;
@@ -20,6 +21,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -55,6 +57,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ActivityHandlerDescriber>();
         services.AddDisplayDriver<OmnichannelActivityContainer, OmnichannelActivityContainerDisplayDriver>();
+        services.AddScoped<IAdminListItemDisplayManager<OmnichannelActivityListEntry>, OmnichannelActivityListEntryDisplayManager>();
         services.AddScoped<IContentDisplayDriver, OmnichannelContactDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelContactPartSettingsDisplayDriver>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectPartSettingsDisplayDriver>();
@@ -97,6 +100,12 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>();
+
+        // The rows of the Subject Flows pages and of the numbers known not to be in service.
+        services
+            .AddDisplayDriver<SubjectFlowEntry, SubjectFlowEntryDisplayDriver>()
+            .AddDisplayDriver<SubjectActionEntry, SubjectActionEntryDisplayDriver>()
+            .AddDisplayDriver<NotInServiceNumberEntry, NotInServiceNumberEntryDisplayDriver>();
 
         services.AddNavigationProvider<AdminMenu>();
 

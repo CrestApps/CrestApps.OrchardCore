@@ -1,0 +1,12 @@
+@model ShapeViewModel<TaxCategory>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Code"]">
+    <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.Value.Code
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.ParentCode))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Parent category"]">
+        <i class="fa-solid fa-sitemap text-secondary me-1" aria-hidden="true"></i>@Model.Value.ParentCode
+    </span>
+}

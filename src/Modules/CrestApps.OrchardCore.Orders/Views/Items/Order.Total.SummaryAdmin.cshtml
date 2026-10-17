@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+
+@model ShapeViewModel<Order>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Total"]">
+    <i class="fa-solid fa-money-bill text-secondary me-1" aria-hidden="true"></i>@ProductPriceFormatter.Format(Model.Value.Total ?? Model.Value.Subtotal, Model.Value.Currency)
+</span>

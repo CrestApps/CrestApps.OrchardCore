@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ProfileBuilderSessionEntry>
+
+@{
+    var session = Model.Value.Session;
+    var revisions = session.Revisions.Count > 0 ? session.Revisions.Count - 1 : 0;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Feedback given in this session"]">
+    <i class="fa-regular fa-comment-dots text-secondary" aria-hidden="true"></i>
+    @T.Plural(session.Feedback.Count, "1 feedback", "{0} feedback")
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Changes made to the instructions"]">
+    <i class="fa-solid fa-code-branch text-secondary" aria-hidden="true"></i>
+    @T.Plural(revisions, "1 revision", "{0} revisions")
+</span>

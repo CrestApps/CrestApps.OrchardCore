@@ -145,6 +145,13 @@ public sealed class ProfileBuilderController : Controller
                 .ToArray(),
         };
 
+        // The admin-list tag builds a row per session, in the layout (List or Grid) the site or the user picked.
+        model.List = new AdminListContext<ProfileBuilderSessionEntry>
+        {
+            Source = model.Models,
+            Pager = (IShape)model.Pager,
+        };
+
         return View(model);
     }
 

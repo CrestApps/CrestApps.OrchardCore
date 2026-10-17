@@ -1,0 +1,10 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var entry = Model.Value.Info.Entry;
+}
+
+<div class="form-check">
+    <input type="checkbox" class="form-check-input" value="@entry.EntryId" name="itemIds" id="itemIds-@entry.EntryId">
+    <label class="form-check-label" for="itemIds-@entry.EntryId">&nbsp;<span class="visually-hidden">@entry.DisplayName</span></label>
+</div>

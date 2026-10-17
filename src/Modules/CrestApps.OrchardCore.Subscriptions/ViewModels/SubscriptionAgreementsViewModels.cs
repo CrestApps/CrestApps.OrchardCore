@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
@@ -30,19 +31,15 @@ public sealed class SubscriptionAgreementsIndexOptions
 public sealed class SubscriptionAgreementsIndexViewModel
 {
     /// <summary>
-    /// Gets or sets the agreements on this page.
-    /// </summary>
-    public IList<Subscription> Subscriptions { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the filter options.
     /// </summary>
     public SubscriptionAgreementsIndexOptions Options { get; set; }
 
     /// <summary>
-    /// Gets or sets the pager shape.
+    /// Gets or sets the agreements on this page, with the toolbar filter and the pager, rendered by the admin list
+    /// in the layout the site or the user picked.
     /// </summary>
-    public dynamic Pager { get; set; }
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>
@@ -56,24 +53,10 @@ public sealed class MySubscriptionsViewModel
     public IList<Subscription> Subscriptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the status shown, or <see langword="null"/> for every status.
+    /// Gets or sets the agreements on this page, with the toolbar filter and the pager, rendered by the admin list
+    /// in the layout the site or the user picked.
     /// </summary>
-    public SubscriptionStatus? Status { get; set; }
-
-    /// <summary>
-    /// Gets or sets the status choices.
-    /// </summary>
-    public IList<SelectListItem> Statuses { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the pager shape.
-    /// </summary>
-    public dynamic Pager { get; set; }
-
-    /// <summary>
-    /// Gets or sets the current UTC time, so the view can say whether an agreement still grants access.
-    /// </summary>
-    public DateTime UtcNow { get; set; }
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>
@@ -87,17 +70,8 @@ public sealed class TenantProvisioningListViewModel
     public IList<TenantProvisioningJob> Jobs { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the status shown, or <see langword="null"/> for every status.
+    /// Gets or sets the jobs on this page, with the toolbar filter (when the page has one) and the pager,
+    /// rendered by the admin list in the layout the site or the user picked.
     /// </summary>
-    public TenantProvisioningStatus? Status { get; set; }
-
-    /// <summary>
-    /// Gets or sets the status choices.
-    /// </summary>
-    public IList<SelectListItem> Statuses { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the pager shape.
-    /// </summary>
-    public dynamic Pager { get; set; }
+    public AdminListContext List { get; set; }
 }

@@ -1,0 +1,17 @@
+@using System.Globalization
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIChatSessionEntry>
+
+@{
+    // The last activity, or when the session started for one that never recorded any.
+    DateTime? lastActivityUtc = Model.Value.LastActivityUtc;
+    DateTime? createdUtc = Model.Value.CreatedUtc;
+    var activityUtc = lastActivityUtc is { } value && value != default ? value : createdUtc.GetValueOrDefault();
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: activityUtc, Format: "g"))">
+    <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+    <time datetime="@activityUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: activityUtc))</time>
+</span>

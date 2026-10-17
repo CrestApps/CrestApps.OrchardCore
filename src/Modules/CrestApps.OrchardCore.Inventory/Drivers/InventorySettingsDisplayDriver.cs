@@ -21,6 +21,7 @@ namespace CrestApps.OrchardCore.Inventory.Drivers;
 public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<InventorySettings>
 {
     private const int MaxThreshold = 100_000;
+    private const int MaxHoldMinutes = 7 * 24 * 60;
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
@@ -44,6 +45,7 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
         => Initialize<InventorySettingsViewModel>("InventorySettings_Edit", model =>
         {
             model.DefaultLowStockThreshold = settings.DefaultLowStockThreshold;
+            model.HoldMinutes = settings.HoldMinutes;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InventoryPermissions.ManageInventory))
         .OnGroup(SettingsGroupId);
@@ -58,6 +60,15 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
         var model = new InventorySettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        if (model.HoldMinutes is < 1 or > MaxHoldMinutes)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.HoldMinutes), S["Enter a number of minutes from 1 to {0}.", MaxHoldMinutes]);
+        }
+        else
+        {
+            settings.HoldMinutes = model.HoldMinutes;
+        }
 
         if (model.DefaultLowStockThreshold is < 0 or > MaxThreshold)
         {

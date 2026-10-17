@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AgentProfile>
+
+@{
+    var queueCount = Model.Value.AllowedQueueIds?.Count ?? 0;
+    var campaignCount = Model.Value.AllowedCampaignIds?.Count ?? 0;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Queues the agent may sign in to"]">
+    <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@(queueCount == 1 ? T["1 queue"] : T["{0} queues", queueCount])
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Campaigns the agent may sign in to"]">
+    <i class="fa-solid fa-bullhorn text-secondary me-1" aria-hidden="true"></i>@(campaignCount == 1 ? T["1 campaign"] : T["{0} campaigns", campaignCount])
+</span>

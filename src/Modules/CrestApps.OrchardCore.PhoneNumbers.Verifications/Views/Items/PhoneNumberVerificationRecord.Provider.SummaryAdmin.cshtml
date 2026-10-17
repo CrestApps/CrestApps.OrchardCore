@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PhoneNumberVerificationRecord>
+
+@{
+    var provider = string.IsNullOrEmpty(Model.Value.VerificationProvider) ? "—" : Model.Value.VerificationProvider;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Provider"]">
+    <i class="fa-solid fa-plug text-secondary" aria-hidden="true"></i> @provider
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.LineStatus))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Line status"]">
+        <i class="fa-solid fa-signal text-secondary" aria-hidden="true"></i> @Model.Value.LineStatus
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.MinimumAge))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Minimum age"]">
+        <i class="fa-solid fa-hourglass-half text-secondary" aria-hidden="true"></i> @Model.Value.MinimumAge
+    </span>
+}

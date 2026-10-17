@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -29,6 +30,8 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
     private readonly IStringLocalizer _stringLocalizer;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
+    private readonly ContactCenterReportingOptions _reportingOptions;
+    private readonly IAgentTimeSummaryReader _summaryReader;
 
     public AgentWorkforceReportProvider(
         IInteractionEventStore eventStore,
@@ -38,7 +41,9 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
         IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer<AgentWorkforceReportProvider> stringLocalizer,
         IClock clock,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IOptions<ContactCenterReportingOptions> reportingOptions,
+        IAgentTimeSummaryReader summaryReader)
     {
         _eventStore = eventStore;
         _agentManager = agentManager;
@@ -48,6 +53,8 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
         _stringLocalizer = stringLocalizer;
         _clock = clock;
         _localClock = localClock;
+        _reportingOptions = reportingOptions.Value;
+        _summaryReader = summaryReader;
     }
 
     public IReadOnlyCollection<string> FilterNames => _filterNames;
@@ -83,6 +90,13 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
             return _capabilityGuard.DescribeUnavailable(missingFeatures);
         }
 
+        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
+
+        if (WorkforceReportRange.TryRefuse(context, _reportingOptions, timeZone, _stringLocalizer, out var refusal))
+        {
+            return refusal;
+        }
+
         var range = context.Filter.GetDateRange();
         var fromUtc = range.FromUtc.GetValueOrDefault();
 
@@ -93,16 +107,29 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
         var agents = (await _agentManager.GetAllAsync(cancellationToken))
             .ToDictionary(agent => agent.ItemId, StringComparer.Ordinal);
         var filtered = !string.IsNullOrEmpty(criteria.AgentId);
-        var events = await AgentStateEventReader.ReadAsync(
-            _eventStore,
-            filtered ? [criteria.AgentId] : agents.Keys,
-            onlyTheseAgents: filtered,
-            fromUtc,
-            toUtc,
-            additionalEventTypes: null,
-            cancellationToken);
-        var timelines = AgentStateTimeline.Build(events);
-        var intervals = AgentStateTimeline.BuildIntervals(timelines, fromUtc, toUtc);
+        IReadOnlyList<AgentStateTimeline> timelines = [];
+        IReadOnlyList<AgentPresenceInterval> intervals;
+
+        if (!filtered && _summaryReader is not null && ReadsSummaries(_kind))
+        {
+            // Every agent over a period: whole days come from their daily summaries, and only the rest is read from
+            // the log. One agent's period is a seek on the aggregate index, so it is always read from the log.
+            intervals = await _summaryReader.ReadAsync(agents.Keys, fromUtc, toUtc, cancellationToken);
+        }
+        else
+        {
+            var events = await AgentStateEventReader.ReadAsync(
+                _eventStore,
+                filtered ? [criteria.AgentId] : agents.Keys,
+                onlyTheseAgents: filtered,
+                fromUtc,
+                toUtc,
+                additionalEventTypes: null,
+                cancellationToken);
+            timelines = AgentStateTimeline.Build(events);
+            intervals = AgentStateTimeline.BuildIntervals(timelines, fromUtc, toUtc);
+        }
+
         var campaignNames = (await _campaignManager.GetAllAsync(cancellationToken))
             .Where(campaign => !string.IsNullOrEmpty(campaign.ItemId))
             .ToDictionary(
@@ -113,7 +140,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
         return _kind switch
         {
             AgentWorkforceReportKind.TimeSummary => BuildTimeSummary(intervals, agents),
-            AgentWorkforceReportKind.DailyTimecard => BuildDailyTimecard(intervals, agents, await ReportTimeZone.ResolveAsync(_localClock)),
+            AgentWorkforceReportKind.DailyTimecard => BuildDailyTimecard(intervals, agents, timeZone),
             AgentWorkforceReportKind.StatusDuration => BuildStatusDuration(intervals),
             AgentWorkforceReportKind.BreakAnalysis => BuildBreakAnalysis(intervals, agents),
             AgentWorkforceReportKind.ReadyNotReady => BuildReadyNotReady(intervals, agents),
@@ -127,6 +154,25 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
             _ => new ReportDocument(),
         };
     }
+
+    /// <summary>
+    /// Determines whether a kind of report can read whole days from the daily agent time summaries. Those are the kinds
+    /// that add up time, and count intervals, per agent, state, reason, queue or campaign. The daily timecard needs
+    /// each interval's time of day, the break analysis each break's own length, and the presence audit each change,
+    /// so they always read the log.
+    /// </summary>
+    /// <param name="kind">The kind of report.</param>
+    /// <returns><see langword="true"/> when the kind reads the summaries.</returns>
+    internal static bool ReadsSummaries(AgentWorkforceReportKind kind)
+        => kind is AgentWorkforceReportKind.TimeSummary
+            or AgentWorkforceReportKind.StatusDuration
+            or AgentWorkforceReportKind.ReadyNotReady
+            or AgentWorkforceReportKind.Utilization
+            or AgentWorkforceReportKind.Occupancy
+            or AgentWorkforceReportKind.ReasonBreakdown
+            or AgentWorkforceReportKind.QueueMembershipHours
+            or AgentWorkforceReportKind.CampaignMembershipHours
+            or AgentWorkforceReportKind.PayrollTimecard;
 
     private IStringLocalizer S => _stringLocalizer;
 
@@ -153,6 +199,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
 
                 return new
                 {
+                    AgentId = group.Key,
                     summary.SignedInSeconds,
                     Row = new ReportRow(
                     [
@@ -168,6 +215,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
                 };
             })
             .OrderByDescending(entry => entry.SignedInSeconds)
+            .ThenBy(entry => entry.AgentId, StringComparer.Ordinal)
             .Select(entry => entry.Row)
             .ToList();
 
@@ -290,6 +338,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
 
                 return new
                 {
+                    Status = group.Key,
                     Duration = duration,
                     Row = new ReportRow(
                     [
@@ -301,6 +350,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
                 };
             })
             .OrderByDescending(entry => entry.Duration)
+            .ThenBy(entry => entry.Status)
             .Select(entry => entry.Row)
             .ToList();
 
@@ -388,15 +438,23 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
                 var readySeconds = summary.AvailableSeconds + summary.ReservedSeconds;
                 var notReadySeconds = Math.Max(0d, summary.SignedInSeconds - readySeconds - summary.WorkSeconds);
 
-                return new ReportRow(
-                [
-                    ResolveAgentName(group.Key, agents),
-                    ReportFormat.Duration(readySeconds),
-                    ReportFormat.Duration(summary.WorkSeconds),
-                    ReportFormat.Duration(notReadySeconds),
-                    ReportFormat.Percent(summary.SignedInSeconds > 0d ? readySeconds / summary.SignedInSeconds : 0d),
-                ]);
+                return new
+                {
+                    AgentId = group.Key,
+                    Name = ResolveAgentName(group.Key, agents),
+                    Row = new ReportRow(
+                    [
+                        ResolveAgentName(group.Key, agents),
+                        ReportFormat.Duration(readySeconds),
+                        ReportFormat.Duration(summary.WorkSeconds),
+                        ReportFormat.Duration(notReadySeconds),
+                        ReportFormat.Percent(summary.SignedInSeconds > 0d ? readySeconds / summary.SignedInSeconds : 0d),
+                    ]),
+                };
             })
+            .OrderBy(entry => entry.Name, StringComparer.Ordinal)
+            .ThenBy(entry => entry.AgentId, StringComparer.Ordinal)
+            .Select(entry => entry.Row)
             .ToList();
 
         var totals = AgentTimeSummary.Create(intervals);
@@ -439,6 +497,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
 
                 return new
                 {
+                    AgentId = group.Key,
                     Ratio = ratio,
                     Row = new ReportRow(
                     [
@@ -450,6 +509,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
                 };
             })
             .OrderByDescending(entry => entry.Ratio)
+            .ThenBy(entry => entry.AgentId, StringComparer.Ordinal)
             .Select(entry => entry.Row)
             .ToList();
 
@@ -499,6 +559,8 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
 
                 return new
                 {
+                    group.Key.Status,
+                    group.Key.Reason,
                     Duration = duration,
                     Row = new ReportRow(
                     [
@@ -510,6 +572,8 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
                 };
             })
             .OrderByDescending(entry => entry.Duration)
+            .ThenBy(entry => entry.Status)
+            .ThenBy(entry => entry.Reason, StringComparer.Ordinal)
             .Select(entry => entry.Row)
             .ToList();
 
@@ -608,6 +672,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
 
                 return new
                 {
+                    group.Key,
                     Duration = duration,
                     Row = new ReportRow(
                     [
@@ -620,6 +685,7 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
                 };
             })
             .OrderByDescending(entry => entry.Duration)
+            .ThenBy(entry => entry.Key, StringComparer.Ordinal)
             .Select(entry => entry.Row)
             .ToList();
 
@@ -656,16 +722,24 @@ internal sealed class AgentWorkforceReportProvider : IReportRunner, IReportFilte
             {
                 var summary = AgentTimeSummary.Create(group);
 
-                return new ReportRow(
-                [
-                    ResolveAgentName(group.Key, agents),
-                    ReportFormat.Duration(summary.SignedInSeconds),
-                    ReportFormat.Duration(summary.ProductivePresenceSeconds),
-                    ReportFormat.Duration(summary.BreakAndAwaySeconds),
-                    ReportFormat.Duration(summary.MeetingAndTrainingSeconds),
-                    ReportFormat.Duration(summary.OtherNotReadySeconds),
-                ]);
+                return new
+                {
+                    AgentId = group.Key,
+                    Name = ResolveAgentName(group.Key, agents),
+                    Row = new ReportRow(
+                    [
+                        ResolveAgentName(group.Key, agents),
+                        ReportFormat.Duration(summary.SignedInSeconds),
+                        ReportFormat.Duration(summary.ProductivePresenceSeconds),
+                        ReportFormat.Duration(summary.BreakAndAwaySeconds),
+                        ReportFormat.Duration(summary.MeetingAndTrainingSeconds),
+                        ReportFormat.Duration(summary.OtherNotReadySeconds),
+                    ]),
+                };
             })
+            .OrderBy(entry => entry.Name, StringComparer.Ordinal)
+            .ThenBy(entry => entry.AgentId, StringComparer.Ordinal)
+            .Select(entry => entry.Row)
             .ToList();
 
         var totals = AgentTimeSummary.Create(intervals);

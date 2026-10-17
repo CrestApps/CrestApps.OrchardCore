@@ -11,10 +11,10 @@
     AIOptions.Value.ToolInstanceSources.TryGetValue(Model.Value.Source ?? string.Empty, out var source);
 }
 
-<span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Source"]">
+<span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Source"]">
     <i class="text-secondary" aria-hidden="true"></i>@(source?.DisplayName?.Value ?? Model.Value.Source)
 </span>
 
-<span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Function name"]">
+<span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Function name"]">
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.GetFunctionName()
 </span>

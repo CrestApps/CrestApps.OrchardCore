@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Carts.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -22,20 +23,27 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
     private const string ProductActionDisplayType = "ProductAction";
 
     private readonly IProductSnapshotResolver _snapshotResolver;
+    private readonly IEnumerable<IProductAvailabilityProvider> _availability;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IClock _clock;
     private readonly CartOptions _options;
 
+    internal readonly IStringLocalizer S;
+
     public AddToCartDisplayDriver(
         IProductSnapshotResolver snapshotResolver,
+        IEnumerable<IProductAvailabilityProvider> availability,
         IHttpContextAccessor httpContextAccessor,
         IClock clock,
-        IOptions<CartOptions> options)
+        IOptions<CartOptions> options,
+        IStringLocalizer<AddToCartDisplayDriver> stringLocalizer)
     {
         _snapshotResolver = snapshotResolver;
+        _availability = availability;
         _httpContextAccessor = httpContextAccessor;
         _clock = clock;
         _options = options.Value;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> DisplayAsync(ProductPart part, BuildPartDisplayContext context)
@@ -92,6 +100,12 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
         var defaultPrice = prices.FirstOrDefault(price => price.IsDefault) ?? prices.FirstOrDefault();
         var request = _httpContextAccessor.HttpContext?.Request;
 
+        // What's in stock of the product, or of each variant on sale, for products whose stock is counted.
+        var keys = variants.Count > 0
+            ? variants.Select(variant => new ProductStockKey(contentItem.ContentItemId, variant.VariantId)).ToArray()
+            : [new ProductStockKey(contentItem.ContentItemId, null)];
+        var stock = await _availability.GetAvailabilityAsync(keys);
+
         return Initialize<AddToCartViewModel>("AddToCart", model =>
         {
             model.ContentItemId = contentItem.ContentItemId;
@@ -112,8 +126,13 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                         : null,
                     Options = new Dictionary<string, string>(variant.Options, StringComparer.OrdinalIgnoreCase),
                     ImagePath = variant.ImagePath,
+                    Availability = Describe(stock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, variant.VariantId))),
                 })
                 .ToList();
+
+            model.Availability = variants.Count == 0
+                ? Describe(stock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, null)))
+                : null;
 
             // One list per option, with the values the variants on sale come in, in the order the product gives them.
             model.Options = (variantsPart?.Options ?? [])
@@ -131,6 +150,24 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                 ? _options.MaxQuantity
                 : defaultPrice.AllowQuantity ? Math.Min(defaultPrice.MaximumQuantity ?? _options.MaxQuantity, _options.MaxQuantity) : 1;
             model.ReturnUrl = request is null ? null : request.PathBase + request.Path + request.QueryString;
+
+            // A buyer can't add more than is left.
+            if (model.Availability is { CanBuy: true } && stock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, null)) is { AllowBackorder: false } counted)
+            {
+                model.MaxQuantity = Math.Min(model.MaxQuantity, Math.Max(1, counted.Available));
+            }
         }).Location(ProductActionDisplayType, "Actions:5");
     }
+
+    // In stock, Only N left (at or below the product's threshold), Out of stock, or Available on backorder. Exact
+    // counts above the threshold stay private.
+    private AddToCartAvailabilityViewModel Describe(ProductAvailability availability)
+        => availability?.Status switch
+        {
+            null => null,
+            ProductAvailabilityStatus.LowStock => new() { Label = S["Only {0} left", availability.Available], Tone = "warning", CanBuy = true },
+            ProductAvailabilityStatus.OutOfStock => new() { Label = S["Out of stock"], Tone = "danger", CanBuy = false },
+            ProductAvailabilityStatus.Backorder => new() { Label = S["Available on backorder"], Tone = "secondary", CanBuy = true },
+            _ => new() { Label = S["In stock"], Tone = "success", CanBuy = true },
+        };
 }

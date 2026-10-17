@@ -54,7 +54,7 @@ public sealed class NewSubscriptionsTrendReport : SubscriptionReportBase, IRepor
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();
-        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().ListAsync(cancellationToken);
+        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(collection: SubscriptionConstants.SubscriptionCollectionName).ListAsync(cancellationToken);
         var monthly = SubscriptionReportAggregator.BucketNewSubscriptionsByMonth(subscriptions, range.FromUtc, range.ToUtc);
 
         var document = new ReportDocument

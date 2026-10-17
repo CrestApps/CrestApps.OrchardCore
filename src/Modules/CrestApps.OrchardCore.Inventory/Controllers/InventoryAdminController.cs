@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Inventory.Core;
+using CrestApps.OrchardCore.Inventory.Core.Indexes;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Services;
@@ -15,6 +17,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Inventory.Controllers;
 
@@ -33,6 +36,7 @@ public sealed class InventoryAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
     private readonly INotifier _notifier;
+    private readonly ISession _session;
     private readonly PagerOptions _pagerOptions;
 
     internal readonly IStringLocalizer S;
@@ -46,6 +50,7 @@ public sealed class InventoryAdminController : Controller
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
         INotifier notifier,
+        ISession session,
         IOptions<PagerOptions> pagerOptions,
         IStringLocalizer<InventoryAdminController> stringLocalizer,
         IHtmlLocalizer<InventoryAdminController> htmlLocalizer)
@@ -57,6 +62,7 @@ public sealed class InventoryAdminController : Controller
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
+        _session = session;
         _pagerOptions = pagerOptions.Value;
         S = stringLocalizer;
         H = htmlLocalizer;
@@ -90,13 +96,25 @@ public sealed class InventoryAdminController : Controller
             routeData.Values.TryAdd(key, value);
         }
 
+        var pagerShape = await _shapeFactory.PagerAsync(pager, count, routeData);
+
         return View(new InventoryIndexViewModel
         {
             Options = options,
             Items = items,
             TotalCount = count,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
-            Pager = await _shapeFactory.PagerAsync(pager, count, routeData),
+            Pager = pagerShape,
+
+            // The admin-list tag builds a row per stock item, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<StockItem>
+            {
+                Source = items,
+                Pager = pagerShape,
+
+                // The "Show" filter renders at the end of the list's toolbar.
+                ToolbarActions = await _shapeFactory.CreateAsync("InventoryAdminListFilters", Arguments.From(new { Options = options })),
+            },
         });
     }
 
@@ -165,7 +183,7 @@ public sealed class InventoryAdminController : Controller
             return BadRequest();
         }
 
-        var result = await _inventory.AdjustAsync(stockItemId, model.Kind, model.Quantity, model.Reason, CurrentActor(), HttpContext.RequestAborted);
+        var result = await CommitAsync(await _inventory.AdjustAsync(stockItemId, model.Kind, model.Quantity, model.Reason, CurrentActor(), HttpContext.RequestAborted));
 
         await NotifyAsync(result, model.Kind == StockMovementKind.Received
             ? H["{0} received. {1} on hand.", model.Quantity, result.Item?.OnHand]
@@ -190,7 +208,7 @@ public sealed class InventoryAdminController : Controller
             return RedirectToAction(nameof(Item), new { stockItemId });
         }
 
-        var result = await _inventory.SetCountAsync(stockItemId, count, model.Reason, CurrentActor(), HttpContext.RequestAborted);
+        var result = await CommitAsync(await _inventory.SetCountAsync(stockItemId, count, model.Reason, CurrentActor(), HttpContext.RequestAborted));
 
         await NotifyAsync(result, H["Counted {0}. The difference was {1}.", count, result.Movement?.Quantity]);
 
@@ -206,7 +224,7 @@ public sealed class InventoryAdminController : Controller
             return Forbid();
         }
 
-        var result = await _inventory.RebuildAsync(stockItemId, HttpContext.RequestAborted);
+        var result = await CommitAsync(await _inventory.RebuildAsync(stockItemId, HttpContext.RequestAborted));
 
         await NotifyAsync(result, H["Recounted from the history: {0} on hand.", result.Item?.OnHand]);
 
@@ -218,14 +236,45 @@ public sealed class InventoryAdminController : Controller
         var pager = new Pager(pagerParameters, _pagerOptions);
         var (count, movements) = await _movements.PageAsync(item.ItemId, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
+        var holds = await _session.Query<StockReservation, StockReservationIndex>(index =>
+                index.StockItemId == item.ItemId && index.Status == StockReservationStatus.Held,
+                collection: InventoryConstants.CollectionName)
+            .OrderBy(index => index.ExpiresUtc)
+            .Take(50)
+            .ListAsync(HttpContext.RequestAborted);
+
         return new StockItemViewModel
         {
             Item = item,
             Movements = movements,
+            Holds = holds.ToArray(),
             MovementCount = count,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
             Pager = await _shapeFactory.PagerAsync(pager, count, new RouteData(new RouteValueDictionary { { "stockItemId", item.ItemId } })),
         };
+    }
+
+    // The change is committed here, so a checkout that changed the same stock at the same moment can't be overwritten:
+    // the later of the two fails and is asked to try again.
+    private async Task<StockChangeResult> CommitAsync(StockChangeResult result)
+    {
+        if (!result.Succeeded)
+        {
+            return result;
+        }
+
+        try
+        {
+            await _session.SaveChangesAsync(HttpContext.RequestAborted);
+
+            return result;
+        }
+        catch (ConcurrencyException)
+        {
+            await _session.CancelAsync();
+
+            return StockChangeResult.Fail(StockChangeError.Busy);
+        }
     }
 
     private async Task NotifyAsync(StockChangeResult result, LocalizedHtmlString success)

@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SharedVoicemailEntry>
+
+@{
+    var voicemail = Model.Value.Voicemail;
+    var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+}
+
+@if (Model.Value.CanClaim)
+{
+    <form asp-action="Claim" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit d-inline-block">
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <button type="submit" class="btn btn-primary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Claimed ? T["Take over"] : T["I'll handle this"])</button>
+    </form>
+}
+
+@if (Model.Value.CanCallBack)
+{
+    <form asp-action="CallBack" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit d-inline-block">
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <button type="submit" class="btn btn-success btn-sm" title="@T["Call the caller back now from your soft phone."]">@T["Call back"]</button>
+    </form>
+}
+
+@if (Model.Value.CanRelease)
+{
+    <form asp-action="Release" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit d-inline-block">
+        <input type="hidden" name="returnUrl" value="@returnUrl" />
+        <button type="submit" class="btn btn-secondary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Resolved ? T["Reopen"] : T["Return to queue"])</button>
+    </form>
+}
+
+@if (Model.Value.CanDelete)
+{
+    <a asp-action="Delete"
+       asp-route-id="@voicemail.ItemId"
+       asp-route-returnUrl="@returnUrl"
+       class="btn btn-danger btn-sm"
+       data-title="@T["Delete"]"
+       data-message="@T["Are you sure you want to delete this voicemail? Its recording is erased too."]"
+       data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>
+}

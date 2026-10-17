@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
@@ -30,15 +31,34 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
 
     public override Task<IDisplayResult> DisplayAsync(OmnichannelChannelEndpoint endpoint, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = endpoint.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("OmnichannelChannelEndpoint_Fields_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
             View("OmnichannelChannelEndpoint_Buttons_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Actions:5"),
+            View("OmnichannelChannelEndpoint_Address_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Address:1")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(endpoint.Value))),
+            View("OmnichannelChannelEndpoint_DefaultTags_SummaryAdmin", endpoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Type:5"),
             View("OmnichannelChannelEndpoint_DefaultMeta_SummaryAdmin", endpoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
             View("OmnichannelChannelEndpoint_CloneActionsMenu_SummaryAdmin", endpoint)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "ActionsMenu:5")
         );
     }
 

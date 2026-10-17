@@ -31,21 +31,21 @@
                         <span id="bulk-action-title">@T["Select an action"]</span>
                     </button>
                     <ul class="dropdown-menu w-100" aria-labelledby="bulk-action-menu-button">
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.Assign)" data-title="@T["Assign activities"]">@T["Assign"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.Reschedule)" data-title="@T["Reschedule activities"]">@T["Reschedule"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.Purge)" data-title="@T["Purge activities"]">@T["Purge"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.SetInstructions)" data-title="@T["Set instructions"]">@T["Set Instructions"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.SetUrgencyLevel)" data-title="@T["Set urgency level"]">@T["Set Urgency Level"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeSubject)" data-title="@T["Change subject"]">@T["Change Subject"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ClearAssignment)" data-title="@T["Clear assignment"]">@T["Clear Assignment"]</a></li>
-                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeSource)" data-title="@T["Change activity source"]">@T["Change Source"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.Assign)" data-title="@T["Assign activities"]">@T["Assign"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.Reschedule)" data-title="@T["Reschedule activities"]">@T["Reschedule"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.Purge)" data-title="@T["Purge activities"]">@T["Purge"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.SetInstructions)" data-title="@T["Set instructions"]">@T["Set Instructions"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.SetUrgencyLevel)" data-title="@T["Set urgency level"]">@T["Set Urgency Level"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.ChangeSubject)" data-title="@T["Change subject"]">@T["Change Subject"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.ClearAssignment)" data-title="@T["Clear assignment"]">@T["Clear Assignment"]</a></li>
+                        <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.ChangeSource)" data-title="@T["Change activity source"]">@T["Change Source"]</a></li>
                         @if (Model.CampaignOptions.Count() > 1)
                         {
-                            <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeCampaign)" data-title="@T["Change campaign"]">@T["Change Campaign"]</a></li>
+                            <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.ChangeCampaign)" data-title="@T["Change campaign"]">@T["Change Campaign"]</a></li>
                         }
                         @if (Model.DialerProfileOptions.Count() > 1)
                         {
-                            <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-action="@nameof(BulkActivityAction.ChangeDialerProfile)" data-title="@T["Change dialer profile"]">@T["Change Dialer Profile"]</a></li>
+                            <li><a class="dropdown-item bulk-action-item" href="javascript:void(0)" data-bulk-action="@nameof(BulkActivityAction.ChangeDialerProfile)" data-title="@T["Change dialer profile"]">@T["Change Dialer Profile"]</a></li>
                         }
                     </ul>
                 </div>

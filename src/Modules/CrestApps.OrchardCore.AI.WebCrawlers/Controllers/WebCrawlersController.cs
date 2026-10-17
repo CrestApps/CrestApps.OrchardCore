@@ -92,22 +92,22 @@ public sealed class WebCrawlersController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
+        var page = crawlers.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize).ToList();
+
         var viewModel = new ListSourceModelViewModel<WebCrawlerStrategyDescriptor, CatalogEntryViewModel<WebCrawler>>
         {
-            Models = [],
+            Models = page.Select(model => new CatalogEntryViewModel<WebCrawler> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, crawlers.Count, routeData),
             Sources = _strategies,
         };
 
-        foreach (var model in crawlers.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize))
+        // The admin-list tag builds a row per crawler, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<WebCrawler>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<WebCrawler>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = page,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

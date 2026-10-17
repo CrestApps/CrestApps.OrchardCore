@@ -9,8 +9,8 @@
 <script asp-name="flatpickr-culture" at="Foot"></script>
 <style asp-name="flatpickr"></style>
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="ItemIds" data-bulk-action-selector="">
-    <input type="submit" name="submit.Filter" id="submitFilter" value="Filter" class="visually-hidden" />
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="ManageActivities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-item-input-name="itemIds">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     <input type="submit" name="submit.BulkAction" value="Execute" class="visually-hidden" />
     <input type="hidden" name="BulkAction" id="BulkAction" value="@nameof(BulkActivityAction.None)" />
 
@@ -43,54 +43,21 @@
         @await DisplayAsync(Model.BulkActions)
     }
 
-    <ul class="list-group with-checkbox">
-        <li class="list-group-item text-bg-theme">
-            <div class="form-check my-1">
-                <input type="checkbox" class="form-check-input" id="select-all">
-                <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
-                <label id="items" for="select-all">
-                    @T["{0} activities", Model.TotalCount]
-                </label>
-                <label id="selected-items" class="text-muted d-none" for="select-all"></label>
-            </div>
-        </li>
-
-        @if (Model.Containers.Count > 0)
-        {
-            for (var i = 0; i < Model.Containers.Count; i++)
-            {
-                var container = Model.Containers[i];
-                var itemId = Model.ActivityItemIds[i];
-
-                <li class="list-group-item list-group-item-action list-group-striped">
-                    <div class="d-flex">
-                        <div class="form-check me-2">
-                            <input type="checkbox" class="form-check-input" name="ItemIds" value="@itemId" id="item-@itemId">
-                            <label class="form-check-label" for="item-@itemId">&nbsp;</label>
-                        </div>
-                        <div class="flex-grow-1">
-                            @await DisplayAsync(container)
-                        </div>
-                    </div>
-                </li>
-            }
-        }
-        else
-        {
-            <li class="list-group-item">
-                <div class="alert alert-info mb-0 text-center">
-                    @T["No activities match the current filter criteria."]
-                </div>
-            </li>
-        }
-    </ul>
-
+    @* The activities, the toolbar (count and select-all) and the pager are rendered by the AdminList shape, in the
+       layout (List or Grid) the site or the user picked. The bulk actions are the panel above, which also offers to
+       apply an action to every matching activity. *@
+    <admin-list name="OmnichannelManageActivities" context="Model.List"
+                empty-message="@T["No activities match the current filter criteria."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Subject" position="20" title="@T["Subject"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" />
+            <admin-list-column name="Handler" position="40" title="@T["Handled by"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
-
-@if (Model.Pager is not null)
-{
-    @await DisplayAsync(Model.Pager)
-}
 
 <script at="Foot" depends-on="flatpickr, flatpickr-culture">
     document.addEventListener('DOMContentLoaded', function () {
@@ -175,7 +142,7 @@
 
         dropdownItems.forEach(function (item) {
             item.addEventListener('click', function () {
-                var action = item.dataset.action;
+                var action = item.dataset.bulkAction;
                 var title = item.dataset.title;
 
                 document.querySelectorAll('.bulk-action-param').forEach(function (panel) {

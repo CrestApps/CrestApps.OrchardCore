@@ -1,93 +1,23 @@
 @using CrestApps.OrchardCore.Subscriptions.Models
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
-@using Microsoft.AspNetCore.Mvc.Localization
 @model TenantProvisioningListViewModel
-
-@{
-    var pager = (dynamic)Model.Pager;
-    int totalItemCount = pager.TotalItemCount;
-}
 
 <zone Name="Title">
     <breadcrumb name="SubscriptionsMySites" title="@T["My Sites"]" />
 </zone>
 
-<ul class="list-group">
-    <li class="list-group-item text-bg-theme">
-        <div class="text-nowrap">
-            @T.Plural(Model.Jobs.Count, "1 site", "{0} sites")
-            <span class="text-muted">@T.Plural(totalItemCount, " / {0} site in total", " / {0} sites in total")</span>
-        </div>
-    </li>
-    @if (Model.Jobs.Count > 0)
-    {
-        @foreach (var job in Model.Jobs)
-        {
-            <li class="list-group-item">
-                <div class="row g-0">
-                    <div class="col-lg col-12 title d-flex align-items-center">
-                        <div class="summary">
-                            <div class="d-flex flex-column flex-md-row align-items-md-center">
-                                <div class="me-2">
-                                    <h5 class="mb-1 mb-md-0">@(string.IsNullOrEmpty(job.TenantTitle) ? job.TenantName : job.TenantTitle)</h5>
-                                </div>
-                                <div class="tags me-1">
-                                    @switch (job.Status)
-                                    {
-                                        case TenantProvisioningStatus.Succeeded:
-                                            <span class="badge text-bg-success">@T["Ready"]</span>
-                                            break;
-                                        case TenantProvisioningStatus.Abandoned:
-                                            <span class="badge text-bg-danger">@T["Needs help"]</span>
-                                            break;
-                                        case TenantProvisioningStatus.Failed:
-                                            <span class="badge text-bg-warning">@T["Retrying"]</span>
-                                            break;
-                                        default:
-                                            <span class="badge text-bg-secondary">@T["Being created"]</span>
-                                            break;
-                                    }
-                                </div>
-                            </div>
-                            <div class="metadata mt-1">
-                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Site name"]">
-                                    <i class="fa-solid fa-globe text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Site name"]</span>
-                                    @job.TenantName
-                                </span>
-                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Bought"]">
-                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Bought"]</span>
-                                    @await DisplayAsync(await New.DateTime(Utc: job.CreatedUtc, Format: "g"))
-                                </span>
-                            </div>
-                            @if (job.Status == TenantProvisioningStatus.Abandoned)
-                            {
-                                <div class="text-danger small mt-1">@T["We could not finish setting this site up. Please contact support."]</div>
-                            }
-                        </div>
-                    </div>
-                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
-                        <div class="actions">
-                            @if (job.Status == TenantProvisioningStatus.Succeeded && !string.IsNullOrEmpty(job.SiteUrl))
-                            {
-                                <a class="btn btn-primary btn-sm" href="@job.SiteUrl">@T["Open"]</a>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0" role="alert">
-                @T["<strong>Nothing here!</strong> You have not bought a site yet."]
-            </div>
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
+@* The sites, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+<admin-list name="MySites" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> You have not bought a site yet."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Title" position="20" title="@T["Site"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column name="SiteName" position="40" title="@T["Site name"]" width="auto" />
+        <admin-list-column name="Bought" position="50" title="@T["Bought"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
 
 @if (Model.Jobs.Any(job => job.Status is not (TenantProvisioningStatus.Succeeded or TenantProvisioningStatus.Abandoned)))
 {

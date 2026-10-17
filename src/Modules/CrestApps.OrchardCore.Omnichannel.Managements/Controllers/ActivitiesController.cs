@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
@@ -49,7 +51,6 @@ public sealed class ActivitiesController : Controller
     private readonly ISession _session;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IContentManager _contentManager;
-    private readonly IDisplayManager<OmnichannelActivityContainer> _containerDisplayManager;
     private readonly IDisplayManager<OmnichannelActivity> _activityDisplayManager;
     private readonly IOmnichannelActivityManager _omnichannelActivityManager;
     private readonly IAuthorizationService _authorizationService;
@@ -73,7 +74,6 @@ public sealed class ActivitiesController : Controller
     /// <param name="session">The session.</param>
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="contentItemManager">The content item manager.</param>
-    /// <param name="containerDisplayManager">The container display manager.</param>
     /// <param name="activityDisplayManager">The activity display manager.</param>
     /// <param name="omnichannelActivityManager">The omnichannel activity manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
@@ -93,7 +93,6 @@ public sealed class ActivitiesController : Controller
         ISession session,
         IUpdateModelAccessor updateModelAccessor,
         IContentManager contentItemManager,
-        IDisplayManager<OmnichannelActivityContainer> containerDisplayManager,
         IDisplayManager<OmnichannelActivity> activityDisplayManager,
         IOmnichannelActivityManager omnichannelActivityManager,
         IAuthorizationService authorizationService,
@@ -113,7 +112,6 @@ public sealed class ActivitiesController : Controller
         _session = session;
         _updateModelAccessor = updateModelAccessor;
         _contentManager = contentItemManager;
-        _containerDisplayManager = containerDisplayManager;
         _activityDisplayManager = activityDisplayManager;
         _omnichannelActivityManager = omnichannelActivityManager;
         _authorizationService = authorizationService;
@@ -181,7 +179,7 @@ public sealed class ActivitiesController : Controller
         var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
             .ListAsync();
 
-        var containerSummaries = new List<IShape>();
+        var entries = new List<OmnichannelActivityListEntry>();
 
         var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
 
@@ -193,16 +191,22 @@ public sealed class ActivitiesController : Controller
 
             var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
 
-            var container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user);
-
-            containerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin"));
+            entries.Add(new OmnichannelActivityListEntry
+            {
+                Container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user),
+            });
         }
 
         var model = new ListOmnichannelActivityContainer()
         {
             Header = header,
-            Containers = containerSummaries,
-            Pager = pagerShape,
+
+            // The admin-list tag builds a row per activity, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<OmnichannelActivityListEntry>
+            {
+                Source = entries,
+                Pager = pagerShape,
+            },
         };
 
         return View(model);
@@ -269,7 +273,7 @@ public sealed class ActivitiesController : Controller
 
         var completedPager = new Pager(pagerParameters, pagerOptions.Value);
 
-        var completedResults = await _omnichannelActivityManager.PageContactManualCompletedAsync(contentItemId, scheduledPager.Page, scheduledPager.PageSize);
+        var completedResults = await _omnichannelActivityManager.PageContactManualCompletedAsync(contentItemId, completedPager.Page, completedPager.PageSize);
 
         var completedPagerShape = await shapeFactory.PagerAsync(completedPager, completedResults.Count);
 
@@ -284,7 +288,7 @@ public sealed class ActivitiesController : Controller
 
         var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
 
-        var scheduledContainerSummaries = new List<IShape>();
+        var scheduledEntries = new List<OmnichannelActivityListEntry>();
 
         foreach (var scheduledActivity in scheduledResults.Entries)
         {
@@ -292,12 +296,14 @@ public sealed class ActivitiesController : Controller
 
             var user = users.FirstOrDefault(x => x.UserId == scheduledActivity.AssignedToId);
 
-            var container = new OmnichannelActivityContainer(scheduledActivity, contentTypeDefinition, contact, user);
-
-            scheduledContainerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", groupId: "ScheduledActivity"));
+            scheduledEntries.Add(new OmnichannelActivityListEntry
+            {
+                Container = new OmnichannelActivityContainer(scheduledActivity, contentTypeDefinition, contact, user),
+                GroupId = OmnichannelActivityContainerDisplayDriver.ScheduledActivityGroup,
+            });
         }
 
-        var completedContainerSummaries = new List<IShape>();
+        var completedEntries = new List<OmnichannelActivityListEntry>();
 
         foreach (var completedActivity in completedResults.Entries)
         {
@@ -305,18 +311,27 @@ public sealed class ActivitiesController : Controller
 
             var user = users.FirstOrDefault(x => x.UserId == completedActivity.CompletedById);
 
-            var container = new OmnichannelActivityContainer(completedActivity, contentTypeDefinition, contact, user);
-
-            completedContainerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", "CompletedActivity"));
+            completedEntries.Add(new OmnichannelActivityListEntry
+            {
+                Container = new OmnichannelActivityContainer(completedActivity, contentTypeDefinition, contact, user),
+                GroupId = OmnichannelActivityContainerDisplayDriver.CompletedActivityGroup,
+            });
         }
 
+        // Each list is rendered by its own admin-list tag, in the layout (List or Grid) the site or the user picked.
         var model = new ListOmnichannelActivity()
         {
             ContactContentItem = contact,
-            ScheduledContainers = scheduledContainerSummaries,
-            ScheduledPager = scheduledPagerShape,
-            CompletedContainers = completedContainerSummaries,
-            CompletedPager = completedPagerShape,
+            ScheduledList = new AdminListContext<OmnichannelActivityListEntry>
+            {
+                Source = scheduledEntries,
+                Pager = scheduledPagerShape,
+            },
+            CompletedList = new AdminListContext<OmnichannelActivityListEntry>
+            {
+                Source = completedEntries,
+                Pager = completedPagerShape,
+            },
         };
 
         return View(model);
@@ -388,46 +403,57 @@ public sealed class ActivitiesController : Controller
 
         var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
 
-        var model = new ListAccountActivitiesViewModel
-        {
-            Account = account,
-            ScheduledPager = scheduledPagerShape,
-            CompletedPager = completedPagerShape,
-        };
+        var scheduledEntries = new List<OmnichannelActivityListEntry>();
 
         foreach (var activity in scheduled.Entries)
         {
             contacts.TryGetValue(activity.ContactContentItemId ?? string.Empty, out var contact);
 
-            var container = new OmnichannelActivityContainer(
-                activity,
-                await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
-                contact,
-                users.FirstOrDefault(x => x.UserId == activity.AssignedToId));
-
-            model.Scheduled.Add(new AccountActivityEntry
+            scheduledEntries.Add(new OmnichannelActivityListEntry
             {
-                Contact = contact,
-                Shape = await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", groupId: "ScheduledActivity"),
+                Container = new OmnichannelActivityContainer(
+                    activity,
+                    await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
+                    contact,
+                    users.FirstOrDefault(x => x.UserId == activity.AssignedToId)),
+                GroupId = OmnichannelActivityContainerDisplayDriver.ScheduledActivityGroup,
+                ShowContact = true,
             });
         }
+
+        var completedEntries = new List<OmnichannelActivityListEntry>();
 
         foreach (var activity in completed.Entries)
         {
             contacts.TryGetValue(activity.ContactContentItemId ?? string.Empty, out var contact);
 
-            var container = new OmnichannelActivityContainer(
-                activity,
-                await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
-                contact,
-                users.FirstOrDefault(x => x.UserId == activity.CompletedById));
-
-            model.Completed.Add(new AccountActivityEntry
+            completedEntries.Add(new OmnichannelActivityListEntry
             {
-                Contact = contact,
-                Shape = await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin", "CompletedActivity"),
+                Container = new OmnichannelActivityContainer(
+                    activity,
+                    await GetSubjectContentTypeDefinitionAsync(activity, contentTypeDefinitions),
+                    contact,
+                    users.FirstOrDefault(x => x.UserId == activity.CompletedById)),
+                GroupId = OmnichannelActivityContainerDisplayDriver.CompletedActivityGroup,
+                ShowContact = true,
             });
         }
+
+        // The activities of an account belong to several contacts, so each row names its contact.
+        var model = new ListAccountActivitiesViewModel
+        {
+            Account = account,
+            ScheduledList = new AdminListContext<OmnichannelActivityListEntry>
+            {
+                Source = scheduledEntries,
+                Pager = scheduledPagerShape,
+            },
+            CompletedList = new AdminListContext<OmnichannelActivityListEntry>
+            {
+                Source = completedEntries,
+                Pager = completedPagerShape,
+            },
+        };
 
         return View(model);
     }
@@ -1220,8 +1246,7 @@ public sealed class ActivitiesController : Controller
         var users = await _session.Query<User, UserIndex>(index => index.UserId.IsIn(userIds))
             .ListAsync();
 
-        var containerSummaries = new List<IShape>();
-        var activityItemIds = new List<string>();
+        var entries = new List<OmnichannelActivityListEntry>();
         var contentTypeDefinitions = new Dictionary<string, ContentTypeDefinition>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in result.Entries)
@@ -1231,18 +1256,25 @@ public sealed class ActivitiesController : Controller
             var contentTypeDefinition = await GetSubjectContentTypeDefinitionAsync(entry, contentTypeDefinitions);
 
             var user = users.FirstOrDefault(x => x.UserId == entry.AssignedToId);
-            var container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user);
 
-            containerSummaries.Add(await _containerDisplayManager.BuildDisplayAsync(container, _updateModelAccessor.ModelUpdater, "SummaryAdmin"));
-            activityItemIds.Add(entry.ItemId);
+            // Each row carries the checkbox the bulk actions select it with.
+            entries.Add(new OmnichannelActivityListEntry
+            {
+                Container = new OmnichannelActivityContainer(entry, contentTypeDefinition, contact, user),
+                Selectable = true,
+            });
         }
 
         var model = new BulkManageOmnichannelActivityContainer()
         {
             Header = header,
-            Containers = containerSummaries,
-            ActivityItemIds = activityItemIds,
-            Pager = pagerShape,
+
+            // The admin-list tag builds a row per activity, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<OmnichannelActivityListEntry>
+            {
+                Source = entries,
+                Pager = pagerShape,
+            },
             TotalCount = result.Count,
             CurrentPageSize = pager.PageSize,
         };

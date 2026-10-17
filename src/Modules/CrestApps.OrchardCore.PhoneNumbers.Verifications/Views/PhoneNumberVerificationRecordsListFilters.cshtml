@@ -1,0 +1,15 @@
+@*
+    The sort of the phone number verification records, passed to the admin list as its 'ToolbarActions' so it renders
+    at the end of the list's toolbar. The list-management-ui script submits the form when it changes.
+*@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    string sort = Model.Sort?.ToString();
+    var sorts = ((IEnumerable<SelectListItem>)Model.Sorts)
+        .Select(option => new SelectListItem(option.Text, option.Value, string.Equals(option.Value, sort, StringComparison.OrdinalIgnoreCase)))
+        .ToList();
+}
+
+<div class="btn-group filter">
+    <select name="Sort" asp-items="sorts" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Sort by"]" data-dropdown-align-right="auto" title="@T["Sort by"]" aria-label="@T["Sort by"]" data-list-filter-submit></select>
+</div>

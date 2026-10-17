@@ -3,7 +3,5 @@
 
 @model ShapeViewModel<CurrencyEntry>
 
-<div class="d-flex flex-column gap-1">
-    <h5 class="mb-0">@Model.Value.DisplayName</h5>
-    <div class="text-body-secondary">@Model.Value.Name</div>
-</div>
+@* A plain link to the edit page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.DisplayName</a>

@@ -414,7 +414,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             // The cancellation is durable before the handlers hear of it, and a handler that fails can't undo it;
             // whatever they let go is committed with it, still inside the lock.
             await _handlers.InvokeAsync((handler, context) => handler.CanceledAsync(context), new CheckoutFlowCanceledContext(new CheckoutFlow(session), reason), _logger);
-            await _session.SaveChangesAsync(cancellationToken);
+            await CommitHandlerWorkAsync(session, cancellationToken);
 
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
@@ -469,7 +469,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _session.SaveChangesAsync(cancellationToken);
 
             await _handlers.InvokeAsync((handler, context) => handler.ExpiredAsync(context), new CheckoutFlowExpiredContext(new CheckoutFlow(session)), _logger);
-            await _session.SaveChangesAsync(cancellationToken);
+            await CommitHandlerWorkAsync(session, cancellationToken);
 
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
@@ -1040,6 +1040,23 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
 
         return null;
+    }
+
+    // What the handlers let go of, such as an order and the stock it held, is committed on its own. When it can't be,
+    // for example because the same stock changed at the same moment, it is rolled back and left to the sweeps that
+    // close abandoned orders and expired holds; the checkout itself is already closed.
+    private async Task CommitHandlerWorkAsync(CheckoutSession session, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch (global::YesSql.ConcurrencyException exception)
+        {
+            await _session.CancelAsync();
+
+            _logger.LogWarning(exception, "What checkout '{SessionId}' held couldn't be let go right away; the sweeps will finish it.", session.SessionId);
+        }
     }
 
     private static bool IsTerminal(CheckoutSessionStatus status)

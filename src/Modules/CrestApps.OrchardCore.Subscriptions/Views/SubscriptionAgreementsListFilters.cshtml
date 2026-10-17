@@ -1,0 +1,13 @@
+@*
+    The status filter of the agreements report, passed to the admin list as its 'ToolbarActions' so it renders at the
+    end of the list's toolbar. The list is rendered outside the filter form, so the select names that form; the
+    commerce-admin-list script submits it when it changes.
+*@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@{
+    var options = (SubscriptionAgreementsIndexOptions)Model.Options;
+}
+
+<div class="btn-group filter">
+    <select name="Options.Status" asp-items="options.Statuses" form="agreements-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
+</div>

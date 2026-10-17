@@ -60,6 +60,7 @@ public sealed class Startup : StartupBase
             .AddScoped<ICatalogEntryHandler<AIProfile>, AIProfileAdminMenuCacheHandler>()
             .AddDisplayDriver<AIChatSessionListOptions, AIChatSessionListOptionsDisplayDriver>()
             .AddDisplayDriver<AIChatSession, AIChatSessionDisplayDriver>()
+            .AddDisplayDriver<AIChatSessionEntry, AIChatSessionEntryDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileMenuDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateMenuDisplayDriver>()
             .AddNavigationProvider<ChatAdminMenu>()

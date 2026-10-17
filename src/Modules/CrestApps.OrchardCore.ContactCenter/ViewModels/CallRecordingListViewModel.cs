@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
@@ -78,40 +79,9 @@ public class CallRecordingListViewModel
     public IList<SelectListItem> AgentOptions { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the recordings on this page.
+    /// Gets or sets the recordings on this page and the pager the <c>admin-list</c> tag renders.
     /// </summary>
-    public IList<CallRecordingListItemViewModel> Items { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the number of recordings the search matched.
-    /// </summary>
-    public int Count { get; set; }
-
-    /// <summary>
-    /// Gets or sets the pager shape rendered beneath the list.
-    /// </summary>
-    public object Pager { get; set; }
-}
-
-/// <summary>
-/// A recording on the call recordings page.
-/// </summary>
-public class CallRecordingListItemViewModel
-{
-    /// <summary>
-    /// Gets or sets the recording.
-    /// </summary>
-    public CallRecording Recording { get; set; }
-
-    /// <summary>
-    /// Gets or sets the name of the agent on the call, or <see langword="null"/> when no person took part.
-    /// </summary>
-    public string AgentName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the customer's number formatted for reading, or <see langword="null"/> when it is not known.
-    /// </summary>
-    public string CustomerNumber { get; set; }
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>
