@@ -232,7 +232,7 @@ Click the transaction's title or **View**. The page shows:
 ### Pay online
 
 1. Click **Pay now**, either on the row in **My Transactions** or on the transaction's page. It is offered only while something is owed and the transaction can still be paid, so not on one that is **Canceled**, **Abandoned** or **Refunded**.
-2. The site opens checkout with the outstanding balance ready to pay. Finish the payment there; see [Checkout](checkout.md).
+2. The site opens checkout with the outstanding balance ready to pay. Finish the payment there; see [Checkout](checkout.md). You can enter a promotion code on the **Payment** step: what it takes off is recorded on the transaction as a discount, and a 100% code pays the whole balance.
 
 When the payment is confirmed, the transaction becomes **Paid**, or **Partially paid** if less than the balance was collected, and you are sent a receipt. If you see *Online settlement is not available*, online payment isn't set up on this site; contact the site's administrator to pay another way.
 
