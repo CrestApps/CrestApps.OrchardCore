@@ -95,6 +95,19 @@ internal sealed class FakeTransactionStore : ITransactionStore
             string.Equals(t.CheckoutSessionId, checkoutSessionId, StringComparison.Ordinal) &&
             string.Equals(t.ObligationId, obligationId, StringComparison.Ordinal)));
 
+    public Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default)
+    {
+        var results = _transactions.Values
+            .Where(t =>
+                string.Equals(t.ParentReferenceType, parentReferenceType, StringComparison.Ordinal) &&
+                string.Equals(t.ParentReferenceId, parentReferenceId, StringComparison.Ordinal))
+            .OrderBy(t => t.CreatedUtc)
+            .ThenBy(t => t.DueUtc)
+            .ToArray();
+
+        return Task.FromResult<IReadOnlyList<Transaction>>(results);
+    }
+
     public Task<IReadOnlyList<Transaction>> GetOutstandingDueAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         var results = _transactions.Values

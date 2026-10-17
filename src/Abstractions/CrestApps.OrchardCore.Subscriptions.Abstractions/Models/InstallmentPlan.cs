@@ -5,10 +5,16 @@ using CrestApps.OrchardCore.Checkout.Services;
 namespace CrestApps.OrchardCore.Subscriptions.Models;
 
 /// <summary>
-/// A payment plan an administrator set up for a customer: a down payment taken when the plan is created, then a
-/// fixed number of payments on a schedule. Every payment, the down payment included, is an ordinary ledger
-/// transaction, so the plan only describes the arrangement and tracks where each payment stands.
+/// A payment plan for a customer: an optional down payment taken when the plan is created, then a fixed number of
+/// payments on a schedule. When there is no down payment, the first scheduled payment is due at once and is taken in
+/// its place. Every payment is an ordinary ledger transaction, so the plan only describes the arrangement and tracks
+/// where each payment stands. A plan is set up by an administrator, by another module through
+/// <c>IInstallmentPlanService</c>, or by the customer at checkout when they choose to pay a balance in installments.
 /// </summary>
+/// <remarks>
+/// The values in the inherited <c>Properties</c> belong to the module that created the plan; they are copied onto
+/// every transaction of the plan.
+/// </remarks>
 public sealed class InstallmentPlan : CatalogItem
 {
     /// <summary>
@@ -20,6 +26,25 @@ public sealed class InstallmentPlan : CatalogItem
     /// Gets or sets what the plan pays for, shown to the customer on every payment.
     /// </summary>
     public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of record the plan pays for, as the module that owns the record names it (for example a
+    /// registration). It is copied onto every transaction of the plan as its parent reference, so the module finds
+    /// its record from any payment.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the record the plan pays for.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outstanding transaction the plan replaces, when the customer chose at checkout to pay it in
+    /// installments. The transaction is canceled once the plan's first payment is received; until then it stays
+    /// owed, so an abandoned checkout leaves the customer's balance as it was.
+    /// </summary>
+    public string SourceTransactionId { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the user the plan belongs to.
@@ -47,7 +72,8 @@ public sealed class InstallmentPlan : CatalogItem
     public decimal TotalAmount { get; set; }
 
     /// <summary>
-    /// Gets or sets the amount collected when the plan is created.
+    /// Gets or sets the amount collected when the plan is created, or zero for a plan without a down payment, whose
+    /// first scheduled payment is collected then instead.
     /// </summary>
     public decimal DownPaymentAmount { get; set; }
 
@@ -62,7 +88,8 @@ public sealed class InstallmentPlan : CatalogItem
     public InstallmentFrequency Frequency { get; set; }
 
     /// <summary>
-    /// Gets or sets when the first payment after the down payment falls due.
+    /// Gets or sets when the first payment after the down payment falls due. On a plan without a down payment it is
+    /// when the plan was created, because that payment is collected at once.
     /// </summary>
     public DateTime FirstDueUtc { get; set; }
 
@@ -77,13 +104,14 @@ public sealed class InstallmentPlan : CatalogItem
     public InstallmentPlanStatus Status { get; set; }
 
     /// <summary>
-    /// Gets or sets the payment method kept when the down payment was taken, which the scheduled payments are
+    /// Gets or sets the payment method kept when the first payment was taken, which the scheduled payments are
     /// charged to when they are collected automatically.
     /// </summary>
     public SavedPaymentMethod PaymentMethod { get; set; }
 
     /// <summary>
-    /// Gets or sets the checkout session that takes the down payment.
+    /// Gets or sets the checkout session that takes the first payment: the down payment, or the first scheduled
+    /// payment of a plan without one. The payment method kept by this checkout is the one the schedule charges.
     /// </summary>
     public string DownPaymentSessionId { get; set; }
 
@@ -103,12 +131,13 @@ public sealed class InstallmentPlan : CatalogItem
     public string Notes { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier of the administrator who created the plan.
+    /// Gets or sets the identifier of the person who created the plan: an administrator, or the customer who chose
+    /// installments at checkout.
     /// </summary>
     public string CreatedById { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the administrator who created the plan.
+    /// Gets or sets the name of the person who created the plan.
     /// </summary>
     public string CreatedByName { get; set; }
 
@@ -123,7 +152,7 @@ public sealed class InstallmentPlan : CatalogItem
     public DateTime UpdatedUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets when the down payment was received and the schedule started.
+    /// Gets or sets when the first payment was received and the schedule started.
     /// </summary>
     public DateTime? ActivatedUtc { get; set; }
 
@@ -148,6 +177,14 @@ public sealed class InstallmentPlan : CatalogItem
     [JsonIgnore]
     public InstallmentPlanPayment DownPayment
         => Payments.FirstOrDefault(payment => payment.Number == 0);
+
+    /// <summary>
+    /// Gets the payment taken when the plan is created, which starts the schedule once it is received: the down
+    /// payment, or the first scheduled payment of a plan without one. <see langword="null"/> on a plan with no payments.
+    /// </summary>
+    [JsonIgnore]
+    public InstallmentPlanPayment FirstPayment
+        => Payments.OrderBy(payment => payment.Number).FirstOrDefault();
 
     /// <summary>
     /// Gets the total received so far.

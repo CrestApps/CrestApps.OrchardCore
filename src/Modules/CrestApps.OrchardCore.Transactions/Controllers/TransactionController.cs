@@ -69,7 +69,7 @@ public sealed class TransactionController : Controller
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
-    [Admin("my-transactions", "MyTransactions")]
+    [Admin("my-transactions", TransactionsConstants.RouteNames.AdminStatement)]
     public async Task<IActionResult> Index(
         MyTransactionsOptions options,
         PagerParameters pagerParameters,
@@ -143,7 +143,7 @@ public sealed class TransactionController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    [Admin("my-transactions", "MyTransactions")]
+    [Admin("my-transactions", TransactionsConstants.RouteNames.AdminStatement)]
     public async Task<IActionResult> IndexFilterPost(MyTransactionsOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ViewOwnTransactions))

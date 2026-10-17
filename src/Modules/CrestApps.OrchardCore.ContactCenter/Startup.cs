@@ -1,6 +1,7 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -84,6 +85,7 @@ public sealed class Startup : StartupBase
                     && options.SharedVoicemailRetentionDays >= 0
                     && options.EventMetricRetentionDays >= 0
                     && options.CallQualityRecordRetentionDays >= 0
+                    && options.DialerPacingCycleRetentionDays >= 0
                     && options.SecureCaptureRetentionDays >= 0
                     && options.ProcessedEventRetentionDays >= 0
                     && options.WorkStateRetentionDays >= 0,
@@ -230,7 +232,9 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
             .AddDataMigration<ContactCenterEventMetricIndexMigrations>()
             .AddIndexProvider<ContactCenterEventMetricDeltaIndexProvider>()
-            .AddDataMigration<ContactCenterEventMetricDeltaIndexMigrations>();
+            .AddDataMigration<ContactCenterEventMetricDeltaIndexMigrations>()
+            .AddIndexProvider<AgentDailyTimeSummaryIndexProvider>()
+            .AddDataMigration<AgentDailyTimeSummaryIndexMigrations>();
 
         services
             .AddIndexProvider<ContactCenterProcessedEventIndexProvider>()
@@ -252,6 +256,16 @@ public sealed class Startup : StartupBase
         services
             .AddIndexProvider<InteractionEventIndexProvider>()
             .AddDataMigration<InteractionEventIndexMigrations>();
+
+        // The dialer decision log: routing decisions and dial suppressions indexed by queue, campaign, record, agent,
+        // outcome and reason as they are written, with the decisions written before the log existed indexed once by a
+        // background task.
+        services
+            .AddScoped<IDialerDecisionLog, DialerDecisionLog>()
+            .AddIndexProvider<DialerDecisionIndexProvider>()
+            .AddDataMigration<DialerDecisionIndexMigrations>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DialerDecisionIndexBackfillBackgroundTask>());
 
         services
             .AddIndexProvider<ContactCenterOutboxMessageIndexProvider>()
@@ -297,6 +311,7 @@ public sealed class Startup : StartupBase
             .AddResourceConfiguration<ContactCenterExternalTransferResourceConfiguration>()
             .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
             .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 }
 
@@ -353,6 +368,7 @@ public sealed class ContactCenterAgentNumbersStartup : StartupBase
     {
         services.AddScoped<IAgentAddressResolver, AgentAddressResolver>();
         services.AddSiteDisplayDriver<ContactCenterDefaultAddressSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 }
 

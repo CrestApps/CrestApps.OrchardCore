@@ -16,6 +16,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
@@ -28,6 +29,17 @@ namespace CrestApps.OrchardCore.Transactions;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant configuration the customer pages options are read from.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -39,18 +51,30 @@ public sealed class Startup : StartupBase
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
 
+        // A transaction can name the record it ultimately belongs to, such as the registration an installment plan
+        // pays for, so the module that owns the record finds every payment of it.
+        services
+            .AddDataMigration<TransactionParentReferenceMigrations>()
+            .AddIndexProvider<TransactionParentReferenceIndexProvider>();
+
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
+        services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();
 
         // The rows of the transactions report and of the customer's own statement.
         services
             .AddDisplayDriver<Transaction, TransactionDisplayDriver>()
             .AddDisplayDriver<CustomerTransaction, CustomerTransactionDisplayDriver>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
+
+        // The customer pages in the admin and in the site theme, and the links to them sent in messages.
+        services.Configure<TransactionCustomerPagesOptions>(_shellConfiguration.GetSection(TransactionsConstants.CustomerPagesConfigurationSection));
+        services.AddScoped<ITransactionCustomerPageService, TransactionCustomerPageService>();
+        services.AddScoped<ITransactionCustomerLinkService, TransactionCustomerLinkService>();
         services.AddScoped<ICommercePersonalDataContributor, TransactionPersonalDataContributor>();
     }
 }

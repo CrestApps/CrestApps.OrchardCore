@@ -24,5 +24,11 @@ internal sealed class AgentPresenceInterval
     /// </summary>
     public bool FromAudit { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the state started before the start the interval was clipped to, so the interval continues
+    /// one that a report counts where it began rather than here.
+    /// </summary>
+    public bool ContinuesFromEarlier { get; set; }
+
     public double DurationSeconds => Math.Max(0d, (EndUtc - StartUtc).TotalSeconds);
 }

@@ -1,0 +1,60 @@
+@model TransactionInvoiceViewModel
+
+@*
+    The TransactionInvoice shape: the printable invoice of a transaction, for the site theme. A theme overrides it with
+    its own TransactionInvoice.cshtml. While something is owed, the customer gets a button to the transaction's pay
+    page, and an administrator gets the pay link to copy.
+*@
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .receipt-print-area,
+        .receipt-print-area * {
+            visibility: visible;
+        }
+
+        .receipt-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="transaction-invoice">
+    <div class="d-flex flex-wrap gap-2 mb-3 no-print">
+        <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print invoice"]</button>
+
+        @if (!Model.IsAdministrator && !string.IsNullOrEmpty(Model.PayUrl))
+        {
+            <a class="btn btn-success" href="@Model.PayUrl">@T["Pay now"]</a>
+        }
+    </div>
+
+    @if (Model.IsAdministrator && !string.IsNullOrEmpty(Model.PayUrl))
+    {
+        <div class="card mb-3 no-print">
+            <div class="card-body">
+                <label for="invoice-pay-link" class="form-label">@T["Payment link"]</label>
+                <div class="input-group">
+                    <input id="invoice-pay-link" type="text" class="form-control" value="@Model.PayUrl" readonly />
+                    <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('invoice-pay-link').value); this.textContent = this.dataset.copied;" data-copied="@T["Copied"]">@T["Copy"]</button>
+                </div>
+                <span class="form-text">@T["Anyone with this link can pay this invoice without signing in. It expires in 60 days; the reminders send a fresh one each time."]</span>
+            </div>
+        </div>
+    }
+
+    <div class="receipt-print-area">
+        <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model.Invoice" />
+    </div>
+</div>

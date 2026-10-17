@@ -23,6 +23,24 @@ public interface IInstallmentPlanStore : ICatalog<InstallmentPlan>
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IReadOnlyList<InstallmentPlan>> GetOpenAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the plans that pay for the supplied record (<see cref="InstallmentPlan.ReferenceType"/> and
+    /// <see cref="InstallmentPlan.ReferenceId"/>), most recent first, whatever their status. A module uses it to find
+    /// the plan of a record of its own without keeping a map from plan to record.
+    /// </summary>
+    /// <param name="referenceType">The kind of record.</param>
+    /// <param name="referenceId">The identifier of the record.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<InstallmentPlan>> GetByReferenceAsync(string referenceType, string referenceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the plans that replace the supplied outstanding transaction (<see cref="InstallmentPlan.SourceTransactionId"/>),
+    /// most recent first, whatever their status.
+    /// </summary>
+    /// <param name="transactionId">The identifier of the transaction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<InstallmentPlan>> GetBySourceTransactionAsync(string transactionId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>

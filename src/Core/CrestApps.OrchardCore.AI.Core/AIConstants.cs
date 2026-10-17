@@ -33,6 +33,8 @@ public static class AIConstants
 
         public const string ToolInstances = "CrestApps.OrchardCore.AI.ToolInstances";
 
+        public const string Personas = "CrestApps.OrchardCore.AI.Personas";
+
         public const string OrchardCoreAIAgent = "CrestApps.OrchardCore.AI.Agent";
 
         public const string ChatCore = "CrestApps.OrchardCore.AI.Chat.Core";

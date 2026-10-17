@@ -64,6 +64,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<AIDataSourceSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
 
         services.RemoveAll<IAIDataSourceIndexingQueue>()
             .AddScoped<IAIDataSourceIndexingQueue, OrchardAIDataSourceIndexingQueue>();

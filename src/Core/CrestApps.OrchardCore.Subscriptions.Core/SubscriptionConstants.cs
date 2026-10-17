@@ -51,6 +51,17 @@ public static class SubscriptionConstants
         /// The prefix of the distributed lock taken while a plan is changed.
         /// </summary>
         public const string LockPrefix = "INSTALLMENT_PLAN_";
+
+        /// <summary>
+        /// The key of the "Choose how to pay" step a checkout that pays an outstanding transaction shows when the
+        /// customer may pay it in installments.
+        /// </summary>
+        public const string CheckoutStepKey = "ChooseHowToPay";
+
+        /// <summary>
+        /// The option the "Choose how to pay" step posts for paying the balance in full. No installment option may use it.
+        /// </summary>
+        public const string PayInFullOptionId = "full";
     }
 
     /// <summary>

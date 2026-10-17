@@ -108,7 +108,9 @@ public sealed class PresenceAuditRowLimitTests
             Mock.Of<IContactCenterReportCapabilityGuard>(),
             new FormattingLocalizer<AgentWorkforceReportProvider>(),
             Mock.Of<IClock>(),
-            Mock.Of<ILocalClock>());
+            Mock.Of<ILocalClock>(),
+            new ContactCenterReportingOptions(),
+            summaryReader: null);
 
     private sealed class FormattingLocalizer<T> : IStringLocalizer<T>
     {

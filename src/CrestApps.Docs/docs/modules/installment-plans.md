@@ -1,7 +1,7 @@
 ---
 sidebar_label: Installment Plans
 title: Installment Plans
-description: How installment plans are configured, how a plan collects its payments through the checkout and the transaction ledger, how double charges are prevented, and how to extend the feature.
+description: How installment plans are configured, how a plan collects its payments through the checkout and the transaction ledger, how a module ties a plan to its own record, how customers choose installments at checkout, how double charges are prevented, and how to extend the feature.
 user_manual:
   - user-manual/commerce/installment-plans
   - user-manual/use-cases/sell-on-a-payment-plan
@@ -12,9 +12,17 @@ user_manual:
 | **Feature Name** | Subscriptions - Installment Plans |
 | **Feature ID** | `CrestApps.OrchardCore.Subscriptions.Installments` |
 | **Module** | Subscriptions |
-| **Dependencies** | `CrestApps.OrchardCore.Subscriptions`, `CrestApps.OrchardCore.Transactions` |
+| **Dependencies** | `CrestApps.OrchardCore.Transactions`, `CrestApps.OrchardCore.Checkout`, `OrchardCore.Users` |
 
-**Subscriptions - Installment Plans** lets an administrator sell something on a payment plan without the customer going through the storefront, for example over the phone or at a counter. The administrator enters the customer, the total, a down payment and a schedule. The down payment is taken by card on the spot. The remaining balance is collected in a fixed number of equal payments, either charged to the kept card on each due date or invoiced to the customer.
+**Subscriptions - Installment Plans** lets a balance be paid in installments. A plan is created in one of three ways:
+
+- **By an administrator**, who sells something on a payment plan without the customer going through the storefront, for example over the phone or at a counter. The administrator enters the customer, the total, a down payment (or none) and a schedule. The first payment is taken by card on the spot.
+- **By another module**, for a record of its own, through `IInstallmentPlanService.CreateAsync` with a `ReferenceType` and `ReferenceId` (for example a registration). Every payment of the plan carries that reference, so the module finds its record from any payment.
+- **By the customer at checkout**, who chooses on the **Choose how to pay** step to pay an outstanding transaction in installments instead of in full. See [Installments at checkout](#installments-at-checkout).
+
+The remaining balance is collected in a fixed number of equal payments, either charged to the kept card on each due date or invoiced to the customer.
+
+The feature lives in the Subscriptions module but does not depend on the **Subscriptions** feature or on **Products**: a site that only lets customers pay balances in installments enables **Subscriptions - Installment Plans** with Transactions and Checkout alone. When Products is enabled, the admin form offers its managed currencies in a list; without it, the currency code is typed.
 
 The feature owns no payment code. Every payment on a plan is an ordinary [transaction](transactions), and every charge goes through the [Checkout](checkout) engine. So plan payments are verified against the gateway, recorded on the durable payment ledger, receipted, reminded and refundable exactly like any other payment.
 
@@ -35,12 +43,16 @@ For the admin screens, see the User Manual page [Installment Plans](../user-manu
 
 ## Configuration
 
-The settings are site settings, edited on **Settings > Subscriptions** in the **Installment Plans** card. Editing them requires the *Manage subscriptions settings* permission.
+The settings are site settings, edited on **Settings > Installment Plans** (site settings group `installment-plans`). Editing them requires the *Manage installment plans and charge customers' saved cards* permission. The *Manage subscriptions settings* permission also still lets a user edit them, because they used to be a card on **Settings > Subscriptions**.
 
 | Setting | Property | Default | Meaning |
 | --- | --- | --- | --- |
 | Collect scheduled payments by | `DefaultCollectionMethod` | `0` (charge the saved card) | What a new plan preselects. `0` charges the kept card on each due date; `1` invoices the customer. The administrator can change it for each plan. |
 | Retry a declined card after (days) | `RetryDays` | `[1, 3, 5]` | The number of days after each declined automatic charge before the next try, in order. After the last retry, the payment is handed to the customer. An empty list hands a declined payment to the customer straight away. |
+| Offer for balances from | `CheckoutSources` | `[]` | The transaction sources (`Transaction.Source`) whose balances the built-in option provider lets a customer split at checkout, for example `pay-later`. Empty offers nothing from these settings. |
+| Numbers of payments offered | `CheckoutInstallmentCounts` | `[]` | The choices the built-in provider offers, for example `[3, 6]`. Up to six numbers between 2 and 120. |
+| Payments fall due | `CheckoutFrequency` | `2` (monthly) | How often the payments chosen at checkout fall due: `0` weekly, `1` every two weeks, `2` monthly, `3` every three months. |
+| Smallest balance | `CheckoutMinimumAmount` | `0` | Balances below this amount are only offered **Pay in full**. |
 
 The settings are stored in the site document as `InstallmentPlanSettings`, so a recipe sets them with the standard `Settings` step:
 
@@ -51,7 +63,11 @@ The settings are stored in the site document as `InstallmentPlanSettings`, so a 
       "name": "Settings",
       "InstallmentPlanSettings": {
         "DefaultCollectionMethod": 1,
-        "RetryDays": [ 2, 4 ]
+        "RetryDays": [ 2, 4 ],
+        "CheckoutSources": [ "pay-later" ],
+        "CheckoutInstallmentCounts": [ 3, 6 ],
+        "CheckoutFrequency": 2,
+        "CheckoutMinimumAmount": 100
       }
     }
   ]
@@ -77,15 +93,19 @@ The permission is deliberately separate from the other subscription permissions,
 `IInstallmentPlanService.CreateAsync` validates the request and creates three things in one unit of work:
 
 1. **The customer.** An existing user, or a new user created from a name and an email. A new user gets a unique user name derived from the email and **no password**; they set one with **Forgot password** when they want to sign in. An email that already belongs to a user is refused, so the administrator picks that user instead.
-2. **The plan**, in the `Draft` status, with its full schedule. Payment `0` is the down payment, due now; payments `1` to `n` are the scheduled ones.
-3. **The down-payment transaction** (`Outstanding`) and the **checkout session** that pays it, referenced to that transaction.
+2. **The plan**, in the `Draft` status, with its full schedule. Payment `0` is the down payment, due now; payments `1` to `n` are the scheduled ones. A plan without a down payment has no payment `0`: payment `1` is due now and is taken in its place (`InstallmentPlan.FirstPayment` returns whichever comes first).
+3. **The first-payment transaction** (`Outstanding`) and the **checkout session** that pays it, referenced to that transaction.
 
 The validation rules are:
 
-- the down payment is more than zero and less than the total;
+- the down payment is zero or more, and less than the total;
 - there are 1 to 120 later payments;
-- the first scheduled payment falls due after today, because the down payment is what is collected today;
+- with a down payment, the first scheduled payment falls due after today, because the down payment is what is collected today;
+- without a down payment, `FirstDueUtc` is left unset or is today: the first payment is due now, and the schedule runs from now;
+- `ReferenceType` and `ReferenceId` are both set or both empty;
 - the balance splits into payments that are all above zero at the currency's precision.
+
+`ReferenceType`, `ReferenceId` and `Properties` on the request are copied onto the plan. Every transaction of the plan gets `ParentReferenceType` and `ParentReferenceId` from the plan's reference, and a copy of its `Properties` (see [Linking a plan to your own record](#linking-a-plan-to-your-own-record)).
 
 ### The schedule
 
@@ -98,7 +118,7 @@ The validation rules are:
 | Monthly | `Monthly` (2) | Counted from the first due date, so a plan that starts on the 31st falls on the last day of a short month and returns to the 31st afterwards. |
 | Quarterly | `Quarterly` (3) | Every three months, counted the same way. |
 
-### Taking the down payment
+### Taking the first payment
 
 The plan's payment page shows the provider's embedded card form. With Stripe, it also shows Apple Pay or Google Pay where the device offers them. The page begins the payment on the plan's checkout session through the checkout engine.
 
@@ -113,9 +133,10 @@ Once the checkout settles the down-payment transaction, the Transactions feature
 
 If the provider could not keep the card, an auto-charge plan switches itself to invoicing and records why in its history. That is better than a plan that never charges anybody.
 
-Nothing is scheduled until the down payment is received:
+Nothing is scheduled until the first payment (the down payment, or payment `1` of a plan without one) is received:
 
-- A `Draft` plan whose down payment is never taken stays a draft.
+- A `Draft` plan an administrator created whose first payment is never taken stays a draft.
+- A `Draft` plan a customer chose at checkout is closed by `ProcessAsync` once its checkout is canceled, expired or failed, or once the transaction it replaces was settled another way. See [Installments at checkout](#installments-at-checkout).
 - Canceling a draft closes its checkout session.
 
 ### Collecting the scheduled payments
@@ -174,6 +195,91 @@ Every change is recorded in the plan's history as an `InstallmentPlanEvent`, wit
 
 Money already collected is refunded separately, from **Commerce > Payments**.
 
+## Installments at checkout
+
+A checkout that pays an outstanding transaction (`ReferenceType` `Transaction`) can offer a **Choose how to pay** step: **Pay in full**, or one of the installment options offered for that transaction. Choosing an option turns the transaction into a plan while the customer is present, takes the first payment in the same checkout, and keeps the card for the rest, which the background task then charges on their due dates like any other plan.
+
+### Where the options come from
+
+Options come from `IInstallmentOptionProvider` implementations, one per transaction source:
+
+```csharp
+public interface IInstallmentOptionProvider
+{
+    // Matched against Transaction.Source, ignoring case. Null or empty asks the provider about every transaction.
+    string Source { get; }
+
+    Task<IEnumerable<InstallmentOption>> GetOptionsAsync(Transaction transaction, CancellationToken cancellationToken = default);
+}
+```
+
+An `InstallmentOption` has an `Id` (what the form posts, at most 64 characters, never `full`), an optional `Title`, `InstallmentCount`, `Frequency`, `DownPaymentAmount` (zero, the default, means the first installment is taken now) and `Properties` copied onto the plan. The amounts are always the transaction's own outstanding amount and currency; an option only says how it is split.
+
+The feature ships `SiteSettingsInstallmentOptionProvider`, which offers the counts in `CheckoutInstallmentCounts` for the sources in `CheckoutSources` (see [Configuration](#configuration)). Register your own for your source:
+
+```csharp
+public sealed class SeasonFeeInstallmentOptionProvider : IInstallmentOptionProvider
+{
+    public string Source => "club-registration";
+
+    public Task<IEnumerable<InstallmentOption>> GetOptionsAsync(Transaction transaction, CancellationToken cancellationToken = default)
+        => Task.FromResult<IEnumerable<InstallmentOption>>(
+        [
+            new InstallmentOption
+            {
+                Id = "3-monthly",
+                Title = "3 monthly payments",
+                InstallmentCount = 3,
+                Frequency = InstallmentFrequency.Monthly,
+            },
+        ]);
+}
+
+// In a startup that requires CrestApps.OrchardCore.Subscriptions.Installments:
+services.AddScoped<IInstallmentOptionProvider, SeasonFeeInstallmentOptionProvider>();
+```
+
+`InstallmentOptionResolver` collects the options and keeps only the ones the plan service accepts. It offers nothing unless:
+
+- the transaction can be split (`InstallmentTransactionEligibility.CanSplit`): it is `Outstanding` with nothing paid yet, it belongs to an authenticated owner (`CustomerOwnerKind.Authenticated`, which includes paying it from a pay link), it has a currency, and it is not a plan payment, a recurring charge or a balance with automatic collection;
+- a payment provider that can keep a card and show its form on the page is enabled (the same test as for administrator plans).
+
+A provider that throws is logged and skipped; the others still offer theirs.
+
+### The step
+
+`InstallmentOptionsCheckoutHandler` adds the step (key `SubscriptionConstants.InstallmentPlans.CheckoutStepKey`, `ChooseHowToPay`, order `10`, `CollectData = true`) when the checkout is activated and at least one option is offered. The step sits after the concealed **Outstanding payment** step (`TransactionsConstants.SettlementStepKey`, order `0`) and before **Payment**, and because it collects data the payment step can't be reached until the customer has chosen.
+
+`InstallmentOptionsCheckoutFlowDisplayDriver` renders the step (shape `InstallmentOptionsStep`) and handles the post. Only the option id is posted. It is matched against the options read again on the server (`InstallmentOptionResolver.FindOptionAsync`), so a tampered form can only choose an option that is really offered. The choice is saved in `SavedSteps["ChooseHowToPay"]` as `{ "optionId": "...", "planId": "..." }`; once a plan is made, posting the step again keeps it rather than making a second one.
+
+### Turning the transaction into a plan
+
+`IInstallmentPlanService.CreateFromTransactionAsync(CreateInstallmentPlanFromTransactionRequest)` takes the `TransactionId`, the `CheckoutSessionId` the customer is paying in, and the chosen `Option`. It refuses when the transaction can't be split, when the checkout is no longer `Pending`, no longer references the transaction or already has payment attempts, or when an active, past-due or completed plan already replaces the transaction. A draft plan left by an earlier abandoned checkout for the same transaction is canceled first.
+
+The plan it creates:
+
+- belongs to the transaction's owner, has the transaction's title, currency and outstanding amount, and collects by charging the saved card;
+- pays for the transaction's parent reference when it has one, otherwise for the transaction's own reference, and carries the transaction's `Properties` merged with the option's;
+- records the transaction as `SourceTransactionId`.
+
+Its first payment is a `Pending` transaction (not `Outstanding`: it is being paid right now, and is not reminded if the customer walks away). The customer's checkout is then moved onto it:
+
+- `CheckoutSession.ReferenceId` becomes the first payment's transaction, and the settlement step's billing item becomes its amount;
+- `CheckoutSession.SavePaymentMethod` is set;
+- the invoice is rebuilt, so the customer is shown, and charged, the first payment only.
+
+The original transaction stays `Outstanding` until the first payment is received. When it is, activation keeps the card from that checkout's attempt, schedules the remaining payments with automatic collection, and cancels the original transaction with a timeline entry naming the plan. If the original transaction was settled some other way in the meantime, it is left as it is and the plan's history asks a person to check.
+
+### Keeping the card in a public checkout
+
+`CheckoutSession.SavePaymentMethod` is set only by server code. When it is set:
+
+- the payment step offers only providers with `PaymentProviderCapabilities.SupportsSavedPaymentMethods` (`CheckoutPaymentMethodSelector.GetEligible(..., savesPaymentMethod: true)`) and tells the customer the card is saved for the remaining payments;
+- each provider panel is rendered with `CheckoutFlowPaymentMethod.SavePaymentMethod`, so Stripe tokenizes a reusable card;
+- `ICheckoutEngine.BeginPaymentAsync` refuses a provider that can't keep a card, and adds `CheckoutPaymentDataKeys.SavePaymentMethod` to the provider data itself.
+
+The public begin-payment endpoint (`checkout/{sessionId}/payment/begin`) drops `savePaymentMethod`, `offSession`, `savedCustomerReference` and `savedPaymentMethodReference` from what the browser sends, so a browser can neither decide that a card is kept nor spend a card kept earlier.
+
 ## Payment safety
 
 A payment plan charges a card without the customer present, so the feature is built never to take money twice:
@@ -221,11 +327,11 @@ The Installment Plans notices go through Orchard Core's `INotificationService` w
 
 | What | Where |
 | --- | --- |
-| Plans | YesSql documents of type `InstallmentPlan` in the `InstallmentPlan` collection. `InstallmentPlanIndex` holds the title, customer, status, currency, total, next due date and creation date. |
+| Plans | YesSql documents of type `InstallmentPlan` in the `InstallmentPlan` collection. `InstallmentPlanIndex` holds the title, customer, status, currency, total, next due date, creation date, `ReferenceType`, `ReferenceId` (both up to 255 characters) and `SourceTransactionId`. The last three were added by an additive migration step (version 2); plans created before it have them empty. |
 | Payments | The plan's `Payments` list. Each payment names its transaction (`TransactionId`) and the checkout sessions that charged it. |
-| Transactions | The source is `installment-plan` and the `ReferenceType` is `InstallmentPlan`. `ReferenceId` is the plan id, and `ObligationId` is the payment number (`0` is the down payment). |
+| Transactions | The source is `installment-plan` and the `ReferenceType` is `InstallmentPlan`. `ReferenceId` is the plan id, and `ObligationId` is the payment number (`0` is the down payment). `ParentReferenceType` and `ParentReferenceId` name the record the plan pays for, and are indexed in `TransactionParentReferenceIndex`; `Properties` is a copy of the plan's. |
 
-The plan's computed values (`DownPayment`, `AmountPaid`, `AmountOutstanding` and `NextPayment`) are `[JsonIgnore]`. Orchard Core's document serializer populates existing collections when it reads a document. So a stored computed property that returns a list item is read back into that same item, and its lists double on every save. Keep any property you add that derives from other members out of the document the same way.
+The plan's computed values (`DownPayment`, `FirstPayment`, `AmountPaid`, `AmountOutstanding` and `NextPayment`) are `[JsonIgnore]`. Orchard Core's document serializer populates existing collections when it reads a document. So a stored computed property that returns a list item is read back into that same item, and its lists double on every save. Keep any property you add that derives from other members out of the document the same way.
 
 ## Extending
 
@@ -273,7 +379,8 @@ public sealed class PhoneSalesService
 
 | Method | Use |
 | --- | --- |
-| `CreateAsync` | Creates a draft plan with its down-payment transaction and checkout session. |
+| `CreateAsync` | Creates a draft plan with its first-payment transaction and checkout session. |
+| `CreateFromTransactionAsync` | Turns an outstanding transaction into a plan in the customer's own checkout. See [Installments at checkout](#installments-at-checkout). |
 | `ActivateAsync` | Starts the schedule once the down payment is paid. It is idempotent, and `ProcessAsync` calls it for you. |
 | `ChargeAsync(planId, paymentNumber)` | Charges one payment now, as **Charge now** does. |
 | `ProcessAsync` | Brings a plan up to date. It is safe to call at any time. |
@@ -283,6 +390,42 @@ To read plans, use `IInstallmentPlanStore`:
 
 - `PageAsync` filters by status, customer or text (`InstallmentPlanQuery`).
 - `GetOpenAsync` returns the plans that still have work to do.
+- `GetByReferenceAsync(referenceType, referenceId)` returns the plans that pay for a record.
+- `GetBySourceTransactionAsync(transactionId)` returns the plans that replace an outstanding transaction.
+
+### Linking a plan to your own record
+
+A module that sells something of its own, such as a season registration, passes its record as the plan's reference. It needs no table of its own that maps plans to records:
+
+```csharp
+var result = await _plans.CreateAsync(new CreateInstallmentPlanRequest
+{
+    Title = "2027 season fee",
+    CustomerUserId = parentUserId,
+    Currency = "USD",
+    TotalAmount = 300m,
+
+    // No down payment: the first of the three payments is taken now, while the card is entered.
+    DownPaymentAmount = 0m,
+    InstallmentCount = 3,
+    Frequency = InstallmentFrequency.Monthly,
+    CollectionMethod = InstallmentCollectionMethod.AutoCharge,
+    ReferenceType = "Registration",
+    ReferenceId = registration.Id,
+    Properties = new Dictionary<string, object>
+    {
+        ["season"] = "2027",
+    },
+});
+```
+
+From any payment of the plan, for example in an `ITransactionPaymentHandler`, the record is `transaction.ParentReferenceType` and `transaction.ParentReferenceId`. The other way round:
+
+| To find | Call |
+| --- | --- |
+| Every payment of the record | `ITransactionStore.GetByParentReferenceAsync("Registration", registrationId)` |
+| The plans of the record | `IInstallmentPlanStore.GetByReferenceAsync("Registration", registrationId)` |
+| The plan of a payment | `IInstallmentPlanStore.FindByIdAsync(transaction.ReferenceId)` |
 
 ### Adding a payment provider that can keep a card
 
@@ -335,6 +478,7 @@ public sealed class PlanPaymentHandler : ITransactionPaymentHandler
         }
 
         // transaction.ReferenceId is the plan id; transaction.ObligationId is the payment number (0 = down payment).
+        // transaction.ParentReferenceType and ParentReferenceId name the record the plan pays for, when it has one.
         // context.Payment is the payment event: its amount, method and receipt number.
         return Task.CompletedTask;
     }
@@ -372,14 +516,14 @@ The plan's own notices are sent through `INotificationService`. To send notices 
 ## Operations
 
 - **Reconciling a plan.** Every plan payment is a transaction, and each attempt the gateway accepted or declined is listed in **Commerce > Payments** with a link to its transaction.
-- **A plan is stuck in `Draft`.** The down payment was never completed. Open the plan and take the payment again, or cancel the plan.
+- **A plan is stuck in `Draft`.** The first payment was never completed. Open the plan and take the payment again, or cancel the plan. A plan a customer chose at checkout is closed automatically once its checkout expires.
 - **Payments are not being charged.** Check that background tasks run on the tenant, and that `InstallmentPlanBackgroundTask` is not disabled under **Configuration > Tasks**. Then check the plan's history for declines.
 - **Reminders have no pay link.** Set the site's **Base URL**.
 - **An auto-charge plan switched to invoicing.** The provider did not keep the card used for the down payment, for example because the card or wallet does not allow future use. The plan's history says so.
 
 ## Related
 
-- [Subscriptions](subscriptions): the module this feature belongs to.
+- [Subscriptions](subscriptions): the module this feature belongs to (the feature does not need the Subscriptions feature itself).
 - [Transactions](transactions): the ledger every plan payment is recorded on, with reminders, receipts, invoices and pay links.
 - [Checkout](checkout): the engine every charge goes through.
 - [Payments](payments): the Stripe provider, saved cards, and Apple Pay / Google Pay.

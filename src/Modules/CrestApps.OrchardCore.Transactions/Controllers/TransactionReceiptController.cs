@@ -1,15 +1,7 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Commerce;
-using CrestApps.OrchardCore.Customers.Models;
-using CrestApps.OrchardCore.Transactions.Core;
-using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
-using CrestApps.OrchardCore.Transactions.ViewModels;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Transactions.Controllers;
 
@@ -17,24 +9,23 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// Shows the printable receipt for one payment applied to a transaction, to the customer who owns it and to the
 /// administrators who manage transactions.
 /// </summary>
-[Admin("transaction-receipts/{itemId}/{paymentId}", "TransactionReceipt")]
+/// <remarks>
+/// The site theme shows the same receipt at <see cref="TransactionsConstants.RouteNames.Receipt"/>; both pages build
+/// it through <see cref="ITransactionCustomerPageService"/>, so they apply the same ownership rules.
+/// </remarks>
+[Admin("transaction-receipts/{itemId}/{paymentId}", TransactionsConstants.RouteNames.AdminReceipt)]
 [CustomerAdminPage]
 public sealed class TransactionReceiptController : Controller
 {
-    private readonly ITransactionManager _transactionManager;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly ITransactionCustomerPageService _pages;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionReceiptController"/> class.
     /// </summary>
-    /// <param name="transactionManager">The transaction manager.</param>
-    /// <param name="authorizationService">The authorization service.</param>
-    public TransactionReceiptController(
-        ITransactionManager transactionManager,
-        IAuthorizationService authorizationService)
+    /// <param name="pages">The service that builds the receipt and checks the viewer may see it.</param>
+    public TransactionReceiptController(ITransactionCustomerPageService pages)
     {
-        _transactionManager = transactionManager;
-        _authorizationService = authorizationService;
+        _pages = pages;
     }
 
     /// <summary>
@@ -44,60 +35,13 @@ public sealed class TransactionReceiptController : Controller
     /// <param name="paymentId">The identifier of the timeline event that recorded the payment.</param>
     public async Task<IActionResult> Index(string itemId, string paymentId)
     {
-        // The receipt is built by the Receipts module, so without it there is no receipt to show.
-        if (string.IsNullOrEmpty(itemId) ||
-            string.IsNullOrEmpty(paymentId) ||
-            HttpContext.RequestServices.GetService<ITransactionReceiptBuilder>() is not { } receiptBuilder)
+        var result = await _pages.BuildReceiptAsync(User, itemId, paymentId, HttpContext.RequestAborted);
+
+        return result.Status switch
         {
-            return NotFound();
-        }
-
-        var canManage = await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions);
-
-        if (!canManage && !await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ViewOwnTransactions))
-        {
-            return Forbid();
-        }
-
-        var transaction = await _transactionManager.FindByIdAsync(itemId);
-
-        // A customer only ever sees a receipt for their own money. Answering "not found" rather than "forbidden"
-        // for someone else's transaction keeps the identifiers from being probed.
-        if (transaction is null || (!canManage && !IsOwnedByCurrentUser(transaction)))
-        {
-            return NotFound();
-        }
-
-        var payment = transaction.Events.FirstOrDefault(evt =>
-            evt.Type == TransactionEventType.PaymentRecorded &&
-            string.Equals(evt.Id, paymentId, StringComparison.Ordinal));
-
-        if (payment is null)
-        {
-            return NotFound();
-        }
-
-        var receipt = await receiptBuilder.BuildAsync(transaction, payment, HttpContext.RequestAborted);
-
-        if (receipt is null)
-        {
-            return NotFound();
-        }
-
-        return View(new TransactionReceiptViewModel
-        {
-            Transaction = transaction,
-            Receipt = receipt,
-            IsAdministrator = canManage,
-        });
-    }
-
-    private bool IsOwnedByCurrentUser(Transaction transaction)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        return !string.IsNullOrEmpty(userId) &&
-            transaction.OwnerKind == CustomerOwnerKind.Authenticated &&
-            string.Equals(transaction.OwnerId, userId, StringComparison.Ordinal);
+            TransactionCustomerPageStatus.Found => View(result.Model),
+            TransactionCustomerPageStatus.Forbidden => Forbid(),
+            _ => NotFound(),
+        };
     }
 }

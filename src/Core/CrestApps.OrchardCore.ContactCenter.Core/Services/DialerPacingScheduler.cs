@@ -39,6 +39,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </remarks>
 internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 {
+    /// <summary>
+    /// The longest description of a failure stored with a cycle's record.
+    /// </summary>
+    private const int MaxDetailLength = 500;
+
     private readonly ConcurrentDictionary<string, DateTime> _pending = new(StringComparer.Ordinal);
     private readonly IContactCenterDeadlineScheduler _deadlineScheduler;
     private readonly IClock _clock;
@@ -153,6 +158,10 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
     /// <summary>
     /// Runs one pacing cycle of the queue on the given scope.
     /// </summary>
+    /// <remarks>
+    /// Every way the cycle can end is recorded through <see cref="IDialerPacingCycleRecorder"/>, when the scope has one, on
+    /// a scope of its own: a cycle that is rolled back, abandoned at its time budget or that throws is on record as such.
+    /// </remarks>
     /// <param name="services">The services of the scope the run commits.</param>
     /// <param name="queueId">The campaign queue.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -169,10 +178,21 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             return null;
         }
 
+        var recorder = services.GetService<IDialerPacingCycleRecorder>();
+        var startedUtc = _clock.UtcNow;
         var head = await services.GetRequiredService<IQueueItemStore>().FindNextWaitingAsync(queueId, cancellationToken);
 
-        if (head is null || string.IsNullOrEmpty(head.DialerProfileId))
+        if (head is null)
         {
+            await RecordAsync(recorder, queueId, null, startedUtc, DialerPacingCycleOutcome.NothingDue, "No record is waiting in the queue.");
+
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(head.DialerProfileId))
+        {
+            await RecordAsync(recorder, queueId, null, startedUtc, DialerPacingCycleOutcome.HeldBack, "The record at the head of the queue has no dialer profile.");
+
             return null;
         }
 
@@ -180,6 +200,20 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
         if (!IsPacedHere(profile))
         {
+            // A profile agents dial, or one the predictive scheduler over-dials, is not this scheduler's to record.
+            if (profile is null || !profile.Enabled)
+            {
+                await RecordAsync(
+                    recorder,
+                    queueId,
+                    head.DialerProfileId,
+                    startedUtc,
+                    DialerPacingCycleOutcome.HeldBack,
+                    profile is null
+                        ? "The dialer profile of the record at the head of the queue no longer exists."
+                        : "The dialer profile of the record at the head of the queue is turned off.");
+            }
+
             return null;
         }
 
@@ -197,12 +231,15 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
             RequestRetry(queueId);
 
+            await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.LockNotAcquired, "Another pacing cycle held the queue's pacing lock.");
+
             return null;
         }
 
         await using var acquiredLock = locker;
 
         var session = services.GetRequiredService<ISession>();
+        var observation = recorder is null ? null : services.GetService<DialerPacingCycleObservation>();
         int started;
 
         if (_logger.IsEnabled(LogLevel.Debug))
@@ -212,6 +249,8 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
         using var cycleCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var cycleToken = cycleCancellation.Token;
+
+        observation?.Begin();
 
         // The cycle is bounded because the lock it holds never expires in-process: a cycle waiting on something that never
         // answers would otherwise stop the campaign dialing until the application restarts.
@@ -238,6 +277,15 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
                 _options.CycleTimeout);
 
             await session.CancelAsync();
+            observation?.End();
+
+            await RecordAsync(
+                recorder,
+                queueId,
+                profile.ItemId,
+                startedUtc,
+                DialerPacingCycleOutcome.TimeBudgetExceeded,
+                $"The cycle did not finish within {_options.CycleTimeout}; it was abandoned and none of its calls were placed.");
 
             return null;
         }
@@ -251,7 +299,16 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             }
 
             await session.CancelAsync();
+            observation?.End();
             RequestRetry(queueId);
+
+            await RecordAsync(
+                recorder,
+                queueId,
+                profile.ItemId,
+                startedUtc,
+                DialerPacingCycleOutcome.WriteConflict,
+                "Another transition saved an agent or record the cycle reserved first; none of its calls were placed.");
 
             return null;
         }
@@ -260,13 +317,23 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             _logger.LogError(ex, "A pacing run of queue '{QueueId}' failed; none of its calls were placed. The minute dialer pacing task paces it again.", queueId.SanitizeLogValue());
 
             await session.CancelAsync();
+            observation?.End();
+
+            await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.Failed, DescribeFailure(ex));
 
             return null;
         }
 
+        observation?.End();
+
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Paced queue '{QueueId}' on request: {Started} call(s) placed.", queueId.SanitizeLogValue(), started);
+        }
+
+        if (recorder is not null)
+        {
+            await recorder.RecordAsync(await DescribeCompletedCycleAsync(services, queueId, profile, startedUtc, started, observation, cancellationToken));
         }
 
         return started > 0 ? _clock.UtcNow.Add(_options.Debounce) : null;
@@ -281,5 +348,179 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
             return placed;
         }
+    }
+
+    /// <summary>
+    /// Describes a cycle that ran to the end and committed: how it ended, why, and the last call it placed and assigned.
+    /// </summary>
+    /// <param name="services">The services of the scope the cycle ran on.</param>
+    /// <param name="queueId">The campaign queue.</param>
+    /// <param name="profile">The dialer profile the cycle paced the queue with.</param>
+    /// <param name="startedUtc">When the cycle started.</param>
+    /// <param name="placed">How many calls the cycle placed.</param>
+    /// <param name="observation">What the cycle was seen to decide, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The cycle's record.</returns>
+    internal static async Task<DialerPacingCycle> DescribeCompletedCycleAsync(
+        IServiceProvider services,
+        string queueId,
+        DialerProfile profile,
+        DateTime startedUtc,
+        int placed,
+        DialerPacingCycleObservation observation,
+        CancellationToken cancellationToken)
+    {
+        string configurationProblem = null;
+        var policyForbidsDialing = false;
+
+        if (placed == 0)
+        {
+            configurationProblem = DescribeConfigurationProblem(services, profile);
+
+            // A Predictive cycle that never asked routing for an agent was stopped before it began by the abandonment
+            // policy; asking the policy again says whether that is why.
+            if (configurationProblem is null &&
+                profile.Mode == DialerMode.Predictive &&
+                (observation is null || observation.RoutingSucceeded + observation.RoutingNoAgent == 0))
+            {
+                policyForbidsDialing = await PolicyForbidsDialingAsync(services, profile, cancellationToken);
+            }
+        }
+
+        var (outcome, detail) = DialerPacingCycleClassifier.Classify(placed, observation, configurationProblem, policyForbidsDialing);
+
+        var record = new DialerPacingCycle
+        {
+            QueueId = queueId,
+            DialerProfileId = profile.ItemId,
+            Outcome = outcome,
+            Detail = detail,
+            CallsPlaced = placed,
+            StartedUtc = startedUtc,
+            RoutingSucceeded = observation?.RoutingSucceeded ?? 0,
+            RoutingNoAgent = observation?.RoutingNoAgent ?? 0,
+            Suppressed = observation?.Suppressed ?? 0,
+            LastAssignedAgentId = observation?.LastAssignedAgentId,
+            LastAssignedActivityItemId = observation?.LastAssignedActivityItemId,
+        };
+
+        await DescribeLastPlacedAsync(services, record, placed > 0 ? observation?.LastPlacedInteractionId : null, cancellationToken);
+
+        return record;
+    }
+
+    /// <summary>
+    /// Fills in the record and agent of the last call a cycle placed, from the interaction the call was placed as.
+    /// </summary>
+    /// <param name="services">The services of the scope the cycle ran on.</param>
+    /// <param name="record">The cycle's record.</param>
+    /// <param name="interactionId">The interaction of the last call the cycle placed, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal static async Task DescribeLastPlacedAsync(
+        IServiceProvider services,
+        DialerPacingCycle record,
+        string interactionId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(interactionId))
+        {
+            return;
+        }
+
+        record.LastPlacedInteractionId = interactionId;
+
+        var interactionStore = services.GetService<IInteractionStore>();
+
+        if (interactionStore is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var interaction = await interactionStore.FindByIdAsync(interactionId, cancellationToken);
+
+            record.LastPlacedActivityItemId = interaction?.ActivityItemId;
+            record.LastPlacedAgentId = interaction?.AgentId;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The call was placed whether or not the record can name who it was for.
+        }
+    }
+
+    /// <summary>
+    /// Describes a failure in a line short enough to store with the cycle's record.
+    /// </summary>
+    /// <param name="exception">The failure.</param>
+    /// <returns>The exception's type and message, cut to a bounded length.</returns>
+    internal static string DescribeFailure(Exception exception)
+    {
+        var description = $"{exception.GetType().Name}: {exception.Message}";
+
+        return description.Length <= MaxDetailLength
+            ? description
+            : description.Substring(0, MaxDetailLength);
+    }
+
+    private static string DescribeConfigurationProblem(IServiceProvider services, DialerProfile profile)
+    {
+        var router = services.GetService<IVoiceContactCenterCallRouter>();
+
+        if (router is not null && !router.CanRouteOutbound(profile.ProviderName))
+        {
+            return "No Contact Center voice provider can route outbound calls for the dialer profile.";
+        }
+
+        var resolver = services.GetService<IDialerStrategyResolver>();
+
+        if (resolver is not null && resolver.Resolve(profile.Mode) is null)
+        {
+            return $"The '{profile.Mode}' dialing mode is not enabled.";
+        }
+
+        return null;
+    }
+
+    private static async Task<bool> PolicyForbidsDialingAsync(IServiceProvider services, DialerProfile profile, CancellationToken cancellationToken)
+    {
+        var policy = services.GetService<IDialerAbandonmentPolicyService>();
+
+        if (policy is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            return !(await policy.EvaluateAsync(profile, cancellationToken)).IsPermitted;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    private static Task RecordAsync(
+        IDialerPacingCycleRecorder recorder,
+        string queueId,
+        string dialerProfileId,
+        DateTime startedUtc,
+        DialerPacingCycleOutcome outcome,
+        string detail)
+    {
+        if (recorder is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return recorder.RecordAsync(new DialerPacingCycle
+        {
+            QueueId = queueId,
+            DialerProfileId = dialerProfileId,
+            Outcome = outcome,
+            Detail = detail,
+            StartedUtc = startedUtc,
+        });
     }
 }

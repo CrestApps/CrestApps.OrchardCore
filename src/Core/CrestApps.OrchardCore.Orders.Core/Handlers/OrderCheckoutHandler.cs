@@ -21,6 +21,8 @@ namespace CrestApps.OrchardCore.Orders.Core.Handlers;
 public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 {
     private readonly IOrderStore _orderStore;
+    private readonly IOrderService _orderService;
+    private readonly IEnumerable<IOrderEventHandler> _orderHandlers;
     private readonly ICartStore _cartStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -29,12 +31,16 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
     public OrderCheckoutHandler(
         IOrderStore orderStore,
+        IOrderService orderService,
+        IEnumerable<IOrderEventHandler> orderHandlers,
         ICartStore cartStore,
         IClock clock,
         ILogger<OrderCheckoutHandler> logger,
         IStringLocalizer<OrderCheckoutHandler> stringLocalizer)
     {
         _orderStore = orderStore;
+        _orderService = orderService;
+        _orderHandlers = orderHandlers;
         _cartStore = cartStore;
         _clock = clock;
         _logger = logger;
@@ -134,7 +140,45 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         }
 
         await _orderStore.UpdateAsync(order);
+
+        // In the same unit of work: a handler that can't record the sale, such as one that can't sell the stock just
+        // now, rolls the completion back and the checkout retries it.
+        var paid = new OrderPaidContext(order);
+
+        foreach (var handler in _orderHandlers)
+        {
+            await handler.PaidAsync(paid);
+        }
+
         await RemoveBoughtLinesAsync(order);
+    }
+
+    public override Task FailedAsync(CheckoutFlowFailedContext context)
+        => CancelOrderAsync(context.Flow.Session as CheckoutSession, OrderCancelReason.PaymentFailed);
+
+    public override Task CanceledAsync(CheckoutFlowCanceledContext context)
+        => CancelOrderAsync(context.Flow.Session as CheckoutSession, OrderCancelReason.CheckoutCanceled);
+
+    public override Task ExpiredAsync(CheckoutFlowExpiredContext context)
+        => CancelOrderAsync(context.Flow.Session as CheckoutSession, OrderCancelReason.CheckoutExpired);
+
+    // A checkout that can no longer be paid ends its order, so what the order held is let go. An order since paid
+    // through another checkout, or moved to one, is not this checkout's to cancel.
+    private async Task CancelOrderAsync(CheckoutSession session, OrderCancelReason reason)
+    {
+        if (!IsOrder(session) || string.IsNullOrEmpty(session.ReferenceId))
+        {
+            return;
+        }
+
+        var order = await _orderStore.FindByIdAsync(session.ReferenceId);
+
+        if (order is null || !string.Equals(order.CheckoutSessionId, session.SessionId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        await _orderService.CancelAsync(order, reason);
     }
 
     /// <summary>
@@ -151,9 +195,11 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
         foreach (var bought in order.Lines)
         {
+            // The variant matters: buying the blue mug leaves the red one in the cart.
             var line = cart.Lines.FirstOrDefault(candidate =>
                 candidate.ContentItemId == bought.ContentItemId &&
-                string.Equals(candidate.PriceId, bought.PriceId, StringComparison.Ordinal));
+                string.Equals(candidate.PriceId, bought.PriceId, StringComparison.Ordinal) &&
+                string.Equals(candidate.VariantId, bought.VariantId, StringComparison.Ordinal));
 
             if (line is null)
             {

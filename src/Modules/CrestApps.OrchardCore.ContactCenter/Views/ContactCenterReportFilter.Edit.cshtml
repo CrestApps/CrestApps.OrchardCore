@@ -89,3 +89,51 @@
         </select>
     </div>
 }
+
+@if (Model.ShowInteractionTypeFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="InteractionType">@T["Interaction type"]</label>
+        <select asp-for="InteractionType" asp-items="Model.InteractionTypes" class="form-select">
+            <option value="">@T["All interaction types"]</option>
+        </select>
+    </div>
+}
+
+@if (Model.ShowDialerProfileFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="DialerProfileId">@T["Dialer profile"]</label>
+        <select asp-for="DialerProfileId" asp-items="Model.DialerProfiles" class="form-select">
+            <option value="">@T["All dialer profiles"]</option>
+        </select>
+    </div>
+}
+
+@if (Model.ShowQueueStateFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="QueueState">@T["Queue state"]</label>
+        <select asp-for="QueueState" asp-items="Model.QueueStates" class="form-select">
+            <option value="">@T["All queue states"]</option>
+        </select>
+    </div>
+}
+
+@if (Model.ShowActivityItemFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="ActivityItemId">@T["Activity ID"]</label>
+        <input asp-for="ActivityItemId" class="form-control" placeholder="@T["All activities"]" />
+    </div>
+}
+
+@if (Model.ShowDecisionReasonFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="DecisionReason">@T["Reason"]</label>
+        <select asp-for="DecisionReason" asp-items="Model.DecisionReasons" class="form-select">
+            <option value="">@T["All reasons"]</option>
+        </select>
+    </div>
+}

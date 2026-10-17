@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -29,6 +30,8 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
     private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileManager _agentManager;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
+    private readonly ContactCenterReportingOptions _reportingOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentActivityTimelineReportProvider"/> class.
@@ -38,6 +41,8 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
     /// <param name="eventStore">The event log.</param>
     /// <param name="agentManager">The agent directory, for agent names.</param>
     /// <param name="clock">The clock, so a state still held ends now and no later.</param>
+    /// <param name="localClock">The tenant's clock, in whose time zone the period is measured against its limit.</param>
+    /// <param name="reportingOptions">The reporting options that bound the period.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AgentActivityTimelineReportProvider(
         IContactCenterReportingService reportingService,
@@ -45,12 +50,16 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
         IInteractionEventStore eventStore,
         IAgentProfileManager agentManager,
         IClock clock,
+        ILocalClock localClock,
+        IOptions<ContactCenterReportingOptions> reportingOptions,
         IStringLocalizer<AgentActivityTimelineReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
         _eventStore = eventStore;
         _agentManager = agentManager;
         _clock = clock;
+        _localClock = localClock;
+        _reportingOptions = reportingOptions.Value;
     }
 
     /// <inheritdoc/>
@@ -78,6 +87,13 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
     /// <inheritdoc/>
     protected override async Task<ReportDocument> RunCoreAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
+        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
+
+        if (WorkforceReportRange.TryRefuse(context, _reportingOptions, timeZone, S, out var refusal))
+        {
+            return refusal;
+        }
+
         var range = context.Filter.GetDateRange();
         var fromUtc = range.FromUtc.GetValueOrDefault();
         var toUtc = ContactCenterReportPeriod.ObservedEnd(range.ToUtc, _clock.UtcNow);
@@ -120,29 +136,32 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
 
         callEvents.AddRange(await _eventStore.GetByAggregateWindowAsync(nameof(CallSession), AgentActivityTimeline.CallEventTypes, null, fromUtc, toUtc, cancellationToken));
 
-        var entries = AgentActivityTimeline.Build(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc);
+        // Only the entries the page lists are built; the rest are only counted.
+        var selection = AgentActivityTimeline.SelectFirst(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc, EntryLimit);
 
         return Build(
-            entries,
+            selection,
             agentId => ReportValue.UserDisplayName(agentId is not null && agents.TryGetValue(agentId, out var userName) ? userName : null, S["(Unknown agent)"].Value));
     }
 
     /// <summary>
     /// Renders the timeline.
     /// </summary>
-    /// <param name="entries">The entries, in order.</param>
+    /// <param name="selection">The first entries, in order, and the counts of every entry.</param>
     /// <param name="agentName">Resolves an agent's display name.</param>
     /// <returns>The report document.</returns>
-    internal ReportDocument Build(IReadOnlyList<AgentActivityEntry> entries, Func<string, string> agentName)
+    internal ReportDocument Build(AgentActivitySelection selection, Func<string, string> agentName)
     {
+        ArgumentNullException.ThrowIfNull(selection);
+
         var document = new ReportDocument()
             .Add(ReportSection.ForMetrics(S["Summary"].Value,
             [
-                new ReportMetric(S["Entries"].Value, ReportFormat.Number(entries.Count)),
-                new ReportMetric(S["State changes"].Value, ReportFormat.Number(entries.Count(entry => entry.Kind == AgentActivityKind.State))),
-                new ReportMetric(S["Offers"].Value, ReportFormat.Number(entries.Count(entry => entry.Kind == AgentActivityKind.Offer))),
-                new ReportMetric(S["Call changes"].Value, ReportFormat.Number(entries.Count(entry => entry.Kind == AgentActivityKind.Call))),
-                new ReportMetric(S["Flagged"].Value, ReportFormat.Number(entries.Count(entry => entry.Flagged))),
+                new ReportMetric(S["Entries"].Value, ReportFormat.Number(selection.TotalCount)),
+                new ReportMetric(S["State changes"].Value, ReportFormat.Number(selection.StateCount)),
+                new ReportMetric(S["Offers"].Value, ReportFormat.Number(selection.OfferCount)),
+                new ReportMetric(S["Call changes"].Value, ReportFormat.Number(selection.CallCount)),
+                new ReportMetric(S["Flagged"].Value, ReportFormat.Number(selection.FlaggedCount)),
             ]));
 
         var columns = new[]
@@ -159,8 +178,7 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
             new ReportColumn(S["Logged (UTC)"].Value),
         };
 
-        var rows = entries
-            .Take(EntryLimit)
+        var rows = selection.Entries
             .Select(entry =>
             {
                 var row = new ReportRow(
@@ -185,9 +203,9 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
 
         var section = ReportSection.ForTable(S["Agent activity timeline"].Value, columns, rows);
 
-        if (entries.Count > EntryLimit)
+        if (selection.TotalCount > rows.Count)
         {
-            section.Description = S["The first {0} of {1} entries are listed. Choose an agent or a shorter period to see the rest.", EntryLimit, entries.Count].Value;
+            section.Description = S["The first {0} of {1} entries are listed. Choose an agent or a shorter period to see the rest.", rows.Count, selection.TotalCount].Value;
         }
 
         return document.Add(section);

@@ -77,6 +77,7 @@ public sealed class Startup : StartupBase
             .AddNavigationProvider<AISiteSettingsAdminMenu>()
             .AddTransient<IConfigureOptions<PromptSecurityOptions>, PromptSecurityOptionsConfiguration>()
             .AddTransient<IConfigureOptions<AIVisitorIdentityOptions>, AIVisitorIdentityOptionsConfiguration>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
 
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
@@ -132,6 +133,7 @@ public sealed class AdminWidgetStartup : StartupBase
         services
             .AddSiteDisplayDriver<AIChatAdminWidgetSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
 
         services.Configure<MvcOptions>(options =>
         {

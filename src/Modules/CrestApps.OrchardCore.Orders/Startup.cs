@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
@@ -12,6 +13,7 @@ using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -33,6 +35,11 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IOrderStore, OrderStore>();
         services.AddScoped<IOrderService, OrderService>();
+
+        // Unpaid orders whose checkout ended without them hearing of it are canceled.
+        services.AddScoped<AbandonedOrderSweeper>();
+        services.AddSingleton<IBackgroundTask, AbandonedOrdersBackgroundTask>();
+
         services.AddScoped<ICheckoutHandler, OrderCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, OrderConfirmationCheckoutHandler>();
         services.AddScoped<OrderConfirmationEmailBuilder>();
@@ -45,6 +52,9 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Order, OrderDisplayDriver>();
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
+
+        // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
+        services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
 
         services.Configure<TemplateOptions>(options =>
         {

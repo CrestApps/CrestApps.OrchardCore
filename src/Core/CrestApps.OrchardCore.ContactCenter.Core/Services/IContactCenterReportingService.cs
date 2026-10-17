@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -99,6 +100,37 @@ public interface IContactCenterReportingService
         DateTime fromUtc,
         DateTime toUtc,
         ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Reads the CRM activities the campaign summary counts over the inclusive UTC period: those created in it, narrowed
+    /// by the criteria.
+    /// </summary>
+    /// <param name="fromUtc">The inclusive lower UTC bound.</param>
+    /// <param name="toUtc">The inclusive upper UTC bound.</param>
+    /// <param name="criteria">The report dimension filters.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The activities, read from the activity index.</returns>
+    Task<IReadOnlyList<OmnichannelActivityIndex>> GetCampaignActivitiesAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        ContactCenterReportCriteria criteria,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Builds the campaign summary report of activities the caller has already read and narrowed, such as with
+    /// <see cref="GetCampaignActivitiesAsync(DateTime, DateTime, ContactCenterReportCriteria, CancellationToken)"/> and
+    /// a filter of its own.
+    /// </summary>
+    /// <param name="fromUtc">The inclusive lower UTC bound the activities were read for.</param>
+    /// <param name="toUtc">The inclusive upper UTC bound the activities were read for.</param>
+    /// <param name="activities">The activities to count.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The campaign summary report.</returns>
+    Task<CampaignSummaryReport> BuildCampaignSummaryAsync(
+        DateTime fromUtc,
+        DateTime toUtc,
+        IReadOnlyList<OmnichannelActivityIndex> activities,
         CancellationToken cancellationToken = default);
 
     /// <summary>

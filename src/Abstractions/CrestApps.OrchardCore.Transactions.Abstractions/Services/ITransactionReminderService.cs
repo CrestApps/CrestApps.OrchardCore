@@ -30,4 +30,15 @@ public interface ITransactionReminderService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when the reminder was sent; otherwise <see langword="false"/>.</returns>
     Task<bool> SendUpcomingReminderAsync(Transaction transaction, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends the owner the invoice of the supplied transaction: issues its invoice number when it has none and sends an
+    /// "Invoice INV-1001" notice, not a reminder, with the link that pays it. The notice counts as the first notice: it
+    /// records a <see cref="TransactionEventType.InvoiceSent"/> event and updates the reminder counters. The caller
+    /// persists the transaction.
+    /// </summary>
+    /// <param name="transaction">The unpaid transaction the owner pays themselves.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the invoice was sent; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendInvoiceAsync(Transaction transaction, CancellationToken cancellationToken = default);
 }

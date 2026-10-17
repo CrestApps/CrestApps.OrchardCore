@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
@@ -66,6 +67,7 @@ public sealed class RecordingStartup : StartupBase
 
         // Recording and monitoring settings screens.
         services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
 
         // The call recordings page: search, playback and the transcript beside it.
         services

@@ -64,6 +64,7 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CouponIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
+        services.AddScoped<CouponScopeEvaluator>();
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();

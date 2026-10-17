@@ -156,6 +156,7 @@ internal sealed class AgentStateTimeline
                     StartUtc = clippedStart,
                     EndUtc = clippedEnd,
                     FromAudit = transition.FromAudit,
+                    ContinuesFromEarlier = startUtc < fromUtc,
                 });
             }
         }

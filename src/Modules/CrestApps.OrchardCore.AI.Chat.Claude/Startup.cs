@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Claude.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Claude.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,6 +44,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<ClaudeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, ClaudePermissionProvider.ManageClaudeSettings);
 
         services.AddPermissionProvider<ClaudePermissionProvider>();
     }

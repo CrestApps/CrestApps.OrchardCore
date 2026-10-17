@@ -36,6 +36,8 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterProjectionCheckpointIndex"] = "Bookkeeping. One row per projection handler; deleting one would replay that projection from the beginning.",
         ["PredictivePacingStateIndex"] = "Bookkeeping. One row per over-dialed campaign queue, rewritten every pacing cycle rather than added to.",
         ["CallSessionLegIndex"] = "A second index over call sessions, one row per leg. Its rows leave with the session when the call session policy purges it.",
+        ["DialerDecisionIndex"] = "A second index over interaction events, one row per routing decision or dial suppression. Its rows leave with the event when the interaction event policy purges it.",
+        ["DialerDecisionAgentIndex"] = "A second index over interaction events, one row per agent a decision names. Its rows leave with the event when the interaction event policy purges it.",
         ["CallRecordingIndex"] = "Communication history, kept while its recording is: one row per recorded call. Erasing the recording takes it off the list, and the media's retention is set by the recording settings. A policy that purges erased rows is owed.",
     };
 
@@ -62,6 +64,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterWorkState"] = "ModifiedUtc",
         ["SecureCaptureSession"] = "ModifiedUtc",
         ["CallQualityRecord"] = "ObservedUtc",
+        ["DialerPacingCycle"] = "CompletedUtc",
         ["SharedVoicemail"] = "ResolvedUtc",
     };
 
@@ -82,6 +85,8 @@ public sealed class ContactCenterRetentionCoverageTests
         ["AgentSession"] = [],
         // A measurement of a leg that is already over; it is written once and never changes.
         ["CallQualityRecord"] = [],
+        // What the dialer did in a pacing cycle that has ended; it is folded into only while it is its queue's latest.
+        ["DialerPacingCycle"] = [],
         // No terminal status exists: closure is owned by the CRM activity. Safe only because a purged work
         // state is recreated and re-seeded from the activity projection on next access.
         ["ContactCenterWorkState"] = [],
@@ -102,10 +107,22 @@ public sealed class ContactCenterRetentionCoverageTests
     };
 
     /// <summary>
+    /// Entities purged out of the box, without a window being configured, and why. Every other window defaults to
+    /// zero so an unconfigured tenant never silently deletes business data; an entry here is a written decision that
+    /// the data is not business data and would otherwise grow without bound.
+    /// </summary>
+    private static readonly Dictionary<string, string> _purgedByDefault = new(StringComparer.Ordinal)
+    {
+        ["DialerPacingCycle"] = "Operational diagnostics, not business records: a pacing cycle record says what the dialer did, carries no customer data, and one is written for every cycle that places calls, so it is kept for a bounded window unless an operator chooses otherwise.",
+    };
+
+    /// <summary>
     /// Entities whose records are settled the moment they are written, so no finished state and no absent
     /// settlement time can exist. An event log entry, a deduplication marker and a daily metric bucket are all
     /// records of something that already happened: the first two are never written again, and a metric bucket is
-    /// only ever accumulated into on the day it names, which any window of a day or more is already past.
+    /// only ever accumulated into on the day it names, which any window of a day or more is already past. A dialer
+    /// pacing cycle record is folded into only while it is its queue's latest, and its age is taken from the latest
+    /// cycle folded into it.
     /// </summary>
     private static readonly HashSet<string> _settledOnCreation = new(StringComparer.Ordinal)
     {
@@ -114,6 +131,7 @@ public sealed class ContactCenterRetentionCoverageTests
         "ContactCenterEventMetricDelta",
         "ContactCenterProcessedEvent",
         "CallQualityRecord",
+        "DialerPacingCycle",
     };
 
     /// <summary>
@@ -134,6 +152,11 @@ public sealed class ContactCenterRetentionCoverageTests
         ["InteractionEvent"] =
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DefaultContactCenterEventPublisher.cs", "PublishAsync", "interactionEvent.OccurredUtc = "),
+        ],
+        ["DialerPacingCycle"] =
+        [
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DialerPacingCycleRecorder.cs", "Complete", "cycle.CompletedUtc = "),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DialerPacingCycleRecorder.cs", "Fold", "latest.CompletedUtc = next.CompletedUtc"),
         ],
         ["CallQualityRecord"] =
         [
@@ -233,6 +256,8 @@ public sealed class ContactCenterRetentionCoverageTests
         // held under the same legal hold as the interaction it belongs to.
         ["SecureCaptureSession"] = (true, false, 0),
         ["CallQualityRecord"] = (false, false, 0),
+        // What the dialer did, with no customer data on it, so no legal hold applies.
+        ["DialerPacingCycle"] = (false, false, 0),
         // The caller's number and name, and how the team handled their message, are held like the callback they lead to.
         ["SharedVoicemail"] = (true, false, 0),
     };
@@ -682,6 +707,7 @@ public sealed class ContactCenterRetentionCoverageTests
             SharedVoicemailRetentionDays = 1,
             EventMetricRetentionDays = 1,
             CallQualityRecordRetentionDays = 1,
+            DialerPacingCycleRetentionDays = 1,
             ProcessedEventRetentionDays = 1,
             WorkStateRetentionDays = 1,
             SecureCaptureRetentionDays = 1,
@@ -729,15 +755,58 @@ public sealed class ContactCenterRetentionCoverageTests
     {
         // Arrange
         var nowUtc = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc);
-        var options = new ContactCenterRetentionOptions();
+        var unconfigured = new ContactCenterRetentionOptions();
+        var zeroed = new ContactCenterRetentionOptions
+        {
+            DialerPacingCycleRetentionDays = 0,
+        };
+
         var failures = new List<string>();
 
         // Act
         foreach (var policy in DiscoverPolicies())
         {
-            if (policy.TryGetCutoff(nowUtc, options, out _))
+            if (policy.TryGetCutoff(nowUtc, zeroed, out _))
+            {
+                failures.Add($"{policy.EntityName}: purging is enabled even though its retention window is zero.");
+            }
+
+            if (!_purgedByDefault.ContainsKey(policy.EntityName) && policy.TryGetCutoff(nowUtc, unconfigured, out _))
             {
                 failures.Add($"{policy.EntityName}: purging is enabled even though no retention window is configured, so an unconfigured tenant would silently start deleting data.");
+            }
+        }
+
+        // Assert
+        Assert.True(failures.Count == 0, string.Join(Environment.NewLine, failures));
+    }
+
+    [Fact]
+    public void EveryEntityPurgedByDefault_IsPurgedOnAnUnconfiguredTenant_AndSaysWhy()
+    {
+        // Arrange
+        var nowUtc = new DateTime(2026, 1, 5, 0, 0, 0, DateTimeKind.Utc);
+        var policies = DiscoverPolicies().ToDictionary(policy => policy.EntityName, StringComparer.Ordinal);
+        var failures = new List<string>();
+
+        // Act
+        foreach (var (entityName, reason) in _purgedByDefault)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                failures.Add($"{entityName}: no reason is given for purging it out of the box.");
+            }
+
+            if (!policies.TryGetValue(entityName, out var policy))
+            {
+                failures.Add($"{entityName}: is declared as purged by default but no policy covers it.");
+
+                continue;
+            }
+
+            if (!policy.TryGetCutoff(nowUtc, new ContactCenterRetentionOptions(), out _))
+            {
+                failures.Add($"{entityName}: is declared as purged by default but an unconfigured tenant keeps it forever.");
             }
         }
 
