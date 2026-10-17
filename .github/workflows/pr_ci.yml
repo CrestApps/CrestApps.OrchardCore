@@ -54,6 +54,9 @@ jobs:
         keys = re.compile(r'\[FAIL\]|Failed |crash|abort|Test Run Aborted|Total tests|Passed!|Failed!|error', re.I)
         hits = [l.strip() for l in lines if keys.search(l)][:60]
         print('::error title=test output::' + '%0A'.join(h.replace('%', '%25')[:400] for h in hits)[:8000])
+        tail = [l.strip() for l in lines if l.strip()][-120:]
+        for i in range(0, len(tail), 30):
+            print('::error title=tail ' + str(i) + '::' + '%0A'.join(h.replace('%', '%25')[:300] for h in tail[i:i+30]))
         print('::error title=trx files::' + ' '.join(glob.glob('TestResults/**/*.trx', recursive=True)))
         ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
         for path in glob.glob('TestResults/**/*.trx', recursive=True):
