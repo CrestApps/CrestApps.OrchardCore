@@ -20,9 +20,7 @@ Both widgets chat with an [AI profile](profiles.md) of type **Chat**. Create the
 
 ## Turn on the admin chat widget
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant">
-  <source src="/img/docs/ai-admin-widget.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling the admin widget, creating an all-tools profile, and using the floating admin assistant" start={503} end={574} />
 
 1. Ask your administrator to turn on the **AI Chat Admin Widget** feature.
 2. Open **Settings > Artificial Intelligence** and scroll to the **Admin Widget** section.
@@ -53,9 +51,7 @@ The widget remembers its position, its size, whether it was open and your curren
 
 ## Add a chat box to your website
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding the website chat widget with an always-on layer">
-  <source src="/img/docs/ai-frontend-widget.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of adding the website chat widget with an always-on layer" start={577} end={615} />
 
 The website widget is a normal Orchard Core widget called **Artificial Intelligence Chat**, so you place it like any other widget.
 

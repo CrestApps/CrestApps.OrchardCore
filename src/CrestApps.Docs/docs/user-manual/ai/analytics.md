@@ -17,9 +17,7 @@ The AI reports answer the questions a manager asks about an assistant: How many 
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling session metrics and running the AI chat analytics report">
-  <source src="/img/docs/ai-chat-analytics.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling session metrics and running the AI chat analytics report" start={659} end={690} />
 
 | Report | What it shows |
 | --- | --- |

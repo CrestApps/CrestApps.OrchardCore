@@ -17,9 +17,7 @@ The **soft phone** makes and takes calls in the browser. Agents usually run it i
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the soft phone window: the Keypad, Recent, Voicemail and Work tabs, the presence menu and the audio settings">
-  <source src="/img/docs/um-softphone-page.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the soft phone window: the Keypad, Recent, Voicemail and Work tabs, the presence menu and the audio settings" start={81} end={104} />
 
 ## The header
 

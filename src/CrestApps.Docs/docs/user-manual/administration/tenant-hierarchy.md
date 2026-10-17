@@ -10,10 +10,7 @@ The tenant hierarchy lets one tenant, a **parent**, create and manage its own **
 
 This video is the whole tour of the tenant hierarchy, from the platform and from a parent. Each section below also has a short screencast of just that task.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/tenant-hierarchy.jpg" aria-label="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security">
-  <source src="/img/docs/tenant-hierarchy.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video overview of the Tenant Hierarchy: making a parent, adding and opening clients, managing them, access rules, activity and security" />
 
 | | |
 | --- | --- |
@@ -35,10 +32,7 @@ If the screen shows **The host guards are not installed**, the application was s
 
 ## See the hierarchy
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the platform's Tenant Hierarchy screen: two parents with their child tenants, searching for a parent, and managing one">
-  <source src="/img/docs/tenant-hierarchy-oversight.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-oversight.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of the platform's Tenant Hierarchy screen: two parents with their child tenants, searching for a parent, and managing one" start={397} end={425} />
 
 Open **Multi-Tenancy > Tenant Hierarchy**. It looks like the **Tenants** screen. Each parent is listed with its address and badges for its state, a count such as **3 of 25 child tenants** and where its child tenants' data lives, with its child tenants underneath. Use the search box to find a parent by its name or address, or by the name or address of one of its child tenants. Click a parent's name, or **Manage**, to see all its child tenants and the actions for the parent. **View** opens the site.
 
@@ -46,10 +40,7 @@ Open **Multi-Tenancy > Tenant Hierarchy**. It looks like the **Tenants** screen.
 
 ## Make a tenant a parent
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of making a tenant a parent: picking the tenant, setting its policy, and the words its team sees">
-  <source src="/img/docs/tenant-hierarchy-platform.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/tenant-hierarchy-platform.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="tenant-hierarchy" title="Video of making a tenant a parent: picking the tenant, setting its policy, and the words its team sees" start={109} end={196} />
 
 Any tenant that is set up and not yet part of the hierarchy can become a parent. If there is none, click **Add Tenant**, create and set up the tenant on the **Tenants** screen, then come back.
 

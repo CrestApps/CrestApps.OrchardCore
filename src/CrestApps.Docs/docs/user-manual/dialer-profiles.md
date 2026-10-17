@@ -17,9 +17,7 @@ A **dialer profile** decides **how** outbound calls are placed: whether an agent
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer profile and switching between preview, power and progressive modes">
-  <source src="/img/docs/um-dialer-profiles.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a dialer profile and switching between preview, power and progressive modes" start={1001} end={1067} />
 
 ## The dialing modes
 
@@ -34,17 +32,13 @@ Older profiles saved as *Manual* are shown and saved as **Preview**.
 
 ### Preview dialing, start to finish
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a live preview-dial call: the offer arrives, the agent clicks Dial, uses mute, hold, keypad and transfer, hangs up and completes the activity">
-  <source src="/img/docs/um-preview-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a live preview-dial call: the offer arrives, the agent clicks Dial, uses mute, hold, keypad and transfer, hangs up and completes the activity" start={172} end={222} />
 
 The agent is signed in to the campaign in the soft phone (right). The record is offered in the docked bar and the workspace; the agent clicks **Dial**, the customer answers, and when the call ends the agent is in **Wrap-up** until the activity is completed.
 
 ### Power dialing, start to finish
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed">
-  <source src="/img/docs/um-power-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a live power-dial call: the agent signs in to the campaign, the dialer places the call, the record opens and the activity is completed" start={225} end={263} />
 
 With a Power profile the agent only signs in and stays **Available**. Within about a second the dialer places the call. Nothing appears on the agent's screen while the call rings: the record opens on its own once the customer answers and the agent is connected. A call that does not reach the agent is never shown to them (see [What happens to each record](#what-happens-to-each-record)).
 

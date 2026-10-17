@@ -38,10 +38,7 @@ The report lists every transaction on the site, newest first.
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-transactions.jpg" aria-label="Narrated video of the Transactions report, a transaction, and the reminder settings">
-  <source src="/img/docs/commerce-transactions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-transactions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of the Transactions report, a transaction, and the reminder settings" start={408} end={454} />
 
 ### Find a transaction
 

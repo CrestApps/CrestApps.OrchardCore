@@ -25,9 +25,7 @@ Your greeting is what callers hear before they leave you a message.
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the My voicemail greeting page with record, upload and preview controls">
-  <source src="/img/docs/um-voicemail-greeting.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the My voicemail greeting page with record, upload and preview controls" start={266} end={285} />
 
 1. Open **Interaction Center > My voicemail greeting**.
 2. Choose how to add the greeting:
@@ -72,9 +70,7 @@ A queue's shared voicemail box lets a team share the messages left on a line: an
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the shared voicemail list with queue and status filters and the claim, call back and mark done actions">
-  <source src="/img/docs/um-shared-voicemail.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the shared voicemail list with queue and status filters and the claim, call back and mark done actions" start={288} end={322} />
 
 1. Open **Interaction Center > Shared voicemail**.
 2. Filter by queue (*All my queues* by default) and status: **Open (new and claimed)**, **New**, **Claimed**, **Done** or **All**, then click **Filter**.

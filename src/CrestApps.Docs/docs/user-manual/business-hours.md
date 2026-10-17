@@ -23,9 +23,7 @@ A **business hours calendar** says when you are open. The same calendar can be u
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a business hours calendar with a weekly schedule and holidays">
-  <source src="/img/docs/um-business-hours.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a business hours calendar with a weekly schedule and holidays" start={221} end={254} />
 
 ## Create a calendar
 

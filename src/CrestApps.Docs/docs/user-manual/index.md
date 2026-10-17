@@ -41,9 +41,7 @@ What you see in the app depends on your role. Most people are not administrators
 
 ## Where things are in the menu
 
-<video controls preload="metadata" width="100%" aria-label="Screencast touring the Interaction Center, Management, Messaging and Reports menus">
-  <source src="/img/docs/um-tour.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Screencast touring the Interaction Center, Management, Messaging and Reports menus" start={7} end={35} />
 
 | Menu | What you find there |
 | --- | --- |

@@ -18,9 +18,7 @@ A **disposition** is the outcome of an activity: *No answer*, *Call back*, *Lead
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating three dispositions with descriptions">
-  <source src="/img/docs/um-dispositions.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating three dispositions with descriptions" start={567} end={609} />
 
 ## Create a disposition
 

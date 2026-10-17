@@ -19,9 +19,7 @@ Reports show what happened in your contact center over a period you choose: call
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of opening a report, changing the date range and filters, and exporting it">
-  <source src="/img/docs/um-reports.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a report, changing the date range and filters, and exporting it" start={802} end={833} />
 
 You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
 

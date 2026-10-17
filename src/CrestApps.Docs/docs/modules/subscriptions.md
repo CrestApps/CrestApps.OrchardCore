@@ -63,10 +63,7 @@ The [Commerce starter](#getting-started-quickly) recipe sets all of this up, wit
 
 ## Buying a plan
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
-  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
 ### Offering more than one price
 
@@ -255,10 +252,7 @@ A delayed start (`SubscriptionDayDelay`) is handled the same way. To the money t
 
 ## Selling sites
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-sites.jpg" aria-label="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning">
-  <source src="/img/docs/commerce-sites.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-sites.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of selling a site: the checkout, payment, the site being created, and Site provisioning" start={231} end={305} />
 
 With **Subscriptions - Sites** enabled on the default tenant, a plan can sell a whole Orchard Core site. The customer names their site and its administrator during checkout, and gets a running site once they have paid.
 

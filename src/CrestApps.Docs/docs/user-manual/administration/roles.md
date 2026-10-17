@@ -48,9 +48,7 @@ For the role editor itself, see the [Orchard Core Roles documentation](https://d
 
 The **Enhanced Roles** feature adds a **Role Picker** part. Add it to a content type when each item should carry a list of roles, for example to say which teams a page is for. The [Content Access Control](content-access-control.md) feature uses the same picker to limit who can view an item.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling Enhanced Roles, adding the Role Picker part, and selecting roles on a content item">
-  <source src="/img/docs/roles.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling Enhanced Roles, adding the Role Picker part, and selecting roles on a content item" start={45} end={72} />
 
 ### Add the role picker to a content type
 

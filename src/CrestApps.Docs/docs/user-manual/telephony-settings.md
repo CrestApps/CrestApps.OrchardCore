@@ -19,9 +19,7 @@ Calls and texts go through a provider account. This page covers the settings an 
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the Telephony settings tabs and the SMS provider settings">
-  <source src="/img/docs/um-telephony-settings.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of the Telephony settings tabs and the SMS provider settings" start={38} end={72} />
 
 Each provider you turn on adds its own tab to **Settings > Communication > Telephony**. The **Soft Phone** tab holds the settings that apply whichever provider you use.
 

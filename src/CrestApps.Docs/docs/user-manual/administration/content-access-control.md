@@ -16,9 +16,7 @@ Content Access Control lets an editor say, on each content item, which roles may
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the Restrict content setting and the improved role selector picking roles on a page">
-  <source src="/img/docs/content-access-control.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of the Restrict content setting and the improved role selector picking roles on a page" start={75} end={102} />
 
 ## How it works
 

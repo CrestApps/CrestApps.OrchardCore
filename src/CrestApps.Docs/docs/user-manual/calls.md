@@ -19,9 +19,7 @@ All call controls live in the **soft phone**, which agents run in the [browser e
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the soft phone keypad: typing a number, switching to extension dialing and searching for a colleague by name">
-  <source src="/img/docs/um-manual-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the soft phone keypad: typing a number, switching to extension dialing and searching for a colleague by name" start={107} end={127} />
 
 The phone only shows the buttons your phone system supports. If a button described here is missing, your provider does not offer it.
 
@@ -75,9 +73,7 @@ When you have the phone open in several places, answering in one stops the other
 
 A call from a queue arrives as an **offer** first: the workspace and the docked agent bar show the caller, the queue and a countdown, and the soft phone lists the contacts that match the number. This screencast signs in to the *Support* queue, accepts a live call, puts the caller on hold and back, mutes and unmutes, hangs up, and lands in wrap-up with **Complete activity**:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of an agent signing in to a queue, accepting an inbound call from the queue, using hold and mute, hanging up and entering wrap-up">
-  <source src="/img/docs/um-answer-queue.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of an agent signing in to a queue, accepting an inbound call from the queue, using hold and mute, hanging up and entering wrap-up" start={130} end={169} />
 
 ### Receive a transferred call
 
@@ -85,9 +81,7 @@ A call a colleague hands to you rings with **Answer** and **Ignore** and shows *
 
 ## During a call
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of a live call in the soft phone window: mute, hold, keypad, the transfer panel and hang up">
-  <source src="/img/docs/um-preview-dial.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of a live call in the soft phone window: mute, hold, keypad, the transfer panel and hang up" start={172} end={222} />
 
 The buttons sit in two rows. The first row holds your own controls, each an icon over its label. The second row holds the actions that bring someone else in or hand the call over.
 

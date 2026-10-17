@@ -19,9 +19,7 @@ Before anyone can chat with an assistant, the site needs to reach an AI service,
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the Azure OpenAI provider connection and its chat, utility, and embedding deployments">
-  <source src="/img/docs/ai-provider-azure-openai.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of the Azure OpenAI provider connection and its chat, utility, and embedding deployments" start={26} end={43} />
 
 Your technical team can also set up connections and deployments in the site's configuration files. Those show in the lists under **Configuration-based connections** or **Configuration-based deployments** with a **Read-only** badge, and can only be changed there. See the [Technical Manual provider pages](../../ai/providers/index.md).
 

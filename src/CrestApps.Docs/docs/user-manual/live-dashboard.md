@@ -18,9 +18,7 @@ The **live dashboard** is the supervisor's real-time view of the contact center:
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the live dashboard summary, queue tiles and agent board filters">
-  <source src="/img/docs/um-live-dashboard.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the live dashboard summary, queue tiles and agent board filters" start={770} end={799} />
 
 :::info[You see your own queues]
 The dashboard shows the queues and campaigns on **your own** [agent entitlement](skills-and-entitlements.md) record, and you can only act on agents and calls in those queues. A supervisor without an entitlement record sees an empty dashboard, even with the Administrator role.

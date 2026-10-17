@@ -18,9 +18,7 @@ The **voice media** library holds the audio your phone system plays: hold music 
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the voice media library and the upload form">
-  <source src="/img/docs/um-voice-media.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of the voice media library and the upload form" start={194} end={218} />
 
 ## Add a clip
 

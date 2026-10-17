@@ -16,9 +16,7 @@ A **do-not-call list** holds phone numbers your company must not call. You can u
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling the Local Do Not Call Registry and uploading a CSV list">
-  <source src="/img/docs/dnc-registry.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling the Local Do Not Call Registry and uploading a CSV list" start={260} end={286} />
 
 ## Where the lists are checked
 
@@ -80,9 +78,7 @@ A background task checks every 10 minutes for lists that are waiting or stuck, f
 
 Use this when company policy says every contact import must be checked, so nobody can forget.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of uploading a local DNC list and enforcing it globally">
-  <source src="/img/docs/omni-dnc-local.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of uploading a local DNC list and enforcing it globally" start={289} end={310} />
 
 1. Open **Settings > Content Import**.
 2. Tick **Enforce do-not-call registry checks globally**. Every contact import must then check phone numbers, and the person importing cannot turn it off.

@@ -18,9 +18,7 @@ A **campaign** is a named push of work, such as *Spring lead drive*. Every activ
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a campaign group and a campaign">
-  <source src="/img/docs/um-campaigns.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a campaign group and a campaign" start={960} end={998} />
 
 ## Create a campaign group (optional)
 

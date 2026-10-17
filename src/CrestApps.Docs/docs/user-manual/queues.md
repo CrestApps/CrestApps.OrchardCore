@@ -18,9 +18,7 @@ A **queue** is where waiting work lines up until an agent takes it: an inbound c
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a queue group and a queue with routing, service level, hours and caller treatment settings">
-  <source src="/img/docs/um-queues.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a queue group and a queue with routing, service level, hours and caller treatment settings" start={257} end={340} />
 
 ## Create a queue group (optional)
 

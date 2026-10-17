@@ -33,9 +33,7 @@ An **automatic** activity load creates activities that an **AI profile** works b
 
 ## Load automated SMS activities
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities">
-  <source src="/img/docs/um-load-ai-sms.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an automatic SMS activity load driven by an AI profile and loading it to generate automated activities" start={1231} end={1290} />
 
 1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Automatic**.
 2. Enter a **Title**, pick the **Subject content type** and the **Campaign**.
@@ -54,9 +52,7 @@ While the conversation runs:
 
 ## Load automated voice calls
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an automatic voice activity load with an AI profile, background office sound and reply delay">
-  <source src="/img/docs/um-load-ai-voice.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an automatic voice activity load with an AI profile, background office sound and reply delay" start={1293} end={1348} />
 
 Follow the same steps with **Phone** as the channel and an address used for voice calls. The AI places each call, talks with the person who answers, and hangs up when the conversation is done. Before every call the contact is checked against opt-outs, national do-not-call registries, and the calling window, which needs the **Contact Center Outbound Dialer** feature.
 
@@ -122,9 +118,7 @@ The AI picks a disposition using your hints and what the customer said, the summ
 
 To find it, open the contact from **Interaction Center > Contacts**, click **List Activities**, and look under **Completed Activities**: each completed AI activity shows its disposition, channel and summary, with a **Review AI conversation** button. The transcript is read-only: the page says the conversation was handled automatically, and there is no reply box. The screencast opens a completed AI phone call and reads the whole conversation:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of opening a contact's completed AI call and reading its transcript with Review AI conversation">
-  <source src="/img/docs/um-review-ai.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of opening a contact's completed AI call and reading its transcript with Review AI conversation" start={695} end={717} />
 
 ### When an AI call is cut off
 
