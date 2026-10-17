@@ -181,6 +181,20 @@ AD1 to AD3 come before CU3. AD4 can follow CU3. AD2 was split in two to keep eac
 - Printing: text before a line's first part belongs to it (Monaco's `MC-`), and text between parts is written only
   between two that have a value. A part the country doesn't use is not printed.
 
+### AD2a as built
+
+- `CrestApps.OrchardCore.Addresses` keeps its id with no dependencies and only calls `AddAddressesCore()`. The new
+  `CrestApps.OrchardCore.Addresses.Countries` ("Address Countries") holds the Country type, its seed,
+  `GeographicAreaIndex` (now countries only) and `ContentCountryService`.
+- `AddressMigrations` keeps its class name and version 3, so sites that ran it don't run it again; new sites get the
+  Country type only. Sites that ran the earlier steps keep the old Region, County, City, District and `AddressPart`
+  definitions until someone removes them; nothing reads them.
+- Removed: `AddressPart`, `IAddressResolver`, `DefaultAddressResolver` and its tests, and the obsolete constants.
+- Found while testing: `CountryContentHandler.ValidatingAsync` never ran for the admin editor, because Orchard
+  Core's content admin creates and publishes without calling `ContentManager.ValidateAsync`. Duplicate and
+  malformed codes were saved. `CountryCodeValidator` now holds the rule, `CountryCodeDisplayDriver` applies it in
+  the editor, and the handler still covers recipes and the content API.
+
 ## Out of scope
 
 - Checking that an address exists (a paid postal database); the `IAddressVerifier` hook comes later.

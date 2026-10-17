@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.Addresses.Core;
+using CrestApps.OrchardCore.Addresses.Drivers;
 using CrestApps.OrchardCore.Addresses.Handlers;
 using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Migrations;
 using CrestApps.OrchardCore.Addresses.Services;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -37,7 +39,9 @@ public sealed class CountriesStartup : StartupBase
 
         services.AddIndexProvider<GeographicAreaIndexProvider>();
 
+        services.AddScoped<CountryCodeValidator>();
         services.AddScoped<IContentHandler, CountryContentHandler>();
+        services.AddScoped<IContentDisplayDriver, CountryCodeDisplayDriver>();
 
         services.AddScoped<ICountryService, ContentCountryService>();
     }
