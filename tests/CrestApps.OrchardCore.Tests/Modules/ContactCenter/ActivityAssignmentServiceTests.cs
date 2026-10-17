@@ -354,6 +354,81 @@ public sealed class ActivityAssignmentServiceTests
         log.AssertEveryEventNamesItsActor();
     }
 
+    [Fact]
+    public async Task AssignNextAsync_WhenTheFailureRepeatsTheQueuesLastDecision_CountsItInsteadOfPublishingAnother()
+    {
+        // Arrange
+        var (queueItemManager, agentManager, queueManager) = CreateQueueWithNoAgents();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var decisionLog = new Mock<IDialerDecisionLog>();
+        decisionLog
+            .Setup(log => log.TryCoalesceRoutingDecisionAsync(It.IsAny<ActivityRoutingDecisionEventData>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var service = CreateService(queueItemManager, agentManager, queueManager, new Mock<IActivityReservationService>(), CreateDistributedLock(locked: true), publisher: publisher, decisionLog: decisionLog);
+
+        // Act
+        var reservation = await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reservation);
+        decisionLog.Verify(
+            log => log.TryCoalesceRoutingDecisionAsync(
+                It.Is<ActivityRoutingDecisionEventData>(data =>
+                    data.QueueId == "q1" &&
+                    data.QueueItemId == "i1" &&
+                    !data.Succeeded &&
+                    data.Reason == "No agents are currently available for this queue."),
+                new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        publisher.Verify(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AssignNextAsync_WhenTheFailureIsNew_PublishesIt()
+    {
+        // Arrange
+        var (queueItemManager, agentManager, queueManager) = CreateQueueWithNoAgents();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var decisionLog = new Mock<IDialerDecisionLog>();
+        decisionLog
+            .Setup(log => log.TryCoalesceRoutingDecisionAsync(It.IsAny<ActivityRoutingDecisionEventData>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var service = CreateService(queueItemManager, agentManager, queueManager, new Mock<IActivityReservationService>(), CreateDistributedLock(locked: true), publisher: publisher, decisionLog: decisionLog);
+
+        // Act
+        await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        publisher.Verify(
+            p => p.PublishAsync(
+                It.Is<InteractionEvent>(interactionEvent => interactionEvent.EventType == ContactCenterConstants.Events.RoutingDecisionMade),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    private static (Mock<IQueueItemManager> QueueItemManager, Mock<IAgentProfileManager> AgentManager, Mock<IActivityQueueManager> QueueManager) CreateQueueWithNoAgents()
+    {
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "i1", QueueId = "q1" });
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityQueue { ItemId = "q1", Enabled = true, ReservationTimeoutSeconds = 30 });
+
+        return (queueItemManager, agentManager, queueManager);
+    }
+
     private static ActivityAssignmentService CreateService(
         Mock<IQueueItemManager> queueItemManager,
         Mock<IAgentProfileManager> agentManager,
@@ -381,7 +456,8 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IDistributedLock> distributedLock,
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null,
-        Mock<IContactCenterEventPublisher> publisher = null)
+        Mock<IContactCenterEventPublisher> publisher = null,
+        Mock<IDialerDecisionLog> decisionLog = null)
     {
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours
@@ -418,7 +494,8 @@ public sealed class ActivityAssignmentServiceTests
             clock.Object,
             CoordinationOptions(),
             NullLogger<ActivityAssignmentService>.Instance,
-            Mock.Of<IQueuedDialerWorkGate>());
+            Mock.Of<IQueuedDialerWorkGate>(),
+            (decisionLog ?? new Mock<IDialerDecisionLog>()).Object);
     }
 
     private static Mock<IDistributedLock> CreateDistributedLock(bool locked)

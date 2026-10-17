@@ -39,4 +39,18 @@ public sealed class ActivityRoutingDecisionEventData
     /// Gets or sets the candidate scoring details.
     /// </summary>
     public IList<ActivityRoutingCandidateDecisionData> Candidates { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how many identical, consecutive decisions the event stands for. Routing folds a failed decision
+    /// that repeats the queue's last one exactly (the same record, reason and candidates) into the event that recorded
+    /// it first, instead of publishing a new event on every pass. An event that stands for one decision, including
+    /// every event written before decisions were coalesced, reads as one.
+    /// </summary>
+    public int OccurrenceCount { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the UTC time the last decision the event stands for was made, or <see langword="null"/> when the
+    /// event stands for a single decision, made when the event occurred.
+    /// </summary>
+    public DateTime? LastSeenUtc { get; set; }
 }

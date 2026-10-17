@@ -119,3 +119,21 @@
         </select>
     </div>
 }
+
+@if (Model.ShowActivityItemFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="ActivityItemId">@T["Activity ID"]</label>
+        <input asp-for="ActivityItemId" class="form-control" placeholder="@T["All activities"]" />
+    </div>
+}
+
+@if (Model.ShowDecisionReasonFilter)
+{
+    <div class="col p-1">
+        <label class="form-label" asp-for="DecisionReason">@T["Reason"]</label>
+        <select asp-for="DecisionReason" asp-items="Model.DecisionReasons" class="form-select">
+            <option value="">@T["All reasons"]</option>
+        </select>
+    </div>
+}

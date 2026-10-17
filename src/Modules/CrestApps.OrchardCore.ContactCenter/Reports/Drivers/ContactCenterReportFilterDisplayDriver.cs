@@ -23,8 +23,8 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
 
 /// <summary>
-/// Adds queue, agent, campaign, channel, direction, source, status, interaction type, dialer profile and queue state
-/// filters to Contact Center reports.
+/// Adds queue, agent, campaign, channel, direction, source, status, interaction type, dialer profile, queue state,
+/// activity and decision reason filters to Contact Center reports.
 /// </summary>
 public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
@@ -122,6 +122,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.InteractionType, model.InteractionType);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.DialerProfileId, model.DialerProfileId);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.QueueState, model.QueueState);
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.ActivityItemId, model.ActivityItemId?.Trim());
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.DecisionReason, model.DecisionReason);
 
         return Edit(filter, context);
     }
@@ -147,6 +149,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.InteractionType = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.InteractionType);
         model.DialerProfileId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.DialerProfileId);
         model.QueueState = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.QueueState);
+        model.ActivityItemId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivityItemId);
+        model.DecisionReason = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.DecisionReason);
         model.ShowQueueGroupFilter = filterNames.Contains(ContactCenterReportFilter.QueueGroupId);
         model.ShowQueueFilter = filterNames.Contains(ContactCenterReportFilter.QueueId);
         model.ShowAgentFilter = filterNames.Contains(ContactCenterReportFilter.AgentId);
@@ -159,6 +163,8 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.ShowInteractionTypeFilter = filterNames.Contains(ContactCenterReportFilter.InteractionType);
         model.ShowDialerProfileFilter = filterNames.Contains(ContactCenterReportFilter.DialerProfileId);
         model.ShowQueueStateFilter = filterNames.Contains(ContactCenterReportFilter.QueueState);
+        model.ShowActivityItemFilter = filterNames.Contains(ContactCenterReportFilter.ActivityItemId);
+        model.ShowDecisionReasonFilter = filterNames.Contains(ContactCenterReportFilter.DecisionReason);
 
         if (model.ShowQueueGroupFilter)
         {
@@ -305,6 +311,11 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
                 new SelectListItem(S["Not in any queue"], DialerQueueState.NotInAnyQueue.ToString()),
                 new SelectListItem(S["Assigned to a user"], DialerQueueState.AssignedToUser.ToString()),
             ];
+        }
+
+        if (model.ShowDecisionReasonFilter)
+        {
+            model.DecisionReasons = DialerDecisionLabels.Options(S);
         }
     }
 

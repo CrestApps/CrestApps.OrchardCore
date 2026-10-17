@@ -1488,9 +1488,12 @@ See [Predictive dialing](contact-center/agents-queues-dialer.md#predictive-diali
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:Reporting` |
-| **Controls** | The widest date range a Contact Center report accepts |
+| **Controls** | The widest date range a Contact Center report accepts, and how long a queue with due work may go without a routing decision before the dialer decision log report flags it |
 
-Key: `MaximumReportRange` (default `400.00:00:00`, 400 days).
+| Key | Default | What it does |
+| --- | --- | --- |
+| `MaximumReportRange` | `400.00:00:00` (400 days) | The widest date range a Contact Center report accepts. |
+| `DecisionLogQuietThreshold` | `00:15:00` (15 minutes) | How long a queue with work due now may go without a routing decision before the **Dialer decision log** report says *No routing decision in the last N minutes*. Must be greater than zero. |
 
 ```json
 {
@@ -1498,7 +1501,8 @@ Key: `MaximumReportRange` (default `400.00:00:00`, 400 days).
     "CrestApps": {
       "ContactCenter": {
         "Reporting": {
-          "MaximumReportRange": "180.00:00:00"
+          "MaximumReportRange": "180.00:00:00",
+          "DecisionLogQuietThreshold": "00:10:00"
         }
       }
     }
@@ -1508,6 +1512,7 @@ Key: `MaximumReportRange` (default `400.00:00:00`, 400 days).
 
 ```text
 OrchardCore__CrestApps__ContactCenter__Reporting__MaximumReportRange=180.00:00:00
+OrchardCore__CrestApps__ContactCenter__Reporting__DecisionLogQuietThreshold=00:10:00
 ```
 
 See [Report Catalog](contact-center/report-catalog.md).

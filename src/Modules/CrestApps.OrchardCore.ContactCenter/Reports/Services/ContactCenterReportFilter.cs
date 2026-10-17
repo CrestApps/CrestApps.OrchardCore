@@ -21,6 +21,8 @@ internal static class ContactCenterReportFilter
     public const string InteractionType = "InteractionType";
     public const string DialerProfileId = "DialerProfileId";
     public const string QueueState = "QueueState";
+    public const string ActivityItemId = "ActivityItemId";
+    public const string DecisionReason = "DecisionReason";
 
     public static ContactCenterReportCriteria GetCriteria(ReportFilter filter)
     {

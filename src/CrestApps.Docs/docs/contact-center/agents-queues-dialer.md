@@ -286,7 +286,7 @@ The reasons are the ones the code applies, in the order it applies them:
 - The record is not waiting in the campaign's queue, so routing never sees it.
 - The **dialer profile** is turned off, the record is **scheduled for later** (with when the first becomes due), it is inside the **retry delay**, or it is **out of attempts**. These are the checks the queue gate makes before an agent is reserved, and the gate and the dashboard share one evaluator so they cannot disagree.
 - The compliance gate last suppressed the record: **do not call**, **national registry**, **outside the calling window**, **number not in service**, **no destination**, **compliance check unavailable**, or **abandonment cap reached**. These are read from the `DialSuppressed` events of the last two hours, ignoring any record dialed since.
-- When records are dialable and agents are available but nothing is assigned, the card shows what routing recorded the last time it looked: the reason, and how many agents it turned away for each reason (from the `RoutingDecisionMade` events of the last fifteen minutes).
+- When records are dialable and agents are available but nothing is assigned, the card shows what routing recorded the last time it looked: the reason, and how many agents it turned away for each reason (from the `RoutingDecisionMade` events last made in the last fifteen minutes, read through the [dialer decision log](#dialer-decision-log); a decision routing keeps repeating counts from the last time it was made).
 
 A campaign's card also says **what is loaded in its queue**, which the queue tiles never show because a campaign's queue is not stored: its items waiting, reserved and assigned; how the queue is paced (the pacer runs only for a queue whose head item carries an enabled Power, Progressive or paced Predictive profile, so a turned-off, missing or agent-driven Preview profile there is called out); the dialer profiles the waiting items are stamped with, by name, mode and on/off state; the source, interaction type and channel of the pending activities; and two warnings: queue items stamped with a different dialer profile than their activity carries (the gate trusts the stamp), and pending activities that carry no profile of their own.
 
@@ -326,6 +326,35 @@ and, over a period that covers every record, each term equals the dialer queue i
 - **Filters.** *Interaction type* (`ContactCenterReportCriteria.InteractionType`) narrows the activities like the other criteria. *Dialer profile* keeps an activity whose own `DialerProfileId` matches or whose active queue item is stamped with it. *Queue state* keeps only pending records in that state.
 - **Columns.** *Attempts distribution* groups the row's activities by `Attempts` (5 and over together). *Last attempt* is the newest interaction of any of the row's activities, read from `InteractionIndex` in batches of 500. *Next due* is the earliest due time of a record scheduled for later or in its retry delay. *Stamped dialer profile* counts the queued pending records by stamped profile.
 - A pending record that is not in its campaign's queue is decided from its activity index row (assigned to a user, or not queued) and does not count toward the 2,000-record limit, which applies only to the queued records that need their documents read.
+
+### Dialer decision log
+
+Every `RoutingDecisionMade` and `DialSuppressed` event is indexed as it is written, so the decisions can be filtered and counted without parsing event payloads at query time. The **Dialer decision log** report (see the [report catalog](report-catalog.md#call-quality-call-handling-and-audit-reports) and [Reports](../user-manual/reports.md#dialer-decision-log) in the User Manual) and the *Why isn't this dialing?* card read it through `IDialerDecisionLog`.
+
+The base **Contact Center** feature registers the log: the `DialerDecisionIndexProvider`, the `DialerDecisionIndexMigrations` migration and `IDialerDecisionLog`. It adds two map indexes over interaction events in the `ContactCenter` collection; `InteractionEventIndex` is not changed.
+
+| Index | One row per | Columns |
+| --- | --- | --- |
+| `DialerDecisionIndex` | routing decision or dial suppression | `EventType`, `QueueId`, `CampaignId`, `ActivityItemId`, `QueueItemId`, `AgentId` (the agent routing selected, or the agent reserved for a suppressed attempt), `Succeeded`, `Reason`, `OccurrenceCount`, `OccurredUtc`, `LastSeenUtc` |
+| `DialerDecisionAgentIndex` | agent a decision names: each candidate routing weighed, the agent it selected, or the agent reserved for a suppressed attempt | `AgentId`, `IsEligible`, `IsSelected`, and the decision's `EventType`, `QueueId`, `CampaignId`, `ActivityItemId`, `Succeeded`, `Reason`, `OccurrenceCount`, `OccurredUtc` and `LastSeenUtc`, so a read by agent needs no join |
+
+- `Reason` is the routing outcome text for a routing decision, or the `DialerSuppressionReason` name (for example `DoNotCall`) for a suppression. Values longer than a column are cut to fit, and an event whose payload cannot be read writes no row, so indexing never fails the save of an event.
+- `CampaignId` comes from the campaign's virtual queue id (`__campaign-queue__{campaignId}`) for a routing decision, and from the payload for a suppression.
+- A decision belongs to a period when it was last made at or after the period's start and first made at or before its end.
+- The rows are removed with their event by the interaction event retention policy.
+
+**Existing events.** The tables start empty when the migration runs. The **Contact Center Dialer Decision Index Backfill** background task (`DialerDecisionIndexBackfillBackgroundTask`, every minute) indexes the decision events written before them: it reads them in pages of 200 (25 pages per run) through the interaction event window index, saves only the events that have no decision row yet, and remembers its position in the `ContactCenterBackfillState` document, so it resumes after a restart and stops for good once it has reached the end. A suppression written before suppressions named their campaign is given its activity's campaign as it is saved. It runs as a background task rather than in the migration so a tenant with a long event history does not wait on it to activate.
+
+**Repeated routing decisions are coalesced.** While a queue has due work and nobody can take it, routing makes the same failed decision on every pass, about once a minute. A failed decision that repeats the latest decision of its queue exactly (the same queue item and activity, the same selected agent and reason, and the same candidates with the same eligibility and reasons; scores are ignored) is folded into the event that recorded it first: the event's `OccurrenceCount` goes up by one and its `LastSeenUtc` moves to the time of the repeat, and no new event and no outbox message are written. A success is never folded, and any difference starts a new event. A run is cut after 10 minutes without a repeat and after one hour in all, so retention, which removes events by `OccurredUtc`, never removes a run that is still being repeated.
+
+**Payload changes.**
+
+- `ActivityRoutingDecisionEventData` adds `OccurrenceCount` (how many identical, consecutive decisions the event stands for; `1` when absent, so every event written earlier reads as one decision) and `LastSeenUtc` (when the last of them was made; `null` for an event that stands for one decision, which was made at the event's `OccurredUtc`). The event's `OccurredUtc` is when the first was made.
+- `DialerSuppressionEventData` adds `CampaignId`, `QueueId` and `AgentId` (the agent reserved for the attempt, `null` for an attempt placed without one).
+
+**Consumers of `RoutingDecisionMade`.** Because a repeat no longer publishes an event, an `IContactCenterEventHandler` or a Contact Center workflow that reacts to `RoutingDecisionMade` runs once for a run of identical failures, when it starts, not once per pass. A consumer that counts decisions should add `OccurrenceCount` rather than count events, and one that asks "when did routing last decide?" should read `LastSeenUtc` (or `IDialerDecisionLog`) rather than `OccurredUtc`. The dispatch diagnostics service (`IDialerDispatchDiagnosticsService`) does both.
+
+**Quiet queues.** The report lists each queue and campaign with work due now (waiting items, an open queue, and records dialable now by the dispatch diagnostics) with the time of its last routing decision, and flags one with none for longer than `CrestApps:ContactCenter:Reporting:DecisionLogQuietThreshold` (a `TimeSpan`, default `00:15:00`; see [Configuration](../configuration.md#reporting)). The predictive over-dialer places calls without a routing decision until one connects, so a campaign it is dialing can be flagged while its calls are in flight.
 
 ### Pacing cycle records and dialer health
 
