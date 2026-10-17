@@ -611,6 +611,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         };
 
         await queueItemMigration.CreateAsync();
+        await queueItemMigration.UpdateFrom6Async();
         await providerCommandMigration.CreateAsync();
 
         // The provider command create step stops at its shipped version, exactly as it does for a real tenant,

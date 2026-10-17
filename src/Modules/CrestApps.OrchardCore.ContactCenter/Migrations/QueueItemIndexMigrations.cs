@@ -334,4 +334,21 @@ internal sealed class QueueItemIndexMigrations : DataMigration
 
         return 6;
     }
+
+    /// <summary>
+    /// Adds the dialer profile an item was loaded under, so the dialer queue inventory and the campaign summary can
+    /// group a campaign's queue by the profile its items are stamped with from the index alone. Items saved before this
+    /// step are filled in by <see cref="BackgroundTasks.QueueItemDialerProfileIndexBackfillBackgroundTask"/>, outside
+    /// activation: reading and re-saving every item still in a queue during activation would hold up the tenant on a
+    /// large dialer load, and a settled item is never read by those reports.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table
+            .AddColumn<string>("DialerProfileId", column => column.Nullable().WithLength(26)),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 7;
+    }
 }

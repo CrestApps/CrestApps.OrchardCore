@@ -54,6 +54,7 @@ internal static class QueueItemQueryPlanFixture
 
         await migration.CreateAsync();
         await migration.UpdateFrom3Async();
+        await migration.UpdateFrom6Async();
     }
 
     /// <summary>
