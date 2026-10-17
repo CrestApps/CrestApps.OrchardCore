@@ -124,6 +124,10 @@ A signed-in customer manages their own details under **My Account**, with the **
 
 The first time a user opens **My Account**, their customer record is made from their account, just as it is on their first order.
 
+## Try it with the sample store
+
+The **Product listing: online store sample** recipe (**Configuration > Recipes**) enables Customers and adds two sample customers: *Sam Carter*, a person with a home and a work address, and *Contoso Supplies*, a business in Canada with a tax id. Open them under **Commerce > Customers** to see the details, address book and privacy actions.
+
 ## Related pages
 
 - [Carts and orders](carts-and-orders.md)

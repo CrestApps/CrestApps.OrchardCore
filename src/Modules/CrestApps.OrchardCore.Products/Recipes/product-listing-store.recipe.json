@@ -1,7 +1,7 @@
 {
   "name": "ProductListingStore",
   "displayName": "Product listing: online store sample",
-  "description": "Creates a Store Product type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, and a Shop listing page at /shop with filters, sorting, keyword search and grid and list views.",
+  "description": "Creates a Store Product type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, and two sample customers with their addresses.",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -21,6 +21,8 @@
       "enable": [
         "OrchardCore.Contents",
         "CrestApps.OrchardCore.Carts",
+        "CrestApps.OrchardCore.Orders",
+        "CrestApps.OrchardCore.Customers",
         "OrchardCore.Title",
         "OrchardCore.Autoroute",
         "OrchardCore.Alias",
@@ -3104,6 +3106,73 @@
             "DefaultPageSize": 12,
             "EnableKeywordSearch": true
           }
+        }
+      ]
+    },
+    {
+      "name": "Customers",
+      "Customers": [
+        {
+          "Kind": "Person",
+          "FirstName": "Sam",
+          "LastName": "Carter",
+          "Email": "sam.carter@example.test",
+          "Phone": "+1 206 555 0142",
+          "AcceptsMarketing": true,
+          "Addresses": [
+            {
+              "AddressId": "sample-sam-home",
+              "Label": "Home",
+              "Address": {
+                "Name": "Sam Carter",
+                "AddressLine1": "1200 Pine Street",
+                "AddressLine2": "Apt 4",
+                "City": "Seattle",
+                "Region": "WA",
+                "PostalCode": "98101",
+                "Country": "US"
+              }
+            },
+            {
+              "AddressId": "sample-sam-work",
+              "Label": "Work",
+              "Address": {
+                "Name": "Sam Carter",
+                "Company": "Fabrikam",
+                "AddressLine1": "500 Union Street",
+                "City": "Seattle",
+                "Region": "WA",
+                "PostalCode": "98101",
+                "Country": "US"
+              }
+            }
+          ],
+          "DefaultBillingAddressId": "sample-sam-home",
+          "DefaultShippingAddressId": "sample-sam-home"
+        },
+        {
+          "Kind": "Business",
+          "CompanyName": "Contoso Supplies",
+          "TaxId": "123456789RT0001",
+          "Email": "purchasing@contoso.example",
+          "Phone": "+1 416 555 0175",
+          "Addresses": [
+            {
+              "AddressId": "sample-contoso-office",
+              "Label": "Office",
+              "Address": {
+                "Company": "Contoso Supplies",
+                "AddressLine1": "100 King Street West",
+                "AddressLine2": "Suite 5700",
+                "City": "Toronto",
+                "Region": "ON",
+                "PostalCode": "M5X 1C7",
+                "Country": "CA"
+              }
+            }
+          ],
+          "DefaultBillingAddressId": "sample-contoso-office",
+          "DefaultShippingAddressId": "sample-contoso-office"
         }
       ]
     }
