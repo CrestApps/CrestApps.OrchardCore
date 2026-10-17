@@ -137,6 +137,22 @@ Each slice is a PR with tests, opened when its tests pass.
 - Kept: an order replaced by a newer one can still be paid by its own open checkout (existing behavior). IN2 must
   handle a paid order whose reservation was already released.
 
+### IN1 Stock and ledger
+
+- `Inventory.Core` holds `InventoryPart`, `StockItem`, `StockMovement` and `InventorySettings`, with `StockItemIndex`
+  and `StockMovementIndex` in the `Inventory` collection. It also holds the concurrency-checked `StockItemStore`, the
+  append-only `StockMovementStore`, `IInventoryService` (Adjust, SetCount, Rebuild under `STOCK_{id}`, committing
+  inside the lock) and `InventoryProductSynchronizer`.
+- No separate Abstractions project yet: nothing outside Inventory needs the contract until IN3's availability
+  provider, which belongs in Products.Core.
+- Module: the content handler notes products and syncs them in a deferred task against their latest version, so drafts
+  can be stocked. Tracking is decided by the type's definition, so products saved before the part was added are
+  counted. *Find products to count* and a threshold change run `SyncAllAsync`.
+- The product editor shows availability per variant, read-only; stock changes only under Commerce > Inventory, so every
+  change is a movement.
+- Found live: the variant editor is filled by script, so saving a product by a scripted form post would lose its
+  variants. Live tests used the inventory pages and settings instead.
+
 ## Not in this phase
 
 Multiple locations in the admin (the schema allows them), preorders, live carrier rates and labels, returns (RMA)
