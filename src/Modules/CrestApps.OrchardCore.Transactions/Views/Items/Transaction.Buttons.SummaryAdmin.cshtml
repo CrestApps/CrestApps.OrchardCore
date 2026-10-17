@@ -1,0 +1,5 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<Transaction>
+
+<a asp-action="Detail" asp-route-itemId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Manage"]</a>

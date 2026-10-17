@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<InstallmentPlan>
+
+@{
+    var plan = Model.Value;
+    var next = plan.NextPayment;
+    var isOpen = plan.Status is not (InstallmentPlanStatus.Canceled or InstallmentPlanStatus.Completed);
+}
+
+@if (isOpen && next is not null)
+{
+    <span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Next payment"]">
+        <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Next payment"]</span>
+        @T["{0} on {1:d}", $"{plan.Currency} {CurrencyScale.Format(next.Amount, plan.Currency)}", next.DueUtc]
+    </span>
+}

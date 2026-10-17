@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.DncRegistry.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.DncRegistry.ViewModels;
 
@@ -13,11 +14,6 @@ public class ListLocalDncListsViewModel
     /// </summary>
     public LocalDncListOptions Options { get; set; }
 
-    /// <summary>
-    /// Gets or sets the collection of summary shapes for each DNC list entry.
-    /// </summary>
-    [BindNever]
-    public IList<dynamic> Entries { get; set; }
 
     /// <summary>
     /// Gets or sets the header shape containing action bar and summary.
@@ -30,4 +26,10 @@ public class ListLocalDncListsViewModel
     /// </summary>
     [BindNever]
     public dynamic Pager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the lists, the header and the pager the <c>admin-list</c> tag renders.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }

@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<InstallmentPlan>
+
+@if (Model.Value.Status == InstallmentPlanStatus.Draft && string.IsNullOrEmpty(Model.Value.SourceTransactionId))
+{
+    <a asp-action="Pay" asp-route-itemId="@Model.Value.ItemId" class="btn btn-primary btn-sm">@T["Take the down payment"]</a>
+}
+<a asp-action="Detail" asp-route-itemId="@Model.Value.ItemId" class="btn btn-secondary btn-sm">@T["Manage"]</a>

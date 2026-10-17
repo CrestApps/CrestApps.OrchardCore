@@ -156,13 +156,28 @@ public sealed class OrdersAdminController : Controller
             routeData.Values.TryAdd(OptionsStatus, options.Status);
         }
 
-        return new OrdersIndexViewModel
+        var viewModel = new OrdersIndexViewModel
         {
             Options = options,
             Orders = orders,
             TotalCount = count,
             Pager = await _shapeFactory.PagerAsync(pager, count, routeData),
         };
+
+        // The admin-list tag builds a row per order, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<Order>
+        {
+            Source = orders,
+            Pager = viewModel.Pager,
+        };
+
+        // The filters render at the end of the list's toolbar; a customer's own orders are not filtered.
+        if (userId is null)
+        {
+            viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("OrdersAdminListFilters", Arguments.From(new { Options = options }));
+        }
+
+        return viewModel;
     }
 
     private static RouteValueDictionary FilterRouteValues(OrdersIndexOptions options, PagerParameters pagerParameters)

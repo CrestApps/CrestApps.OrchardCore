@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PhoneNumberVerificationRecord>
+
+@if (!string.IsNullOrEmpty(Model.Value.DisplayText))
+{
+    <div class="admin-list-secondary">@Model.Value.DisplayText <span class="opacity-75">(@Model.Value.ContentType)</span></div>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.LastError))
+{
+    <div class="admin-list-secondary text-danger">
+        <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i><code class="text-danger">@Model.Value.LastError</code>
+    </div>
+}

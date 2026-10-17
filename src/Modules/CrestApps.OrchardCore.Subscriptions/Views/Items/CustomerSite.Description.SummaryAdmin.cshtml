@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<CustomerSite>
+
+@if (Model.Value.Job.Status == TenantProvisioningStatus.Abandoned)
+{
+    <div class="admin-list-secondary text-danger">@T["We could not finish setting this site up. Please contact support."]</div>
+}

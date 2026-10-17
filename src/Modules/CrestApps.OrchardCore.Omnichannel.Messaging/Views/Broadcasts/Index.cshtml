@@ -4,14 +4,15 @@
     <breadcrumb name="MessagingBroadcasts" title="@T["Broadcasts"]" />
 </zone>
 
+@* Every broadcast is listed on one page, so the search filters the rows in the browser. *@
 <div data-list-management data-client-side-search="true">
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-1">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input id="search-box" class="form-control" placeholder="@T["Search broadcasts"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -21,55 +22,24 @@
         </div>
     </div>
 
-    @if (Model.Broadcasts.Count == 0)
-    {
-        <div class="alert alert-info">@T["No broadcasts yet."]</div>
-    }
-    else
-    {
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>@T["Name"]</th>
-                    <th>@T["Channel"]</th>
-                    <th>@T["From"]</th>
-                    <th>@T["Status"]</th>
-                    <th>@T["Recipients"]</th>
-                    <th>@T["Sent"]</th>
-                    <th>@T["Failed"]</th>
-                    <th>@T["Created"]</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var broadcast in Model.Broadcasts)
-                {
-                    <tr data-filter-value="@($"{broadcast.Name} {broadcast.Channel} {broadcast.ServiceAddress} {broadcast.Status}")">
-                        <td>@broadcast.Name</td>
-                        <td>
-                            @if (Model.Channels.TryGetValue(broadcast.Channel ?? string.Empty, out var channel))
-                            {
-                                <i class="@channel.IconCssClass me-1" aria-hidden="true"></i>@channel.DisplayName
-                            }
-                            else
-                            {
-                                @broadcast.Channel
-                            }
-                        </td>
-                        <td>@broadcast.ServiceAddress</td>
-                        <td>@broadcast.Status.ToString()</td>
-                        <td>@broadcast.Recipients.Count</td>
-                        <td>@broadcast.SentCount</td>
-                        <td>@broadcast.FailedCount</td>
-                        <td>@broadcast.CreatedUtc.ToString("g")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+    @* The broadcasts and the toolbar are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="MessagingBroadcasts" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["No broadcasts yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Channel" position="30" title="@T["Channel"]" width="auto" />
+            <admin-list-column name="From" position="40" title="@T["From"]" width="auto" />
+            <admin-list-column name="Status" position="50" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Progress" position="60" title="@T["Recipients"]" width="auto" />
+            <admin-list-column name="Created" position="70" title="@T["Created"]" width="auto" />
+        </admin-list-grid>
+    </admin-list>
 
-        <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
-            @T["Your search returned no results."]
-        </div>
-    }
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
 </div>
 
 <script asp-name="list-management-ui" at="Foot"></script>

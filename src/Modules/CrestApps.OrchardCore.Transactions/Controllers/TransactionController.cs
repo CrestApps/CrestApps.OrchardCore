@@ -115,11 +115,21 @@ public sealed class TransactionController : Controller
 
         options.Statuses = TransactionStatusFilterExtensions.BuildFilterItems(options.Status, S);
 
+        // The status filter renders at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("MyTransactionsListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         var model = new MyTransactionsViewModel
         {
-            Transactions = result.Entries,
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            List = new AdminListContext<CustomerTransaction>
+            {
+                Source = result.Entries.Select(transaction => new CustomerTransaction(transaction)).ToArray(),
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
         };
 
         return View(model);

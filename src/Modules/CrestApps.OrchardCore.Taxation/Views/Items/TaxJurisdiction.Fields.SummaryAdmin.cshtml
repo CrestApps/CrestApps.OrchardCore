@@ -1,17 +1,4 @@
 @model ShapeViewModel<TaxJurisdiction>
 
-<h5 class="mb-0">
-    @Model.Value.Name
-    <span class="badge bg-secondary">@Model.Value.Level</span>
-</h5>
-<small class="text-muted">
-    @T["Code:"] <code>@Model.Value.Code</code>
-    @if (!string.IsNullOrEmpty(Model.Value.Country))
-    {
-        <span class="ms-1">@T["Country:"] @Model.Value.Country</span>
-    }
-    @if (!string.IsNullOrEmpty(Model.Value.Region))
-    {
-        <span class="ms-1">@T["Region:"] @Model.Value.Region</span>
-    }
-</small>
+@* A plain link to the edit page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>

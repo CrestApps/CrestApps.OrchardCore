@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<Cadence>
+
+@{
+    var stepCount = Model.Value.Steps?.Count ?? 0;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Follow-up steps"]">
+    <i class="fa-solid fa-bell text-secondary me-1" aria-hidden="true"></i>@T["{0} step(s)", stepCount]
+</span>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["This cadence is disabled."]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

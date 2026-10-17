@@ -3,4 +3,12 @@
 
 @model ShapeViewModel<AIProviderConnection>
 
-<h5>@(Model.Value.Name)</h5>
+@* A plain link to the edit page. A connection defined in configuration cannot be edited, so its name is plain text. *@
+@if (Model.Value.IsReadOnly)
+{
+    @Model.Value.Name
+}
+else
+{
+    <a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
+}

@@ -5,7 +5,9 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.A2A.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -32,10 +34,28 @@ internal sealed class A2AConnectionDisplayDriver : DisplayDriver<A2AConnection>
 
     public override Task<IDisplayResult> DisplayAsync(A2AConnection connection, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = connection.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("A2AConnection_Fields_SummaryAdmin", connection).Location("Content:1"),
-        View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
-        View("A2AConnection_DefaultMeta_SummaryAdmin", connection).Location("Meta:5")
+            View("A2AConnection_Checkbox_SummaryAdmin", connection)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("A2AConnection_Fields_SummaryAdmin", connection)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("A2AConnection_Buttons_SummaryAdmin", connection).Location("Actions:5"),
+            View("A2AConnection_DefaultTags_SummaryAdmin", connection)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Endpoint:5"),
+            View("A2AConnection_DefaultMeta_SummaryAdmin", connection)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

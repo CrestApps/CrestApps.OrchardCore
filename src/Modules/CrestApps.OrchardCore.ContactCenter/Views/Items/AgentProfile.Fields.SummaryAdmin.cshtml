@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AgentProfile>
+
+@* A plain link to the edit page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">
+    @if (!string.IsNullOrEmpty(Model.Value.UserName))
+    {
+        <shape type="UserDisplayName" prop-user-name="@Model.Value.UserName" />
+    }
+    else
+    {
+        @Model.Value.DisplayName
+    }
+</a>

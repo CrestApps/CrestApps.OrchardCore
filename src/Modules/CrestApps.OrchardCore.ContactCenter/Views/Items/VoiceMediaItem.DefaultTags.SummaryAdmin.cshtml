@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<VoiceMediaItem>
+
+@{
+    var hasMasterCopy = !string.IsNullOrWhiteSpace(Model.Value.MasterStorageReference);
+    var providerNames = Model.Value.ProviderReferences?.Keys.ToList() ?? new List<string>();
+
+    if (providerNames.Count == 0 && !string.IsNullOrWhiteSpace(Model.Value.ProviderName) && !string.IsNullOrWhiteSpace(Model.Value.MediaReference))
+    {
+        providerNames.Add(Model.Value.ProviderName);
+    }
+
+    var hasAudio = hasMasterCopy || providerNames.Count > 0;
+}
+
+@if (!hasAudio)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Audio"]">
+        <i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T["No audio"]
+    </span>
+}
+else
+{
+    @if (!string.IsNullOrWhiteSpace(Model.Value.Format))
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Format"]">
+            <i class="fa-solid fa-file-audio text-secondary me-1" aria-hidden="true"></i><span class="text-uppercase">@Model.Value.Format</span>
+        </span>
+    }
+    @if (hasMasterCopy)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The platform keeps a master copy and sends it to any phone provider that needs it."]">
+            <i class="fa-solid fa-shield-halved text-info me-1" aria-hidden="true"></i>@T["Master copy"]
+        </span>
+    }
+    else
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["This clip exists only at the phone provider. Re-upload this clip to protect it."]">
+            <i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T["Provider copy only"]
+        </span>
+    }
+    @foreach (var providerName in providerNames)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Phone provider"]">
+            <i class="fa-solid fa-tower-broadcast text-secondary me-1" aria-hidden="true"></i>@providerName
+        </span>
+    }
+}

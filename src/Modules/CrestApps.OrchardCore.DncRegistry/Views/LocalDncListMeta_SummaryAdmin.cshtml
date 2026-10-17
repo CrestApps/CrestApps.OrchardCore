@@ -22,18 +22,18 @@
 }
 
 <div class="d-flex flex-wrap gap-1">
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Country"]">
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Country"]">
         <i class="fa-solid fa-globe text-secondary" aria-hidden="true"></i> @entry.CountryCode
     </span>
 
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: entry.CreatedUtc, Format: "g"))">
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: entry.CreatedUtc, Format: "g"))">
         <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
         <time datetime="@entry.CreatedUtc.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)">
             @await DisplayAsync(await New.Timespan(Utc: entry.CreatedUtc))
         </time>
     </span>
 
-    <span class="badge ta-badge font-weight-normal @statusClass" data-bs-toggle="tooltip" title="@T["Status"]">
+    <span class="badge ta-badge fw-normal @statusClass" data-bs-toggle="tooltip" title="@T["Status"]">
         <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         @switch (entry.Status)
         {
@@ -63,13 +63,13 @@
 
     @if (entry.TotalProcessed > 0)
     {
-        <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Records imported successfully"]">
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Records imported successfully"]">
             <i class="fa-solid fa-check text-success" aria-hidden="true"></i> @entry.ImportedCount.ToString("N0")
         </span>
 
         @if (errorCount > 0)
         {
-            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Records with errors"]">
+            <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Records with errors"]">
                 <i class="fa-solid fa-xmark text-danger" aria-hidden="true"></i> @errorCount
             </span>
         }
@@ -77,7 +77,7 @@
 
     @if (entry.ProcessSaveUtc.HasValue)
     {
-        <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Last processed at"]">
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last processed at"]">
             <i class="fa-solid fa-clock text-secondary" aria-hidden="true"></i>
             <time datetime="@entry.ProcessSaveUtc.Value.ToString("yyyy-MM-ddTHH:mm:sszzz", CultureInfo.InvariantCulture)">
                 @await DisplayAsync(await New.Timespan(Utc: entry.ProcessSaveUtc.Value))

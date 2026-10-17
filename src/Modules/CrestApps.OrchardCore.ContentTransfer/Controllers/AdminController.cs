@@ -42,7 +42,6 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
 
-    private readonly IDisplayManager<ContentTransferEntry> _entryDisplayManager;
     private readonly IContentTransferEntryAdminListQueryService _entriesAdminListQueryService;
     private readonly IDisplayManager<ListContentTransferEntryOptions> _entryOptionsDisplayManager;
     private readonly INotifier _notifier;
@@ -73,7 +72,6 @@ public sealed class AdminController : Controller, IUpdateModel
         ISession session,
         IShapeFactory shapeFactory,
         IOptions<PagerOptions> pagerOptions,
-        IDisplayManager<ContentTransferEntry> entryDisplayManager,
         IContentTransferEntryAdminListQueryService entriesAdminListQueryService,
         IDisplayManager<ListContentTransferEntryOptions> entryOptionsDisplayManager,
         INotifier notifier,
@@ -98,7 +96,6 @@ public sealed class AdminController : Controller, IUpdateModel
     {
         _authorizationService = authorizationService;
         _session = session;
-        _entryDisplayManager = entryDisplayManager;
         _entriesAdminListQueryService = entriesAdminListQueryService;
         _entryOptionsDisplayManager = entryOptionsDisplayManager;
         _notifier = notifier;
@@ -674,12 +671,45 @@ public sealed class AdminController : Controller, IUpdateModel
     }
 
     [Admin("export/dashboard", "ExportDashboard")]
-    public Task<IActionResult> ExportDashboard(
+    public async Task<IActionResult> ExportDashboard(
         [ModelBinder(BinderType = typeof(ContentTransferEntryFilterEngineModelBinder), Name = "q")] QueryFilterResult<ContentTransferEntry> queryFilterResult,
         PagerParameters pagerParameters,
         ListContentTransferEntryOptions options)
     {
-        return Export(queryFilterResult, pagerParameters, options);
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
+        {
+            return Forbid();
+        }
+
+        options.FilterResult = queryFilterResult;
+        await PopulateListOptionsAsync(options, ContentTransferDirection.Export, CurrentUserId());
+
+        // The dashboard lists the same export entries as the export page, searched on the client, without the
+        // export form and the filters. It used to render the export page's model, which its view does not take.
+        var list = await BuildEntriesListAsync(options, pagerParameters);
+        list.BulkActions = options.BulkActions;
+
+        return View(new ListContentTransferEntriesViewModel
+        {
+            Options = options,
+            List = list,
+            Pager = list.Pager,
+        });
+    }
+
+    [HttpPost]
+    [ActionName(nameof(ExportDashboard))]
+    [FormValueRequired("submit.BulkAction")]
+    public async Task<ActionResult> ExportDashboardPOST(ListContentTransferEntryOptions options, IEnumerable<string> itemIds)
+    {
+        if (!await _authorizationService.AuthorizeAsync(HttpContext.User, ContentTransferPermissions.ExportContentFromFile))
+        {
+            return Forbid();
+        }
+
+        await ExecuteBulkActionAsync(itemIds, options.BulkAction, ContentTransferDirection.Export, CurrentUserId());
+
+        return RedirectToAction(nameof(ExportDashboard));
     }
 
     [Admin("import/entries/{entryId}/resume", "ResumeImport")]
@@ -964,36 +994,44 @@ public sealed class AdminController : Controller, IUpdateModel
 
     private async Task<IShape> BuildListViewModelAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
     {
-        var routeData = new RouteData(options.RouteValues);
-        var pager = new Pager(pagerParameters, _pagerOptions);
+        var list = await BuildEntriesListAsync(options, pagerParameters);
 
-        var queryResult = await _entriesAdminListQueryService.QueryAsync(pager.Page, pager.PageSize, options, this);
-        var pagerShape = await _shapeFactory.PagerAsync(pager, queryResult.TotalCount, routeData);
-
-        var summaries = new List<dynamic>();
-
-        foreach (var entry in queryResult.Entries)
-        {
-            dynamic shape = await _entryDisplayManager.BuildDisplayAsync(entry, this, "SummaryAdmin");
-            shape.ContentTransferEntry = entry;
-            summaries.Add(shape);
-        }
-
-        var startIndex = (pager.Page - 1) * pager.PageSize + 1;
-        options.StartIndex = queryResult.TotalCount == 0 ? 0 : startIndex;
-        options.EndIndex = queryResult.TotalCount == 0 ? 0 : startIndex + summaries.Count - 1;
-        options.EntriesCount = summaries.Count;
-        options.TotalItemCount = queryResult.TotalCount;
-
+        // The options editor shape: the list renders its Summary and Actions zones (the item count, the
+        // select-all checkbox, the bulk actions and the filters) above the rows, and the view renders its
+        // Search and Create zones in the action bar.
         var header = await _entryOptionsDisplayManager.BuildEditorAsync(options, this, false, string.Empty, string.Empty);
+        list.Header = header;
 
         return await _shapeFactory.CreateAsync<ListContentTransferEntriesViewModel>("ContentTransferEntriesAdminList", viewModel =>
         {
             viewModel.Options = options;
             viewModel.Header = header;
-            viewModel.Entries = summaries;
-            viewModel.Pager = pagerShape;
+            viewModel.List = list;
+            viewModel.Pager = list.Pager;
         });
+    }
+
+    private async Task<AdminListContext<ContentTransferEntry>> BuildEntriesListAsync(ListContentTransferEntryOptions options, PagerParameters pagerParameters)
+    {
+        var routeData = new RouteData(options.RouteValues);
+        var pager = new Pager(pagerParameters, _pagerOptions);
+
+        var queryResult = await _entriesAdminListQueryService.QueryAsync(pager.Page, pager.PageSize, options, this);
+        var pagerShape = await _shapeFactory.PagerAsync(pager, queryResult.TotalCount, routeData);
+        var entries = queryResult.Entries.ToList();
+
+        var startIndex = (pager.Page - 1) * pager.PageSize + 1;
+        options.StartIndex = queryResult.TotalCount == 0 ? 0 : startIndex;
+        options.EndIndex = queryResult.TotalCount == 0 ? 0 : startIndex + entries.Count - 1;
+        options.EntriesCount = entries.Count;
+        options.TotalItemCount = queryResult.TotalCount;
+
+        // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
+        return new AdminListContext<ContentTransferEntry>
+        {
+            Source = entries,
+            Pager = pagerShape,
+        };
     }
 
     private async Task<ContentExporterViewModel> BuildContentExporterViewModelAsync(

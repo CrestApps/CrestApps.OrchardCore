@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using CrestApps.OrchardCore.PhoneNumbers
+@using OrchardCore.DisplayManagement.Views
+
+@inject IPhoneNumberService PhoneNumberService
+
+@model ShapeViewModel<NotInServiceNumberEntry>
+
+@{
+    var number = Model.Value.Number;
+    var displayNumber = PhoneNumberService.FormatForDisplay(number.PhoneNumber);
+}
+
+<a asp-action="AllowDialing"
+   asp-route-phoneNumber="@number.PhoneNumber"
+   asp-route-returnUrl="@FullRequestPath"
+   class="btn btn-primary btn-sm"
+   title="@T["Remove the not-in-service mark so campaigns can load and dial this number again. Nothing is dialed now."]"
+   data-title="@T["Allow dialing"]"
+   data-message="@T["Remove the not-in-service mark from {0}, so campaigns can load and dial it again? Nothing is dialed now.", displayNumber]"
+   data-ok-text="@T["Allow dialing"]"
+   data-cancel-text="@T["Cancel"]"
+   data-url-af="RemoveUrl UnsafeUrl">@T["Allow dialing"]</a>

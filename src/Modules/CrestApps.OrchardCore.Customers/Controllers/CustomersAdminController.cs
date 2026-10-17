@@ -137,14 +137,26 @@ public sealed class CustomersAdminController : Controller
             routeData.Values.TryAdd(key, value);
         }
 
-        return View(new CustomersIndexViewModel
+        var viewModel = new CustomersIndexViewModel
         {
             Options = options,
             Customers = customers,
             TotalCount = count,
             CanManage = await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers),
             Pager = await _shapeFactory.PagerAsync(pager, count, routeData),
-        });
+        };
+
+        // The admin-list tag builds a row per customer, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<Customer>
+        {
+            Source = customers,
+            Pager = viewModel.Pager,
+        };
+
+        // The filters render at the end of the list's toolbar.
+        viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("CustomersAdminListFilters", Arguments.From(new { Options = options }));
+
+        return View(viewModel);
     }
 
     [HttpPost]

@@ -88,7 +88,14 @@ public sealed class AgentEntitlementsController : Controller
             .OrderBy(agent => agent.UserName ?? agent.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
-        return View(agents);
+        return View(new AgentEntitlementListViewModel
+        {
+            // The admin-list tag builds a row per agent, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<AgentProfile>
+            {
+                Source = agents,
+            },
+        });
     }
 
     /// <summary>

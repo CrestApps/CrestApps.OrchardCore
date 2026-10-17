@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 
@@ -30,10 +31,10 @@ public class PhoneNumberVerificationRecordsViewModel
     public bool CanVerifyPhoneNumbers { get; set; }
 
     /// <summary>
-    /// Gets or sets the records on the current page.
+    /// Gets or sets the records on the current page, the bulk actions and the pager, rendered by the admin list.
     /// </summary>
     [BindNever]
-    public IList<PhoneNumberVerificationRecordEntry> Entries { get; set; } = [];
+    public AdminListContext List { get; set; }
 
     /// <summary>
     /// Gets or sets the record counts per status filter, used to render the dashboard tiles.

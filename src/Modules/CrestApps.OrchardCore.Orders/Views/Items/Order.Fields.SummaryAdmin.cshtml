@@ -1,0 +1,4 @@
+@model ShapeViewModel<Order>
+
+@* A plain link to the order's page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Detail" asp-route-orderId="@Model.Value.ItemId">@Model.Value.OrderNumber</a>

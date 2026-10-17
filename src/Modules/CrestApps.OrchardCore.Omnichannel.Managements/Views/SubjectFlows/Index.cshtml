@@ -1,5 +1,3 @@
-@using CrestApps.OrchardCore.Omnichannel.Core
-@using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 
@@ -21,14 +19,14 @@
 }
 else
 {
-    <form asp-action="Index" method="post" class="no-multisubmit">
+    <form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="true">
         <div class="card text-bg-theme mb-3 position-sticky action-bar">
             <div class="card-body">
-                <div class="row gx-1">
+                <div class="row gx-2">
                     <div class="col">
-                        <div class="has-search">
-                            <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <div class="input-group">
                             <input id="search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                            <button type="button" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                         </div>
                     </div>
                     <div class="col-auto">
@@ -38,90 +36,22 @@ else
             </div>
         </div>
 
-        <ul class="list-group" id="subject-flows-list">
-            <li class="list-group-item text-bg-theme ignore-elements">
-                <div class="row gx-3">
-                    <div class="col">
-                        <span class="text-muted">
-                            @T.Plural(Model.Subjects.Count, "1 subject", "{0} subjects")
-                        </span>
-                    </div>
-                </div>
-            </li>
-            @foreach (var subject in Model.Subjects)
-            {
-                <li class="list-group-item item" data-filter-value="@subject.DisplayName?.ToLowerInvariant() @subject.ContentTypeName?.ToLowerInvariant()">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <a asp-route-action="ManageActions"
-                               asp-route-controller="SubjectFlows"
-                               asp-route-subjectContentType="@subject.ContentTypeName"
-                               class="fw-semibold text-break">@subject.DisplayName</a>
-                            <span class="text-muted ms-1">(@subject.ContentTypeName)</span>
-                            <span class="badge ta-badge font-weight-normal ms-2">@(subject.Direction == SubjectDirection.Inbound ? T["Inbound"] : T["Outbound"])</span>
-                            @if (subject.InteractionType == ActivityInteractionType.Automated)
-                            {
-                                <span class="badge ta-badge font-weight-normal ms-1">@T["Automated"]</span>
-                                @if (!string.IsNullOrEmpty(subject.Channel))
-                                {
-                                    <span class="badge ta-badge font-weight-normal ms-1">@subject.Channel</span>
-                                }
-                            }
-                            @if (!subject.HasActions)
-                            {
-                                <span class="badge ta-badge bg-danger-subtle font-weight-normal ms-1">@T["Missing flow"]</span>
-                            }
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            @if (Model.CanEditContentTypes)
-                            {
-                                <a class="btn btn-sm btn-secondary"
-                                   href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.ContentTypes", id = subject.ContentTypeName })">@T["Edit Content Type"]</a>
-                                <a class="btn btn-sm btn-secondary"
-                                   href="@Url.Action("EditTypePart", "Admin", new { area = "OrchardCore.ContentTypes", id = subject.ContentTypeName, name = OmnichannelConstants.ContentParts.OmnichannelSubject })">@T["Edit Settings"]</a>
-                            }
-                            <a class="btn btn-sm btn-primary"
-                               asp-route-action="ManageActions"
-                               asp-route-controller="SubjectFlows"
-                               asp-route-subjectContentType="@subject.ContentTypeName">@T["Manage Flow"]</a>
-                        </div>
-                    </div>
-                </li>
-            }
-        </ul>
+        @* The rows are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+        <admin-list name="OmnichannelSubjectFlows" context="Model.List"
+                    show-select-all="false">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Name" position="20" title="@T["Subject"]" />
+                <admin-list-column name="Direction" position="30" title="@T["Direction"]" width="auto" />
+                <admin-list-column name="Flow" position="40" title="@T["Flow"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
 
         <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
             @T["Your search returned no results."]
         </div>
     </form>
 
-    <script at="Foot">
-        document.addEventListener('DOMContentLoaded', function () {
-            const searchBox = document.getElementById('search-box');
-            const list = document.getElementById('subject-flows-list');
-            const alert = document.getElementById('list-alert');
-
-            if (searchBox && list) {
-                searchBox.addEventListener('input', function () {
-                    const filter = this.value.toLowerCase();
-                    const items = list.querySelectorAll('.item');
-                    let visibleCount = 0;
-
-                    items.forEach(function (item) {
-                        const value = item.getAttribute('data-filter-value') || '';
-                        if (value.includes(filter)) {
-                            item.style.display = '';
-                            visibleCount++;
-                        } else {
-                            item.style.display = 'none';
-                        }
-                    });
-
-                    if (alert) {
-                        alert.classList.toggle('d-none', visibleCount > 0 || !filter);
-                    }
-                });
-            }
-        });
-    </script>
+    <script asp-name="list-management-ui" at="Foot"></script>
 }

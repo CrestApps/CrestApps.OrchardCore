@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SubjectFlowEntry>
+
+<span class="badge ta-badge bg-danger-subtle fw-normal" data-bs-toggle="tooltip" title="@T["No action is defined for this subject yet."]">
+    <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@T["Missing flow"]
+</span>

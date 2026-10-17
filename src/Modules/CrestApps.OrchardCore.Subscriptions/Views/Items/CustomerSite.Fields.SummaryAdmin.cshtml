@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<CustomerSite>
+
+@* Plain text: a site has no page of its own here; a ready site is opened with the Open button. *@
+@(string.IsNullOrEmpty(Model.Value.Job.TenantTitle) ? Model.Value.Job.TenantName : Model.Value.Job.TenantTitle)

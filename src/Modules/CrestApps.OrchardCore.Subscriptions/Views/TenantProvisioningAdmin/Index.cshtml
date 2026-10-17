@@ -1,14 +1,5 @@
-@using CrestApps.OrchardCore.Subscriptions.Models
-@using CrestApps.OrchardCore.Subscriptions.Services
 @using CrestApps.OrchardCore.Subscriptions.ViewModels
-@using Microsoft.AspNetCore.Mvc.Localization
 @model TenantProvisioningListViewModel
-@inject SubscriptionDisplayText DisplayText
-
-@{
-    var pager = (dynamic)Model.Pager;
-    int totalItemCount = pager.TotalItemCount;
-}
 
 <zone Name="Title">
     <breadcrumb name="SubscriptionsTenantProvisioning" title="@T["Site provisioning"]" />
@@ -18,6 +9,8 @@
     @T["A job marked <strong>Abandoned</strong> means a customer paid and did not get their site, and the site has stopped trying. Fix the cause so the next sale works, then create this site by hand under <strong>Tenants</strong> and mark the job as created, or refund the purchase."]
 </div>
 
+@* The filter renders in the list's toolbar, after this form, and names it with its form attribute. The list stays
+   outside the form because its rows post forms of their own (Retry now, Mark as created). *@
 <form asp-action="Index" method="get" id="provisioning-filter">
     @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
     {
@@ -25,113 +18,19 @@
     }
 </form>
 
-<ul class="list-group">
-    <li class="list-group-item text-bg-theme">
-        <div class="row gx-3 align-items-center">
-            <div class="col text-nowrap">
-                @T.Plural(Model.Jobs.Count, "1 site", "{0} sites")
-                <span class="text-muted">@T.Plural(totalItemCount, " / {0} site in total", " / {0} sites in total")</span>
-            </div>
-            <div class="col col-md-auto text-end">
-                <div class="btn-group filter">
-                    <select name="status" asp-items="Model.Statuses" form="provisioning-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Status"]"></select>
-                </div>
-            </div>
-        </div>
-    </li>
-    @if (Model.Jobs.Count > 0)
-    {
-        @foreach (var job in Model.Jobs)
-        {
-            var statusClass = job.Status switch
-            {
-                TenantProvisioningStatus.Succeeded => "text-bg-success",
-                TenantProvisioningStatus.Abandoned => "text-bg-danger",
-                TenantProvisioningStatus.Failed => "text-bg-warning",
-                _ => "text-bg-secondary",
-            };
-
-            <li class="list-group-item">
-                <div class="row g-0">
-                    <div class="col-lg col-12 title d-flex align-items-center">
-                        <div class="summary">
-                            <div class="d-flex flex-column flex-md-row align-items-md-center">
-                                <div class="me-2">
-                                    <h5 class="mb-1 mb-md-0">@job.TenantName</h5>
-                                </div>
-                                <div class="tags me-1">
-                                    <span class="badge @statusClass">@DisplayText.ProvisioningStatusName(job.Status)</span>
-                                </div>
-                            </div>
-                            <div class="metadata mt-1">
-                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Owner"]">
-                                    <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Owner"]</span>
-                                    @(job.ContactEmail ?? job.OwnerId)
-                                </span>
-                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Bought"]">
-                                    <i class="fa-regular fa-calendar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Bought"]</span>
-                                    @await DisplayAsync(await New.DateTime(Utc: job.CreatedUtc, Format: "g"))
-                                </span>
-                                <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Attempts"]">
-                                    <i class="fa-solid fa-rotate text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Attempts"]</span>
-                                    @T.Plural(job.AttemptCount, "1 attempt", "{0} attempts")
-                                </span>
-                            </div>
-                            @if (!string.IsNullOrEmpty(job.LastError))
-                            {
-                                <div class="text-danger small mt-1">
-                                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i><span class="visually-hidden">@T["Last error"]</span>
-                                    @job.LastError
-                                </div>
-                            }
-                        </div>
-                    </div>
-                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
-                        <div class="actions">
-                            @if (TenantProvisioningJobActions.CanRetry(job))
-                            {
-                                <form asp-action="Retry" asp-route-itemId="@job.ItemId" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-secondary btn-sm"
-                                            data-url-af="RemoveUrl"
-                                            data-title="@T["Retry now"]"
-                                            data-message="@T["Try to create the site {0} again now?", job.TenantName]"
-                                            data-ok-text="@T["Retry now"]"
-                                            data-cancel-text="@T["Cancel"]">
-                                        @T["Retry now"]
-                                    </button>
-                                </form>
-                            }
-                            @if (TenantProvisioningJobActions.CanMarkCreated(job))
-                            {
-                                <form asp-action="MarkCreated" asp-route-itemId="@job.ItemId" method="post" class="d-inline-flex gap-1">
-                                    <input type="text" name="siteUrl" class="form-control form-control-sm" placeholder="@T["Site URL (optional)"]" aria-label="@T["Site URL"]" />
-                                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap"
-                                            data-url-af="RemoveUrl"
-                                            data-title="@T["Mark as created"]"
-                                            data-message="@T["Did you create the site {0} by hand? The customer will see it as ready.", job.TenantName]"
-                                            data-ok-text="@T["Mark as created"]"
-                                            data-cancel-text="@T["Cancel"]">
-                                        @T["Mark as created"]
-                                    </button>
-                                </form>
-                            }
-                        </div>
-                    </div>
-                </div>
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0" role="alert">
-                @T["<strong>Nothing here!</strong> No sites match the current filter."]
-            </div>
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
+@* The jobs, the toolbar with the filter and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+<admin-list name="TenantProvisioningJobs" context="Model.List" show-select-all="false"
+            empty-message="@T["<strong>Nothing here!</strong> No sites match the current filter."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Title" position="20" title="@T["Site"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+        <admin-list-column name="Owner" position="40" title="@T["Owner"]" width="auto" />
+        <admin-list-column name="Bought" position="50" title="@T["Bought"]" width="auto" />
+        <admin-list-column name="Attempts" position="60" title="@T["Attempts"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="commerce-admin-list" at="Foot"></script>

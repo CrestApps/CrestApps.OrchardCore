@@ -52,6 +52,9 @@ public sealed class Startup : StartupBase
         // Stock items follow their products as they are saved.
         services.AddScoped<IContentHandler, InventoryContentHandler>();
 
+        // The rows of the inventory admin list.
+        services.AddDisplayDriver<StockItem, StockItemDisplayDriver>();
+
         services.AddSiteDisplayDriver<InventorySettingsDisplayDriver>();
 
         // Lets a role with Manage inventory, but no site-settings permission, open Settings > Commerce > Inventory.

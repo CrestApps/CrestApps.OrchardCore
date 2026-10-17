@@ -10,7 +10,9 @@ using CrestApps.OrchardCore.AI.FileSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -49,10 +51,31 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<FileSource>
 
     public override Task<IDisplayResult> DisplayAsync(FileSource fileSource, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = fileSource.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("FileSource_Fields_SummaryAdmin", fileSource).Location("Content:1"),
+            View("FileSource_Checkbox_SummaryAdmin", fileSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("FileSource_Fields_SummaryAdmin", fileSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("FileSource_LastRun_SummaryAdmin", fileSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "LastRun:1"),
             View("FileSource_Buttons_SummaryAdmin", fileSource).Location("Actions:5"),
-            View("FileSource_DefaultMeta_SummaryAdmin", fileSource).Location("Meta:5"),
+            View("FileSource_DefaultTags_SummaryAdmin", fileSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Connector:5"),
+            View("FileSource_DefaultMeta_SummaryAdmin", fileSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
             View("FileSource_ActionsMenu_SummaryAdmin", fileSource).Location("ActionsMenu:10")
         );
     }

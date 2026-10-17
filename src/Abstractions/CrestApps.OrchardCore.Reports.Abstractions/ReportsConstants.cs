@@ -71,6 +71,11 @@ public static class ReportsConstants
         public const string CrmCampaigns = "CRM & Campaigns";
 
         /// <summary>
+        /// The AI report category: chat session analytics, extracted data and conversion goals.
+        /// </summary>
+        public const string AIReports = "Artificial Intelligence Reports";
+
+        /// <summary>
         /// The compliance and audit report category.
         /// </summary>
         public const string ComplianceAudit = "Compliance & Audit";
@@ -102,6 +107,7 @@ public static class ReportsConstants
                 BillingUsage => 60,
                 Commerce => 65,
                 CrmCampaigns => 70,
+                AIReports => 75,
                 ComplianceAudit => 80,
                 Technical => 90,
                 _ => 100,

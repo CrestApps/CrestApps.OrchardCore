@@ -120,7 +120,7 @@
 			} catch (error) {}
 		}
 		function closeListPlayer(button) {
-			var row = button.closest("li");
+			var row = rowOf(button);
 			var holder = row ? row.querySelector("[data-cc-list-player]") : null;
 			if (holder) {
 				var audio = holder.querySelector("audio");
@@ -134,6 +134,9 @@
 			button.classList.remove("active");
 			button.setAttribute("aria-pressed", "false");
 		}
+		function rowOf(element) {
+			return element.closest("li, .admin-list-grid-row");
+		}
 		function mediaUrlOf(recordingId) {
 			if (!/^[A-Za-z0-9]{1,64}$/.test(recordingId || "")) return null;
 			return window.location.pathname.replace(/\/+$/, "") + "/" + encodeURIComponent(recordingId) + "/media";
@@ -146,12 +149,14 @@
 				var wasOpen = button.classList.contains("active");
 				list.querySelectorAll("[data-cc-list-play].active").forEach(closeListPlayer);
 				if (wasOpen) return;
-				var row = button.closest("li");
+				var row = rowOf(button);
 				var mediaUrl = mediaUrlOf(button.getAttribute("data-cc-list-play"));
 				if (!row || !mediaUrl) return;
 				var holder = document.createElement("div");
 				holder.className = "mt-2";
 				holder.setAttribute("data-cc-list-player", "");
+				holder.style.gridColumn = "1 / -1";
+				holder.style.flexBasis = "100%";
 				var audio = document.createElement("audio");
 				audio.controls = true;
 				audio.autoplay = true;

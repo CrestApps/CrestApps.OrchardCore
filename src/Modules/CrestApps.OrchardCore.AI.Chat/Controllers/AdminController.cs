@@ -273,13 +273,21 @@ public sealed class AdminController : Controller
             : sessionResult.Count;
 
         var pagerShape = await shapeFactory.PagerAsync(pager, itemsPerPage, options.RouteValues);
+        var sessions = sessionResult.Sessions.ToList();
 
         var shapeViewModel = await shapeFactory.CreateAsync<ListChatSessionsViewModel>("AIChatSessionsList", async viewModel =>
         {
             viewModel.ProfileId = profileId;
-            viewModel.ChatSessions = sessionResult.Sessions;
+            viewModel.ChatSessions = sessions;
             viewModel.Pager = pagerShape;
             viewModel.Options = options;
+
+            // The admin-list tag builds a row per session, in the layout (List or Grid) the site or the user picked.
+            viewModel.List = new AdminListContext<AIChatSessionEntry>
+            {
+                Source = sessions,
+                Pager = pagerShape,
+            };
 
             viewModel.Header = await _optionsDisplayManager.BuildEditorAsync(options, _updateModelAccessor.ModelUpdater, false);
         });

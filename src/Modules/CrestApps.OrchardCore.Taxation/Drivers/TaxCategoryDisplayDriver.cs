@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Taxation.Drivers;
@@ -10,13 +11,29 @@ internal sealed class TaxCategoryDisplayDriver : DisplayDriver<TaxCategory>
 {
     public override Task<IDisplayResult> DisplayAsync(TaxCategory category, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = category.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("TaxCategory_Fields_SummaryAdmin", category)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("TaxCategory_Buttons_SummaryAdmin", category)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("TaxCategory_DefaultTags_SummaryAdmin", category)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
+            View("TaxCategory_Description_SummaryAdmin", category)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(category.Description))),
+            View("TaxCategory_Buttons_SummaryAdmin", category).Location("Actions:5"),
             View("TaxCategory_DefaultMeta_SummaryAdmin", category)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

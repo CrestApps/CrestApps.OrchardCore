@@ -40,40 +40,24 @@
 
 <p class="text-muted">@T["The activities of every contact in {0}.", Model.Account.DisplayText]</p>
 
+@* Each list, its toolbar and its pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked for it. *@
 <div class="card text-bg-theme mb-3">
     <div class="card-header">
         @T["Scheduled Activities"]
     </div>
     <div class="card-body">
-        @if (Model.Scheduled.Count == 0)
-        {
-            <div class="alert alert-info mb-0 text-center">
-                @T["No scheduled activities."]
-            </div>
-        }
-        else
-        {
-            <ul class="list-group with-checkbox">
-                @foreach (var entry in Model.Scheduled)
-                {
-                    <li class="list-group-item list-group-item-action list-group-striped">
-                        @if (entry.Contact is not null)
-                        {
-                            <div class="small mb-1">
-                                <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>
-                                <a asp-action="List" asp-controller="Activities" asp-route-contentItemId="@entry.Contact.ContentItemId">@entry.Contact.DisplayText</a>
-                            </div>
-                        }
-                        @await DisplayAsync(entry.Shape)
-                    </li>
-                }
-            </ul>
-
-            @if (Model.ScheduledPager is not null)
-            {
-                @await DisplayAsync(Model.ScheduledPager)
-            }
-        }
+        <admin-list name="OmnichannelAccountScheduledActivities" context="Model.ScheduledList"
+                    show-select-all="false"
+                    empty-message="@T["No scheduled activities."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Subject" position="20" title="@T["Subject"]" />
+                <admin-list-column name="Contact" position="25" title="@T["Contact"]" width="auto" />
+                <admin-list-column name="Details" position="30" title="@T["Details"]" />
+                <admin-list-column name="Handler" position="40" title="@T["Handled by"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
     </div>
 </div>
 
@@ -82,34 +66,17 @@
         @T["Completed Activities"]
     </div>
     <div class="card-body">
-        @if (Model.Completed.Count == 0)
-        {
-            <div class="alert alert-info mb-0 text-center">
-                @T["No completed activities."]
-            </div>
-        }
-        else
-        {
-            <ul class="list-group with-checkbox">
-                @foreach (var entry in Model.Completed)
-                {
-                    <li class="list-group-item list-group-item-action list-group-striped">
-                        @if (entry.Contact is not null)
-                        {
-                            <div class="small mb-1">
-                                <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>
-                                <a asp-action="List" asp-controller="Activities" asp-route-contentItemId="@entry.Contact.ContentItemId">@entry.Contact.DisplayText</a>
-                            </div>
-                        }
-                        @await DisplayAsync(entry.Shape)
-                    </li>
-                }
-            </ul>
-
-            @if (Model.CompletedPager is not null)
-            {
-                @await DisplayAsync(Model.CompletedPager)
-            }
-        }
+        <admin-list name="OmnichannelAccountCompletedActivities" context="Model.CompletedList"
+                    show-select-all="false"
+                    empty-message="@T["No completed activities."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Subject" position="20" title="@T["Subject"]" />
+                <admin-list-column name="Contact" position="25" title="@T["Contact"]" width="auto" />
+                <admin-list-column name="Details" position="30" title="@T["Details"]" />
+                <admin-list-column name="Handler" position="40" title="@T["Completed by"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
     </div>
 </div>

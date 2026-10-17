@@ -109,19 +109,16 @@ public sealed class AIPersonasController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIPersona>>
         {
-            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, personas.Count, routeData),
         };
 
-        foreach (var persona in personas.Skip(pager.GetStartIndex()).Take(pager.PageSize))
+        // The admin-list tag builds a row per persona, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIPersona>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIPersona>
-            {
-                Model = persona,
-                Shape = await _displayManager.BuildDisplayAsync(persona, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = personas.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToList(),
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

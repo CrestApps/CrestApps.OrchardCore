@@ -1,0 +1,19 @@
+@using CrestApps.Core.AI.Mcp.Models
+@using Microsoft.Extensions.Options
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<McpConnection>
+
+@inject IOptions<McpClientAIOptions> Options
+
+<span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Connection type"]">
+    <i class="fa-solid fa-plug text-secondary me-1" aria-hidden="true"></i>
+    @if (Options.Value.TransportTypes.TryGetValue(Model.Value.Source, out var entry))
+    {
+        @entry.DisplayName
+    }
+    else
+    {
+        @Model.Value.Source
+    }
+</span>

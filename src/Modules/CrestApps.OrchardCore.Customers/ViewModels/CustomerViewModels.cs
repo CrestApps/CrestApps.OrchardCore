@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Customers.ViewModels;
@@ -18,6 +19,13 @@ public class CustomersIndexViewModel
 
     [BindNever]
     public IShape Pager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the customers, pager and region shapes the <c>admin-list</c> tag renders, in the
+    /// layout (List or Grid) the site or the user picked.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }
 
 public class CustomersIndexOptions

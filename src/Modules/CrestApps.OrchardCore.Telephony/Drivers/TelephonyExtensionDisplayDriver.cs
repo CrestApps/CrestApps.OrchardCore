@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users;
 using OrchardCore.Users.Indexes;
@@ -30,10 +32,28 @@ internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyE
 
     public override Task<IDisplayResult> DisplayAsync(TelephonyExtension extension, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = $"{extension.Number} {extension.DisplayName} {extension.UserName}".ToLowerInvariant();
+        }
+
         return CombineAsync(
-            View("TelephonyExtension_Fields_SummaryAdmin", extension).Location("Content:1"),
+            View("TelephonyExtension_Checkbox_SummaryAdmin", extension)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("TelephonyExtension_Fields_SummaryAdmin", extension)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("TelephonyExtension_DefaultTags_SummaryAdmin", extension)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Number:5"),
             View("TelephonyExtension_Buttons_SummaryAdmin", extension).Location("Actions:5"),
-            View("TelephonyExtension_DefaultMeta_SummaryAdmin", extension).Location("Meta:5"));
+            View("TelephonyExtension_DefaultMeta_SummaryAdmin", extension)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "User:5"));
     }
 
     public override IDisplayResult Edit(TelephonyExtension extension, BuildEditorContext context)

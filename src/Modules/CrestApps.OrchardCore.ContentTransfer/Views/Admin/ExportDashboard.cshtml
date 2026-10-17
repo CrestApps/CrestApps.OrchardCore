@@ -4,60 +4,46 @@
     <breadcrumb name="ContentTransferExportDashboard" title="@T["Export Dashboard"]" />
 </zone>
 
-<div class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body">
-        <div class="row gx-3">
-            <div class="col">
-                <div class="has-search">
-                    <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-                    <input id="export-search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus />
+@* The form is necessary to generate an antiforgery token for the bulk and row actions. The search filters the
+   entries of the current page on the client. *@
+<form asp-action="ExportDashboard" asp-controller="Admin" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" autocomplete="off"
+      data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        @* The entries are filtered as the user types, so the button does not post the form. *@
+                        <button type="button" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<ul class="list-group" id="export-entries-list">
-    @if (Model.Entries.Count > 0)
-    {
-        @foreach (var entry in Model.Entries)
-        {
-            <li class="list-group-item export-entry-item">
-                @await DisplayAsync(entry)
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0" id="no-items-message">
-                @T["No export requests found."]
-            </div>
-        </li>
-    }
-</ul>
+    @* The entries, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="ContentTransferExportDashboard" context="Model.List"
+                empty-message="@T["No export requests found."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["File"]" />
+            <admin-list-column name="Type" position="30" title="@T["Content type"]" width="auto" />
+            <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Records" position="50" title="@T["Records"]" width="auto" />
+            <admin-list-column name="Created" position="60" title="@T["Created"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 
-@await DisplayAsync(Model.Pager)
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
 
-<script at="Foot">
-    document.addEventListener('DOMContentLoaded', function () {
-        var searchBox = document.getElementById('export-search-box');
-        if (!searchBox) return;
-
-        searchBox.addEventListener('input', function () {
-            var filter = this.value.toLowerCase();
-            var items = document.querySelectorAll('.export-entry-item');
-            var visibleCount = 0;
-
-            items.forEach(function (item) {
-                var text = item.textContent.toLowerCase();
-                if (text.indexOf(filter) > -1) {
-                    item.style.display = '';
-                    visibleCount++;
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
-    });
-</script>
+<script asp-name="list-management-ui" at="Foot"></script>

@@ -9,7 +9,7 @@
         <form asp-action="Index" method="post">
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-2 row-cols-lg-5 no-gutters">
                 @await DisplayAsync(Model.FilterShape)
-                <div class="col p-1">
+                <div class="col p-1 d-flex align-items-end">
                     <button type="submit" class="btn btn-dark">
                         <i class="fas fa-filter"></i> @T["Show"]
                     </button>

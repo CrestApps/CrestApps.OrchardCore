@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ProfileBuilderSessionEntry>
+
+<a asp-action="Delete"
+   asp-controller="ProfileBuilder"
+   asp-route-id="@Model.Value.Session.ItemId"
+   class="dropdown-item text-danger"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-message="@T["Delete this session, its conversation and its feedback? AI profiles saved from it are kept."]"
+   data-ok-text="@T["Yes"]"
+   data-cancel-text="@T["Cancel"]">@T["Delete"]</a>

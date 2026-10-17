@@ -1,0 +1,5 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentAttempt>
+
+<a asp-action="Detail" asp-controller="Admin" asp-route-itemId="@Model.Value.ReferenceId" class="btn btn-secondary btn-sm">@T["Transaction"]</a>

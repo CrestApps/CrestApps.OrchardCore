@@ -1,0 +1,6 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIDataSource>
+
+<div class="admin-list-secondary">@(!string.IsNullOrWhiteSpace(Model.Value.Source) ? Model.Value.Source : AIDataSourceSourceTypes.SearchIndexProfile)</div>

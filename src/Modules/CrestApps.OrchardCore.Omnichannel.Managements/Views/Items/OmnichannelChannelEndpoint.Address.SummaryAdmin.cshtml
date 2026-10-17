@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelChannelEndpoint>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Address"]">
+    <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.Value.Value
+</span>

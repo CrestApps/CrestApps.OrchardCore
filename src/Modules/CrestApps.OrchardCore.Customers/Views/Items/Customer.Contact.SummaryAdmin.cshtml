@@ -1,0 +1,14 @@
+@model ShapeViewModel<Customer>
+
+@if (!string.IsNullOrEmpty(Model.Value.Email))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Email"]">
+        <i class="fa-regular fa-envelope text-secondary me-1" aria-hidden="true"></i>@Model.Value.Email
+    </span>
+}
+@if (Model.Value.Kind == CustomerKind.Business && !string.IsNullOrEmpty(Model.Value.CompanyName) && Model.Value.CompanyName != Model.Value.GetName())
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Company"]">
+        <i class="fa-regular fa-building text-secondary me-1" aria-hidden="true"></i>@Model.Value.CompanyName
+    </span>
+}

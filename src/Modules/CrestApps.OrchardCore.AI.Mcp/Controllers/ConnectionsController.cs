@@ -104,20 +104,18 @@ public sealed class ConnectionsController : Controller
 
         var viewModel = new ListSourceCatalogEntryViewModel<McpConnection>
         {
-            Models = [],
+            Models = result.Entries.Select(model => new CatalogEntryViewModel<McpConnection> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _mcpClientOptions.TransportTypes.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per connection, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<McpConnection>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<McpConnection>
-            {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

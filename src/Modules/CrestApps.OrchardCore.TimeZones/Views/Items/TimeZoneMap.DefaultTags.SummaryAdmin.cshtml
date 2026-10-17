@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.TimeZones.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<TimeZoneMap>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Time zone ID"]">
+    <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@Model.Value.TimeZoneId
+</span>

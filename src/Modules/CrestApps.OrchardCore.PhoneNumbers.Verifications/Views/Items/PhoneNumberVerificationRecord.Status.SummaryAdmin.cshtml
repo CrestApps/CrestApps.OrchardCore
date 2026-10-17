@@ -1,0 +1,25 @@
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PhoneNumberVerificationRecord>
+
+@{
+    var statusClass = Model.Value.VerificationStatus switch
+    {
+        PhoneNumberVerificationStatus.Verified => "text-bg-success",
+        PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
+        PhoneNumberVerificationStatus.Failed => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+}
+
+<span class="badge ta-badge fw-normal @statusClass" data-bs-toggle="tooltip" title="@T["Verification status"]">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i> @Model.Value.VerificationStatus.ToString()
+</span>
+
+@if (Model.Value.IsExhausted)
+{
+    <span class="badge ta-badge bg-danger-subtle text-danger fw-normal" data-bs-toggle="tooltip" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @T["Needs attention"]
+    </span>
+}

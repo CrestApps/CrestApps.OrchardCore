@@ -7,7 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
@@ -43,14 +45,31 @@ public sealed class ChatInteractionDisplayDriver : DisplayDriver<ChatInteraction
 
     public override IDisplayResult Display(ChatInteraction interaction, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = interaction.Title?.ToLowerInvariant() ?? "untitled";
+        }
+
         return Combine(
-            View("ChatInteraction_Fields_SummaryAdmin", interaction).Location("Content:1"),
-        View("ChatInteraction_Buttons_SummaryAdmin", interaction).Location("Actions:5"),
-        View("ChatInteraction_DefaultTags_SummaryAdmin", interaction).Location("Tags:5"),
-        View("ChatInteraction_DefaultMeta_SummaryAdmin", interaction).Location("Meta:5"),
-        View("ChatInteraction_ActionsMenu_SummaryAdmin", interaction)
-            .Location("ActionsMenu:10")
-            .RenderWhen(async () => await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.DeleteChatInteraction, interaction))
+            View("ChatInteraction_Checkbox_SummaryAdmin", interaction)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("ChatInteraction_Fields_SummaryAdmin", interaction)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("ChatInteraction_Buttons_SummaryAdmin", interaction).Location("Actions:5"),
+            View("ChatInteraction_DefaultTags_SummaryAdmin", interaction)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"),
+            View("ChatInteraction_DefaultMeta_SummaryAdmin", interaction)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
+            View("ChatInteraction_ActionsMenu_SummaryAdmin", interaction)
+                .Location("ActionsMenu:10")
+                .RenderWhen(async () => await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.DeleteChatInteraction, interaction))
         );
     }
 

@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Products.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CurrencyEntry>
+
+<span class="badge ta-badge bg-primary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Currency code"]">
+    <i class="fa-solid fa-coins text-secondary me-1" aria-hidden="true"></i>@Model.Value.Name
+</span>

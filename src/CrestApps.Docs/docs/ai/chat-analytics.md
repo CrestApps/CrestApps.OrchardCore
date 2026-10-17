@@ -35,7 +35,7 @@ Running and reading the reports is described in the User Manual under [Analytics
 
 ## Analytics Dashboard
 
-The analytics dashboard provides a comprehensive view of your AI chat performance through multiple report sections. The report is filtered by a **From** / **To** date range and an optional AI profile, and runs when the user clicks **Show**. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
+The analytics dashboard provides a comprehensive view of your AI chat performance through multiple report sections. The report is filtered by a date range, picked with the same date range selector as the other reports (relative ranges such as *Last 30 Days*, or custom dates), and an optional AI profile, and runs when the user clicks **Show**. The User Manual page [Analytics](../user-manual/ai/analytics.md#ai-chat-session-analytics) walks through the report with a screencast.
 
 ---
 

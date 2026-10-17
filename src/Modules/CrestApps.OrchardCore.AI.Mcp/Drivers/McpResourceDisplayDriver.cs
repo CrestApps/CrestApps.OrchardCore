@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.AI.Mcp.ViewModels;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -30,11 +32,31 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 
     public override Task<IDisplayResult> DisplayAsync(McpResource entry, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = entry.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("McpResource_Fields_SummaryAdmin", entry).Location("Content:1"),
-        View("McpResource_Buttons_SummaryAdmin", entry).Location("Actions:5"),
-        View("McpResource_DefaultMeta_SummaryAdmin", entry).Location("Meta:5"),
-        View("McpResource_Description_SummaryAdmin", entry).Location("Description:1")
+            View("McpResource_Checkbox_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("McpResource_Fields_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("McpResource_Description_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"),
+            View("McpResource_Buttons_SummaryAdmin", entry).Location("Actions:5"),
+            View("McpResource_DefaultTags_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Type:5"),
+            View("McpResource_DefaultMeta_SummaryAdmin", entry)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

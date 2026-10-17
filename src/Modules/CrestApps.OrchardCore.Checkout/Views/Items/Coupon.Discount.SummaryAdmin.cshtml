@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Payments
+
+@model ShapeViewModel<Coupon>
+
+<span class="badge ta-badge bg-primary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Discount"]">
+    <i class="fa-solid fa-percent text-secondary me-1" aria-hidden="true"></i>
+    @if (Model.Value.Kind == CouponKind.Percentage)
+    {
+        @($"{Model.Value.Percentage:0.##}%")
+    }
+    else
+    {
+        @($"{Model.Value.Currency} {CurrencyScale.Format(Model.Value.Amount, Model.Value.Currency)}")
+    }
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Applies to"]">
+    <i class="fa-solid fa-bullseye text-secondary me-1" aria-hidden="true"></i>@(Model.Value.Target == DiscountTarget.FirstCycle ? T["First cycle"] : T["One-time amount"])
+</span>

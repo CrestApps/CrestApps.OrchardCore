@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
@@ -146,21 +147,21 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
+        var pagerShape = await shapeFactory.PagerAsync(pager, result.Count, routeData);
+
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TModel>>
         {
-            Models = [],
+            Models = result.Entries.Select(model => new CatalogEntryViewModel<TModel> { Model = model }).ToList(),
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-        };
+            Pager = pagerShape,
 
-        foreach (var model in result.Entries)
-        {
-            viewModel.Models.Add(new CatalogEntryViewModel<TModel>
+            // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<TModel>
             {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+                Source = result.Entries,
+                Pager = pagerShape,
+            },
+        };
 
         return View(viewModel);
     }

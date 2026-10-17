@@ -70,6 +70,7 @@ public sealed class ListContentTransferEntryOptionsDisplayDriver : DisplayDriver
         m.ExportableTypes = model.ExportableTypes;
         m.StartIndex = model.StartIndex;
         m.EndIndex = model.EndIndex;
+        m.EntriesCount = model.EntriesCount;
         m.TotalItemCount = model.TotalItemCount;
         m.OrderBy = model.OrderBy;
         m.Direction = model.Direction;

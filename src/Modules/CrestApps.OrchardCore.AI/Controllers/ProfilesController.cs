@@ -103,19 +103,17 @@ public sealed class ProfilesController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<AIProfile>>
         {
-            Models = [],
+            Models = result.Entries.Select(model => new CatalogEntryViewModel<AIProfile> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per profile, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIProfile>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIProfile>
-            {
-                Model = model,
-                Shape = await _profileDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

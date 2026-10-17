@@ -1,0 +1,15 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<WebCrawler>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Crawl strategy"]">
+    <i class="fa-solid fa-spider text-secondary me-1" aria-hidden="true"></i>@Model.Value.Source
+</span>
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

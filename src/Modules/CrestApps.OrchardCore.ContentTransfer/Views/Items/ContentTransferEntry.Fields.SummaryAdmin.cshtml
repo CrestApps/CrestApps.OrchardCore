@@ -1,0 +1,6 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContentTransferEntry>
+
+@* The name of the transferred file, as plain text: an entry has no edit page. *@
+<span>@Model.Value.UploadedFileName</span>

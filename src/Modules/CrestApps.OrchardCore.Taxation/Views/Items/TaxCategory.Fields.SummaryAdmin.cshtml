@@ -1,14 +1,4 @@
 @model ShapeViewModel<TaxCategory>
 
-<h5 class="mb-0">@Model.Value.Name</h5>
-<small class="text-muted">
-    @T["Code:"] <code>@Model.Value.Code</code>
-    @if (!string.IsNullOrEmpty(Model.Value.ParentCode))
-    {
-        <span class="ms-1">@T["Parent:"] <code>@Model.Value.ParentCode</code></span>
-    }
-    @if (!string.IsNullOrEmpty(Model.Value.Description))
-    {
-        <span class="d-block">@Model.Value.Description</span>
-    }
-</small>
+@* A plain link to the edit page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>

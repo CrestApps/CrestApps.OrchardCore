@@ -1,0 +1,40 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContentTransferEntry>
+
+@{
+    var entry = Model.Value;
+    var status = entry.Direction == ContentTransferDirection.Import
+        ? entry.Status.NormalizeImportStatus()
+        : entry.Status;
+
+    var statusClasses = status switch
+    {
+        ContentTransferEntryStatus.New => "text-secondary-emphasis",
+        ContentTransferEntryStatus.Pending => "text-secondary-emphasis",
+        ContentTransferEntryStatus.Processing => "text-primary",
+        ContentTransferEntryStatus.Completed => "text-success",
+        ContentTransferEntryStatus.CompletedWithErrors => "text-warning-emphasis",
+        ContentTransferEntryStatus.Paused => "text-secondary",
+        ContentTransferEntryStatus.Deleting => "text-danger",
+        ContentTransferEntryStatus.Failed => "text-danger",
+        _ => "text-body",
+    };
+
+    var statusText = status switch
+    {
+        ContentTransferEntryStatus.New => T["New"],
+        ContentTransferEntryStatus.Pending => T["Pending"],
+        ContentTransferEntryStatus.Processing => T["Processing"],
+        ContentTransferEntryStatus.Completed => T["Completed"],
+        ContentTransferEntryStatus.CompletedWithErrors => T["Completed with errors"],
+        ContentTransferEntryStatus.Paused => T["Paused"],
+        ContentTransferEntryStatus.Deleting => T["Deleting"],
+        ContentTransferEntryStatus.Failed => T["Failed"],
+        _ => T["Unknown"],
+    };
+}
+
+<span class="badge ta-badge fw-normal @statusClasses" data-bs-toggle="tooltip" title="@T["Status"]">
+    <i class="fa-solid fa-circle-info" aria-hidden="true"></i> @statusText
+</span>

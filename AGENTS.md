@@ -182,6 +182,17 @@ dotnet run
 * Optimize framework code for consistency, extensibility, and long-term maintainability across providers and hosts.
 * For optional provider integrations in sample hosts, do not eagerly read validated options in UI setup paths—unconfigured providers should appear unavailable rather than cause failures.
 
+#### Admin Index (CRUD List) Pages
+
+Every admin page that lists records follows one pattern, so all lists look alike and honor the List/Grid layout and the Buttons/Menu row actions picked in **Configuration → Settings → Admin**. Follow `.agents/skills/crestapps-admin-index-views/SKILL.md` for every new list and whenever you touch an existing one; AI Profiles is the reference page.
+
+* Render the list with Orchard Core's `<admin-list name="..." context="Model.List">` tag helper. Never hand-write a `<ul class="list-group">` or `<table>` listing, a toolbar row, a select-all checkbox, an item count, an empty-state row or a pager.
+* The controller passes the records in an `AdminListContext<TModel>` (`Source`, `Pager`, optional `ToolbarActions`/`Header`). It never builds `SummaryAdmin` row shapes.
+* Rows come from a display driver for the domain model. Give every shape a `SummaryAdmin` location and a `SummaryAdminGrid` location in a column zone (`Actions`/`ActionsMenu` serve both), and add a checkbox shape only when the list has bulk actions.
+* Row templates use the shared row layout: the title is a plain link, facts are `badge ta-badge fw-normal` badges with an icon and a tooltip, the description sits under the title, and actions render through `AdminListActions`. `ActionsMenu` items are bare `dropdown-item` elements, never wrapped in `<li>`.
+* The action bar above the list holds only the search (an input group ending with the magnifying-glass button) and the page buttons such as **Add**. Filters (status, type, "Show" selects) go in the list's toolbar through `AdminListContext.ToolbarActions`, never beside the **Add** button.
+* Declare the grid columns in the view (`<admin-list-grid>` with `<admin-list-column>`), give the list a unique PascalCase name, and check the page in both layouts and both action modes before you hand it off.
+
 #### Quality Enforcement
 
 * Treat all warnings as errors and resolve every warning.
@@ -351,6 +362,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-admin-index-views` — how every admin list (index) page is built on
+  Orchard Core's `AdminList` shape and `<admin-list>` tag helpers, in the List or Grid layout the site and the user
+  pick: the row display driver, the row template, the controller's `AdminListContext`, the view and its columns.
+  Never hand-write a `<ul class="list-group">` listing.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories
