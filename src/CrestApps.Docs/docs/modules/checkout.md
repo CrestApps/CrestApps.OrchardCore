@@ -39,6 +39,8 @@ A **`CheckoutSession`** is the provider-agnostic unit of work for any purchase. 
 
 Sessions are persisted by **`ICheckoutSessionStore`**, which enforces ownership: an anonymous session is bound to its originating IP address and user agent so it cannot be resumed by a different visitor.
 
+For access and erasure requests, `ICheckoutSessionStore.GetByCustomerAsync(ownerId, email, skip, take)` returns the sessions owned by a user or whose buyer gave an email (`CheckoutContactInfo.Email`, matched without case sensitivity), oldest first, and `GetManyAsync(sessionIds)` returns sessions by id. Neither enforces ownership or runs the checkout handlers, so their sessions must never resume a customer-facing flow. They read the `CheckoutSessionCustomerIndex` (session id, owner, normalized email and creation time), created by `CheckoutSessionCustomerIndexMigrations`. A session with neither an owner nor an email is not indexed. When the table is created, the sessions saved before it are saved once more in batches of 100 after the migration commits, so they are indexed too. See [Personal data requests](commerce#personal-data-requests).
+
 #### The canonical order reference
 
 The reference triple is intentionally generic so any consumer can drive a checkout, but ecommerce orders use one stable relationship, published as the well-known constants in **`CheckoutReferenceTypes`**:

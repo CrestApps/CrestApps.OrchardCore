@@ -149,6 +149,50 @@ The defaults are:
 
 The sequential generator keeps the last number of each series in one document, read and saved in the caller's own unit of work, under a distributed lock held until that unit of work is saved. So two nodes or two requests never issue the same number. A number taken by work that then fails is not reused, so a failed payment can leave a gap. Replace the service to use your own numbering, for example a series per year.
 
+### Personal data requests
+
+Access and erasure requests (GDPR, CCPA) need everything commerce keeps about one person, from every module that keeps some. The Commerce feature registers **`ICommercePersonalDataService`** (`CrestApps.OrchardCore.Customers.Abstractions`, namespace `CrestApps.OrchardCore.Customers.PersonalData`), which composes what the enabled modules contribute:
+
+```csharp
+public interface ICommercePersonalDataService
+{
+    Task<CommercePersonalDataExport> ExportAsync(CustomerOwner owner, string email, CancellationToken cancellationToken = default);
+
+    Task<CommercePersonalDataAnonymizeResult> AnonymizeAsync(CustomerOwner owner, string email, string replacementText, CancellationToken cancellationToken = default);
+}
+```
+
+The person is named by their owner (`CustomerOwner.ForUser(userId)`, or `CustomerOwner.ForGuest(guestOwnerId)` for a guest id an application derives itself), by their email, or by both; one of the two is required. The email is matched without case sensitivity.
+
+- **`ExportAsync`** returns a `CommercePersonalDataExport` with typed records: `Transactions` (with the invoice number and the receipt numbers of their payments), `Payments`, `Refunds`, `InstallmentPlans`, `Subscriptions`, `CheckoutSessions` (with the contact, IP address, user agent and saved steps), `CouponRedemptions` and `ProviderCustomers`, plus `Warnings` for anything that could not be read.
+- **`AnonymizeAsync`** removes names, emails, phone numbers, addresses (all but the billing country and region), IP addresses, user agents, saved checkout steps, internal plan notes and card descriptions, and replaces the person's emails and names wherever they appear in titles, history messages and failure or refund reasons. A removed name becomes `replacementText`, or is cleared when it is `null`. Amounts, dates, statuses, invoice and receipt numbers and the payment provider's references stay, because the business must keep them, so ledger totals do not change and an open plan or subscription can still be collected. It returns a `CommercePersonalDataAnonymizeResult` with how many records of each kind changed and any `Warnings`.
+
+The Customers feature uses the service from its own privacy actions: `CommercePersonalDataCustomerPrivacyHandler` is an `ICustomerPrivacyHandler`, so erasing a customer anonymizes their commerce data and exporting a customer adds a `commerce` section to the download. See [Customers: Privacy](customers#privacy).
+
+#### How a request finds the person
+
+Each module contributes through **`ICommercePersonalDataContributor`**, registered in the startup of the feature that owns the records, so a feature that is not enabled is skipped:
+
+| Member | Called |
+| --- | --- |
+| `IdentifyAsync(CommercePersonalDataSubject subject)` | In rounds, before anything is exported or changed. A contributor adds what its records reveal: guest owners, checkout sessions, names and payment-provider customers. The rounds stop when one adds nothing (at most five). |
+| `ExportAsync(CommercePersonalDataExportContext context)` | Adds the module's records to `context.Export`. |
+| `AnonymizeAsync(CommercePersonalDataAnonymizeContext context)` | Changes the module's records and counts them on `context.Result`. `context.ReplaceName(name)` and `context.Scrub(text)` apply the replacement text. |
+
+Identification comes first because a guest checkout is owned by an id derived from its session: one person who checked out three times as a guest has three guest owners, and only their email ties them together. Anonymizing in the same pass would remove the very email the next module looks for. A user is never added as an owner because their checkout carries the person's email, and an email found on a record is not followed, so buying for someone else never sweeps up the other person's records.
+
+| Feature | Contributor | What it adds |
+| --- | --- | --- |
+| Checkout | `CheckoutPersonalDataContributor` | Finds checkout sessions by owner and email (`ICheckoutSessionStore.GetByCustomerAsync`), adds a guest owner per guest session, exports the sessions and the payments and refunds taken in them, and anonymizes the sessions: contact, IP address, user agent, saved steps, and the person's details anywhere else in the session's property bag. The modification time is left alone, so the abandoned-checkout sweep is unaffected. |
+| Checkout | `CouponPersonalDataContributor` | A coupon keeps only a count, so a redemption is a coupon discount line of a completed checkout's invoice. Exports those and scrubs them. |
+| Transactions | `TransactionPersonalDataContributor` | Transactions of every owner of the person: the guest contact, the auto-collection card description, and the person's details in the title and history. Adds the creating and online-settling checkouts. |
+| Transactions (with Checkout) | `TransactionSettlementPersonalDataContributor` | Adds every checkout that paid toward the person's transactions, so a balance paid over several pay links is covered. |
+| Subscriptions | `SubscriptionPersonalDataContributor` | Subscriptions of every owner: the guest contact, and the person's details in the title, cancellation reason and history. Adds the provider customer each one bills. |
+| Subscriptions - Installment Plans | `InstallmentPlanPersonalDataContributor` | Plans by owner and by the email recorded on the plan: the customer's name and email, the note, the saved card's brand, last four digits and expiry, and the person's details in the title, history and failure messages. Adds the plan's checkouts and the provider customer of its saved card. |
+| Stripe | `StripePersonalDataContributor` | The Stripe customers of the person's subscriptions and plans, and the customers the store's checkout created for their email (marked with `checkout_session_id` in their metadata; a customer another system created in the same account is left alone). Redaction calls the Stripe customer update API: the name becomes the replacement text and the email and phone are removed. The customer, its payment methods and its history stay at Stripe. Nothing is called when Stripe has no secret key, and a Stripe failure becomes a warning rather than stopping the request. |
+
+To take part from your own module, implement `ICommercePersonalDataContributor`, register it with `services.AddScoped<ICommercePersonalDataContributor, MyContributor>()` in your feature's startup, and keep `IdentifyAsync` safe to call more than once. Records owned by a guest id that is not a checkout session (for example one your application derives from an email) are found when the caller passes that owner; the shipped modules cannot find them by email alone.
+
 ### Architectural boundary
 
 Commerce is a composition shell, not a domain:
