@@ -30,6 +30,13 @@ public sealed class TransactionEvent
     public string Message { get; set; }
 
     /// <summary>
+    /// Gets or sets the reason given for the event, as entered, when the event records a cancellation. Unlike
+    /// <see cref="Message"/>, it holds only what the person or process gave as the reason, so it can be passed on to
+    /// <see cref="Services.ITransactionEventHandler.CanceledAsync"/>.
+    /// </summary>
+    public string Reason { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the user that caused the event, when applicable.
     /// </summary>
     public string ActorId { get; set; }

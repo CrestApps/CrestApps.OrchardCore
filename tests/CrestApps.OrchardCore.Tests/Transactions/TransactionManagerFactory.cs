@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
@@ -12,6 +13,15 @@ namespace CrestApps.OrchardCore.Tests.Transactions;
 /// </summary>
 internal static class TransactionManagerFactory
 {
-    public static TransactionManager Create(FakeTransactionStore store)
-        => new(store, [], NullLogger<CatalogManager<Transaction>>.Instance);
+    public static TransactionManager Create(FakeTransactionStore store, params ITransactionEventHandler[] eventHandlers)
+    {
+        var services = new ServiceCollection();
+
+        foreach (var eventHandler in eventHandlers)
+        {
+            services.AddSingleton(eventHandler);
+        }
+
+        return new(store, [], services.BuildServiceProvider(), NullLogger<CatalogManager<Transaction>>.Instance);
+    }
 }
