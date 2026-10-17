@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Receipts;
@@ -101,6 +102,18 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         var text = S["Thank you. We received your payment of {0} for {1}. Your receipt reference is {2}.", amount, title, receipt.Reference].Value;
         var html = _htmlRenderer.Render(receipt);
 
+        // A signed-up customer can open the receipt online again later, in the admin or in the site theme as the site
+        // chose. A guest has no account to sign in with, so their email carries the receipt alone.
+        var receiptUrl = await GetReceiptUrlAsync(transaction, context.Payment, cancellationToken);
+
+        if (!string.IsNullOrEmpty(receiptUrl))
+        {
+            var linkText = S["View your receipt online"].Value;
+
+            text += " " + S["View it online: {0}", receiptUrl].Value;
+            html += $"<p><a href=\"{HtmlEncoder.Default.Encode(receiptUrl)}\">{HtmlEncoder.Default.Encode(linkText)}</a></p>";
+        }
+
         var delivered = transaction.OwnerKind == CustomerOwnerKind.Guest
             ? await SendByEmailAsync(receipt.BilledToEmail, subject, text, html, cancellationToken)
             : await SendNotificationAsync(transaction.OwnerId, subject, text, html, cancellationToken);
@@ -126,6 +139,17 @@ public sealed class PaymentReceiptTransactionPaymentHandler : ITransactionPaymen
         });
 
         await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+    }
+
+    private async Task<string> GetReceiptUrlAsync(Transaction transaction, TransactionEvent payment, CancellationToken cancellationToken)
+    {
+        if (transaction.OwnerKind == CustomerOwnerKind.Guest ||
+            _serviceProvider.GetService<ITransactionCustomerLinkService>() is not { } links)
+        {
+            return null;
+        }
+
+        return await links.GetReceiptUrlAsync(transaction, payment, cancellationToken);
     }
 
     private async Task<bool> IssueReceiptNumberAsync(TransactionEvent payment, CancellationToken cancellationToken)

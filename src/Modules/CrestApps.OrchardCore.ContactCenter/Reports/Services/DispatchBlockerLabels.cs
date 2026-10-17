@@ -32,6 +32,7 @@ internal static class DispatchBlockerLabels
             DispatchBlocker.NumberNotInService => localizer["Number not in service"].Value,
             DispatchBlocker.ComplianceScreeningUnavailable => localizer["Compliance check unavailable"].Value,
             DispatchBlocker.AbandonmentRateExceeded => localizer["Abandonment rate cap reached"].Value,
+            DispatchBlocker.ProfileMissing => localizer["The dialer profile it is stamped with no longer exists"].Value,
             _ => blocker.ToString(),
         };
 }

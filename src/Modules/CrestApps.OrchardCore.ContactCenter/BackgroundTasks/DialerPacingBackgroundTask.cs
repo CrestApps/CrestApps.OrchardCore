@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -24,6 +26,11 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 /// budget is kept safely below the distributed-lock expiration so a slow run can never outlive its lock. Queues that do
 /// not fit in the budget are simply requested on the following tick.
 /// </para>
+/// <para>
+/// A queue whose head item is stamped with a dialer profile that is turned off or no longer exists is never paced, and
+/// nothing else dials it. That is logged as a warning, at most once per <see cref="HoldBackWarningInterval"/> for each
+/// queue and reason, so the hold-back is visible without flooding the log every minute.
+/// </para>
 /// </summary>
 [BackgroundTask(
     Title = "Contact Center Dialer Pacing",
@@ -45,6 +52,13 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
     /// guarantees the next scheduled tick cannot start an overlapping pacing cycle on another node.
     /// </summary>
     private const int MaxRunDurationMilliseconds = 90_000;
+
+    /// <summary>
+    /// How long a held-back queue's warning stays quiet before it is written again while the queue stays held back.
+    /// </summary>
+    internal static readonly TimeSpan HoldBackWarningInterval = TimeSpan.FromMinutes(15);
+
+    private readonly ConcurrentDictionary<string, DateTime> _lastHoldBackWarningUtc = new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
@@ -151,7 +165,9 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                 // profile governs this cycle's pacing.
                 var headItem = await queueItemStore.FindNextWaitingAsync(queueId, runToken);
 
-                if (headItem is null || string.IsNullOrEmpty(headItem.DialerProfileId))
+                if (headItem is null ||
+                    string.IsNullOrEmpty(headItem.DialerProfileId) ||
+                    QueueCallbackDialerProfile.IsCallbackProfile(headItem.DialerProfileId))
                 {
                     continue;
                 }
@@ -160,7 +176,23 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
                 if (profile is null)
                 {
+                    if (ShouldWarn(queueId, "missing", clock.UtcNow))
+                    {
+                        logger.LogWarning(
+                            "Campaign queue '{QueueId}' is not being dialed: its next waiting item is stamped with dialer profile '{DialerProfileId}', which no longer exists, so the dialer has no profile to pace it with. Load the records again under a dialer profile that exists; the Dialer queue inventory report shows what the queue holds.",
+                            queueId.SanitizeLogValue(),
+                            headItem.DialerProfileId.SanitizeLogValue());
+                    }
+
                     continue;
+                }
+
+                if (!profile.Enabled && ShouldWarn(queueId, "disabled", clock.UtcNow))
+                {
+                    logger.LogWarning(
+                        "Campaign queue '{QueueId}' is not being dialed: its next waiting item is stamped with dialer profile '{Profile}', which is turned off, so its records are held back. Turn the profile on, or load the records again under a profile that is on; the Dialer queue inventory report shows what the queue holds.",
+                        queueId.SanitizeLogValue(),
+                        profile.Name.SanitizeLogValue());
                 }
 
                 // Every queue is paced by its own requests, each on a scope of its own under the queue's pacing lock, so a
@@ -203,5 +235,21 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                 logger.LogError(ex, "An error occurred while pacing dialer queue '{QueueId}'.", queueId);
             }
         }
+    }
+
+    // Allows one warning per queue and reason per interval. The task is a singleton, so the last warning times outlive a
+    // run; they are per node, which at worst writes the warning once on each node.
+    private bool ShouldWarn(string queueId, string reason, DateTime utcNow)
+    {
+        var key = $"{reason}:{queueId}";
+
+        if (_lastHoldBackWarningUtc.TryGetValue(key, out var lastUtc) && utcNow - lastUtc < HoldBackWarningInterval)
+        {
+            return false;
+        }
+
+        _lastHoldBackWarningUtc[key] = utcNow;
+
+        return true;
     }
 }

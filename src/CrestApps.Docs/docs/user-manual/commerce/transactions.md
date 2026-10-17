@@ -235,6 +235,36 @@ If you leave checkout before paying the first payment, nothing changes: you stil
 
 Installments are offered only for a balance that is still owed in full and belongs to a customer account (also when you pay from a reminder link), and only when the site has a payment method that can save a card. Which balances can be split, and into how many payments, is set by the site; see [Let customers choose installments at checkout](installment-plans.md#let-customers-choose-installments-at-checkout).
 
+## My Transactions on the website
+
+Customers who never open the admin can see their transactions on the website itself, in your site's own design. They see the same transactions, invoices and receipts as on **Commerce > My Transactions**, and only their own.
+
+| | |
+| --- | --- |
+| **Page** | Your site's address followed by */my-transactions*, for example *https://shop.contoso.com/my-transactions* |
+| **Permission** | View own transactions |
+| **Feature** | Transactions, and Receipts for invoices and receipts |
+
+<AskYourAdmin />
+
+The page asks the customer to sign in first. A guest who bought without an account has no page here; they pay and see their invoice from the link in a reminder instead.
+
+### See your transactions on the website
+
+1. Open *my-transactions* on the site, or follow a link the site sent you.
+2. To find one transaction, type part of its description in **Search by description**. To see only what you still owe, tick **Only what I owe**. Click **Filter**.
+
+Each transaction shows its status, the **Total**, the **Outstanding** amount while something is owed, and the **Due** date when there is one. Under it are links to its invoice, such as **Invoice INV-1001**, once you have been sent one, and to the receipt of each payment, such as **Receipt R-1001**. **Pay now** appears while something is owed; it opens the transaction's [pay page](invoices-and-receipts.md#the-pay-page).
+
+### Print an invoice or a receipt on the website
+
+1. Click the invoice or receipt link under the transaction.
+2. Click **Print invoice** or **Print receipt**. Only the document is printed.
+
+While the invoice is still due, its page also has **Pay now**. **Back to my transactions** returns to the list.
+
+Your site's designer can change how these pages look, or show the same documents inside the site's own customer area.
+
 ## Related pages
 
 - [Invoices and Receipts](invoices-and-receipts.md): invoice numbers, pay links, printable invoices and receipts.

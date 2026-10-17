@@ -294,6 +294,25 @@ The breakdown reads each campaign's pending records, so the dashboard asks for i
 
 The **Campaign summary** report adds *Pending right now: dialable versus held back* and *Why pending records are not dialing* when queues are enabled. They describe the present, whatever period the report covers, so they sit apart from its own *Pending* counts.
 
+A record whose queue item is stamped with a dialer profile that has since been deleted is held back as **the dialer profile it is stamped with no longer exists** (`DispatchBlocker.ProfileMissing`): the pacer reads the stamped profile and finds nothing to pace with. A record with no profile at all, or a queued callback, is still let through to routing, as the queue gate does.
+
+When a campaign queue's head item is stamped with a turned-off or deleted profile, the pacer does not run for the queue and nothing else dials it. The minute **Contact Center Dialer Pacing** task logs that as a warning (*Campaign queue '...' is not being dialed: ...*), at most once every 15 minutes for each queue and reason on each node, so the hold-back shows up in the log without flooding it. Per-record hold-backs in the queue gate stay at Debug.
+
+### Dialer queue inventory
+
+The **Dialer queue inventory** report (*CRM & Campaigns*, `contact-center-dialer-queue-inventory`) is the exportable form of what the dispatch card shows for campaigns. It is read live when it runs: the date range does not apply, and its times are in the tenant's time zone. It is available whenever Work Distribution and Reports are on and needs **View Contact Center reports**. It filters by **Campaign group** and **Campaign**. See the [User Manual page](../user-manual/reports.md#dialer-queue-inventory) for the columns.
+
+It has one row per campaign queue and the dialer profile stamped on its items, plus one row per campaign for its pending records that are not in its queue. Each row carries the waiting, reserved and assigned item counts and the oldest waiting item; the stamped profile's name, mode and on/off state, and the profiles the row's pending activities carry; the pending activities' source, interaction type and channel; how many are dialable now and why the rest are held back; the queue's pacing; the time the queue last placed a call (the newest outbound interaction under the queue id); and three flags: items stamped with a different profile than their activity, pending activities that have no item in any queue, and a stamped profile that no longer exists.
+
+How it is computed (`IDialerQueueInventoryService`, the default `DialerQueueInventoryService`):
+
+- **Index rows only for grouping.** Every waiting, reserved and assigned queue item is read from `QueueItemIndex`, which now carries `DialerProfileId`, and every pending campaign activity from `OmnichannelActivityIndex`. No queue item document is read except the head of each campaign queue, which pacing is decided from.
+- **The dashboard's classification.** Each campaign's pending records are classified by `DialerRecordClassifier`, which `DialerDispatchDiagnosticsService` uses too: it reads the records' activities, work states, last calls and the `DialSuppressed` events of the last two hours in batches of 500 and applies the same evaluation as the queue gate. As on the dashboard, at most 2,000 records of a campaign are explained, the earliest due first; the rest are counted under *Not explained*.
+- **In its queue.** A pending record is in its campaign's queue when an item for it is waiting, reserved or assigned there. A record with no item there is held back as *not in the queue*; it is also counted as *in no queue* when no queue holds an item for it.
+- **Pending** means what the Campaign summary counts as pending: not finished and not being worked yet (`ActivityProgressTally.IsPending`).
+
+`QueueItemIndexMigrations` step 7 (`UpdateFrom6Async`) adds the nullable `DialerProfileId` column (26 characters). It adds no database index: the report filters on `Status` and reads the column, which the existing indexes already serve. A queue item is indexed again whenever it is saved, so only items untouched since the upgrade lack the value; the **Contact Center Queue Item Dialer Profile Backfill** background task (`QueueItemDialerProfileIndexBackfillBackgroundTask`, every minute, 25 pages of 200 items a run) re-saves the waiting, reserved and assigned items whose document carries a profile, outside activation, and stops once none is left. Settled items are not backfilled, because no report reads their profile.
+
 ### Agents stuck on work that is already over
 
 An agent can be left showing **On a call**, Busy or Reserved with nothing on the line: a soft-phone call record the provider can no longer resolve, a Contact Center call the provider reports ended, a reservation or queue item nothing backs. The agent's own *Set Available* repairs Contact Center reservations and queue items but deliberately leaves any call the provider might still hold, so it could not clear this.

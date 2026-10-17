@@ -28,6 +28,11 @@ bug to fix later:
 
 - **Checkout** (`CrestApps.OrchardCore.Checkout`) — the checkout engine, the durable payment and refund
   ledgers, reconciliation, the public checkout pages, and the JSON endpoints the payment step uses.
+- **Test payments** (`CrestApps.OrchardCore.Checkout.TestProvider`) — a payment method for development and
+  automated tests. It confirms every payment at once and moves no money, supports refunds, saved payment
+  methods and recurring agreements, and simulates a decline (amounts ending in `.02`) or a payment that stays
+  pending for the reconciliation sweep (amounts ending in `.05`). It is registered only in the Development
+  environment unless `CrestApps:Checkout:TestProvider:AllowOutsideDevelopment` is `true`.
 
 ## Key contracts
 
@@ -45,6 +50,13 @@ bug to fix later:
 Implement `ICheckoutHandler` to contribute the step and its billing items, then derive a display driver from
 `CheckoutFlowDisplayDriver` and register it as an `IDisplayDriver<CheckoutFlow>`. The driver renders only
 while its own step is current, so a step never has to know about the ones around it.
+
+## Returning the customer
+
+Set `ReturnUrl`, `ReturnText` and `Title` on the `StartCheckoutRequest` to bring the customer back to the page
+that started the checkout: the confirmation shows a **Continue** button to it, the payment step and the page of
+a canceled or expired checkout show a **Back** link, and `Title` heads the confirmation instead of "Order
+confirmation". Only a local URL is accepted; any other throws when the checkout is started.
 
 ## Adding a payment provider
 

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Reports;
@@ -109,6 +110,7 @@ public sealed class Startup : StartupBase
         // The gateway is authoritative for a recurring agreement, so its notifications are what keep the
         // local record honest about renewals, failures, and cancellations made outside this application.
         services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, SubscriptionPersonalDataContributor>();
 
         services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
     }
@@ -308,6 +310,7 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<IInstallmentPlanStore, InstallmentPlanStore>();
         services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
 
         // The "Choose how to pay" step of a checkout that pays an outstanding transaction. The options come from the
         // providers; the one built in offers what the settings page configures.

@@ -83,6 +83,9 @@ public sealed class QueuesStartup : StartupBase
         services.AddScoped<IQueueTreatmentService, QueueTreatmentService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, QueueTreatmentBackgroundTask>());
 
+        // Indexes the dialer profile of queue items saved before the queue item index carried it, outside activation.
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, QueueItemDialerProfileIndexBackfillBackgroundTask>());
+
         // Queue size and maximum-wait limits. Sending a waiting caller to voicemail needs a live call to move,
         // which only a voice feature has, so the default sink declines and Voice replaces it.
         services.AddScoped<IQueueLimitService, QueueLimitService>();

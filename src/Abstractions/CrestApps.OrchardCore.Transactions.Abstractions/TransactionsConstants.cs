@@ -23,6 +23,12 @@ public static class TransactionsConstants
     public const string SettlementStepKey = "TransactionSettlement";
 
     /// <summary>
+    /// The configuration section that holds <c>TransactionCustomerPagesOptions</c>, under the tenant's
+    /// <c>OrchardCore</c> section.
+    /// </summary>
+    public const string CustomerPagesConfigurationSection = "CrestApps:Transactions:CustomerPages";
+
+    /// <summary>
     /// Contains the feature identifiers exposed by the Transactions module.
     /// </summary>
     public static class Features
@@ -50,6 +56,60 @@ public static class TransactionsConstants
         /// The public page a signed pay link opens, where the owner pays one transaction without signing in.
         /// </summary>
         public const string Pay = "TransactionsPay";
+
+        /// <summary>
+        /// The customer's statement of their own transactions in the site theme, at <c>my-transactions</c>.
+        /// </summary>
+        public const string Statement = "TransactionsStatement";
+
+        /// <summary>
+        /// The printable invoice of a customer's transaction in the site theme, at
+        /// <c>my-transactions/invoices/{itemId}</c>.
+        /// </summary>
+        public const string Invoice = "TransactionsInvoice";
+
+        /// <summary>
+        /// The printable receipt of a payment on a customer's transaction in the site theme, at
+        /// <c>my-transactions/receipts/{itemId}/{paymentId}</c>.
+        /// </summary>
+        public const string Receipt = "TransactionsReceipt";
+
+        /// <summary>
+        /// The customer's statement in the admin, at <c>Admin/my-transactions</c>.
+        /// </summary>
+        public const string AdminStatement = "MyTransactions";
+
+        /// <summary>
+        /// The printable invoice in the admin, at <c>Admin/transaction-invoices/{itemId}</c>.
+        /// </summary>
+        public const string AdminInvoice = "TransactionInvoice";
+
+        /// <summary>
+        /// The printable receipt in the admin, at <c>Admin/transaction-receipts/{itemId}/{paymentId}</c>.
+        /// </summary>
+        public const string AdminReceipt = "TransactionReceipt";
+    }
+
+    /// <summary>
+    /// The shapes that show a customer their own transactions. A theme overrides how they look with a template of
+    /// the same name; a module renders them with a model built by <c>ITransactionCustomerPageService</c>.
+    /// </summary>
+    public static class Shapes
+    {
+        /// <summary>
+        /// One page of a customer's statement. Its model is <c>TransactionStatementViewModel</c>.
+        /// </summary>
+        public const string Statement = "TransactionStatement";
+
+        /// <summary>
+        /// The printable invoice of a transaction. Its model is <c>TransactionInvoiceViewModel</c>.
+        /// </summary>
+        public const string Invoice = "TransactionInvoice";
+
+        /// <summary>
+        /// The printable receipt of one payment on a transaction. Its model is <c>TransactionReceiptViewModel</c>.
+        /// </summary>
+        public const string Receipt = "TransactionReceipt";
     }
 
     /// <summary>

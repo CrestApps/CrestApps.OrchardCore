@@ -49,9 +49,10 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
 
         var agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
 
+        // The gate's rules live in AgentRoutingEligibility, which the agent availability report explains an agent with,
+        // so what a supervisor reads there is what is decided here.
         if (agent is null ||
-            agent.PresenceStatus != AgentPresenceStatus.Available ||
-            !AgentEntitlementUtilities.HasQueueEntitlement(agent, queueId))
+            AgentRoutingEligibility.GetProfileIneligibility(agent, queueId) != AgentRoutingIneligibility.None)
         {
             return null;
         }
@@ -59,19 +60,14 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         var session = await _sessionManager.FindByUserIdAsync(agent.UserId, cancellationToken);
         var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
 
-        if (session is null ||
-            !session.IsOnline ||
-            session.ConnectionIds.Count == 0 ||
-            !session.LastHeartbeatUtc.HasValue ||
-            session.LastHeartbeatUtc.Value < liveAfter ||
-            !session.QueueIds.Contains(queueId, StringComparer.OrdinalIgnoreCase))
+        if (AgentRoutingEligibility.GetSessionIneligibility(session, queueId, liveAfter) != AgentRoutingIneligibility.None)
         {
             return null;
         }
 
         var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(agentId, cancellationToken);
 
-        if (activeInteractionCount >= Math.Max(1, agent.MaxConcurrentInteractions))
+        if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount))
         {
             return null;
         }
@@ -105,18 +101,14 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         var session = await _sessionManager.FindByUserIdAsync(agent.UserId, cancellationToken);
         var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
 
-        if (session is null ||
-            !session.IsOnline ||
-            session.ConnectionIds.Count == 0 ||
-            !session.LastHeartbeatUtc.HasValue ||
-            session.LastHeartbeatUtc.Value < liveAfter)
+        if (!AgentRoutingEligibility.IsSessionLive(session, liveAfter))
         {
             return null;
         }
 
         var activeInteractionCount = await _interactionManager.CountActiveByAgentAsync(agentId, cancellationToken);
 
-        if (activeInteractionCount >= Math.Max(1, agent.MaxConcurrentInteractions))
+        if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount))
         {
             return null;
         }
@@ -155,11 +147,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
 
         foreach (var session in sessions)
         {
-            if (!session.IsOnline ||
-                session.ConnectionIds.Count == 0 ||
-                !session.LastHeartbeatUtc.HasValue ||
-                session.LastHeartbeatUtc.Value < liveAfter ||
-                !session.QueueIds.Contains(queueId, StringComparer.OrdinalIgnoreCase) ||
+            if (AgentRoutingEligibility.GetSessionIneligibility(session, queueId, liveAfter) != AgentRoutingIneligibility.None ||
                 !agentsByUserId.TryGetValue(session.UserId, out var agent))
             {
                 continue;
@@ -167,7 +155,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
 
             activeCounts.TryGetValue(agent.ItemId, out var activeInteractionCount);
 
-            if (activeInteractionCount >= Math.Max(1, agent.MaxConcurrentInteractions))
+            if (AgentRoutingEligibility.IsAtCapacity(agent, activeInteractionCount))
             {
                 continue;
             }

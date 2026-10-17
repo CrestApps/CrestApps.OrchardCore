@@ -190,6 +190,13 @@ public sealed class Transaction : CatalogItem
     public DateTime? UpcomingReminderSentUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the reminder sweep first found the transaction unpaid after the day it was due, and
+    /// raised <see cref="Services.ITransactionEventHandler.BecameOverdueAsync"/>. It is set once and never cleared, so
+    /// a transaction is reported overdue only once.
+    /// </summary>
+    public DateTime? BecameOverdueUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the invoice number, for example <c>INV-1001</c>, of a transaction the owner pays themselves. It is
     /// issued the first time the owner is told about the payment and never changes after that.
     /// </summary>

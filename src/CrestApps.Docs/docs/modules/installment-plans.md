@@ -160,8 +160,9 @@ Either way it is picked up from its transaction, so it is never charged again.
 | What happened | Result |
 | --- | --- |
 | The gateway could not be reached, or refused to start | Nothing is known about the card. The charge is tried again an hour later and does not use up a retry. |
-| The card was declined, and retries are left | The payment is `Failed`. The next try is scheduled from `RetryDays`, and the customer is told *We could not take your payment*. |
+| The card was declined, and retries are left | The payment is `Failed`, and so is its transaction (`TransactionStatus.Failed`, still collectable). The next try is scheduled from `RetryDays`, and the customer is told *We could not take your payment*. A retry that goes through settles the transaction. |
 | The card was declined on the last retry | The payment is handed to the customer: its transaction becomes `Outstanding` with no automatic collection. The customer is told *Your payment is overdue*, and the overdue reminders take over. It is not charged again unless an administrator clicks **Charge now**. |
+| An administrator's **Charge now** on or after the due date was declined | The payment and its transaction are `Failed`. No automatic retry is scheduled. |
 | An administrator's **Charge now** before the due date was declined | The payment stays `Scheduled`, and it is still charged (with its retries) from its due date. An early charge is a favor, not a deadline. |
 
 ### Statuses

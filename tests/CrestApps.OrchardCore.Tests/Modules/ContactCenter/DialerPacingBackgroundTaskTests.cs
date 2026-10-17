@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Moq;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
@@ -148,6 +150,69 @@ public sealed class DialerPacingBackgroundTaskTests
         pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(_queue2), Times.Never);
     }
 
+    // A queue whose head item is stamped with a turned-off profile, or with one that was deleted, is never paced and nothing
+    // else dials it. That used to pass without a word above Debug; it is now a warning, written once per interval.
+    [Fact]
+    public async Task DoWorkAsync_AQueueHeldBackByItsStampedProfile_WarnsOncePerInterval()
+    {
+        // Arrange
+        var current = new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(() => current);
+
+        var disabled = new DialerProfile { ItemId = "dp-off", Name = "Renewals power", Mode = DialerMode.Power, Enabled = false };
+        var dialerManager = new Mock<IDialerProfileManager>();
+        dialerManager.Setup(m => m.FindByIdAsync("dp-off", It.IsAny<CancellationToken>())).ReturnsAsync(disabled);
+        dialerManager.Setup(m => m.FindByIdAsync("dp-gone", It.IsAny<CancellationToken>())).ReturnsAsync((DialerProfile)null);
+
+        var queueItemStore = CreateQueueItemStore(
+            (_queue1, "dp-off"),
+            (_queue2, "dp-gone"));
+
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
+        var logger = new RecordingLogger<DialerPacingBackgroundTask>();
+        var task = new DialerPacingBackgroundTask();
+
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock, logger: logger);
+
+        // Act
+        await task.DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+        current = current.AddMinutes(1);
+        await task.DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+        var afterTwoRuns = logger.At(LogLevel.Warning).ToArray();
+
+        current = current.Add(DialerPacingBackgroundTask.HoldBackWarningInterval);
+        await task.DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, afterTwoRuns.Length);
+        Assert.Contains(afterTwoRuns, message => message.Contains(_queue1, StringComparison.Ordinal) && message.Contains("turned off", StringComparison.Ordinal));
+        Assert.Contains(afterTwoRuns, message => message.Contains(_queue2, StringComparison.Ordinal) && message.Contains("no longer exists", StringComparison.Ordinal));
+        Assert.Equal(4, logger.At(LogLevel.Warning).Count());
+        pacingScheduler.Verify(scheduler => scheduler.RequestBackstop(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DoWorkAsync_AQueuedCallbackAtTheHead_IsNotWarnedAbout()
+    {
+        // Arrange
+        var dialerManager = new Mock<IDialerProfileManager>();
+        var queueItemStore = CreateQueueItemStore((_queue1, QueueCallbackDialerProfile.Id));
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var logger = new RecordingLogger<DialerPacingBackgroundTask>();
+
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock, logger: logger);
+
+        // Act
+        await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(logger.At(LogLevel.Warning));
+        dialerManager.Verify(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task DoWorkAsync_WhenShutdownCancels_PropagatesCancellation()
     {
@@ -238,7 +303,8 @@ public sealed class DialerPacingBackgroundTaskTests
         Mock<IDialerPacingScheduler> pacingScheduler,
         Mock<IQueueItemStore> queueItemStore,
         Mock<IClock> clock,
-        IContactCenterFeatureWorkManager workManager = null)
+        IContactCenterFeatureWorkManager workManager = null,
+        ILogger<DialerPacingBackgroundTask> logger = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(dialerManager.Object);
@@ -247,6 +313,11 @@ public sealed class DialerPacingBackgroundTaskTests
         services.AddSingleton(clock.Object);
         services.AddSingleton(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();
+
+        if (logger is not null)
+        {
+            services.AddSingleton(logger);
+        }
 
         return services.BuildServiceProvider();
     }

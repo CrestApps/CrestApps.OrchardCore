@@ -137,7 +137,7 @@ Payments already received stay received and can be refunded from **Commerce > Pa
 
 When the plan charges the card, each payment is charged on its due date. If the card is declined:
 
-1. The payment is marked **Failed**, the plan becomes **Past due**, and the customer is notified that the payment could not be taken and when it will be tried again.
+1. The payment is marked **Failed**, and its transaction in **Commerce > Transactions** shows **Failed** too. The plan becomes **Past due**, and the customer is notified that the payment could not be taken and when it will be tried again.
 2. The card is tried again after the number of days set in **Retry a declined card after (days)**, by default 1, 3 and 5 days after each failure.
 3. After the last retry, the payment becomes **Due**: an outstanding balance the customer pays themselves from **My Transactions**. The customer is told the payment is overdue, and the site's overdue payment reminders take over (see [Transactions](transactions.md)).
 
