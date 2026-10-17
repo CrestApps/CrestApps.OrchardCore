@@ -157,12 +157,13 @@ addresses to it. A script copies the data into the repo, and we refresh it when 
 | Slice | Scope | Exit gate |
 | --- | --- | --- |
 | **AD1 Country rules** | `Address` gains two fields; `AddressFormat`, provider, validator, formatter; Addresses.Core with the embedded data, the import script and the notice | Formats, checks and printing are right for the United States, Canada, the United Kingdom, Germany, France, Japan, Brazil and a country with no data; tests pin each. |
-| **AD2 Module split and shapes** | Base feature without content dependencies; Countries feature; `AddressPart`, resolver and the other geography types removed; `AddressEditor` and `AddressDisplay` with the re-layout script; docs | Choosing a country in the editor shows its fields, labels and regions; a bad postal code is refused on the server; the docs build. |
+| **AD2a Module split** | Base feature without content dependencies; Address Countries feature; `AddressPart`, resolver and the other geography types removed; docs | A site with only Addresses lists the ISO countries; enabling Address Countries seeds and lists Country content. |
+| **AD2b Shared editor** | `AddressEditor` and `AddressDisplay` shapes, the formats endpoint and the re-layout script | Choosing a country in the editor shows its fields, labels and regions; a bad postal code is refused on the server; the docs build. |
 | **AD3 Customers on the shared address** | `CustomerAddress` wraps `Address`; My Account and the admin use the editor; #923 amended before it merges | The live pass from CU2 passes again, with a Japanese and a British address. |
 | **CU3** (Customers plan) | The checkout contact step, using the editor | As in the Customers plan. |
 | **AD4 Address Field** | `AddressField` feature, settings, index, Liquid, schemas, docs | A content type with Home and Work address fields saves, prints and lists by city. |
 
-AD1 to AD3 come before CU3. AD4 can follow CU3.
+AD1 to AD3 come before CU3. AD4 can follow CU3. AD2 was split in two to keep each PR reviewable.
 
 ### AD1 as built
 

@@ -12,15 +12,23 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Addresses;
 
 /// <summary>
-/// Registers the Addresses module services, content definitions, country seeding, and the content-backed
-/// country service used to populate country selectors across the platform.
+/// Registers each country's address format and the checks and printing built on it. Countries come from the ISO list
+/// until the Address Countries feature replaces them with managed content.
 /// </summary>
 public sealed class Startup : StartupBase
 {
-    /// <summary>
-    /// Registers the Addresses module services with the dependency injection container.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddAddressesCore();
+    }
+}
+
+/// <summary>
+/// Keeps the countries the site serves as Country content items, seeded from the ISO list.
+/// </summary>
+[Feature(AddressConstants.Feature.Countries)]
+public sealed class CountriesStartup : StartupBase
+{
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<AddressMigrations>();
@@ -31,9 +39,6 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentHandler, CountryContentHandler>();
 
-        services.AddAddressesCore();
         services.AddScoped<ICountryService, ContentCountryService>();
-
-        services.AddScoped<IAddressResolver, DefaultAddressResolver>();
     }
 }
