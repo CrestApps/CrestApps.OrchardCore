@@ -188,6 +188,22 @@ This is what shipping, guest order lookup and the customer account pages wait on
   event handlers → merge service → customer service → user service → registration events). They resolve it when they
   run.
 
+### CU5 as built
+
+- Customers.Core: `CustomerPrivacySettings` (`InactiveGuestMonths` 24, `GuestOrderMonths` 12, zero keeps),
+  `Customer.Anonymize`, `AnonymizedUtc`, `PrivacyLog` of `CustomerPrivacyEntry` (Exported, Erased, Expired),
+  `ICustomerPrivacyService` (`EraseAsync`, `ExpireAsync`, `ExportAsync` to JSON) and `ICustomerPrivacyHandler`;
+  `CustomerQuery.LastActivityBefore` and `NotAnonymized`.
+- Orders.Core: `Order.Anonymize` (keeps the billing country and region for tax records), `AnonymizedUtc` on the order
+  and its index (upgrade step 4), `OrderQuery.GuestsOnly`, `CreatedBefore`, `NotAnonymized`.
+- Customers: `OrderCustomerPrivacyHandler` and `OrderAnonymizer` (orders, plus the guest contact of their
+  transactions); `CustomerRetentionBackgroundTask` daily, 500 of each per run; Erase (confirmed) and Download data on
+  the customer page with the privacy log; the Privacy settings on Settings › Commerce › Customers, whose menu entry now
+  shows without Orders.
+- Differences from F5: the order window counts from when the order was placed (there is no fulfillment date yet), and
+  only settled orders (paid or canceled) are anonymized. Customers with an account are not expired by inactivity; the
+  account holds the same data, so they are erased on request. Erasing a customer does not delete the user account.
+
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
 

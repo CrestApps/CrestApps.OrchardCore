@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
+using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -37,7 +39,13 @@ public sealed class CustomersAdminController : Controller
 
     private static readonly EmailAddressAttribute _emailAddress = new();
 
+    private static readonly JsonSerializerOptions _exportOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true,
+    };
+
     private readonly ICustomerStore _store;
+    private readonly ICustomerPrivacyService _privacy;
     private readonly CustomerAddressBook _addressBook;
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
@@ -51,6 +59,7 @@ public sealed class CustomersAdminController : Controller
 
     public CustomersAdminController(
         ICustomerStore store,
+        ICustomerPrivacyService privacy,
         CustomerAddressBook addressBook,
         IUserService userService,
         IAuthorizationService authorizationService,
@@ -62,6 +71,7 @@ public sealed class CustomersAdminController : Controller
         IHtmlLocalizer<CustomersAdminController> htmlLocalizer)
     {
         _store = store;
+        _privacy = privacy;
         _addressBook = addressBook;
         _userService = userService;
         _authorizationService = authorizationService;
@@ -265,6 +275,58 @@ public sealed class CustomersAdminController : Controller
         }
 
         model.MergedCustomers = merged;
+        model.PrivacyLog = customer.PrivacyLog ?? [];
+    }
+
+    /// <summary>
+    /// Erases the customer's personal data, and the personal details of their orders, for an erasure request.
+    /// </summary>
+    [HttpPost]
+    [Admin("customers/{customerId}/erase", "CustomersErase")]
+    public async Task<IActionResult> Erase(string customerId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers))
+        {
+            return Forbid();
+        }
+
+        var customer = string.IsNullOrEmpty(customerId) ? null : await _store.FindByIdAsync(customerId, HttpContext.RequestAborted);
+
+        if (customer is null)
+        {
+            return NotFound();
+        }
+
+        if (customer.Status != CustomerStatus.Anonymized)
+        {
+            await _privacy.EraseAsync(customer, User.Identity?.Name, HttpContext.RequestAborted);
+            await _notifier.SuccessAsync(H["The customer's personal data was erased. Their orders stay, without it."]);
+        }
+
+        return RedirectToAction(nameof(Edit), new { customerId });
+    }
+
+    /// <summary>
+    /// Downloads everything the store holds on the customer, for an access request.
+    /// </summary>
+    [Admin("customers/{customerId}/export", "CustomersExport")]
+    public async Task<IActionResult> Export(string customerId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers))
+        {
+            return Forbid();
+        }
+
+        var customer = string.IsNullOrEmpty(customerId) ? null : await _store.FindByIdAsync(customerId, HttpContext.RequestAborted);
+
+        if (customer is null)
+        {
+            return NotFound();
+        }
+
+        var export = await _privacy.ExportAsync(customer, User.Identity?.Name, HttpContext.RequestAborted);
+
+        return File(Encoding.UTF8.GetBytes(export.ToJsonString(_exportOptions)), "application/json", $"customer-{customer.ItemId}.json");
     }
 
     [Admin("customers/{customerId}/addresses/add", "CustomersAddressCreate")]

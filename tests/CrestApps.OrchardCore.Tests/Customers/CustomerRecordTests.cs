@@ -116,6 +116,9 @@ public sealed class CustomerRecordTests
                 Assert.Equal(["c2"], await IdsAsync(store, new CustomerQuery { Kind = CustomerKind.Business }));
                 Assert.Equal(["c1", "c2", "c4"], await IdsAsync(store, new CustomerQuery { Status = CustomerStatus.Active }));
 
+                // Guests last active more than two and a half days ago, as the retention task looks for them.
+                Assert.Equal(["c4", "c5"], await IdsAsync(store, new CustomerQuery { HasAccount = false, LastActivityBefore = DateTime.UtcNow.AddHours(-60), NotAnonymized = true }));
+
                 // The most recently active come first.
                 Assert.Equal(["c1", "c2", "c3", "c4", "c5"], await IdsAsync(store, new CustomerQuery()));
 

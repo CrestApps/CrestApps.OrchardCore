@@ -36,6 +36,16 @@ public sealed class CustomerQuery
     public CustomerStatus? Status { get; set; }
 
     public bool? HasAccount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date before which the customers were last active.
+    /// </summary>
+    public DateTime? LastActivityBefore { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to leave out customers whose personal data was already erased.
+    /// </summary>
+    public bool NotAnonymized { get; set; }
 }
 
 public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, ICustomerStore
@@ -96,6 +106,16 @@ public sealed class CustomerStore : DocumentCatalog<Customer, CustomerIndex>, IC
         if (query.HasAccount is { } hasAccount)
         {
             customers = customers.Where(index => index.HasAccount == hasAccount);
+        }
+
+        if (query.LastActivityBefore is { } lastActivityBefore)
+        {
+            customers = customers.Where(index => index.LastActivityUtc < lastActivityBefore);
+        }
+
+        if (query.NotAnonymized)
+        {
+            customers = customers.Where(index => index.Status != CustomerStatus.Anonymized);
         }
 
         if (CustomerIndexProvider.Normalize(query.Search) is { } search)

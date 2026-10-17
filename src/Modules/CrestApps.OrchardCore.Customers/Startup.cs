@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -43,6 +45,12 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<CustomerAddressBook>();
 
+        // Access and erasure requests, and the retention windows for guests' personal data.
+        services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();
+        services.AddSingleton<IBackgroundTask, CustomerRetentionBackgroundTask>();
+        services.AddSiteDisplayDriver<CustomerPrivacySettingsDisplayDriver>();
+        services.AddNavigationProvider<CustomerSettingsAdminMenu>();
+
         // Statements, receipts and reminders address a customer by their customer record once there is one.
         services.AddScoped<DefaultCustomerContactResolver>();
         services.Replace(ServiceDescriptor.Scoped<ICustomerContactResolver, CustomerRecordContactResolver>());
@@ -62,9 +70,10 @@ public sealed class OrdersStartup : StartupBase
     {
         services.AddScoped<ICheckoutHandler, CustomerContactCheckoutHandler>();
         services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
+        services.AddScoped<OrderAnonymizer>();
+        services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
-        services.AddNavigationProvider<CustomerSettingsAdminMenu>();
     }
 }
 

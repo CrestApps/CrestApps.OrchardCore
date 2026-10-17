@@ -22,7 +22,8 @@ public sealed class OrderMigrations : DataMigration
             .Column<string>("CartId", column => column.WithLength(26))
             .Column<string>("CheckoutSessionId", column => column.WithLength(26))
             .Column<int>("Status")
-            .Column<DateTime>("CreatedUtc"),
+            .Column<DateTime>("CreatedUtc")
+            .Column<DateTime>("AnonymizedUtc", column => column.Nullable()),
             collection: OrderConstants.CollectionName
         );
 
@@ -43,7 +44,7 @@ public sealed class OrderMigrations : DataMigration
             );
         }
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -70,5 +71,18 @@ public sealed class OrderMigrations : DataMigration
         await IndexTableIndexCreation.CreateIfMissingAsync<OrderIndex>(SchemaBuilder, "IDX_OrderIndex_CustomerEmail", OrderConstants.CollectionName, "CustomerEmail");
 
         return 3;
+    }
+
+    /// <summary>
+    /// Records when an order's personal details were removed, so the retention task does not visit it again.
+    /// </summary>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OrderIndex>(table => table
+            .AddColumn<DateTime>("AnonymizedUtc", column => column.Nullable()),
+            collection: OrderConstants.CollectionName
+        );
+
+        return 4;
     }
 }

@@ -14,7 +14,17 @@ internal sealed class InMemoryCustomerStore : ICustomerStore
         => Task.FromResult(Customers.FirstOrDefault(customer => customer.UserId == userId));
 
     public Task<(int Count, IReadOnlyList<Customer> Customers)> PageAsync(CustomerQuery query, int skip, int take, CancellationToken cancellationToken = default)
-        => Task.FromResult<(int, IReadOnlyList<Customer>)>((Customers.Count, Customers));
+    {
+        var matches = Customers
+            .Where(customer => query.Status is null || customer.Status == query.Status)
+            .Where(customer => query.Kind is null || customer.Kind == query.Kind)
+            .Where(customer => query.HasAccount is null || string.IsNullOrEmpty(customer.UserId) != query.HasAccount)
+            .Where(customer => query.LastActivityBefore is null || customer.LastActivityUtc < query.LastActivityBefore)
+            .Where(customer => !query.NotAnonymized || customer.Status != CustomerStatus.Anonymized)
+            .ToArray();
+
+        return Task.FromResult<(int, IReadOnlyList<Customer>)>((matches.Length, matches.Skip(skip).Take(take).ToArray()));
+    }
 
     public Task<IReadOnlyList<Customer>> ListGuestsByEmailAsync(string email, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<Customer>>(Customers
