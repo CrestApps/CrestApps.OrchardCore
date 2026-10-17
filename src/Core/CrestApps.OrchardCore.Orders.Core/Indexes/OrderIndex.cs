@@ -24,6 +24,8 @@ public sealed class OrderIndex : CatalogItemIndex
     public OrderStatus Status { get; set; }
 
     public DateTime CreatedUtc { get; set; }
+
+    public DateTime? AnonymizedUtc { get; set; }
 }
 
 public sealed class OrderIndexProvider : IndexProvider<Order>
@@ -43,6 +45,7 @@ public sealed class OrderIndexProvider : IndexProvider<Order>
                 UserId = order.UserId,
                 CustomerId = order.CustomerId,
                 CustomerEmail = order.CustomerEmail?.Trim().ToUpperInvariant(),
+                AnonymizedUtc = order.AnonymizedUtc,
                 CartId = order.CartId,
                 CheckoutSessionId = order.CheckoutSessionId,
                 Status = order.Status,

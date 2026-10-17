@@ -88,6 +88,26 @@ public sealed class Order : CatalogItem
     public DateTime? ConfirmationSentUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the order's personal details were removed, at the customer's request or after the retention
+    /// window.
+    /// </summary>
+    public DateTime? AnonymizedUtc { get; set; }
+
+    /// <summary>
+    /// Removes who the order was for: the name, email and phone, and the billing address but its country and region,
+    /// which tax records need. The lines, totals and dates stay for the store's accounts.
+    /// </summary>
+    public void Anonymize(DateTime now)
+    {
+        CustomerName = null;
+        CustomerEmail = null;
+        CustomerPhone = null;
+        BillingAddress = BillingAddress is null ? null : new Address { Country = BillingAddress.Country, Region = BillingAddress.Region };
+        AnonymizedUtc ??= now;
+        ModifiedUtc = now;
+    }
+
+    /// <summary>
     /// Gets the number of units ordered.
     /// </summary>
     public int ItemCount

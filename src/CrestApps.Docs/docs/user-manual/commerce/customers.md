@@ -11,7 +11,7 @@ Everyone who buys from your store is a **customer**: a person or a business, wit
 | | |
 | --- | --- |
 | **Menu** | Commerce > Customers |
-| **Permission** | **View customers** to look, **Manage customers** to add and edit; **Manage own customer profile and addresses** for **My Account** |
+| **Permission** | **View customers** to look, **Manage customers** to add, edit, export and erase; **Manage own customer profile and addresses** for **My Account** |
 | **Feature** | Customers |
 
 <AskYourAdmin />
@@ -92,6 +92,28 @@ A customer keeps an address book of up to 20 addresses, such as a home and an of
 The address is checked against its country: a postal code has to look like that country's, and belong to the state or province chosen. A new address starts with the customer's name, company and phone, in the country of their other addresses, and a customer's first address becomes both defaults.
 
 To remove an address, click **Delete** and confirm. Orders keep their own copy of the addresses they used, so changing or deleting an address never changes a past order.
+
+## Privacy requests
+
+People can ask what you hold on them, or ask you to erase it. Open the customer; the **Privacy** section at the bottom has both, for those with **Manage customers**:
+
+- **Download data** gives you a JSON file with everything the store holds on the customer: their details, addresses, and their orders with the payments for them. Send it to the person who asked.
+- **Erase personal data** removes the customer's name, company, tax id, email, phone, addresses and marketing consent, and the name, email, phone and billing address of their orders. You're asked to confirm; it can't be undone. The orders themselves stay, with their lines, totals, dates and the billing country and region, because your accounts and tax records need them. An erased customer shows *This customer's personal data was erased* and can't be edited.
+
+Erasing a customer doesn't delete their account. If they also want the account gone, delete the user under **Security > Users**.
+
+Each download and erasure is listed under **Privacy** with when it happened and who did it.
+
+## How long guest data is kept
+
+Under **Settings > Commerce > Customers**, **Privacy** sets how long you keep guests' personal data. Once a day the store applies it:
+
+| Setting | What happens | Default |
+| --- | --- | --- |
+| **Erase inactive guests after (months)** | A guest customer who hasn't bought or paid in this many months is erased, as above. | 24 |
+| **Anonymize guest orders after (months)** | A paid or canceled guest order this old loses its name, email, phone and billing address but the country and region. Orders still awaiting payment keep them until they're settled. | 12 |
+
+Enter **0** to keep the data. Customers with an account are kept while the account exists; erase them on request instead.
 
 ## My Account
 

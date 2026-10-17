@@ -185,6 +185,46 @@
     </div>
 }
 
+@if (!Model.IsNew && Model.CanManage)
+{
+    <div class="mt-5">
+        <h2 class="h5">@T["Privacy"]</h2>
+        @if (Model.Status != CustomerStatus.Anonymized)
+        {
+            <p class="text-muted small">@T["For an access request, download everything the store holds on this customer. For an erasure request, erase their name, email, phone, addresses and the personal details of their orders; the orders stay for your accounts, and an account itself is deleted under Users."]</p>
+            <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-secondary" asp-action="Export" asp-route-customerId="@Model.CustomerId">@T["Download data"]</a>
+                <form asp-action="Erase" asp-route-customerId="@Model.CustomerId" method="post" class="no-multisubmit">
+                    <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl" data-title="@T["Erase personal data"]" data-message="@T["Erase this customer's name, email, phone, addresses and the personal details of their orders? This cannot be undone."]">@T["Erase personal data"]</button>
+                </form>
+            </div>
+        }
+        @if (Model.PrivacyLog.Count > 0)
+        {
+            <ul class="list-unstyled small mt-3 mb-0">
+                @foreach (var entry in Model.PrivacyLog)
+                {
+                    var by = string.IsNullOrEmpty(entry.By) ? T["the retention task"].Value : entry.By;
+                    <li>
+                        @switch (entry.Action)
+                        {
+                            case CustomerPrivacyAction.Exported:
+                                @T["{0:g}: data downloaded by {1}", entry.Utc, by]
+                                break;
+                            case CustomerPrivacyAction.Erased:
+                                @T["{0:g}: personal data erased by {1}", entry.Utc, by]
+                                break;
+                            default:
+                                @T["{0:g}: personal data erased after the retention window", entry.Utc]
+                                break;
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+}
+
 <script at="Foot">
     // Company and tax id are for businesses.
     (function () {

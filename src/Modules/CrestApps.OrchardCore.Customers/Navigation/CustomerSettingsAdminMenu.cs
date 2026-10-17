@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Customers.Navigation;
 
 /// <summary>
-/// Settings › Commerce › Customers, with what an order's checkout asks the buyer.
+/// Settings › Commerce › Customers: how long guests' data is kept and, with Orders, what an order's checkout asks.
 /// </summary>
 public sealed class CustomerSettingsAdminMenu : AdminNavigationProvider
 {

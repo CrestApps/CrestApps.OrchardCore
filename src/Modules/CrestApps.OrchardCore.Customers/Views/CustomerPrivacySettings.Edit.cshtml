@@ -1,0 +1,21 @@
+@model CustomerPrivacySettingsViewModel
+
+<h3 class="h5 mt-4">@T["Privacy"]</h3>
+
+<div class="ocat-wrapper" asp-validation-class-for="InactiveGuestMonths">
+    <label asp-for="InactiveGuestMonths" class="ocat-label">@T["Erase inactive guests after (months)"]</label>
+    <div class="ocat-end">
+        <input asp-for="InactiveGuestMonths" type="number" min="0" max="1200" class="form-control" />
+        <span asp-validation-for="InactiveGuestMonths"></span>
+        <span class="hint">@T["A guest customer who has not bought or paid in this many months has their name, email, phone and addresses erased, and their orders anonymized. 0 keeps them."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="GuestOrderMonths">
+    <label asp-for="GuestOrderMonths" class="ocat-label">@T["Anonymize guest orders after (months)"]</label>
+    <div class="ocat-end">
+        <input asp-for="GuestOrderMonths" type="number" min="0" max="1200" class="form-control" />
+        <span asp-validation-for="GuestOrderMonths"></span>
+        <span class="hint">@T["A paid or canceled guest order this old loses its name, email, phone and billing address but the country and region. The lines, totals and dates stay for your accounts. Orders placed with an account are kept with the account. 0 keeps them."]</span>
+    </div>
+</div>

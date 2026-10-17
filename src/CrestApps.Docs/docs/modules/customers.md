@@ -77,6 +77,25 @@ With Orders enabled, Customers adds a **Contact** step to every order's checkout
 
 The event handlers resolve the merge service when they run: Orchard Core's user store and user service create them, and the merge service needs the user service, so injecting it would be a circular dependency. A failed merge is logged and tried again on the next sign-in.
 
+## Privacy
+
+`ICustomerPrivacyService` answers access and erasure requests and applies the retention windows.
+
+- **`EraseAsync(customer, by)`** calls every `ICustomerPrivacyHandler.ErasingAsync`, then `Customer.Anonymize`: names, company, tax id, email, phone, addresses, outside ids and marketing consent are cleared, the account is unlinked (`UserId`), and the status becomes `Anonymized`. With Orders on, `OrderCustomerPrivacyHandler` anonymizes the customer's orders (by `CustomerId`, and by `UserId` for an account holder's older orders) through `OrderAnonymizer`: `Order.Anonymize` clears the name, email and phone and keeps only the billing address's country and region, and the guest contact of the transactions paying for the order is cleared. Handlers see the account before it is unlinked (`CustomerPrivacyContext.UserId`). Erasing an anonymized customer does nothing.
+- **`ExportAsync(customer, by)`** returns a `JsonObject` with the customer and their addresses; each handler's `ExportingAsync` adds its own section (`orders`, each with its `transactions`).
+- **`ExpireAsync(customer)`** erases as the retention task.
+
+Each export and erasure appends a `CustomerPrivacyEntry` (`Utc`, `Action`: `Exported`, `Erased` or `Expired`, `By`) to `Customer.PrivacyLog`.
+
+**Retention.** `CustomerRetentionBackgroundTask` runs daily at 03:30 under the background-task lock and reads `CustomerPrivacySettings` (Settings › Commerce › Customers; zero turns a window off):
+
+- `InactiveGuestMonths` (24): guests (`HasAccount = false`, merged ones included) whose `LastActivityUtc` is older are expired. Customers with an account are not, since the account holds the same data; erase them on request.
+- `GuestOrderMonths` (12): orders placed without an account (`OrderQuery.GuestsOnly`), `Paid` or `Canceled`, created before the window, are anonymized. Orders awaiting payment keep their contact.
+
+Each run handles up to 500 of each, and queries leave out what is already anonymized (`CustomerQuery.NotAnonymized`, `OrderQuery.NotAnonymized` on the new `OrderIndex.AnonymizedUtc`, upgrade step 4), so a backlog is worked off over a few days.
+
+**Admin.** `POST customers/{customerId}/erase` and `GET customers/{customerId}/export` (a `customer-{id}.json` download) need **Manage customers**.
+
 ## Admin
 
 **Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active, and their address book (`customers/{customerId}/addresses/...`). An anonymized customer's addresses can't be edited.
@@ -87,7 +106,7 @@ The event handlers resolve the merge service when they run: Orchard Core's user 
 
 | Permission | Allows |
 | --- | --- |
-| **Manage customers** | Adding and editing customers. Implies **View customers**. |
+| **Manage customers** | Adding, editing, exporting and erasing customers, and the Customers settings. Implies **View customers**. |
 | **View customers** | Listing and opening customers, read-only. |
 | **Manage own customer profile and addresses** | Using **My Account**. Granted to the Authenticated role by default. |
 

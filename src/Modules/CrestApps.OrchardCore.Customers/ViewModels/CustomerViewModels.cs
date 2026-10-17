@@ -120,6 +120,9 @@ public class CustomerEditViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyList<CustomerMergeSummary> MergedCustomers { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<CustomerPrivacyEntry> PrivacyLog { get; set; } = [];
 }
 
 /// <summary>

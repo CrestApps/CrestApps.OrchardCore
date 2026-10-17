@@ -99,6 +99,41 @@ public sealed class Customer : CatalogItem
     /// </summary>
     public List<string> MergedCustomerIds { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets when the customer's personal data was erased.
+    /// </summary>
+    public DateTime? AnonymizedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets what was done with the customer's personal data, and by whom: exports and erasures.
+    /// </summary>
+    public List<CustomerPrivacyEntry> PrivacyLog { get; set; } = [];
+
+    /// <summary>
+    /// Removes everything personal: names, company, tax id, email, phone, addresses, outside ids and marketing consent.
+    /// The record stays, anonymized, so the orders that name it still add up. An account's customer is also unlinked
+    /// from the account, so the user starts a new customer if they buy again.
+    /// </summary>
+    public void Anonymize(DateTime now)
+    {
+        DisplayName = null;
+        FirstName = null;
+        LastName = null;
+        CompanyName = null;
+        TaxId = null;
+        Email = null;
+        Phone = null;
+        AcceptsMarketing = false;
+        Addresses = [];
+        DefaultBillingAddressId = null;
+        DefaultShippingAddressId = null;
+        ExternalIds?.Clear();
+        UserId = null;
+        Status = CustomerStatus.Anonymized;
+        AnonymizedUtc ??= now;
+        ModifiedUtc = now;
+    }
+
     public CustomerAddress FindAddress(string addressId)
         => string.IsNullOrEmpty(addressId)
             ? null
