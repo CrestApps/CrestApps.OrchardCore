@@ -20,11 +20,11 @@ It suits profiles that hold a conversation on their own, such as automated text 
 
 This video shows why the Profile Builder exists, how it works, and how to build, test and save a profile with it.
 
-<YouTube id="UOKvEY-kID4" title="Video overview of the AI Profile Builder" />
+<YouTube video="ai-profile-builder" title="Video overview of the AI Profile Builder" />
 
 ## Start a session
 
-<YouTube id="UOKvEY-kID4" title="Video of starting a Profile Builder session from an existing AI profile" start={99} end={146} />
+<YouTube video="ai-profile-builder" title="Video of starting a Profile Builder session from an existing AI profile" start={99} end={146} />
 
 1. Open **Artificial Intelligence > Profile Builder**.
 2. Click **New Session** to start empty. To begin from an AI profile you already have, open the arrow beside **New Session**, choose **Improve an existing AI profile...**, pick the profile and click **Start session**. The session starts with the profile's instructions and settings, and can update that profile when you finish.
@@ -37,7 +37,7 @@ In **Settings**, choose the **Chat deployment** (the model to test) and, if you 
 
 ## Role-play and give feedback
 
-<YouTube id="UOKvEY-kID4" title="Video of giving feedback on a reply and regenerating it with the rewritten instructions" start={146} end={203} />
+<YouTube video="ai-profile-builder" title="Video of giving feedback on a reply and regenerating it with the rewritten instructions" start={146} end={203} />
 
 1. Type what that person would say and send it. The AI answers.
 2. Under a reply, click **Feedback**. The reply is highlighted and shown in the feedback panel.
@@ -62,7 +62,7 @@ If the chat deployment has a conversation deployment, you can role-play by voice
 
 ## Revisions
 
-<YouTube id="UOKvEY-kID4" title="Video of the revision history and of replaying earlier feedback" start={203} end={237} />
+<YouTube video="ai-profile-builder" title="Video of the revision history and of replaying earlier feedback" start={203} end={237} />
 
 The **Revisions** tab lists every version of the instructions, with what changed and why. Expand **System message** to read a version, and click **Restore** to make it the current one again.
 
@@ -78,7 +78,7 @@ Tools are not used during a replay, so nothing is sent or booked.
 
 ## Save the result
 
-<YouTube id="UOKvEY-kID4" title="Video of saving the session to an AI profile" start={237} end={271} />
+<YouTube video="ai-profile-builder" title="Video of saving the session to an AI profile" start={237} end={271} />
 
 On the **Finish** tab:
 
