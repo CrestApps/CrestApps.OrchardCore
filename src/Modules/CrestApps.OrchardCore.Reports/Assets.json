@@ -1,12 +1,14 @@
 [
   {
-    "inputs": [
-      "Assets/js/report-charts.js"
-    ],
-    "output": "wwwroot/scripts/report-charts.js"
+    "action": "vite",
+    "name": "report-charts.js",
+    "source": "Assets/js/report-charts.js",
+    "dest": "wwwroot/scripts/report-charts.js"
   },
   {
-    "inputs": [
+    "action": "vite",
+    "name": "report-designer.js",
+    "source": [
       "Assets/js/report-designer/designer-state.js",
       "Assets/js/report-designer/designer-ui.js",
       "Assets/js/report-designer/designer-app.js",
@@ -17,12 +19,12 @@
       "Assets/js/report-designer/designer-refresh.js",
       "Assets/js/report-designer/designer-history.js"
     ],
-    "output": "wwwroot/scripts/report-designer.js"
+    "dest": "wwwroot/scripts/report-designer.js"
   },
   {
-    "inputs": [
-      "Assets/css/report-designer.css"
-    ],
-    "output": "wwwroot/styles/report-designer.css"
+    "action": "vite",
+    "name": "report-designer.css",
+    "source": "Assets/css/report-designer.css",
+    "dest": "wwwroot/styles/report-designer.css"
   }
 ]
