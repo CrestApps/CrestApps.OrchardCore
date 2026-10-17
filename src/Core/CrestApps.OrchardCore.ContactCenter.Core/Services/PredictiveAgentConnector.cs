@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -226,9 +227,8 @@ public sealed partial class PredictiveAgentConnector : IPredictiveAgentConnector
 
     private async Task<PredictiveConnectOutcome> ConnectUnderLockAsync(string interactionId, CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
             GetConnectLockKey(interactionId),
-            TimeSpan.Zero,
             _options.PacingLockExpiration);
 
         if (!locked)

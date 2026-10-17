@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -137,9 +138,8 @@ public sealed class PredictiveOverDialPacer : IPredictiveOverDialPacer
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
             GetPacingLockKey(queueId),
-            TimeSpan.Zero,
             _options.PacingLockExpiration);
 
         if (!locked)

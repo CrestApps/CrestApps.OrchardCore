@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Locking;
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -220,9 +221,8 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             return null;
         }
 
-        (var locker, var locked) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockAsync(
+        (var locker, var locked) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockWithoutWaitingAsync(
             GetPacingLockKey(queueId),
-            TimeSpan.Zero,
             _options.LockExpiration);
 
         if (!locked)
