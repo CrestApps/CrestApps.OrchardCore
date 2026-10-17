@@ -42,6 +42,15 @@ internal sealed class InMemoryCheckoutSessionStore : ICheckoutSessionStore
             .OrderByDescending(session => session.CreatedUtc)
             .FirstOrDefault());
 
+    public Task<IReadOnlyList<CheckoutSession>> ListByReferenceAsync(string referenceType, string referenceId, int skip, int take, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<CheckoutSession>>(_sessions.Values
+            .Where(session => session.ReferenceType == referenceType && session.ReferenceId == referenceId)
+            .OrderBy(session => session.CreatedUtc)
+            .ThenBy(session => session.SessionId, StringComparer.Ordinal)
+            .Skip(skip)
+            .Take(take)
+            .ToArray());
+
     public Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(ownerId) && string.IsNullOrWhiteSpace(email))

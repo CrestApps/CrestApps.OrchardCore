@@ -297,7 +297,7 @@ public sealed class CommercePersonalDataServiceTests : IAsyncLifetime
 
         return new DefaultCommercePersonalDataService(
             [
-                new CheckoutPersonalDataContributor(_sessions, _attempts, _refunds),
+                new CheckoutPersonalDataContributor(_sessions, _attempts, _refunds, Clock()),
                 new CouponPersonalDataContributor(_sessions),
                 new TransactionPersonalDataContributor(transactionManager),
                 new TransactionSettlementPersonalDataContributor(transactionManager, _attempts),

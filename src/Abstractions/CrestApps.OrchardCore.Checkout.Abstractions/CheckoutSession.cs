@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.Addresses.Models;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Checkout;
@@ -130,4 +131,46 @@ public sealed class CheckoutSession : Entity, ICheckoutFlowSession
     /// leaked database does not hand an attacker the ability to resume live checkouts.
     /// </summary>
     public string GuestTokenHash { get; set; }
+
+    /// <summary>
+    /// The UTC time the buyer's personal data was removed from the session, at their request or after a retention
+    /// window, or <see langword="null"/> while it is still there.
+    /// </summary>
+    public DateTime? AnonymizedUtc { get; set; }
+
+    /// <summary>
+    /// Removes who the session was for: the owning account, the buyer's contact (their billing address keeps only its
+    /// country and region, which tax records need), the IP address, the user agent and what was typed into each step.
+    /// The amounts, invoice, status and dates stay for the store's accounts.
+    /// </summary>
+    /// <remarks>
+    /// A session that is still pending can no longer be resumed afterwards: it has no owner, and the guest token only
+    /// ever proved who started it. The modification time is left alone, so the abandoned-checkout sweep still expires
+    /// it on time.
+    /// </remarks>
+    /// <param name="now">The current UTC time, recorded as <see cref="AnonymizedUtc"/> the first time.</param>
+    /// <param name="replacementName">The text the buyer's name is replaced with, or <see langword="null"/> to clear it.</param>
+    public void Anonymize(DateTime now, string replacementName = null)
+    {
+        if (this.TryGet<CheckoutContactInfo>(out var contact) && contact is not null)
+        {
+            this.Put(new CheckoutContactInfo
+            {
+                DisplayName = string.IsNullOrEmpty(contact.DisplayName) ? null : replacementName,
+                BillingAddress = contact.BillingAddress is null
+                    ? null
+                    : new Address
+                    {
+                        Country = contact.BillingAddress.Country,
+                        Region = contact.BillingAddress.Region,
+                    },
+            });
+        }
+
+        OwnerId = null;
+        IPAddress = null;
+        AgentInfo = null;
+        SavedSteps?.Clear();
+        AnonymizedUtc ??= now;
+    }
 }

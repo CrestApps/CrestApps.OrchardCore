@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Transactions;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -8,8 +9,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Customers.Services;
 
 /// <summary>
-/// Removes who an order was for, and the guest contact of the transactions paying for it. The lines, totals and dates
-/// stay for the store's accounts.
+/// Removes who an order was for, the guest contact of the transactions paying for it, and the buyer's details from the
+/// checkout sessions behind both. The lines, totals and dates stay for the store's accounts.
 /// </summary>
 public sealed class OrderAnonymizer
 {
@@ -70,6 +71,15 @@ public sealed class OrderAnonymizer
 
         await _orderStore.UpdateAsync(order, cancellationToken);
 
+        // Every attempt to pay holds what the buyer typed, not only the session the order names.
+        var sessions = _serviceProvider.GetService<ICheckoutSessionAnonymizer>();
+
+        if (sessions is not null)
+        {
+            await sessions.AnonymizeAsync(order.CheckoutSessionId, cancellationToken);
+            await sessions.AnonymizeByReferenceAsync(CheckoutReferenceTypes.Order, order.ItemId, cancellationToken);
+        }
+
         if (_serviceProvider.GetService<ITransactionManager>() is not { } transactions)
         {
             return;
@@ -83,6 +93,12 @@ public sealed class OrderAnonymizer
 
         foreach (var transaction in result.Entries)
         {
+            // A balance left on the order is paid through a checkout of its own transaction.
+            if (sessions is not null)
+            {
+                await sessions.AnonymizeByReferenceAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId, cancellationToken);
+            }
+
             if (transaction.GuestContactName is null && transaction.GuestContactEmail is null)
             {
                 continue;
