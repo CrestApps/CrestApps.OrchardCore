@@ -73,9 +73,6 @@
                         <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
-                <div class="col-auto">
-                    <select asp-for="Sort" asp-items="Model.Sorts" class="form-select" title="@T["Sort by"]" aria-label="@T["Sort by"]" data-list-filter-submit></select>
-                </div>
                 @if (Model.CanVerifyPhoneNumbers)
                 {
                     <div class="col-auto">
@@ -107,4 +104,6 @@
     </admin-list>
 </form>
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 <script asp-name="list-management-ui" at="Foot"></script>

@@ -111,6 +111,9 @@ public sealed class InventoryAdminController : Controller
             {
                 Source = items,
                 Pager = pagerShape,
+
+                // The "Show" filter renders at the end of the list's toolbar.
+                ToolbarActions = await _shapeFactory.CreateAsync("InventoryAdminListFilters", Arguments.From(new { Options = options })),
             },
         });
     }

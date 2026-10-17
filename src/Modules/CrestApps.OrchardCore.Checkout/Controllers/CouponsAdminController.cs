@@ -149,6 +149,9 @@ public sealed class CouponsAdminController : Controller
             Pager = (IShape)viewModel.Pager,
         };
 
+        // The status filter renders at the end of the list's toolbar.
+        viewModel.List.ToolbarActions = await shapeFactory.CreateAsync("CouponsAdminListFilters", Arguments.From(new { Options = options }));
+
         return View(viewModel);
     }
 

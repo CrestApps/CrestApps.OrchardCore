@@ -221,6 +221,12 @@ public sealed class CallRecordingsController : Controller
             model.AgentOptions = await GetAgentOptionsAsync(filter.AgentUserId);
         }
 
+        // The date, direction, call type and agent filters render at the end of the list's toolbar.
+        model.List.ToolbarActions = await shapeFactory.CreateAsync("CallRecordingListFilters", Arguments.From(new
+        {
+            ListModel = model,
+        }));
+
         return View(model);
     }
 

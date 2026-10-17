@@ -1,56 +1,15 @@
-@using Microsoft.AspNetCore.Mvc.Rendering
-
 @model SharedVoicemailListViewModel
-
-@{
-    var statusOptions = new List<SelectListItem>
-    {
-        new(T["Open (new and claimed)"].Value, nameof(SharedVoicemailStatusFilter.Open), Model.Status == SharedVoicemailStatusFilter.Open),
-        new(T["New"].Value, nameof(SharedVoicemailStatusFilter.New), Model.Status == SharedVoicemailStatusFilter.New),
-        new(T["Claimed"].Value, nameof(SharedVoicemailStatusFilter.Claimed), Model.Status == SharedVoicemailStatusFilter.Claimed),
-        new(T["Done"].Value, nameof(SharedVoicemailStatusFilter.Resolved), Model.Status == SharedVoicemailStatusFilter.Resolved),
-        new(T["All"].Value, nameof(SharedVoicemailStatusFilter.All), Model.Status == SharedVoicemailStatusFilter.All),
-    };
-}
 
 <zone Name="Title">
     <breadcrumb name="ContactCenterSharedVoicemail" title="@T["Shared voicemail"]" />
 </zone>
 
-<form asp-action="Index" method="get" class="no-multisubmit">
+@* The filters render in the list's toolbar, after this form, and name it with their form attribute. *@
+<form asp-action="Index" method="get" id="shared-voicemail-filter" class="no-multisubmit">
     @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
     {
         <input type="hidden" name="pageSize" value="@selectedPageSize" />
     }
-    <div class="card text-bg-theme mb-3 position-sticky action-bar">
-        <div class="card-body">
-            <div class="row gx-2 gy-2 align-items-center">
-                <div class="col-sm-auto">
-                    <label for="queueId" class="visually-hidden">@T["Queue"]</label>
-                    <select id="queueId" name="queueId" class="form-select" asp-items="Model.QueueOptions">
-                        <option value="">@T["All my queues"]</option>
-                    </select>
-                </div>
-                <div class="col-sm-auto">
-                    <label for="status" class="visually-hidden">@T["Status"]</label>
-                    <select id="status" name="status" class="form-select" asp-items="statusOptions"></select>
-                </div>
-                <div class="col-sm-auto">
-                    <button type="submit" class="btn btn-secondary">@T["Filter"]</button>
-                </div>
-                <div class="col text-sm-end">
-                    @if (Model.NewCount > 0)
-                    {
-                        <span class="badge text-bg-danger">@(Model.NewCount == 1 ? T["1 new voicemail"] : T["{0} new voicemails", Model.NewCount])</span>
-                    }
-                    else
-                    {
-                        <span class="badge text-bg-secondary">@T["No new voicemail"]</span>
-                    }
-                </div>
-            </div>
-        </div>
-    </div>
 </form>
 
 @* The messages, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site
@@ -67,3 +26,6 @@
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>
 </admin-list>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>

@@ -171,6 +171,12 @@ public sealed class OrdersAdminController : Controller
             Pager = viewModel.Pager,
         };
 
+        // The filters render at the end of the list's toolbar; a customer's own orders are not filtered.
+        if (userId is null)
+        {
+            viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("OrdersAdminListFilters", Arguments.From(new { Options = options }));
+        }
+
         return viewModel;
     }
 

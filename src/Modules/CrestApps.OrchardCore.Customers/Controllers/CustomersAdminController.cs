@@ -153,6 +153,9 @@ public sealed class CustomersAdminController : Controller
             Pager = viewModel.Pager,
         };
 
+        // The filters render at the end of the list's toolbar.
+        viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("CustomersAdminListFilters", Arguments.From(new { Options = options }));
+
         return View(viewModel);
     }
 

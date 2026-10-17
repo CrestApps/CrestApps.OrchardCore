@@ -195,6 +195,13 @@ public sealed class RecordsController : Controller
             },
         };
 
+        // The sort renders at the end of the list's toolbar.
+        model.List.ToolbarActions = await _shapeFactory.CreateAsync("PhoneNumberVerificationRecordsListFilters", Arguments.From(new
+        {
+            model.Sort,
+            model.Sorts,
+        }));
+
         return View(model);
     }
 

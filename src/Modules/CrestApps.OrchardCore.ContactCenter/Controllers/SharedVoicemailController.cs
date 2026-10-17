@@ -170,6 +170,14 @@ public sealed class SharedVoicemailController : Controller
             Pager = await shapeFactory.PagerAsync(pager, page.Count, routeData),
         };
 
+        // The filters and the new-message count render at the end of the list's toolbar.
+        model.List.ToolbarActions = await shapeFactory.CreateAsync("SharedVoicemailListFilters", Arguments.From(new
+        {
+            model.Status,
+            model.NewCount,
+            model.QueueOptions,
+        }));
+
         return View(model);
     }
 

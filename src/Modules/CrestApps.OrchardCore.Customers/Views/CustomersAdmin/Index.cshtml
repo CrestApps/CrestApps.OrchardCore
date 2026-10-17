@@ -16,9 +16,6 @@
                         <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
-                <div class="col-auto">
-                    <select asp-for="Options.Filter" asp-items="Model.Options.Filters" class="selectpicker show-tick" data-width="fit" data-header="@T["Show"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Show"]"></select>
-                </div>
                 @if (Model.CanManage)
                 {
                     <div class="col-auto">

@@ -193,8 +193,17 @@ The view keeps the form, its hidden inputs and the action bar, and renders the l
 - A list with bulk actions must load `list-management-ui` (it wires `#select-all`, `#items`, `#selected-items`,
   `#actions` and the `itemIds` checkboxes the toolbar and rows render). Client-side search uses the same script
   with `data-client-side-search="true"` and the rows' `data-filter-value`.
-- Filters (selects) go in the action bar beside the search, or in `ToolbarActions`; keep their existing script hooks
-  (e.g. `data-commerce-list-filter`).
+- Filters (status, type, "Show" selects) go in the list's toolbar, never in the action bar beside the **Add**
+  button. The controller creates a small filter shape and passes it as `AdminListContext.ToolbarActions`:
+
+  ```csharp
+  viewModel.List.ToolbarActions = await _shapeFactory.CreateAsync("CustomersAdminListFilters", Arguments.From(new { Options = options }));
+  ```
+
+  Its template (`Views/CustomersAdminListFilters.cshtml`) renders the selects in a `<div class="btn-group filter">`,
+  each with `data-style="btn-sm"` and `form="<the filter form's id>"` so it submits the filter form wherever the list
+  is rendered. Keep the existing script hooks (e.g. `data-commerce-list-filter`). Reference: Customers, Orders,
+  Coupons, Inventory and Transactions.
 - An onboarding empty state (a card with a call to action) may be shown **instead of** `<admin-list>` when there are
   no records and no search; otherwise use `empty-message`.
 - Remove leftovers: `int startIndex = ...` computations, `id="rewrite-rules-sortable-list"` on lists that are not

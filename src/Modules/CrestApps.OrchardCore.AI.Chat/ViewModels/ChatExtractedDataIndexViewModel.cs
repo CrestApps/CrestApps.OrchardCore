@@ -23,6 +23,11 @@ public class ChatExtractedDataIndexViewModel
     public DateTime? EndDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the relative range picked in the date range selector, e.g. <c>last30</c>, so the selector shows it again.
+    /// </summary>
+    public string Range { get; set; }
+
+    /// <summary>
     /// Gets or sets the profiles.
     /// </summary>
     public IReadOnlyList<SelectListItem> Profiles { get; set; } = [];
