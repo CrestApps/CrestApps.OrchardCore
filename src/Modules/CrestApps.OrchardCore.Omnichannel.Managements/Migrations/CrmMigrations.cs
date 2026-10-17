@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentFields.Fields;
@@ -160,7 +161,7 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
             .GetRequiredService<CrmCatalogSeeder>()
             .SeedAsync());
 
-        return 4;
+        return 5;
     }
 
     /// <summary>
@@ -219,6 +220,27 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
         await EnsureLeadImportIndexAsync();
 
         return 4;
+    }
+
+    /// <summary>
+    /// Adds the covering index the leads list needs to filter and count on a large tenant without a lookup per lead.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        if (await IndexTableExistsAsync<LeadIndex>(null))
+        {
+            await IndexTableIndexCreation.CreateIfMissingAsync<LeadIndex>(
+                SchemaBuilder,
+                LeadConvertedIndexName,
+                collection: null,
+                "DocumentId",
+                "IsConverted",
+                "Published",
+                "Latest");
+        }
+
+        return 5;
     }
 
     // The imports already made are recorded on their leads by LeadImportBackfillBackgroundTask, after activation:
@@ -551,7 +573,14 @@ public sealed class CrmMigrations : OmnichannelIndexMigration
 
         await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
             .CreateIndex("IDX_LeadIndex_Owner", "OwnerId", "IsConverted", "Published", "Latest"));
+
+        await schemaBuilder.AlterIndexTableAsync<LeadIndex>(table => table
+            .CreateIndex(LeadConvertedIndexName, "DocumentId", "IsConverted", "Published", "Latest"));
     }
+
+    // Covers the join from the content list to the lead index together with the converted filter, so counting a
+    // large lead list reads this index alone instead of looking up every lead row to test IsConverted.
+    private const string LeadConvertedIndexName = "IDX_LeadIndex_DocumentId_Converted";
 
     internal static async Task CreateLeadImportIndexAsync(ISchemaBuilder schemaBuilder)
     {
