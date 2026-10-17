@@ -66,3 +66,13 @@ Countries are indexed by `GeographicAreaIndex` (content item id, content type, c
 ## Money safety
 
 Taxation stores codes, not content item ids: the country's ISO code and the region, county, city and district as text. Addresses entered through the address rules carry region codes, so a tax jurisdiction for `CA` matches an address whose customer chose "California". Enabling or disabling either feature never orphans tax data.
+
+## Upgrading from an earlier 3.0 preview
+
+Earlier 3.0 previews kept the Country content in the Addresses feature and had an `AddressPart` whose country, region, county, city and district were content pickers, with Region, County, City and District content types and `IAddressResolver` to read them. A site upgrading from one of those keeps working:
+
+- **Countries.** A site that ran the earlier Addresses migration gets **Address Countries** turned on by itself the first time it starts, so its country list, with any renamed or removed countries, stays as it was. A new site starts without it.
+- **Content.** Content types that have `AddressPart` keep it, with its picker fields, and the Region, County, City and District items stay. Nothing is deleted. They are still indexed in `GeographicAreaIndex`, with their parents.
+- **Code.** `IAddressResolver`, `DefaultAddressResolver` and the `AddressConstants` names for the removed types and parts (`AddressPart`, `Region`, `RegionPart`, `County`, `CountyPart`, `City`, `CityPart`, `District`, `DistrictPart`) are still there, marked `[Obsolete]`, so code that used them builds with a warning. They will be removed in the next major version.
+
+To move to the new address, add an Address field (the ContentFields module's **Address Field** feature) to the content type, copy each item's address into it, and remove `AddressPart`; code reads the field's `Address` value instead of calling `IAddressResolver`.

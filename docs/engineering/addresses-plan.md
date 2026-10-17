@@ -183,6 +183,16 @@ AD1 to AD3 come before CU3. AD4 can follow CU3. AD2 was split in two to keep eac
 
 ### AD2a as built
 
+- Compatibility for sites on earlier 3.0 previews (added before merging, at Mike's request not to break anyone):
+  `IAddressResolver`, `DefaultAddressResolver` and the removed `AddressConstants` names are back, `[Obsolete]`, with
+  the resolver registered by Address Countries; `GeographicAreaIndexProvider` still indexes Region, County, City and
+  District items. `AddressCountriesUpgradeMigrations` (base feature) turns Address Countries on for a site whose
+  data migration record has the old `AddressMigrations`; it returns 0 until the feature is on, so it retries on the next
+  start, and enables it through `HttpBackgroundJob` because migrations run during activation in a scope that runs no
+  deferred tasks and can't reload the tenant.
+- Gotcha: `IExtensionManager.GetFeatures(ids)` returns the features with their dependencies, so `FirstOrDefault()`
+  picks a dependency. Find a feature by id in `IShellFeaturesManager.GetAvailableFeaturesAsync()`.
+
 - `CrestApps.OrchardCore.Addresses` keeps its id with no dependencies and only calls `AddAddressesCore()`. The new
   `CrestApps.OrchardCore.Addresses.Countries` ("Address Countries") holds the Country type, its seed,
   `GeographicAreaIndex` (now countries only) and `ContentCountryService`.

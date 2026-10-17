@@ -22,6 +22,9 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddAddressesCore();
+
+        // Sites from earlier 3.0 previews keep their managed countries.
+        services.AddDataMigration<AddressCountriesUpgradeMigrations>();
     }
 }
 
@@ -44,5 +47,9 @@ public sealed class CountriesStartup : StartupBase
         services.AddScoped<IContentDisplayDriver, CountryCodeDisplayDriver>();
 
         services.AddScoped<ICountryService, ContentCountryService>();
+
+#pragma warning disable CS0618 // Kept for sites that used AddressPart in earlier 3.0 previews.
+        services.AddScoped<IAddressResolver, DefaultAddressResolver>();
+#pragma warning restore CS0618
     }
 }
