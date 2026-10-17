@@ -45,8 +45,14 @@ second one.
 
 ## Configuration
 
-Under **Settings → Stripe**, supply the secret and publishable keys. Verifying the secret key provisions the
+Under **Settings → Payments → Stripe**, supply the secret and publishable keys. Verifying the secret key provisions the
 webhook automatically, so there is no separate endpoint to register by hand.
+
+The keys and the mode can also come from the tenant's application configuration, in the optional `CrestApps_Stripe`
+section (`IsLive`, and `PublishableKey`, `SecretKey` and `WebhookSecret` under `Test` and `Live`), for example
+`OrchardCore__CrestApps_Stripe__Test__SecretKey` as an environment variable. A configured value wins over the
+settings page and is shown read-only there. The `StripeSettings` recipe step imports the settings and protects any
+clear-text secret, and the **Stripe Settings** deployment step exports them without any secret.
 
 ## Documentation
 

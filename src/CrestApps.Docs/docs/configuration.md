@@ -144,8 +144,9 @@ Keep API keys, passwords and connection strings out of files that are committed 
   configuration. Azure Key Vault secret names use `--` in place of `:`, for example
   `OrchardCore--CrestApps--AI--Connections--0--ApiKey`.
 
-Some admin screens also store secrets, such as the Telnyx API key or the Claude API key. Those are
-encrypted with ASP.NET Core data protection before they are saved.
+Some admin screens also store secrets, such as the Telnyx API key, the Claude API key or the Stripe secret
+keys. Those are encrypted with ASP.NET Core data protection before they are saved. The Stripe keys can also
+come from configuration instead; see [Stripe](#stripe).
 
 ### Which source wins
 
@@ -185,6 +186,7 @@ Many modules can be set up both in the browser and in configuration. Which one w
 | Asterisk | **Settings > Communication > Telephony**, **Asterisk** | `CrestApps:Asterisk:Default` | They are two separate providers. Configuration adds a **Default Asterisk** provider; the tenant picks which provider to use as its default telephony provider. |
 | Do Not Call registries | **Settings > DNC Registries** | `CrestApps:DncRegistry:AzureBlobStorage` | Registry credentials are admin-only. File storage in Azure is configuration-only. |
 | Phone number verification | **Settings > Phone Number Verifications** | None | Admin screen and recipes only. |
+| Stripe | **Settings > Payments > Stripe** | `CrestApps_Stripe` | **Configuration wins**, one value at a time. A value set in configuration is shown read-only on the settings page and is never overwritten by it; a value left out falls back to the settings page. |
 
 Every other section on this page is configuration-only: it has no admin screen.
 
@@ -858,6 +860,48 @@ OrchardCore__OrchardCore_Sms_Telnyx__MessagingProfileId=<messaging-profile-id>
 
 The SMS settings screen wins while its Telnyx provider is enabled. See
 [Telnyx SMS](telephony/telnyx.md#telnyx-sms).
+
+## Payments
+
+### Stripe
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps_Stripe` |
+| **Feature** | Stripe (`CrestApps.OrchardCore.Stripe`) |
+| **Controls** | The Stripe mode and the keys of each mode, in place of or on top of **Settings > Payments > Stripe** |
+
+Keys: `IsLive` (`true` or `false`; leave it out to let the settings page decide), and for each mode, `Test` and `Live`, the keys `PublishableKey`, `SecretKey` and `WebhookSecret`. Every key is optional. A key that has a value wins over the value stored on the settings page, and the page shows it as configured from the application settings and does not overwrite it; a key that is left out falls back to the settings page.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_Stripe": {
+      "IsLive": false,
+      "Test": {
+        "PublishableKey": "pk_test_...",
+        "SecretKey": "sk_test_...",
+        "WebhookSecret": "whsec_..."
+      },
+      "Live": {
+        "PublishableKey": "pk_live_...",
+        "SecretKey": "sk_live_...",
+        "WebhookSecret": "whsec_..."
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps_Stripe__IsLive=false
+OrchardCore__CrestApps_Stripe__Test__PublishableKey=pk_test_...
+OrchardCore__CrestApps_Stripe__Test__SecretKey=sk_test_...
+OrchardCore__CrestApps_Stripe__Test__WebhookSecret=whsec_...
+OrchardCore__Contoso__CrestApps_Stripe__Live__SecretKey=sk_live_...
+```
+
+Keep the secret keys and webhook signing secrets in environment variables or a secret store rather than in a committed file; see [Secrets](#secrets). See [Configuration from the application settings](modules/payments.md#configuration-from-the-application-settings).
 
 ## Telephony
 
