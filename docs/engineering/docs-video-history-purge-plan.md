@@ -31,17 +31,19 @@ Every version, on every ref, of:
 | `*.gif` except 3 (optional, recommended) | 35 | 98.4 MiB | The GIF screencasts the MP4s replaced; only on the stale `ma/add-screencasts` branch and #551's refs |
 
 Kept: the 7 `.png` screenshots, and `admin-ui-sample.gif`, `mcp-integration.gif` and `widget-ui-sample.gif`, which are
-still on `main` and embedded by the versioned docs (1.2 and 2.1) and are in the release tags. Media under other
+in the release tags. They are no longer on `main`: the versioned docs (1.2 and 2.1) embed chapters of the
+`ai-walkthroughs` YouTube video instead. Their old versions stay in history, because purging them would mean rewriting
+the release tags, and they hold no personal data (see the check below). Media under other
 folders (`docs/images`, `src/docs`, `src/CrestApps.OrchardCore.Documentations`, `versioned_docs/version-1.2/images`)
 is out of scope; together it is under 16 MiB.
 
 Include the retired GIFs. They are the same recordings in an older format, they were never part of the OCR pass, and
 they add no extra churn: every ref that holds them is already in the rewrite.
 
-> **Check before running:** `mcp-integration.gif` records the same demo as one of the MP4s that showed personal data,
-> and it was never OCR-checked. If it shows the same thing, purging history will not help while it is on `main` and in
-> the versioned docs. It would need a redacted replacement first, and purging its old versions would mean rewriting
-> the 13 release tags from `v2.0.0-preview-0006` to `v2.1.5`. Run the OCR pass on it before deciding.
+> **Checked:** `mcp-integration.gif` records the same demo as one of the MP4s that showed personal data, so its frames
+> were reviewed on 2026-10-17 (34 frames from start to end). It shows only the demo site, the time MCP server and the
+> maintainer's own username. It holds no personal data, so the 13 release tags from `v2.0.0-preview-0006` to `v2.1.5`
+> can stay as they are.
 
 ## Measured sizes
 
@@ -236,7 +238,7 @@ until its worktree has been moved: a session that pushes a new branch from an ol
 2. **CrestApps.Videos no longer reads OC history.** The `reel.json` files of the walkthrough reels and the
    `commerce`/`tenant-hierarchy` READMEs point at OC commit `ef4a3177a`, which disappears. Copy the source screencasts
    they need somewhere private (not a public repo: the raw files are the unredacted ones) and repoint them first.
-3. **The `mcp-integration.gif` check** above is done.
+3. **The `mcp-integration.gif` check** above is done (done).
 4. **Open PRs merged or closed** as far as practical.
 5. A **quiet window**: no one else pushing, no sessions running.
 
@@ -350,7 +352,7 @@ backup). After garbage collection there is no rollback, which is why the backup 
 - [ ] Decide: videos only, or videos + retired GIFs (recommended).
 - [ ] Decide: accept that ~330 merged PRs lose their diff views when Support purges (required to remove the personal
       data from GitHub; skipping Support only shrinks clones).
-- [ ] OCR-check `mcp-integration.gif`; replace it first if it shows personal data.
+- [x] Check `mcp-integration.gif` for personal data (none found).
 - [ ] #814 switched to YouTube embeds; ready PRs merged; the rest noted for re-review.
 - [ ] CrestApps.Videos sources moved off OC commit `ef4a3177a` to private storage, and repointed.
 - [ ] Every Claude session and other automation that pushes to this repo stopped.

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentFailedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Stripe Payment Failed"])
+    </h4>
+</header>

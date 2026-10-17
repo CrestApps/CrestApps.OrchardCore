@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscriptionStartedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-play" aria-hidden="true"></i>
+    @T["Subscription Started"]
+</h4>
+<p class="text-muted">@T["Triggered when a subscription is first created from a completed checkout."]</p>
