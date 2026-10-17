@@ -91,7 +91,7 @@ public sealed class StripeSettingsDeploymentTests
         });
 
         // Act
-        await step.ExecuteAsync(context);
+        await ((IRecipeStepHandler)step).ExecuteAsync(context);
 
         // Assert
         Assert.Empty(context.Errors);
@@ -130,7 +130,7 @@ public sealed class StripeSettingsDeploymentTests
         });
 
         // Act
-        await step.ExecuteAsync(context);
+        await ((IRecipeStepHandler)step).ExecuteAsync(context);
 
         // Assert
         Assert.Empty(context.Errors);
@@ -158,7 +158,7 @@ public sealed class StripeSettingsDeploymentTests
         });
 
         // Act
-        await step.ExecuteAsync(context);
+        await ((IRecipeStepHandler)step).ExecuteAsync(context);
 
         // Assert
         Assert.Single(context.Errors);
@@ -167,7 +167,7 @@ public sealed class StripeSettingsDeploymentTests
         shellReleaseManager.Verify(manager => manager.RequestRelease(), Times.Never);
     }
 
-    private static IRecipeStepHandler CreateStep(
+    private static StripeSettingsStep CreateStep(
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         out Mock<IShellReleaseManager> shellReleaseManager)
