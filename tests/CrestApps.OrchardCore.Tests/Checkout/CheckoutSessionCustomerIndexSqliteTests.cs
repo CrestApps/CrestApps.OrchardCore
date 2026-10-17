@@ -176,7 +176,7 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
 
         if (createCheckoutSchema)
         {
-            await new CheckoutMigrations { SchemaBuilder = schemaBuilder }.CreateAsync();
+            await new CheckoutMigrations(session) { SchemaBuilder = schemaBuilder }.CreateAsync();
         }
 
         if (withCustomerIndex)
