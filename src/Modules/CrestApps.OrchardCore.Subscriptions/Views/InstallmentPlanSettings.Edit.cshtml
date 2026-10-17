@@ -24,3 +24,58 @@
         <span class="hint">@T["When charging the saved card fails, it is tried again this many days after each failure, in order. After the last retry the payment is left for the customer to pay, and the overdue reminders take over. Leave it empty to hand a declined payment to the customer straight away."]</span>
     </div>
 </div>
+
+<h6 class="mt-4">@T["Installments at checkout"]</h6>
+<p class="text-muted">@T["Let customers who pay an outstanding balance choose to pay it in installments instead. The card they pay the first installment with is saved and charged automatically for the rest. Modules can offer their own options too, whatever is set here."]</p>
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Offer for balances from"]</span>
+    <div class="ocat-end">
+        @if (Model.AvailableSources.Count == 0)
+        {
+            <span class="hint">@T["No transaction sources are registered."]</span>
+        }
+
+        @for (var index = 0; index < Model.AvailableSources.Count; index++)
+        {
+            var source = Model.AvailableSources[index];
+            var inputId = Html.IdFor(m => m.CheckoutSources) + "_" + index;
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@inputId" name="@Html.NameFor(m => m.CheckoutSources)" value="@source.Value" checked="@source.Selected" />
+                <label class="form-check-label" for="@inputId">@source.Text</label>
+            </div>
+        }
+        <span class="hint">@T["Only balances owed in full by a customer with an account can be split."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CheckoutInstallmentCounts">
+    <label asp-for="CheckoutInstallmentCounts" class="ocat-label">@T["Numbers of payments offered"]</label>
+    <div class="ocat-end">
+        <input asp-for="CheckoutInstallmentCounts" class="form-control" placeholder="3, 6" />
+        <span asp-validation-for="CheckoutInstallmentCounts"></span>
+        <span class="hint">@T["The first payment is taken at checkout. Leave it empty to offer no installments from these settings."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CheckoutFrequency">
+    <label asp-for="CheckoutFrequency" class="ocat-label">@T["Payments fall due"]</label>
+    <div class="ocat-end">
+        <select asp-for="CheckoutFrequency" class="form-select">
+            <option value="@InstallmentFrequency.Weekly">@T["Every week"]</option>
+            <option value="@InstallmentFrequency.BiWeekly">@T["Every two weeks"]</option>
+            <option value="@InstallmentFrequency.Monthly">@T["Every month"]</option>
+            <option value="@InstallmentFrequency.Quarterly">@T["Every three months"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CheckoutMinimumAmount">
+    <label asp-for="CheckoutMinimumAmount" class="ocat-label">@T["Smallest balance"]</label>
+    <div class="ocat-end">
+        <input asp-for="CheckoutMinimumAmount" type="number" min="0" step="any" class="form-control" />
+        <span asp-validation-for="CheckoutMinimumAmount"></span>
+        <span class="hint">@T["Balances below this amount can only be paid in full. Zero allows any balance."]</span>
+    </div>
+</div>

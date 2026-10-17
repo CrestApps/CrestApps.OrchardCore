@@ -86,4 +86,10 @@ public enum DispatchBlocker
     /// it with.
     /// </summary>
     ProfileMissing,
+
+    /// <summary>
+    /// The record is not in its campaign's queue because it is assigned to a user, who works it from their own list rather
+    /// than through the dialer.
+    /// </summary>
+    AssignedToUser,
 }

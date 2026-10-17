@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports.Models;
 
@@ -17,6 +18,11 @@ internal static class ContactCenterReportFilter
     public const string Direction = "Direction";
     public const string ActivitySource = "ActivitySource";
     public const string ActivityStatus = "ActivityStatus";
+    public const string InteractionType = "InteractionType";
+    public const string DialerProfileId = "DialerProfileId";
+    public const string QueueState = "QueueState";
+    public const string ActivityItemId = "ActivityItemId";
+    public const string DecisionReason = "DecisionReason";
 
     public static ContactCenterReportCriteria GetCriteria(ReportFilter filter)
     {
@@ -31,8 +37,17 @@ internal static class ContactCenterReportFilter
             Channel = GetEnum<InteractionChannel>(filter, Channel),
             Direction = GetEnum<InteractionDirection>(filter, Direction),
             ActivityStatus = GetEnum<ActivityStatus>(filter, ActivityStatus),
+            InteractionType = GetEnum<ActivityInteractionType>(filter, InteractionType),
         };
     }
+
+    /// <summary>
+    /// Reads the selected queue state: where the pending records the report covers stand with the dialer right now.
+    /// </summary>
+    /// <param name="filter">The report filter.</param>
+    /// <returns>The selected state, or <see langword="null"/> for every record.</returns>
+    public static DialerQueueState? GetQueueState(ReportFilter filter)
+        => GetEnum<DialerQueueState>(filter, QueueState);
 
     public static string GetString(ReportFilter filter, string key)
     {

@@ -22,16 +22,22 @@ public static class CheckoutPaymentMethodSelector
     /// Whether the checkout pays off a balance that already exists. A provider that only records a promise to pay
     /// later can't do that, so it is left out.
     /// </param>
+    /// <param name="savesPaymentMethod">
+    /// Whether the checkout keeps the payment method for later charges without the customer present
+    /// (<see cref="CheckoutSession.SavePaymentMethod"/>). A provider that can't keep one is left out.
+    /// </param>
     public static ICheckoutPaymentProvider[] GetEligible(
         IEnumerable<ICheckoutPaymentProvider> providers,
         IReadOnlyList<string> obligations,
-        bool settlesExistingBalance = false)
+        bool settlesExistingBalance = false,
+        bool savesPaymentMethod = false)
     {
         ArgumentNullException.ThrowIfNull(providers);
         ArgumentNullException.ThrowIfNull(obligations);
 
         return [.. providers.Where(provider =>
             (!settlesExistingBalance || !provider.Capabilities.DefersPayment) &&
+            (!savesPaymentMethod || provider.Capabilities.SupportsSavedPaymentMethods) &&
             IsEligible(provider, obligations))];
     }
 

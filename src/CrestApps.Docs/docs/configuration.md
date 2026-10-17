@@ -144,8 +144,9 @@ Keep API keys, passwords and connection strings out of files that are committed 
   configuration. Azure Key Vault secret names use `--` in place of `:`, for example
   `OrchardCore--CrestApps--AI--Connections--0--ApiKey`.
 
-Some admin screens also store secrets, such as the Telnyx API key or the Claude API key. Those are
-encrypted with ASP.NET Core data protection before they are saved.
+Some admin screens also store secrets, such as the Telnyx API key, the Claude API key or the Stripe secret
+keys. Those are encrypted with ASP.NET Core data protection before they are saved. The Stripe keys can also
+come from configuration instead; see [Stripe](#stripe).
 
 ### Which source wins
 
@@ -185,6 +186,7 @@ Many modules can be set up both in the browser and in configuration. Which one w
 | Asterisk | **Settings > Communication > Telephony**, **Asterisk** | `CrestApps:Asterisk:Default` | They are two separate providers. Configuration adds a **Default Asterisk** provider; the tenant picks which provider to use as its default telephony provider. |
 | Do Not Call registries | **Settings > DNC Registries** | `CrestApps:DncRegistry:AzureBlobStorage` | Registry credentials are admin-only. File storage in Azure is configuration-only. |
 | Phone number verification | **Settings > Phone Number Verifications** | None | Admin screen and recipes only. |
+| Stripe | **Settings > Payments > Stripe** | `CrestApps_Stripe` | **Configuration wins**, one value at a time. A value set in configuration is shown read-only on the settings page and is never overwritten by it; a value left out falls back to the settings page. |
 
 Every other section on this page is configuration-only: it has no admin screen.
 
@@ -859,6 +861,48 @@ OrchardCore__OrchardCore_Sms_Telnyx__MessagingProfileId=<messaging-profile-id>
 The SMS settings screen wins while its Telnyx provider is enabled. See
 [Telnyx SMS](telephony/telnyx.md#telnyx-sms).
 
+## Payments
+
+### Stripe
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps_Stripe` |
+| **Feature** | Stripe (`CrestApps.OrchardCore.Stripe`) |
+| **Controls** | The Stripe mode and the keys of each mode, in place of or on top of **Settings > Payments > Stripe** |
+
+Keys: `IsLive` (`true` or `false`; leave it out to let the settings page decide), and for each mode, `Test` and `Live`, the keys `PublishableKey`, `SecretKey` and `WebhookSecret`. Every key is optional. A key that has a value wins over the value stored on the settings page, and the page shows it as configured from the application settings and does not overwrite it; a key that is left out falls back to the settings page.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps_Stripe": {
+      "IsLive": false,
+      "Test": {
+        "PublishableKey": "pk_test_...",
+        "SecretKey": "sk_test_...",
+        "WebhookSecret": "whsec_..."
+      },
+      "Live": {
+        "PublishableKey": "pk_live_...",
+        "SecretKey": "sk_live_...",
+        "WebhookSecret": "whsec_..."
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps_Stripe__IsLive=false
+OrchardCore__CrestApps_Stripe__Test__PublishableKey=pk_test_...
+OrchardCore__CrestApps_Stripe__Test__SecretKey=sk_test_...
+OrchardCore__CrestApps_Stripe__Test__WebhookSecret=whsec_...
+OrchardCore__Contoso__CrestApps_Stripe__Live__SecretKey=sk_live_...
+```
+
+Keep the secret keys and webhook signing secrets in environment variables or a secret store rather than in a committed file; see [Secrets](#secrets). See [Configuration from the application settings](modules/payments.md#configuration-from-the-application-settings).
+
 ## Telephony
 
 Telnyx voice is configured only on the **Telnyx** tab of the telephony settings; it reads no configuration
@@ -1339,12 +1383,19 @@ Every value is validated on start, and an invalid one stops the tenant.
 | `Debounce` | `00:00:00.300` | Greater than zero. |
 | `LockExpiration` | `00:00:30` | Greater than zero. |
 | `LockRetryDelay` | `00:00:01` | Greater than zero and shorter than `LockExpiration`. |
+| `StalledAfter` | `00:05:00` | Greater than zero. |
 
 `Debounce` is how long a pacing request waits for others before the campaign is paced, so a burst of agent and call
 changes paces it once. `LockExpiration` bounds the per-campaign pacing lock should a node stop while holding it, and
 `LockRetryDelay` is how soon a campaign is paced again when its lock was held by another run. These change only when a
 campaign is paced; how many calls each cycle places stays with the dialer profile. The minute dialer pacing task stays
 on as the backstop.
+
+`StalledAfter` is how long work may wait in a paced campaign queue without a pacing cycle of that queue completing before the dialer is reported as stalled: on the **Dialer activity and health** report, on the live dashboard's dialer banner, and by the `contactcenter-dialer-pacing` health check. The minute task paces every queue with waiting work, so a healthy dialer completes a cycle at least once a minute. See [Pacing cycle records and dialer health](contact-center/agents-queues-dialer.md#pacing-cycle-records-and-dialer-health).
+
+```text
+OrchardCore__CrestApps__ContactCenter__DialerPacing__StalledAfter=00:10:00
+```
 
 ```json
 {
@@ -1437,7 +1488,7 @@ See [Predictive dialing](contact-center/agents-queues-dialer.md#predictive-diali
 | | |
 | --- | --- |
 | **Section** | `CrestApps:ContactCenter:Reporting` |
-| **Controls** | The widest date range a Contact Center report accepts, the widest period an agent workforce report reads from the agent state log, and how far back the daily agent time summaries are kept |
+| **Controls** | The widest date range a Contact Center report accepts, the widest period an agent workforce report reads from the agent state log, how far back the daily agent time summaries are kept, and how long a queue with due work may go without a routing decision before the dialer decision log report flags it |
 
 | Key | Type | Default | What it does |
 | --- | --- | --- | --- |
@@ -1445,6 +1496,7 @@ See [Predictive dialing](contact-center/agents-queues-dialer.md#predictive-diali
 | `MaximumWorkforceReportRange` | `TimeSpan` | `31.00:00:00` (31 days) | The widest period an agent workforce report reads when it is shown in the browser: every *Workforce & Payroll* report, the agent presence audit, the agent activity timeline and the reconciled payroll timecard. A longer period is refused with a message, before any event is read. Measured in the tenant's time zone. Must be greater than zero. |
 | `MaximumWorkforceExportRange` | `TimeSpan` | `31.00:00:00` (31 days) | The same limit for an export of those reports, which lists every row. Must be greater than zero. |
 | `AgentTimeSummaryBackfill` | `TimeSpan` | `92.00:00:00` (92 days) | How far back the daily agent time summaries are computed and kept. The time-based workforce reports read whole UTC days inside their period from these summaries. `00:00:00` turns the summaries off, so every report reads the log, and the roller deletes the summaries it kept. Cannot be negative. |
+| `DecisionLogQuietThreshold` | `TimeSpan` | `00:15:00` (15 minutes) | How long a queue with work due now may go without a routing decision before the **Dialer decision log** report says *No routing decision in the last N minutes*. Must be greater than zero. |
 
 ```json
 {
@@ -1455,7 +1507,8 @@ See [Predictive dialing](contact-center/agents-queues-dialer.md#predictive-diali
           "MaximumReportRange": "180.00:00:00",
           "MaximumWorkforceReportRange": "31.00:00:00",
           "MaximumWorkforceExportRange": "62.00:00:00",
-          "AgentTimeSummaryBackfill": "92.00:00:00"
+          "AgentTimeSummaryBackfill": "92.00:00:00",
+          "DecisionLogQuietThreshold": "00:10:00"
         }
       }
     }
@@ -1468,6 +1521,7 @@ OrchardCore__CrestApps__ContactCenter__Reporting__MaximumReportRange=180.00:00:0
 OrchardCore__CrestApps__ContactCenter__Reporting__MaximumWorkforceReportRange=31.00:00:00
 OrchardCore__CrestApps__ContactCenter__Reporting__MaximumWorkforceExportRange=62.00:00:00
 OrchardCore__CrestApps__ContactCenter__Reporting__AgentTimeSummaryBackfill=92.00:00:00
+OrchardCore__CrestApps__ContactCenter__Reporting__DecisionLogQuietThreshold=00:10:00
 ```
 
 Raising the workforce limits makes one request read more of the agent state log; on a busy tenant a period the database cannot read within its command timeout ends with a *This period is too large to report* message instead of figures. See [Agent workforce reports over long periods](contact-center/report-catalog.md#agent-workforce-reports-over-long-periods).
@@ -1481,10 +1535,10 @@ See [Report Catalog](contact-center/report-catalog.md).
 | **Section** | `CrestApps:ContactCenter:Retention` |
 | **Controls** | How many days each kind of Contact Center record is kept, the floors that hold records longer, and the purge batch size |
 
-Every `...RetentionDays` key defaults to `0`, which keeps records indefinitely. Keys include
+Every `...RetentionDays` key defaults to `0`, which keeps records indefinitely, except `DialerPacingCycleRetentionDays`, which defaults to `14`: dialer pacing cycle records are diagnostics with no customer data, and `0` keeps them indefinitely too. Keys include
 `InteractionRetentionDays`, `InteractionEventRetentionDays`, `CallSessionRetentionDays`,
 `QueueItemRetentionDays`, `SharedVoicemailRetentionDays`, `CallQualityRecordRetentionDays`,
-`LegalHoldMinimumDays`, `ProjectionReplayHorizonDays`, `PurgeBatchSize` and `MaxPurgeBatchesPerCycle`.
+`DialerPacingCycleRetentionDays`, `LegalHoldMinimumDays`, `ProjectionReplayHorizonDays`, `PurgeBatchSize` and `MaxPurgeBatchesPerCycle`.
 
 ```json
 {
@@ -1645,6 +1699,16 @@ The phone number verification providers have no configuration section. Set them 
 
 ## Commerce
 
+### Transaction customer pages
+
+| | |
+| --- | --- |
+| **Section** | `CrestApps:Transactions:CustomerPages` |
+| **Read by** | Transactions (`CrestApps.OrchardCore.Transactions`), through the tenant configuration |
+| **Controls** | Which customer pages the links in receipt and reminder messages open |
+
+Keys: `LinkTarget`: `Admin` (default) opens the customer pages in the admin (`Admin/my-transactions`, `Admin/transaction-invoices/{itemId}`, `Admin/transaction-receipts/{itemId}/{paymentId}`); `Site` opens the pages in the site theme (`my-transactions`, `my-transactions/invoices/{itemId}`, `my-transactions/receipts/{itemId}/{paymentId}`). Both sets of pages are always available; the key only decides where the links point.
+
 ### Test payments
 
 | | |
@@ -1659,6 +1723,11 @@ Keys: `AllowOutsideDevelopment` (default `false`). The test payment method confi
 {
   "OrchardCore": {
     "CrestApps": {
+      "Transactions": {
+        "CustomerPages": {
+          "LinkTarget": "Site"
+        }
+      },
       "Checkout": {
         "TestProvider": {
           "AllowOutsideDevelopment": true
@@ -1670,10 +1739,11 @@ Keys: `AllowOutsideDevelopment` (default `false`). The test payment method confi
 ```
 
 ```text
+OrchardCore__CrestApps__Transactions__CustomerPages__LinkTarget=Site
 OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
 ```
 
-See [Test payments](modules/checkout.md#test-payments).
+See [Transactions](modules/transactions.md#links-in-messages) and [Test payments](modules/checkout.md#test-payments).
 
 ## Multi-tenancy
 

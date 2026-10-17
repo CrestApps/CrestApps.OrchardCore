@@ -11,21 +11,6 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
-/// Builds the receipt for one payment applied to a transaction.
-/// </summary>
-public interface ITransactionReceiptBuilder
-{
-    /// <summary>
-    /// Builds the receipt for the payment recorded by <paramref name="payment"/>, or returns <see langword="null"/>
-    /// when the event did not record money.
-    /// </summary>
-    /// <param name="transaction">The transaction the payment was applied to.</param>
-    /// <param name="payment">The timeline event that recorded the payment.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    Task<ReceiptDocument> BuildAsync(Transaction transaction, TransactionEvent payment, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
 /// The default <see cref="ITransactionReceiptBuilder"/>. A receipt is for the money in one payment, not for the
 /// transaction as a whole: a balance paid in three parts gets three receipts, each showing what that part paid.
 /// </summary>
@@ -146,6 +131,12 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
         if (!string.IsNullOrEmpty(transaction.InvoiceNumber))
         {
             notes.Add(S["Payment for invoice {0}.", transaction.InvoiceNumber].Value);
+        }
+
+        // What was taken off the charge without being paid, so the receipt explains why it is less than the charge.
+        if (transaction.AmountAdjusted > 0m)
+        {
+            notes.Add(S["{0} {1} of the {2} {3} charged was taken off without being paid (a discount, waiver, credit or write-off).", transaction.Currency, CurrencyScale.Format(transaction.AmountAdjusted, transaction.Currency), transaction.Currency, CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)].Value);
         }
 
         return notes.Count == 0 ? null : string.Join(' ', notes);

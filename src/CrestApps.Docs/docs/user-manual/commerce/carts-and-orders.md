@@ -34,8 +34,10 @@ Guests do not need an account to use a cart. If a guest signs in, what they put 
 | Status | Meaning |
 | --- | --- |
 | Paid | The checkout completed. |
-| Awaiting payment | The buyer started the checkout and did not finish it. |
-| Canceled | The buyer checked out again with a changed cart before paying, so the newer order replaced this one. |
+| Awaiting payment | The buyer started the checkout and has not finished it yet. |
+| Canceled | The order was never paid. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, or nobody finished it in time. |
+
+Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
 
 Open an order to see what was bought, the quantities and prices, the tax and the total paid, when it was placed and paid, who placed it, and the address it was billed to. Refunds are made from the [payment screens](payments-and-refunds.md).
 

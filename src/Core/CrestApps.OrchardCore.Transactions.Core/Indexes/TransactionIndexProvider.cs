@@ -35,7 +35,7 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                 Currency = transaction.Currency,
                 TotalAmount = transaction.TotalAmount,
                 AmountPaid = transaction.AmountPaid,
-                OutstandingAmount = CurrencyScale.Round(Math.Max(0m, transaction.TotalAmount - transaction.AmountPaid), transaction.Currency),
+                OutstandingAmount = CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency),
                 Status = transaction.Status,
                 DueUtc = transaction.DueUtc,
                 NextCycleUtc = transaction.Recurrence?.GetNextCycleUtc(),

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Core.Services;
@@ -18,6 +19,13 @@ public interface IOrderService
     /// <param name="pricing">The cart, priced now. Every line must be available.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<Order> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancels an order that was not paid, records why, and tells every <see cref="IOrderEventHandler"/>. A paid or
+    /// already canceled order is left as it is.
+    /// </summary>
+    /// <returns><see langword="true"/> when the order was canceled now.</returns>
+    Task<bool> CancelAsync(Order order, OrderCancelReason reason, CancellationToken cancellationToken = default);
 }
 
 public sealed class OrderService : IOrderService
@@ -26,12 +34,16 @@ public sealed class OrderService : IOrderService
     private const string NumberAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
     private readonly IOrderStore _store;
+    private readonly IEnumerable<IOrderEventHandler> _handlers;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
-    public OrderService(IOrderStore store, IClock clock)
+    public OrderService(IOrderStore store, IEnumerable<IOrderEventHandler> handlers, IClock clock, ILogger<OrderService> logger)
     {
         _store = store;
+        _handlers = handlers;
         _clock = clock;
+        _logger = logger;
     }
 
     public async Task<Order> CreateFromCartAsync(CartPricing pricing, CancellationToken cancellationToken = default)
@@ -47,10 +59,7 @@ public sealed class OrderService : IOrderService
 
         foreach (var earlier in await _store.ListUnpaidByCartAsync(pricing.Cart.ItemId, cancellationToken))
         {
-            earlier.Status = OrderStatus.Canceled;
-            earlier.ModifiedUtc = now;
-
-            await _store.UpdateAsync(earlier, cancellationToken);
+            await CancelAsync(earlier, OrderCancelReason.Replaced, cancellationToken);
         }
 
         var order = new Order
@@ -89,6 +98,39 @@ public sealed class OrderService : IOrderService
         await _store.CreateAsync(order, cancellationToken);
 
         return order;
+    }
+
+    public async Task<bool> CancelAsync(Order order, OrderCancelReason reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        if (order.Status is not (OrderStatus.Draft or OrderStatus.AwaitingPayment))
+        {
+            return false;
+        }
+
+        var now = _clock.UtcNow;
+
+        order.Status = OrderStatus.Canceled;
+        order.CancelReason = reason;
+        order.CanceledUtc = now;
+        order.ModifiedUtc = now;
+
+        await _store.UpdateAsync(order, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Order '{OrderNumber}' was canceled: {Reason}.", order.OrderNumber, reason);
+        }
+
+        var context = new OrderCanceledContext(order, reason);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.CanceledAsync(context, cancellationToken);
+        }
+
+        return true;
     }
 
     /// <summary>

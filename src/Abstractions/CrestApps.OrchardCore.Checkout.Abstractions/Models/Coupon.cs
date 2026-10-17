@@ -89,6 +89,44 @@ public sealed class Coupon : CatalogItem
     public decimal? MinimumAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the sources the coupon is limited to, such as the source of a transaction (for example a registration fee
+    /// source). When it is empty the coupon is not limited by source; otherwise it applies only to a checkout whose
+    /// <see cref="CheckoutDiscountScope.Source"/> is one of them, matched without case sensitivity.
+    /// </summary>
+    public IList<string> Sources { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the reference types the coupon is limited to: the kind of thing a checkout pays for
+    /// (<see cref="CheckoutSession.ReferenceType"/>, for example <c>Transaction</c>), or what the charge it settles is
+    /// for (<see cref="CheckoutDiscountScope.ReferenceType"/>). When it is empty the coupon is not limited by reference
+    /// type.
+    /// </summary>
+    public IList<string> ReferenceTypes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the identifier of the one customer who may use the coupon (a user id, or a guest customer id), or
+    /// <see langword="null"/> when anyone may. It is matched against the checkout's owner and the customer who owes the
+    /// charge it settles.
+    /// </summary>
+    public string CustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email address of the one customer who may use the coupon, or <see langword="null"/> when anyone
+    /// may. It is matched without case sensitivity against the email the checkout collected, the email of the customer
+    /// who owes the charge it settles, and the email on the buyer's account.
+    /// </summary>
+    public string CustomerEmail { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the coupon is limited to some sources, reference types or one customer.
+    /// </summary>
+    public bool IsScoped
+        => Sources?.Count > 0 ||
+            ReferenceTypes?.Count > 0 ||
+            !string.IsNullOrWhiteSpace(CustomerId) ||
+            !string.IsNullOrWhiteSpace(CustomerEmail);
+
+    /// <summary>
     /// Gets or sets the UTC time the coupon was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

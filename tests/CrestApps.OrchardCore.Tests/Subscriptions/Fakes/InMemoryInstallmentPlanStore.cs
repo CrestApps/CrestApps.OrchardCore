@@ -72,4 +72,16 @@ internal sealed class InMemoryInstallmentPlanStore : IInstallmentPlanStore
     public Task<IReadOnlyList<InstallmentPlan>> GetOpenAsync(CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<InstallmentPlan>>(
             [.. _plans.Values.Where(plan => plan.Status is InstallmentPlanStatus.Draft or InstallmentPlanStatus.Active or InstallmentPlanStatus.PastDue)]);
+
+    public Task<IReadOnlyList<InstallmentPlan>> GetByReferenceAsync(string referenceType, string referenceId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<InstallmentPlan>>(
+            [.. _plans.Values
+                .Where(plan => plan.ReferenceType == referenceType && plan.ReferenceId == referenceId)
+                .OrderByDescending(plan => plan.CreatedUtc)]);
+
+    public Task<IReadOnlyList<InstallmentPlan>> GetBySourceTransactionAsync(string transactionId, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<InstallmentPlan>>(
+            [.. _plans.Values
+                .Where(plan => plan.SourceTransactionId == transactionId)
+                .OrderByDescending(plan => plan.CreatedUtc)]);
 }

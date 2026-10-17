@@ -13,6 +13,8 @@
     var canMarkPaid = TransactionStateMachine.CanMarkPaid(transaction);
     var canCancel = TransactionStateMachine.CanCancel(transaction);
     var canSendReminder = TransactionStateMachine.CanSendReminder(transaction);
+    var canAdjust = TransactionStateMachine.CanAdjust(transaction);
+    var canSendInvoice = TransactionStateMachine.CanSendInvoice(transaction);
 
     var decimalPlaces = CurrencyScale.GetDecimalPlaces(transaction.Currency);
     var amountStep = decimalPlaces == 0 ? "1" : "0." + new string('0', decimalPlaces - 1) + "1";
@@ -44,6 +46,12 @@
 
                     <dt class="col-sm-4">@T["Total"]</dt>
                     <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)</dd>
+
+                    @if (transaction.AmountAdjusted > 0m)
+                    {
+                        <dt class="col-sm-4">@T["Adjusted"]</dt>
+                        <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountAdjusted, transaction.Currency)</dd>
+                    }
 
                     <dt class="col-sm-4">@T["Paid"]</dt>
                     <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountPaid, transaction.Currency)</dd>
@@ -143,6 +151,23 @@
                         </form>
                     </div>
                 </div>
+
+                @if (transaction.AutoCollection is null)
+                {
+                    <div class="card mb-3">
+                        <div class="card-header">@T["Send the invoice"]</div>
+                        <div class="card-body">
+                            <p class="text-muted">@T["Send the owner the invoice now, with a link that pays it. It counts as the first notice, so the next reminder waits the reminder interval."]</p>
+                            <form asp-action="SendInvoice" method="post">
+                                <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                                <button type="submit" class="btn btn-primary" disabled="@(!canSendInvoice)"
+                                        data-url-af="RemoveUrl" data-title="@T["Send invoice"]" data-message="@T["Send the owner the invoice for the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send invoice"]" data-cancel-text="@T["Cancel"]">
+                                    @T["Send invoice"]
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
             }
 
             <div class="card mb-3">
@@ -155,12 +180,48 @@
                             <input type="number" step="@amountStep" min="0" class="form-control" id="Amount" name="Amount" value="@CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency).ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canRecordPayment)" />
                         </div>
                         <div class="mb-2">
+                            <label class="form-label" for="Reference">@T["Reference"]</label>
+                            <input type="text" class="form-control" id="Reference" name="Reference" placeholder="@T["Check number or transfer reference (optional)"]" />
+                        </div>
+                        <div class="mb-2">
                             <label class="form-label" for="Note">@T["Note"]</label>
                             <input type="text" class="form-control" id="Note" name="Note" placeholder="@T["How the payment was received"]" />
                         </div>
                         <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
                                 data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">
                             @T["Record payment"]
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">@T["Adjust or waive"]</div>
+                <div class="card-body">
+                    <p class="text-muted">@T["Lower what is owed without money being received, for example financial aid or a discount given after the fact."]</p>
+                    <form asp-action="Adjust" method="post">
+                        <input type="hidden" name="TransactionId" value="@transaction.ItemId" />
+                        <div class="mb-2">
+                            <label class="form-label" for="AdjustmentKind">@T["Type"]</label>
+                            <select class="form-select" id="AdjustmentKind" name="Kind" disabled="@(!canAdjust)">
+                                <option value="@TransactionAdjustmentKind.Discount">@T["Discount"]</option>
+                                <option value="@TransactionAdjustmentKind.Waiver">@T["Waiver"]</option>
+                                <option value="@TransactionAdjustmentKind.Credit">@T["Credit"]</option>
+                                <option value="@TransactionAdjustmentKind.WriteOff">@T["Write-off"]</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="AdjustmentAmount">@T["Amount"]</label>
+                            <input type="number" step="@amountStep" min="0" class="form-control" id="AdjustmentAmount" name="Amount" value="@CurrencyScale.Round(transaction.OutstandingAmount, transaction.Currency).ToString(System.Globalization.CultureInfo.InvariantCulture)" disabled="@(!canAdjust)" />
+                            <div class="form-text">@T["At most the {0} {1} still owed.", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label" for="AdjustmentReason">@T["Reason"]</label>
+                            <input type="text" class="form-control" id="AdjustmentReason" name="Reason" placeholder="@T["Shown on the invoice (optional)"]" disabled="@(!canAdjust)" />
+                        </div>
+                        <button type="submit" class="btn btn-outline-primary" disabled="@(!canAdjust)"
+                                data-url-af="RemoveUrl" data-title="@T["Adjust"]" data-message="@T["Take this amount off what is owed? It is not counted as money received."]" data-ok-text="@T["Adjust"]" data-cancel-text="@T["Cancel"]">
+                            @T["Adjust"]
                         </button>
                     </form>
                 </div>

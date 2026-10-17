@@ -30,6 +30,16 @@ public interface ITransactionStore : ICatalog<Transaction>
     Task<Transaction> GetByObligationAsync(string checkoutSessionId, string obligationId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the transactions whose <see cref="Transaction.ParentReferenceType"/> and
+    /// <see cref="Transaction.ParentReferenceId"/> name the supplied record, oldest first. A module uses it to find
+    /// every payment of a record of its own, for example each payment of the installment plan that pays for it.
+    /// </summary>
+    /// <param name="parentReferenceType">The kind of record.</param>
+    /// <param name="parentReferenceId">The identifier of the record.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the outstanding transactions (status <see cref="TransactionStatus.Outstanding"/> or
     /// <see cref="TransactionStatus.PartiallyPaid"/>) whose due date is on or before
     /// <paramref name="asOfUtc"/>, or that have no due date, so the reminder sweep can chase them.

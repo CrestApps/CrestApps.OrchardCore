@@ -19,6 +19,11 @@ public class RecordPaymentViewModel
     public decimal Amount { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional reference for the payment, such as a check number or a bank transfer reference.
+    /// </summary>
+    public string Reference { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional note describing how the payment was received.
     /// </summary>
     public string Note { get; set; }

@@ -99,7 +99,7 @@
                     </div>
                     <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
                         <div class="actions">
-                            @if (plan.Status == InstallmentPlanStatus.Draft)
+                            @if (plan.Status == InstallmentPlanStatus.Draft && string.IsNullOrEmpty(plan.SourceTransactionId))
                             {
                                 <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take the down payment"]</a>
                             }

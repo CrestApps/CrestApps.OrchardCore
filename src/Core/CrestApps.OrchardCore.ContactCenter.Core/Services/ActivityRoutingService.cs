@@ -46,7 +46,7 @@ public sealed class ActivityRoutingService : IActivityRoutingService
 
         if (candidates.Count == 0)
         {
-            return CreateNoMatchDecision(queue, queueItem, candidates, "No agents are currently available for this queue.");
+            return CreateNoMatchDecision(queue, queueItem, candidates, ActivityRoutingReasons.NoAgentsAvailable);
         }
 
         var selected = candidates
@@ -57,7 +57,7 @@ public sealed class ActivityRoutingService : IActivityRoutingService
 
         if (selected is null)
         {
-            return CreateNoMatchDecision(queue, queueItem, candidates, "No available agent matched the queue routing policy.");
+            return CreateNoMatchDecision(queue, queueItem, candidates, ActivityRoutingReasons.NoAgentMatchedPolicy);
         }
 
         return new ActivityRoutingDecision
@@ -66,7 +66,7 @@ public sealed class ActivityRoutingService : IActivityRoutingService
             Queue = queue,
             QueueItem = queueItem,
             Agent = selected.Agent,
-            Reason = "Selected the highest-scoring eligible agent.",
+            Reason = ActivityRoutingReasons.Selected,
             Candidates = candidates,
         };
     }

@@ -79,6 +79,8 @@ public sealed class TransactionDisplayText
             TransactionEventType.Canceled => S["Canceled"],
             TransactionEventType.Note => S["Note"],
             TransactionEventType.Refunded => S["Refunded"],
+            TransactionEventType.Adjusted => S["Adjusted"],
+            TransactionEventType.InvoiceSent => S["Invoice sent"],
             _ => type.ToString(),
         };
 
@@ -98,8 +100,27 @@ public sealed class TransactionDisplayText
             return S["Recorded by hand"];
         }
 
+        if (string.Equals(method, TransactionsConstants.SettlementMethods.Adjusted, StringComparison.OrdinalIgnoreCase))
+        {
+            return S["Nothing left to pay after an adjustment"];
+        }
+
         return method;
     }
+
+    /// <summary>
+    /// Gets the label for why the amount owed was lowered.
+    /// </summary>
+    /// <param name="kind">The adjustment kind.</param>
+    public string AdjustmentKindName(TransactionAdjustmentKind kind)
+        => kind switch
+        {
+            TransactionAdjustmentKind.Discount => S["Discount"],
+            TransactionAdjustmentKind.Waiver => S["Waiver"],
+            TransactionAdjustmentKind.Credit => S["Credit"],
+            TransactionAdjustmentKind.WriteOff => S["Write-off"],
+            _ => kind.ToString(),
+        };
 
     /// <summary>
     /// Gets the name of the feature that created a transaction, falling back to its stored identifier when that

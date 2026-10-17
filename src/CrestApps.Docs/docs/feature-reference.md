@@ -246,3 +246,28 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Resources` | CrestApps Resources | [Resources](./modules/resources) |
 | `CrestApps.OrchardCore.Roles` | Enhanced Roles | [Roles](./modules/roles) |
 | `CrestApps.OrchardCore.WebSockets` | WebSockets (dependency only) | [WebSockets](./modules/websockets) |
+
+## Settings groups and the permissions that open them
+
+Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `SettingsPermissions.ManageGroupSettings` with the group id as the resource, and `SiteSettingsAuthorizationHandler` grants it only through the permissions registered for that group with `services.AddSiteSettingsPermission(groupId, permission)` (in `OrchardCore.Settings.Core`), besides `ManageSettings` itself. Every CrestApps settings group whose display driver checks a module permission registers that permission for its group, in the same startup (and therefore the same feature) that registers the driver, so a role that holds only the module permission and `AccessAdminPanel` can open the page.
+
+| Group id | Permission keys | Registered by |
+| --- | --- | --- |
+| `stripe` | `ManageStripeSettings` | Stripe |
+| `transactions` | `ManageTransactionSettings` | Transaction Reminders (`CrestApps.OrchardCore.Transactions.Notification`) |
+| `paylater` | `ManageTransactionSettings` | Pay Later |
+| `receipts` | `ManageReceiptSettings` | Receipts |
+| `inventory` | `ManageInventory` | Inventory |
+| `subscriptions` | `ManageSubscriptionSettings` | Subscriptions, and its roles, Stripe currency and installment plan features |
+| `telephony` | `ManageTelephonySettings` | Telephony, the soft phone widget, Asterisk and Telnyx |
+| `sms` | `ManageSmsSettings` | Telnyx SMS (`CrestApps.OrchardCore.Telnyx.Sms`), whose settings section now also requires this permission, as Orchard Core's own SMS and Twilio sections do |
+| `contactcenter` | `ManageContactCenter` | Contact Center, its agent numbers, recording and secure capture features |
+| `ai-settings` | `ManageAIProfiles`, `ManageChatInteractionSettings`, `EditChatInteractions`, `ManageCopilotSettings`, `ManageClaudeSettings`, `ManageMcpServerSettings` | Each AI feature registers the permission its own section checks (AI, AI Chat, AI Chat admin widget, AI Data Sources, AI Documents, AI Memory, Chat Interactions, Copilot, Claude, MCP Server) |
+| DNC registry groups (`ImportContentSettings`, `UsaFtcRegistry`, `CanadaDnclRegistry` in `DncRegistryConstants.SettingsGroupIds`) | `ManageDncRegistrySettings` | DNC Registry and its USA FTC and Canada DNCL features |
+| `PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications` | `ManagePhoneNumberVerificationSettings` | Phone Number Verifications and each provider feature |
+| `userDisplayName` | `ManageDisplaySettings` | User Display Name |
+| `avatarOptions` | `ManageAvatarSettings` | User Avatars |
+
+The `orders` and `customers` groups are registered by their own change. Registering one permission for a shared group (such as `ai-settings`) opens the page; each section on it still checks its own permission, so the holder sees only the sections that permission covers.
+
+A module that adds a settings driver with its own permission must call `AddSiteSettingsPermission` next to the driver registration, and reference `OrchardCore.Settings.Core`. The `SiteSettingsGroupPermissionRegistrationTests` architecture test scans every `SiteDisplayDriver` under `src/Modules` and fails when the startup that registers a driver does not register the driver's permission for its group.

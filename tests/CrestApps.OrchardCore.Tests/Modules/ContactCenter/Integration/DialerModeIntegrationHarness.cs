@@ -609,6 +609,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             services.AddSingleton(CreateEmptyInteractionEventStore());
         }
 
+        // No repeated routing decision is folded into an earlier one here, so every decision a flow makes stays a
+        // published event it can read.
+        services.AddSingleton(Mock.Of<IDialerDecisionLog>());
         services.AddSingleton<IContactCenterAuditRecorder, ContactCenterAuditRecorder>();
         services.AddSingleton<IAgentAvailabilityService, HarnessAvailabilityService>();
         services.AddSingleton(CreateEligibilityService());

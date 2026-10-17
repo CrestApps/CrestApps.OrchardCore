@@ -83,4 +83,47 @@ public class StripeSettingsViewModel
     /// </summary>
     [BindNever]
     public string TestAccountId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether <see cref="IsLive"/> comes from the application configuration and
+    /// cannot be changed on the page.
+    /// </summary>
+    [BindNever]
+    public bool IsLiveFromConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the live publishable key comes from the application configuration.
+    /// </summary>
+    [BindNever]
+    public bool LivePublishableKeyFromConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the live secret key comes from the application configuration.
+    /// </summary>
+    [BindNever]
+    public bool LivePrivateSecretFromConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the live webhook signing secret comes from the application configuration.
+    /// </summary>
+    [BindNever]
+    public bool LiveWebhookSecretFromConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the test publishable key comes from the application configuration.
+    /// </summary>
+    [BindNever]
+    public bool TestPublishableKeyFromConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the test secret key comes from the application configuration.
+    /// </summary>
+    [BindNever]
+    public bool TestPrivateSecretFromConfiguration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the test webhook signing secret comes from the application configuration.
+    /// </summary>
+    [BindNever]
+    public bool TestWebhookSecretFromConfiguration { get; set; }
 }

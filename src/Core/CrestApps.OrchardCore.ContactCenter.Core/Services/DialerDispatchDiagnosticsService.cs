@@ -35,14 +35,14 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
     /// <summary>
     /// How far back a routing decision counts as why a queue is not assigning. Routing decides on every pass, so an older
-    /// one says nothing about now.
+    /// one says nothing about now. A repeated decision counts from the last time it was made, not the first.
     /// </summary>
     internal static readonly TimeSpan RoutingLookback = TimeSpan.FromMinutes(15);
 
     private readonly IActivityQueueManager _queueManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IBusinessHoursService _businessHours;
-    private readonly IInteractionEventStore _eventStore;
+    private readonly IDialerDecisionLog _decisionLog;
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly DialerRecordClassifier _classifier;
@@ -56,7 +56,8 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
     /// <param name="profileReader">The reader of the dialer profile a record is dialed under.</param>
     /// <param name="activityManager">The CRM activities the campaign records are.</param>
     /// <param name="workStateStore">The work state that holds each record's attempt count.</param>
-    /// <param name="eventStore">The recorded suppression and routing decisions.</param>
+    /// <param name="eventStore">The recorded suppressions.</param>
+    /// <param name="decisionLog">The dialer decision log, from which each queue's latest routing decision is read.</param>
     /// <param name="session">The YesSql session, which reads many records' pending state and last calls at once.</param>
     /// <param name="clock">The clock.</param>
     public DialerDispatchDiagnosticsService(
@@ -67,13 +68,14 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateStore workStateStore,
         IInteractionEventStore eventStore,
+        IDialerDecisionLog decisionLog,
         ISession session,
         IClock clock)
     {
         _queueManager = queueManager;
         _queueItemManager = queueItemManager;
         _businessHours = businessHours;
-        _eventStore = eventStore;
+        _decisionLog = decisionLog;
         _session = session;
         _clock = clock;
         _classifier = new DialerRecordClassifier(profileReader, activityManager, workStateStore, eventStore, session);
@@ -300,7 +302,7 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         // Routing only sees what waits in the campaign's queue.
         if (!queued)
         {
-            return (DispatchBlocker.NotQueued, null);
+            return (EvaluateNotQueued(activity?.AssignedToId), null);
         }
 
         // A record stamped with a profile that has since been deleted is never paced: the pacer reads the stamped profile
@@ -343,6 +345,15 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         return (DispatchBlocker.DialableNow, null);
     }
 
+    /// <summary>
+    /// Decides why a pending record that is not in its campaign's queue is not dialed.
+    /// </summary>
+    /// <param name="assignedToId">The user the record is assigned to, if any.</param>
+    /// <returns><see cref="DispatchBlocker.AssignedToUser"/> for a record a user works from their own list; otherwise
+    /// <see cref="DispatchBlocker.NotQueued"/>.</returns>
+    internal static DispatchBlocker EvaluateNotQueued(string assignedToId)
+        => string.IsNullOrEmpty(assignedToId) ? DispatchBlocker.NotQueued : DispatchBlocker.AssignedToUser;
+
     private static DispatchBlocker? ToBlocker(DialerSuppressionReason reason)
         => reason switch
         {
@@ -368,20 +379,17 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
             .Sum(bucket => bucket.Count);
     }
 
-    // The latest routing decision of each queue, when it found nobody to take the work.
+    // The latest routing decision of each queue, when it found nobody to take the work. A failure routing keeps repeating
+    // is one event counted on every pass, so it is read by the last time it was made: one first made hours ago and made
+    // again a minute ago still explains the queue now.
     private async Task<Dictionary<string, DispatchRoutingFinding>> ReadRoutingFindingsAsync(string[] queueIds, DateTime now, CancellationToken cancellationToken)
     {
         var wanted = new HashSet<string>(queueIds, StringComparer.OrdinalIgnoreCase);
         var findings = new Dictionary<string, DispatchRoutingFinding>(StringComparer.OrdinalIgnoreCase);
-        var events = await _eventStore.GetByAggregateWindowAsync(
-            nameof(QueueItem),
-            [ContactCenterConstants.Events.RoutingDecisionMade],
-            aggregateIds: null,
-            now - RoutingLookback,
-            now,
-            cancellationToken);
+        var events = await _decisionLog.GetRoutingDecisionsSeenSinceAsync(queueIds, now - RoutingLookback, cancellationToken);
 
-        // Oldest first, so the last decision of a queue is the one left standing: a success clears an earlier failure.
+        // Oldest last-seen first, so the last decision of a queue is the one left standing: a success clears an earlier
+        // failure.
         foreach (var interactionEvent in events)
         {
             var data = DialerRecordClassifier.ReadData<ActivityRoutingDecisionEventData>(interactionEvent);
@@ -400,7 +408,7 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
             findings[data.QueueId] = new DispatchRoutingFinding
             {
-                OccurredUtc = interactionEvent.OccurredUtc,
+                OccurredUtc = RoutingDecisionCoalescing.GetLastSeenUtc(interactionEvent, data),
                 Reason = data.Reason,
                 CandidateCount = data.Candidates.Count,
                 CandidateReasons = data.Candidates

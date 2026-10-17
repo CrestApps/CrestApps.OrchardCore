@@ -19,14 +19,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Services;
 /// <remarks>
 /// <para>
 /// Queue items and pending activities are read from their indexes only: the dialer profile an item is stamped with is
-/// indexed, so grouping a large dialer load by profile never reads an item's document. Only the records being explained
-/// are read in full, by <see cref="DialerRecordClassifier"/>, which is what the live dashboard uses too, and at most
-/// <see cref="DialerDispatchDiagnosticsService.MaxEvaluatedRecords"/> of each campaign, the earliest due first; the rest are
-/// counted as pending but not explained.
+/// indexed, so grouping a large dialer load by profile never reads an item's document.
 /// </para>
 /// <para>
-/// A pending record is in its campaign's queue when an item for it is waiting, reserved or assigned there. A record with
-/// no item there is held back as not queued, and is also counted as in no queue at all when no queue holds an item for it.
+/// A pending record is in its campaign's queue when an item for it is waiting, reserved or assigned there. A record that
+/// is not is decided from the activity index alone, through the same rule the dispatch diagnostics apply: assigned to a
+/// user, or not queued (and in no queue at all when no queue holds an item for it). Only the queued records are read in
+/// full, by <see cref="DialerRecordClassifier"/>, which is what the live dashboard uses too, and at most
+/// <see cref="DialerDispatchDiagnosticsService.MaxEvaluatedRecords"/> of each campaign, the earliest due first; the rest are
+/// counted as pending but not explained.
 /// </para>
 /// </remarks>
 internal sealed class DialerQueueInventoryService : IDialerQueueInventoryService
@@ -123,7 +124,8 @@ internal sealed class DialerQueueInventoryService : IDialerQueueInventoryService
             }
         }
 
-        // Each campaign's earliest-due records are explained; the rest are counted but not read in full.
+        // A record that is not queued is decided from its index row; each campaign's earliest-due queued records are read
+        // in full and explained, and the rest are counted but not explained.
         var placements = new List<(OmnichannelActivityIndex Activity, RowKey Key, bool InAnyQueue, bool Evaluated)>(pending.Length);
         var inputs = new List<DialerRecordInput>();
 
@@ -136,159 +138,308 @@ internal sealed class DialerQueueInventoryService : IDialerQueueInventoryService
             {
                 var items = itemsByActivity[activity.ItemId];
                 var item = items.FirstOrDefault(candidate => string.Equals(candidate.QueueId, queueId, StringComparison.Ordinal));
-                var evaluated = position++ < DialerDispatchDiagnosticsService.MaxEvaluatedRecords;
-                var key = item is null
-                    ? new RowKey(campaign.Key, null, null)
-                    : new RowKey(campaign.Key, queueId, NormalizeProfileId(item.DialerProfileId));
 
-                placements.Add((activity, key, items.Any(), evaluated));
+                if (item is null)
+                {
+                    placements.Add((activity, new RowKey(campaign.Key, null, null), items.Any(), true));
+
+                    continue;
+                }
+
+                var evaluated = position++ < DialerDispatchDiagnosticsService.MaxEvaluatedRecords;
+
+                placements.Add((activity, new RowKey(campaign.Key, queueId, NormalizeProfileId(item.DialerProfileId)), true, evaluated));
 
                 if (evaluated)
                 {
-                    inputs.Add(new DialerRecordInput(activity.ItemId, item is not null, item?.DialerProfileId, activity.DialerProfileId));
+                    inputs.Add(new DialerRecordInput(activity.ItemId, true, item.DialerProfileId, activity.DialerProfileId));
                 }
             }
         }
 
         var verdicts = await _classifier.ClassifyAsync(inputs, now, cancellationToken);
-        var campaigns = new Dictionary<string, CampaignBuilder>(StringComparer.Ordinal);
+        var inventory = new DialerQueueInventory
+        {
+            GeneratedUtc = now,
+        };
 
         foreach (var (activity, key, inAnyQueue, evaluated) in placements)
         {
             var row = GetRow(rows, key);
-            var campaign = GetCampaign(campaigns, activity.CampaignId);
+            var record = new DialerInventoryRecord
+            {
+                ActivityId = activity.ItemId,
+                CampaignId = activity.CampaignId,
+                Queued = key.QueueId is not null,
+                StampedProfileId = key.StampedProfileId,
+                StampedProfileName = (await _classifier.ReadProfileAsync(key.StampedProfileId, cancellationToken))?.Name,
+            };
+
+            if (key.QueueId is null)
+            {
+                record.Blocker = DialerDispatchDiagnosticsService.EvaluateNotQueued(activity.AssignedToId);
+            }
+            else if (evaluated && verdicts.TryGetValue(activity.ItemId, out var verdict))
+            {
+                record.Blocker = verdict.Blocker;
+                record.DueUtc = verdict.DueUtc;
+            }
+
+            record.State = StateOf(record.Blocker, inAnyQueue);
+            inventory.Records.Add(record);
 
             row.Pending.Add(activity);
-            campaign.Summary.PendingCount++;
 
             if (key.QueueId is not null && DispatchQueueLoadSummary.IsStampMismatch(key.StampedProfileId, activity.DialerProfileId))
             {
                 row.ProfileMismatchCount++;
             }
 
-            if (!inAnyQueue)
+            if (record.State == DialerQueueState.NotInAnyQueue)
             {
                 row.NotInAnyQueueCount++;
-                campaign.Summary.NotInAnyQueueCount++;
             }
 
-            if (!evaluated || !verdicts.TryGetValue(activity.ItemId, out var verdict))
+            if (record.Blocker is not { } blocker)
             {
                 row.NotEvaluatedCount++;
-                campaign.Summary.NotEvaluatedCount++;
-
-                continue;
             }
-
-            AddToBucket(campaign.Buckets, verdict);
-
-            if (verdict.Blocker == DispatchBlocker.DialableNow)
+            else if (blocker == DispatchBlocker.DialableNow)
             {
                 row.DialableNowCount++;
-                campaign.Summary.DialableNowCount++;
             }
             else
             {
                 row.HeldBackCount++;
-                campaign.Summary.HeldBackCount++;
-                AddToBucket(row.HeldBack, verdict);
+                AddToBucket(row.HeldBack, blocker, record.DueUtc);
             }
         }
 
-        var inventory = new DialerQueueInventory
+        if (request.IncludeQueueRows)
         {
-            GeneratedUtc = now,
-        };
+            var queueFacts = new Dictionary<string, (DispatchPacing Pacing, DateTime? LastDialedUtc)>(StringComparer.Ordinal);
 
-        var queueFacts = new Dictionary<string, (DispatchPacing Pacing, DateTime? LastDialedUtc)>(StringComparer.Ordinal);
-
-        foreach (var (key, builder) in rows
-            .OrderBy(entry => entry.Key.CampaignId, StringComparer.Ordinal)
-            .ThenBy(entry => entry.Key.QueueId is null ? 1 : 0)
-            .ThenByDescending(entry => entry.Value.WaitingCount)
-            .ThenBy(entry => entry.Key.StampedProfileId, StringComparer.Ordinal))
-        {
-            var row = new DialerQueueInventoryRow
+            foreach (var (key, builder) in rows
+                .OrderBy(entry => entry.Key.CampaignId, StringComparer.Ordinal)
+                .ThenBy(entry => entry.Key.QueueId is null ? 1 : 0)
+                .ThenByDescending(entry => entry.Value.WaitingCount)
+                .ThenBy(entry => entry.Key.StampedProfileId, StringComparer.Ordinal))
             {
-                CampaignId = key.CampaignId,
-                QueueId = key.QueueId,
-                StampedProfileId = key.StampedProfileId,
-                WaitingCount = builder.WaitingCount,
-                ReservedCount = builder.ReservedCount,
-                AssignedCount = builder.AssignedCount,
-                OldestWaitingUtc = builder.OldestWaitingUtc,
-                PendingCount = builder.Pending.Count,
-                DialableNowCount = builder.DialableNowCount,
-                HeldBackCount = builder.HeldBackCount,
-                NotEvaluatedCount = builder.NotEvaluatedCount,
-                ProfileMismatchCount = builder.ProfileMismatchCount,
-                NotInAnyQueueCount = builder.NotInAnyQueueCount,
-                HeldBackReasons = Order(builder.HeldBack.Values),
-                ActivityMix = DispatchQueueLoadSummary.Mix(builder.Pending
-                    .Select(activity => new PendingRecord(
-                        activity.ItemId,
-                        activity.Source,
-                        activity.InteractionType.ToString(),
-                        activity.Channel,
-                        activity.DialerProfileId))),
-            };
+                var row = new DialerQueueInventoryRow
+                {
+                    CampaignId = key.CampaignId,
+                    QueueId = key.QueueId,
+                    StampedProfileId = key.StampedProfileId,
+                    WaitingCount = builder.WaitingCount,
+                    ReservedCount = builder.ReservedCount,
+                    AssignedCount = builder.AssignedCount,
+                    OldestWaitingUtc = builder.OldestWaitingUtc,
+                    PendingCount = builder.Pending.Count,
+                    DialableNowCount = builder.DialableNowCount,
+                    HeldBackCount = builder.HeldBackCount,
+                    NotEvaluatedCount = builder.NotEvaluatedCount,
+                    ProfileMismatchCount = builder.ProfileMismatchCount,
+                    NotInAnyQueueCount = builder.NotInAnyQueueCount,
+                    HeldBackReasons = Order(builder.HeldBack.Values),
+                    ActivityMix = DispatchQueueLoadSummary.Mix(builder.Pending
+                        .Select(activity => new PendingRecord(
+                            activity.ItemId,
+                            activity.Source,
+                            activity.InteractionType.ToString(),
+                            activity.Channel,
+                            activity.DialerProfileId))),
+                };
 
-            if (key.StampedProfileId is not null)
-            {
-                if (QueueCallbackDialerProfile.IsCallbackProfile(key.StampedProfileId))
+                if (key.StampedProfileId is not null)
                 {
-                    row.StampedProfileIsCallback = true;
+                    if (QueueCallbackDialerProfile.IsCallbackProfile(key.StampedProfileId))
+                    {
+                        row.StampedProfileIsCallback = true;
+                    }
+                    else if (await _classifier.ReadProfileAsync(key.StampedProfileId, cancellationToken) is { } stamped)
+                    {
+                        row.StampedProfileName = stamped.Name;
+                        row.StampedProfileMode = stamped.Mode.ToString();
+                        row.StampedProfileEnabled = stamped.Enabled;
+                    }
+                    else
+                    {
+                        row.StampedProfileMissing = true;
+                    }
                 }
-                else if (await _classifier.ReadProfileAsync(key.StampedProfileId, cancellationToken) is { } stamped)
+
+                foreach (var group in builder.Pending
+                    .GroupBy(activity => NormalizeProfileId(activity.DialerProfileId) ?? string.Empty, StringComparer.Ordinal)
+                    .OrderByDescending(group => group.Count())
+                    .ThenBy(group => group.Key, StringComparer.Ordinal))
                 {
-                    row.StampedProfileName = stamped.Name;
-                    row.StampedProfileMode = stamped.Mode.ToString();
-                    row.StampedProfileEnabled = stamped.Enabled;
+                    var profileId = group.Key.Length == 0 ? null : group.Key;
+
+                    row.ActivityProfiles.Add(new DialerInventoryProfileCount
+                    {
+                        ProfileId = profileId,
+                        ProfileName = (await _classifier.ReadProfileAsync(profileId, cancellationToken))?.Name,
+                        Count = group.Count(),
+                    });
                 }
-                else
+
+                if (key.QueueId is not null)
                 {
-                    row.StampedProfileMissing = true;
+                    if (!queueFacts.TryGetValue(key.QueueId, out var facts))
+                    {
+                        facts = await ReadQueueFactsAsync(key.QueueId, rows, now, cancellationToken);
+                        queueFacts[key.QueueId] = facts;
+                    }
+
+                    row.Pacing = facts.Pacing;
+                    row.LastDialedUtc = facts.LastDialedUtc;
                 }
+
+                inventory.Rows.Add(row);
             }
-
-            foreach (var group in builder.Pending
-                .GroupBy(activity => NormalizeProfileId(activity.DialerProfileId) ?? string.Empty, StringComparer.Ordinal)
-                .OrderByDescending(group => group.Count())
-                .ThenBy(group => group.Key, StringComparer.Ordinal))
-            {
-                var profileId = group.Key.Length == 0 ? null : group.Key;
-
-                row.ActivityProfiles.Add(new DialerInventoryProfileCount
-                {
-                    ProfileId = profileId,
-                    ProfileName = (await _classifier.ReadProfileAsync(profileId, cancellationToken))?.Name,
-                    Count = group.Count(),
-                });
-            }
-
-            if (key.QueueId is not null)
-            {
-                if (!queueFacts.TryGetValue(key.QueueId, out var facts))
-                {
-                    facts = await ReadQueueFactsAsync(key.QueueId, rows, now, cancellationToken);
-                    queueFacts[key.QueueId] = facts;
-                }
-
-                row.Pacing = facts.Pacing;
-                row.LastDialedUtc = facts.LastDialedUtc;
-            }
-
-            inventory.Rows.Add(row);
-            GetCampaign(campaigns, key.CampaignId);
         }
 
-        foreach (var campaign in campaigns.Values.OrderBy(campaign => campaign.Summary.CampaignId, StringComparer.Ordinal))
+        var summaries = Summarize(inventory.Records).ToDictionary(summary => summary.CampaignId, StringComparer.Ordinal);
+
+        // A campaign whose queue holds items but none of the covered pending records is still covered.
+        foreach (var campaignId in inventory.Rows.Select(row => row.CampaignId).Distinct(StringComparer.Ordinal))
         {
-            campaign.Summary.Buckets = Order(campaign.Buckets.Values);
-            inventory.Campaigns.Add(campaign.Summary);
+            summaries.TryAdd(campaignId, new DialerCampaignDispatchSummary { CampaignId = campaignId });
+        }
+
+        foreach (var summary in summaries.Values.OrderBy(summary => summary.CampaignId, StringComparer.Ordinal))
+        {
+            inventory.Campaigns.Add(summary);
         }
 
         return inventory;
+    }
+
+    /// <inheritdoc/>
+    public IReadOnlyList<DialerCampaignDispatchSummary> Summarize(IEnumerable<DialerInventoryRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+
+        var summaries = new List<DialerCampaignDispatchSummary>();
+
+        foreach (var campaign in records
+            .Where(record => record is not null && !string.IsNullOrEmpty(record.CampaignId))
+            .GroupBy(record => record.CampaignId, StringComparer.Ordinal)
+            .OrderBy(campaign => campaign.Key, StringComparer.Ordinal))
+        {
+            var summary = new DialerCampaignDispatchSummary { CampaignId = campaign.Key };
+            var buckets = new Dictionary<DispatchBlocker, DispatchBucket>();
+            var otherReasons = new Dictionary<DispatchBlocker, DispatchBucket>();
+
+            foreach (var record in campaign)
+            {
+                summary.PendingCount++;
+
+                if (record.DueUtc is { } due && (summary.NextDueUtc is null || due < summary.NextDueUtc))
+                {
+                    summary.NextDueUtc = due;
+                }
+
+                if (record.Blocker is not { } blocker)
+                {
+                    summary.NotEvaluatedCount++;
+
+                    continue;
+                }
+
+                AddToBucket(buckets, blocker, record.DueUtc);
+
+                switch (record.State)
+                {
+                    case DialerQueueState.DialableNow:
+                        summary.DialableNowCount++;
+
+                        continue;
+                    case DialerQueueState.ScheduledForLater:
+                        summary.ScheduledForLaterCount++;
+
+                        break;
+                    case DialerQueueState.NotInAnyQueue:
+                        summary.NotInAnyQueueCount++;
+
+                        break;
+                    case DialerQueueState.AssignedToUser:
+                        summary.AssignedToUserCount++;
+
+                        break;
+                    default:
+                        AddToBucket(otherReasons, blocker, record.DueUtc);
+
+                        break;
+                }
+
+                summary.HeldBackCount++;
+            }
+
+            summary.Buckets = Order(buckets.Values);
+            summary.OtherHeldBackReasons = Order(otherReasons.Values);
+            summary.StampedProfiles = campaign
+                .Where(record => record.Queued)
+                .GroupBy(record => record.StampedProfileId ?? string.Empty, StringComparer.Ordinal)
+                .Select(group => new DialerInventoryProfileCount
+                {
+                    ProfileId = group.Key.Length == 0 ? null : group.Key,
+                    ProfileName = group.First().StampedProfileName,
+                    Count = group.Count(),
+                })
+                .OrderByDescending(profile => profile.Count)
+                .ThenBy(profile => profile.ProfileId, StringComparer.Ordinal)
+                .ToList();
+
+            summaries.Add(summary);
+        }
+
+        return summaries;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, DateTime>> GetLastAttemptsAsync(IEnumerable<string> activityIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(activityIds);
+
+        var last = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+
+        foreach (var batch in activityIds.Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Chunk(BatchSize))
+        {
+            var interactions = await _session.QueryIndex<InteractionIndex>(
+                index => index.ActivityItemId.IsIn(batch),
+                collection: ContactCenterStorage.CollectionName)
+                .ListAsync(cancellationToken);
+
+            foreach (var interaction in interactions)
+            {
+                if (!last.TryGetValue(interaction.ActivityItemId, out var existing) || interaction.CreatedUtc > existing)
+                {
+                    last[interaction.ActivityItemId] = interaction.CreatedUtc;
+                }
+            }
+        }
+
+        return last;
+    }
+
+    /// <summary>
+    /// Decides where a pending record stands from what holds it back.
+    /// </summary>
+    /// <param name="blocker">What holds the record back, or <see langword="null"/> when it was not explained.</param>
+    /// <param name="inAnyQueue">Whether any queue holds an item for the record.</param>
+    /// <returns>The record's state, or <see langword="null"/> when it was not explained.</returns>
+    internal static DialerQueueState? StateOf(DispatchBlocker? blocker, bool inAnyQueue)
+    {
+        return blocker switch
+        {
+            null => null,
+            DispatchBlocker.DialableNow => DialerQueueState.DialableNow,
+            DispatchBlocker.ScheduledForLater => DialerQueueState.ScheduledForLater,
+            DispatchBlocker.AssignedToUser => DialerQueueState.AssignedToUser,
+            DispatchBlocker.NotQueued when !inAnyQueue => DialerQueueState.NotInAnyQueue,
+            _ => DialerQueueState.HeldBack,
+        };
     }
 
     private async Task<IReadOnlyList<OmnichannelActivityIndex>> ReadPendingAsync(HashSet<string> campaignFilter, CancellationToken cancellationToken)
@@ -359,28 +510,17 @@ internal sealed class DialerQueueInventoryService : IDialerQueueInventoryService
         return row;
     }
 
-    private static CampaignBuilder GetCampaign(Dictionary<string, CampaignBuilder> campaigns, string campaignId)
+    private static void AddToBucket(Dictionary<DispatchBlocker, DispatchBucket> buckets, DispatchBlocker blocker, DateTime? dueUtc)
     {
-        if (!campaigns.TryGetValue(campaignId, out var campaign))
+        if (!buckets.TryGetValue(blocker, out var bucket))
         {
-            campaign = new CampaignBuilder(campaignId);
-            campaigns[campaignId] = campaign;
-        }
-
-        return campaign;
-    }
-
-    private static void AddToBucket(Dictionary<DispatchBlocker, DispatchBucket> buckets, DialerRecordVerdict verdict)
-    {
-        if (!buckets.TryGetValue(verdict.Blocker, out var bucket))
-        {
-            bucket = new DispatchBucket { Blocker = verdict.Blocker };
-            buckets[verdict.Blocker] = bucket;
+            bucket = new DispatchBucket { Blocker = blocker };
+            buckets[blocker] = bucket;
         }
 
         bucket.Count++;
 
-        if (verdict.DueUtc is { } due && (bucket.NextDueUtc is null || due < bucket.NextDueUtc))
+        if (dueUtc is { } due && (bucket.NextDueUtc is null || due < bucket.NextDueUtc))
         {
             bucket.NextDueUtc = due;
         }
@@ -420,17 +560,5 @@ internal sealed class DialerQueueInventoryService : IDialerQueueInventoryService
         public int NotInAnyQueueCount { get; set; }
 
         public Dictionary<DispatchBlocker, DispatchBucket> HeldBack { get; } = [];
-    }
-
-    private sealed class CampaignBuilder
-    {
-        public CampaignBuilder(string campaignId)
-        {
-            Summary = new DialerCampaignDispatchSummary { CampaignId = campaignId };
-        }
-
-        public DialerCampaignDispatchSummary Summary { get; }
-
-        public Dictionary<DispatchBlocker, DispatchBucket> Buckets { get; } = [];
     }
 }

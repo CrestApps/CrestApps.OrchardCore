@@ -71,7 +71,7 @@ The cart page shows **Checkout** when the Orders feature is enabled. Checking ou
 3. cancels earlier unpaid orders made from the same cart, so the customer pays for what the cart holds now;
 4. starts a checkout session whose reference is the order (`CheckoutReferenceTypes.Order`) and sends the customer to it.
 
-`OrderCheckoutHandler` bills one line per order line, with its quantity, SKU, tax category, tax classification and product type, so each line is taxed as what it is. It refuses to complete a checkout that bills nothing. When the checkout completes, the order is marked **Paid** with the total and tax that were charged, and what was bought is taken out of the cart; anything added to the cart after checking out stays in it. An order replaced by a newer one is still marked paid if its own checkout completes, because that payment bought it.
+`OrderCheckoutHandler` bills one line per order line, with its quantity, SKU, tax category, tax classification and product type, so each line is taxed as what it is. It refuses to complete a checkout that bills nothing. When the checkout completes, the order is marked **Paid** with the total and tax that were charged, and what was bought is taken out of the cart, matching each line's product, price and variant; anything added to the cart after checking out stays in it. An order replaced by a newer one is still marked paid if its own checkout completes, because that payment bought it.
 
 The checkout's confirmation page shows the order number.
 
@@ -90,7 +90,9 @@ Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, 
 | Draft | Made from a cart, not yet sent to the checkout. |
 | Awaiting payment | Its checkout started and has not completed. |
 | Paid | Its checkout completed. |
-| Canceled | Replaced by a newer order from the same cart before it was paid. |
+| Canceled | Ended unpaid, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired` or `Abandoned` (no checkout was left that could pay it). |
+
+**Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order, records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
 
 An order holds lines, not money. The payment, its tax, the payment attempts and any refund belong to the checkout session the order names, and refunds are made from the payment screens.
 

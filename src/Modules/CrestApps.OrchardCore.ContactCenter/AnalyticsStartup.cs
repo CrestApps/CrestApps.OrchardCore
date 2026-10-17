@@ -58,6 +58,9 @@ public sealed class AnalyticsStartup : StartupBase
             .Validate(
                 options => options.AgentTimeSummaryBackfill >= TimeSpan.Zero,
                 "'CrestApps:ContactCenter:Reporting:AgentTimeSummaryBackfill' cannot be negative. Use zero to turn the daily agent time summaries off.")
+            .Validate(
+                options => options.DecisionLogQuietThreshold > TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:DecisionLogQuietThreshold' must be greater than zero.")
             .ValidateOnStart();
 
         // The daily agent time summaries the time-based workforce reports read whole days from, and the roller that
@@ -77,7 +80,8 @@ public sealed class AnalyticsStartup : StartupBase
             .AddScoped<IReport, QueueUsageReportProvider>()
             .AddScoped<IReport, CampaignSummaryReportProvider>()
             .AddScoped<IReport, DialerQueueInventoryReportProvider>()
-            .AddScoped<IReport, SubjectInventoryReportProvider>();
+            .AddScoped<IReport, SubjectInventoryReportProvider>()
+            .AddScoped<IReport, DialerDecisionLogReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();
         services.AddScoped<IReportProvider, ContactCenterReportProvider>();

@@ -21,7 +21,13 @@
     </breadcrumb>
 </zone>
 
-@if (plan.Status == InstallmentPlanStatus.Draft)
+@if (plan.Status == InstallmentPlanStatus.Draft && !string.IsNullOrEmpty(plan.SourceTransactionId))
+{
+    <div class="alert alert-info" role="alert">
+        @T["The customer chose this plan at checkout and has not paid the first payment yet. It starts once they do, and is closed if they leave the checkout."]
+    </div>
+}
+else if (plan.Status == InstallmentPlanStatus.Draft)
 {
     <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
         <span>@T["Nothing is scheduled until the down payment is received."]</span>
@@ -58,7 +64,26 @@
                     <dd class="col-sm-8"><strong>@Money(plan.AmountOutstanding)</strong></dd>
 
                     <dt class="col-sm-4">@T["Schedule"]</dt>
-                    <dd class="col-sm-8">@T["Down payment of {0}, then {1} payments from {2:d}", Money(plan.DownPaymentAmount), plan.InstallmentCount, plan.FirstDueUtc]</dd>
+                    @if (plan.DownPayment is not null)
+                    {
+                        <dd class="col-sm-8">@T["Down payment of {0}, then {1} payments from {2:d}", Money(plan.DownPaymentAmount), plan.InstallmentCount, plan.FirstDueUtc]</dd>
+                    }
+                    else
+                    {
+                        <dd class="col-sm-8">@T["{0} payments from {1:d}, the first taken when the plan was set up", plan.InstallmentCount, plan.FirstDueUtc]</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(plan.ReferenceType))
+                    {
+                        <dt class="col-sm-4">@T["Pays for"]</dt>
+                        <dd class="col-sm-8"><code>@plan.ReferenceType</code> <code>@plan.ReferenceId</code></dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(plan.SourceTransactionId))
+                    {
+                        <dt class="col-sm-4">@T["Replaces"]</dt>
+                        <dd class="col-sm-8">@T["An outstanding transaction the customer chose to pay in installments at checkout."]</dd>
+                    }
 
                     <dt class="col-sm-4">@T["Collected by"]</dt>
                     <dd class="col-sm-8">

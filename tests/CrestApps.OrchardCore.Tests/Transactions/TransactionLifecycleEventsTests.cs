@@ -141,7 +141,7 @@ public sealed class TransactionLifecycleEventsTests
         var controller = CreateAdminController(TransactionManagerFactory.Create(store, events));
 
         // Act
-        await controller.MarkPaid("transaction-1");
+        await controller.MarkPaid("transaction-1", note: null);
 
         // Assert
         Assert.Equal([("transaction-1", TransactionStatus.Outstanding, TransactionStatus.Paid)], events.StatusChanges);
@@ -345,14 +345,13 @@ public sealed class TransactionLifecycleEventsTests
 
         var controller = new AdminController(
             manager,
+            TransactionCommandServiceFactory.Create(manager, new TestClock(_now)),
             authorizationService.Object,
             Mock.Of<IUserService>(),
             Mock.Of<IDisplayNameProvider>(),
             new TestClock(_now),
             Mock.Of<INotifier>(),
             Options.Create(new TransactionSourceOptions()),
-            [],
-            NullLogger<AdminController>.Instance,
             new PassThroughHtmlLocalizer<AdminController>(),
             new PassThroughStringLocalizer<AdminController>());
 

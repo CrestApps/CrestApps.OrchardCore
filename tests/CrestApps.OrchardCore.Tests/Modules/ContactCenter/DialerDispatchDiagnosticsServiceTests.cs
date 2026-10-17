@@ -32,6 +32,22 @@ public sealed class DialerDispatchDiagnosticsServiceTests
         Assert.Equal(DispatchBlocker.NotQueued, blocker);
     }
 
+    // A record a user works from their own list is not in the campaign's queue on purpose.
+    [Fact]
+    public void Evaluate_ARecordAssignedToAUserAndNotQueued_IsAssignedToThem()
+    {
+        // Arrange
+        var activity = CreateActivity();
+        activity.AssignedToId = "user-1";
+
+        // Act
+        var (blocker, _) = DialerDispatchDiagnosticsService.Evaluate(
+            queueItem: null, CreateProfile(), activity, workState: null, lastInteraction: null, suppression: null, _now);
+
+        // Assert
+        Assert.Equal(DispatchBlocker.AssignedToUser, blocker);
+    }
+
     [Fact]
     public void Evaluate_ARecordOfATurnedOffProfile_IsHeldByTheProfile()
     {
@@ -387,7 +403,7 @@ public sealed class DialerDispatchDiagnosticsServiceTests
     }
 
     [Fact]
-    public async Task DiagnoseAsync_ReadsOnlyRecentRoutingDecisions()
+    public async Task DiagnoseAsync_ReadsOnlyTheRoutingDecisionsOfTheQueuesAskedAbout_LastMadeRecently()
     {
         // Arrange
         var harness = new Harness();
@@ -397,15 +413,37 @@ public sealed class DialerDispatchDiagnosticsServiceTests
         await harness.CreateService().DiagnoseAsync(["support"], TestContext.Current.CancellationToken);
 
         // Assert
-        harness.EventStore.Verify(
-            store => store.GetByAggregateWindowAsync(
-                nameof(QueueItem),
-                It.Is<IEnumerable<string>>(types => types.SequenceEqual(new[] { ContactCenterConstants.Events.RoutingDecisionMade })),
-                null,
+        harness.DecisionLog.Verify(
+            log => log.GetRoutingDecisionsSeenSinceAsync(
+                It.Is<IReadOnlyCollection<string>>(queueIds => queueIds.SequenceEqual(new[] { "support" })),
                 _now - DialerDispatchDiagnosticsService.RoutingLookback,
-                _now,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // Routing counts a repeated failure on the event that recorded it first, so the event's own time can be hours old
+    // while the failure was made again a minute ago; it still explains the queue now, as of its last time.
+    [Fact]
+    public async Task DiagnoseAsync_WhenRoutingKeepsRepeatingAFailureFirstMadeLongAgo_ReportsItAsOfTheLastTime()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AddQueue("support", enabled: true, waiting: 2);
+        harness.AddRoutingDecision(
+            "support",
+            succeeded: false,
+            _now.AddHours(-3),
+            "No agents are currently available for this queue.",
+            lastSeenUtc: _now.AddMinutes(-1),
+            occurrenceCount: 180);
+
+        // Act
+        var diagnosis = Assert.Single(await harness.CreateService().DiagnoseAsync(["support"], TestContext.Current.CancellationToken));
+
+        // Assert
+        var finding = Assert.IsType<DispatchRoutingFinding>(diagnosis.RoutingFinding);
+        Assert.Equal("No agents are currently available for this queue.", finding.Reason);
+        Assert.Equal(_now.AddMinutes(-1), finding.OccurredUtc);
     }
 
     [Fact]
@@ -420,6 +458,7 @@ public sealed class DialerDispatchDiagnosticsServiceTests
         // Assert
         Assert.Empty(result);
         harness.EventStore.VerifyNoOtherCalls();
+        harness.DecisionLog.VerifyNoOtherCalls();
     }
 
     private static DialerProfile CreateProfile(bool enabled = true)
@@ -462,18 +501,20 @@ public sealed class DialerDispatchDiagnosticsServiceTests
 
         public Harness()
         {
-            EventStore
-                .Setup(store => store.GetByAggregateWindowAsync(
-                    nameof(QueueItem),
-                    It.IsAny<IEnumerable<string>>(),
-                    It.IsAny<IEnumerable<string>>(),
-                    It.IsAny<DateTime>(),
+            DecisionLog
+                .Setup(log => log.GetRoutingDecisionsSeenSinceAsync(
+                    It.IsAny<IReadOnlyCollection<string>>(),
                     It.IsAny<DateTime>(),
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => _routingEvents.ToArray());
+                .ReturnsAsync((IReadOnlyCollection<string> queueIds, DateTime sinceUtc, CancellationToken _) => _routingEvents
+                    .Where(interactionEvent => queueIds.Contains(interactionEvent.GetData<ActivityRoutingDecisionEventData>().QueueId))
+                    .Where(interactionEvent => (interactionEvent.GetData<ActivityRoutingDecisionEventData>().LastSeenUtc ?? interactionEvent.OccurredUtc) >= sinceUtc)
+                    .ToArray());
         }
 
         public Mock<IInteractionEventStore> EventStore { get; } = new();
+
+        public Mock<IDialerDecisionLog> DecisionLog { get; } = new();
 
         public void AddQueue(string queueId, bool enabled, int waiting, bool businessHoursOpen = true)
         {
@@ -494,6 +535,16 @@ public sealed class DialerDispatchDiagnosticsServiceTests
             DateTime occurredUtc,
             string reason,
             params (string AgentId, bool Eligible, string[] Reasons)[] candidates)
+            => AddRoutingDecision(queueId, succeeded, occurredUtc, reason, lastSeenUtc: null, occurrenceCount: 1, candidates);
+
+        public void AddRoutingDecision(
+            string queueId,
+            bool succeeded,
+            DateTime occurredUtc,
+            string reason,
+            DateTime? lastSeenUtc,
+            int occurrenceCount,
+            params (string AgentId, bool Eligible, string[] Reasons)[] candidates)
         {
             var interactionEvent = new InteractionEvent
             {
@@ -509,6 +560,8 @@ public sealed class DialerDispatchDiagnosticsServiceTests
                 QueueId = queueId,
                 Succeeded = succeeded,
                 Reason = reason,
+                LastSeenUtc = lastSeenUtc,
+                OccurrenceCount = occurrenceCount,
                 Candidates = candidates
                     .Select(candidate => new ActivityRoutingCandidateDecisionData
                     {
@@ -531,6 +584,7 @@ public sealed class DialerDispatchDiagnosticsServiceTests
                 Mock.Of<IOmnichannelActivityManager>(),
                 Mock.Of<IContactCenterWorkStateStore>(),
                 EventStore.Object,
+                DecisionLog.Object,
                 Mock.Of<ISession>(),
                 new StubClock(_now));
     }

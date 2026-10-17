@@ -52,7 +52,6 @@ public sealed class InstallmentPlansController : Controller
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
     private readonly IEnumerable<ICheckoutSavedPaymentMethodProvider> _savedPaymentMethodProviders;
     private readonly ITransactionManager _transactionManager;
-    private readonly IProductCurrencyProvider _currencyProvider;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
@@ -72,7 +71,6 @@ public sealed class InstallmentPlansController : Controller
         ICheckoutPaymentProviderResolver providerResolver,
         IEnumerable<ICheckoutSavedPaymentMethodProvider> savedPaymentMethodProviders,
         ITransactionManager transactionManager,
-        IProductCurrencyProvider currencyProvider,
         ISiteService siteService,
         IAuthorizationService authorizationService,
         INotifier notifier,
@@ -87,7 +85,6 @@ public sealed class InstallmentPlansController : Controller
         _providerResolver = providerResolver;
         _savedPaymentMethodProviders = savedPaymentMethodProviders;
         _transactionManager = transactionManager;
-        _currencyProvider = currencyProvider;
         _siteService = siteService;
         _authorizationService = authorizationService;
         _notifier = notifier;
@@ -297,7 +294,8 @@ public sealed class InstallmentPlansController : Controller
             return NotFound();
         }
 
-        if (plan.Status != InstallmentPlanStatus.Draft)
+        // A plan the customer chose at checkout takes its first payment in the customer's own checkout, not here.
+        if (plan.Status != InstallmentPlanStatus.Draft || !string.IsNullOrEmpty(plan.SourceTransactionId))
         {
             return RedirectToAction(nameof(Detail), new { itemId });
         }
@@ -341,7 +339,7 @@ public sealed class InstallmentPlansController : Controller
 
         var plan = await FindPlanAsync(itemId);
 
-        if (plan is null || plan.Status != InstallmentPlanStatus.Draft || string.IsNullOrEmpty(plan.DownPaymentSessionId))
+        if (plan is null || plan.Status != InstallmentPlanStatus.Draft || string.IsNullOrEmpty(plan.DownPaymentSessionId) || !string.IsNullOrEmpty(plan.SourceTransactionId))
         {
             return Error(S["This plan is not waiting for a down payment."], StatusCodes.Status400BadRequest);
         }
@@ -575,9 +573,15 @@ public sealed class InstallmentPlansController : Controller
         return sanitized;
     }
 
+    // The currencies come from Products, which installment plans don't need. Without it the currency is typed.
     private async Task PopulateAsync(CreateInstallmentPlanViewModel model)
     {
-        var currencies = await _currencyProvider.GetCurrenciesAsync();
+        if (HttpContext.RequestServices.GetService<IProductCurrencyProvider>() is not { } currencyProvider)
+        {
+            return;
+        }
+
+        var currencies = await currencyProvider.GetCurrenciesAsync(HttpContext.RequestAborted);
 
         model.Currencies = [.. currencies
             .OrderBy(currency => currency.CurrencyCode, StringComparer.OrdinalIgnoreCase)

@@ -27,6 +27,7 @@ public sealed class OrderCheckoutTests
 
     private readonly FakeOrderStore _orders = new();
     private readonly FakeCartStore _carts = new();
+    private readonly List<OrderCanceledContext> _canceled = [];
 
     [Fact]
     public async Task ACart_BecomesADraftOrder_WithItsLinesFrozen()
@@ -60,7 +61,90 @@ public sealed class OrderCheckoutTests
         var second = await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
 
         Assert.Equal(OrderStatus.Canceled, first.Status);
+        Assert.Equal(OrderCancelReason.Replaced, first.CancelReason);
+        Assert.Equal(_now, first.CanceledUtc);
         Assert.Equal(OrderStatus.Draft, second.Status);
+    }
+
+    [Theory]
+    [InlineData("failed", OrderCancelReason.PaymentFailed)]
+    [InlineData("canceled", OrderCancelReason.CheckoutCanceled)]
+    [InlineData("expired", OrderCancelReason.CheckoutExpired)]
+    public async Task ACheckoutThatEndsUnpaid_CancelsItsOrder_AndSaysWhy(string end, OrderCancelReason expected)
+    {
+        var order = await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        var session = await StartCheckoutAsync(order);
+        var flow = new CheckoutFlow(session);
+        var handler = CreateHandler();
+
+        await (end switch
+        {
+            "failed" => handler.FailedAsync(new CheckoutFlowFailedContext(flow)),
+            "canceled" => handler.CanceledAsync(new CheckoutFlowCanceledContext(flow, "abandoned")),
+            _ => handler.ExpiredAsync(new CheckoutFlowExpiredContext(flow)),
+        });
+
+        Assert.Equal(OrderStatus.Canceled, order.Status);
+        Assert.Equal(expected, order.CancelReason);
+
+        // Modules hear of it once, so the stock the order held is released once.
+        var canceled = Assert.Single(_canceled);
+        Assert.Same(order, canceled.Order);
+        Assert.Equal(expected, canceled.Reason);
+    }
+
+    [Fact]
+    public async Task ACheckoutThatNoLongerOwnsTheOrder_DoesNotCancelIt()
+    {
+        var order = await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        await StartCheckoutAsync(order);
+        var other = new CheckoutSession { SessionId = "someone-else", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = order.ItemId };
+
+        await CreateHandler().ExpiredAsync(new CheckoutFlowExpiredContext(new CheckoutFlow(other)));
+
+        Assert.Equal(OrderStatus.AwaitingPayment, order.Status);
+        Assert.Empty(_canceled);
+    }
+
+    [Fact]
+    public async Task APaidOrder_IsNeverCanceled()
+    {
+        var service = CreateService();
+        var order = await service.CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        order.Status = OrderStatus.Paid;
+
+        Assert.False(await service.CancelAsync(order, OrderCancelReason.Abandoned, TestContext.Current.CancellationToken));
+        Assert.Equal(OrderStatus.Paid, order.Status);
+        Assert.Empty(_canceled);
+    }
+
+    [Fact]
+    public async Task BuyingOneVariant_LeavesTheOtherVariantsInTheCart()
+    {
+        var cart = new Cart
+        {
+            ItemId = "cart-1",
+            Currency = "USD",
+            Lines =
+            [
+                // The red mug comes first, so matching by product and price alone would take it instead of the blue one.
+                new CartLine { LineId = "red", ContentItemId = "mug", VariantId = "red", Quantity = 2, AddedUnitPrice = 12m },
+                new CartLine { LineId = "blue", ContentItemId = "mug", VariantId = "blue", Quantity = 1, AddedUnitPrice = 12m },
+            ],
+        };
+        _carts.Carts.Add(cart);
+
+        var order = await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        order.Lines.RemoveAll(line => line.VariantId == "red");
+
+        var session = await StartCheckoutAsync(order);
+        session.Put(new CheckoutInvoice { Currency = "USD", GrandTotal = 12m, LineItems = [new CheckoutLineItem { ItemId = "blue", Quantity = 1, UnitPrice = 12m }] });
+
+        await CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        var left = Assert.Single(cart.Lines);
+        Assert.Equal("red", left.VariantId);
+        Assert.Equal(2, left.Quantity);
     }
 
     [Fact]
@@ -235,10 +319,18 @@ public sealed class OrderCheckoutTests
         };
 
     private OrderService CreateService()
-        => new(_orders, Clock());
+    {
+        var handler = new Mock<IOrderEventHandler>();
+        handler
+            .Setup(h => h.CanceledAsync(It.IsAny<OrderCanceledContext>(), It.IsAny<CancellationToken>()))
+            .Callback<OrderCanceledContext, CancellationToken>((context, _) => _canceled.Add(context))
+            .Returns(Task.CompletedTask);
+
+        return new(_orders, [handler.Object], Clock(), NullLogger<OrderService>.Instance);
+    }
 
     private OrderCheckoutHandler CreateHandler()
-        => new(_orders, _carts, Clock(), NullLogger<OrderCheckoutHandler>.Instance, new PassThroughStringLocalizer<OrderCheckoutHandler>());
+        => new(_orders, CreateService(), _carts, Clock(), NullLogger<OrderCheckoutHandler>.Instance, new PassThroughStringLocalizer<OrderCheckoutHandler>());
 
     private static IClock Clock()
     {

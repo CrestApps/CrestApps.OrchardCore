@@ -41,6 +41,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 | One step per content type | When a plan asks the buyer to fill in content, such as details about their organization. The step is named after the content type. |
 | **Your new site** | When the plan creates a new site for the buyer. See [Sites](sites.md). |
 | **Outstanding payment** | Paying an outstanding balance. |
+| **Choose how to pay** | Paying an outstanding balance that the site lets customers pay in installments. The buyer picks **Pay in full** or one of the installment choices, such as *3 monthly payments*. See [Pay in installments](transactions.md#pay-in-installments). |
 | **Payment** | Always, as the last step. |
 
 ### The order summary
@@ -67,6 +68,7 @@ If the card's bank asks the cardholder to approve the payment, the approval wind
 | *Please choose a payment method.* | The buyer clicked **Pay now** without picking a method. |
 | *Your payment is still being processed.* | The provider has not confirmed yet. The buyer does not need to pay again; the purchase completes on its own once the provider confirms, even if the buyer closes the browser. |
 | *Your payment could not be completed. Please try again.* | The payment failed, for example a declined card. The buyer stays on the payment step and can try again or pick another method. |
+| *The card you pay with now is saved, and the remaining payments are charged to it automatically on their due dates.* | The buyer chose to pay in installments. Only payment methods that can save a card are shown. |
 
 ## Apply a promotion code
 
@@ -76,7 +78,9 @@ The **Promotion code** box sits under the order summary on the **Payment** step.
 2. Click **Apply**. The page refreshes the order summary; no payment is taken.
 3. When the code takes money off, the box shows the amount, for example *USD 10.00 off applied.*, and the summary shows the new total.
 
-To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. See [Coupons](coupons.md).
+To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.*
+
+When the buyer is paying an existing balance (a transaction, from **My Transactions** or a pay link), what the code takes off is taken off the balance: a 100% code pays it without a card, and a smaller code leaves the rest to pay. See [Coupons](coupons.md#coupons-on-a-payment-for-a-transaction).
 
 ## Who the order is for
 

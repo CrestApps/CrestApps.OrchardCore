@@ -437,6 +437,10 @@ public sealed class DialerAttemptServiceTests
         Assert.Equal(reason, suppression.Reason);
         Assert.Equal("Suppressed by policy.", suppression.Description);
         Assert.Equal(activity.PreferredDestination, suppression.Destination);
+
+        // The decision log reads the queue the attempt came from and the agent it was reserved for off the payload.
+        Assert.Equal("q1", suppression.QueueId);
+        Assert.Equal("a1", suppression.AgentId);
         VerifyNoOutboundRouting(voiceCallRouter);
     }
 

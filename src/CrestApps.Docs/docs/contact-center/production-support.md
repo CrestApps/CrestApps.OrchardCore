@@ -235,6 +235,7 @@ The dependency report contains only what the tenant's enabled features registere
 | `contactcenter-outbox` | Dependency | Contact Center | Dead-lettered count and overdue (past-due pending/claimed) backlog. The overdue backlog is the scheduler-lag signal: a sustained non-zero value means the dispatch background task is not keeping up. | Dead-letters or overdue backlog reach the degraded threshold. | Either reaches the unhealthy threshold, or the store is unreadable. |
 | `contactcenter-active-calls` | Dependency | Contact Center | A live gauge, not a verdict: reports `active_calls`, the number of call sessions that have not ended, in the check's `Data`. This is the count of live calls a node drain would interrupt. Stays healthy at any count because the acceptable ceiling is deployment specific. | — | The store is unreadable. |
 | `contactcenter-queue-backlog` | Dependency | Contact Center Work Distribution | A live gauge, not a verdict: reports `queued_interactions`, the number of interactions waiting for an agent across every queue, in the check's `Data`. Registered by the Work Distribution feature, which owns the queue item store, so it is absent on tenants without Work Distribution. Stays healthy at any count. | — | The store is unreadable. |
+| `contactcenter-dialer-pacing` | Dependency | Contact Center Paced Dialing | The dialer's heartbeat: for each campaign queue with a waiting record under an enabled paced profile, the last pacing cycle that ran to the end. Reports the number of queues stalled, idle (no agent), held back, dialing and with nothing due in the check's `Data`, and `stalled_queue_ids` when any is stalled. A queue whose cycles keep completing is healthy whatever they decide, so an idle dialer or one with nothing to call never alerts. Registered by the Paced Dialing feature, so it is absent on tenants without it. See [Pacing cycle records and dialer health](agents-queues-dialer.md#pacing-cycle-records-and-dialer-health). | — | Due work is waiting but no pacing cycle of its queue has completed for longer than `CrestApps:ContactCenter:DialerPacing:StalledAfter` (default 5 minutes), or the records are unreadable. |
 | `contactcenter-provider-ingress` | Dependency | Contact Center Voice | Provider webhook inbox dead-letter and overdue backlog. A stuck provider stream or an expired listener lease surfaces here as a growing ingress backlog. | Same thresholds as the outbox. | Same thresholds as the outbox. |
 | `contactcenter-distributed-lock` | Dependency | Contact Center | Acquires and releases a dedicated probe lock within a bounded time, exercising whichever `IDistributedLock` the tenant resolves (the Redis-backed lock end to end when `OrchardCore.Redis.Lock` is enabled). Registered only when the `OrchardCore.Redis` feature is enabled with a valid Redis configuration; absent otherwise. | — | The probe lock cannot be acquired within the timeout, or the lock backend throws. |
 | `contactcenter-redis` | Dependency | Contact Center | Pings the Redis connection shared by the distributed lock and the SignalR backplane. Registered only when the `OrchardCore.Redis` feature is enabled with a valid Redis configuration; absent otherwise. | — | The ping fails or times out while Redis is enabled. |
@@ -481,7 +482,7 @@ Every table that grows with traffic is aged out by a retention policy. A table w
 
 Each entity declares a policy that answers three questions: which timestamp the record is aged from, what makes the record finished, and which floors hold it beyond its configured window.
 
-Retention is configured under `CrestApps:ContactCenter:Retention`. Every window defaults to `0`, which means "keep indefinitely":
+Retention is configured under `CrestApps:ContactCenter:Retention`. Every window over business records defaults to `0`, which means "keep indefinitely"; only the dialer pacing cycle records, which are diagnostics, are aged out by default:
 
 | Setting | Entity |
 | --- | --- |
@@ -498,6 +499,7 @@ Retention is configured under `CrestApps:ContactCenter:Retention`. Every window 
 | `SharedVoicemailRetentionDays` | Shared voicemail messages, once marked as done |
 | `EventMetricRetentionDays` | Daily event metrics |
 | `CallQualityRecordRetentionDays` | Call quality records |
+| `DialerPacingCycleRetentionDays` | Dialer pacing cycle records. The one window that does not default to `0`: it defaults to `14`, because a record only says what the dialer did, carries no customer data, and one is written for every cycle that places calls. Set it to `0` to keep them indefinitely. |
 | `ProcessedEventRetentionDays` | Processed-event markers |
 | `WorkStateRetentionDays` | Routing work state |
 
@@ -520,6 +522,7 @@ A record is aged from the moment it reached a final state, never from when it ar
 | Event metric | `Date` | Always — a closed day is final |
 | Processed-event marker | `ProcessedUtc` | Always — the event was handled |
 | Callback request | `ModifiedUtc` | Completed, canceled or failed |
+| Dialer pacing cycle | `CompletedUtc` | Always — the cycle has ended; a record is only folded into while it is its queue's latest |
 
 Ageing from arrival time would delete exactly the work that waited longest — the calls that sat in queue for an hour, the commands that retried for a day — which are the records an operator most needs when explaining what went wrong. Ageing from a *scheduled* time is worse still: a callback booked three weeks out carries a future timestamp, and a command in backoff carries a retry time that keeps moving.
 
@@ -595,6 +598,7 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 | Routing work state | Non-personal | No | `WorkStateRetentionDays`, from last mutation; recreated and re-seeded on next access | Retention expiry |
 | Event metric | Non-personal | No | `EventMetricRetentionDays` | Not applicable |
 | Call quality record | Non-personal | No | `CallQualityRecordRetentionDays`, from the end of the measured leg | Retention expiry |
+| Dialer pacing cycle | Non-personal | No | `DialerPacingCycleRetentionDays` (14 days unless configured), from when the latest cycle it stands for ended | Retention expiry |
 | Projection checkpoint | Non-personal | No | Operational; updated in place | Not applicable |
 | Processed-event ledger | Non-personal | No | `ProcessedEventRetentionDays`, floored by the redelivery envelope | Retention expiry |
 | Routing and dialing configuration | Non-personal | No | Administrator-managed | Not applicable |

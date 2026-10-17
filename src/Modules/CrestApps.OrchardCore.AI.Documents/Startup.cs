@@ -59,6 +59,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<InteractionDocumentSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageChatInteractionSettings);
 
         services.AddScoped<IAuthorizationHandler, OrchardChatInteractionDocumentAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrchardAIChatSessionDocumentAuthorizationHandler>();
