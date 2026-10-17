@@ -53,6 +53,21 @@ public sealed class InstallmentPlanIndex : CatalogItemIndex
     /// Gets or sets when the plan was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of record the plan pays for.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the record the plan pays for.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the outstanding transaction the plan replaces.
+    /// </summary>
+    public string SourceTransactionId { get; set; }
 }
 
 /// <summary>
@@ -60,6 +75,11 @@ public sealed class InstallmentPlanIndex : CatalogItemIndex
 /// </summary>
 public sealed class InstallmentPlanIndexProvider : IndexProvider<InstallmentPlan>
 {
+    /// <summary>
+    /// The longest reference type or reference identifier the index holds.
+    /// </summary>
+    public const int ReferenceMaxLength = 255;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="InstallmentPlanIndexProvider"/> class.
     /// </summary>
@@ -84,10 +104,14 @@ public sealed class InstallmentPlanIndexProvider : IndexProvider<InstallmentPlan
                 TotalAmount = plan.TotalAmount,
                 NextDueUtc = plan.NextPayment?.DueUtc,
                 CreatedUtc = plan.CreatedUtc,
+                ReferenceType = Truncate(plan.ReferenceType, ReferenceMaxLength),
+                ReferenceId = Truncate(plan.ReferenceId, ReferenceMaxLength),
+                SourceTransactionId = plan.SourceTransactionId,
             });
     }
 
-    // The columns are bounded, and a longer value must not stop the plan from being saved.
-    private static string Truncate(string value, int length)
+    // The columns are bounded, and a longer value must not stop the plan from being saved. A query truncates the value
+    // it looks for the same way, so it still finds the row.
+    internal static string Truncate(string value, int length)
         => value is null || value.Length <= length ? value : value[..length];
 }

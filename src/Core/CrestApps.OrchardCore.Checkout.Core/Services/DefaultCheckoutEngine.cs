@@ -196,9 +196,16 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 return new PaymentBeginOutcome { Succeeded = true };
             }
 
-            if (!TryValidateCapabilities(provider, expectedObligations, session.SettlesExistingBalance, out var capabilityError))
+            if (!TryValidateCapabilities(provider, expectedObligations, session.SettlesExistingBalance, session.SavePaymentMethod, out var capabilityError))
             {
                 return PaymentBeginOutcome.Failure(capabilityError);
+            }
+
+            if (session.SavePaymentMethod)
+            {
+                // The session, not the browser, decides that the card is kept: the remaining payments of what the
+                // customer agreed to are charged to it without them present.
+                options = WithSavedPaymentMethod(options);
             }
 
             var existingAttempts = (await _attemptStore.GetBySessionAsync(sessionId, cancellationToken)).ToList();
@@ -775,6 +782,28 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         return amounts;
     }
 
+    // Adds the request to keep the payment method to what the browser sent. Nothing else changes, so the provider still
+    // sees the payment method its own script tokenized.
+    private static BeginPaymentOptions WithSavedPaymentMethod(BeginPaymentOptions options)
+    {
+        var providerData = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var pair in options.ProviderData ?? new Dictionary<string, string>())
+        {
+            providerData[pair.Key] = pair.Value;
+        }
+
+        providerData[CheckoutPaymentDataKeys.SavePaymentMethod] = "true";
+
+        return new BeginPaymentOptions
+        {
+            ProviderKey = options.ProviderKey,
+            ReturnUrl = options.ReturnUrl,
+            CancelUrl = options.CancelUrl,
+            ProviderData = providerData,
+        };
+    }
+
     // Refuses a provider that cannot express what the invoice needs, before any money moves. Discovering this
     // after a charge would mean refunding a customer for a configuration mistake.
     //
@@ -784,9 +813,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         ICheckoutPaymentProvider provider,
         IReadOnlyList<string> obligations,
         bool settlesExistingBalance,
+        bool savesPaymentMethod,
         out string error)
     {
-        if (CheckoutPaymentMethodSelector.GetEligible([provider], obligations, settlesExistingBalance).Length > 0)
+        if (CheckoutPaymentMethodSelector.GetEligible([provider], obligations, settlesExistingBalance, savesPaymentMethod).Length > 0)
         {
             error = null;
 
@@ -796,6 +826,13 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         if (settlesExistingBalance && provider.Capabilities.DefersPayment)
         {
             error = "This balance must be paid now, so the selected payment method can't be used.";
+
+            return false;
+        }
+
+        if (savesPaymentMethod && !provider.Capabilities.SupportsSavedPaymentMethods)
+        {
+            error = "The selected payment method can't keep your card for the later payments.";
 
             return false;
         }

@@ -35,6 +35,8 @@ public sealed class ShapeViewModelContractTests
         typeof(SubscriptionPartViewModel),
         typeof(SubscriptionSettingsViewModel),
         typeof(UserRegistrationStepViewModel),
+        typeof(InstallmentOptionsStepViewModel),
+        typeof(InstallmentPlanSettingsViewModel),
         typeof(CrestApps.OrchardCore.Subscriptions.Models.CreateUserViewModel),
     ];
 

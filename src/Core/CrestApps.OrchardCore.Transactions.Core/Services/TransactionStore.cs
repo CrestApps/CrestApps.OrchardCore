@@ -109,6 +109,30 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Transaction>> GetByParentReferenceAsync(string parentReferenceType, string parentReferenceId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(parentReferenceType);
+        ArgumentException.ThrowIfNullOrEmpty(parentReferenceId);
+
+        var type = TransactionParentReferenceIndexProvider.Truncate(parentReferenceType);
+        var id = TransactionParentReferenceIndexProvider.Truncate(parentReferenceId);
+
+        var records = await Session.Query<Transaction, TransactionParentReferenceIndex>(
+            x => x.ParentReferenceType == type && x.ParentReferenceId == id,
+            collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        // The index row is truncated; the document is not, so a longer reference is matched exactly here.
+        return records
+            .Where(transaction =>
+                string.Equals(transaction.ParentReferenceType, parentReferenceType, StringComparison.Ordinal) &&
+                string.Equals(transaction.ParentReferenceId, parentReferenceId, StringComparison.Ordinal))
+            .OrderBy(transaction => transaction.CreatedUtc)
+            .ThenBy(transaction => transaction.DueUtc)
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Transaction>> GetOutstandingDueAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
     {
         var records = await Session.Query<Transaction, TransactionIndex>(

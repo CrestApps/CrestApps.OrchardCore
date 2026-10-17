@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -21,6 +23,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Entities;
 using OrchardCore.Locking;
 using OrchardCore.Notifications;
 using OrchardCore.Users;
@@ -82,7 +85,7 @@ public sealed class DefaultInstallmentPlanServiceTests
 
     [Theory]
     [InlineData(1200, 1200, 6, nameof(CreateInstallmentPlanRequest.DownPaymentAmount))]
-    [InlineData(1200, 0, 6, nameof(CreateInstallmentPlanRequest.DownPaymentAmount))]
+    [InlineData(1200, -1, 6, nameof(CreateInstallmentPlanRequest.DownPaymentAmount))]
     [InlineData(1200, 300, 0, nameof(CreateInstallmentPlanRequest.InstallmentCount))]
     [InlineData(0, 300, 6, nameof(CreateInstallmentPlanRequest.TotalAmount))]
     public async Task CreateAsync_RejectsAPlanThatDoesNotAddUp(decimal total, decimal downPayment, int count, string member)
@@ -700,6 +703,510 @@ public sealed class DefaultInstallmentPlanServiceTests
         planService.Verify(service => service.ProcessAsync("plan-2", It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task CreateAsync_WithAReference_CopiesItOntoThePlanAndEveryPayment()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var request = CreateRequest();
+        request.ReferenceType = "Registration";
+        request.ReferenceId = "reg-1";
+        request.Properties = new Dictionary<string, object>
+        {
+            ["season"] = "2027",
+        };
+
+        // Act
+        var plan = await CreateActiveAsync(context, service, request);
+
+        // Assert
+        Assert.Equal("Registration", plan.ReferenceType);
+        Assert.Equal("reg-1", plan.ReferenceId);
+        Assert.Equal("2027", plan.Properties["season"]);
+
+        Assert.Equal(7, context.Transactions.Transactions.Count);
+        Assert.All(context.Transactions.Transactions, transaction =>
+        {
+            Assert.Equal("Registration", transaction.ParentReferenceType);
+            Assert.Equal("reg-1", transaction.ParentReferenceId);
+            Assert.Equal("2027", transaction.Properties["season"]);
+        });
+    }
+
+    [Fact]
+    public async Task GetByParentReference_FromAnyPlanPayment_FindsTheRecordAndThePlan()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var request = CreateRequest();
+        request.ReferenceType = "Registration";
+        request.ReferenceId = "reg-1";
+
+        var plan = await CreateActiveAsync(context, service, request);
+
+        // Act
+        var payments = await context.Transactions.GetByParentReferenceAsync("Registration", "reg-1", TestContext.Current.CancellationToken);
+        var lastPayment = payments.Single(transaction => transaction.ObligationId == "6");
+        var plans = await context.Plans.GetByReferenceAsync(lastPayment.ParentReferenceType, lastPayment.ParentReferenceId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(7, payments.Count);
+        Assert.Same(plan, Assert.Single(plans));
+        Assert.Empty(await context.Transactions.GetByParentReferenceAsync("Registration", "reg-2", TestContext.Current.CancellationToken));
+    }
+
+    [Theory]
+    [InlineData("Registration", null)]
+    [InlineData(null, "reg-1")]
+    public async Task CreateAsync_WithHalfAReference_IsRefused(string referenceType, string referenceId)
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var request = CreateRequest();
+        request.ReferenceType = referenceType;
+        request.ReferenceId = referenceId;
+
+        // Act
+        var result = await context.Build().CreateAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(result.Errors, error => error.Key == nameof(CreateInstallmentPlanRequest.ReferenceType));
+        Assert.Empty(context.Transactions.Transactions);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithoutADownPayment_TakesTheFirstPaymentNowAndSchedulesTheRestAfterIt()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var request = CreateRequest();
+        request.DownPaymentAmount = 0m;
+        request.FirstDueUtc = default;
+
+        // Act
+        var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+
+        var plan = result.Plan;
+
+        Assert.Null(plan.DownPayment);
+        Assert.Equal(6, plan.Payments.Count);
+        Assert.Equal(1200m, plan.Payments.Sum(payment => payment.Amount));
+        Assert.Equal(1, plan.FirstPayment.Number);
+        Assert.Equal(200m, plan.FirstPayment.Amount);
+        Assert.Equal(_now, plan.FirstPayment.DueUtc);
+        Assert.Equal(InstallmentPaymentStatus.Due, plan.FirstPayment.Status);
+
+        var firstTransaction = Assert.Single(context.Transactions.Transactions);
+
+        Assert.Equal(plan.FirstPayment.TransactionId, firstTransaction.ItemId);
+        Assert.Equal(TransactionStatus.Outstanding, firstTransaction.Status);
+        Assert.Equal(200m, firstTransaction.TotalAmount);
+        Assert.Equal(firstTransaction.ItemId, Assert.Single(context.Engine.Started).ReferenceId);
+
+        // Once the first payment is in, the card is kept and the remaining payments are scheduled a month apart.
+        await context.Engine.BeginPaymentAsync(plan.DownPaymentSessionId, new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        await context.Engine.TryCompleteAsync(plan.DownPaymentSessionId, TestContext.Current.CancellationToken);
+        await service.ActivateAsync(plan.ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(InstallmentPlanStatus.Active, plan.Status);
+        Assert.Equal("pm_saved", plan.PaymentMethod.PaymentMethodReference);
+        Assert.Equal(InstallmentPaymentStatus.Paid, plan.FirstPayment.Status);
+        Assert.Equal(6, context.Transactions.Transactions.Count);
+        Assert.Equal(_now.AddMonths(1), plan.Payments.Single(payment => payment.Number == 2).DueUtc);
+        Assert.All(plan.Payments.Where(payment => payment.Number > 1), payment => Assert.Equal(InstallmentPaymentStatus.Scheduled, payment.Status));
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithoutADownPayment_RefusesAFirstPaymentDueLater()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var request = CreateRequest();
+        request.DownPaymentAmount = 0m;
+
+        // Act
+        var result = await context.Build().CreateAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(result.Errors, error => error.Key == nameof(CreateInstallmentPlanRequest.FirstDueUtc));
+        Assert.Empty(context.Engine.Started);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_MovesTheCustomersCheckoutOntoTheFirstPaymentAndKeepsTheBalanceOwed()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+
+        // Act
+        var result = await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+
+        var plan = result.Plan;
+
+        Assert.Equal(InstallmentPlanStatus.Draft, plan.Status);
+        Assert.Equal(CustomerId, plan.OwnerId);
+        Assert.Equal(transaction.ItemId, plan.SourceTransactionId);
+        Assert.Equal("Registration", plan.ReferenceType);
+        Assert.Equal("reg-1", plan.ReferenceId);
+        Assert.Equal("2027", plan.Properties["season"]);
+        Assert.Equal(InstallmentCollectionMethod.AutoCharge, plan.CollectionMethod);
+        Assert.Equal(0m, plan.DownPaymentAmount);
+        Assert.Equal(new[] { 100m, 100m, 100m }, plan.Payments.Select(payment => payment.Amount));
+        Assert.Equal(checkout.SessionId, plan.DownPaymentSessionId);
+
+        // The customer's own checkout takes the first payment; no other checkout is started.
+        Assert.Empty(context.Engine.Started);
+
+        var firstTransaction = await context.Transactions.FindByIdAsync(plan.FirstPayment.TransactionId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionStatus.Pending, firstTransaction.Status);
+        Assert.Equal(100m, firstTransaction.TotalAmount);
+        Assert.Equal("reg-1", firstTransaction.ParentReferenceId);
+        Assert.Equal(firstTransaction.ItemId, checkout.ReferenceId);
+        Assert.True(checkout.SavePaymentMethod);
+        Assert.True(checkout.TryGet<CheckoutInvoice>(out var invoice));
+        Assert.Equal(100m, invoice.DueNow);
+
+        // Until the first payment is received, nothing changes for the balance.
+        Assert.Equal(TransactionStatus.Outstanding, transaction.Status);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_AfterTheFirstPayment_KeepsTheCardReplacesTheBalanceAndChargesTheRestAutomatically()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+        var plan = (await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken)).Plan;
+
+        // Act
+        await context.Engine.BeginPaymentAsync(checkout.SessionId, new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        await context.Engine.TryCompleteAsync(checkout.SessionId, TestContext.Current.CancellationToken);
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InstallmentPlanStatus.Active, plan.Status);
+        Assert.Equal("pm_saved", plan.PaymentMethod.PaymentMethodReference);
+        Assert.Equal(TransactionStatus.Canceled, transaction.Status);
+
+        var payments = await context.Transactions.GetByParentReferenceAsync("Registration", "reg-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, payments.Count);
+        Assert.All(
+            payments.Where(payment => payment.ItemId != plan.FirstPayment.TransactionId),
+            payment => Assert.Equal("Visa •••• 4242", payment.AutoCollection?.PaymentMethodDescription));
+
+        // On the next due date the saved card is charged without the customer.
+        context.Clock.UtcNow = plan.Payments[1].DueUtc.AddHours(1);
+
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        var charge = context.Engine.Begun.Last();
+
+        Assert.True(CheckoutPaymentDataKeys.IsSet(charge.Options.ProviderData, CheckoutPaymentDataKeys.OffSession));
+        Assert.Equal("pm_saved", charge.Options.ProviderData[CheckoutPaymentDataKeys.SavedPaymentMethodReference]);
+        Assert.Equal(InstallmentPaymentStatus.Paid, plan.Payments[1].Status);
+        Assert.Equal(InstallmentPaymentStatus.Scheduled, plan.Payments[2].Status);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_WithADownPaymentOption_SchedulesTheFirstPaymentAPeriodLater()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+        var request = ConvertRequest(transaction, checkout);
+        request.Option.DownPaymentAmount = 60m;
+
+        // Act
+        var result = await service.CreateFromTransactionAsync(request, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+        Assert.Equal(60m, result.Plan.DownPayment.Amount);
+        Assert.Equal(new[] { 80m, 80m, 80m }, result.Plan.Payments.Where(payment => payment.Number > 0).Select(payment => payment.Amount));
+        Assert.Equal(_now.Date.AddMonths(1), result.Plan.Payments.Single(payment => payment.Number == 1).DueUtc);
+
+        Assert.True(checkout.TryGet<CheckoutInvoice>(out var invoice));
+        Assert.Equal(60m, invoice.DueNow);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_WhenTheCustomerLeavesTheCheckout_ClosesThePlanAndLeavesTheBalanceOwed()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+        var plan = (await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken)).Plan;
+
+        await context.Engine.CancelAsync(checkout.SessionId, "Abandoned.", TestContext.Current.CancellationToken);
+
+        // Act
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InstallmentPlanStatus.Canceled, plan.Status);
+        Assert.Equal(TransactionStatus.Outstanding, transaction.Status);
+
+        var firstTransaction = await context.Transactions.FindByIdAsync(plan.FirstPayment.TransactionId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionStatus.Canceled, firstTransaction.Status);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_WhenTheBalanceIsPaidAnotherWay_ClosesThePlanAndItsCheckout()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+        var plan = (await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken)).Plan;
+
+        transaction.AmountPaid = transaction.TotalAmount;
+        transaction.Status = TransactionStatus.Paid;
+
+        // Act
+        await service.ProcessAsync(plan.ItemId, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InstallmentPlanStatus.Canceled, plan.Status);
+        Assert.Contains(checkout.SessionId, context.Engine.Canceled);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_ForABalanceAlreadyPaidInInstallments_IsRefused()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+        var plan = (await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken)).Plan;
+
+        plan.Status = InstallmentPlanStatus.Active;
+
+        var secondCheckout = SeedSettlementCheckout(context, transaction, "session-second");
+
+        // Act
+        var result = await service.CreateFromTransactionAsync(ConvertRequest(transaction, secondCheckout), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Errors, error => error.Key == nameof(CreateInstallmentPlanFromTransactionRequest.TransactionId));
+        Assert.Equal(transaction.ItemId, secondCheckout.ReferenceId);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_AgainAfterALeftCheckout_ClosesTheEarlierPlan()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var firstCheckout = SeedSettlementCheckout(context, transaction);
+        var abandoned = (await service.CreateFromTransactionAsync(ConvertRequest(transaction, firstCheckout), TestContext.Current.CancellationToken)).Plan;
+        var secondCheckout = SeedSettlementCheckout(context, transaction, "session-second");
+
+        // Act
+        var result = await service.CreateFromTransactionAsync(ConvertRequest(transaction, secondCheckout), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+        Assert.Equal(InstallmentPlanStatus.Canceled, abandoned.Status);
+        Assert.Contains(firstCheckout.SessionId, context.Engine.Canceled);
+        Assert.Equal(InstallmentPlanStatus.Draft, result.Plan.Status);
+    }
+
+    [Theory]
+    [InlineData("guest")]
+    [InlineData("partly-paid")]
+    [InlineData("plan-payment")]
+    [InlineData("recurring")]
+    public async Task CreateFromTransactionAsync_ForABalanceThatCannotBeSplit_IsRefused(string kind)
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+
+        switch (kind)
+        {
+            case "guest":
+                transaction.OwnerKind = CustomerOwnerKind.Guest;
+                break;
+            case "partly-paid":
+                transaction.AmountPaid = 50m;
+                break;
+            case "plan-payment":
+                transaction.ReferenceType = SubscriptionConstants.InstallmentPlans.ReferenceType;
+                break;
+            case "recurring":
+                transaction.Recurrence = new TransactionRecurrence();
+                break;
+        }
+
+        var checkout = SeedSettlementCheckout(context, transaction);
+
+        // Act
+        var result = await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Empty(context.Plans.Plans);
+        Assert.Equal(transaction.ItemId, checkout.ReferenceId);
+        Assert.False(checkout.SavePaymentMethod);
+    }
+
+    [Fact]
+    public async Task CreateFromTransactionAsync_AfterAPaymentWasBegun_IsRefused()
+    {
+        // Arrange
+        var context = new TestContextBuilder();
+        var service = context.Build();
+        var transaction = await SeedSeasonFeeAsync(context);
+        var checkout = SeedSettlementCheckout(context, transaction);
+
+        await context.Attempts.CreateAsync(new PaymentAttempt
+        {
+            ItemId = "attempt-begun",
+            SessionId = checkout.SessionId,
+            ProviderKey = ProviderKey,
+            State = PaymentAttemptState.Pending,
+        }, TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await service.CreateFromTransactionAsync(ConvertRequest(transaction, checkout), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(result.Errors, error => error.Key == nameof(CreateInstallmentPlanFromTransactionRequest.CheckoutSessionId));
+        Assert.Empty(context.Plans.Plans);
+    }
+
+    private static async Task<InstallmentPlan> CreateActiveAsync(TestContextBuilder context, DefaultInstallmentPlanService service, CreateInstallmentPlanRequest request)
+    {
+        var result = await service.CreateAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, string.Join(" ", result.Errors.Select(error => error.Value)));
+
+        await context.Engine.BeginPaymentAsync(result.Plan.DownPaymentSessionId, new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        await context.Engine.TryCompleteAsync(result.Plan.DownPaymentSessionId, TestContext.Current.CancellationToken);
+        await service.ActivateAsync(result.Plan.ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(InstallmentPlanStatus.Active, result.Plan.Status);
+
+        return result.Plan;
+    }
+
+    private static async Task<Transaction> SeedSeasonFeeAsync(TestContextBuilder context)
+    {
+        var transaction = new Transaction
+        {
+            ItemId = "tx-season-fee",
+            Title = "Season fee",
+            Source = "club-fees",
+            OwnerId = CustomerId,
+            OwnerKind = CustomerOwnerKind.Authenticated,
+            ReferenceType = "Registration",
+            ReferenceId = "reg-1",
+            Currency = "USD",
+            Amount = 300m,
+            TotalAmount = 300m,
+            Status = TransactionStatus.Outstanding,
+            CreatedUtc = _now,
+            UpdatedUtc = _now,
+            Properties = new Dictionary<string, object>
+            {
+                ["season"] = "2027",
+            },
+        };
+
+        await context.Transactions.CreateAsync(transaction, TestContext.Current.CancellationToken);
+
+        return transaction;
+    }
+
+    // The checkout a customer opens to pay the balance, as the settlement handler and the installment step build it.
+    private static CheckoutSession SeedSettlementCheckout(TestContextBuilder context, Transaction transaction, string sessionId = "session-customer")
+    {
+        var session = new CheckoutSession
+        {
+            SessionId = sessionId,
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+            Status = CheckoutSessionStatus.Pending,
+            Currency = transaction.Currency,
+            OwnerId = CustomerId,
+            SettlesExistingBalance = true,
+            CreatedUtc = _now,
+            ModifiedUtc = _now,
+        };
+
+        session.Steps.Add(new CheckoutFlowStep
+        {
+            Key = TransactionsConstants.SettlementStepKey,
+            Order = 0,
+            BillingItems =
+            [
+                new BillingItem
+                {
+                    ItemId = transaction.ItemId,
+                    Description = transaction.Title,
+                    Amount = transaction.TotalAmount,
+                    ExcludeFromTax = true,
+                },
+            ],
+        });
+
+        session.Steps.Add(new CheckoutFlowStep
+        {
+            Key = SubscriptionConstants.InstallmentPlans.CheckoutStepKey,
+            Order = 10,
+            CollectData = true,
+        });
+
+        session.Steps.Add(new CheckoutFlowStep
+        {
+            Key = CheckoutConstants.PaymentStepKey,
+            Order = int.MaxValue,
+        });
+
+        context.Engine.Sessions.Seed(session);
+
+        return session;
+    }
+
+    private static CreateInstallmentPlanFromTransactionRequest ConvertRequest(Transaction transaction, CheckoutSession checkout)
+        => new()
+        {
+            TransactionId = transaction.ItemId,
+            CheckoutSessionId = checkout.SessionId,
+            Option = new InstallmentOption
+            {
+                Id = "3-Monthly",
+                InstallmentCount = 3,
+                Frequency = InstallmentFrequency.Monthly,
+            },
+        };
+
     private static CreateInstallmentPlanRequest CreateRequest()
         => new()
         {
@@ -815,6 +1322,10 @@ public sealed class DefaultInstallmentPlanServiceTests
                     Clock,
                     NullLogger<TransactionSettlementService>.Instance,
                     new PassThroughStringLocalizer<TransactionSettlementService>()),
+                new CheckoutInvoiceBuilder(
+                    SiteServiceFactory.Create(Settings),
+                    new DefaultCheckoutDiscountService([], NullLogger<DefaultCheckoutDiscountService>.Instance),
+                    new NullCheckoutTaxService()),
                 UserManager.Object,
                 userService.Object,
                 new LocalLock(NullLogger<LocalLock>.Instance),

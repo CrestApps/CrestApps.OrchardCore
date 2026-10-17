@@ -238,6 +238,26 @@ When the payment is confirmed, the transaction becomes **Paid**, or **Partially 
 
 Customers can also pay from the link in a reminder, without signing in; see [Pay from a reminder](invoices-and-receipts.md#pay-from-a-reminder).
 
+### Pay in installments
+
+When the site lets you pay a balance in installments, checkout opens on a **Choose how to pay** step before the payment. It asks *How would you like to pay* the balance and lists:
+
+- **Pay in full**: the whole balance today, as usual.
+- One or more installment choices, such as **3 monthly payments**, each saying what is charged today and what follows, for example *USD 100.00 today, then 2 more payments of USD 100.00, charged to your card automatically.*
+
+To pay in installments:
+
+1. Pick the installment choice you want and click **Continue**.
+2. The step now says *You chose 3 monthly payments.* and the order summary shows only the first payment.
+3. On the **Payment** step, enter your card. The page says *The card you pay with now is saved, and the remaining payments are charged to it automatically on their due dates.* Only payment methods that can save a card are offered.
+4. Click **Pay now**.
+
+When the first payment is confirmed, your payment plan starts. The original balance is canceled because the plan replaces it, and each payment of the plan appears in **My Transactions** with its due date. On each due date the saved card is charged without you having to do anything. If a charge is declined, you are told, and the card is tried again; see [When a card is declined](installment-plans.md#when-a-card-is-declined).
+
+If you leave checkout before paying the first payment, nothing changes: you still owe the original balance, and you can pay it in full or choose installments again later.
+
+Installments are offered only for a balance that is still owed in full and belongs to a customer account (also when you pay from a reminder link), and only when the site has a payment method that can save a card. Which balances can be split, and into how many payments, is set by the site; see [Let customers choose installments at checkout](installment-plans.md#let-customers-choose-installments-at-checkout).
+
 ## My Transactions on the website
 
 Customers who never open the admin can see their transactions on the website itself, in your site's own design. They see the same transactions, invoices and receipts as on **Commerce > My Transactions**, and only their own.

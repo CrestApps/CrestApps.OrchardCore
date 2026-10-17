@@ -167,8 +167,10 @@ public static class PaymentEndpoints
 
     // The provider data comes straight from the browser, so it is bounded before it reaches a provider or a
     // durable record. An unbounded dictionary posted by anyone would otherwise be a cheap way to push
-    // arbitrary volumes of attacker-controlled text through the payment path.
-    private static Dictionary<string, string> SanitizeProviderData(Dictionary<string, string> providerData)
+    // arbitrary volumes of attacker-controlled text through the payment path. The keys that keep a card or spend
+    // a kept one are dropped too: only server code decides those (the session says whether the card is kept), and
+    // a browser must never be able to charge a saved card without its owner.
+    internal static Dictionary<string, string> SanitizeProviderData(Dictionary<string, string> providerData)
     {
         if (providerData is null || providerData.Count == 0)
         {
@@ -180,6 +182,14 @@ public static class PaymentEndpoints
         foreach (var pair in providerData)
         {
             if (string.IsNullOrEmpty(pair.Key) || pair.Key.Length > MaxProviderDataKeyLength)
+            {
+                continue;
+            }
+
+            if (pair.Key is CheckoutPaymentDataKeys.OffSession
+                or CheckoutPaymentDataKeys.SavedCustomerReference
+                or CheckoutPaymentDataKeys.SavedPaymentMethodReference
+                or CheckoutPaymentDataKeys.SavePaymentMethod)
             {
                 continue;
             }

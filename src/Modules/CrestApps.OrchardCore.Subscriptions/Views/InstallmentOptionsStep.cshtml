@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model InstallmentOptionsStepViewModel
+
+@if (Model.IsChosen && Model.ChosenPlan is not null)
+{
+    <div class="alert alert-info" role="status">
+        <p class="fw-semibold mb-1">@T["You chose {0}.", Model.ChosenPlan.Title]</p>
+        <p class="mb-0">@Model.ChosenPlan.Description</p>
+    </div>
+    <p class="text-muted mb-0">@T["Continue to enter your card. It is charged {0} {1} now and saved for the remaining payments.", Model.Currency, CurrencyScale.Format(Model.ChosenPlan.DueToday, Model.Currency)]</p>
+
+    return;
+}
+
+<fieldset>
+    <legend class="h6">@T["How would you like to pay {0} {1}?", Model.Currency, CurrencyScale.Format(Model.FullAmount, Model.Currency)]</legend>
+
+    @if (!string.IsNullOrEmpty(Model.Title))
+    {
+        <p class="text-muted">@Model.Title</p>
+    }
+
+    <div class="list-group mb-2">
+        @for (var index = 0; index < Model.Options.Count; index++)
+        {
+            var option = Model.Options[index];
+            var inputId = $"installment-option-{index}";
+
+            <label class="list-group-item list-group-item-action d-flex gap-3 align-items-start" for="@inputId">
+                <input type="radio" class="form-check-input flex-shrink-0 mt-1" asp-for="SelectedOptionId" id="@inputId" value="@option.Id" />
+                <span>
+                    <span class="d-block fw-semibold">@option.Title</span>
+                    <small class="d-block text-body-secondary">@option.Description</small>
+                </span>
+            </label>
+        }
+    </div>
+
+    <span asp-validation-for="SelectedOptionId" class="text-danger"></span>
+
+    @if (Model.Options.Count > 1)
+    {
+        <span class="hint">@T["With installments, the card you enter next is charged the first payment now and saved, and each later payment is charged to it automatically on its due date."]</span>
+    }
+</fieldset>

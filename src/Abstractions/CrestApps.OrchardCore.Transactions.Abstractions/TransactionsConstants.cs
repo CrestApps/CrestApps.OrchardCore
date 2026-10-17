@@ -16,6 +16,13 @@ public static class TransactionsConstants
     public const string SettingsGroupId = "transactions";
 
     /// <summary>
+    /// The key of the checkout step that carries the balance of the transaction a settlement checkout pays. Another
+    /// feature that changes what such a checkout collects, such as turning the balance into an installment plan,
+    /// finds the step by this key.
+    /// </summary>
+    public const string SettlementStepKey = "TransactionSettlement";
+
+    /// <summary>
     /// The configuration section that holds <c>TransactionCustomerPagesOptions</c>, under the tenant's
     /// <c>OrchardCore</c> section.
     /// </summary>

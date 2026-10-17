@@ -29,6 +29,17 @@ public sealed class CheckoutSession : Entity, ICheckoutFlowSession
     public bool SettlesExistingBalance { get; set; }
 
     /// <summary>
+    /// Whether the payment method the customer pays with is kept so it can be charged again later without them
+    /// present, for example for the remaining payments of an installment plan they chose at checkout. Only a provider
+    /// that <see cref="Services.PaymentProviderCapabilities.SupportsSavedPaymentMethods"/> is offered or accepted,
+    /// and the engine asks it to keep the method (<see cref="Services.CheckoutPaymentDataKeys.SavePaymentMethod"/>).
+    /// </summary>
+    /// <remarks>
+    /// Only server code sets this. Whether a card is kept is never decided by what the customer's browser sends.
+    /// </remarks>
+    public bool SavePaymentMethod { get; set; }
+
+    /// <summary>
     /// Whether the module that settles the existing balance (<see cref="SettlesExistingBalance"/>) takes what the
     /// invoice's discounts take off off that balance, so a promotion code can be used on this checkout. That module
     /// also redeems the codes, once the balance is settled; the checkout does not redeem them on completion. When it

@@ -82,6 +82,43 @@ public sealed class InstallmentPlanStore : DocumentCatalog<InstallmentPlan, Inst
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<InstallmentPlan>> GetByReferenceAsync(string referenceType, string referenceId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(referenceType);
+        ArgumentException.ThrowIfNullOrEmpty(referenceId);
+
+        var type = InstallmentPlanIndexProvider.Truncate(referenceType, InstallmentPlanIndexProvider.ReferenceMaxLength);
+        var id = InstallmentPlanIndexProvider.Truncate(referenceId, InstallmentPlanIndexProvider.ReferenceMaxLength);
+
+        var records = await Session.Query<InstallmentPlan, InstallmentPlanIndex>(
+            x => x.ReferenceType == type && x.ReferenceId == id,
+            collection: CollectionName)
+            .OrderByDescending(x => x.CreatedUtc)
+            .ListAsync(cancellationToken);
+
+        // The index holds a truncated value; the plan holds the whole one, so a longer reference is matched exactly here.
+        return records
+            .Where(plan =>
+                string.Equals(plan.ReferenceType, referenceType, StringComparison.Ordinal) &&
+                string.Equals(plan.ReferenceId, referenceId, StringComparison.Ordinal))
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<InstallmentPlan>> GetBySourceTransactionAsync(string transactionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(transactionId);
+
+        var records = await Session.Query<InstallmentPlan, InstallmentPlanIndex>(
+            x => x.SourceTransactionId == transactionId,
+            collection: CollectionName)
+            .OrderByDescending(x => x.CreatedUtc)
+            .ListAsync(cancellationToken);
+
+        return records.ToArray();
+    }
+
+    /// <inheritdoc/>
     protected override ValueTask SavingAsync(InstallmentPlan record)
     {
         var now = _clock.UtcNow;
