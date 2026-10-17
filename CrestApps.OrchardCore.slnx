@@ -41,6 +41,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Addresses.Core/CrestApps.OrchardCore.Addresses.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Carts.Core/CrestApps.OrchardCore.Carts.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Checkout.Core/CrestApps.OrchardCore.Checkout.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Addresses.Core;
 using CrestApps.OrchardCore.Addresses.Handlers;
 using CrestApps.OrchardCore.Addresses.Indexes;
 using CrestApps.OrchardCore.Addresses.Migrations;
@@ -30,6 +31,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IContentHandler, CountryContentHandler>();
 
+        services.AddAddressesCore();
         services.AddScoped<ICountryService, ContentCountryService>();
 
         services.AddScoped<IAddressResolver, DefaultAddressResolver>();

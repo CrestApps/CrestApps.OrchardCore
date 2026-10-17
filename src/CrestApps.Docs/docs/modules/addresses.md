@@ -61,6 +61,26 @@ public interface IAddressResolver
 }
 ```
 
+## Address formats
+
+Every country writes an address differently: Germany puts the postal code before the city, the United Kingdom gives the post town and the postcode a line each, and Japan starts with the postal code and goes from the prefecture down. `CrestApps.OrchardCore.Addresses.Core` ships each country's rules and three services built on them, registered with `services.AddAddressesCore()`:
+
+| Service | What it does |
+| --- | --- |
+| `IAddressFormatProvider` | `GetFormatAsync(countryCode)` returns the country's `AddressFormat`: the lines of the address and the text between the parts (`Layout`, and `LatinLayout` for an address written in Latin letters in Japan, China or Korea), the `Required` and `Uppercase` parts, the `PostalCodePattern` and `PostalCodeExamples`, what the region, city, dependent locality and postal code are called (`RegionLabel` such as `state`, `prefecture` or `emirate`; `PostalCodeLabel` such as `zip`, `pin` or `eircode`; the values are in `AddressLabels`), and the country's `Regions`. A country the data doesn't know gets a generic format with every common part, requiring only the street and the city. |
+| `IAddressValidator` | `ValidateAsync(address)` checks the address against its country: a known country, the parts the country requires, the postal code pattern, a region from the country's list, and a postal code that belongs to that region. It returns `AddressProblem`s, each naming the `AddressComponent` and the `AddressProblemKind` (`Missing`, `Invalid`, `Unknown`, `NotInRegion`), and the address tidied up: trimmed, the country and the postal code in capitals, and a region given by its name stored by its code. It checks the form of an address, not that the place exists. |
+| `IAddressFormatter` | `GetLinesAsync(address, options)` prints the address in its country's order, leaving out empty parts and the text around them. `Envelope` writes in capitals the parts the country's post wants in capitals; `IncludeCountry` adds the country's name. |
+
+A region in a country with a list of regions is stored by its code: its ISO 3166-2 code without the country (`CA` for California, `13` for Tokyo, `D` for County Dublin), or the key the country's post uses when there is none. `AddressFormat.FindRegion` finds a region by its code, key, name or Latin name. Storing codes is what lets tax jurisdictions match an address whether the customer chose "California" or typed "CA".
+
+`Address` has a part for each component a country can use, including `DependentLocality` (a suburb, a Brazilian *bairro*, a Chinese district) and `SortingCode` (the CEDEX of France's overseas departments).
+
+### Where the country data comes from
+
+The formats come from Google's address data, the data behind [libaddressinput](https://github.com/google/libaddressinput), which is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is free to use and redistribute, commercially included; the credit is in the package's `THIRD-PARTY-NOTICES.md`, which anyone redistributing the package keeps with it.
+
+The data is a snapshot inside the package. A running site never contacts Google, and no address leaves the site. `utilities/address-data/build-address-data.mjs` refreshes the snapshot from Google's Address Data Service when the maintainers choose to.
+
 ## Country selectors
 
 When the feature is enabled it registers a content-backed `ICountryService`. Country dropdowns across the platform &mdash; for example the taxation jurisdiction editor &mdash; are populated from the managed `Country` content items and indexed by the shared `GeographicAreaIndex` for efficient lookup. When no country content exists yet, the service falls back to the canonical ISO list so selectors are never empty.
