@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Receipts.Core.Services;
 using CrestApps.OrchardCore.Receipts.Drivers;
 using CrestApps.OrchardCore.Receipts.Navigation;
@@ -7,6 +8,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Receipts;
 
@@ -25,5 +27,8 @@ public sealed class Startup : StartupBase
             .AddSiteDisplayDriver<ReceiptSettingsDisplayDriver>()
             .AddNavigationProvider<ReceiptsAdminMenu>()
             .AddPermissionProvider<ReceiptsPermissionProvider>();
+
+        // Lets a role that holds only the receipt settings permission open Settings > Commerce > Receipts.
+        services.AddSiteSettingsPermission(ReceiptsConstants.SettingsGroupId, ReceiptsPermissions.ManageReceiptSettings);
     }
 }
