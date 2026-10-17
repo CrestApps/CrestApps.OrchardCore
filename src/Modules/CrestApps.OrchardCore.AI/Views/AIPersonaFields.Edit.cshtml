@@ -51,11 +51,10 @@
 <div class="ocat-wrapper">
     <label asp-for="Instructions" class="ocat-label">@T["Persona instructions"]</label>
     <div class="ocat-end">
-        <div class="hint mb-1">@T["Who the assistant is and how it talks: its personality, tone and manners. They go before the system instructions of every profile and interaction that uses this persona, so leave the task and the rules to the profile. Liquid is supported."]</div>
+        @* The Liquid token is passed as an argument: braces in a localized string are format placeholders. *@
+        <div class="hint mb-1">@T["Who the assistant is and how it talks: its personality, tone and manners. They go before the system instructions of every profile and interaction that uses this persona, so leave the task and the rules to the profile. Liquid is supported: use {0} to insert the assistant name.", new HtmlString("<code>{{ assistant_name }}</code>")]</div>
         <textarea asp-for="Instructions" class="form-control content-preview-text" rows="8"></textarea>
         <span asp-validation-for="Instructions" class="text-danger"></span>
-        @* The Liquid tokens are passed as an argument: braces in a localized string are format placeholders. *@
-        <span class="hint">@T["Use {0} to insert the assistant name, for example: {1}", new HtmlString("<code>{{ assistant_name }}</code>"), new HtmlString("<code>You are {{ assistant_name }}, the front-desk concierge.</code>")]</span>
     </div>
 </div>
 
