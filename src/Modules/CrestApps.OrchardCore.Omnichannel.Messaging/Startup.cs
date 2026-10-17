@@ -230,6 +230,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IChannelEndpointRule, MessagingLineEndpointRule>();
         services.AddDisplayDriver<MessagingConversation, MessagingConversationDisplayDriver>();
         services.AddDisplayDriver<MessageTemplate, MessageTemplateDisplayDriver>();
+        services.AddDisplayDriver<MessagingBroadcast, MessagingBroadcastDisplayDriver>();
         services.AddNavigationProvider<MessagingAdminMenu>();
 
         // The workspace page's view assembly and the composer's contact search.

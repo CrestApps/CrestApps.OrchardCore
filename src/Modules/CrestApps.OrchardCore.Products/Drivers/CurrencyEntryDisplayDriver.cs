@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.Products.Models;
 using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -23,8 +25,21 @@ internal sealed class CurrencyEntryDisplayDriver : DisplayDriver<CurrencyEntry>
 
     public override Task<IDisplayResult> DisplayAsync(CurrencyEntry model, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = $"{model.Name} {model.DisplayName}".ToLowerInvariant();
+        }
+
         return CombineAsync(
-            View("CurrencyEntry_Fields_SummaryAdmin", model).Location("Content:1"),
+            View("CurrencyEntry_Fields_SummaryAdmin", model)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("CurrencyEntry_DefaultTags_SummaryAdmin", model)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Code:5"),
             View("CurrencyEntry_Buttons_SummaryAdmin", model).Location("Actions:5"));
     }
 

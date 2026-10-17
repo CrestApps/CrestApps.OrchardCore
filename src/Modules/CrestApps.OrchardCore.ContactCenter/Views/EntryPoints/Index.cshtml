@@ -23,14 +23,12 @@
             })
             .ToList(),
         Options = Model.Options,
-        Pager = Model.Pager,
-        Entries = Model.Models
-            .Select(entry => new CatalogListEntry
-            {
-                Shape = entry.Shape,
-                FilterValue = entry.Model.Name?.ToLowerInvariant(),
-            })
-            .ToList(),
+        ListName = "ContactCenterEntryPoints",
+        List = Model.List,
+        Columns =
+        {
+            new CatalogListColumn { Name = "Answers", Title = T["Answers"] },
+        },
     };
 }
 

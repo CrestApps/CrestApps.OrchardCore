@@ -107,20 +107,17 @@ public sealed class ChannelEndpointsController : Controller
 
         var viewModel = new ListSourceCatalogEntryViewModel<OmnichannelChannelEndpoint>
         {
-            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _addressOptions.GetCreatableTypes().Select(type => type.Name).Order(),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per record, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<OmnichannelChannelEndpoint>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<OmnichannelChannelEndpoint>
-            {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions = [];
 

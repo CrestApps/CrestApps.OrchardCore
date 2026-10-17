@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Liquid;
 using OrchardCore.Mvc.ModelBinding;
@@ -57,11 +59,28 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
 
     public override Task<IDisplayResult> DisplayAsync(AIProfile profile, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = profile.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("AIProfile_Fields_SummaryAdmin", profile).Location("Content:1"),
+            View("AIProfile_Checkbox_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("AIProfile_Fields_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
             View("AIProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
-            View("AIProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
-            View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5"),
+            View("AIProfile_DefaultTags_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Type:5"),
+            View("AIProfile_DefaultMeta_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
             View("AIProfile_CloneActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:5")
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile)),
             View("AIProfile_ActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:10")

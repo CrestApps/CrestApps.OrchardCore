@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SharedVoicemailEntry>
+
+@{
+    var voicemail = Model.Value.Voicemail;
+    var hasCaller = !string.IsNullOrWhiteSpace(voicemail.CallerName);
+}
+
+@* A message has no page of its own, so its title is plain text: the caller, and their number beside a known name. *@
+<span>@(hasCaller ? voicemail.CallerName : (string.IsNullOrWhiteSpace(voicemail.CallerNumber) ? T["Unknown caller"].Value : voicemail.CallerNumber))</span>
+@if (hasCaller && !string.IsNullOrWhiteSpace(voicemail.CallerNumber))
+{
+    <span class="text-muted ms-1">@voicemail.CallerNumber</span>
+}

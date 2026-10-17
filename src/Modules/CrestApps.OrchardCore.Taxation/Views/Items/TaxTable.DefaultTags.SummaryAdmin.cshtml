@@ -1,0 +1,24 @@
+@model ShapeViewModel<TaxTable>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rows"]">
+    <i class="fa-solid fa-table-list text-secondary me-1" aria-hidden="true"></i>@T["{0} row(s)", Model.Value.Rows?.Count ?? 0]
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Version"]">
+    <i class="fa-solid fa-code-branch text-secondary me-1" aria-hidden="true"></i>@T["Version {0}", Model.Value.Version]
+</span>
+
+@if (Model.Value.EffectiveFromUtc.HasValue || Model.Value.EffectiveToUtc.HasValue)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Effective"]">
+        <i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>
+        @if (Model.Value.EffectiveFromUtc.HasValue)
+        {
+            @T["From {0:yyyy-MM-dd}", Model.Value.EffectiveFromUtc.Value]
+        }
+        @if (Model.Value.EffectiveToUtc.HasValue)
+        {
+            @T["to {0:yyyy-MM-dd}", Model.Value.EffectiveToUtc.Value]
+        }
+    </span>
+}

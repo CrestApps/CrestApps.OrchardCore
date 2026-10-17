@@ -351,6 +351,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-admin-index-views` — how every admin list (index) page is built on
+  Orchard Core's `AdminList` shape and `<admin-list>` tag helpers, in the List or Grid layout the site and the user
+  pick: the row display driver, the row template, the controller's `AdminListContext`, the view and its columns.
+  Never hand-write a `<ul class="list-group">` listing.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Transactions.Models;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Transactions.ViewModels;
 
@@ -8,18 +8,13 @@ namespace CrestApps.OrchardCore.Transactions.ViewModels;
 public class MyTransactionsViewModel
 {
     /// <summary>
-    /// Gets or sets the transactions shown on the current page.
-    /// </summary>
-    public IReadOnlyCollection<Transaction> Transactions { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the filter options applied to the statement.
     /// </summary>
     public MyTransactionsOptions Options { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets the pager shape rendered under the statement.
+    /// Gets or sets the transactions of the current page, with the toolbar filter and the pager, rendered by
+    /// the admin list in the layout the site or the user picked.
     /// </summary>
-    public dynamic Pager { get; set; }
+    public AdminListContext List { get; set; }
 }
-

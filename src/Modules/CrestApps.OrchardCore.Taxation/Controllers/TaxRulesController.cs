@@ -97,21 +97,19 @@ public sealed class TaxRulesController : Controller
 
         var viewModel = new ListSourceModelViewModel<TaxCalculationMethodEntry, CatalogEntryViewModel<TaxRule>>
         {
-            Models = [],
+            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxRule> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _methodOptions.Methods.Values
                 .OrderBy(entry => entry.DisplayName.Value, StringComparer.OrdinalIgnoreCase),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per tax rule, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<TaxRule>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<TaxRule>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions = [];
 

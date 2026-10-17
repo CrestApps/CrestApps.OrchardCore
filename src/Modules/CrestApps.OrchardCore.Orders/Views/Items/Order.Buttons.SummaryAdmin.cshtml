@@ -1,0 +1,5 @@
+@model ShapeViewModel<Order>
+
+<a asp-action="Detail"
+   asp-route-orderId="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["View"]</a>

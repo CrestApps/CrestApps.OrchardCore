@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Core.Validation;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +16,6 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 
@@ -100,15 +100,13 @@ public sealed class SubjectFlowsController : Controller
             .GroupBy(a => a.SubjectContentType, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
-        var canEditContentTypes = await _authorizationService.AuthorizeAsync(User, new Permission("EditContentTypes"));
-
-        var entries = new List<SubjectFlowEntryViewModel>();
+        var entries = new List<SubjectFlowEntry>();
 
         foreach (var subjectType in subjectTypes.OrderBy(t => t.DisplayName))
         {
             var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectType.Name);
 
-            entries.Add(new SubjectFlowEntryViewModel
+            entries.Add(new SubjectFlowEntry
             {
                 ContentTypeName = subjectType.Name,
                 DisplayName = subjectType.DisplayName,
@@ -119,10 +117,14 @@ public sealed class SubjectFlowsController : Controller
             });
         }
 
+        // The admin-list tag builds a row per subject, in the layout (List or Grid) the site or the user picked.
         var model = new SubjectFlowsIndexViewModel
         {
             Subjects = entries,
-            CanEditContentTypes = canEditContentTypes,
+            List = new AdminListContext<SubjectFlowEntry>
+            {
+                Source = entries,
+            },
         };
 
         return View(model);
@@ -153,7 +155,7 @@ public sealed class SubjectFlowsController : Controller
         var dispositions = await _dispositionsCatalog.GetAllAsync();
         var dispositionMap = dispositions.ToDictionary(d => d.ItemId, d => d.Name, StringComparer.OrdinalIgnoreCase);
 
-        var actionEntries = new List<SubjectActionEntryViewModel>();
+        var actionEntries = new List<SubjectActionEntry>();
 
         foreach (var action in subjectActions)
         {
@@ -163,9 +165,9 @@ public sealed class SubjectFlowsController : Controller
                 ? typeEntry.DisplayName?.Value
                 : action.Source;
 
-            actionEntries.Add(new SubjectActionEntryViewModel
+            actionEntries.Add(new SubjectActionEntry
             {
-                Model = action,
+                Action = action,
                 DispositionDisplayText = dispositionText ?? action.DispositionId,
                 ActionTypeDisplayName = typeDisplayName ?? action.Source,
             });
@@ -177,6 +179,12 @@ public sealed class SubjectFlowsController : Controller
             SubjectDisplayName = contentType.DisplayName,
             Actions = actionEntries,
             ActionTypes = _actionOptions.ActionTypes.Values,
+
+            // The admin-list tag builds a row per action, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<SubjectActionEntry>
+            {
+                Source = actionEntries,
+            },
         };
 
         return View(model);

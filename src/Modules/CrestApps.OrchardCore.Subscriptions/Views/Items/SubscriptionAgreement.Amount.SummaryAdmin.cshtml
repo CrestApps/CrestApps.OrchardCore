@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<SubscriptionAgreement>
+
+@{
+    var subscription = Model.Value.Subscription;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Per cycle"]">
+    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Per cycle"]</span>
+    @subscription.Currency @CurrencyScale.Format(subscription.TotalAmount, subscription.Currency)
+</span>

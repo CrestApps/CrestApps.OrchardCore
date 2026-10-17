@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -25,13 +26,29 @@ internal sealed class AgentStateReasonCodeDisplayDriver : DisplayDriver<AgentSta
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(AgentStateReasonCode reasonCode, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = reasonCode.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("AgentStateReasonCode_Fields_SummaryAdmin", reasonCode)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("AgentStateReasonCode_Buttons_SummaryAdmin", reasonCode)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("AgentStateReasonCode_Description_SummaryAdmin", reasonCode)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrWhiteSpace(reasonCode.Description))),
+            View("AgentStateReasonCode_DefaultTags_SummaryAdmin", reasonCode)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "State:5"),
+            View("AgentStateReasonCode_Buttons_SummaryAdmin", reasonCode).Location("Actions:5"),
             View("AgentStateReasonCode_DefaultMeta_SummaryAdmin", reasonCode)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

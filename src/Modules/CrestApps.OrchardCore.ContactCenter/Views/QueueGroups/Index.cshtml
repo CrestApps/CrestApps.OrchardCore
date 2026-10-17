@@ -9,14 +9,8 @@
         ListId = "queue-groups-list",
         EmptyMessage = T["<strong>Nothing here!</strong> There are no queue groups at the moment."],
         Options = Model.Options,
-        Pager = Model.Pager,
-        Entries = Model.Models
-            .Select(entry => new CatalogListEntry
-            {
-                Shape = entry.Shape,
-                FilterValue = entry.Model.Name?.ToLowerInvariant(),
-            })
-            .ToList(),
+        ListName = "ContactCenterQueueGroups",
+        List = Model.List,
     };
 }
 

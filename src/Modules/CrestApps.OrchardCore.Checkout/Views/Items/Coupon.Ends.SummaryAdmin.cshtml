@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Checkout.Models
+
+@model ShapeViewModel<Coupon>
+
+<span class="badge ta-badge fw-normal @(Model.Value.EndsUtc.HasValue ? string.Empty : "bg-warning-subtle")" data-bs-toggle="tooltip" title="@T["Valid until"]">
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@(Model.Value.EndsUtc.HasValue ? Model.Value.EndsUtc.Value.ToString("d") : T["No end date"].Value)
+</span>

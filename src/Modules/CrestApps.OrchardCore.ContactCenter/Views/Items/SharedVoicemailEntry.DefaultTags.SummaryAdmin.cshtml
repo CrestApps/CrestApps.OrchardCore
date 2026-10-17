@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SharedVoicemailEntry>
+
+@{
+    var voicemail = Model.Value.Voicemail;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Queue"]">
+    <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@Model.Value.QueueName
+</span>
+
+@switch (voicemail.Status)
+{
+    case SharedVoicemailStatus.New:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-circle text-danger me-1" aria-hidden="true"></i>@T["New"]
+        </span>
+        break;
+    case SharedVoicemailStatus.Claimed:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-user-check text-warning me-1" aria-hidden="true"></i>@(Model.Value.IsMine ? T["Claimed by you"] : T["Claimed by {0}", voicemail.ClaimedByUserName ?? string.Empty])
+        </span>
+        break;
+    case SharedVoicemailStatus.Resolved:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+            <i class="fa-solid fa-check text-success me-1" aria-hidden="true"></i>@T["Done by {0}", voicemail.ResolvedByUserName ?? string.Empty]
+        </span>
+        break;
+}
+
+@if (voicemail.CallbackRequestedUtc is { } callbackUtc)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: callbackUtc, Format: "g"))">
+        <i class="fa-solid fa-phone-arrow-up-right text-info me-1" aria-hidden="true"></i>@T["Called back by {0}", voicemail.CallbackRequestedByUserName ?? string.Empty]
+    </span>
+}

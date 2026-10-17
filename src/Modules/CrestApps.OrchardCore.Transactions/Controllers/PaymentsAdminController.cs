@@ -125,13 +125,21 @@ public sealed class PaymentsAdminController : Controller
         options.States = BuildStateItems(options.State);
         options.Providers = BuildProviderItems(options.ProviderKey);
 
+        // The state and method filters render at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("PaymentsAdminListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         return View(new PaymentsAdminIndexViewModel
         {
             Options = options,
-            Attempts = [.. result.Entries],
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-            CanRefund = true,
-            RefundableAttemptIds = result.Entries.Where(IsRefundable).Select(attempt => attempt.ItemId).ToHashSet(StringComparer.Ordinal),
+            List = new AdminListContext<PaymentAttempt>
+            {
+                Source = result.Entries,
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
         });
     }
 
@@ -315,10 +323,7 @@ public sealed class PaymentsAdminController : Controller
     }
 
     private bool IsRefundable(PaymentAttempt attempt)
-        => attempt is not null &&
-            attempt.State == PaymentAttemptState.Succeeded &&
-            !string.IsNullOrEmpty(attempt.TransactionId) &&
-            _displayText.FindPaymentProvider(attempt.ProviderKey)?.Capabilities?.DefersPayment != true;
+        => PaymentAttemptRefundPolicy.CanRefund(attempt, _displayText);
 
     // Everything already given back against this payment, whether it settled or is still in flight. Counting
     // an in-flight refund is deliberate: ignoring it would let an operator start a second refund for money

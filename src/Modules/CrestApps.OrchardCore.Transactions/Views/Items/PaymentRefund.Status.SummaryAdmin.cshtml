@@ -1,0 +1,16 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentRefund>
+@inject TransactionDisplayText DisplayText
+
+@{
+    var statusClass = Model.Value.Status switch
+    {
+        RefundStatus.Succeeded => "text-bg-success",
+        RefundStatus.Failed or RefundStatus.Canceled => "text-bg-danger",
+        RefundStatus.PendingManualReview => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+}
+
+<span class="badge @statusClass">@DisplayText.RefundStatusName(Model.Value.Status)</span>

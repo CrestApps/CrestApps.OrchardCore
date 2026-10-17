@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Payments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentRefund>
+
+@{
+    var refund = Model.Value;
+}
+
+@* The list is rendered outside the page's filter form, so this form is not nested in another. *@
+<form asp-action="Resolve" asp-route-itemId="@refund.ItemId" method="post" class="d-inline-flex gap-1">
+    <input type="text" name="reference" class="form-control form-control-sm" placeholder="@T["Reference"]" aria-label="@T["Reference"]" />
+    <button type="submit" class="btn btn-sm btn-secondary text-nowrap"
+            data-url-af="RemoveUrl"
+            data-title="@T["Mark settled"]"
+            data-message="@T["Record that {0} {1} was paid back to the customer outside the application? This cannot be undone.", refund.Currency, CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)]"
+            data-ok-text="@T["Mark settled"]"
+            data-cancel-text="@T["Cancel"]">
+        @T["Mark settled"]
+    </button>
+</form>

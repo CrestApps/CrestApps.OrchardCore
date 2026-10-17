@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Drivers;
 using CrestApps.OrchardCore.Transactions.Migrations;
+using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Navigation;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.Tasks;
@@ -44,6 +45,11 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
+
+        // The rows of the transactions report and of the customer's own statement.
+        services
+            .AddDisplayDriver<Transaction, TransactionDisplayDriver>()
+            .AddDisplayDriver<CustomerTransaction, CustomerTransactionDisplayDriver>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
         services.AddScoped<ICommercePersonalDataContributor, TransactionPersonalDataContributor>();
     }
@@ -60,6 +66,11 @@ public sealed class CheckoutStartup : StartupBase
     {
         services.AddScoped<ICheckoutHandler, TransactionSettlementCheckoutHandler>();
         services.AddNavigationProvider<PaymentLedgerAdminMenu>();
+
+        // The rows of the payments and refunds ledgers.
+        services
+            .AddDisplayDriver<PaymentAttempt, PaymentAttemptDisplayDriver>()
+            .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>();
         services.AddScoped<ICommercePersonalDataContributor, TransactionSettlementPersonalDataContributor>();
     }
 }

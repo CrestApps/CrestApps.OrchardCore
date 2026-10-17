@@ -1,0 +1,56 @@
+@using CrestApps.Core
+@using CrestApps.Core.AI.FileSources
+@using CrestApps.Core.AI.Ingestion
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<FileSource>
+
+@{
+    Model.Value.TryGet<FileSourceRunSummary>(out var lastRun);
+}
+
+<div class="admin-list-secondary">
+    @if (lastRun is not null && lastRun.StartedUtc != default)
+    {
+        var statusCssClass = lastRun.Status switch
+        {
+            FileSourceRunStatus.Succeeded => "bg-success-subtle",
+            FileSourceRunStatus.PartiallyCompleted => "bg-warning-subtle",
+            FileSourceRunStatus.Failed => "bg-danger-subtle",
+            FileSourceRunStatus.Running => "bg-info-subtle",
+            _ => string.Empty,
+        };
+
+        @* A file source runs unattended, so the list is the only account anyone gets of what it did. *@
+        <span class="badge ta-badge fw-normal @statusCssClass" data-bs-toggle="tooltip" title="@T["Last run"]">
+            <i class="fa-solid fa-clock-rotate-left text-secondary me-1" aria-hidden="true"></i>@lastRun.Status
+        </span>
+
+        @* What the scan saw comes first. Without it "0 ingested" reads as a broken source, when the usual
+           reason is a folder holding nothing, or one whose files have all been read already and have not
+           changed since. *@
+        <span data-bs-toggle="tooltip" title="@T["Found is what this run saw in the source. A file that was already ingested and has not changed is counted there, and left alone rather than read again."]">@T["{0} found, {1} ingested, {2} unchanged, {3} removed, {4} failed", lastRun.ItemsDiscovered, lastRun.ItemsIndexed, lastRun.ItemsSkipped, lastRun.ItemsDeleted, lastRun.ItemsFailed]</span>
+
+        @if (!lastRun.DiscoveryCompleted)
+        {
+            @* Worth surfacing: a run that saw only part of the source deletes nothing. *@
+            <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["This run saw only part of the source, so nothing was removed. The next run resumes where it stopped."]">
+                <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@T["Partial listing"]
+            </span>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(lastRun.Error))
+        {
+            @* A run that ingested nothing has already recorded why. Without this the list shows a status and
+               three zeroes, and the reason is only reachable by reading the record out of the database. *@
+            <div class="text-danger mt-1">
+                <i class="fa-solid fa-circle-exclamation me-1" aria-hidden="true"></i>@lastRun.Error
+            </div>
+        }
+    }
+    else
+    {
+        <span>@T["Never run"]</span>
+    }
+</div>

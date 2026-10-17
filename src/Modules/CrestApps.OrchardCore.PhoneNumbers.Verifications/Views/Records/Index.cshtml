@@ -55,173 +55,56 @@
     }
 </div>
 
-<form asp-action="Index" asp-controller="Records" method="get">
+@* One form for the search, the bulk action and the row actions: it carries the antiforgery token and the return URL. *@
+<form asp-action="Index" asp-controller="Records" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" autocomplete="off"
+      data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    @* The bulk action of the toolbar ("Retry") re-queues the selected records. *@
+    <input type="submit" name="submit.BulkAction" formaction="@Url.Action("RetrySelected", "Records")" class="visually-hidden" />
     <input type="hidden" asp-for="Status" />
-    @if (Context.Request.Query.TryGetValue("pageSize", out var selectedPageSize))
-    {
-        <input type="hidden" name="pageSize" value="@selectedPageSize" />
-    }
+    <input type="hidden" name="returnUrl" value="@returnUrl" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-1 gy-2 align-items-center">
-                <div class="col-12 col-md">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-                        <input asp-for="Q" class="form-control" placeholder="@T["Search by phone number"]" type="search" autofocus autocomplete="off" />
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Q" class="form-control" placeholder="@T["Search by phone number"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
-                <div class="col-12 col-md-auto">
-                    <div class="d-flex align-items-center gap-2">
-                        <label asp-for="Sort" class="col-form-label text-nowrap">@T["Sort by"]</label>
-                        <select asp-for="Sort" asp-items="Model.Sorts" class="form-select" onchange="this.form.submit()"></select>
+                <div class="col-auto">
+                    <select asp-for="Sort" asp-items="Model.Sorts" class="form-select" title="@T["Sort by"]" aria-label="@T["Sort by"]" data-list-filter-submit></select>
+                </div>
+                @if (Model.CanVerifyPhoneNumbers)
+                {
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
+                                title="@T["Re-queues every failed or needs-attention record across all pages that matches the current search."]">
+                            <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
+                        </button>
                     </div>
-                </div>
-                <div class="col-12 col-md-auto">
-                    <button type="submit" class="btn btn-primary">@T["Search"]</button>
-                    <a asp-action="Index" asp-controller="Records" class="btn btn-link">@T["Reset"]</a>
-                </div>
+                }
             </div>
         </div>
     </div>
+
+    @* The records, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="PhoneNumberVerificationRecords" context="Model.List"
+                empty-message="@T["No phone number verifications match the current filter."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            @if (Model.CanVerifyPhoneNumbers)
+            {
+                <admin-list-column type="Select" />
+            }
+            <admin-list-column name="Name" position="20" title="@T["Phone number"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Provider" position="40" title="@T["Provider"]" width="auto" />
+            <admin-list-column name="Attempts" position="50" title="@T["Attempts"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
 
-@if (Model.Entries.Count == 0)
-{
-    <div class="alert alert-info text-center">@T["No phone number verifications match the current filter."]</div>
-}
-else
-{
-    <form asp-action="RetrySelected" asp-controller="Records" method="post">
-        <input type="hidden" name="returnUrl" value="@returnUrl" />
-        <input type="hidden" name="q" value="@Model.Q" />
-
-        @if (Model.CanVerifyPhoneNumbers)
-        {
-            <div class="card text-bg-theme mb-3 position-sticky action-bar">
-                <div class="card-body">
-                    <div class="row gx-3 gy-2 align-items-center">
-                        <div class="col-12 col-md-auto">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="checkbox" id="select-all-records" />
-                                <label class="form-check-label" for="select-all-records">@T["Select all on this page"]</label>
-                            </div>
-                        </div>
-                        <div class="col-12 col-md">
-                            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                                <button type="submit" class="btn btn-secondary" formaction="@Url.Action("RetrySelected", "Records")">
-                                    <i class="fa-solid fa-rotate-right me-1" aria-hidden="true"></i>@T["Retry selected"]
-                                </button>
-                                <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
-                                        title="@T["Re-queues every failed or needs-attention record across all pages that matches the current search."]">
-                                    <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        }
-
-        <ul class="list-group">
-            @foreach (var entry in Model.Entries)
-            {
-                var statusClass = entry.VerificationStatus switch
-                {
-                    PhoneNumberVerificationStatus.Verified => "text-bg-success",
-                    PhoneNumberVerificationStatus.Invalid => "text-bg-danger",
-                    PhoneNumberVerificationStatus.Failed => "text-bg-warning",
-                    _ => "text-bg-secondary",
-                };
-                var editUrl = Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = entry.ContentItemId });
-                var displayNumber = string.IsNullOrEmpty(entry.NormalizedPhoneNumber) ? entry.PhoneNumber : entry.NormalizedPhoneNumber;
-                var provider = string.IsNullOrEmpty(entry.VerificationProvider) ? "—" : entry.VerificationProvider;
-                var lastAttempt = entry.LastAttemptUtc.HasValue
-                    ? entry.LastAttemptUtc.Value.ToString("g")
-                    : T["Never"].Value;
-
-                <li class="list-group-item">
-                    <div class="row align-items-center gx-3 gy-2">
-                        @if (Model.CanVerifyPhoneNumbers)
-                        {
-                            <div class="col-auto">
-                                <div class="form-check mb-0">
-                                    <input class="form-check-input record-checkbox" type="checkbox" name="contentItemIds" value="@entry.ContentItemId" aria-label="@T["Select record"]" />
-                                </div>
-                            </div>
-                        }
-                        <div class="col-12 col-lg">
-                            <a href="@editUrl" class="fw-semibold text-decoration-none">@displayNumber</a>
-                            <div class="d-flex flex-wrap gap-1 mt-1">
-                                <span class="badge ta-badge font-weight-normal @statusClass">@entry.VerificationStatus.ToString()</span>
-                                @if (entry.IsExhausted)
-                                {
-                                    <span class="badge ta-badge bg-danger-subtle text-danger font-weight-normal" title="@T["This record reached the maximum failed attempts and is no longer retried automatically."]">@T["Needs attention"]</span>
-                                }
-                                <span class="badge ta-badge font-weight-normal" title="@T["Provider"]">@T["Provider: {0}", provider]</span>
-                                @if (!string.IsNullOrEmpty(entry.LineStatus))
-                                {
-                                    <span class="badge ta-badge font-weight-normal" title="@T["Line status"]">@T["Line status: {0}", entry.LineStatus]</span>
-                                }
-                                @if (!string.IsNullOrEmpty(entry.MinimumAge))
-                                {
-                                    <span class="badge ta-badge font-weight-normal" title="@T["Minimum age"]">@T["Minimum age: {0}", entry.MinimumAge]</span>
-                                }
-                                <span class="badge ta-badge font-weight-normal" title="@T["Attempts"]">@T["Attempts: {0}", entry.VerificationAttemptCount]</span>
-                                @if (entry.FailedAttemptCount > 0)
-                                {
-                                    <span class="badge ta-badge bg-danger-subtle text-danger font-weight-normal" title="@T["Failed attempts"]">@T["Failed: {0}", entry.FailedAttemptCount]</span>
-                                }
-                                <span class="badge ta-badge font-weight-normal" title="@T["Last attempt"]">@T["Last attempt: {0}", lastAttempt]</span>
-                            </div>
-                            @if (!string.IsNullOrEmpty(entry.DisplayText))
-                            {
-                                <div class="text-muted small">@entry.DisplayText <span class="opacity-75">(@entry.ContentType)</span></div>
-                            }
-                        </div>
-                        <div class="col-12 col-lg-auto text-lg-end">
-                            @if (Model.CanVerifyPhoneNumbers && entry.FailedAttemptCount > 0)
-                            {
-                                <button type="submit" name="contentItemId" value="@entry.ContentItemId" formaction="@Url.Action("Retry", "Records")" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
-                            }
-                        </div>
-                    </div>
-                    @if (!string.IsNullOrEmpty(entry.LastError))
-                    {
-                        <div class="text-danger small mt-2">
-                            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i><code class="text-danger">@entry.LastError</code>
-                        </div>
-                    }
-                </li>
-            }
-        </ul>
-    </form>
-
-    @await DisplayAsync(Model.Pager)
-}
-
-<script at="Foot">
-    (function () {
-        var selectAll = document.getElementById('select-all-records');
-
-        if (!selectAll) {
-            return;
-        }
-
-        var checkboxes = Array.prototype.slice.call(document.querySelectorAll('.record-checkbox'));
-
-        selectAll.addEventListener('change', function () {
-            checkboxes.forEach(function (checkbox) {
-                checkbox.checked = selectAll.checked;
-            });
-        });
-
-        checkboxes.forEach(function (checkbox) {
-            checkbox.addEventListener('change', function () {
-                selectAll.checked = checkboxes.every(function (item) {
-                    return item.checked;
-                });
-            });
-        });
-    })();
-</script>
+<script asp-name="list-management-ui" at="Foot"></script>

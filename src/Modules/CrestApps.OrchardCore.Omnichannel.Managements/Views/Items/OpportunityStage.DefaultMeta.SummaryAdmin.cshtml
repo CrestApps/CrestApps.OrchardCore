@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OpportunityStage>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Probability"]">
+    <i class="fa-solid fa-percent text-secondary me-1" aria-hidden="true"></i>@Model.Value.Probability%
+</span>

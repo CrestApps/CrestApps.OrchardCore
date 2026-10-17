@@ -111,7 +111,7 @@ public sealed class DataSourcesController : Controller
 
         var viewModel = new ListSourceModelViewModel<AIDataSourceSourceDescriptor, CatalogEntryViewModel<AIDataSource>>
         {
-            Models = [],
+            Models = result.Entries.Select(record => new CatalogEntryViewModel<AIDataSource> { Model = record }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _sourceOptions.Sources
@@ -119,14 +119,12 @@ public sealed class DataSourcesController : Controller
                 .ToArray(),
         };
 
-        foreach (var record in result.Entries)
+        // The admin-list tag builds a row per data source, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIDataSource>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIDataSource>
-            {
-                Model = record,
-                Shape = await _displayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

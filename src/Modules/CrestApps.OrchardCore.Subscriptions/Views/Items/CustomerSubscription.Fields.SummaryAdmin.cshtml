@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<CustomerSubscription>
+
+@* Plain text: a customer's plan has no page of its own. *@
+@(string.IsNullOrEmpty(Model.Value.Subscription.Title) ? T["(untitled)"].Value : Model.Value.Subscription.Title)

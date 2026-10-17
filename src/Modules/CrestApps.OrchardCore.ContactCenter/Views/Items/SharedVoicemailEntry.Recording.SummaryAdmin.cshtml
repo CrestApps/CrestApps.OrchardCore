@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SharedVoicemailEntry>
+
+<div class="mt-2">
+    @if (Model.Value.HasRecording)
+    {
+        <audio controls preload="none" class="w-100" style="max-width: 28rem;" src="@Url.Action("Recording", "SharedVoicemail", new { area = "CrestApps.OrchardCore.ContactCenter", id = Model.Value.Voicemail.ItemId })">
+            @T["Your browser cannot play this recording."]
+        </audio>
+    }
+    else
+    {
+        <span class="text-muted small">@T["No recording is available yet. The caller may have hung up before leaving a message, or it is still being saved."]</span>
+    }
+</div>

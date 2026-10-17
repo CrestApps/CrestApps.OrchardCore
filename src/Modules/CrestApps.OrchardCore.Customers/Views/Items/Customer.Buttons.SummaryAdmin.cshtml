@@ -1,0 +1,8 @@
+@using Microsoft.AspNetCore.Authorization
+@inject IAuthorizationService AuthorizationService
+
+@model ShapeViewModel<Customer>
+
+<a asp-action="Edit"
+   asp-route-customerId="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@(await AuthorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers) ? T["Edit"] : T["View"])</a>

@@ -188,7 +188,6 @@ public sealed class CallRecordingsController : Controller
         {
             Filter = filter,
             CanListEveryone = access.CanListEveryone,
-            Count = page.Count,
             DirectionOptions =
             [
                 new SelectListItem(S["Inbound"], nameof(InteractionDirection.Inbound), filter.Direction == InteractionDirection.Inbound),
@@ -200,22 +199,26 @@ public sealed class CallRecordingsController : Controller
                 new SelectListItem(S["AI voice agent"], nameof(CallRecordingSource.AiAgent), filter.Source == CallRecordingSource.AiAgent),
                 new SelectListItem(S["Soft phone keypad"], nameof(CallRecordingSource.SoftPhone), filter.Source == CallRecordingSource.SoftPhone),
             ],
-            Pager = await shapeFactory.PagerAsync(pager, page.Count, routeData),
+
+            // The admin-list tag builds a row per recording, in the layout (List or Grid) the site or the user picked.
+            // A row opens its player beneath itself in either layout.
+            List = new AdminListContext<CallRecordingEntry>
+            {
+                Source = page.Entries
+                    .Select(recording => new CallRecordingEntry
+                    {
+                        Recording = recording,
+                        AgentName = NameOf(recording.AgentUserId, names),
+                        CustomerNumber = FormatNumber(recording.CustomerAddress, region),
+                    })
+                    .ToList(),
+                Pager = await shapeFactory.PagerAsync(pager, page.Count, routeData),
+            },
         };
 
         if (access.CanListEveryone)
         {
             model.AgentOptions = await GetAgentOptionsAsync(filter.AgentUserId);
-        }
-
-        foreach (var recording in page.Entries)
-        {
-            model.Items.Add(new CallRecordingListItemViewModel
-            {
-                Recording = recording,
-                AgentName = NameOf(recording.AgentUserId, names),
-                CustomerNumber = FormatNumber(recording.CustomerAddress, region),
-            });
         }
 
         return View(model);

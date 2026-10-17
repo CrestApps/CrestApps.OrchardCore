@@ -1,21 +1,20 @@
 @using CrestApps.OrchardCore.Core.Models
-@using CrestApps.OrchardCore.Omnichannel.Core.Models
 
-@model IList<CatalogEntryViewModel<OpportunityStage>>
+@model ListCatalogEntryViewModel
 
 <zone Name="Title">
     <breadcrumb name="OmnichannelOpportunityStages" title="@T["Opportunity Stages"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for the delete action. *@
-<form asp-action="Index" method="post" class="no-multisubmit">
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="true">
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-1">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-                        <input id="search-box" class="form-control" placeholder="@T["Filter"]" type="search" autofocus autocomplete="off" />
+                    <div class="input-group">
+                        <input id="search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="button" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -25,46 +24,22 @@
         </div>
     </div>
 
-    <ul class="list-group" id="catalog-entries">
-        @if (Model.Count > 0)
-        {
-            foreach (var entry in Model)
-            {
-                <li class="list-group-item item" data-filter-value="@entry.Model.Name?.ToLowerInvariant()">
-                    @await DisplayAsync(entry.Shape)
-                </li>
-            }
-        }
-        else
-        {
-            <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> There are no opportunity stages at the moment."]
-            </li>
-        }
-    </ul>
+    @* The rows are rendered by the AdminList shape, in their order, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="OmnichannelOpportunityStages" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no opportunity stages at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Type" position="30" title="@T["Type"]" width="auto" />
+            <admin-list-column name="Probability" position="40" title="@T["Probability"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 
     <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
         @T["Your search returned no results."]
     </div>
 </form>
 
-<script at="Foot">
-    (() => {
-        const searchBox = document.getElementById('search-box');
-        const alert = document.getElementById('list-alert');
-        const items = document.querySelectorAll('#catalog-entries li.item');
-
-        searchBox?.addEventListener('input', () => {
-            const value = searchBox.value.trim().toLowerCase();
-            let visible = 0;
-
-            items.forEach(item => {
-                const match = !value || (item.dataset.filterValue || '').includes(value);
-                item.classList.toggle('d-none', !match);
-                visible += match ? 1 : 0;
-            });
-
-            alert.classList.toggle('d-none', visible > 0 || items.length === 0);
-        });
-    })();
-</script>
+<script asp-name="list-management-ui" at="Foot"></script>

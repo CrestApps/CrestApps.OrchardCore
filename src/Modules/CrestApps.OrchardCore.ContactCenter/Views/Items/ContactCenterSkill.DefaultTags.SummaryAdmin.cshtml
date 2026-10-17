@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContactCenterSkill>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+    <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+</span>

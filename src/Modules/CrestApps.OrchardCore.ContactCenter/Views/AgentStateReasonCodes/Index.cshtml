@@ -9,14 +9,12 @@
         ListId = "agent-states-list",
         EmptyMessage = T["<strong>Nothing here!</strong> There are no agent state reason codes at the moment."],
         Options = Model.Options,
-        Pager = Model.Pager,
-        Entries = Model.Models
-            .Select(entry => new CatalogListEntry
-            {
-                Shape = entry.Shape,
-                FilterValue = entry.Model.Name?.ToLowerInvariant(),
-            })
-            .ToList(),
+        ListName = "ContactCenterAgentStateReasonCodes",
+        List = Model.List,
+        Columns =
+        {
+            new CatalogListColumn { Name = "State", Title = T["Sets state"] },
+        },
     };
 }
 

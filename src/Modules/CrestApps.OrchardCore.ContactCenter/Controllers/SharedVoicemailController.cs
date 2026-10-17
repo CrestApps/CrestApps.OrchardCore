@@ -154,13 +154,21 @@ public sealed class SharedVoicemailController : Controller
             QueueOptions = queues
                 .Select(queue => new SelectListItem(queue.Name ?? queue.ItemId, queue.ItemId, string.Equals(queue.ItemId, queueId, StringComparison.OrdinalIgnoreCase)))
                 .ToList(),
-            Pager = await shapeFactory.PagerAsync(pager, page.Count, routeData),
         };
+
+        var entries = new List<SharedVoicemailEntry>();
 
         foreach (var voicemail in page.Entries)
         {
-            model.Items.Add(await BuildItemAsync(voicemail, access, queueNames));
+            entries.Add(await BuildEntryAsync(voicemail, access, queueNames));
         }
+
+        // The admin-list tag builds a row per message, in the layout (List or Grid) the site or the user picked.
+        model.List = new AdminListContext<SharedVoicemailEntry>
+        {
+            Source = entries,
+            Pager = await shapeFactory.PagerAsync(pager, page.Count, routeData),
+        };
 
         return View(model);
     }
@@ -358,14 +366,14 @@ public sealed class SharedVoicemailController : Controller
         }
     }
 
-    private async Task<SharedVoicemailItemViewModel> BuildItemAsync(
+    private async Task<SharedVoicemailEntry> BuildEntryAsync(
         SharedVoicemail voicemail,
         SharedVoicemailAccess access,
         Dictionary<string, string> queueNames)
     {
         var interaction = await _interactionManager.FindByIdAsync(voicemail.InteractionId, HttpContext.RequestAborted);
 
-        return new SharedVoicemailItemViewModel
+        return new SharedVoicemailEntry
         {
             Voicemail = voicemail,
             QueueName = queueNames.TryGetValue(voicemail.QueueId, out var name) && !string.IsNullOrWhiteSpace(name)

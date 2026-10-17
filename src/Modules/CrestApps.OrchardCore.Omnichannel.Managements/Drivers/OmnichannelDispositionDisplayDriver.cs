@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
@@ -23,13 +24,27 @@ internal sealed class OmnichannelDispositionDisplayDriver : DisplayDriver<Omnich
 
     public override Task<IDisplayResult> DisplayAsync(OmnichannelDisposition disposition, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = disposition.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("OmnichannelDisposition_Fields_SummaryAdmin", disposition)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-        View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
-            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
-        View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
-            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("OmnichannelDisposition_Buttons_SummaryAdmin", disposition)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Actions:5"),
+            View("OmnichannelDisposition_DefaultTags_SummaryAdmin", disposition)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Outcome:5"),
+            View("OmnichannelDisposition_DefaultMeta_SummaryAdmin", disposition)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

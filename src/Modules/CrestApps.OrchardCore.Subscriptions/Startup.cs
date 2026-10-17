@@ -85,6 +85,11 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
         services.AddScoped<SubscriptionDisplayText>();
 
+        // The rows of the agreements report and of the customer's own plans.
+        services
+            .AddDisplayDriver<SubscriptionAgreement, SubscriptionAgreementDisplayDriver>()
+            .AddDisplayDriver<CustomerSubscription, CustomerSubscriptionDisplayDriver>();
+
         // The agreement lives in its own YesSql collection, which has to be declared here. Declaring only
         // the index leaves the collection's document table uncreated, and every read or write against it
         // then fails at runtime with "no such table" even though the migration ran clean.
@@ -254,6 +259,11 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddSingleton<IBackgroundTask, TenantProvisioningBackgroundTask>();
         services.AddNavigationProvider<TenantProvisioningAdminMenu>();
 
+        // The rows of the site provisioning list and of the customer's own sites.
+        services
+            .AddDisplayDriver<TenantProvisioningJob, TenantProvisioningJobDisplayDriver>()
+            .AddDisplayDriver<CustomerSite, CustomerSiteDisplayDriver>();
+
         services.AddActivity<SubscribedTenantSetupSucceededEvent, SubscribedTenantSetupSucceededEventDisplayDriver>();
         services.AddActivity<SubscribedTenantFailedSetupEvent, SubscribedTenantFailedSetupEventDisplayDriver>();
     }
@@ -314,6 +324,7 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
+        services.AddDisplayDriver<InstallmentPlan, InstallmentPlanDisplayDriver>();
 
         services.AddSingleton<IBackgroundTask, InstallmentPlanBackgroundTask>();
     }

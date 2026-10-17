@@ -6,7 +6,7 @@
 
 @if (modifiedAt.HasValue)
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt.Value, Format: "g"))">
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: modifiedAt.Value, Format: "g"))">
         <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
         @await DisplayAsync(await New.Timespan(Utc: modifiedAt.Value))
     </span>

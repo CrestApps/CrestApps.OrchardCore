@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Transactions.Core.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CustomerTransaction>
+
+@if (TransactionStateMachine.CanRecordPayment(Model.Value.Transaction))
+{
+    @* Paying starts a checkout, so it is posted. The list is rendered outside the page's filter form, so this form is not nested in another. *@
+    <form asp-action="Pay" method="post" class="d-inline">
+        <input type="hidden" name="itemId" value="@Model.Value.Transaction.ItemId" />
+        <button type="submit" class="btn btn-success btn-sm">@T["Pay now"]</button>
+    </form>
+}
+<a asp-action="Detail" asp-route-itemId="@Model.Value.Transaction.ItemId" class="btn btn-secondary btn-sm">@T["View"]</a>

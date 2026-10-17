@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SubjectFlowEntry>
+
+@if (Model.Value.Direction == SubjectDirection.Inbound)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Direction"]">
+        <i class="fa-solid fa-arrow-right-to-bracket text-secondary me-1" aria-hidden="true"></i>@T["Inbound"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Direction"]">
+        <i class="fa-solid fa-arrow-right-from-bracket text-secondary me-1" aria-hidden="true"></i>@T["Outbound"]
+    </span>
+}
+
+@if (Model.Value.InteractionType == ActivityInteractionType.Automated)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Interaction"]">
+        <i class="fa-solid fa-robot text-secondary me-1" aria-hidden="true"></i>@T["Automated"]
+    </span>
+
+    @if (!string.IsNullOrEmpty(Model.Value.Channel))
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Channel"]">
+            <i class="fa-solid fa-tower-broadcast text-secondary me-1" aria-hidden="true"></i>@Model.Value.Channel
+        </span>
+    }
+}

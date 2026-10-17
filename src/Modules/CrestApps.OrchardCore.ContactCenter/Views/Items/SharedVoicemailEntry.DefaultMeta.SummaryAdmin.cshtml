@@ -1,0 +1,24 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SharedVoicemailEntry>
+
+@{
+    var receivedUtc = Model.Value.Voicemail.ReceivedUtc;
+}
+
+@if (receivedUtc != default)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: receivedUtc, Format: "g"))">
+        <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
+        <time datetime="@receivedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: receivedUtc))</time>
+    </span>
+}
+
+@if (Model.Value.DurationSeconds is { } seconds)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Length"]">
+        <i class="fa-solid fa-clock text-secondary me-1" aria-hidden="true"></i>@(TimeSpan.FromSeconds(seconds).ToString(seconds >= 3600 ? "h\\:mm\\:ss" : "m\\:ss", CultureInfo.InvariantCulture))
+    </span>
+}

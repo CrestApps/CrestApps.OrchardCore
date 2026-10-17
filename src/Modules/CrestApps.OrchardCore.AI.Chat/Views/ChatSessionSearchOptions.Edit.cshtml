@@ -3,6 +3,6 @@
 @model ChatSessionListOptionsViewModel
 
 <div class="input-group">
-    <input asp-for="SearchText" type="text" class="form-control" placeholder="@T["History search"]" autofocus />
-    <button type="submit" class="btn btn-primary">@T["Search"]</button>
+    <input id="search-box" asp-for="SearchText" type="search" class="form-control" placeholder="@T["History search"]" autofocus autocomplete="off" />
+    <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
 </div>

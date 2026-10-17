@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.TenantHierarchy.Core.Services;
 using CrestApps.OrchardCore.TenantHierarchy.Drivers;
 using CrestApps.OrchardCore.TenantHierarchy.Handlers;
 using CrestApps.OrchardCore.TenantHierarchy.Migrations;
+using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
@@ -84,6 +85,7 @@ public sealed class ParentStartup : StartupBase
         services.AddNavigationProvider<ParentAdminMenu>();
         services.AddDisplayDriver<Navbar, ParentSwitcherNavbarDisplayDriver>();
         services.AddDisplayDriver<AuditTrailEvent, HierarchyAuditTrailEventDisplayDriver>();
+        services.AddDisplayDriver<ChildTenantListItem, ChildTenantListItemDisplayDriver>();
         services.AddTransient<IConfigureOptions<AuditTrailOptions>, TenantHierarchyAuditTrailEventConfiguration>();
     }
 

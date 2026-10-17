@@ -7,6 +7,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Mvc.ModelBinding;
@@ -55,15 +56,30 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(DialerProfile profile, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = profile.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("DialerProfile_Fields_SummaryAdmin", profile)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("DialerProfile_Buttons_SummaryAdmin", profile)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("DialerProfile_Description_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrWhiteSpace(profile.Description))),
+            View("DialerProfile_DefaultTags_SummaryAdmin", profile)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Mode:5"),
+            View("DialerProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
             View("DialerProfile_DefaultMeta_SummaryAdmin", profile)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
-            View("DialerProfile_CloneActionsMenu_SummaryAdmin", profile)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
+            View("DialerProfile_CloneActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:5")
         );
     }
 

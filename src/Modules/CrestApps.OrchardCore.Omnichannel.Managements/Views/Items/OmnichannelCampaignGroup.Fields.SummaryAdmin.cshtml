@@ -3,8 +3,4 @@
 
 @model ShapeViewModel<OmnichannelCampaignGroup>
 
-<h5>@Model.Value.DisplayText</h5>
-@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
-{
-    <span class="text-muted">@Model.Value.Description</span>
-}
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.DisplayText</a>

@@ -133,11 +133,21 @@ public sealed class InstallmentPlansController : Controller
 
         options.Statuses = BuildStatusItems(options.Status);
 
+        // The status filter renders at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("InstallmentPlansListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         return View(new InstallmentPlansIndexViewModel
         {
             Options = options,
-            Plans = [.. result.Entries],
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            List = new AdminListContext<InstallmentPlan>
+            {
+                Source = result.Entries,
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
         });
     }
 

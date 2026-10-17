@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -109,6 +110,7 @@ public sealed class ProfileBuilderStartup : StartupBase
             .AddDataMigration<ProfileBuilderSessionIndexMigrations>()
             .AddScoped<ProfileBuilderCoach>()
             .AddScoped<ProfileBuilderService>()
+            .AddDisplayDriver<ProfileBuilderSessionEntry, ProfileBuilderSessionEntryDisplayDriver>()
             .AddNavigationProvider<ProfileBuilderAdminMenu>();
     }
 }

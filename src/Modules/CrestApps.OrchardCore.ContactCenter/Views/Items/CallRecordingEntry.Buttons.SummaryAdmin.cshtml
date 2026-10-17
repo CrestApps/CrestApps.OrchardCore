@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CallRecordingEntry>
+
+@* The contact-center-call-recording script opens a player under the row when Play is pressed. *@
+<button type="button" class="btn btn-primary btn-sm" aria-pressed="false" data-cc-list-play="@Model.Value.Recording.ItemId">
+    <i class="fa-solid fa-play" aria-hidden="true"></i>
+    @T["Play"]
+</button>
+<a asp-action="Display" asp-route-id="@Model.Value.Recording.ItemId" class="btn btn-secondary btn-sm">
+    <i class="fa-solid fa-eye" aria-hidden="true"></i>
+    @T["View"]
+</a>

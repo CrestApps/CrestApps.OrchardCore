@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
+using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Drivers;
 using CrestApps.OrchardCore.Customers.Handlers;
@@ -66,6 +67,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IPermissionProvider, CustomerPermissionsProvider>();
         services.AddNavigationProvider<CustomersAdminMenu>();
+        services.AddDisplayDriver<Customer, CustomerDisplayDriver>();
     }
 }
 

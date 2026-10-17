@@ -1,4 +1,6 @@
 ﻿using CrestApps.OrchardCore.Core.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.AI.ViewModels;
 
@@ -8,7 +10,9 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 public class ListCatalogEntryWithReadOnlyViewModel<T> : ListSourceCatalogEntryViewModel<T>
 {
     /// <summary>
-    /// Gets or sets the read only models.
+    /// Gets or sets the read-only entries, e.g. the ones defined in configuration, the second <c>admin-list</c>
+    /// of the page renders. It is <see langword="null"/> when there are none.
     /// </summary>
-    public IList<CatalogEntryViewModel<T>> ReadOnlyModels { get; set; } = [];
+    [BindNever]
+    public AdminListContext ReadOnlyList { get; set; }
 }

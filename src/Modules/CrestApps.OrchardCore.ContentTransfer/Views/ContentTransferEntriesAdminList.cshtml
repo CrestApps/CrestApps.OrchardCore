@@ -1,133 +1,55 @@
 @model ListContentTransferEntriesViewModel
 
-<!-- Hidden submit button do not remove -->
-<input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
-<input type="submit" name="submit.BulkAction" class="visually-hidden" />
-@Html.HiddenFor(o => o.Options.BulkAction)
-
-<div class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body">
-        <div class="row gx-3">
-            @if (Model.Header?.Search != null)
-            {
-                <div class="col">
-                    @await DisplayAsync(Model.Header.Search)
-                </div>
-            }
-
-            @if (Model.Header?.Create != null)
-            {
-                <div class="col-auto">
-                    @await DisplayAsync(Model.Header.Create)
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-<ul class="list-group with-checkbox">
-
-    @if (Model.Header?.Summary != null || Model.Header?.Actions != null)
-    {
-        <li class="list-group-item text-bg-theme">
-            <div class="row gx-3">
-                @if (Model.Header.Summary != null)
-                {
-                    <div class="col">
-                        @await DisplayAsync(Model.Header.Summary)
-                    </div>
-                }
-                @if (Model.Header.Actions != null)
-                {
-                    <div class="col col-md-auto text-end">
-                        @await DisplayAsync(Model.Header.Actions)
-                    </div>
-                }
-            </div>
-        </li>
-    }
-    @if (Model.Entries.Count > 0)
-    {
-        foreach (var entry in Model.Entries)
-        {
-            <li class="list-group-item">
-                @await DisplayAsync(entry)
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0">
-                @T["No items found."]
-            </div>
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
+@{
+    // Imports and exports are separate lists, so a user picks the layout of each on its own.
+    var listName = Model.Options.Direction == ContentTransferDirection.Export
+        ? "ContentTransferExports"
+        : "ContentTransferImports";
+}
 
 <style asp-name="bootstrap-select" at="Head"></style>
 <script asp-name="bootstrap-select" at="Foot"></script>
-<script at="Foot" depends-on="jQuery">
-    $(function () {
-        var actions = $("#actions");
-        var items = $("#items");
-        var filters = $(".filter");
-        var selectAllCtrl = $("#select-all");
-        var selectedItems = $("#selected-items");
-        var itemsCheckboxes = $(":checkbox[name='itemIds']");
 
-        $('.selectpicker:not(.nosubmit)').on('changed.bs.select', function () {
-            $("[name='submit.Filter']").click();
-        });
+<div data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <!-- Hidden submit button do not remove -->
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+    @Html.HiddenFor(o => o.Options.BulkAction)
 
-        $(".dropdown-menu .dropdown-item").filter(function () {
-            return $(this).data("action");
-        }).on("click", function () {
-            if ($(":checkbox[name='itemIds']:checked").length > 1) {
-                var $this = $(this);
-                confirmDialog({
-                    ...$this.data(), callback: function (r) {
-                        if (r) {
-                            $("#@Html.IdFor(o => o.Options.BulkAction)").val($this.data("action"));
-                            $("[name='submit.BulkAction']").click();
-                        }
-                    }
-                });
-            }
-        });
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                @if (Model.Header?.Search != null)
+                {
+                    <div class="col">
+                        @await DisplayAsync(Model.Header.Search)
+                    </div>
+                }
 
-        function displayActionsOrFilters() {
-            if ($(":checkbox[name='itemIds']:checked").length > 1) {
-                actions.show();
-                filters.hide();
-                selectedItems.show();
-                items.hide();
-            }
-            else {
-                actions.hide();
-                filters.show();
-                selectedItems.hide();
-                items.show();
-            }
-        }
+                @if (Model.Header?.Create != null)
+                {
+                    <div class="col-auto">
+                        @await DisplayAsync(Model.Header.Create)
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
 
-        selectAllCtrl.click(function () {
-            itemsCheckboxes.not(this).prop("checked", this.checked);
-            selectedItems.text($(":checkbox[name='itemIds']:checked").length + ' @T["selected"]');
-            displayActionsOrFilters();
-        });
+    @* The entries, the summary/actions bar of the options editor (Header) and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="@listName" context="Model.List"
+                empty-message="@T["No items found."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["File"]" />
+            <admin-list-column name="Type" position="30" title="@T["Content type"]" width="auto" />
+            <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Records" position="50" title="@T["Records"]" width="auto" />
+            <admin-list-column name="Created" position="60" title="@T["Created"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</div>
 
-        itemsCheckboxes.on("click", function () {
-            var itemsCount = $(":checkbox[name='itemIds']").length;
-            var selectedItemsCount = $(":checkbox[name='itemIds']:checked").length;
-
-            selectAllCtrl.prop("checked", selectedItemsCount == itemsCount);
-            selectAllCtrl.prop("indeterminate", selectedItemsCount > 0 && selectedItemsCount < itemsCount);
-
-            selectedItems.text(selectedItemsCount + ' @T["selected"]');
-            displayActionsOrFilters();
-        });
-    });
-</script>
+<script asp-name="list-management-ui" at="Foot"></script>

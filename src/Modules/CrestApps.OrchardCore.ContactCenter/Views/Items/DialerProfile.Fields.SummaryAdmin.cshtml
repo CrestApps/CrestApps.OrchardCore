@@ -3,21 +3,5 @@
 
 @model ShapeViewModel<DialerProfile>
 
-<h5>@Model.Value.Name</h5>
-
-@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
-{
-    <div class="text-muted">@Model.Value.Description</div>
-}
-
-<div class="mt-1">
-    <span class="badge text-bg-secondary">@T["Mode: {0}", Model.Value.Mode]</span>
-    @if (!string.IsNullOrWhiteSpace(Model.Value.ProviderName))
-    {
-        <span class="badge text-bg-secondary">@T["Provider: {0}", Model.Value.ProviderName]</span>
-    }
-    @if (!Model.Value.Enabled)
-    {
-        <span class="badge text-bg-warning">@T["Disabled"]</span>
-    }
-</div>
+@* A plain link to the edit page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>

@@ -1,0 +1,30 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var item = Model.Value;
+    var entry = item.Info.Entry;
+    var entryId = entry.EntryId;
+}
+
+@if (item.CanEnter)
+{
+    <a class="btn btn-primary btn-sm" href="@Url.Content($"~/delegated-access/open/{entryId}")" title="@T["Open {0} without signing in again", entry.DisplayName]">
+        <i class="fa-solid fa-arrow-right-to-bracket me-1" aria-hidden="true"></i>@T["Open"]
+    </a>
+}
+
+@if (entry.Status == ChildTenantStatus.Failed && item.CanCreate)
+{
+    <a class="btn btn-success btn-sm" asp-action="Retry" asp-route-id="@entryId" data-url-af="UnsafeUrl">@T["Retry"]</a>
+    <a class="btn btn-danger btn-sm" asp-action="Discard" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard"]" data-message="@T["Discard {0}? Its address becomes free again.", entry.DisplayName]">@T["Discard"]</a>
+}
+
+@if (entry.Status == ChildTenantStatus.PendingRemoval && item.CanRemove)
+{
+    <a class="btn btn-success btn-sm" asp-action="Restore" asp-route-id="@entryId" data-url-af="UnsafeUrl">@T["Restore"]</a>
+}
+
+@if (item.Info.State == ChildTenantRuntimeState.ChangedByPlatform && item.CanManage)
+{
+    <a class="btn btn-secondary btn-sm" asp-action="Dismiss" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove from list"]" data-message="@T["Remove {0} from this list?", entry.DisplayName]">@T["Remove from list"]</a>
+}

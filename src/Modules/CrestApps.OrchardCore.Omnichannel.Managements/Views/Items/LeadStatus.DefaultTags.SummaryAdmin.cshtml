@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<LeadStatus>
+
+@if (Model.Value.IsDefault)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["New leads get this status."]">
+        <i class="fa-solid fa-star text-secondary me-1" aria-hidden="true"></i>@T["Default"]
+    </span>
+}
+@if (Model.Value.IsClosed)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A lead with this status is closed."]">
+        <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["Closed"]
+    </span>
+}
+@if (Model.Value.IsConverted)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["A lead with this status was converted."]">
+        <i class="fa-solid fa-user-check text-secondary me-1" aria-hidden="true"></i>@T["Converted"]
+    </span>
+}

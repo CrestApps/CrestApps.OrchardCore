@@ -1,0 +1,15 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var entry = Model.Value.Info.Entry;
+}
+
+@if (!string.IsNullOrEmpty(entry.Description))
+{
+    <div class="admin-list-secondary text-break">@entry.Description</div>
+}
+
+@if (entry.Status == ChildTenantStatus.Failed && !string.IsNullOrEmpty(entry.Error))
+{
+    <div class="admin-list-secondary text-danger"><i class="fa-solid fa-circle-exclamation me-1" aria-hidden="true"></i>@entry.Error</div>
+}

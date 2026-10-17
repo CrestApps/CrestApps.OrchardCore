@@ -1,5 +1,3 @@
-@using System.Globalization
-
 @model CallRecordingListViewModel
 
 <zone Name="Title">
@@ -13,7 +11,7 @@
     }
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3 gy-2 align-items-end">
+            <div class="row gx-2 gy-2 align-items-end">
                 @await Component.InvokeAsync("DateRangePicker", new
                 {
                     fromName = "From",
@@ -56,9 +54,6 @@
                     <button type="submit" class="btn btn-secondary">@T["Search"]</button>
                     <a asp-action="Index" class="btn btn-link">@T["Clear"]</a>
                 </div>
-                <div class="col text-sm-end">
-                    <span class="badge text-bg-secondary">@(Model.Count == 1 ? T["1 recording"] : T["{0} recordings", Model.Count])</span>
-                </div>
             </div>
             @if (!Model.CanListEveryone)
             {
@@ -68,66 +63,22 @@
     </div>
 </form>
 
-<ul class="list-group" data-cc-call-recording-list>
-    @if (Model.Items.Count > 0)
-    {
-        @foreach (var item in Model.Items)
-        {
-            var recording = item.Recording;
-
-            <li class="list-group-item">
-                <div class="row g-0">
-                    <div class="col-lg col-12 title d-flex align-items-center">
-                        <div class="summary">
-                            <div class="d-flex flex-column flex-md-row">
-                                <div class="me-2">
-                                    <h5 class="mb-0">@(item.CustomerNumber ?? T["Unknown caller"].Value)</h5>
-                                </div>
-                                <div class="metadata me-1">
-                                    <partial name="_CallRecordingBadges" model="recording" />
-                                </div>
-                            </div>
-                            <div class="text-muted small mt-1">
-                                <span class="me-3" title="@T["Started"]">
-                                    <i class="fa-regular fa-calendar" aria-hidden="true"></i><span class="visually-hidden">@T["Started"]</span>
-                                    <time datetime="@recording.StartedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: recording.StartedUtc, Format: "g"))</time>
-                                </span>
-                                <span class="me-3" title="@T["Agent"]">
-                                    <i class="fa-solid fa-headset" aria-hidden="true"></i><span class="visually-hidden">@T["Agent"]</span>
-                                    @(item.AgentName ?? (recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))
-                                </span>
-                                <span title="@T["Length"]">
-                                    <i class="fa-regular fa-clock" aria-hidden="true"></i><span class="visually-hidden">@T["Length"]</span>
-                                    <span class="font-monospace">@CallRecordingFormat.Duration(recording.DurationSeconds)</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
-                        <div class="actions">
-                            <button type="button" class="btn btn-primary btn-sm" aria-pressed="false" data-cc-list-play="@recording.ItemId">
-                                <i class="fa-solid fa-play" aria-hidden="true"></i>
-                                @T["Play"]
-                            </button>
-                            <a asp-action="Display" asp-route-id="@recording.ItemId" class="btn btn-secondary btn-sm">
-                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                                @T["View"]
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item list-group-item-info text-center">
-            @T["No recorded call matches. Calls are listed here once their recording has been saved."]
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
+@* The recordings, the toolbar and the pager are rendered by the AdminList shape. The contact-center-call-recording
+   script finds the rows by data-cc-call-recording-list and opens a recording's player beneath its row. *@
+<admin-list name="ContactCenterCallRecordings" context="Model.List"
+            show-select-all="false"
+            rows-data-cc-call-recording-list=""
+            empty-message="@T["No recorded call matches. Calls are listed here once their recording has been saved."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Caller"]" />
+        <admin-list-column name="Call" position="30" title="@T["Call"]" width="auto" />
+        <admin-list-column name="Started" position="40" title="@T["Started"]" width="auto" />
+        <admin-list-column name="Agent" position="50" title="@T["Agent"]" width="auto" />
+        <admin-list-column name="Length" position="60" title="@T["Length"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>

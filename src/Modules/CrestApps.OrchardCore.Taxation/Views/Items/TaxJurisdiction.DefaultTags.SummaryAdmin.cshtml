@@ -1,0 +1,23 @@
+@model ShapeViewModel<TaxJurisdiction>
+
+<span class="badge ta-badge bg-primary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Level"]">
+    <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@Model.Value.Level
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Code"]">
+    <i class="fa-solid fa-hashtag text-secondary me-1" aria-hidden="true"></i>@Model.Value.Code
+</span>
+
+@if (!string.IsNullOrEmpty(Model.Value.Country))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Country"]">
+        <i class="fa-solid fa-earth-americas text-secondary me-1" aria-hidden="true"></i>@Model.Value.Country
+    </span>
+}
+
+@if (!string.IsNullOrEmpty(Model.Value.Region))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Region"]">
+        <i class="fa-solid fa-map-location-dot text-secondary me-1" aria-hidden="true"></i>@Model.Value.Region
+    </span>
+}

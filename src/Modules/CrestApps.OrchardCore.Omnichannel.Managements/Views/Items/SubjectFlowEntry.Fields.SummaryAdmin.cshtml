@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SubjectFlowEntry>
+
+<a asp-route-action="ManageActions" asp-route-controller="SubjectFlows" asp-route-subjectContentType="@Model.Value.ContentTypeName">@Model.Value.DisplayName</a>

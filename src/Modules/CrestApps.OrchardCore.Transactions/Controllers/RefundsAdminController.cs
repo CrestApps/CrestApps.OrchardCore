@@ -118,11 +118,21 @@ public sealed class RefundsAdminController : Controller
         options.Statuses = BuildStatusItems(options.Status);
         options.Providers = BuildProviderItems(options.ProviderKey);
 
+        // The status and method filters render at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("RefundsAdminListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         return View(new RefundsAdminIndexViewModel
         {
             Options = options,
-            Refunds = [.. result.Entries],
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            List = new AdminListContext<PaymentRefund>
+            {
+                Source = result.Entries,
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
         });
     }
 

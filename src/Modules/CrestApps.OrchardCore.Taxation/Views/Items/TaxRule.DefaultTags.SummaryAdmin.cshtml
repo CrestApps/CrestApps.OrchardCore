@@ -1,0 +1,41 @@
+@using Microsoft.Extensions.Options
+@inject IOptions<TaxCalculationMethodOptions> MethodOptions
+@model ShapeViewModel<TaxRule>
+@{
+    var methodLabel = !string.IsNullOrEmpty(Model.Value.Source) && MethodOptions.Value.Methods.TryGetValue(Model.Value.Source, out var method)
+        ? method.DisplayName.Value
+        : Model.Value.Source;
+}
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["This rule is not applied."]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}
+
+<span class="badge ta-badge bg-primary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Tax type"]">
+    <i class="fa-solid fa-tag text-secondary me-1" aria-hidden="true"></i>@Model.Value.TaxType
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Calculation method"]">
+    <i class="fa-solid fa-calculator text-secondary me-1" aria-hidden="true"></i>@methodLabel
+</span>
+
+@if (Model.Value.Rate.HasValue)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rate"]">
+        <i class="fa-solid fa-percent text-secondary me-1" aria-hidden="true"></i>@Model.Value.Rate.Value.ToString("P2")
+    </span>
+}
+
+@if (Model.Value.FixedAmount.HasValue)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Amount"]">
+        <i class="fa-solid fa-money-bill text-secondary me-1" aria-hidden="true"></i>@Model.Value.FixedAmount.Value.ToString("N2")
+    </span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Priority"]">
+    <i class="fa-solid fa-arrow-up-wide-short text-secondary me-1" aria-hidden="true"></i>@Model.Value.Priority
+</span>

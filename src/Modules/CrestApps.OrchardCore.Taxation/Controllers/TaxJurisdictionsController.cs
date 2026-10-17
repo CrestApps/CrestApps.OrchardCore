@@ -86,19 +86,17 @@ public sealed class TaxJurisdictionsController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<TaxJurisdiction>>
         {
-            Models = [],
+            Models = [.. result.Entries.Select(model => new CatalogEntryViewModel<TaxJurisdiction> { Model = model })],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per tax jurisdiction, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<TaxJurisdiction>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<TaxJurisdiction>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions = [];
 

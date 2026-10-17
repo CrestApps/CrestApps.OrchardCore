@@ -1,0 +1,11 @@
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PhoneNumberVerificationRecord>
+
+@{
+    var displayNumber = string.IsNullOrEmpty(Model.Value.NormalizedPhoneNumber) ? Model.Value.PhoneNumber : Model.Value.NormalizedPhoneNumber;
+}
+
+@* A plain link to the edit page of the content item that owns the phone number. *@
+<a href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.Value.ContentItemId })">@displayNumber</a>

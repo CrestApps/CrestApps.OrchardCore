@@ -43,7 +43,8 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
             Initialize<ContentItemViewModel>("ContactSummaryAdmin", model =>
             {
                 model.ContentItem = contentItem;
-            }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:3"),
+            }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:3")
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Actions:3"),
 
             // The list part's header renders its container in the HeaderAdmin display type, so this puts the
             // primary contact methods under the contact's name whenever the list header is shown.

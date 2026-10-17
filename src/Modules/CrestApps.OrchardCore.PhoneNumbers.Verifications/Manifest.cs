@@ -19,6 +19,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         "OrchardCore.Contents",
+        "CrestApps.OrchardCore.Resources",
         PhoneNumberVerificationsConstants.Features.PhoneNumbers,
     ]
 )]

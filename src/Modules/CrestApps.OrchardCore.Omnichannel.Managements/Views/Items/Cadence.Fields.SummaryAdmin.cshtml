@@ -3,4 +3,4 @@
 
 @model ShapeViewModel<Cadence>
 
-<h5>@(Model.Value.DisplayText)</h5>
+<a asp-action="Edit" asp-controller="Cadences" asp-route-id="@Model.Value.ItemId">@Model.Value.DisplayText</a>

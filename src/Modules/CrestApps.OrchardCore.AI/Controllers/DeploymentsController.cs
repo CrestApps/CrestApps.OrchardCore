@@ -121,29 +121,27 @@ public sealed class DeploymentsController : Controller
 
         var viewModel = new ListCatalogEntryWithReadOnlyViewModel<AIDeployment>
         {
-            Models = [],
-            ReadOnlyModels = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, editableCount, routeData),
             Sources = _aiOptions.Deployments.Select(x => x.Key).Order(),
         };
 
-        foreach (var record in pagedEditable)
+        // The admin-list tag builds a row per deployment, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIDeployment>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIDeployment>
-            {
-                Model = record,
-                Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = pagedEditable.ToList(),
+            Pager = (IShape)viewModel.Pager,
+        };
 
-        foreach (var record in readOnlyEntries)
+        var readOnlyDeployments = readOnlyEntries.ToList();
+
+        if (readOnlyDeployments.Count > 0)
         {
-            viewModel.ReadOnlyModels.Add(new CatalogEntryViewModel<AIDeployment>
+            // The deployments defined in configuration are listed apart: they cannot be selected, edited or deleted.
+            viewModel.ReadOnlyList = new AdminListContext<AIDeployment>
             {
-                Model = record,
-                Shape = await _deploymentDisplayManager.BuildDisplayAsync(record, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
+                Source = readOnlyDeployments,
+            };
         }
 
         viewModel.Options.BulkActions =

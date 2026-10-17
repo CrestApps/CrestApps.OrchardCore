@@ -127,29 +127,27 @@ public sealed class ProviderConnectionsController : Controller
 
         var viewModel = new ListCatalogEntryWithReadOnlyViewModel<AIProviderConnection>
         {
-            Models = [],
-            ReadOnlyModels = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, editableCount, routeData),
             Sources = _aiOptions.ConnectionSources.Keys.Order(),
         };
 
-        foreach (var model in pagedEditable)
+        // The admin-list tag builds a row per connection, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIProviderConnection>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIProviderConnection>
-            {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = pagedEditable.ToList(),
+            Pager = (IShape)viewModel.Pager,
+        };
 
-        foreach (var model in readOnlyEntries)
+        var readOnlyConnections = readOnlyEntries.ToList();
+
+        if (readOnlyConnections.Count > 0)
         {
-            viewModel.ReadOnlyModels.Add(new CatalogEntryViewModel<AIProviderConnection>
+            // The connections defined in configuration are listed apart: they cannot be selected, edited or deleted.
+            viewModel.ReadOnlyList = new AdminListContext<AIProviderConnection>
             {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
+                Source = readOnlyConnections,
+            };
         }
 
         viewModel.Options.BulkActions =

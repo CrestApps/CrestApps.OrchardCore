@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +20,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Navigation;
+using OrchardCore.Routing;
 using OrchardCore.Settings;
 using YesSql;
 using YesSql.Services;
@@ -34,6 +36,7 @@ public sealed class RecordsController : Controller
 {
     private const int RequeueBatchSize = 100;
     private const int MaxRetryAllFailedRecords = 10_000;
+    private const string RetryBulkAction = "Retry";
 
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
@@ -136,7 +139,7 @@ public sealed class RecordsController : Controller
 
         var pagerShape = await _shapeFactory.PagerAsync(pager, totalCount, routeData);
 
-        var entries = new List<PhoneNumberVerificationRecordEntry>();
+        var records = new List<PhoneNumberVerificationRecord>();
 
         foreach (var contentItem in contentItems)
         {
@@ -147,7 +150,7 @@ public sealed class RecordsController : Controller
 
             part.TryGetPhoneNumberVerificationResult(out var result);
 
-            entries.Add(new PhoneNumberVerificationRecordEntry
+            records.Add(new PhoneNumberVerificationRecord
             {
                 ContentItemId = contentItem.ContentItemId,
                 DisplayText = contentItem.DisplayText,
@@ -174,13 +177,67 @@ public sealed class RecordsController : Controller
             Status = status,
             Sort = sort,
             CanVerifyPhoneNumbers = canVerifyPhoneNumbers,
-            Entries = entries,
             Pager = pagerShape,
             Sorts = BuildSortOptions(),
             Counts = await BuildStatusCountsAsync(maxAttempts, term),
+
+            // The admin-list tag builds a row per record, in the layout (List or Grid) the site or the user picked.
+            // The selected records are re-queued through the toolbar's bulk action, so only a user who can retry
+            // verifications can select them.
+            List = new AdminListContext<PhoneNumberVerificationRecord>
+            {
+                Source = records,
+                Pager = pagerShape,
+                ShowSelectAll = canVerifyPhoneNumbers,
+                BulkActions = canVerifyPhoneNumbers
+                    ? [new SelectListItem(S["Retry"], RetryBulkAction)]
+                    : null,
+            },
         };
 
         return View(model);
+    }
+
+    /// <summary>
+    /// Applies the search and the sort order posted by the records queue, keeping the status filter.
+    /// </summary>
+    /// <param name="q">The phone number search term.</param>
+    /// <param name="status">The status filter to keep.</param>
+    /// <param name="sort">The sort order to apply.</param>
+    /// <param name="pagerParameters">The pager parameters.</param>
+    /// <returns>A redirect to the filtered records queue.</returns>
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.Filter")]
+    public IActionResult IndexFilterPost(
+        string q,
+        PhoneNumberVerificationRecordFilter status,
+        PhoneNumberVerificationRecordSort sort,
+        PagerParameters pagerParameters)
+    {
+        var routeValues = new RouteValueDictionary();
+
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            routeValues[nameof(q)] = q.Trim();
+        }
+
+        if (status != PhoneNumberVerificationRecordFilter.All)
+        {
+            routeValues[nameof(status)] = status;
+        }
+
+        if (sort != PhoneNumberVerificationRecordSort.RecentlyAttempted)
+        {
+            routeValues[nameof(sort)] = sort;
+        }
+
+        if (pagerParameters.PageSize.HasValue)
+        {
+            routeValues["pageSize"] = pagerParameters.PageSize;
+        }
+
+        return RedirectToAction(nameof(Index), routeValues);
     }
 
     /// <summary>
@@ -226,19 +283,19 @@ public sealed class RecordsController : Controller
     /// Re-queues the selected records for verification. Deferred throttled work re-verifies the
     /// queued records shortly afterwards.
     /// </summary>
-    /// <param name="contentItemIds">The identifiers of the records selected on the current page.</param>
+    /// <param name="itemIds">The identifiers of the records selected on the current page.</param>
     /// <param name="returnUrl">The URL to return to.</param>
     /// <returns>A redirect to the originating page or the records queue.</returns>
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> RetrySelected(string[] contentItemIds, string returnUrl)
+    public async Task<IActionResult> RetrySelected(string[] itemIds, string returnUrl)
     {
         if (!await _authorizationService.AuthorizeAsync(User, PhoneNumberVerificationsPermissions.VerifyPhoneNumbers))
         {
             return Forbid();
         }
 
-        if (contentItemIds is null || contentItemIds.Length == 0)
+        if (itemIds is null || itemIds.Length == 0)
         {
             await _notifier.WarningAsync(H["No records were selected."]);
 
@@ -250,7 +307,7 @@ public sealed class RecordsController : Controller
             return RedirectToReturnUrlOrIndex(returnUrl);
         }
 
-        var requeued = await RequeueContentItemsAsync(contentItemIds);
+        var requeued = await RequeueContentItemsAsync(itemIds);
 
         await _notifier.SuccessAsync(H["{0} record(s) were queued for verification and will be processed shortly.", requeued]);
 
