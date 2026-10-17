@@ -10,10 +10,7 @@ The same few steps build very different reports. This page walks through common 
 
 Watch the short video, then follow the examples below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-kinds-of-reports.jpg" aria-label="Video: building a list, a chart report, a report with subtotals and a pivot table">
-  <source src="/img/docs/report-builder-kinds-of-reports.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-kinds-of-reports.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of building a list, a chart report, a report with subtotals and a pivot table" start={388} end={432} />
 
 | | |
 | --- | --- |

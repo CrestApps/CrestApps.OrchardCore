@@ -11,10 +11,7 @@ The **Report Builder** feature of the [Reports](../reports.md) module lets peopl
 
 This video walks through the Report Builder: building a report, aggregates and formulas, filters, visuals, joins, reusable views, sharing, and every data source.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder.jpg" aria-label="Video overview of the Report Builder">
-  <source src="/img/docs/report-builder.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video overview of the Report Builder" />
 
 | | |
 | --- | --- |

@@ -10,10 +10,7 @@ The builder saves your work as you go, so you never lose a change. What you save
 
 Watch the short video, then read how it works below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-publish-and-versions.jpg" aria-label="Video: drafts saving as you work, publishing, and restoring an earlier version">
-  <source src="/img/docs/report-builder-publish-and-versions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-publish-and-versions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of drafts saving as you work, publishing, and restoring an earlier version" start={487} end={521} />
 
 | | |
 | --- | --- |

@@ -11,10 +11,7 @@ Filters decide which data a report shows. A filter can narrow the rows before th
 
 Watch the short video, then follow the steps below.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-filters.jpg" aria-label="Video: adding filters and letting viewers change the period and values">
-  <source src="/img/docs/report-builder-filters.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-filters.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of adding filters and letting viewers change the period and values" start={260} end={298} />
 
 | | |
 | --- | --- |

@@ -10,10 +10,7 @@ Any module can add data to the Report Builder. A **data source** answers only th
 
 This video shows a data source added by a module and how its data sets appear in the builder.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder-custom-data-sources.jpg" aria-label="Video: a module's own data source and its data sets in the Report Builder">
-  <source src="/img/docs/report-builder-custom-data-sources.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder-custom-data-sources.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video of a module's own data source and its data sets in the Report Builder" start={594} end={622} />
 
 ## Choose an approach
 

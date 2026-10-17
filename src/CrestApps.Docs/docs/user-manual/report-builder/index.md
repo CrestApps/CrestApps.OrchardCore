@@ -11,10 +11,7 @@ The **Report Builder** lets you build your own reports without writing code. You
 
 This video shows how to build a report, add totals, formulas, filters and charts, join data sets, save reusable views, and share your reports.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/report-builder.jpg" aria-label="Video overview of the Report Builder">
-  <source src="/img/docs/report-builder.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/report-builder.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="report-builder" title="Narrated video overview of the Report Builder" />
 
 | | |
 | --- | --- |
