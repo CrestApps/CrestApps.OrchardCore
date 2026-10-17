@@ -7,7 +7,7 @@ technical_manual:
   - modules/report-builder/permissions
 ---
 
-The **Report Builder** lets you build your own reports without writing code. You pick the data you need (for example your customers and their orders), drag fields onto the report, choose how numbers are added up, and add charts, headline numbers, and pivot tables. You can save a report, put it in the admin menu so you can run it again with one click, and share it with people, roles, or a link.
+The **Report Builder** lets you build your own reports without writing code. You pick the data you need (for example your customers and their orders), drag fields onto the report, choose how numbers are added up, and add charts, headline numbers, and pivot tables. You can save a report, put it in the admin menu so you can run it again with one click, and share it with people and roles, or send people a link to it.
 
 This video shows how to build a report, add totals, formulas, filters and charts, join data sets, save reusable views, and share your reports.
 
@@ -20,7 +20,7 @@ This video shows how to build a report, add totals, formulas, filters and charts
 | --- | --- |
 | **Menu** | Reports > Report Builder, and Reports > Report Views |
 | **Permissions** | Build reports and manage own custom reports and views (to design); Share custom reports publicly and through share links (to share with everyone or create links); Manage all custom reports and views (to change other people's reports) |
-| **Features** | Report Builder. Your content types (such as customers or orders) are offered as data when Contents is on, and your saved queries when Queries is on. |
+| **Features** | Report Builder, which turns on Orchard Core's Data Pipelines Core. Your content types (such as customers or orders) are offered as data when Contents is on, and your saved queries when Queries is on. Emailing share links needs Email. |
 
 <AskYourAdmin />
 
@@ -72,4 +72,4 @@ Your administrator gives these permissions to roles. Administrators have all of 
 | **View** | A saved, reusable data set: it joins, filters, and calculates once, and other reports can use its columns as fields. |
 | **Draft** | Your saved changes that nobody else sees until you publish them. |
 | **Version** | A copy of the report kept each time you publish a change. |
-| **Share link** | A secret address that opens one report for anyone who has it. |
+| **Share link** | A secret address that opens one report for the people it was made for, once they sign in. It stops working when it expires. |

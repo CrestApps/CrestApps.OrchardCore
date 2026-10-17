@@ -28,10 +28,10 @@ Watch the short video, then follow the steps below.
 
 Data sets your site already links are joined for you when you add them:
 
-- an item's content picker to the content item it picks, such as an order's *Customer* to the customer;
-- a contact to the account whose list holds it;
-- an item's owner, and a user picker, to **Users**;
+- a content item's **Owner** to **Users**;
 - records of other features to the records they point to, such as an activity to its disposition or campaign, or an activity's assigned user to **Users**.
+
+Content pickers, user pickers and lists are not joined for you: join them yourself, as described below, such as an order's *Customer* picker to the customer's **Content item id**.
 
 Once a report has a data set, **Add data set** opens on **Related**, which lists the data sets linked to the ones you already have.
 
@@ -40,7 +40,7 @@ When you add a second data set that is not linked this way, the builder suggests
 ## Join on the Data model tab
 
 1. Open the **Data model** tab. Each data set is a card listing its columns; key columns are marked with a key and listed first. Drag a card by its title to move it.
-2. Drag a column from one card onto the matching column of another card, such as the order's *Customer* onto the customer's *Content item ID*. A line now connects the two columns.
+2. Drag a column from one card onto the matching column of another card, such as the order's *Customer* onto the customer's **Content item id**. A line now connects the two columns.
 3. To match on more than one column, drag another pair. Every pair must be equal for two rows to match.
 4. Click the line or its badge to open the join on the right, then pick which rows to keep.
 
@@ -69,6 +69,7 @@ You can also click the link icon on a data set's card in the **Data** pane to ed
 
 - One customer with three orders gives three rows. Use **Count distinct** on the customer, rather than **Count**, to count customers in such a report.
 - A join on an ID field is the most reliable. Joining on names can match the wrong rows when two records share a name.
+- A content picker or user picker that holds several items gives their IDs separated by commas, which match no single item. Join on a picker that holds one item.
 - To compare the same data in two roles, such as who created an activity and who it is assigned to, add **Users** twice and join each copy to a different field.
 
 Next: [Kinds of reports](kinds-of-reports.md).

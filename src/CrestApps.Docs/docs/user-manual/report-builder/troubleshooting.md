@@ -24,8 +24,13 @@ This page lists the problems people most often meet in the Report Builder, and w
 | There is no **Report Builder** under **Reports** | The Report Builder feature may be off, or you may not have the *Build reports and manage own custom reports and views* permission. People who only run shared reports see **Shared Reports** instead, once a report is shared with them. Ask your administrator. |
 | **Add data set** says *No data sources are enabled* or *No data sets are available to you* | Your site does not use a feature that offers data, or you do not have the permission a data source asks for. See [Data sources](data-sources.md). |
 | A data set says it is not available to you | You may not view that content type or that data. Ask your administrator. |
+| A content type shows drafts, or only published items | People who may edit a content type see the latest version of its items, drafts included; others see the published ones. Filter on **Published** to leave out the items whose latest version is a draft. |
 | A query offers no fields | A query's fields are found in the rows it returns. Make sure the query returns rows without parameters. |
+| A content picker shows IDs, not names | A content picker gives the IDs of the items it picks. Add the picked content type as a data set, join the picker to its **Content item id**, and use its **Display text**. See [Join data sets](joins.md). |
 | The **Anonymous** role cannot be checked, or there are no share links | You need the *Share custom reports publicly and through share links* permission. Share links also need the report to be published. |
+| A share link cannot be created | Every recipient must be a user of the site: check the user names and emails. To email the link, the Email feature must be on; otherwise turn off **Email the link to the recipients** and copy the link. |
+| A recipient cannot open a share link | They must sign in with the account the link was made for: a link opens for its recipients only. A link that expired, was used as many times as allowed, or was revoked no longer opens; create a new one. |
+| You want everyone to see a report without a link | Share it with the **Anonymous** role on the **Sharing** tab. Share links are always for named people. |
 | **Edit** or **Delete** is missing on a report | You may change only your own reports, unless you have *Manage all custom reports and views*. Use **Actions > Clone** to make your own copy. |
 | The export button is missing | The report's owner turned off **Let people the report is shared with export it**, or the share link does not allow export. |
 

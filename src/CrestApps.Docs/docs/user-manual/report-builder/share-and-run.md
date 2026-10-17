@@ -1,12 +1,12 @@
 ---
 sidebar_label: Share and Run Reports
 title: Share, Run and Export Reports
-description: Put a report in the admin menu, share it with people, roles or a link, and run and export it.
+description: Put a report in the admin menu, share it with people and roles, send people a link to it, and run and export it.
 technical_manual:
   - modules/report-builder/permissions
 ---
 
-A report you build is yours until you share it. You can put it in the admin menu, share it with people and roles, or create a link that opens it for anyone who has it. The people you share with run the report, change the filters you let them change, and export it.
+A report you build is yours until you share it. You can put it in the admin menu, share it with people and roles, or send people a link that opens it for them. The people you share with run the report, change the filters you let them change, and export it.
 
 Watch the short video, then follow the steps below.
 
@@ -19,7 +19,7 @@ Watch the short video, then follow the steps below.
 | --- | --- |
 | **Menu** | Reports > Report Builder > *a report* > Sharing |
 | **Permission** | Build reports and manage own custom reports and views (to share your reports); Share custom reports publicly and through share links (to share with everyone or create links) |
-| **Feature** | Report Builder |
+| **Feature** | Report Builder. Emailing share links needs Email. |
 
 <AskYourAdmin />
 
@@ -52,19 +52,42 @@ Publish the report to apply the sharing. The people you share with find the repo
 A shared report reads data with **your** access: people see what the report shows even when they could not open that data themselves. Share only what they should see. If your account is disabled or deleted, your reports stop running; someone who designs reports can clone them and share the copies again.
 :::
 
-People who cannot open the admin can open a shared report at its own page outside the admin. A report shared with the **Anonymous** role opens there for anyone.
+People who cannot open the admin can open a shared report at its own page outside the admin. A report shared with the **Anonymous** role opens there for anyone, including visitors who are not signed in: this is how you show a report to everyone.
 
 ## Create a share link
 
-A share link opens one report for anyone who has the link, without an account. You need the *Share custom reports publicly and through share links* permission, and the report must be published.
+A share link sends one report to people who have an account on the site. Only the people you send it to can open it, and only once they sign in. A link always expires, and you can limit how many times it is used. You need the *Share custom reports publicly and through share links* permission and the right to change the report, and the report must be published.
 
-1. On the **Sharing** tab, under **Share links**, enter a **Note** that says what the link is for.
-2. Optionally set **Expires**, **Allow export**, and **Require sign-in** (the link then works only for people who are signed in).
-3. Click **Create link**, then **Copy**. For security, the full link is shown only once.
+A link is for named people only. To show a report to everyone, share it with the **Anonymous** role instead (see above).
 
-To stop a link working, click **Revoke**. The list shows each link's note, the first characters of its address, when it expires, what it allows, and whether it is **Active**, **Expired** or **Revoked**.
+1. On the **Sharing** tab, under **Share links**, fill in the settings below.
+2. Click **Create link**.
+3. If the link was emailed, the page says who received it. Otherwise, click **Copy** and send the link to its recipients yourself. For security, the full link is shown only on this page, and not again once you leave it.
 
-Pages opened through a share link are hidden from search engines, and every opening and export through a link is recorded in the site's logs.
+| Setting | What it does |
+| --- | --- |
+| **Recipients** | Search by user name or email and pick the people the link is for. They must be users of the site. |
+| **Note** | Optional. What the link is for. It is sent with the email and shown in the list of links. |
+| **Expires after (days)** | How many days the link works, at least 1. It starts at 7. |
+| **Most uses** | How many times the link can be used, or `0` for no limit. Opening the report, changing its filters and exporting it are each a use. |
+| **Allow export** | Lets the recipients download the report. |
+| **Email the link to the recipients** | Sends the link and your note to each recipient by email. It is on at first, and needs the Email feature. Turn it off to send the link yourself. |
+
+The list under the settings shows every link of the report:
+
+| Column | What it shows |
+| --- | --- |
+| **Shared with** | The recipients, and the note. |
+| **Expires** | When the link stops working. |
+| **Uses** | How many times the link was used, such as *3 of 10* when it has a limit. |
+| **Allows** | **Export** when the recipients may download the report. |
+| **Status** | **Active**, **Expired**, **Used up** (used as many times as allowed) or **Revoked**. |
+
+To stop a link working before it expires, click **Revoke**.
+
+When a recipient opens the link, the site asks them to sign in if they are not signed in yet. Someone else who signs in with the link is refused, and a link that expired, was used up or was revoked no longer opens. Pages opened through a share link are hidden from search engines, and every opening and export through a link is recorded in the site's logs.
+
+The links of every feature of the site, such as report links and the files of data pipelines, are listed together under **Tools > Shared Links** for people with the *Manage shared links* permission. They can revoke and delete links there too. A link is deleted a day after it stops working, and a report's links are deleted with the report.
 
 ## Run and export a report
 

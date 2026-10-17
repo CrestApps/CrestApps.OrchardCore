@@ -49,8 +49,9 @@ Actions that do not concern one existing item check `ManageOwnReportDesigns` wit
 | Export a report | `ViewAllReportDesigns` on the report, and the report's `AllowExport`, unless the user also passes `ManageAllReportDesigns` on it. |
 | Clone a report | `ViewAllReportDesigns` on the report and `ManageOwnReportDesigns`. The copy is owned by the person cloning and shared with nobody. |
 | Share with the `Anonymous` role | `ShareReportsPublicly`, unless the report was already shared with `Anonymous`. |
-| List, create or revoke share links | `ManageAllReportDesigns` on the report and `ShareReportsPublicly`. |
-| Open a share link (`/reports/shared/{token}`) | The token only; with **Require sign-in**, a signed-in user. |
+| List, create or revoke share links on the **Sharing** tab | `ManageAllReportDesigns` on the report and `ShareReportsPublicly`. |
+| Open a share link (`/SharedLinks/{linkId}?token=...`) | A signed-in user who is one of the link's recipients, with the link's token, while the link works. |
+| List, revoke or delete every shared link of the site (**Tools > Shared Links**) | Orchard Core's `ManageSharedLinks` (**Manage shared links**). |
 | Edit, save, delete or refresh a view | `ManageAllReportDesigns` on the view. |
 | Use a view as a data set | `ViewAllReportDesigns` on the view. |
 
@@ -73,9 +74,9 @@ A scheduled view refreshes with its owner's access in the same way; see [Schedul
 
 ## Data sources are the security boundary
 
-A data source must hide every data set the principal it is given may not read: `GetDataSetsAsync` lists only those, and `GetSchemaAsync` returns `null` for the others, so the engine refuses them. The principal is the designer while designing and the owner while a saved report runs. See [Add your own data source](custom-data-sources.md#security).
+A data source must hide every data set the principal it is given (`DataSourceContext.User`) may not read: `GetDataSetsAsync` lists only those, `GetSchemaAsync` returns `null` for the others, so the engine refuses them, and `ReadAsync` yields nothing for them. The principal is the designer while designing and the owner while a saved report runs. See [Add your own data source](custom-data-sources.md#security).
 
-The **Content items** source lists a content type only when the principal holds `ViewContent` for it, including the type-specific permission of a securable type. Because Orchard Core grants `ViewContent` broadly by default, make content types that hold sensitive data **Securable** to control which report builders can report on them. Each built-in source's permission is listed in [Built-in data sources](data-sources.md).
+The **Content items** source lists a content type only when the principal holds `ViewContent` for it, including the type-specific permission of a securable type, and reads drafts only for a principal that holds `EditContent` for it. Because Orchard Core grants `ViewContent` broadly by default, make content types that hold sensitive data **Securable** to control which report builders can report on them. Each built-in source's permission is listed in [Built-in data sources](data-sources.md).
 
 ## Viewers and filters
 
@@ -83,10 +84,17 @@ Exposed filter values from the query string override only filters marked as expo
 
 ## Share links
 
-- Share link tokens hold 256 random bits. Only their SHA-256 hash is stored, and the full link is shown once.
-- Links can expire, be revoked, require sign-in, and allow or deny export.
-- Pages opened through a link send `X-Robots-Tag: noindex, nofollow` and `Referrer-Policy: no-referrer`.
+Share links are Orchard Core shared links (`ISharedLinkManager`, from the Data Pipelines Core feature), of the kind `Reports.Report` (`ReportsConstants.SharedLinkKind`). The builder creates them with the report's id as their resource, and `ReportSharedLinkHandler` opens the report when a link is used.
+
+- A link is for named recipients: users of the site, given by user name or email. Every recipient must be a user; there is no link for anyone who has it. To show a report to everyone, share it with the `Anonymous` role, which needs `ShareReportsPublicly`.
+- A link opens at `/SharedLinks/{linkId}?token=...` only for a signed-in recipient who has the token. A wrong token is answered `404 Not Found`, so links cannot be discovered; an expired, used-up or revoked link `410 Gone`; and a signed-in user who is not a recipient is refused (`403 Forbidden`).
+- A token holds 256 random bits, of which only the SHA-256 hash is stored. The full link is returned once, when it is created: in the email to the recipients, and on the **Sharing** tab until the page is left.
+- Every link expires: `ExpiresAfterDays` is at least 1. `MaxUses` limits the uses (`0` for no limit); opening the report, changing its filters and exporting it are each a use, counted with one atomic database update per use.
+- The link's `Note` and `AllowExport` are stored in the link's properties. An export through a link that does not allow it is answered `404 Not Found`.
+- With `NotifyByEmail` (the default), Orchard Core emails the link and the note to each recipient, which needs the Email feature; otherwise the person who shares the report sends the link.
+- The report opened through a link runs with its **owner's** access, like a shared report. Its pages send `X-Robots-Tag: noindex, nofollow` and `Referrer-Policy: no-referrer`.
 - Every link opening, export, creation and revocation is logged.
+- **Tools > Shared Links** lists the links of every module, where people with `ManageSharedLinks` can revoke and delete them; each report link links back to its report in the builder. Orchard Core deletes a link a day after it stops working.
 - Deleting a report deletes its share links. Share links are never exported by the deployment step.
 
 ## Limits

@@ -99,8 +99,8 @@ For a value the data does not hold, add a [calculated field](columns-and-formula
 
 *Example: the ten customers with the most revenue.*
 
-1. Add the *Customer* data set, then the *Order* data set. If the order has a content picker for its customer, the two are joined for you; otherwise join the order's *Customer* to the customer's *Content item ID* (see [Join data sets](joins.md)).
-2. Drag the customer's **Display text** onto **Columns**, then the order's *Total* (summed), and the order's **Content item ID** with **Aggregate** set to **Count distinct**, which counts the orders.
+1. Add the *Customer* data set, then the *Order* data set, and join the order's *Customer* (a content picker) to the customer's **Content item id** (see [Join data sets](joins.md)).
+2. Drag the customer's **Display text** onto **Columns**, then the order's *Total* (summed), and the order's **Content item id** with **Aggregate** set to **Count distinct**, which counts the orders.
 3. Sort by the total, descending, and set **Top rows** to 10.
 4. Add a **Chart** with **Chart type** **Horizontal bar**, and **Metrics** for the total revenue.
 

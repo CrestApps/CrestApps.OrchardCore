@@ -42,11 +42,13 @@ The tasks run the report with its owner's access through the same runner as a sh
 | `RunReportTask` | `Done`, `No rows`, `Failed` | `Report`: `ReportId`, `Title`, `RowCount`, `Columns` (labels), `Rows` (at most 1,000, each a dictionary by column label) and `Errors`. |
 | `ExportReportTask` | `Done`, `Failed` | `ReportFile`: `ReportId`, `Title`, `FileName`, `ContentType`, `Format`, `RowCount`, `Size`, and either `Path` and `Url` (with a `MediaFolder`) or `Base64`. |
 | `EmailReportTask` | `Done`, `Failed` | None. Sends `To`, `Cc`, `Bcc`, `Subject` (the title when empty) and `Body` (HTML), all Liquid, with the report's metrics and tables rendered as inline-styled HTML when `IncludeReport` is set, and the export in `AttachmentFormat` attached unless it is empty. The report runs once for both. |
-| `CreateReportShareLinkTask` | `Done`, `Failed` | `ReportShareLink`: `ReportId`, `Title`, `Url`, `LinkId` and `ExpiresUtc`. Takes `Note` (Liquid), `ExpiresAfterDays` (0 for never), `AllowExport` and `RequireSignIn`. |
+| `CreateReportShareLinkTask` | `Done`, `Failed` | `ReportShareLink`: `ReportId`, `Title`, `Url`, `LinkId`, `ExpiresUtc`, `Recipients` (the recipients' user names) and `Notified` (the recipients the link was emailed to). Takes `Recipients` (Liquid: user names or emails of users of the site, separated by commas), `Note` (Liquid), `ExpiresAfterDays` (at least 1, 7 by default), `MaxUses` (`0` for no limit), `AllowExport` and `NotifyByEmail` (`true` by default). |
 
 The output name can be changed on each task with `OutputName`. `Workflow.LastResult` is set to the output of `RunReportTask` and `ExportReportTask`, to the link's URL by `CreateReportShareLinkTask`, and to the report's id by `EmailReportTask`.
 
-`CreateReportShareLinkTask` builds the URL from the site's base URL, or from the current request when the base URL is not set. Set the base URL for workflows started by a timer, which have no request. Links created by a workflow are recorded with the workflow as their creator and can be revoked on the report's **Sharing** tab.
+`CreateReportShareLinkTask` creates an Orchard Core shared link with `ISharedLinkManager`, like the report's **Sharing** tab (see [Share links](permissions.md#share-links)): only its recipients can open it, once signed in, until it expires, is used up or is revoked. With `NotifyByEmail`, Orchard Core emails the link and the note to the recipients; turn it off to send `Url` with another activity. The task takes `Failed` when there is no report, when there is no recipient or a recipient is not a user of the site, or when `NotifyByEmail` is set while the Email feature is off; the reason is logged.
+
+The URL is built from the site's base URL, or from the current request when the base URL is not set. Set the base URL for workflows started by a timer, which have no request. Links created by a workflow can be revoked on the report's **Sharing** tab or under **Tools > Shared Links**.
 
 ## React in code with `IReportEventHandler`
 

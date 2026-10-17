@@ -1,12 +1,12 @@
 ---
 sidebar_label: Formula Reference
 title: Report Builder Formula Reference
-description: The Report Builder formula language - syntax, operators and precedence, types, missing values, aggregate formulas, and every function.
+description: The formula language of the Report Builder, which is Orchard Core's - syntax, operators and precedence, types, missing values, aggregate formulas, every built-in function, and adding functions.
 user_manual:
   - user-manual/report-builder/columns-and-formulas
 ---
 
-Calculated fields (`ReportCalculatedField`) are written in a small, spreadsheet-like formula language. It is parsed by `ExpressionParser`, type-checked and compiled by `ExpressionCompiler`, and its functions are declared in `ExpressionFunctions` (all in `CrestApps.OrchardCore.Reports.Core`, `Designer/Expressions`). The builder lists the functions from the same catalog (`/Admin/reports/builder/api/functions`), so this page and the formula window always agree. How people write formulas in the builder is described in the User Manual: [Columns and formulas](../../user-manual/report-builder/columns-and-formulas.md#calculated-fields).
+Calculated fields (`ReportCalculatedField`) are written in a small, spreadsheet-like formula language: Orchard Core's, from the Data Pipelines Core feature (namespace `OrchardCore.DataSources.Expressions`, package `OrchardCore.DataSources.Core`), which Orchard Core's data pipelines use too. `ReportQueryPlanner` compiles each formula with `ExpressionCompiler` against the fields of the report's data sets and the `IExpressionFunctionCatalog`, which holds the built-in functions and those modules add. The builder lists the functions from the same catalog (`/Admin/reports/builder/api/functions`), so the formula window always lists every function the site has. The full reference of the language is in Orchard Core's [Data Sources](https://docs.orchardcore.net/en/latest/reference/modules/DataSources/#formulas) documentation; this page describes it as reports use it. How people write formulas in the builder is described in the User Manual: [Columns and formulas](../../user-manual/report-builder/columns-and-formulas.md#calculated-fields).
 
 ## Syntax
 
@@ -77,6 +77,8 @@ The formula window shows the type a formula returns, which decides the aggregate
 
 ## Functions
 
+These are the built-in functions of Orchard Core's catalog. Functions that modules add appear in the formula window with them, see [Adding a function](#adding-a-function).
+
 ### Aggregate
 
 | Function | What it does |
@@ -95,7 +97,7 @@ The formula window shows the type a formula returns, which decides the aggregate
 | Function | What it does |
 | --- | --- |
 | `IF(condition, then, [else])` | Returns one value when the condition is true and another when it is not. |
-| `IIF(condition, then, else)` | Same as IF. |
+| `IIF(condition, then, [else])` | Same as IF. |
 | `IFS(condition1, value1, condition2, value2, ..., [else])` | Returns the value of the first condition that is true. |
 | `SWITCH(value, match1, result1, match2, result2, ..., [else])` | Returns the result paired with the first match of the value. |
 | `COALESCE(value1, value2, ...)` | Returns the first value that is not missing. |
@@ -132,7 +134,7 @@ The formula window shows the type a formula returns, which decides the aggregate
 | Function | What it does |
 | --- | --- |
 | `ABS(number)` | Returns the absolute value of a number. |
-| `ROUND(number, [decimals])` | Rounds a number to a number of decimals (0 by default). |
+| `ROUND(number, [decimals])` | Rounds a number to a number of decimals (0 by default). Midpoints are rounded away from zero. |
 | `FLOOR(number)` | Rounds a number down to a whole number. |
 | `CEILING(number)` | Rounds a number up to a whole number. |
 | `POWER(number, exponent)` | Raises a number to a power. |
@@ -178,6 +180,10 @@ The `part` of `DATEADD`, `DATEDIFF` and `DATETRUNC` is case-insensitive and acce
 | `second` | `seconds`, `ss`, `s` (not for `DATETRUNC`) |
 
 `DATEDIFF` counts calendar boundaries for years, quarters and months (`DATEDIFF('month', '2026-01-31', '2026-02-01')` is 1), whole weeks and days between the dates, and whole hours, minutes and seconds between the times. Weeks start on Monday. Date-time fields are in the tenant time zone before any formula runs.
+
+## Adding a function
+
+A module adds a function to every formula of the site, in reports and in data pipelines, by registering it in Orchard Core's function catalog: `services.AddExpressionFunction(...)` with a function made by `ExpressionFunction.CreateScalar` (computed from the values of one row) or `ExpressionFunction.CreateAggregate` (combined over the rows of a group), or several at once with an `IExpressionFunctionProvider`, in a startup marked `[RequireFeatures("OrchardCore.DataPipelines.Core")]`. A registered function replaces a built-in one of the same name. An aggregate function makes a formula aggregated, like the built-in ones, so it works per group in reports. See [Adding a formula function](https://docs.orchardcore.net/en/latest/reference/modules/DataSources/#adding-a-formula-function) for the arguments and an example.
 
 ## Examples
 

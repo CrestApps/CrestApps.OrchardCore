@@ -1,12 +1,14 @@
 ---
 sidebar_label: Add Your Own Data Source
 title: Add Your Own Report Data Source
-description: Extend the Report Builder with your own data sources and data sets - record-backed sources, sources for external systems, grouping in the source, join keys, relationships, and content field providers.
+description: Extend the Report Builder with your own Orchard Core data sources - record-backed sources, sources for external systems, grouping in the source, join keys, relationships, and more content parts and fields.
 user_manual:
   - user-manual/report-builder/data-sources
 ---
 
-Any module can add data to the Report Builder. A **data source** answers only three questions: which data sets exist for the principal, which typed fields each one has, and which rows it holds. The engine does everything else for every source: joins, formulas, transforms, filters, grouping and aggregation, sorting, limits, time zones, viewer filters and their option lists, visuals, export, sharing and authorization.
+Any module can add data to the Report Builder. The builder reads Orchard Core data sources, from the **Data Pipelines Core** feature (`OrchardCore.DataPipelines.Core`) of Orchard Core 4.0, so a data source you add is offered to reports and to Orchard Core's data pipelines alike. A **data source** answers only three questions: which data sets exist for the principal, which typed fields each one has, and which rows it holds. The engine does everything else for every source: joins, formulas, transforms, filters, grouping and aggregation, sorting, limits, time zones, viewer filters and their option lists, visuals, export, sharing and authorization.
+
+This page covers what matters to reports. The contract itself is described in Orchard Core's [Data Sources](https://docs.orchardcore.net/en/latest/reference/modules/DataSources/#extending-data-sources) documentation.
 
 This video shows a data source added by a module and how its data sets appear in the builder.
 
@@ -19,37 +21,44 @@ This video shows a data source added by a module and how its data sets appear in
 
 | You want to report on | Build | Reference |
 | --- | --- | --- |
-| Records your module stores, such as YesSql documents or catalog entries | A `ReportRecordDataSource` with one `ReportRecordDataSet<T>` per record type | `CrestApps.OrchardCore.Reports.Abstractions` |
-| Such records, grouped in the database for large data | The same, with `IReportAggregateDataSet` and `ReportIndexAggregator` | Also `CrestApps.OrchardCore.Reports.Core` |
-| An external system whose data sets or fields are found at run time, such as a database, a search index or a REST API | `IReportDataSource` | `CrestApps.OrchardCore.Reports.Abstractions` |
-| A custom content field type or content part | An `IContentReportFieldProvider` or `IContentReportPartProvider` for the built-in **Content items** source | `CrestApps.OrchardCore.Reports` |
+| Records your module stores, such as YesSql documents or catalog entries | A `RecordDataSource` with one `RecordDataSet<T>` per record type | `OrchardCore.DataSources.Abstractions`, and `CrestApps.OrchardCore.Reports.Abstractions` for the helpers |
+| Such records, grouped in the database for large data | The same, with `IAggregateRecordDataSet` and `ReportIndexAggregator` | Also `CrestApps.OrchardCore.Reports.Core` |
+| An external system whose data sets or fields are found at run time, such as a database, a search index or a REST API | `IDataSource` | `OrchardCore.DataSources.Abstractions` |
+| A content part or content field type that the **Content items** source does not read the way you want | `ContentDataSourceOptions` | Orchard Core's Data Pipelines module |
 | Data that people can prepare in the browser | Nothing: a [reusable view](../../user-manual/report-builder/views.md) | |
 
-The data source types live in the `CrestApps.OrchardCore.Reports.DataSources` namespace; `ReportsConstants` (feature IDs and the built-in source names) is in `CrestApps.OrchardCore.Reports`.
+The data source contract (`IDataSource`, `RecordDataSource`, `RecordDataSet<T>`, `DataField`, `DataFieldType`, `DataCondition`, `DataConditions`) is in the `OrchardCore.DataSources` namespace. The CrestApps helpers are in `CrestApps.OrchardCore.Reports.DataSources` (`CrestApps.OrchardCore.Reports.Abstractions`) and `CrestApps.OrchardCore.Reports.Designer.DataSources` (`CrestApps.OrchardCore.Reports.Core`), and `ReportsConstants` (the builder's feature ID and the built-in source names) is in `CrestApps.OrchardCore.Reports`.
 
 ## Where the code goes
 
-- **A module exposing its own records** (activities, interactions, chat sessions...) keeps the source in that module, in a startup marked with the module's feature and `[RequireFeatures(ReportsConstants.BuilderFeature)]`, so the Reports module never depends on it and the source appears only when both are enabled. The Omnichannel, Contact Center, AI chat and Messaging sources are built this way.
-- **A source that wraps an Orchard Core feature** (like **Content items** and **Queries**) needs no feature of its own: a startup marked `[Feature(ReportsConstants.BuilderFeature)]` and `[RequireFeatures("OrchardCore.X")]` registers it.
-- **A source for an external system** goes in its own module, with a feature that depends on `ReportsConstants.BuilderFeature` in the `Reporting` category. Connection settings belong in configuration (for example `CrestApps:Reports:{Source}`), never in a design.
+- **A module exposing its own records** (activities, interactions, chat sessions...) keeps the source in that module, in a startup marked with the module's feature and `[RequireFeatures("OrchardCore.DataPipelines.Core")]`. The Reports module never depends on it, and the source is registered whenever Data Pipelines Core is on with that feature: with the Report Builder, which depends on Data Pipelines Core, or with Orchard Core's Data Pipelines. The Omnichannel, Contact Center, AI chat and Messaging sources are built this way.
+- **A source for an external system** goes in its own module, whose feature depends on `OrchardCore.DataPipelines.Core`. Connection settings belong in configuration (for example `CrestApps:Reports:{Source}`), never in a design.
 
-Register a source as a scoped `IReportDataSource`. The builder lists it as soon as the feature that registers it is enabled.
+Register a source with `services.AddDataSource<TDataSource>()`, from the `OrchardCore.DataSources.Core` package. Data sources are scoped services resolved by name through `IDataSourceManager`, which lists them with their name, display name and description without creating them. Two data sources cannot share a name.
+
+:::note[Data sources are not resolved as a list of services]
+`IDataSource` declares `Name`, `DisplayName` and `Description` as static abstract members, so it cannot be used as a generic type argument, and data sources are not resolved with `GetServices<IDataSource>()`. Use `IDataSourceManager`: `GetDataSource(name)` resolves one from the services of the scope.
+:::
 
 ## Record-backed data sources
 
-For records kept in a store, derive from `ReportRecordDataSet<TRecord>` and `ReportRecordDataSource` instead of implementing `IReportDataSource` by hand. The base classes check access on every call, keep only the fields the report uses, read one row more than the limit to set `Truncated`, convert each value to its field's type (enums become their name, unspecified and offset date-times become UTC), and add each field's references to its data set.
+For records kept in a store, derive from `RecordDataSet<TRecord>` and `RecordDataSource` instead of implementing `IDataSource` by hand. The base classes check access on every call, read only the fields and the number of rows the query asks for, split the rows into batches, and convert each value to its field's type (enums become their name, `DateTimeOffset`, local and unspecified date-times become UTC).
 
-This example exposes the invoices of a billing module:
+This example exposes the invoices of a billing module, stored in YesSql with an `InvoiceIndex` map index. It follows the Contact Center and Messaging data sets:
 
 ```csharp
+using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
 using YesSql;
 using YesSql.Services;
+using ISession = YesSql.ISession;
 
-public sealed class InvoicesReportDataSet : ReportRecordDataSet<Invoice>
+public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
 {
     public const string Name = "Invoices";
 
@@ -60,7 +69,7 @@ public sealed class InvoicesReportDataSet : ReportRecordDataSet<Invoice>
         ISession session,
         IAuthorizationService authorizationService,
         IStringLocalizer<InvoicesReportDataSet> S)
-        : base(new ReportDataSetDescriptor(Name, S["Invoices"], S["One row per invoice."]) { DefaultDateField = "IssuedUtc" })
+        : base(new DataSetDescriptor(Name, S["Invoices"], S["One row per invoice."]) { DefaultDateField = "IssuedUtc" })
     {
         _session = session;
         _authorizationService = authorizationService;
@@ -68,157 +77,153 @@ public sealed class InvoicesReportDataSet : ReportRecordDataSet<Invoice>
         var invoice = S["Invoice"].Value;
         var people = S["People"].Value;
 
-        AddField("InvoiceId", S["Invoice ID"], ReportDataType.Text, record => record.InvoiceId, invoice, isIdentifier: true);
-        AddField("Number", S["Number"], ReportDataType.Text, record => record.Number, invoice);
-        AddField("Status", S["Status"], ReportDataType.Text, record => record.Status, invoice);
-        AddField("Amount", S["Amount"], ReportDataType.Decimal, record => record.Amount, invoice);
-        AddField("IssuedUtc", S["Issued"], ReportDataType.DateTime, record => record.IssuedUtc, invoice);
-        AddField("PaidUtc", S["Paid"], ReportDataType.DateTime, record => record.PaidUtc, invoice);
+        AddField("InvoiceId", S["Invoice ID"], DataFieldType.Text, record => record.InvoiceId, invoice).Identifier();
+        AddField("Number", S["Number"], DataFieldType.Text, record => record.Number, invoice);
+        AddField("Status", S["Status"], DataFieldType.Text, record => record.Status, invoice);
+        AddField("Amount", S["Amount"], DataFieldType.Decimal, record => record.Amount, invoice);
+        AddField("IssuedUtc", S["Issued"], DataFieldType.DateTime, record => record.IssuedUtc, invoice);
+        AddField("PaidUtc", S["Paid"], DataFieldType.DateTime, record => record.PaidUtc, invoice);
 
         // The customer is a content item of the Customer type; the account manager is a user.
-        AddField(
-            "CustomerId",
-            S["Customer ID"],
-            ReportDataType.Text,
-            record => record.CustomerContentItemId,
-            people,
-            isIdentifier: true,
-            new ReportFieldReference(ReportsConstants.ContentsDataSource, "Customer", "ContentItemId"));
-        AddField(
-            "AccountManagerId",
-            S["Account manager (user ID)"],
-            ReportDataType.Text,
-            record => record.AccountManagerUserId,
-            people,
-            isIdentifier: true,
-            new ReportFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+        AddField("CustomerId", S["Customer ID"], DataFieldType.Text, record => record.CustomerContentItemId, people)
+            .Identifier(new DataFieldReference(ReportsConstants.ContentsDataSource, "Customer", "ContentItemId"));
+        AddField("AccountManagerId", S["Account manager (user ID)"], DataFieldType.Text, record => record.AccountManagerUserId, people)
+            .Identifier(new DataFieldReference(ReportsConstants.UsersDataSource, ReportsConstants.UsersDataSet, ReportsConstants.UserIdField));
+
+        // The fields LoadAsync filters exactly when a join sends keys, and the data sets the fields point to.
+        Fields.MarkKeyFilterable(["InvoiceId", "CustomerId"]);
+        Descriptor.AddReferencesOf(Fields);
     }
 
-    // The fields LoadAsync filters exactly when the engine sends join keys.
-    protected override IEnumerable<string> KeyFilterableFields => ["InvoiceId", "CustomerId"];
-
-    public override async Task<bool> CanReadAsync(ReportDataSourceContext context)
+    public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         return context?.User is not null &&
             await _authorizationService.AuthorizeAsync(context.User, BillingPermissions.ViewInvoiceReports);
     }
 
-    protected override async Task<IEnumerable<Invoice>> LoadAsync(ReportDataSourceQuery query, int take, CancellationToken cancellationToken)
+    protected override async IAsyncEnumerable<Invoice> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var invoices = _session.Query<Invoice, InvoiceIndex>();
-
         // Join keys: read only the invoices a joined report can match. An empty list means none can match.
-        if (ReportJoinKeys.For(query.Conditions, "InvoiceId") is { } invoiceIds)
+        var invoiceIds = DataConditions.Keys(query.Conditions, "InvoiceId")?.Select(key => key?.ToString()).ToArray();
+        var customerIds = DataConditions.Keys(query.Conditions, "CustomerId")?.Select(key => key?.ToString()).ToArray();
+
+        if (invoiceIds is { Length: 0 } || customerIds is { Length: 0 })
         {
-            if (invoiceIds.Count == 0)
-            {
-                return [];
-            }
-
-            var values = invoiceIds.ToArray();
-            invoices = invoices.Where(index => index.InvoiceId.IsIn(values));
-        }
-
-        if (ReportJoinKeys.For(query.Conditions, "CustomerId") is { } customerIds)
-        {
-            if (customerIds.Count == 0)
-            {
-                return [];
-            }
-
-            var values = customerIds.ToArray();
-            invoices = invoices.Where(index => index.CustomerContentItemId.IsIn(values));
+            yield break;
         }
 
         // The period the report's filters put on the main date, never narrower than the filters.
-        var (from, to) = ReportDateRange.For(query.Conditions, "IssuedUtc");
+        var (from, to) = DataConditions.DateRange(query.Conditions, "IssuedUtc");
 
-        if (from.HasValue)
+        // Called once per page, with a stable order.
+        IQuery<Invoice> Query()
         {
-            var earliest = from.Value;
-            invoices = invoices.Where(index => index.IssuedUtc >= earliest);
+            var invoices = _session.Query<Invoice, InvoiceIndex>();
+
+            if (invoiceIds is not null)
+            {
+                invoices = invoices.Where(index => index.InvoiceId.IsIn(invoiceIds));
+            }
+
+            if (customerIds is not null)
+            {
+                invoices = invoices.Where(index => index.CustomerContentItemId.IsIn(customerIds));
+            }
+
+            if (from.HasValue)
+            {
+                var earliest = from.Value;
+                invoices = invoices.Where(index => index.IssuedUtc >= earliest);
+            }
+
+            if (to.HasValue)
+            {
+                var latest = to.Value;
+                invoices = invoices.Where(index => index.IssuedUtc <= latest);
+            }
+
+            return invoices
+                .OrderByDescending(index => index.IssuedUtc)
+                .ThenByDescending(index => index.Id);
         }
 
-        if (to.HasValue)
+        // Newest first, a page at a time; the base class stops reading at the row limit.
+        await foreach (var invoice in ReportIndexPages.ReadAsync(_session, Query, cancellationToken: cancellationToken))
         {
-            var latest = to.Value;
-            invoices = invoices.Where(index => index.IssuedUtc <= latest);
+            yield return invoice;
         }
-
-        // Newest first, at most `take` records.
-        return await invoices
-            .OrderByDescending(index => index.IssuedUtc)
-            .ThenByDescending(index => index.DocumentId)
-            .Take(take)
-            .ListAsync(cancellationToken);
     }
 }
 ```
 
-The data source lists its data sets:
+The data source lists its data sets. Its name, display name and description are static, and it declares `IDataSource` itself, since `RecordDataSource` is a base class:
 
 ```csharp
-public sealed class BillingReportDataSource : ReportRecordDataSource
+using OrchardCore.DataSources;
+using OrchardCore.Localization;
+
+public sealed class BillingReportDataSource : RecordDataSource, IDataSource
 {
-    public const string SourceName = "Billing";
+    private readonly IRecordDataSet[] _dataSets;
 
-    private readonly IReportRecordDataSet[] _dataSets;
-    private readonly IStringLocalizer S;
-
-    public BillingReportDataSource(
-        InvoicesReportDataSet invoices,
-        IStringLocalizer<BillingReportDataSource> stringLocalizer)
+    public BillingReportDataSource(InvoicesReportDataSet invoices)
     {
         _dataSets = [invoices];
-        S = stringLocalizer;
     }
 
-    public override string Name => SourceName;
+    public static string Name => "Billing";
 
-    public override LocalizedString DisplayName => S["Billing"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<BillingReportDataSource>("Billing");
 
-    public override LocalizedString Description => S["Invoices of the billing module."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<BillingReportDataSource>("Invoices of the billing module.");
 
-    protected override IEnumerable<IReportRecordDataSet> DataSets => _dataSets;
+    protected override IEnumerable<IRecordDataSet> DataSets => _dataSets;
 }
 ```
 
-And a startup registers both when the Report Builder is enabled:
+And a startup registers both when Data Pipelines Core is enabled, which the Report Builder enables:
 
 ```csharp
-using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Reports.DataSources;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
 
-[RequireFeatures(ReportsConstants.BuilderFeature)]
-public sealed class ReportsStartup : StartupBase
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DataSourcesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
         services
             .AddScoped<InvoicesReportDataSet>()
-            .AddScoped<IReportDataSource, BillingReportDataSource>();
+            .AddDataSource<BillingReportDataSource>();
     }
 }
 ```
 
-`AddField` returns the field's `ReportFieldDescriptor`, so you can set its `Description` (a hint shown in the builder). Override `DefaultDateField` instead of setting it on the descriptor when it depends on the data set.
+`AddField(name, displayName, type, read, group)` returns the field's `DataField`, so you can set its `Description` (a hint shown in the builder) or chain the helpers below. A source with many data sets that depend on features, like the Contact Center, injects them as an interface each feature registers (`IContactCenterReportDataSet`), so a data set whose feature is off is never listed.
 
-:::note[Two `ReportDateRange` types]
-`CrestApps.OrchardCore.Reports.DataSources.ReportDateRange` reads the date range of a query's conditions. `CrestApps.OrchardCore.Reports.Models.ReportDateRange` is the reporting period of the built-in date-range filter of the Reports area. A file that imports both namespaces must qualify the one it uses.
-:::
+### The CrestApps helpers
+
+| Helper | What it does |
+| --- | --- |
+| `field.Identifier(params DataFieldReference[] references)` | Marks a field as identifying a record (`IsIdentifier`) and adds the data sets its values point to (`References`). |
+| `Fields.MarkKeyFilterable(names)` | Sets `IsKeyFilterable` on the named fields; see [Join keys](#join-keys). |
+| `Descriptor.AddReferencesOf(Fields)` | Copies the fields' references to the data set's descriptor, so the builder can list related data sets under **Related** before reading their fields. Call it last in the constructor. |
+| `ReportIndexPages.ReadAsync(session, () => query, collection, cancellationToken)` | Reads a YesSql query 500 records at a time and detaches each page from the session once it was read, so a long read does not keep every record in memory. The query is created once per page and needs a stable order. |
+| `ReportIndexPages.ReadPagesAsync(...)` | The same, one page at a time, such as to look up what the records of a page refer to in one call. |
+| `ReportIndexAggregator` | Answers an aggregate query with one `GROUP BY` over a map index; see [Grouping in the data source](#grouping-in-the-data-source). |
 
 ## Sources for external systems
 
-Implement `IReportDataSource` when the data sets or fields are not known in advance, or the rows do not come from records you load. This example reads tickets from a help desk API:
+Implement `IDataSource` when the data sets or fields are not known in advance, or the rows do not come from records you load. This example reads tickets from a help desk API:
 
 ```csharp
-using CrestApps.OrchardCore.Reports.DataSources;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DataSources;
+using OrchardCore.Localization;
 
-public sealed class HelpDeskReportDataSource : IReportDataSource
+public sealed class HelpDeskDataSource : IDataSource
 {
     private const string TicketsDataSet = "Tickets";
 
@@ -226,94 +231,100 @@ public sealed class HelpDeskReportDataSource : IReportDataSource
     private readonly IAuthorizationService _authorizationService;
     private readonly IStringLocalizer S;
 
-    public HelpDeskReportDataSource(
+    public HelpDeskDataSource(
         IHelpDeskClient client,
         IAuthorizationService authorizationService,
-        IStringLocalizer<HelpDeskReportDataSource> stringLocalizer)
+        IStringLocalizer<HelpDeskDataSource> stringLocalizer)
     {
         _client = client;
         _authorizationService = authorizationService;
         S = stringLocalizer;
     }
 
-    public string Name => "HelpDesk";
+    public static string Name => "HelpDesk";
 
-    public LocalizedString DisplayName => S["Help desk"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<HelpDeskDataSource>("Help desk");
 
-    public LocalizedString Description => S["Tickets of the help desk."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<HelpDeskDataSource>("Tickets of the help desk.");
 
-    public async Task<IReadOnlyList<ReportDataSetDescriptor>> GetDataSetsAsync(ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DataSetDescriptor>> GetDataSetsAsync(DataSourceContext context, CancellationToken cancellationToken = default)
     {
         // List only what context.User may read.
         return await CanReadAsync(context) ? [Describe()] : [];
     }
 
-    public async Task<ReportDataSetSchema> GetSchemaAsync(string dataSet, ReportDataSourceContext context, CancellationToken cancellationToken = default)
+    public async Task<DataSetSchema> GetSchemaAsync(string dataSet, DataSourceContext context, CancellationToken cancellationToken = default)
     {
         if (dataSet != TicketsDataSet || !await CanReadAsync(context))
         {
             return null; // The engine refuses the data set.
         }
 
-        return new ReportDataSetSchema
+        return new DataSetSchema
         {
             DataSet = Describe(),
-            Fields = GetFields(),
+            Fields = [.. GetFields()],
         };
     }
 
-    public async Task<ReportDataTable> QueryAsync(ReportDataSourceQuery query, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<DataBatch> ReadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        // Check again: QueryAsync is the last line of defense.
+        // Check again: reading is the last line of defense.
         if (query.DataSet != TicketsDataSet || !await CanReadAsync(query.Context))
         {
-            return new ReportDataTable();
+            yield break;
         }
 
-        // Return at least the fields the report uses; skip the work of the others.
+        // Return the fields the report uses (every field when none is named); skip the work of the others.
         var fields = GetFields()
             .Where(field => query.Fields is null || query.Fields.Count == 0 || query.Fields.Contains(field.Name))
-            .ToList();
+            .ToArray();
 
-        // Optional push-down: ask the API for the period the filters allow, newest first, one more than the limit.
-        var (from, to) = ReportDateRange.For(query.Conditions, "CreatedUtc");
-        var tickets = await _client.GetTicketsAsync(from, to, query.MaxRows + 1, cancellationToken);
-        var table = new ReportDataTable { Fields = fields };
+        // Optional push-down: ask the API for the period the filters allow, newest first, a page at a time.
+        var (from, to) = DataConditions.DateRange(query.Conditions, "CreatedUtc");
+        var remaining = query.MaxRows > 0 ? query.MaxRows : int.MaxValue;
+        var skip = 0;
 
-        foreach (var ticket in tickets)
+        while (remaining > 0)
         {
-            if (table.Rows.Count >= query.MaxRows)
-            {
-                table.Truncated = true;
+            var take = Math.Min(Math.Max(1, query.BatchSize), remaining);
+            var tickets = await _client.GetTicketsAsync(from, to, skip, take, cancellationToken);
 
-                break;
+            if (tickets.Count == 0)
+            {
+                yield break;
             }
 
-            table.Rows.Add(fields.Select(field => ReportDataValues.Coerce(Read(ticket, field.Name), field.DataType)).ToArray());
-        }
+            var rows = tickets
+                .Select(ticket => fields.Select(field => DataValues.Coerce(Read(ticket, field.Name), field.Type)).ToArray())
+                .ToList();
 
-        return table;
+            yield return new DataBatch(fields, rows);
+
+            skip += tickets.Count;
+            remaining -= tickets.Count;
+        }
     }
 
-    private ReportDataSetDescriptor Describe()
+    private DataSetDescriptor Describe()
     {
-        return new ReportDataSetDescriptor(TicketsDataSet, S["Tickets"], S["One row per help desk ticket."])
+        return new DataSetDescriptor(TicketsDataSet, S["Tickets"], S["One row per help desk ticket."])
         {
             DefaultDateField = "CreatedUtc",
         };
     }
 
-    private List<ReportFieldDescriptor> GetFields()
+    private DataField[] GetFields()
     {
         return
         [
-            new ReportFieldDescriptor("TicketId", S["Ticket ID"], ReportDataType.Text) { IsIdentifier = true },
-            new ReportFieldDescriptor("Subject", S["Subject"], ReportDataType.Text),
-            new ReportFieldDescriptor("Priority", S["Priority"], ReportDataType.Text),
-            new ReportFieldDescriptor("RequesterEmail", S["Requester email"], ReportDataType.Text),
-            new ReportFieldDescriptor("CreatedUtc", S["Created"], ReportDataType.DateTime),
-            new ReportFieldDescriptor("ResolvedUtc", S["Resolved"], ReportDataType.DateTime),
-            new ReportFieldDescriptor("ReopenCount", S["Times reopened"], ReportDataType.Integer),
+            new("TicketId", S["Ticket ID"], DataFieldType.Text) { IsIdentifier = true },
+            new("Subject", S["Subject"], DataFieldType.Text),
+            new("Priority", S["Priority"], DataFieldType.Text),
+            new("RequesterEmail", S["Requester email"], DataFieldType.Text),
+            new("CreatedUtc", S["Created"], DataFieldType.DateTime),
+            new("ResolvedUtc", S["Resolved"], DataFieldType.DateTime),
+            new("ReopenCount", S["Times reopened"], DataFieldType.Integer),
         ];
     }
 
@@ -333,7 +344,7 @@ public sealed class HelpDeskReportDataSource : IReportDataSource
         };
     }
 
-    private async Task<bool> CanReadAsync(ReportDataSourceContext context)
+    private async Task<bool> CanReadAsync(DataSourceContext context)
     {
         return context?.User is not null &&
             await _authorizationService.AuthorizeAsync(context.User, HelpDeskPermissions.ViewHelpDeskReports);
@@ -342,33 +353,34 @@ public sealed class HelpDeskReportDataSource : IReportDataSource
 ```
 
 ```csharp
-services.AddScoped<IReportDataSource, HelpDeskReportDataSource>();
+services.AddDataSource<HelpDeskDataSource>();
 ```
 
-A source whose data sets come from somewhere else, such as the tables of a database, lists them in `GetDataSetsAsync` and describes each in `GetSchemaAsync`. A source that has to read data to learn its fields, like the **Queries** source, can sample rows and infer each field's type with `ReportDataValues.InferType`. A source that cannot describe a data set, for example because an upstream definition is broken, may throw `ReportQueryException` (`CrestApps.OrchardCore.Reports.Designer`, in `CrestApps.OrchardCore.Reports.Core`) with a message the builder shows.
+A source whose data sets come from somewhere else, such as the tables of a database, lists them in `GetDataSetsAsync` and describes each in `GetSchemaAsync`. A source that has to read data to learn its fields, like Orchard Core's **Queries** source, can sample rows and infer each field's type with `DataValues.InferType`. A source that cannot describe a data set, for example because an upstream definition is broken, may throw `ReportQueryException` (`CrestApps.OrchardCore.Reports.Designer`, in `CrestApps.OrchardCore.Reports.Core`) with a message the builder shows; a source meant for data pipelines too should throw an exception whose message is safe to show.
 
 ## The contract
 
 | Member | Rule |
 | --- | --- |
-| `Name` | Stable technical name. Designs store it (`ReportDataSetReference.Source`), so never rename it. |
-| `DisplayName`, `Description` | Shown in the builder's data source picker. |
-| `GetDataSetsAsync(context)` | The data sets `context.User` may read. When `context.User` is `null`, return nothing. |
-| `GetSchemaAsync(dataSet, context)` | The fields of a data set, or `null` when it does not exist or the principal may not read it. The engine reads a data set only after this returns a schema: this is the security boundary. |
-| `QueryAsync(query)` | Rows of `query.DataSet` with at least `query.Fields` (every field when the set is empty), at most `query.MaxRows` rows, newest first; set `Truncated` when there are more (read `MaxRows + 1`). Check access again, and honor cancellation. |
-| Data set and field names | Stable: designs store them. Field names may contain dots (`Part.Field.Suffix`) and are referenced as `alias.FieldName`. |
-| `ReportDataSetDescriptor.DefaultDateField` | The data set's main date. A new report starts filtered on its last 30 days, and the source can read only that period. |
-| `ReportDataSetDescriptor.Group`, `ReportFieldDescriptor.Group` | The group a data set or field is listed under in the builder. |
-| `ReportFieldDescriptor.IsIdentifier` | Marks keys and foreign keys, which the builder suggests when joining and never sums by default. |
-| `ReportFieldDescriptor.IsKeyFilterable` | The source filters join keys on this field exactly; see [Join keys](#join-keys). |
+| `static Name` | Stable technical name. Designs store it (`ReportDataSetReference.Source`), so never rename it. |
+| `static DisplayName`, `static Description` | `LocalizationSource`s, such as `LocalizationSource.Create<MySource>("...")`, shown in the builder's data source picker. |
+| `GetDataSetsAsync(context, cancellationToken)` | The data sets `context.User` may read. When `context.User` is `null`, return nothing. |
+| `GetSchemaAsync(dataSet, context, cancellationToken)` | The fields of a data set, or `null` when it does not exist or the principal may not read it. The engine reads a data set only after this returns a schema: this is the security boundary. |
+| `ReadAsync(query, cancellationToken)` | Batches of rows of `query.DataSet` with the fields of `query.Fields` (every field when it is empty), at most `query.MaxRows` rows in all, about `query.BatchSize` rows per batch. Check access again, and honor cancellation. The engine asks for one row more than its limit to tell when a data set has more. |
+| `RecordDataSet<T>.LoadAsync(query, cancellationToken)` | Streams the records in a stable order, a page at a time; the base class stops the enumeration once it has enough rows, so never load every record at once. |
+| Data set and field names | Stable: designs store them. Field names may contain dots (`Part.Field.Property`) and are referenced as `alias.FieldName`. |
+| `DataSetDescriptor.DefaultDateField` | The data set's main date. A new report starts filtered on its last 30 days, and the source can read only that period. |
+| `DataSetDescriptor.Group`, `DataField.Group` | The group a data set or field is listed under in the builder. |
+| `DataField.IsIdentifier` | Marks keys and foreign keys, which the builder suggests when joining and never sums by default. |
+| `DataField.IsKeyFilterable` | The source filters join keys on this field exactly; see [Join keys](#join-keys). |
 | `References` | On a field, the data sets (and their key field) its values point to; on a data set, every data set its fields point to. See [Relationships](#relationships). |
-| `ReportDataSourceContext.Properties` | A bag shared by one run, for example to detect recursion. |
+| `DataSourceContext.Properties` | A bag shared by one run, for example to detect recursion. |
 
 ### Values
 
-Each row is an `object[]` aligned with `ReportDataTable.Fields`. Each `ReportDataType` maps to one CLR type:
+Each row is an `object[]` aligned with the fields of its `DataBatch`. Each `DataFieldType` maps to one CLR type:
 
-| `ReportDataType` | CLR type |
+| `DataFieldType` | CLR type |
 | --- | --- |
 | `Text` | `string` |
 | `Integer` | `long` |
@@ -377,14 +389,14 @@ Each row is an `object[]` aligned with `ReportDataTable.Fields`. Each `ReportDat
 | `Date` | `DateTime`, date only, no time zone; never shifted |
 | `DateTime` | `DateTime` in UTC; the engine converts it to the tenant time zone |
 
-Use `ReportDataValues.Coerce(value, dataType)` to normalize raw values; it also unwraps `System.Text.Json` nodes and parses text with the invariant culture. A missing value is `null`.
+Use `DataValues.Coerce(value, fieldType)` to normalize raw values. A missing value is `null`. `RecordDataSet<T>` converts the values its fields read for you.
 
 ### Conditions you may push down
 
-`query.Conditions` carries the report's row filters as `ReportDataCondition`s (field, `ReportFilterOperator`, typed values, with `DateTime` values already in UTC). Relative date filters (in the last or next N days) arrive as a date range. Applying a condition is **optional** and must never drop a row the engine's own filter would keep, because the engine applies every filter again after reading:
+`query.Conditions` carries the report's row filters as `DataCondition`s (field, `DataFilterOperator`, typed values, with `DateTime` values already in UTC). Relative date filters (in the last or next N days) arrive as a date range. Applying a condition is **optional** and must never drop a row the engine's own filter would keep, because the engine applies every filter again after reading:
 
 - Ignoring every condition is always correct.
-- `ReportDateRange.For(conditions, field)` returns inclusive bounds that never drop a matching row; apply them to an indexed date column.
+- `DataConditions.DateRange(conditions, field)` returns the narrowest inclusive bounds the conditions allow; a missing bound is `null`. Apply them to an indexed date column.
 - Text compares ignoring case in the engine, so do not push text equality to a case-sensitive collation.
 - Conditions are offered only for data sets that no outer join can fill with empty values.
 
@@ -392,38 +404,39 @@ Use `ReportDataValues.Coerce(value, dataType)` to normalize raw values; it also 
 
 When a report joins a data set with an inner or left join, the engine can send the distinct keys of the rows before it, so the joined data set reads only the records that can match instead of its newest records up to the row limit. To take part:
 
-1. Mark the field `IsKeyFilterable` (with `ReportRecordDataSet<T>`, list it in `KeyFilterableFields`). Only `Text` and `Integer` fields joined to a field of the same type are narrowed.
-2. Read the keys with `ReportJoinKeys.For(query.Conditions, field)`: `null` when no join key condition applies to the field, an empty list when no record can match, or the values as text, with their case kept.
+1. Mark the field `IsKeyFilterable` (with the helper, `Fields.MarkKeyFilterable(names)`). Only `Text` and `Integer` fields joined to a field of the same type are narrowed.
+2. Read the keys with `DataConditions.Keys(query.Conditions, field)`: `null` when no condition limits the field to a list of values, an empty list when no record can match, or the values.
 3. Apply them **exactly**: return every record whose value is one of the keys, and no other. A source that cannot must not set the flag.
 
 The keys arrive as an `In` condition with `IsJoinKey` set, in batches of `JoinKeyBatchSize`, up to `MaxJoinKeys` keys; with more keys, the joined data set is read in full (see [Configuration](index.md#configuration)).
 
 ## Relationships
 
-A `ReportFieldReference(source, dataSet, field)` on a field says that its values identify records of another data set, such as an invoice's customer:
+A `DataFieldReference(source, dataSet, field)` on a field says that its values identify records of another data set, such as an invoice's customer:
 
-- The builder joins on it automatically when both data sets are in a report, lists the referenced data sets under **Related** in **Add data set**, and suggests the join.
-- Reference other modules' data sets by their stable names, such as `new ReportFieldReference("ContactCenter", "DialerProfiles", "ItemId")`, or the users data set with `ReportsConstants.UsersDataSource`, `ReportsConstants.UsersDataSet` and `ReportsConstants.UserIdField`. A content type is `new ReportFieldReference(ReportsConstants.ContentsDataSource, "{ContentType}", "ContentItemId")`.
+- The builder joins on it automatically when both data sets are in a report, lists the referenced data sets under **Related** in **Add data set**, and suggests the join. Add the references to the data set too (`Descriptor.AddReferencesOf(Fields)`), so **Related** can list them before the fields are read.
+- Reference other modules' data sets by their stable names, such as `new DataFieldReference("ContactCenter", "DialerProfiles", "ItemId")`, or the users data set with `ReportsConstants.UsersDataSource`, `ReportsConstants.UsersDataSet` and `ReportsConstants.UserIdField`. A content type is `new DataFieldReference(ReportsConstants.ContentsDataSource, "{ContentType}", "ContentItemId")`.
 - A reference to a source that is not enabled is simply unused.
 - Declare references only when the source knows them without reading data, for example from definitions.
 
 ## Grouping in the data source
 
-A report over one data set that groups by fields or date periods and counts, sums, averages, or takes the smallest or largest values can be answered by its source, so the engine reads a few groups instead of every row (see [Large data](large-data.md#grouping-in-the-data-source)).
+A report over one data set that groups by fields or date periods and counts, sums, averages, or takes the smallest or largest values can be answered by its source, so the engine reads a few groups instead of every row (see [Large data](large-data.md#grouping-in-the-data-source)). The engine asks a source that implements Orchard Core's `IDataAggregateSource`; `RecordDataSource` implements it and passes the query to the data set, once it checked access, when the data set implements `IAggregateRecordDataSet`.
 
-For YesSql records, implement `IReportAggregateDataSet` on the data set and hand the query to `ReportIndexAggregator` (namespace `CrestApps.OrchardCore.Reports.Designer.DataSources`, in `CrestApps.OrchardCore.Reports.Core`), which answers it with one `GROUP BY` statement over the map index table:
+For YesSql records, implement `IAggregateRecordDataSet` on the data set and hand the query to `ReportIndexAggregator`, which answers it with one `GROUP BY` statement over the map index table:
 
 ```csharp
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
+using OrchardCore.DataSources;
 
-public sealed class InvoicesReportDataSet : ReportRecordDataSet<Invoice>, IReportAggregateDataSet
+public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>, IAggregateRecordDataSet
 {
     // The report fields whose values the index copies unchanged, mapped to their index column.
     private IReadOnlyDictionary<string, string> _aggregateColumns;
 
     // ...constructor, fields, CanReadAsync and LoadAsync as above...
 
-    public Task<ReportAggregateTable> AggregateAsync(ReportAggregateQuery query, CancellationToken cancellationToken)
+    public Task<IReadOnlyList<object[]>> AggregateAsync(DataAggregateQuery query, CancellationToken cancellationToken = default)
     {
         _aggregateColumns ??= ReportIndexAggregator.MapByName<InvoiceIndex>(Fields.Select(field => field.Name));
 
@@ -432,11 +445,11 @@ public sealed class InvoicesReportDataSet : ReportRecordDataSet<Invoice>, IRepor
 }
 ```
 
-`ReportRecordDataSource` passes the query to a readable data set that implements `IReportAggregateDataSet`, after checking access. `MapByName` maps each field to the index column of the same name; pass your own dictionary when the names differ, and map only fields whose index column holds exactly the value the field reads. Pass the index's collection as the second argument when the records are stored in one.
+`MapByName` maps each field to the index column of the same name; pass your own dictionary when the names differ, and map only fields whose index column holds exactly the value the field reads. Pass the index's collection as the second argument when the records are stored in one. A data set that limits which records a principal reads beyond its permission should return `null` instead, since the statement reads the whole index.
 
 `ReportIndexAggregator` declines (returns `null`) whenever it cannot answer exactly the way the engine would: a field that is not a mapped column, a text comparison other than equality, equality on non-ASCII text, an empty-text test on a text column, or more groups than `MaxGroups`. Enum columns are compared and grouped by name, and date buckets are written as a `CASE` expression over UTC boundaries.
 
-To group anything else, implement `IReportAggregateDataSource` on the source (or `IReportAggregateDataSet` on a record data set) yourself:
+To group anything else, implement `AggregateAsync(DataAggregateQuery, CancellationToken)` yourself:
 
 - `query.Groups` lists the fields to group by. A group with `Boundaries` is a date bucketed by those ascending UTC boundaries: its value is the zero-based bucket index as a `long`, and records outside every bucket or without a value fall in a `null` group.
 - `query.Measures` lists what to compute per group: `Count` (of the field's values, or of all records when `Field` is `null`), `Sum`, `Min` and `Max`.
@@ -446,79 +459,49 @@ To group anything else, implement `IReportAggregateDataSource` on the source (or
 
 ## Security
 
-- When a saved report runs, `context.User` is the **report owner's** principal, not the viewer's. Filter by that principal exactly as you would for the owner. While a report is designed, it is the designer.
+- When a saved report runs, `context.User` is the **report owner's** principal, not the viewer's. Filter by that principal exactly as you would for the owner. While a report is designed, it is the designer. In a data pipeline, it is the user who published the pipeline.
 - Never fall back to "everything" when the principal is `null` or cannot be authorized: return no data sets, a `null` schema, and no rows.
-- Check access in `GetDataSetsAsync`, `GetSchemaAsync` and again in `QueryAsync` (`ReportRecordDataSource` does this for you).
+- Check access in `GetDataSetsAsync`, `GetSchemaAsync` and again in `ReadAsync` (`RecordDataSource` does this for you through `CanReadAsync`).
 - Never expose secrets, password hashes, tokens, message bodies, IP addresses or storage locations.
 
 See [Permissions and security](permissions.md).
 
-## Content fields and parts
+## Content parts and fields
 
-To report on a custom content field type or content part, extend the built-in **Content items** source instead of writing a new one. These types are in the `CrestApps.OrchardCore.Reports` module (namespaces `CrestApps.OrchardCore.Reports.Contents`, `.Contents.Services` and `.Contents.Models`), so the module that registers them references it and requires `ReportsConstants.BuilderFeature` and `OrchardCore.Contents`.
-
-A field type whose value is one JSON property of the field needs one line:
+The built-in **Content items** source is Orchard Core's. It reads the parts and content fields registered in code from the public properties of their classes, and the fields added in the admin from the part definitions, so a part your module registers with `AddContentPart<TPart>()` is offered without any work. To read a part or a field type differently, such as with another type, as a list, or when it has no class, describe its values in `ContentDataSourceOptions` (namespace `OrchardCore.DataSources.Contents`, from Orchard Core's Data Pipelines module):
 
 ```csharp
-services.AddContentReportFieldProvider("RatingField", ReportDataType.Integer, ContentReportValueMode.Single, "Value");
-```
+using OrchardCore.DataSources;
+using OrchardCore.DataSources.Contents;
 
-`ContentReportValueMode.Single` reads one value, `First` the first entry of an array, and `Join` the non-empty entries of an array joined with commas. The property names are tried in order.
-
-A field type with several values implements `IContentReportFieldProvider`. The first field uses the base name `{PartName}.{FieldName}`; extra values add a suffix:
-
-```csharp
-using CrestApps.OrchardCore.Reports.Contents.Models;
-using CrestApps.OrchardCore.Reports.Contents.Services;
-using CrestApps.OrchardCore.Reports.DataSources;
-using Microsoft.Extensions.Localization;
-
-public sealed class AddressFieldReportProvider : IContentReportFieldProvider
+services.Configure<ContentDataSourceOptions>(options =>
 {
-    private readonly IStringLocalizer S;
+    // A field type with several values becomes one {PartName}.{FieldName}.{Property} field per value.
+    options.Fields["AddressField"] =
+    [
+        new("City", DataFieldType.Text),
+        new("PostalCode", DataFieldType.Text),
+        new("CountryCode", DataFieldType.Text),
+    ];
 
-    public AddressFieldReportProvider(IStringLocalizer<AddressFieldReportProvider> stringLocalizer)
-    {
-        S = stringLocalizer;
-    }
-
-    public string FieldType => "AddressField";
-
-    public IEnumerable<ContentReportField> GetFields(ContentReportFieldContext context)
-    {
-        return
-        [
-            context.CreateElementField(null, context.DisplayName, ReportDataType.Text, ContentReportValueMode.Single, "City"),
-            context.CreateElementField("PostalCode", S["{0} (postal code)", context.DisplayName], ReportDataType.Text, ContentReportValueMode.Single, "PostalCode"),
-            context.CreateElementField("Country", S["{0} (country)", context.DisplayName], ReportDataType.Text, ContentReportValueMode.Single, "CountryCode"),
-        ];
-    }
-}
+    // A part value becomes the field {PartName}.{Property}; a path reads a nested property.
+    options.Parts["RatingPart"] =
+    [
+        new("Score", DataFieldType.Decimal),
+        new("Votes.Count", DataFieldType.Integer) { DisplayName = "Votes", IsReadOnly = true },
+    ];
+});
 ```
 
-```csharp
-[RequireFeatures(ReportsConstants.BuilderFeature, "OrchardCore.Contents")]
-public sealed class ContentReportsStartup : StartupBase
-{
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IContentReportFieldProvider, AddressFieldReportProvider>();
-    }
-}
-```
-
-- Providers are keyed by `FieldType`; the provider registered last wins, so a module can replace a built-in one. A field type no provider handles is read as text from its `Text` or `Value` property.
-- Every property a part stores is already offered, discovered from the stored items and typed from their values (see [Every property of every part](data-sources.md#every-property-of-every-part)). Implement `IContentReportPropertySource` to type the properties of your own parts, including before any item stores them: return each property's path within the part (dots between nested names) and its `ReportDataType`, and nothing for parts you do not know. A typed property wins over one inferred from stored values. Register it with `services.AddScoped<IContentReportPropertySource, MyPartPropertySource>()`.
-- For part data with friendlier names, computed values, or references, implement `IContentReportPartProvider`. Every provider is asked about every part and returns nothing for parts it does not know; the fields of all providers are combined. Name the fields `{PartName}.{Property}` with `ContentReportFieldContext.GetFieldName`.
-- For a value that is computed, derive a field from `ContentReportField`. Override `GetValue` to read the value from a content item, and `PrepareAsync` for work done once per query, such as loading the display texts of referenced items. `PrepareAsync` runs only when a report uses the field. Values may be raw JSON nodes; the source converts them to the field's type.
-- Create descriptors with `ContentReportFieldContext.CreateDescriptor`, and set `IsIdentifier` and `References` on fields that point to other content items or users.
+A described field type is read only as described, so the names of its fields do not change. See [Reading more parts and fields](https://docs.orchardcore.net/en/latest/reference/modules/DataSources/#reading-more-parts-and-fields) in the Orchard Core documentation.
 
 ## Checklist
 
 - Names of the source, its data sets and its fields are stable, and field names are unique within a data set.
 - Every data set and schema is hidden from a principal that may not read it, and a `null` principal sees nothing.
 - Every value has the CLR type of its field, date-times are UTC, and missing values are `null`.
-- `QueryAsync` returns at most `MaxRows` rows, newest first, and sets `Truncated` when there are more.
+- Records are streamed in a stable order, a page at a time, newest first when the data set has a main date.
 - Pushed-down conditions never drop a row the engine would keep; join keys and aggregates are exact or declined.
-- Identifiers are marked, references declared where known, and the main date set.
+- Identifiers are marked, references declared where known and added to the descriptor, and the main date set.
+- The source is registered with `AddDataSource<T>()` in a startup that requires `OrchardCore.DataPipelines.Core`.
 - The source's feature and permissions are listed in the [Feature reference](../../feature-reference.md), and its configuration, if any, in [Configuration](../../configuration.md).

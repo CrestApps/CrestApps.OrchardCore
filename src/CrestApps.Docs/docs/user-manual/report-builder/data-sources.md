@@ -9,6 +9,8 @@ technical_manual:
 
 A **data source** is where a report's data comes from. Each one offers one or more **data sets**, which are like tables. The data sources you see depend on the features your site uses and on your permissions.
 
+The data sources are shared with Orchard Core: **Content items**, **Users** and **Queries** come from Orchard Core itself, and the data sources of the CrestApps features are also offered to Orchard Core's data pipelines, so a data pipeline can read the same data as your reports.
+
 Watch the short video, then read about each data source below.
 
 <video controls preload="metadata" width="100%" poster="/img/docs/report-builder-data-sources.jpg" aria-label="Video: a tour of the data sources and data sets the Report Builder offers">
@@ -28,7 +30,7 @@ Watch the short video, then read about each data source below.
 
 | Data source | What it offers | Shown when | You need |
 | --- | --- | --- | --- |
-| **Content items** | One data set per content type of the site, such as *Customer* or *Order*, with the published items. Widgets are left out. | The **Contents** feature is on. | Permission to view that content type. |
+| **Content items** | One data set per content type of the site, such as *Customer* or *Order*, grouped by the kind of content type (its stereotype). | The **Contents** feature is on. | Permission to view that content type. |
 | **Queries** | One data set per saved query, such as a SQL or search query, with the rows it returns. | The **Queries** feature is on. | Permission to run that query: **Execute Api - All queries**, or **Execute Api -** *the query's name*. |
 | **Report views** | The [reusable views](views.md) you and your team saved. | Always. | **Build reports and manage own custom reports and views**. |
 | **Users** | **Users** (one row per user account) and **User roles** (one row per user and role). | Always. | **View Users**. |
@@ -41,21 +43,30 @@ If a data source or data set is missing, your site may not use the feature that 
 
 ## Content items
 
-Each content type is a data set with the information every item has (**Content item ID**, **Display text**, **Content type**, **Owner**, **Author**, **Created**, **Modified**, **Published on**, **Published**) and its own fields, grouped by part. Some fields give extra values: a content picker gives the ID of the item it picks and the display text of the items, and a link gives its address and its text.
+Each content type is a data set. It starts with the information every item has, in the **Content item** group: **Content item id**, **Version id**, **Content type**, **Display text**, **Owner**, **Author**, **Published**, **Latest**, **Created**, **Modified** and **Published on**.
 
-Everything else a content type stores can be a column too, including the settings and values of parts added by modules, such as the contact preferences of a contact. Look for them in the **(more)** group of each part, such as **Omnichannel Contact (more)**. Values that look secret, such as passwords and access tokens, are never offered.
+Then come the values of its parts and fields, grouped by part:
+
+- a field with one value is one column, such as an order's *Total*;
+- a field with several values gives one column per value, such as the address and the text of a link;
+- a field that holds several items, such as a content picker or a user picker, gives their IDs, separated by commas;
+- the values of the parts, such as the title of a **Title** part, and the values of the parts that features add, such as the contact preferences of a contact.
+
+Values that look secret, such as passwords and access tokens, are never offered.
+
+Which items you see depends on your permissions for the content type. If you may edit it, you see the latest version of each item, drafts included; use the **Published** column to tell them apart. Otherwise you see the published items only. When a saved report runs, this follows the permissions of the report's owner.
 
 To protect sensitive content from report builders, your administrator can make its content type **Securable** and allow only some roles to view it.
 
 ## Queries
 
-Each saved query is a data set. A query does not list its columns, so its fields are found in the rows it returns: a query that returns no rows yet offers no fields. The query runs without parameters, once per report run, so its parameters need default values.
+Each saved query is a data set, grouped by the kind of query, such as SQL. A query does not list its columns, so its fields are found in the first rows it returns: a query that returns no rows yet offers no fields. A query that returns content items offers the information every item has, such as **Display text** and **Owner**, but not the values of their parts and fields; to report on those, use the **Content items** data source. The query runs without parameters, once per report run, so its parameters need default values.
 
 ## Users
 
-**Users** lists every user account with its **User name**, **Email**, **Roles**, whether it is **Enabled**, and other account settings, plus the custom user settings stored with the users. Passwords, security codes, tokens and other secrets are never shown. **User roles** has one row per user and role, so you can count the users of each role.
+**Users** lists every user account with its **User name**, **Email**, **Roles**, whether it is **Enabled**, and other account settings, such as whether two-factor authentication is on and the number of failed sign-ins. Passwords, security codes, tokens and other secrets are never shown. **User roles** has one row per user and role, with the **Role**, so you can count the users of each role.
 
-Content items, activities and other records that point to a user are joined to **Users** for you.
+The owner of a content item, and the records of other features that point to a user, such as an activity's assigned user, are joined to **Users** for you.
 
 ## Records of other features
 
@@ -69,6 +80,6 @@ The **Report views** data source lists the views saved under **Reports > Report 
 
 ## More data sources
 
-Your administrator or developer can add data sources for other systems, such as another database or a business application. They appear in **Add data set** like the ones above. How to build one is described in the Technical Manual: [Add your own data source](../../modules/report-builder/custom-data-sources.md).
+Your administrator or developer can add data sources for other systems, such as another database or a business application, and other Orchard Core modules can add their own. They appear in **Add data set** like the ones above. How to build one is described in the Technical Manual: [Add your own data source](../../modules/report-builder/custom-data-sources.md).
 
 Next: [Publish and versions](publish-and-versions.md).

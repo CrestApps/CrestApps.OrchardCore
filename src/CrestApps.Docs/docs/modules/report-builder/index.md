@@ -7,7 +7,7 @@ user_manual:
   - user-manual/report-builder/getting-started
 ---
 
-The **Report Builder** feature of the [Reports](../reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. The built-in sources cover content items, saved queries, reusable views and users, other CrestApps modules add their records, and any module can add more.
+The **Report Builder** feature of the [Reports](../reports.md) module lets people build their own reports in the browser. A designed report reads data sets from one or more **data sources**, joins them, adds calculated fields, filters, groups and aggregates the rows, and renders tables, charts, headline metrics and pivot tables through the same renderer and exporters as every other report. The data sources, the formula language and the share links come from Orchard Core's **Data Pipelines Core** feature: Orchard Core provides the content items, users and saved queries sources, the builder adds reusable views, other CrestApps modules add their records, and any module can add more.
 
 This video walks through the Report Builder: building a report, aggregates and formulas, filters, visuals, joins, reusable views, sharing, and every data source.
 
@@ -20,7 +20,7 @@ This video walks through the Report Builder: building a report, aggregates and f
 | --- | --- |
 | **Feature Name** | Report Builder |
 | **Feature ID** | `CrestApps.OrchardCore.Reports.Builder` |
-| **Dependency** | `CrestApps.OrchardCore.Reports` |
+| **Dependencies** | `CrestApps.OrchardCore.Reports`, `OrchardCore.DataPipelines.Core` (Orchard Core 4.0) |
 
 How people use the builder is described in the User Manual, starting at [Report Builder](../../user-manual/report-builder/index.md).
 
@@ -30,8 +30,8 @@ How people use the builder is described in the User Manual, starting at [Report 
 | --- | --- |
 | [Permissions and security](permissions.md) | The four permissions, how reports and views are authorized per resource, the owner's-access model, share links and limits. |
 | [Built-in data sources](data-sources.md) | Every data source and data set the builder offers, when each is registered, and the permission each asks for. |
-| [Add your own data source](custom-data-sources.md) | Extending the builder: `IReportDataSource`, `ReportRecordDataSource` and `ReportRecordDataSet<T>`, grouping in the source, join keys, and content field providers. |
-| [Formula reference](formulas.md) | The formula language: syntax, operators, types, and every function. |
+| [Add your own data source](custom-data-sources.md) | Extending the builder with an Orchard Core data source: `IDataSource`, `RecordDataSource` and `RecordDataSet<T>`, grouping in the source, join keys, relationships, and more content parts and fields. |
+| [Formula reference](formulas.md) | The formula language of Orchard Core as reports use it: syntax, operators, types, aggregate formulas, and every built-in function. |
 | [Large data](large-data.md) | Row limits, date push-down, grouping in the source, join key narrowing, and scheduled views. |
 | [Drafts, versions and real time](drafts-versions-and-real-time.md) | Autosave, revisions and conflicts, publishing, versions, and SignalR presence. |
 | [Workflows and report events](workflows.md) | The workflow events and tasks, and `IReportEventHandler`. |
@@ -39,16 +39,18 @@ How people use the builder is described in the User Manual, starting at [Report 
 
 ## Architecture
 
-The builder is split over the three Reports layers, so the engine can be reused outside Orchard Core and data sources can be added from any module:
+The builder is built on Orchard Core's **Data Pipelines Core** feature (`OrchardCore.DataPipelines.Core`, part of the Data Pipelines module), which the Report Builder feature depends on, so enabling the builder enables it. Data Pipelines Core provides the data sources and their contract (`IDataSource`, `IDataSourceManager`, `RecordDataSource`, `RecordDataSet<T>`, `DataField`, `DataCondition`, `IDataAggregateSource`), the formula language and its function catalog (`ExpressionCompiler`, `IExpressionFunctionCatalog`), the data operations, and the shared links (`ISharedLinkManager`). See Orchard Core's [Data Sources](https://docs.orchardcore.net/en/latest/reference/modules/DataSources/) and [Data Pipelines](https://docs.orchardcore.net/en/latest/reference/modules/DataPipelines/) documentation.
 
-- **`CrestApps.OrchardCore.Reports.Abstractions`** holds the data source contract (`IReportDataSource`, `IReportAggregateDataSource`, `IReportDataSourceManager`, `ReportDataType`, `ReportFieldDescriptor`, `ReportFieldReference`, `ReportDataSetDescriptor`, `ReportDataSetSchema`, `ReportDataSourceQuery`, `ReportDataCondition`, `ReportDataTable`, `ReportDataValues`, `ReportJoinKeys`, `ReportDateRange`, and the `ReportRecordDataSource` and `ReportRecordDataSet<T>` base classes) in the `CrestApps.OrchardCore.Reports.DataSources` namespace, and the designed query model (`ReportQueryDefinition`, `ReportDataSetReference`, `ReportJoinDefinition`, `ReportCalculatedField`, `ReportFilterDefinition`, `ReportColumnDefinition`, `ReportSortDefinition`, `ReportVisualDefinition`, and the `ReportAggregate`, `ReportFieldTransform`, `ReportFilterControl`, `ReportFilterStage`, `ReportJoinType` and `ReportVisualType` enums) in `CrestApps.OrchardCore.Reports.Designer`.
-- **`CrestApps.OrchardCore.Reports.Core`** holds the engine: `ReportQueryPlanner` checks a query against the live schemas and compiles it, `ReportQueryEngine` runs it, the formula language lives in `Designer/Expressions`, `ReportDesignDocumentBuilder` turns a result into a `ReportDocument`, and `ReportIndexAggregator` lets YesSql-backed sources group in the database.
-- **`CrestApps.OrchardCore.Reports`** holds the Orchard Core side: the stores of designed reports, views, drafts, versions and share links, permissions and the authorization handler, the builder pages and JSON endpoints, the admin menu, the background task that refreshes scheduled views, and the built-in **Report views**, **Users**, **Content items** and **Queries** data sources.
+On top of it, the builder is split over the three Reports layers, so the engine can be reused outside Orchard Core and data sources can be added from any module:
+
+- **`CrestApps.OrchardCore.Reports.Abstractions`** references `OrchardCore.DataSources.Abstractions` and adds a few helpers for data sets (`DataFieldExtensions`, in the `CrestApps.OrchardCore.Reports.DataSources` namespace), and `ReportsConstants`, which names the built-in sources and the builder's feature.
+- **`CrestApps.OrchardCore.Reports.Core`** holds the designed query model (`ReportQueryDefinition`, `ReportDataSetReference`, `ReportJoinDefinition`, `ReportCalculatedField`, `ReportFilterDefinition`, `ReportColumnDefinition`, `ReportSortDefinition`, `ReportVisualDefinition`, in the `CrestApps.OrchardCore.Reports.Designer` namespace, with Orchard Core's `DataAggregate`, `DataFieldTransform` and `DataJoinType` enums) and the engine: `ReportQueryPlanner` checks a query against the live schemas and compiles its formulas with the function catalog, `ReportQueryEngine` runs it, and `ReportDesignDocumentBuilder` turns a result into a `ReportDocument`. `ReportIndexPages` and `ReportIndexAggregator` (namespace `CrestApps.OrchardCore.Reports.Designer.DataSources`) help YesSql-backed sources read page by page and group in the database.
+- **`CrestApps.OrchardCore.Reports`** holds the Orchard Core side: the stores of designed reports, views, drafts and versions, permissions and the authorization handler, the builder pages and JSON endpoints, the admin menu, the background task that refreshes scheduled views, the **Report views** data source, and the shared link handler that opens a report through an Orchard Core shared link.
 
 A run goes through these steps:
 
 1. **Plan.** Every data set's schema is read with the principal the run reads data for. A data set the principal may not read fails the plan. Joins, calculated fields, columns, filters, sorts and the limit are checked, and every problem is reported at once.
-2. **Read.** Each data source returns only the fields the query uses, up to the row limit, newest first. Row filters on data sets that no outer join can fill with empty values are offered to the source as `ReportDataCondition`s, which it may apply to read less; the engine always applies every filter again. Data sets are read in join order: a joined data set is read only for the keys the rows before it hold (see [Large data](large-data.md#joins-read-only-what-can-match)). A simple report over one data set can be answered by the source itself (see [Large data](large-data.md#grouping-in-the-data-source)).
+2. **Read.** Each data source is resolved by name through `IDataSourceManager` and streams only the fields the query uses, in batches, up to the row limit, in the order the source reads (newest first for the CrestApps sources). Row filters on data sets that no outer join can fill with empty values are offered to the source as `DataCondition`s, which it may apply to read less; the engine always applies every filter again. Data sets are read in join order: a joined data set is read only for the keys the rows before it hold (see [Large data](large-data.md#joins-read-only-what-can-match)). A simple report over one data set can be answered by the source itself (see [Large data](large-data.md#grouping-in-the-data-source)).
 3. **Join.** Data sets are hash-joined in order (inner, left, right or full). Keys of different types (text and number) are compared as text; empty keys never match.
 4. **Calculate, filter, group.** Row-level calculated fields are evaluated, then fixed filters, then the exposed filters with the viewer's values. When any column is a measure, rows are grouped by the dimension columns.
 5. **Shape.** Result filters, sorts, the row limit and the result-size limit are applied.
@@ -74,11 +76,11 @@ Values are formatted with the current culture. A column's **Format** is a .NET f
 | `/Admin/reports/builder/create`, `/Admin/reports/builder/edit/{id}` | The builder. |
 | `/Admin/reports/views`, `/Admin/reports/views/create`, `/Admin/reports/views/edit/{id}` | Reusable views. |
 | `/reports/view/{id}` | A report shared with users or roles, outside the admin, for people without admin access. |
-| `/reports/shared/{token}` | A report opened through a share link. |
+| `/SharedLinks/{linkId}?token=...` | A report opened through a share link. The page is Orchard Core's, and opens the report through the Report Builder's handler; see [Share links](permissions.md#share-links). |
 
 Run and export pages read exposed filter values from the query string: `applied=1`, then `f.{filterId}` (repeatable) or `f.{filterId}.from` and `f.{filterId}.to` for ranges.
 
-The builder talks to JSON endpoints under `/Admin/reports/builder/api/` (`sources`, `datasets`, `schema`, `functions`, `plan`, `users`), `/Admin/reports/builder/preview`, `/Admin/reports/builder/save`, `/Admin/reports/views/save`, the draft and version endpoints described in [Drafts, versions and real time](drafts-versions-and-real-time.md), and the share link endpoints `/Admin/reports/builder/{id}/links`. They are internal to the builder and may change.
+The builder talks to JSON endpoints under `/Admin/reports/builder/api/` (`sources`, `datasets`, `schema`, `functions`, `plan`, `users`), `/Admin/reports/builder/preview`, `/Admin/reports/builder/save`, `/Admin/reports/views/save`, the draft and version endpoints described in [Drafts, versions and real time](drafts-versions-and-real-time.md), and the share link endpoints under `/Admin/reports/builder/{id}/links` (list, `create`, and `{linkId}/revoke`). They are internal to the builder and may change.
 
 ## Configuration
 

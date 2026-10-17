@@ -11,19 +11,19 @@ The engine processes rows in memory, so every data source gets joins, formulas a
 
 ## Limits
 
-The engine reads each data set up to `MaxRowsPerDataSet` rows (newest first) and warns when a data set has more. Joins may produce at most `MaxJoinedRows` rows, and a result keeps at most `MaxResultRows` rows after sorting. The defaults and how to change them are in [Configuration](index.md#configuration).
+Data sources stream their rows in batches (500 rows by default), and record-backed sources read their store a page at a time, so a source never loads more than the engine asks for. The engine reads each data set up to `MaxRowsPerDataSet` rows, in the order the source reads (newest first for the CrestApps sources), and warns when a data set has more: it asks for one row more than the limit to tell. Joins may produce at most `MaxJoinedRows` rows, and a result keeps at most `MaxResultRows` rows after sorting. The defaults and how to change them are in [Configuration](index.md#configuration).
 
 Four mechanisms keep large data sets fast and complete.
 
 ## A date filter from the start
 
-Data sets name their main date (`ReportDataSetDescriptor.DefaultDateField`, such as when a record was created). When the first data set of a new report has one, the builder adds a filter on it that viewers see as a **recent period** (today, the last 7, 30 or 90 days, the last 12 months, or all time), starting at the last 30 days.
+Data sets name their main date (`DataSetDescriptor.DefaultDateField`, such as when a record was created). When the first data set of a new report has one, the builder adds a filter on it that viewers see as a **recent period** (today, the last 7, 30 or 90 days, the last 12 months, or all time), starting at the last 30 days.
 
-Relative date filters (in the last or next N days) are passed to the sources as a date range, so they read only that period. Record-backed sources read the range with `ReportDateRange.For` and apply it to an indexed date column; see [Add your own data source](custom-data-sources.md#conditions-you-may-push-down).
+Relative date filters (in the last or next N days) are passed to the sources as a date range, so they read only that period. Record-backed sources read the range with `DataConditions.DateRange` and apply it to an indexed date column; see [Add your own data source](custom-data-sources.md#conditions-you-may-push-down).
 
 ## Grouping in the data source
 
-A report over one data set that groups by fields or date periods and counts, sums, averages, or takes the smallest or largest values can be answered by its source (`IReportAggregateDataSource`). The source returns per group the row count and the count, sum, smallest and largest value of each measured field; the engine merges these partial aggregates wherever it would aggregate rows, so sorting, result filters, totals, charts and pivots give the same result as reading every row.
+A report over one data set that groups by fields or date periods and counts, sums, averages, or takes the smallest or largest values can be answered by its source, through Orchard Core's `IDataAggregateSource` (a `RecordDataSource` passes it to the data set when it implements `IAggregateRecordDataSet`). The source returns per group the row count and the count, sum, smallest and largest value of each measured field; the engine merges these partial aggregates wherever it would aggregate rows, so sorting, result filters, totals, charts and pivots give the same result as reading every row.
 
 The engine asks the source only when the report:
 
@@ -38,7 +38,7 @@ Row filters are sent as exact conditions and date periods as UTC boundaries of l
 
 ## Joins read only what can match
 
-For an inner or left join on a field the source can filter exactly (`ReportFieldDescriptor.IsKeyFilterable`), the engine sends the distinct keys of the rows before it as an `IN` condition marked `IsJoinKey`, in batches of `JoinKeyBatchSize` up to `MaxJoinKeys` keys. The joined data set then reads the records that can match instead of its newest records. Only text and whole-number keys joined to a field of the same type are narrowed this way.
+For an inner or left join on a field the source can filter exactly (`DataField.IsKeyFilterable`), the engine sends the distinct keys of the rows before it as an `In` `DataCondition` marked `IsJoinKey`, in batches of `JoinKeyBatchSize` up to `MaxJoinKeys` keys. The joined data set then reads the records that can match instead of its newest records. Only text and whole-number keys joined to a field of the same type are narrowed this way.
 
 Users, content items, Omnichannel activities, Contact Center records, AI chat sessions and messaging conversations and messages filter their key columns this way; a join with more keys, or on another field, reads the joined data set in full, up to `MaxRowsPerDataSet`. When the rows before a join hold no key at all, the joined data set is not read. See [Join keys](custom-data-sources.md#join-keys).
 
@@ -60,4 +60,5 @@ How people schedule a view is described in the User Manual: [Reusable views](../
 - Index the main date and every key column a join filters, and mark those keys `IsKeyFilterable`.
 - Implement grouping in the source for the fields its index holds.
 - For a heavy view that many reports read, schedule it.
+- Read the store a page at a time (`ReportIndexPages` for YesSql) rather than loading every record at once.
 - Raise the limits in [Configuration](index.md#configuration) only after the above, and watch memory: every row read is held in memory during the run.

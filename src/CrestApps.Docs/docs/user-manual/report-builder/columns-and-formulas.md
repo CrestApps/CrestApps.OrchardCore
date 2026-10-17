@@ -145,13 +145,15 @@ A formula that uses an aggregate function (**SUM**, **AVG**, **MIN**, **MAX**, *
 
 ### Functions
 
-The functions list in the formula window explains every function. They cover:
+The formula language is Orchard Core's, so formulas work the same way in reports and in Orchard Core's data pipelines. The functions list in the formula window explains every function. They cover:
 
 - **Text**, such as **UPPER**, **LOWER**, **PROPER**, **LEFT**, **RIGHT**, **MID**, **LEN**, **TRIM**, **REPLACE**, **CONTAINS**, **STARTSWITH**, **SPLIT** and **TEXT**.
 - **Numbers**, such as **ROUND**, **FLOOR**, **CEILING**, **ABS**, **POWER**, **SQRT** and **MOD**.
 - **Dates**, such as **TODAY**, **NOW**, **YEAR**, **MONTH**, **WEEKDAY**, **DATEADD**, **DATEDIFF** and **DATETRUNC**.
 - **Logic**, such as **IF**, **IFS**, **SWITCH**, **COALESCE**, **IFNULL**, **ISBLANK** and **IN**.
 - **Aggregates**: **SUM**, **AVG**, **COUNT**, **COUNTD**, **MIN**, **MAX** and **MEDIAN**.
+
+Other features of the site can add functions of their own. They appear in the functions list with the others, and work in reports like the built-in ones.
 
 A formula never stops the report: dividing by zero or a missing value gives an empty result. The full list, with every function's arguments, is in the Technical Manual's [formula reference](../../modules/report-builder/formulas.md).
 

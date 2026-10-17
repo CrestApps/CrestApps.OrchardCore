@@ -28,7 +28,7 @@ The report activities are in the **Reports** category of the activity picker.
 | **Run Report** | Task | Runs a report and keeps its rows for the next activities. |
 | **Export Report** | Task | Exports a report to CSV, or to Excel when the Reports (OpenXml) feature is on, and saves the file in the media library. |
 | **Email Report** | Task | Emails a report: your message, the report's headline numbers and tables, and the report attached as a file. |
-| **Create Report Share Link** | Task | Creates a share link to a report, to send to someone. |
+| **Create Report Share Link** | Task | Creates a share link to a report for users of the site, and emails it to them. |
 
 Each event can be limited to some reports. Leave **Reports** empty to start the workflow for every report.
 
@@ -61,13 +61,33 @@ The recipients get your message, the report's headline numbers and tables, and t
 
 ## Email someone a link to a report
 
-A link is better than an attachment when the report is large or the reader wants to change its filters.
+A link is better than an attachment when the report is large or the reader wants to change its filters. A link is for users of the site: they open it once signed in.
 
-1. Add **Create Report Share Link**. Choose the report, enter **What the link is for**, and set **Expires after (days)**: `0` for a link that never expires.
-2. Add **Email Report**, or Orchard Core's own **Email** task, and put `{{ Workflow.Output.ReportShareLink.Url }}` in the message where the link goes.
-3. Connect **Done** of the link task to the email task.
+1. Add **Create Report Share Link** and choose the report.
+2. Fill in its settings:
 
-The link appears on the report's **Sharing** tab with your note, where you can revoke it like any other link. Set the site's base URL under **Settings > General** so links created on a timer are complete.
+| Setting | What it does |
+| --- | --- |
+| **Recipients** | The user names or emails of the users the link is for, separated by commas. It can use Liquid. |
+| **Note** | Optional. What the link is for, sent with the email and shown on the report's **Sharing** tab. It can use Liquid. |
+| **Expires after (days)** | How many days the link works, at least 1. It starts at 7. Every link expires. |
+| **Most uses** | How many times the link can be used, or `0` for no limit. Opening the report, changing its filters and exporting it are each a use. |
+| **Allow export** | Lets the recipients download the report. |
+| **Email the link to the recipients** | On at first: the task emails the link and the note to each recipient. It needs the Email feature. Turn it off to send the link with another task, such as Orchard Core's **Email** task, with `{{ Workflow.Output.ReportShareLink.Url }}` in the message. |
+
+3. Connect the outcomes: **Done** when the link was created, **Failed** otherwise.
+
+The task keeps the link for the next activities, read in Liquid as `{{ Workflow.Output.ReportShareLink.Url }}` (or the **Output name** you entered):
+
+| Value | What it holds |
+| --- | --- |
+| `Url` | The link. |
+| `LinkId` | The link's ID. |
+| `ExpiresUtc` | When the link stops working. |
+| `Recipients` | The user names of the recipients. |
+| `Notified` | The recipients the email was sent to. |
+
+The link appears on the report's **Sharing** tab with your note, and under **Tools > Shared Links**, where you can revoke it like any other link. Set the site's base URL under **Settings > General** so links created on a timer are complete.
 
 ## React when a report is run
 
@@ -104,4 +124,4 @@ Runs made by the report tasks of a workflow do not start these events, so a work
 
 ## When something goes wrong
 
-Every report task has a **Failed** outcome. It is taken when the report cannot be found or is not published, when the report cannot run, when the email cannot be sent, or when a media folder is set and the Media feature is off. The reason is written to the site's logs.
+Every report task has a **Failed** outcome. It is taken when the report cannot be found or is not published, when the report cannot run, when the email cannot be sent, or when a media folder is set and the Media feature is off. **Create Report Share Link** also fails when there is no recipient, when a recipient is not a user of the site, or when it should email the link and the Email feature is off. The reason is written to the site's logs.
