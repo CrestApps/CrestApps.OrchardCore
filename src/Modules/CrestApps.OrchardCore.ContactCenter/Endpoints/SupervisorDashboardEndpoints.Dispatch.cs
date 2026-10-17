@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -81,6 +82,15 @@ internal static partial class SupervisorDashboardEndpoints
             names.TryAdd(campaignQueueId, ContactCenterConstants.CampaignQueue.GetCampaignId(campaignQueueId));
         }
 
+        // What the dialer is doing for each paced campaign with work waiting, when Paced Dialing is on. A campaign the
+        // dialer cannot pace is explained even when nobody is signed in to it and its campaign record cannot be read.
+        var pacing = await ReadPacingHealthAsync(httpContext.RequestServices, cancellationToken);
+
+        foreach (var queueId in pacing.Keys)
+        {
+            names.TryAdd(queueId, ContactCenterConstants.CampaignQueue.GetCampaignId(queueId) ?? queueId);
+        }
+
         var authorizationCache = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         var authorizedQueueIds = new List<string>();
 
@@ -104,7 +114,7 @@ internal static partial class SupervisorDashboardEndpoints
 
         var explained = diagnoses
             // Nothing pending and nothing waiting is nothing to explain.
-            .Where(diagnosis => diagnosis.PendingCount != 0 || diagnosis.WaitingItemCount != 0)
+            .Where(diagnosis => diagnosis.PendingCount != 0 || diagnosis.WaitingItemCount != 0 || pacing.ContainsKey(diagnosis.QueueId))
             .Select(diagnosis => (
                 Diagnosis: diagnosis,
                 SignedIn: agents
@@ -131,15 +141,61 @@ internal static partial class SupervisorDashboardEndpoints
             viewModel.StaleAgentCount = signedIn.Count(agent =>
                 agent.PresenceStatus is AgentPresenceStatus.Available or AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy &&
                 staleWork.ContainsKey(agent.ItemId));
+            ApplyPacing(viewModel, pacing.GetValueOrDefault(diagnosis.QueueId));
             model.Queues.Add(viewModel);
         }
 
         model.Queues = model.Queues
-            .OrderByDescending(queue => queue.HeldBackCount + queue.DialableNowCount)
+            // A campaign the dialer cannot pace leads: nothing else on its card matters until that is fixed.
+            .OrderByDescending(queue => queue.PacingLockNotAcquiredSinceUtc is not null)
+            .ThenByDescending(queue => queue.HeldBackCount + queue.DialableNowCount)
             .ThenBy(queue => queue.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         return TypedResults.Ok(model);
+    }
+
+    private static async Task<IReadOnlyDictionary<string, DialerPacingQueueHealth>> ReadPacingHealthAsync(
+        IServiceProvider services,
+        CancellationToken cancellationToken)
+    {
+        var pacing = new Dictionary<string, DialerPacingQueueHealth>(StringComparer.OrdinalIgnoreCase);
+
+        if (services.GetService<IDialerPacingHealthService>() is not { } healthService)
+        {
+            return pacing;
+        }
+
+        foreach (var queue in (await healthService.EvaluateAsync(cancellationToken)).Queues)
+        {
+            pacing.TryAdd(queue.QueueId, queue);
+        }
+
+        return pacing;
+    }
+
+    /// <summary>
+    /// Copies what the dialer is doing for a paced campaign onto its card, so the card says when the dialer cannot pace it
+    /// rather than leaving dialable records to look as though they wait for the next pass.
+    /// </summary>
+    /// <param name="viewModel">The campaign's card.</param>
+    /// <param name="health">The dialer's state for the campaign's queue, or <see langword="null"/> when it is not paced.</param>
+    internal static void ApplyPacing(SupervisorDispatchViewModel viewModel, DialerPacingQueueHealth health)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+
+        if (health is null)
+        {
+            return;
+        }
+
+        viewModel.PacingState = health.State.ToString();
+        viewModel.PacingLockNotAcquiredSinceUtc = health.State == DialerPacingHealthState.LockNotAcquired
+            ? health.LockNotAcquiredSinceUtc
+            : null;
+        viewModel.PacingStalledMinutes = health.State == DialerPacingHealthState.Stalled
+            ? (int)health.TimeWithoutCompletedCycle.TotalMinutes
+            : null;
     }
 
     private static async Task<IReadOnlyList<QueueDispatchDiagnostics>> DiagnoseCachedAsync(

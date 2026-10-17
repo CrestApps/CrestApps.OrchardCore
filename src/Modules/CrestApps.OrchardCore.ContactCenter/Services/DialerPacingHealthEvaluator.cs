@@ -41,7 +41,14 @@ internal static class DialerPacingHealthEvaluator
             return (DialerPacingHealthState.Stalled, silence);
         }
 
-        var state = lastCompletedCycle?.Outcome switch
+        // A cycle that completed before the work now waiting arrived decided about other work: it says nothing about this
+        // work, so it can neither say that nothing is due nor that calls are being placed.
+        if (lastCompletedCycle is null || lastCompletedCycle.CompletedUtc <= waitingSinceUtc)
+        {
+            return (DialerPacingHealthState.Starting, silence);
+        }
+
+        var state = lastCompletedCycle.Outcome switch
         {
             DialerPacingCycleOutcome.Placed => DialerPacingHealthState.Dialing,
             DialerPacingCycleOutcome.NoAgents => DialerPacingHealthState.Idle,
@@ -54,6 +61,42 @@ internal static class DialerPacingHealthEvaluator
     }
 
     /// <summary>
+    /// Decides whether a queue's pacing lock has stayed out of reach: its latest cycle could not take the lock, and no cycle
+    /// has run with it for longer than the threshold.
+    /// </summary>
+    /// <param name="nowUtc">The current time.</param>
+    /// <param name="threshold">How long every cycle may miss the lock before that is a fault.</param>
+    /// <param name="lastCycle">The queue's latest cycle, however it ended, or <see langword="null"/>.</param>
+    /// <param name="lastCycleNotLockMiss">
+    /// The queue's latest cycle that ended any other way than <see cref="DialerPacingCycleOutcome.LockNotAcquired"/>, or
+    /// <see langword="null"/>.
+    /// </param>
+    /// <returns>
+    /// Since when the lock has not been acquired, or <see langword="null"/> when the queue is not starved of its lock.
+    /// </returns>
+    public static DateTime? FindLockNotAcquiredSince(
+        DateTime nowUtc,
+        TimeSpan threshold,
+        DialerPacingCycle lastCycle,
+        DialerPacingCycle lastCycleNotLockMiss)
+    {
+        if (lastCycle?.Outcome != DialerPacingCycleOutcome.LockNotAcquired)
+        {
+            return null;
+        }
+
+        // Without a cycle that ran, the misses folded into the latest record are the oldest evidence there is: the record
+        // keeps when the first of them started.
+        var sinceUtc = lastCycleNotLockMiss is not null && lastCycleNotLockMiss.CompletedUtc < lastCycle.CompletedUtc
+            ? lastCycleNotLockMiss.CompletedUtc
+            : lastCycle.FirstStartedUtc == default ? lastCycle.StartedUtc : lastCycle.FirstStartedUtc;
+
+        return nowUtc - sinceUtc > threshold
+            ? sinceUtc
+            : null;
+    }
+
+    /// <summary>
     /// Ranks a state by how much it needs someone's attention, so the most serious one is shown first.
     /// </summary>
     /// <param name="state">The state.</param>
@@ -61,6 +104,7 @@ internal static class DialerPacingHealthEvaluator
     public static int Severity(DialerPacingHealthState state)
         => state switch
         {
+            DialerPacingHealthState.LockNotAcquired => 6,
             DialerPacingHealthState.Stalled => 5,
             DialerPacingHealthState.Idle => 4,
             DialerPacingHealthState.HeldBack => 3,

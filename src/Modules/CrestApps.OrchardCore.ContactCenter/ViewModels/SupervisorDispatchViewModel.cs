@@ -129,6 +129,24 @@ public sealed class SupervisorDispatchViewModel
     /// it has not failed lately.
     /// </summary>
     public SupervisorDispatchRoutingViewModel Routing { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the dialer is doing for the campaign, as a <c>DialerPacingHealthState</c> name, or
+    /// <see langword="null"/> when the campaign is not paced or Paced Dialing is off.
+    /// </summary>
+    public string PacingState { get; set; }
+
+    /// <summary>
+    /// Gets or sets, when every pacing cycle of the campaign skips itself because it cannot take the campaign's pacing
+    /// lock, since when the lock has not been acquired; otherwise <see langword="null"/>.
+    /// </summary>
+    public DateTime? PacingLockNotAcquiredSinceUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets, when the campaign's pacing has stalled, for how many minutes no pacing cycle has completed; otherwise
+    /// <see langword="null"/>.
+    /// </summary>
+    public int? PacingStalledMinutes { get; set; }
 }
 
 /// <summary>

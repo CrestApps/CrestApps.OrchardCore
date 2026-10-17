@@ -476,7 +476,9 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
         function dispatchCard(queue, reference) {
             var cls = 'cc-dispatch__card';
-            var pacingStuck = queue.pacing === 'ProfileDisabled' || queue.pacing === 'ProfileMissing';
+            var pacingStuck = queue.pacing === 'ProfileDisabled' || queue.pacing === 'ProfileMissing' ||
+                !!queue.pacingLockNotAcquiredSinceUtc ||
+                queue.pacingStalledMinutes != null;
             var stalled = !!queue.queueBlocker ||
                 !!queue.routing ||
                 pacingStuck ||
@@ -515,6 +517,20 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
 
             var notes = [];
 
+            // The dialer cannot pace the campaign at all: said first, since it is why dialable records are not dialed.
+            if (queue.pacingLockNotAcquiredSinceUtc) {
+                var lockSince = Date.parse(queue.pacingLockNotAcquiredSinceUtc);
+
+                if (isFinite(lockSince)) {
+                    notes.push(format(
+                        label('dispatchLockNotAcquired', 'Not being paced: its pacing lock has not been acquired since {0} ({1} ago), so every pacing cycle skips itself. Check the distributed lock.'),
+                        new Date(lockSince).toLocaleString(),
+                        formatWait(Math.max(0, (reference - lockSince) / 1000))));
+                }
+            } else if (queue.pacingStalledMinutes != null) {
+                notes.push(format(label('dispatchPacingStalled', 'Pacing stalled: no pacing cycle has completed for {0} minutes.'), queue.pacingStalledMinutes));
+            }
+
             if (queue.queueBlocker) {
                 notes.push(label('blocker.' + queue.queueBlocker, queue.queueBlocker));
             }
@@ -532,7 +548,7 @@ import { createSupervisorInterventions } from './supervisor-interventions.js';
                 (routing.candidateReasons || []).slice(0, 4).forEach(function (reason) {
                     notes.push(format(label('dispatchCandidate', '{0} agents: {1}'), reason.agentCount, reason.reason));
                 });
-            } else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) {
+            } else if (!queue.queueBlocker && !pacingStuck && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) {
                 notes.push(label('dispatchWaiting', 'Work and available agents are both here; it is waiting for the next dispatch pass.'));
             } else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount === 0) {
                 notes.push(label('dispatchNoAvailable', 'Dialable work is waiting for an available agent.'));
