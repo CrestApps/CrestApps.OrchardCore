@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
@@ -30,8 +31,12 @@ namespace CrestApps.OrchardCore.Transactions.Controllers;
 /// review rather than silently dropped, which means somebody has to go and move the money by hand. Without
 /// a screen listing those, they sit in the database and the customer never gets paid back. This is that
 /// screen, and the place an operator records that they did.
+/// <para>
+/// The attempts and refunds it lists are Checkout's, so it is routed only where Checkout is enabled, like its menu.
+/// </para>
 /// </remarks>
 [Admin("refunds/{action}/{itemId?}", "Refunds{action}")]
+[RequireFeatures(CheckoutConstants.Features.Area)]
 public sealed class RefundsAdminController : Controller
 {
     private readonly IPaymentRefundStore _refundStore;
