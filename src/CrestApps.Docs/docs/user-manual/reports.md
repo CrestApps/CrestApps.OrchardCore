@@ -27,7 +27,7 @@ You only see the reports your permissions allow. If the **Reports** page says *N
 
 1. Open **Reports** and pick a category, then a report.
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days.
-3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status** or **Disposition**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
+3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status**, **Interaction type**, **Dialer profile**, **Queue state** or **Disposition**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) feature is on, the button becomes an **Export** menu with **Export CSV** and **Export Excel (.xlsx)**. Excel puts each section of the report on its own worksheet.
 
@@ -63,7 +63,8 @@ The button always shows the range you picked in words, for example *From Jan 1, 
 | How long do agents talk, hold and ring, and how long do callers wait? | **Talk, hold, ring and queue wait** |
 | What did each agent handle, and what is their average handle time? | **Agent productivity** |
 | How busy is each queue right now and over the period? | **Queue usage** |
-| How far along is each campaign or subject, and how many numbers were not in service? | **Campaign summary**, **Subject inventory** |
+| How far along is each campaign or subject, and how many numbers were not in service? | **Campaign summary** (see [below](#campaign-summary)), **Subject inventory** |
+| How many of a campaign's pending records can be dialed right now, and why can the rest not? | **Campaign summary** (see [below](#campaign-summary)) |
 | What did an agent do, minute by minute? | **Agent activity timeline** |
 | Why is an available agent not getting calls, and how long has each agent waited? | **Agent availability and wait time** (see [below](#agent-availability-and-wait-time)) |
 | How much paid time did each agent spend in each state? | **Reconciled payroll timecard** and the other *Workforce & Payroll* reports |
@@ -215,6 +216,8 @@ The **Campaign queues by stamped dialer profile** table has one row for each cam
 | **Flags** | Problems to fix, in red: records stamped with a different dialer profile than their activity carries, pending records that are in no queue, and a stamped profile that is turned off or no longer exists. |
 | **Last dialed** | When the queue last placed a call. |
 
+The **Campaign summary** report splits the same pending records the same way (see [below](#campaign-summary)), so the two reports agree. This report's **Held back** counts every record that cannot be dialed now; the Campaign summary shows scheduled, not-in-a-queue and assigned records in columns of their own, so its **Held back** is what is left.
+
 The **Why records are held back** table lists each reason again, with the **Count** of records and, for records that wait by themselves (scheduled for later, retry delay), when the first becomes due.
 
 What to do about a flag:
@@ -223,5 +226,33 @@ What to do about a flag:
 - **The stamped dialer profile no longer exists**: load the records again under a profile that exists.
 - **Pending activities in no queue**: load the records into the campaign again so they are queued.
 - **Stamped differently from their activity**: the dialer uses the stamped profile. Load the records again if they should be dialed under the activity's own profile.
+
+## Campaign summary
+
+**Campaign summary**, under *CRM & Campaigns*, shows how far along each campaign is: how many of the records created in the date range are completed, pending, in progress, failed or cancelled, and how many numbers were not in service. Its pending records are also split by what the dialer can do with them **right now**, so you can see per campaign how many can be dialed and why the rest cannot.
+
+Filter it by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status**, **Interaction type** (*Manual* or *Automated*), **Dialer profile** and **Queue state**.
+
+- **Dialer profile** keeps the records whose activity carries the profile and the records whose queue item is stamped with it, because the dialer dials a record under the profile stamped on it. Turned-off profiles are listed too, marked *(turned off)*.
+- **Queue state** keeps only the pending records in one state: *Dialable now*, *Held back*, *Scheduled for later*, *Not in any queue* or *Assigned to a user*. Records that are not pending have no queue state, so they drop out.
+
+The **Campaigns** table has these columns beside the progress columns (**Total**, **Completed**, **Pending**, **In progress**, **Failed**, **Cancelled**, **Not in service**, **Attempts**, **Completion**):
+
+| Column | What it shows |
+| --- | --- |
+| **Dialable now** | Pending records the dialer could dial right now. |
+| **Held back** and **Held back because** | Pending records that cannot be dialed now for any other reason, with the reasons: the dialer profile is turned off or no longer exists, waiting out the retry delay, out of attempts, outside the calling window, do not call, number not in service and the other compliance reasons. |
+| **Scheduled for later** | Pending records that wait for a time set on them, such as a follow-up after *Try again*. |
+| **Not in any queue** | Pending records that are in no queue, so nothing will dial them until they are loaded again. |
+| **Assigned to a user** | Pending records a user works from their own list. |
+| **Not explained** | Queued records past the first 2,000 of a campaign, which are counted but not checked one by one. |
+| **Attempts distribution** | How many of the campaign's records have been tried 0, 1, 2, 3, 4, or 5 or more times. |
+| **Last attempt** | When a call was last placed for one of the campaign's records. |
+| **Next due** | When the first record that waits for a time becomes due. |
+| **Stamped dialer profile** | The dialer profiles stamped on the campaign's queued pending records, with how many carry each. |
+
+**Dialable now**, **Held back**, **Scheduled for later**, **Not in any queue**, **Assigned to a user** and **Not explained** always add up to **Pending**. Pending records that belong to no campaign are not split. The split shows where the records the date range covers stand **now**, whatever the date range; with a date range that covers every record, it matches the **Dialer queue inventory** report.
+
+The **Why pending records are not dialing** table lists every reason a campaign's pending records cannot be dialed now, with the number of records and, for records that wait for a time, when the first becomes due.
 
 The [report catalog](../contact-center/report-catalog.md) in the Technical Manual lists every Contact Center and CRM report with its filters, columns and exact formulas, such as how answer rate, service level and average handle time are calculated.

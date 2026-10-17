@@ -22,14 +22,14 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports;
 /// </summary>
 public sealed class DialerQueueInventoryTests
 {
-    private const string RenewalsCampaign = "renewals";
-    private const string WinBackCampaign = "winback";
-    private const string DisabledProfile = "profile-renewals-off";
-    private const string PowerProfile = "profile-winback-power";
-    private const string DeletedProfile = "profile-deleted";
+    private const string RenewalsCampaign = DialerInventoryFixture.RenewalsCampaign;
+    private const string WinBackCampaign = DialerInventoryFixture.WinBackCampaign;
+    private const string DisabledProfile = DialerInventoryFixture.DisabledProfile;
+    private const string PowerProfile = DialerInventoryFixture.PowerProfile;
+    private const string DeletedProfile = DialerInventoryFixture.DeletedProfile;
 
-    private static readonly string _renewalsQueue = ContactCenterConstants.CampaignQueue.CreateId(RenewalsCampaign);
-    private static readonly string _winBackQueue = ContactCenterConstants.CampaignQueue.CreateId(WinBackCampaign);
+    private static readonly string _renewalsQueue = DialerInventoryFixture.RenewalsQueue;
+    private static readonly string _winBackQueue = DialerInventoryFixture.WinBackQueue;
 
     // The incident, scaled down: a campaign queue whose records are stamped with a turned-off profile, pending records of
     // the same campaign in no queue at all, and a second queue correctly stamped with an enabled Power profile that is
@@ -190,48 +190,8 @@ public sealed class DialerQueueInventoryTests
         Assert.Equal(["b"], one);
     }
 
-    private static async Task<DialerInventoryFixture> SeedIncidentAsync()
-    {
-        var fixture = await DialerInventoryFixture.CreateAsync();
-
-        fixture.AddProfile(DisabledProfile, "Renewals power", DialerMode.Power, enabled: false);
-        fixture.AddProfile(PowerProfile, "Win-back power", DialerMode.Power, enabled: true);
-
-        // Eight records waiting in the renewals queue, stamped with the turned-off profile; two of the activities carry a
-        // different profile of their own.
-        for (var i = 0; i < 8; i++)
-        {
-            var activity = fixture.AddActivity(RenewalsCampaign, i < 6 ? DisabledProfile : PowerProfile);
-            fixture.AddQueueItem(activity, _renewalsQueue, DisabledProfile, enqueuedUtc: DialerInventoryFixture.Now.AddHours(-6).AddMinutes(i));
-        }
-
-        // Three pending renewals records that are in no queue at all.
-        for (var i = 0; i < 3; i++)
-        {
-            fixture.AddActivity(RenewalsCampaign, DisabledProfile);
-        }
-
-        // The win-back queue: correctly stamped with an enabled Power profile, but its head item is stamped with a profile
-        // that was deleted, so the pacer never runs for it.
-        var head = fixture.AddActivity(WinBackCampaign, PowerProfile);
-        fixture.AddQueueItem(head, _winBackQueue, DeletedProfile, enqueuedUtc: DialerInventoryFixture.Now.AddHours(-5), priority: InteractionPriority.High);
-
-        for (var i = 0; i < 4; i++)
-        {
-            var activity = fixture.AddActivity(WinBackCampaign, PowerProfile);
-            fixture.AddQueueItem(activity, _winBackQueue, PowerProfile, enqueuedUtc: DialerInventoryFixture.Now.AddHours(-4).AddMinutes(i));
-        }
-
-        // One win-back record is with an agent right now, and the queue last placed a call three hours ago.
-        var reserved = fixture.AddActivity(WinBackCampaign, PowerProfile, ActivityStatus.Reserved);
-        fixture.AddQueueItem(reserved, _winBackQueue, PowerProfile, QueueItemStatus.Reserved);
-        fixture.AddOutboundCall(_winBackQueue, reserved, DialerInventoryFixture.Now.AddHours(-3));
-        fixture.AddOutboundCall(_winBackQueue, reserved, DialerInventoryFixture.Now.AddHours(-9));
-
-        await fixture.SaveAsync();
-
-        return fixture;
-    }
+    private static Task<DialerInventoryFixture> SeedIncidentAsync()
+        => DialerInventoryFixture.CreateIncidentAsync();
 
     private static DialerQueueInventoryReportProvider CreateProvider(IDialerQueueInventoryService service)
     {
