@@ -42,7 +42,21 @@ jobs:
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
       run: |
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj --logger "trx;LogFileName=unit.trx" --results-directory ./TestResults
+    - name: TEMP report failed tests as annotations
+      if: failure()
+      shell: python
+      run: |
+        import glob, xml.etree.ElementTree as ET
+        ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+        for path in glob.glob('TestResults/**/*.trx', recursive=True):
+            root = ET.parse(path).getroot()
+            for r in root.iterfind('.//t:UnitTestResult', ns):
+                if r.get('outcome') != 'Failed':
+                    continue
+                msg = r.find('.//t:Message', ns)
+                text = (msg.text if msg is not None and msg.text else '').replace('%', '%25').replace('\r', '').replace('\n', '%0A')[:3000]
+                print('::error title=' + r.get('testName', '')[:200].replace(',', ' ').replace(':', ' ') + '::' + text)
     # The soft phone's arithmetic and state mapping - number formatting, the call-quality score, the Telnyx
     # call-state mapping, the reconnect schedule - now live in their own files with unit tests. A mistake in any
     # of them reaches an agent as a wrong number on screen, a quality indicator that never warns, or a call that
