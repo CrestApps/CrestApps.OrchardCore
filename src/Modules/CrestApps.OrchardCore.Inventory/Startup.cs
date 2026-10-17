@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -41,6 +42,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IInventoryService, DefaultInventoryService>();
         services.AddScoped<InventoryProductSynchronizer>();
         services.AddScoped<InventorySyncService>();
+
+        // The cart, product pages and listings ask what can be bought.
+        services.AddScoped<IProductAvailabilityProvider, InventoryAvailabilityProvider>();
 
         services.AddContentPart<InventoryPart>()
             .UseDisplayDriver<InventoryPartDisplayDriver>();

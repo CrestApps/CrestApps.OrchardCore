@@ -60,6 +60,10 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 `ExpiredStockHoldsBackgroundTask` releases expired holds every five minutes, up to 500 per run. The cart's **Checkout** commits the order, and what it holds, before the checkout starts, and turns a concurrency conflict into *Someone else is buying the same items right now.* An item's admin page lists the orders holding it.
 
+## Availability
+
+`InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items at the default location: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
+
 ## Admin
 
 - **Commerce > Inventory** (`inventory`, `InventoryAdminController`) lists stock items, fewest available first.
@@ -78,4 +82,4 @@ Administrators have both by default.
 
 ## Coming next
 
-Availability on product pages and in the cart, low-stock notifications, and CSV, recipe and deployment steps.
+An in-stock filter for listings, low-stock notifications, and CSV, recipe and deployment steps.

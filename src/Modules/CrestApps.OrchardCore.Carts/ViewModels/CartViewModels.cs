@@ -37,6 +37,27 @@ public class AddToCartViewModel
     /// Gets or sets where the visitor returns to after adding: the page they added from.
     /// </summary>
     public string ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets what's in stock of a product without variants, or <see langword="null"/> when its stock isn't
+    /// counted. Variants carry their own.
+    /// </summary>
+    public AddToCartAvailabilityViewModel Availability { get; set; }
+}
+
+/// <summary>
+/// What a buyer is told about a product's stock, and whether it can be added.
+/// </summary>
+public class AddToCartAvailabilityViewModel
+{
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets a CSS hint for the label: success, warning, danger or secondary.
+    /// </summary>
+    public string Tone { get; set; }
+
+    public bool CanBuy { get; set; }
 }
 
 /// <summary>
@@ -65,6 +86,11 @@ public class CartLinkViewModel
 
 public class AddToCartVariantViewModel
 {
+    /// <summary>
+    /// Gets or sets what's in stock of this variant, or <see langword="null"/> when its stock isn't counted.
+    /// </summary>
+    public AddToCartAvailabilityViewModel Availability { get; set; }
+
     public string VariantId { get; set; }
 
     /// <summary>
