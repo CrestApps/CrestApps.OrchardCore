@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -74,6 +75,35 @@ public sealed class InventoryMigrations : DataMigration
             .WithDisplayName("Inventory")
             .WithDescription("Counts how many units of a product, or each of its variants, are on hand."));
 
-        return 1;
+        await CreateReservationIndexAsync();
+
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the holds stock keeps for orders being paid for.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreateReservationIndexAsync();
+
+        return 2;
+    }
+
+    private async Task CreateReservationIndexAsync()
+    {
+        await SchemaBuilder.CreateMapIndexTableAsync<StockReservationIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("StockItemId", column => column.WithLength(26))
+            .Column<string>("OrderId", column => column.WithLength(26))
+            .Column<int>("Status")
+            .Column<DateTime>("ExpiresUtc"),
+            collection: InventoryConstants.CollectionName
+        );
+
+        // Safe to run again: a server that finished the step first has already made them.
+        await IndexTableIndexCreation.CreateIfMissingAsync<StockReservationIndex>(SchemaBuilder, "IDX_StockReservationIndex_OrderId", InventoryConstants.CollectionName, "OrderId");
+        await IndexTableIndexCreation.CreateIfMissingAsync<StockReservationIndex>(SchemaBuilder, "IDX_StockReservationIndex_StockItemId_Status", InventoryConstants.CollectionName, "StockItemId", "Status");
+        await IndexTableIndexCreation.CreateIfMissingAsync<StockReservationIndex>(SchemaBuilder, "IDX_StockReservationIndex_Status_ExpiresUtc", InventoryConstants.CollectionName, "Status", "ExpiresUtc");
     }
 }

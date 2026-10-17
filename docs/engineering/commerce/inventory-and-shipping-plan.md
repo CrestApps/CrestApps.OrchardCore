@@ -153,6 +153,25 @@ Each slice is a PR with tests, opened when its tests pass.
 - Found live: the variant editor is filled by script, so saving a product by a scripted form post would lose its
   variants. Live tests used the inventory pages and settings instead.
 
+### IN2 Reservations
+
+- `StockReservation` (Held, Committed, Released) with its index (upgrade step 2, indexes via
+  `IndexTableIndexCreation`).
+- `IInventoryService` gains `ReserveAsync` (all or nothing), `CommitAsync` (sells holds, and sells anyway when no hold is
+  left; idempotent per order and item), `ReleaseAsync` and `ReleaseExpiredAsync`.
+- Orders: `IOrderEventHandler.CreatedAsync` (can refuse, which cancels the order as `Unavailable` and returns
+  `OrderCreationResult.Problems`) and `PaidAsync` (in the completion's unit of work), plus `OrderEventHandlerBase`. The
+  cart checkout commits the order before starting the checkout and turns a `ConcurrencyException` into "try again".
+- `InventoryOrderEventHandler` reserves, sells and releases. `ExpiredStockHoldsBackgroundTask` runs every 5 minutes.
+  Settings gain *Hold stock for (minutes)*.
+- Design change found live: IN1's service committed its own work inside a distributed lock, first in the request
+  session, then (tried for IN2) in a separate session. A separate session deadlocks SQLite, which allows one writer,
+  against the request's open transaction ("database is locked"). Committing the request session mid-request detaches
+  documents read earlier (a duplicate-row trap). So the service now works only in the caller's session, with no locks
+  and no commits of its own; the concurrency-checked `StockItem` makes a racing second commit fail. The admin
+  actions and the cart checkout commit explicitly and catch the conflict, and the engine's Canceled and Expired paths
+  roll back and log it, leaving the work to the sweeps.
+
 ## Not in this phase
 
 Multiple locations in the admin (the schema allows them), preorders, live carrier rates and labels, returns (RMA)
