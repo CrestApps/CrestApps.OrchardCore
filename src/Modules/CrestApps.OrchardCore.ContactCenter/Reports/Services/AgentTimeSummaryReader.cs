@@ -305,7 +305,7 @@ internal sealed class AgentTimeSummaryReader : IAgentTimeSummaryReader
             }
         }
 
-        public IReadOnlyList<AgentPresenceInterval> ToIntervals(IReadOnlySet<string> agentIds)
+        public List<AgentPresenceInterval> ToIntervals(HashSet<string> agentIds)
         {
             var intervals = new List<AgentPresenceInterval>();
 

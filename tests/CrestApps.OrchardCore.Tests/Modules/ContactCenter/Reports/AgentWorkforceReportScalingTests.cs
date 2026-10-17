@@ -188,7 +188,7 @@ public sealed class AgentWorkforceReportScalingTests
         return (Document: document, EventsRead: counter.Read, Elapsed: stopwatch.Elapsed);
     }
 
-    private static Task<ReportDocument> RunInMemoryAsync(AgentWorkforceReportKind kind, IReadOnlyList<InteractionEvent> log)
+    private static Task<ReportDocument> RunInMemoryAsync(AgentWorkforceReportKind kind, List<InteractionEvent> log)
         => CreateProvider(kind, InMemoryLog(log), new ContactCenterReportingOptions(), summaryReader: null)
             .RunAsync(Context(), TestContext.Current.CancellationToken);
 
@@ -219,7 +219,7 @@ public sealed class AgentWorkforceReportScalingTests
         AgentWorkforceReportKind kind,
         IInteractionEventStore eventStore,
         ContactCenterReportingOptions options,
-        IAgentTimeSummaryReader summaryReader)
+        AgentTimeSummaryReader summaryReader)
     {
         var guard = new Mock<IContactCenterReportCapabilityGuard>();
         guard
@@ -278,7 +278,7 @@ public sealed class AgentWorkforceReportScalingTests
 
     // The whole log in memory, read the way the store's contract says it is read, with nothing paged or batched: the
     // computation the reports did before any of this existed.
-    private static IInteractionEventStore InMemoryLog(IReadOnlyList<InteractionEvent> log)
+    private static IInteractionEventStore InMemoryLog(List<InteractionEvent> log)
     {
         var eventStore = new Mock<IInteractionEventStore>(MockBehavior.Strict);
 
@@ -295,7 +295,7 @@ public sealed class AgentWorkforceReportScalingTests
                 var types = eventTypes?.ToHashSet(StringComparer.Ordinal) ?? [];
                 var ids = aggregateIds?.ToHashSet(StringComparer.Ordinal);
 
-                IReadOnlyList<InteractionEvent> window = log
+                return Task.FromResult<IReadOnlyList<InteractionEvent>>(log
                     .Where(interactionEvent => interactionEvent.AggregateType == aggregateType &&
                         interactionEvent.OccurredUtc >= fromUtc &&
                         interactionEvent.OccurredUtc <= throughUtc &&
@@ -303,9 +303,7 @@ public sealed class AgentWorkforceReportScalingTests
                         (ids is null || ids.Contains(interactionEvent.AggregateId)))
                     .OrderBy(interactionEvent => interactionEvent.OccurredUtc)
                     .ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal)
-                    .ToArray();
-
-                return Task.FromResult(window);
+                    .ToArray());
             });
 
         eventStore
@@ -319,7 +317,7 @@ public sealed class AgentWorkforceReportScalingTests
             {
                 var types = eventTypes?.ToHashSet(StringComparer.Ordinal) ?? [];
 
-                IReadOnlyList<InteractionEvent> anchors = (aggregateIds ?? [])
+                return Task.FromResult<IReadOnlyList<InteractionEvent>>((aggregateIds ?? [])
                     .Distinct(StringComparer.Ordinal)
                     .Select(aggregateId => log
                         .Select((interactionEvent, position) => (Event: interactionEvent, Position: position))
@@ -334,9 +332,7 @@ public sealed class AgentWorkforceReportScalingTests
                     .Where(interactionEvent => interactionEvent is not null)
                     .OrderBy(interactionEvent => interactionEvent.OccurredUtc)
                     .ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal)
-                    .ToArray();
-
-                return Task.FromResult(anchors);
+                    .ToArray());
             });
 
         return eventStore.Object;
@@ -450,7 +446,7 @@ public sealed class AgentWorkforceReportScalingTests
         return [.. log.OrderBy(interactionEvent => interactionEvent.OccurredUtc).ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal)];
     }
 
-    private static IEnumerable<InteractionEvent> LateBreak(IReadOnlyList<InteractionEvent> log, string agentId, DateTime at)
+    private static IEnumerable<InteractionEvent> LateBreak(List<InteractionEvent> log, string agentId, DateTime at)
     {
         var taken = log
             .Where(interactionEvent => interactionEvent.AggregateId == agentId)
@@ -599,7 +595,7 @@ public sealed class AgentWorkforceReportScalingTests
     {
         public int Read { get; private set; }
 
-        public IInteractionEventStore Wrap(IInteractionEventStore inner)
+        public IInteractionEventStore Wrap(InteractionEventStore inner)
         {
             var eventStore = new Mock<IInteractionEventStore>(MockBehavior.Strict);
 

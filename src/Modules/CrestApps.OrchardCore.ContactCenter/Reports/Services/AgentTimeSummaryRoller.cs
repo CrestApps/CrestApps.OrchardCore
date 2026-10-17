@@ -119,7 +119,7 @@ internal sealed class AgentTimeSummaryRoller
         if (stale.HasValue)
         {
             // A change late in a day is the state the next days open in, so they are recomputed with it.
-            foreach (var day in current.Keys.Where(day => day >= stale.Value).ToArray())
+            foreach (var day in current.Keys.Where(candidate => candidate >= stale.Value).ToArray())
             {
                 await DeleteDayAsync(day, cancellationToken);
                 current.Remove(day);
@@ -205,14 +205,14 @@ internal sealed class AgentTimeSummaryRoller
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var days = current.Keys.OrderBy(day => day).ToArray();
+        var days = current.Keys.OrderBy(candidate => candidate).ToArray();
 
         if (days.Length == 0)
         {
             return null;
         }
 
-        var verified = new SortedSet<DateTime>(days.OrderByDescending(day => day).Take(DaysVerifiedPerRun));
+        var verified = new SortedSet<DateTime>(days.OrderByDescending(candidate => candidate).Take(DaysVerifiedPerRun));
         var older = days.Length - verified.Count;
 
         if (older > 0)
