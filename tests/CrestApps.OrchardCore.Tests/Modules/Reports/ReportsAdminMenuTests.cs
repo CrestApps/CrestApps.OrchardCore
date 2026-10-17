@@ -12,6 +12,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Localization;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 
@@ -27,17 +28,21 @@ public sealed class ReportsAdminMenuTests
     public async Task ReportsMenu_KeepsItsIdAndClass_WhenAnotherModuleAddsToIt()
     {
         // Arrange
-        var report = new Mock<IReport>();
-        report.SetupGet(item => item.Name).Returns("Sales");
-        report.SetupGet(item => item.DisplayName).Returns(new LocalizedString("Sales", "Sales"));
-        report.SetupGet(item => item.Permission).Returns(new Permission("ViewSalesReport"));
+        var report = new ReportDescriptor(
+            "Sales",
+            LocalizationSource.Create("Sales"),
+            LocalizationSource.Create("Sales by month."),
+            ReportsConstants.Categories.Commerce,
+            new Permission("ViewSalesReport"),
+            typeof(IReportRunner),
+            _ => Mock.Of<IReportRunner>());
         var reportManager = new Mock<IReportManager>();
-        reportManager.Setup(manager => manager.GetReports()).Returns([report.Object]);
+        reportManager.Setup(manager => manager.GetReports()).Returns([report]);
 
         // The other module's item is added first, so equal priorities would keep its (missing) id.
         var navigationManager = Manager(
             new OtherModuleMenu(),
-            new ReportsAdminMenu(reportManager.Object, new PassThroughStringLocalizer<ReportsAdminMenu>()));
+            new ReportsAdminMenu(reportManager.Object, new PassThroughStringLocalizerFactory(), new PassThroughStringLocalizer<ReportsAdminMenu>()));
 
         // Act
         var menu = await navigationManager.BuildMenuAsync(NavigationConstants.AdminId, ActionContext());

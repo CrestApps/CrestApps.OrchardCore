@@ -110,7 +110,7 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
 
         // Until the filter form has been submitted once, nothing has been chosen, and a report may start with its
         // own defaults. Once it has, an empty value is a choice ("All sources") and is kept.
-        if (!WasSubmitted() && _reportManager.FindByName(filter.ReportName) is IOmnichannelReportFilterDefaults defaults)
+        if (!WasSubmitted() && _reportManager.GetReport(filter.ReportName) is IOmnichannelReportFilterDefaults defaults)
         {
             defaults.ApplyDefaults(filter);
         }
@@ -125,13 +125,13 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
             return false;
         }
 
-        return _reportManager.FindByName(reportName) is not IReportFilterMetadata metadata ||
+        return _reportManager.GetReport(reportName) is not IReportFilterMetadata metadata ||
             metadata.FilterNames.Contains(FilterName, StringComparer.Ordinal);
     }
 
     private bool PagesRows(string reportName)
     {
-        return _reportManager.FindByName(reportName) is IReportFilterMetadata metadata &&
+        return _reportManager.GetReport(reportName) is IReportFilterMetadata metadata &&
             metadata.FilterNames.Contains(PageFilterName, StringComparer.Ordinal);
     }
 

@@ -11,6 +11,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
 using YesSql;
@@ -24,7 +26,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 /// disposition it ended with, its attempts, when it completed, its agent and its status. The rows are read from the
 /// activity index a page at a time, so a campaign of any size can be listed; an export reads every matching row.
 /// </summary>
-public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IReportFilterMetadata, IOmnichannelReportFilterDefaults
+public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IReportFilterMetadata, IOmnichannelReportFilterDefaults, IReport
 {
     /// <summary>
     /// The report's technical name.
@@ -80,13 +82,19 @@ public sealed class DialerCallDetailReportProvider : OmnichannelReportBase, IRep
     }
 
     /// <inheritdoc/>
-    public override string Name => ReportName;
+    public static string Name => ReportName;
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Dialer call detail"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<DialerCallDetailReportProvider>("Dialer call detail");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["One row per dialed number with its contact, campaign, last disposition, attempts, completion time, agent and status."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<DialerCallDetailReportProvider>("One row per dialed number with its contact, campaign, last disposition, attempts, completion time, agent and status.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public IReadOnlyCollection<string> FilterNames => _filterNames;

@@ -1,8 +1,11 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -13,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Reports;
 /// The tax collected report: total tax and taxable transaction volume for the reporting period, with a
 /// monthly breakdown of tax collected.
 /// </summary>
-public sealed class TaxCollectedReport : SubscriptionReportBase
+public sealed class TaxCollectedReport : SubscriptionReportBase, IReport
 {
     private readonly ISession _session;
 
@@ -33,13 +36,19 @@ public sealed class TaxCollectedReport : SubscriptionReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "tax-collected";
+    public static string Name => "tax-collected";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Tax collected"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<TaxCollectedReport>("Tax collected");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Total tax collected and taxable transaction volume, with a monthly breakdown."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<TaxCollectedReport>("Total tax collected and taxable transaction volume, with a monthly breakdown.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

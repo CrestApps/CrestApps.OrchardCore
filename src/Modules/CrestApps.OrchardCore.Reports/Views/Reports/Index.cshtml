@@ -1,4 +1,6 @@
 @using System.Linq
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizerFactory LocalizerFactory
 @model ReportsIndexViewModel
 
 <zone Name="Title">
@@ -11,7 +13,7 @@
 }
 else
 {
-    @foreach (var group in Model.Reports.GroupBy(report => report.Category ?? string.Empty))
+    @foreach (var group in Model.Reports.GroupBy(report => report.Category))
     {
         @if (!string.IsNullOrEmpty(group.Key))
         {
@@ -24,8 +26,11 @@ else
                 <div class="col">
                     <a class="card h-100 text-decoration-none text-reset" asp-action="Display" asp-route-id="@report.Name">
                         <div class="card-body">
-                            <h3 class="h6">@report.DisplayName</h3>
-                            <p class="text-muted small mb-0">@report.Description</p>
+                            <h3 class="h6">@LocalizerFactory.Localize(report.DisplayName)</h3>
+                            @if (report.Description is not null)
+                            {
+                                <p class="text-muted small mb-0">@LocalizerFactory.Localize(report.Description)</p>
+                            }
                         </div>
                     </a>
                 </div>

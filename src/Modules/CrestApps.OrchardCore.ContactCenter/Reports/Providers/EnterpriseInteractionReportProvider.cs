@@ -9,19 +9,28 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Security.Permissions;
+using Microsoft.Extensions.Options;
 using YesSql;
 using static CrestApps.OrchardCore.ContactCenter.Reports.Services.InteractionMetricsCalculator;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
-internal sealed partial class EnterpriseInteractionReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
+internal sealed partial class EnterpriseInteractionReportProvider : IReportRunner, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
+    private static readonly string[] _filterNames =
+    [
+        ContactCenterReportFilter.QueueGroupId,
+        ContactCenterReportFilter.QueueId,
+        ContactCenterReportFilter.AgentId,
+        ContactCenterReportFilter.Channel,
+        ContactCenterReportFilter.Direction,
+    ];
+
     private readonly ISession _session;
     private readonly IInteractionEventStore _eventStore;
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentProfileManager _agentManager;
-    private readonly EnterpriseInteractionReportDefinition _definition;
+    private readonly EnterpriseInteractionReportKind _kind;
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
     private readonly TimeSpan _maximumReportRange;
@@ -65,34 +74,24 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReport, IRe
         IInteractionEventStore eventStore,
         IActivityQueueManager queueManager,
         IAgentProfileManager agentManager,
-        EnterpriseInteractionReportDefinition definition,
+        EnterpriseInteractionReportKind kind,
         IContactCenterReportCapabilityGuard capabilityGuard,
-        IStringLocalizer stringLocalizer,
-        TimeSpan maximumReportRange)
+        IStringLocalizer<EnterpriseInteractionReportProvider> stringLocalizer,
+        IOptions<ContactCenterReportingOptions> reportingOptions)
     {
         _session = session;
         _eventStore = eventStore;
         _queueManager = queueManager;
         _agentManager = agentManager;
-        _definition = definition;
+        _kind = kind;
         _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
-        _maximumReportRange = maximumReportRange;
+        _maximumReportRange = reportingOptions.Value.MaximumReportRange;
     }
 
-    public string Name => _definition.Name;
+    public IReadOnlyCollection<string> FilterNames => _filterNames;
 
-    public LocalizedString DisplayName => _definition.DisplayName();
-
-    public LocalizedString Description => _definition.Description();
-
-    public string Category => _definition.Category;
-
-    public Permission Permission => ContactCenterPermissions.ViewReports;
-
-    public IReadOnlyCollection<string> FilterNames => _definition.FilterNames;
-
-    public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_definition.Kind);
+    public IReadOnlyCollection<string> RequiredFeatureIds => ContactCenterReportCapabilityRequirements.For(_kind);
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -139,7 +138,7 @@ internal sealed partial class EnterpriseInteractionReportProvider : IReport, IRe
             .Where(agent => !string.IsNullOrEmpty(agent.UserName))
             .ToDictionary(agent => agent.ItemId, agent => agent.UserName, StringComparer.Ordinal);
 
-        return _definition.Kind switch
+        return _kind switch
         {
             EnterpriseInteractionReportKind.ExecutiveSummary => BuildExecutiveSummary(filteredInteractions, queues),
             EnterpriseInteractionReportKind.VolumeTrend => BuildIntervalPerformance(filteredInteractions, volumeOnly: true),

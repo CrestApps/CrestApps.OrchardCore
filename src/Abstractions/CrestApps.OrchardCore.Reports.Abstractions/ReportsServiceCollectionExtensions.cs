@@ -8,6 +8,23 @@ namespace Microsoft.Extensions.DependencyInjection;
 public static class ReportsServiceCollectionExtensions
 {
     /// <summary>
+    /// Registers a report, as a scoped service, and adds its descriptor to <see cref="ReportOptions"/>.
+    /// </summary>
+    /// <typeparam name="TReport">The class of the report.</typeparam>
+    /// <param name="services">The service collection.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddReport<TReport>(this IServiceCollection services)
+        where TReport : class, IReport
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddScoped<TReport>();
+        services.Configure<ReportOptions>(options => options.Add(ReportDescriptor.Create<TReport>()));
+
+        return services;
+    }
+
+    /// <summary>
     /// Registers a report export format, as a scoped service, and adds its descriptor to
     /// <see cref="ReportExportFormatOptions"/>.
     /// </summary>

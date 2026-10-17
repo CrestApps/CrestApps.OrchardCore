@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
@@ -6,13 +7,15 @@ using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using ISession = YesSql.ISession;
 using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 
 /// <summary>
 /// The CRM disposition breakdown report: how completed activities were dispositioned in the period.
 /// </summary>
-public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
+public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase, IReport
 {
     private readonly ISession _session;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
@@ -42,16 +45,19 @@ public sealed class DispositionBreakdownReportProvider : OmnichannelReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-disposition-breakdown";
+    public static string Name => "omnichannel-disposition-breakdown";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Disposition breakdown"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<DispositionBreakdownReportProvider>("Disposition breakdown");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["How completed CRM activities were dispositioned in the reporting period."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<DispositionBreakdownReportProvider>("How completed CRM activities were dispositioned in the reporting period.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.ComplianceAudit;
+    public static string Category => ReportsConstants.Categories.ComplianceAudit;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

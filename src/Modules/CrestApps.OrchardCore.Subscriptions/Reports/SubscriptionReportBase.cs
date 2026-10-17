@@ -7,16 +7,15 @@ using YesSql;
 using ISession = YesSql.ISession;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Subscriptions.Reports;
 
 /// <summary>
-/// Provides the shared category, permission, and formatting used by the subscription reports contributed
-/// to the admin Reports area.
+/// Provides the shared formatting and queries of the subscription reports contributed to the admin Reports area. A
+/// report derives from it and implements <see cref="IReport"/> with its static members.
 /// </summary>
-public abstract class SubscriptionReportBase : IReport
+public abstract class SubscriptionReportBase : IReportRunner
 {
     private readonly ISiteService _siteService;
 
@@ -35,21 +34,6 @@ public abstract class SubscriptionReportBase : IReport
     /// Gets the string localizer used for the report labels.
     /// </summary>
     protected IStringLocalizer S { get; }
-
-    /// <inheritdoc/>
-    public abstract string Name { get; }
-
-    /// <inheritdoc/>
-    public abstract LocalizedString DisplayName { get; }
-
-    /// <inheritdoc/>
-    public abstract LocalizedString Description { get; }
-
-    /// <inheritdoc/>
-    public virtual string Category => ReportsConstants.Categories.Commerce;
-
-    /// <inheritdoc/>
-    public Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public abstract Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default);

@@ -114,7 +114,7 @@ public sealed class OmnichannelReportFilterDisplayDriverTests
         {
             ReportName = OtherReportName,
         };
-        var driver = CreateDriver(Mock.Of<IReport>(), string.Empty);
+        var driver = CreateDriver(Mock.Of<IReportRunner>(), string.Empty);
 
         // Act
         await driver.UpdateAsync(filter, PostedFormUpdateModel.CreateContext(new OmnichannelReportFilterViewModel()));
@@ -141,7 +141,7 @@ public sealed class OmnichannelReportFilterDisplayDriverTests
         var paged = Assert.Single(await DisplayResultModels.BuildAsync<OmnichannelReportFilterViewModel>(
             CreateDriver(CreateDialerReport(), string.Empty).Edit(pagedFilter, context)));
         var other = Assert.Single(await DisplayResultModels.BuildAsync<OmnichannelReportFilterViewModel>(
-            CreateDriver(Mock.Of<IReport>(), string.Empty).Edit(otherFilter, context)));
+            CreateDriver(Mock.Of<IReportRunner>(), string.Empty).Edit(otherFilter, context)));
 
         // Assert
         Assert.True(paged.ShowPage);
@@ -181,7 +181,7 @@ public sealed class OmnichannelReportFilterDisplayDriverTests
             new PassThroughStringLocalizer<DialerCallDetailReportProvider>());
     }
 
-    private static OmnichannelReportFilterDisplayDriver CreateDriver(IReport report, string queryString)
+    private static OmnichannelReportFilterDisplayDriver CreateDriver(IReportRunner report, string queryString)
     {
         var campaignManager = new Mock<ICatalogManager<OmnichannelCampaign>>();
         campaignManager
@@ -212,7 +212,7 @@ public sealed class OmnichannelReportFilterDisplayDriverTests
 
         var reportManager = new Mock<IReportManager>();
         reportManager
-            .Setup(manager => manager.FindByName(It.IsAny<string>()))
+            .Setup(manager => manager.GetReport(It.IsAny<string>()))
             .Returns(report);
 
         var httpContext = new DefaultHttpContext();

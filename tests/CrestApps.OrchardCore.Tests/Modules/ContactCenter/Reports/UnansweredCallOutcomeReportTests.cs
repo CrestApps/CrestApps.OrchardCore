@@ -13,7 +13,6 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using CrestApps.Core.Services;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using YesSql;
@@ -299,23 +298,15 @@ public sealed class UnansweredCallOutcomeReportTests
             .Setup(value => value.GetMissingFeaturesAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((IReadOnlyCollection<string>)[]);
 
-        var definition = new EnterpriseInteractionReportDefinition(
-            kind.ToString(),
-            () => new LocalizedString(kind.ToString(), kind.ToString()),
-            () => new LocalizedString(kind.ToString(), kind.ToString()),
-            kind,
-            "Interactions",
-            []);
-
         var provider = new EnterpriseInteractionReportProvider(
             session,
             CreateEventStore(session),
             queueManager.Object,
             agentManager.Object,
-            definition,
+            kind,
             guard.Object,
             new PassThroughStringLocalizer<EnterpriseInteractionReportProvider>(),
-            TimeSpan.FromDays(400));
+            Options.Create(new ContactCenterReportingOptions { MaximumReportRange = TimeSpan.FromDays(400) }));
 
         var filter = new ReportFilter();
         filter.SetDateRange(new ReportDateRange { FromUtc = _from, ToUtc = _to });

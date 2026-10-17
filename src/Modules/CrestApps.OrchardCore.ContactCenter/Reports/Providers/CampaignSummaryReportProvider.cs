@@ -1,17 +1,20 @@
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 /// <summary>
 /// The Contact Center campaign summary report: per-campaign completed-versus-pending activity progress.
 /// </summary>
-public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
+public sealed class CampaignSummaryReportProvider : ContactCenterReportBase, IReport
 {
     private readonly IDialerDispatchDiagnosticsService _dispatchDiagnostics;
 
@@ -33,16 +36,19 @@ public sealed class CampaignSummaryReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-campaign-summary";
+    public static string Name => "contact-center-campaign-summary";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Campaign summary"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CampaignSummaryReportProvider>("Campaign summary");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Per-campaign completed-versus-pending progress across the activity inventory."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CampaignSummaryReportProvider>("Per-campaign completed-versus-pending progress across the activity inventory.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.CrmCampaigns;
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

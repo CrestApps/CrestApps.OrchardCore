@@ -1,9 +1,12 @@
 using System.Globalization;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -11,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// The Contact Center call insights report: inbound/outbound volume, outcomes, handle time, channel and
 /// status breakdowns, and a daily trend.
 /// </summary>
-public sealed class CallInsightsReportProvider : ContactCenterReportBase
+public sealed class CallInsightsReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CallInsightsReportProvider"/> class.
@@ -28,13 +31,19 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-call-insights";
+    public static string Name => "contact-center-call-insights";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Call insights"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CallInsightsReportProvider>("Call insights");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Inbound and outbound call volume, answered, abandoned, and failed calls, handle time, and a daily trend."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CallInsightsReportProvider>("Inbound and outbound call volume, answered, abandoned, and failed calls, handle time, and a daily trend.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Operations;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

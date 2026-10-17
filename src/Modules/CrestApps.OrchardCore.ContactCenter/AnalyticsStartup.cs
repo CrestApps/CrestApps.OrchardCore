@@ -43,17 +43,16 @@ public sealed class AnalyticsStartup : StartupBase
             .ValidateOnStart();
 
         services
-            .AddScoped<IReport, CallInsightsReportProvider>()
-            .AddScoped<IReport, CallQualityReportProvider>()
-            .AddScoped<IReport, CallHandlingReportProvider>()
-            .AddScoped<IReport, AgentActivityTimelineReportProvider>()
-            .AddScoped<IReport, ReconciledPayrollTimecardReportProvider>()
-            .AddScoped<IReport, AgentProductivityReportProvider>()
-            .AddScoped<IReport, QueueUsageReportProvider>()
-            .AddScoped<IReport, CampaignSummaryReportProvider>()
-            .AddScoped<IReport, SubjectInventoryReportProvider>();
+            .AddReport<CallInsightsReportProvider>()
+            .AddReport<CallQualityReportProvider>()
+            .AddReport<CallHandlingReportProvider>()
+            .AddReport<AgentActivityTimelineReportProvider>()
+            .AddReport<ReconciledPayrollTimecardReportProvider>()
+            .AddReport<AgentProductivityReportProvider>()
+            .AddReport<QueueUsageReportProvider>()
+            .AddReport<CampaignSummaryReportProvider>()
+            .AddReport<SubjectInventoryReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();
-        services.AddScoped<IReportProvider, ContactCenterReportProvider>();
     }
 }

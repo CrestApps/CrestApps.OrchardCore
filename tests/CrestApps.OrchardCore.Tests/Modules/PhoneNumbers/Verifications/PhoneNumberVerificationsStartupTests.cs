@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement.Handlers;
@@ -152,9 +153,13 @@ public sealed class PhoneNumberVerificationsStartupTests
         new PhoneNumberVerificationsReportsStartup().ConfigureServices(services);
 
         // Assert
+        using var provider = services.BuildServiceProvider();
+        var report = Assert.Single(provider.GetRequiredService<IOptions<ReportOptions>>().Value.Reports);
+        Assert.Equal(PhoneNumberVerificationReportProvider.Name, report.Name);
+        Assert.Equal(typeof(PhoneNumberVerificationReportProvider), report.Type);
         Assert.Contains(services, descriptor =>
-            descriptor.ServiceType == typeof(IReport) &&
-            descriptor.ImplementationType == typeof(PhoneNumberVerificationReportProvider));
+            descriptor.ServiceType == typeof(PhoneNumberVerificationReportProvider) &&
+            descriptor.Lifetime == ServiceLifetime.Scoped);
     }
 
     private static IStringLocalizer<T> CreateLocalizer<T>()
