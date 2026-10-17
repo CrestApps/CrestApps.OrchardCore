@@ -41,8 +41,32 @@ jobs:
       run: |
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
+      shell: bash
       run: |
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+        set -o pipefail
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 2>&1 | tee test-output.txt
+    - name: TEMP report failed tests as annotations
+      if: failure()
+      shell: python
+      run: |
+        import glob, re, xml.etree.ElementTree as ET
+        lines = open('test-output.txt', encoding='utf-8', errors='replace').read().splitlines()
+        keys = re.compile(r'\[FAIL\]|Failed |crash|abort|Test Run Aborted|Total tests|Passed!|Failed!|error', re.I)
+        hits = [l.strip() for l in lines if keys.search(l)][:60]
+        print('::error title=test output::' + '%0A'.join(h.replace('%', '%25')[:400] for h in hits)[:8000])
+        tail = [l.strip() for l in lines if l.strip()][-120:]
+        for i in range(0, len(tail), 30):
+            print('::error title=tail ' + str(i) + '::' + '%0A'.join(h.replace('%', '%25')[:300] for h in tail[i:i+30]))
+        print('::error title=trx files::' + ' '.join(glob.glob('TestResults/**/*.trx', recursive=True)))
+        ns = {'t': 'http://microsoft.com/schemas/VisualStudio/TeamTest/2010'}
+        for path in glob.glob('TestResults/**/*.trx', recursive=True):
+            root = ET.parse(path).getroot()
+            for r in root.iterfind('.//t:UnitTestResult', ns):
+                if r.get('outcome') != 'Failed':
+                    continue
+                msg = r.find('.//t:Message', ns)
+                text = (msg.text if msg is not None and msg.text else '').replace('%', '%25').replace('\r', '').replace('\n', '%0A')[:3000]
+                print('::error title=' + r.get('testName', '')[:200].replace(',', ' ').replace(':', ' ') + '::' + text)
     # The soft phone's arithmetic and state mapping - number formatting, the call-quality score, the Telnyx
     # call-state mapping, the reconnect schedule - now live in their own files with unit tests. A mistake in any
     # of them reaches an agent as a wrong number on screen, a quality indicator that never warns, or a call that

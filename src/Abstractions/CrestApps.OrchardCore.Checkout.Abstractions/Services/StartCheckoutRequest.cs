@@ -46,4 +46,29 @@ public sealed class StartCheckoutRequest
     /// it decides whose checkout is being paid.
     /// </remarks>
     public string OwnerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the local URL the customer returns to, usually the page that started the checkout. The
+    /// confirmation page shows a <b>Continue</b> button to it, and the payment step and the page of a canceled or
+    /// expired checkout show a <b>Back</b> link to it.
+    /// </summary>
+    /// <remarks>
+    /// Only a local URL is accepted (see <see cref="CheckoutReturnInfo.IsLocalUrl(string)"/>): a path generated with
+    /// <c>Url.Action</c> or <c>Url.RouteUrl</c>, which includes the tenant's URL prefix, or an application-relative
+    /// <c>~/</c> path. Starting a checkout with any other URL throws <see cref="ArgumentException"/>, so a checkout
+    /// can never send a customer to another site.
+    /// </remarks>
+    public string ReturnUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the text of the link to <see cref="ReturnUrl"/>, for example <c>Back to my payments</c>. When
+    /// empty, the pages use their own wording (<b>Continue</b> or <b>Back</b>).
+    /// </summary>
+    public string ReturnText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the heading of the confirmation page, for example <c>Payment received</c>. When empty, the
+    /// confirmation is headed "Order confirmation".
+    /// </summary>
+    public string Title { get; set; }
 }

@@ -70,6 +70,13 @@ public static partial class ContactCenterConstants
         public const string QueueBacklogCheckName = "contactcenter-queue-backlog";
 
         /// <summary>
+        /// The registration name of the dialer pacing heartbeat check. It fails when due work is waiting in a paced
+        /// campaign queue but no pacing cycle of that queue has completed within the stall threshold, and is an alerting
+        /// dependency check because every node reads the same shared pacing record.
+        /// </summary>
+        public const string DialerPacingCheckName = "contactcenter-dialer-pacing";
+
+        /// <summary>
         /// The registration name of the provider ingress inbox backlog check.
         /// </summary>
         public const string ProviderIngressCheckName = "contactcenter-provider-ingress";

@@ -80,4 +80,16 @@ public enum DispatchBlocker
     /// The dialer profile's abandonment rate reached its cap, or the statistics proving compliance were unavailable.
     /// </summary>
     AbandonmentRateExceeded,
+
+    /// <summary>
+    /// The record's queue item is stamped with a dialer profile that no longer exists, so the pacer has no profile to dial
+    /// it with.
+    /// </summary>
+    ProfileMissing,
+
+    /// <summary>
+    /// The record is not in its campaign's queue because it is assigned to a user, who works it from their own list rather
+    /// than through the dialer.
+    /// </summary>
+    AssignedToUser,
 }

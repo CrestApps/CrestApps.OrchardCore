@@ -169,6 +169,32 @@ public sealed class ContactCenterHealthEndpointsTests
     }
 
     [Fact]
+    public void DialerPacingHealthChecks_RegisterTheHeartbeatProbe_TaggedDependency()
+    {
+        // Arrange
+        var registrations = GetRegisteredHealthChecks(services => services.AddContactCenterDialerPacingHealthChecks());
+
+        // Act
+        var selected = SelectNames(registrations, ContactCenterHealthEndpoints.IsDependencyCheck);
+
+        // Assert
+        // The heartbeat reads the pacing cycle records every node shares, so a stalled dialer gives the same verdict on
+        // every node: it alerts through the dependency probe and never drains the fleet through readiness.
+        Assert.Equal(
+            [
+                ContactCenterConstants.HealthChecks.DialerPacingCheckName,
+            ],
+            selected);
+
+        Assert.All(registrations, registration =>
+        {
+            Assert.Contains(ContactCenterConstants.HealthChecks.AreaTag, registration.Tags);
+            Assert.Contains(ContactCenterConstants.HealthChecks.DependencyTag, registration.Tags);
+            Assert.DoesNotContain(ContactCenterConstants.HealthChecks.ReadyTag, registration.Tags);
+        });
+    }
+
+    [Fact]
     public void RedisHealthChecks_RegisterNothing_WhenRedisServiceIsNotRegistered()
     {
         // Enabling OrchardCore.Redis is not enough: Orchard skips registering IRedisService when the Redis

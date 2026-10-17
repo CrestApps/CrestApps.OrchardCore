@@ -1,14 +1,25 @@
 @using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Checkout.Services
 
 @model ShapeViewModel<CheckoutFlow>
 
 @{
     var previousStep = Model.Value.GetPreviousStep();
     var isPaymentStep = Model.Value.CurrentStepEquals(CheckoutConstants.PaymentStepKey);
+
+    // The way back to the page that started the checkout, when it named one.
+    var returnLink = CheckoutReturnLinks.GetBackLink(Model.Value);
+    var returnText = returnLink is null
+        ? null
+        : !string.IsNullOrEmpty(returnLink.ReturnText)
+            ? returnLink.ReturnText
+            : previousStep is null
+                ? T["Back"].Value
+                : T["Leave checkout"].Value;
 }
 
 <div class="d-flex justify-content-between align-items-center mt-4">
-    <div>
+    <div class="d-flex flex-wrap align-items-center gap-2">
         @if (previousStep is not null)
         {
             <a class="btn btn-link"
@@ -16,6 +27,13 @@
                asp-route-sessionId="@Model.Value.Session.SessionId"
                asp-route-step="@previousStep.Key">
                 @T["Back"]
+            </a>
+        }
+
+        @if (returnLink is not null)
+        {
+            <a class="btn btn-link" href="@Url.Content(returnLink.ReturnUrl)" data-checkout-return>
+                @returnText
             </a>
         }
     </div>

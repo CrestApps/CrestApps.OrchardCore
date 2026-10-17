@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
@@ -39,6 +40,7 @@
     <PackageReference Include="OrchardCore.Users" />
     <PackageReference Include="OrchardCore.ReCaptcha.Core" />
     <PackageReference Include="OrchardCore.RateLimits.Core" />
+    <PackageReference Include="OrchardCore.Settings" />
   </ItemGroup>
 
   <ItemGroup>

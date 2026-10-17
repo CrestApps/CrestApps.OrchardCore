@@ -78,7 +78,7 @@ public sealed class CheckoutController : Controller
 
         if (session is null)
         {
-            return NotFound();
+            return await ShowEndedAsync(sessionId);
         }
 
         var flow = new CheckoutFlow(session);
@@ -114,7 +114,7 @@ public sealed class CheckoutController : Controller
 
         if (session is null)
         {
-            return NotFound();
+            return await ShowEndedAsync(model?.SessionId);
         }
 
         var flow = new CheckoutFlow(session);
@@ -191,10 +191,52 @@ public sealed class CheckoutController : Controller
 
         var content = await _displayManager.BuildDisplayAsync(flow, _updateModelAccessor.ModelUpdater, "Confirmation");
 
+        var returnInfo = CheckoutReturnInfo.GetFrom(session);
+
         return View(new CheckoutViewModel
         {
             SessionId = session.SessionId,
             Content = content,
+            ReturnUrl = returnInfo?.ReturnUrl,
+            ReturnText = returnInfo?.ReturnText,
+            Title = returnInfo?.Title,
+        });
+    }
+
+    // A checkout that is no longer live is either finished, which has its own page, or over without being paid. The
+    // second still gets a page rather than a 404: the customer followed a link to it, and the page is where they find
+    // their way back to wherever they started.
+    private async Task<IActionResult> ShowEndedAsync(string sessionId)
+    {
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            return NotFound();
+        }
+
+        if (await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Completed) is not null)
+        {
+            return RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId });
+        }
+
+        // The store only returns a session that belongs to this caller, whatever its state, so this page never tells
+        // one visitor anything about another's checkout.
+        var session = await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Canceled)
+            ?? await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Expired)
+            ?? await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Failed);
+
+        if (session is null)
+        {
+            return NotFound();
+        }
+
+        var returnInfo = CheckoutReturnInfo.GetFrom(session);
+
+        return View("Ended", new CheckoutEndedViewModel
+        {
+            SessionId = session.SessionId,
+            Status = session.Status,
+            ReturnUrl = returnInfo?.ReturnUrl,
+            ReturnText = returnInfo?.ReturnText,
         });
     }
 

@@ -106,6 +106,7 @@ public sealed class ContactCenterQueueBacklogHealthCheckTests
 
         await migration.CreateAsync();
         await migration.UpdateFrom3Async();
+        await migration.UpdateFrom6Async();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;

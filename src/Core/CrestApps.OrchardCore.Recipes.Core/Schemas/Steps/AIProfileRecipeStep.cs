@@ -37,6 +37,7 @@ public sealed class AIProfileRecipeStep : IRecipeStep
                 ("PromptTemplate", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Liquid template for TemplatePrompt profiles.")),
                 ("PromptSubject", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Prompt subject.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name.")),
+                ("PersonaId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional technical name of the AI persona this profile links to. An empty value unlinks the persona, and leaving the key out keeps the current link.")),
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment technical name for the AI model.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment technical name for the AI model.")),
                 ("CreatedUtc", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional creation timestamp in ISO 8601 format.")),

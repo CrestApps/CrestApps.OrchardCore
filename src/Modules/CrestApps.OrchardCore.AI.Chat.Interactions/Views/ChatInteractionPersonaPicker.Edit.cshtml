@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Core.ViewModels
+
+@model AIPersonaPickerViewModel
+
+<div class="mb-3">
+    <label asp-for="PersonaId" class="form-label">
+        @T["AI persona"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The character the assistant plays: its personality, the name it uses and the voice it speaks with. Its instructions come before the system instructions, which still decide what the assistant does."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    @* The setting-input class and data-setting name are what the interaction script saves. *@
+    <select asp-for="PersonaId" class="form-select setting-input" data-setting="personaId" data-ai-persona-select>
+        <option value="">@T["No persona"]</option>
+        @foreach (var option in Model.Personas)
+        {
+            <option value="@option.Id" selected="@(string.Equals(option.Id, Model.PersonaId, StringComparison.OrdinalIgnoreCase))" data-voice-name="@option.VoiceName" title="@option.Description">@option.Text</option>
+        }
+    </select>
+</div>

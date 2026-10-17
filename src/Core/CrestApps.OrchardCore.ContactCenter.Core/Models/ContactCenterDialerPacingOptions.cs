@@ -39,4 +39,12 @@ public sealed class ContactCenterDialerPacingOptions
     /// campaign dialing, until the application restarts.
     /// </summary>
     public TimeSpan CycleTimeout { get; set; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Gets or sets how long work may wait in a paced campaign queue without a pacing cycle of that queue completing
+    /// before the dialer is reported as stalled, on the dialer activity report, the live dashboard and the dialer pacing
+    /// health check. The minute dialer pacing task paces every queue with waiting work at least once a minute, so a
+    /// healthy dialer completes a cycle well within the default of five minutes.
+    /// </summary>
+    public TimeSpan StalledAfter { get; set; } = TimeSpan.FromMinutes(5);
 }

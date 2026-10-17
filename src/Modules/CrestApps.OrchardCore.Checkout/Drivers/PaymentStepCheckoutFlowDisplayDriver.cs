@@ -55,12 +55,15 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
         var invoice = flow.Session.TryGet<CheckoutInvoice>(out var found) ? found : null;
         var obligations = invoice is null ? [] : CheckoutObligations.GetExpectedObligationIds(invoice);
 
+        var savesPaymentMethod = flow.Session is CheckoutSession { SavePaymentMethod: true };
+
         // Only providers that can actually settle what this invoice owes are offered. Offering one that
         // cannot would let the customer select it and only discover the mismatch when payment is refused.
         var eligible = CheckoutPaymentMethodSelector.GetEligible(
             _providers,
             obligations,
-            flow.Session is CheckoutSession { SettlesExistingBalance: true });
+            flow.Session is CheckoutSession { SettlesExistingBalance: true },
+            savesPaymentMethod);
 
         var selected = CheckoutPaymentMethodSelector.ResolveDefault(eligible, settings.DefaultPaymentMethod);
 
@@ -68,6 +71,7 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
         {
             Flow = flow,
             RequiresPayment = obligations.Count > 0,
+            SavePaymentMethod = savesPaymentMethod,
             SelectedProviderKey = selected,
             Methods = [.. eligible.Select(provider => new CheckoutPaymentMethodOption
             {
@@ -88,6 +92,7 @@ public sealed class PaymentStepCheckoutFlowDisplayDriver : CheckoutFlowDisplayDr
             viewModel.Flow = model.Flow;
             viewModel.Methods = model.Methods;
             viewModel.RequiresPayment = model.RequiresPayment;
+            viewModel.SavePaymentMethod = model.SavePaymentMethod;
             viewModel.SelectedProviderKey = model.SelectedProviderKey;
         }).Location("Content:5");
     }

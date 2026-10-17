@@ -41,4 +41,12 @@ public abstract class CheckoutHandlerBase : ICheckoutHandler
     /// <inheritdoc/>
     public virtual Task FailedAsync(CheckoutFlowFailedContext context)
         => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task CanceledAsync(CheckoutFlowCanceledContext context)
+        => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public virtual Task ExpiredAsync(CheckoutFlowExpiredContext context)
+        => Task.CompletedTask;
 }

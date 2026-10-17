@@ -34,6 +34,7 @@ internal static partial class SupervisorDashboardEndpoints
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
     public const string DispatchRouteName = "ContactCenterSupervisorDashboardDispatch";
+    public const string DialerRouteName = "ContactCenterSupervisorDashboardDialer";
 
     public static IEndpointRouteBuilder AddSupervisorDashboardEndpoints(this IEndpointRouteBuilder builder)
     {
@@ -45,6 +46,9 @@ internal static partial class SupervisorDashboardEndpoints
 
         builder.MapGet("Admin/contact-center/dashboard/dispatch", HandleDispatchAsync)
             .WithName(DispatchRouteName);
+
+        builder.MapGet("Admin/contact-center/dashboard/dialer", HandleDialerAsync)
+            .WithName(DialerRouteName);
 
         return builder;
     }

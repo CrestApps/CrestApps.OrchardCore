@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
+using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.AI.Core;
@@ -323,7 +324,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                 // profile itself. Only the activity was read before, and a batch does not set a voice unless
                 // somebody picks one — so the voice an operator selected on the profile was silently ignored and
                 // every realtime call used the model's default, whatever the profile said.
-                Voice = ResolveVoice(context),
+                Voice = await ResolveVoiceAsync(context, cancellationToken),
 
                 // A caller who talks over the assistant is interrupting a person as far as they are concerned,
                 // and being talked through is the single most common complaint about automated calls.
@@ -384,16 +385,20 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
-    /// The voice this call should be spoken in: the one the activity was loaded with, falling back to the one
-    /// configured on the profile.
+    /// The voice this call should be spoken in: the one the activity was loaded with, then the one configured on
+    /// the profile, then the voice of the persona the profile links to.
     /// </summary>
     /// <remarks>
     /// The activity only carries a voice when the inventory load explicitly chose one, which is the exception
     /// rather than the rule. Reading only the activity therefore threw away the profile's own setting, so an
     /// operator who picked a voice there heard the model's default on every call and had no way to tell why.
+    /// The persona's voice goes through the same resolver the chat hubs use, so it is skipped on a deployment of
+    /// another provider rather than sending the call a voice that provider does not have. Without the AI Personas
+    /// feature there is no persona and the profile's voice is used.
     /// </remarks>
     /// <param name="context">The call being held.</param>
-    private static string ResolveVoice(RealtimeVoiceConversationContext context)
+    /// <param name="cancellationToken">The call's token.</param>
+    private static async Task<string> ResolveVoiceAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken)
     {
         var activityVoice = context.Activity?.TextToSpeechVoiceId;
 
@@ -402,14 +407,28 @@ public sealed partial class RealtimeVoiceConversationRunner
             return activityVoice.Trim();
         }
 
+        string profileVoice = null;
+
         if (context.Profile is not null &&
             context.Profile.TryGetSettings<ChatModeProfileSettings>(out var settings) &&
             !string.IsNullOrWhiteSpace(settings.VoiceName))
         {
-            return settings.VoiceName.Trim();
+            profileVoice = settings.VoiceName.Trim();
         }
 
+        var services = ShellScope.Services;
+
+        if (services is null)
+        {
+            return profileVoice;
+        }
+
+        var persona = await services.ResolvePersonaAsync(context.Profile, cancellationToken);
+        var voice = await services.SelectPersonaVoiceAsync(persona, profileVoice, context.RealtimeDeploymentName, defaultVoice: null, cancellationToken);
+
         // Nothing chosen anywhere: let the deployment use whatever it defaults to.
-        return null;
+        return string.IsNullOrWhiteSpace(voice)
+            ? null
+            : voice.Trim();
     }
 }

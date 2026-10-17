@@ -30,6 +30,14 @@
 
 <div id="checkout-payment-error" class="alert alert-danger d-none" role="alert"></div>
 
+@if (Model.SavePaymentMethod)
+{
+    @* The customer agrees to later charges here, so they are told before they enter a card, not after. *@
+    <div class="alert alert-info" role="alert">
+        @T["The card you pay with now is saved, and the remaining payments are charged to it automatically on their due dates."]
+    </div>
+}
+
 <fieldset class="mb-4">
     <legend class="h6">@T["Payment method"]</legend>
 
@@ -62,7 +70,7 @@
     @foreach (var method in Model.Methods)
     {
         var panel = await PaymentMethodDisplayManager.BuildEditorAsync(
-            model: new CheckoutFlowPaymentMethod { Flow = Model.Flow },
+            model: new CheckoutFlowPaymentMethod { Flow = Model.Flow, SavePaymentMethod = Model.SavePaymentMethod },
             updater: UpdateModelAccessor.ModelUpdater,
             isNew: false,
             method.Key);

@@ -609,6 +609,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             services.AddSingleton(CreateEmptyInteractionEventStore());
         }
 
+        // No repeated routing decision is folded into an earlier one here, so every decision a flow makes stays a
+        // published event it can read.
+        services.AddSingleton(Mock.Of<IDialerDecisionLog>());
         services.AddSingleton<IContactCenterAuditRecorder, ContactCenterAuditRecorder>();
         services.AddSingleton<IAgentAvailabilityService, HarnessAvailabilityService>();
         services.AddSingleton(CreateEligibilityService());
@@ -793,7 +796,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
-            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable())
+            .Column<string>("DialerProfileId", column => column.Nullable().WithLength(26)),
             collection: ContactCenterStorage.CollectionName);
 
         await builder.CreateMapIndexTableAsync<AgentProfileIndex>(table => table

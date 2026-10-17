@@ -155,6 +155,7 @@ public sealed class McpServerStartup : StartupBase
         // opt in the tools and tool instances exposed to MCP clients.
         services.AddSiteDisplayDriver<McpServerSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, McpServerPermissionsProvider.ManageMcpServerSettings);
 
         // Register the authorization handler for MCP server.
         services.AddScoped<IAuthorizationHandler, McpServerAuthorizationHandler>();

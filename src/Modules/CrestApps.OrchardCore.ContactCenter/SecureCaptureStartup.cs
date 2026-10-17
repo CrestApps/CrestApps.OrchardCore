@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -60,6 +61,7 @@ public sealed class SecureCaptureStartup : StartupBase
         services.AddIndexProvider<SecureCaptureSessionIndexProvider>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SecureCaptureExpiryBackgroundTask>());
         services.AddSiteDisplayDriver<SecureCaptureSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

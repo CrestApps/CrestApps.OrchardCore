@@ -59,4 +59,17 @@ public interface ICheckoutHandler
     /// </summary>
     /// <param name="context">The failed context.</param>
     Task FailedAsync(CheckoutFlowFailedContext context);
+
+    /// <summary>
+    /// Triggered after a session is canceled before it completed, so what it held, such as an order or reserved
+    /// stock, can be let go.
+    /// </summary>
+    /// <param name="context">The canceled context.</param>
+    Task CanceledAsync(CheckoutFlowCanceledContext context);
+
+    /// <summary>
+    /// Triggered after a session nobody finished is expired, so what it held can be let go.
+    /// </summary>
+    /// <param name="context">The expired context.</param>
+    Task ExpiredAsync(CheckoutFlowExpiredContext context);
 }

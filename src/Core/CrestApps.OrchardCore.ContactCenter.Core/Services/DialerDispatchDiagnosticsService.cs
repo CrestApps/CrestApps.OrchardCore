@@ -1,4 +1,3 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Dispatch;
@@ -9,7 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.Modules;
 using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -37,21 +35,17 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
     /// <summary>
     /// How far back a routing decision counts as why a queue is not assigning. Routing decides on every pass, so an older
-    /// one says nothing about now.
+    /// one says nothing about now. A repeated decision counts from the last time it was made, not the first.
     /// </summary>
     internal static readonly TimeSpan RoutingLookback = TimeSpan.FromMinutes(15);
-
-    private const int BatchSize = 500;
 
     private readonly IActivityQueueManager _queueManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IBusinessHoursService _businessHours;
-    private readonly IDialerProfileReader _profileReader;
-    private readonly IOmnichannelActivityManager _activityManager;
-    private readonly IContactCenterWorkStateStore _workStateStore;
-    private readonly IInteractionEventStore _eventStore;
+    private readonly IDialerDecisionLog _decisionLog;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly DialerRecordClassifier _classifier;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialerDispatchDiagnosticsService"/> class.
@@ -62,7 +56,8 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
     /// <param name="profileReader">The reader of the dialer profile a record is dialed under.</param>
     /// <param name="activityManager">The CRM activities the campaign records are.</param>
     /// <param name="workStateStore">The work state that holds each record's attempt count.</param>
-    /// <param name="eventStore">The recorded suppression and routing decisions.</param>
+    /// <param name="eventStore">The recorded suppressions.</param>
+    /// <param name="decisionLog">The dialer decision log, from which each queue's latest routing decision is read.</param>
     /// <param name="session">The YesSql session, which reads many records' pending state and last calls at once.</param>
     /// <param name="clock">The clock.</param>
     public DialerDispatchDiagnosticsService(
@@ -73,18 +68,17 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateStore workStateStore,
         IInteractionEventStore eventStore,
+        IDialerDecisionLog decisionLog,
         ISession session,
         IClock clock)
     {
         _queueManager = queueManager;
         _queueItemManager = queueItemManager;
         _businessHours = businessHours;
-        _profileReader = profileReader;
-        _activityManager = activityManager;
-        _workStateStore = workStateStore;
-        _eventStore = eventStore;
+        _decisionLog = decisionLog;
         _session = session;
         _clock = clock;
+        _classifier = new DialerRecordClassifier(profileReader, activityManager, workStateStore, eventStore, session);
     }
 
     /// <inheritdoc/>
@@ -174,19 +168,20 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
             PendingCount = await pending.CountAsync(cancellationToken),
         };
 
-        var profiles = new Dictionary<string, DialerProfile>(StringComparer.Ordinal);
         var waitingItems = await _queueItemManager.GetWaitingAsync(queueId, cancellationToken);
 
         diagnostics.WaitingItemCount = waitingItems.Count;
         diagnostics.ReservedItemCount = await CountItemsAsync(queueId, QueueItemStatus.Reserved, cancellationToken);
         diagnostics.AssignedItemCount = await CountItemsAsync(queueId, QueueItemStatus.Assigned, cancellationToken);
 
+        var stampProfiles = new Dictionary<string, DialerProfile>(StringComparer.Ordinal);
+
         foreach (var profileId in waitingItems.Select(item => item.DialerProfileId).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
         {
-            await ReadProfileAsync(profiles, profileId, cancellationToken);
+            stampProfiles[profileId] = await _classifier.ReadProfileAsync(profileId, cancellationToken);
         }
 
-        diagnostics.ProfileStamps = DispatchQueueLoadSummary.Stamps(waitingItems, id => profiles.GetValueOrDefault(id));
+        diagnostics.ProfileStamps = DispatchQueueLoadSummary.Stamps(waitingItems, id => stampProfiles.GetValueOrDefault(id));
 
         var head = waitingItems.Count == 0
             ? null
@@ -194,7 +189,7 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
         diagnostics.Pacing = DispatchQueueLoadSummary.Pacing(
             head,
-            head is null || string.IsNullOrEmpty(head.DialerProfileId) ? null : profiles.GetValueOrDefault(head.DialerProfileId));
+            head is null ? null : await _classifier.ReadProfileAsync(head.DialerProfileId, cancellationToken));
 
         if (diagnostics.PendingCount == 0)
         {
@@ -202,7 +197,6 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         }
 
         var records = (await pending.OrderBy(index => index.ScheduledUtc).Take(MaxEvaluatedRecords).ListAsync(cancellationToken)).ToArray();
-        var recordIds = records.Select(index => index.ItemId).ToArray();
 
         var waiting = waitingItems
             .Where(item => !string.IsNullOrEmpty(item.ActivityItemId))
@@ -216,44 +210,37 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         diagnostics.ActivityMix = DispatchQueueLoadSummary.Mix(pendingRecords);
         (diagnostics.ProfileMismatchCount, diagnostics.ActivitiesWithoutProfileCount) = DispatchQueueLoadSummary.Compare(waiting, pendingRecords);
 
-        var activities = await LoadActivitiesAsync(recordIds, cancellationToken);
-        var workStates = await LoadWorkStatesAsync(recordIds, cancellationToken);
-        var lastInteractions = await LoadLastInteractionsAsync(recordIds, cancellationToken);
-        var suppressions = await LoadSuppressionsAsync(recordIds, now, cancellationToken);
+        var verdicts = await _classifier.ClassifyAsync(
+            pendingRecords
+                .Select(record => new DialerRecordInput(
+                    record.ActivityId,
+                    waiting.TryGetValue(record.ActivityId, out var queueItem),
+                    queueItem?.DialerProfileId,
+                    record.DialerProfileId))
+                .ToArray(),
+            now,
+            cancellationToken);
+
         var buckets = new Dictionary<DispatchBlocker, DispatchBucket>();
 
         foreach (var record in records)
         {
-            if (!activities.TryGetValue(record.ItemId, out var activity))
+            if (!verdicts.TryGetValue(record.ItemId, out var verdict))
             {
                 continue;
             }
 
-            waiting.TryGetValue(record.ItemId, out var queueItem);
-            workStates.TryGetValue(record.ItemId, out var workState);
-            lastInteractions.TryGetValue(record.ItemId, out var lastInteraction);
-            suppressions.TryGetValue(record.ItemId, out var suppression);
-
-            var profileId = queueItem?.DialerProfileId ?? record.DialerProfileId;
-            DialerProfile profile = null;
-
-            if (!string.IsNullOrEmpty(profileId) && !QueueCallbackDialerProfile.IsCallbackProfile(profileId))
-            {
-                profile = await ReadProfileAsync(profiles, profileId, cancellationToken);
-            }
-
-            var (blocker, dueUtc) = Evaluate(queueItem, profile, activity, workState, lastInteraction, suppression, now);
             diagnostics.EvaluatedCount++;
 
-            if (!buckets.TryGetValue(blocker, out var bucket))
+            if (!buckets.TryGetValue(verdict.Blocker, out var bucket))
             {
-                bucket = new DispatchBucket { Blocker = blocker };
-                buckets[blocker] = bucket;
+                bucket = new DispatchBucket { Blocker = verdict.Blocker };
+                buckets[verdict.Blocker] = bucket;
             }
 
             bucket.Count++;
 
-            if (dueUtc is { } due && (bucket.NextDueUtc is null || due < bucket.NextDueUtc))
+            if (verdict.DueUtc is { } due && (bucket.NextDueUtc is null || due < bucket.NextDueUtc))
             {
                 bucket.NextDueUtc = due;
             }
@@ -271,22 +258,6 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         return diagnostics;
     }
 
-    private async Task<DialerProfile> ReadProfileAsync(Dictionary<string, DialerProfile> profiles, string profileId, CancellationToken cancellationToken)
-    {
-        if (QueueCallbackDialerProfile.IsCallbackProfile(profileId))
-        {
-            return null;
-        }
-
-        if (!profiles.TryGetValue(profileId, out var profile))
-        {
-            profile = await _profileReader.FindByIdAsync(profileId, cancellationToken);
-            profiles[profileId] = profile;
-        }
-
-        return profile;
-    }
-
     private async Task<int> CountItemsAsync(string queueId, QueueItemStatus status, CancellationToken cancellationToken)
         => await _session.QueryIndex<QueueItemIndex>(
             index => index.QueueId == queueId && index.Status == status,
@@ -302,10 +273,43 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         DialerSuppressionEventData suppression,
         DateTime now)
     {
+        return Evaluate(queueItem is not null, queueItem?.DialerProfileId, profile, activity, workState, lastInteraction, suppression, now);
+    }
+
+    /// <summary>
+    /// Decides what holds one pending campaign record back, if anything.
+    /// </summary>
+    /// <param name="queued">Whether the record has an item in its campaign's queue.</param>
+    /// <param name="profileId">The dialer profile the record is dialed under, if any.</param>
+    /// <param name="profile">That profile, or <see langword="null"/> when it is not set, is the built-in queued-callback
+    /// profile, or no longer exists.</param>
+    /// <param name="activity">The record.</param>
+    /// <param name="workState">The record's work state, which holds its attempt count.</param>
+    /// <param name="lastInteraction">The record's last call, if any.</param>
+    /// <param name="suppression">The compliance gate's latest suppression of the record that no call has followed.</param>
+    /// <param name="now">The current time.</param>
+    /// <returns>The reason the record is held back and when it becomes due, or <see cref="DispatchBlocker.DialableNow"/>.</returns>
+    internal static (DispatchBlocker Blocker, DateTime? DueUtc) Evaluate(
+        bool queued,
+        string profileId,
+        DialerProfile profile,
+        OmnichannelActivity activity,
+        ContactCenterWorkState workState,
+        Interaction lastInteraction,
+        DialerSuppressionEventData suppression,
+        DateTime now)
+    {
         // Routing only sees what waits in the campaign's queue.
-        if (queueItem is null)
+        if (!queued)
         {
-            return (DispatchBlocker.NotQueued, null);
+            return (EvaluateNotQueued(activity?.AssignedToId), null);
+        }
+
+        // A record stamped with a profile that has since been deleted is never paced: the pacer reads the stamped profile
+        // and finds nothing to pace with.
+        if (profile is null && !string.IsNullOrEmpty(profileId) && !QueueCallbackDialerProfile.IsCallbackProfile(profileId))
+        {
+            return (DispatchBlocker.ProfileMissing, null);
         }
 
         // The queue gate lets a record with no profile, or a queued callback, through to routing untouched.
@@ -341,6 +345,15 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         return (DispatchBlocker.DialableNow, null);
     }
 
+    /// <summary>
+    /// Decides why a pending record that is not in its campaign's queue is not dialed.
+    /// </summary>
+    /// <param name="assignedToId">The user the record is assigned to, if any.</param>
+    /// <returns><see cref="DispatchBlocker.AssignedToUser"/> for a record a user works from their own list; otherwise
+    /// <see cref="DispatchBlocker.NotQueued"/>.</returns>
+    internal static DispatchBlocker EvaluateNotQueued(string assignedToId)
+        => string.IsNullOrEmpty(assignedToId) ? DispatchBlocker.NotQueued : DispatchBlocker.AssignedToUser;
+
     private static DispatchBlocker? ToBlocker(DialerSuppressionReason reason)
         => reason switch
         {
@@ -366,124 +379,20 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
             .Sum(bucket => bucket.Count);
     }
 
-    private async Task<Dictionary<string, OmnichannelActivity>> LoadActivitiesAsync(string[] ids, CancellationToken cancellationToken)
-    {
-        var activities = new Dictionary<string, OmnichannelActivity>(StringComparer.Ordinal);
-
-        foreach (var batch in ids.Chunk(BatchSize))
-        {
-            foreach (var activity in await _activityManager.GetByIdsAsync(batch, cancellationToken))
-            {
-                activities[activity.ItemId] = activity;
-            }
-        }
-
-        return activities;
-    }
-
-    private async Task<Dictionary<string, ContactCenterWorkState>> LoadWorkStatesAsync(string[] ids, CancellationToken cancellationToken)
-    {
-        var states = new Dictionary<string, ContactCenterWorkState>(StringComparer.Ordinal);
-
-        foreach (var batch in ids.Chunk(BatchSize))
-        {
-            foreach (var state in await _workStateStore.GetByActivityIdsAsync(batch, cancellationToken))
-            {
-                states[state.ActivityItemId] = state;
-            }
-        }
-
-        return states;
-    }
-
-    private async Task<Dictionary<string, Interaction>> LoadLastInteractionsAsync(string[] ids, CancellationToken cancellationToken)
-    {
-        var last = new Dictionary<string, Interaction>(StringComparer.Ordinal);
-
-        foreach (var batch in ids.Chunk(BatchSize))
-        {
-            var interactions = await _session.Query<Interaction, InteractionIndex>(
-                index => index.ActivityItemId.IsIn(batch),
-                collection: ContactCenterStorage.CollectionName)
-                .ListAsync(cancellationToken);
-
-            foreach (var interaction in interactions)
-            {
-                if (!string.IsNullOrEmpty(interaction.ActivityItemId) &&
-                    (!last.TryGetValue(interaction.ActivityItemId, out var existing) || interaction.CreatedUtc > existing.CreatedUtc))
-                {
-                    last[interaction.ActivityItemId] = interaction;
-                }
-            }
-        }
-
-        return last;
-    }
-
-    // The latest suppression of each record that no call has followed.
-    private async Task<Dictionary<string, DialerSuppressionEventData>> LoadSuppressionsAsync(string[] ids, DateTime now, CancellationToken cancellationToken)
-    {
-        var latest = new Dictionary<string, (DateTime OccurredUtc, DialerSuppressionEventData Data)>(StringComparer.Ordinal);
-        var events = await _eventStore.GetByAggregateWindowAsync(
-            nameof(OmnichannelActivity),
-            [ContactCenterConstants.Events.DialSuppressed],
-            ids,
-            now - SuppressionLookback,
-            now,
-            cancellationToken);
-
-        foreach (var interactionEvent in events)
-        {
-            var data = ReadData<DialerSuppressionEventData>(interactionEvent);
-
-            if (data is null || string.IsNullOrEmpty(interactionEvent.AggregateId))
-            {
-                continue;
-            }
-
-            if (!latest.TryGetValue(interactionEvent.AggregateId, out var existing) || interactionEvent.OccurredUtc >= existing.OccurredUtc)
-            {
-                latest[interactionEvent.AggregateId] = (interactionEvent.OccurredUtc, data);
-            }
-        }
-
-        if (latest.Count == 0)
-        {
-            return [];
-        }
-
-        // A call placed after the suppression means the record was dialed since; the suppression no longer explains it.
-        var lastInteractions = await LoadLastInteractionsAsync(latest.Keys.ToArray(), cancellationToken);
-        var current = new Dictionary<string, DialerSuppressionEventData>(StringComparer.Ordinal);
-
-        foreach (var (activityId, entry) in latest)
-        {
-            if (!lastInteractions.TryGetValue(activityId, out var interaction) || interaction.CreatedUtc <= entry.OccurredUtc)
-            {
-                current[activityId] = entry.Data;
-            }
-        }
-
-        return current;
-    }
-
-    // The latest routing decision of each queue, when it found nobody to take the work.
+    // The latest routing decision of each queue, when it found nobody to take the work. A failure routing keeps repeating
+    // is one event counted on every pass, so it is read by the last time it was made: one first made hours ago and made
+    // again a minute ago still explains the queue now.
     private async Task<Dictionary<string, DispatchRoutingFinding>> ReadRoutingFindingsAsync(string[] queueIds, DateTime now, CancellationToken cancellationToken)
     {
         var wanted = new HashSet<string>(queueIds, StringComparer.OrdinalIgnoreCase);
         var findings = new Dictionary<string, DispatchRoutingFinding>(StringComparer.OrdinalIgnoreCase);
-        var events = await _eventStore.GetByAggregateWindowAsync(
-            nameof(QueueItem),
-            [ContactCenterConstants.Events.RoutingDecisionMade],
-            aggregateIds: null,
-            now - RoutingLookback,
-            now,
-            cancellationToken);
+        var events = await _decisionLog.GetRoutingDecisionsSeenSinceAsync(queueIds, now - RoutingLookback, cancellationToken);
 
-        // Oldest first, so the last decision of a queue is the one left standing: a success clears an earlier failure.
+        // Oldest last-seen first, so the last decision of a queue is the one left standing: a success clears an earlier
+        // failure.
         foreach (var interactionEvent in events)
         {
-            var data = ReadData<ActivityRoutingDecisionEventData>(interactionEvent);
+            var data = DialerRecordClassifier.ReadData<ActivityRoutingDecisionEventData>(interactionEvent);
 
             if (data is null || string.IsNullOrEmpty(data.QueueId) || !wanted.Contains(data.QueueId))
             {
@@ -499,7 +408,7 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
 
             findings[data.QueueId] = new DispatchRoutingFinding
             {
-                OccurredUtc = interactionEvent.OccurredUtc,
+                OccurredUtc = RoutingDecisionCoalescing.GetLastSeenUtc(interactionEvent, data),
                 Reason = data.Reason,
                 CandidateCount = data.Candidates.Count,
                 CandidateReasons = data.Candidates
@@ -514,19 +423,5 @@ public sealed class DialerDispatchDiagnosticsService : IDialerDispatchDiagnostic
         }
 
         return findings;
-    }
-
-    private static T ReadData<T>(InteractionEvent interactionEvent)
-        where T : class
-    {
-        try
-        {
-            return interactionEvent.GetData<T>();
-        }
-        catch (JsonException)
-        {
-            // A payload written by a release this one cannot read says nothing about now.
-            return null;
-        }
     }
 }

@@ -24,7 +24,7 @@ The module ships several composable features:
 | --- | --- | --- |
 | Subscriptions | `CrestApps.OrchardCore.Subscriptions` | Subscription plans, the durable agreement, its lifecycle, entitlements, and the admin and customer screens. Depends on the [Checkout](checkout) framework. |
 | Subscriptions - Sites | `CrestApps.OrchardCore.Subscriptions.Tenants` | Sells whole Orchard Core sites, provisioning each from a durable job (default tenant only). |
-| Subscriptions - Installment Plans | `CrestApps.OrchardCore.Subscriptions.Installments` | Payment plans an administrator sets up for a customer: a down payment taken by card, then a fixed number of scheduled payments. See [Installment Plans](installment-plans). |
+| Subscriptions - Installment Plans | `CrestApps.OrchardCore.Subscriptions.Installments` | Payment plans for a customer: an optional down payment taken by card, then a fixed number of scheduled payments. Set up by an administrator, by another module, or by the customer at checkout. Does not require the Subscriptions feature. See [Installment Plans](installment-plans). |
 
 Payment options are contributed by other modules rather than by dedicated Subscriptions sub-features:
 
@@ -287,6 +287,8 @@ A site sold this way carries a `Tenant` entitlement naming it, so the site runs 
 - a down payment taken by card (or Apple Pay / Google Pay) on the spot;
 - a fixed number of equal payments after it, weekly, every two weeks, monthly or quarterly;
 - each payment either charged to the kept card on its due date, with retries, or invoiced to the customer with a pay link.
+
+A plan can also start without a down payment, be created by another module for a record of its own, or be chosen by the customer on a **Choose how to pay** step when they pay an outstanding balance. The feature lives in this module but does not need the **Subscriptions** feature or Products.
 
 Every payment is an ordinary [transaction](transactions) and every charge goes through the [Checkout](checkout) engine. Configuration, the payment lifecycle, the double-charge safeguards and the extension points are described on their own page: [Installment Plans](installment-plans).
 

@@ -133,6 +133,76 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
         Assert.Equal("admin-1", session.OwnerId);
     }
 
+    [Fact]
+    public async Task BeginPaymentAsync_ForACheckoutThatKeepsTheCard_AsksTheProviderToKeepIt()
+    {
+        // Arrange
+        var attempts = new InMemoryPaymentAttemptStore();
+        var provider = new ScriptedProvider();
+        var (engine, sessions) = CreateEngine(attempts, provider);
+        var session = CreateSession();
+        session.SavePaymentMethod = true;
+        sessions.Seed(session);
+
+        // Act
+        var outcome = await engine.BeginPaymentAsync(
+            "session-1",
+            new BeginPaymentOptions
+            {
+                ProviderKey = ProviderKey,
+                ProviderData = new Dictionary<string, string> { ["paymentMethodId"] = "pm_browser" },
+            },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(outcome.Succeeded);
+        Assert.True(CheckoutPaymentDataKeys.IsSet(provider.LastProviderData, CheckoutPaymentDataKeys.SavePaymentMethod));
+        Assert.Equal("pm_browser", provider.LastProviderData["paymentMethodId"]);
+    }
+
+    [Fact]
+    public async Task BeginPaymentAsync_ForAnOrdinaryCheckout_DoesNotKeepTheCard()
+    {
+        // Arrange
+        var attempts = new InMemoryPaymentAttemptStore();
+        var provider = new ScriptedProvider();
+        var (engine, sessions) = CreateEngine(attempts, provider);
+        sessions.Seed(CreateSession());
+
+        // Act
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(CheckoutPaymentDataKeys.IsSet(provider.LastProviderData, CheckoutPaymentDataKeys.SavePaymentMethod));
+    }
+
+    [Fact]
+    public async Task BeginPaymentAsync_ForACheckoutThatKeepsTheCard_RefusesAProviderThatCannotKeepOne()
+    {
+        // Arrange
+        var attempts = new InMemoryPaymentAttemptStore();
+        var provider = new ScriptedProvider
+        {
+            Capabilities = new PaymentProviderCapabilities
+            {
+                SupportsOneTimePayments = true,
+            },
+        };
+
+        var (engine, sessions) = CreateEngine(attempts, provider);
+        var session = CreateSession();
+        session.SavePaymentMethod = true;
+        sessions.Seed(session);
+
+        // Act
+        var outcome = await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(outcome.Succeeded);
+        Assert.Null(provider.LastProviderData);
+        Assert.Empty(await attempts.GetBySessionAsync("session-1", TestContext.Current.CancellationToken));
+    }
+
     private static CheckoutSession CreateSession()
     {
         var session = new CheckoutSession
@@ -199,14 +269,20 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
 
         public string DisplayName => ProviderKey;
 
-        public PaymentProviderCapabilities Capabilities { get; } = new()
+        public PaymentProviderCapabilities Capabilities { get; init; } = new()
         {
             SupportsOneTimePayments = true,
             SupportsSavedPaymentMethods = true,
         };
 
+        public IReadOnlyDictionary<string, string> LastProviderData { get; private set; }
+
         public Task<PaymentBeginResult> BeginAsync(BeginPaymentContext context, CancellationToken cancellationToken = default)
-            => Task.FromResult(Result);
+        {
+            LastProviderData = context.ProviderData;
+
+            return Task.FromResult(Result);
+        }
 
         public Task<PaymentVerificationResult> VerifyAsync(VerifyPaymentContext context, CancellationToken cancellationToken = default)
             => Task.FromResult(new PaymentVerificationResult { Status = PaymentStatus.Unknown });
@@ -232,6 +308,12 @@ public sealed class DefaultCheckoutEngineSavedPaymentTests
 
         public Task<CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
             => Task.FromResult<CheckoutSession>(null);
+
+        public Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CheckoutSession>>([]);
+
+        public Task<IReadOnlyList<CheckoutSession>> GetManyAsync(IEnumerable<string> sessionIds, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<CheckoutSession>>([]);
 
         public Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default)
         {
