@@ -6,8 +6,8 @@ using CrestApps.OrchardCore.Stripe.Deployments.Steps;
 using CrestApps.OrchardCore.Stripe.Drivers;
 using CrestApps.OrchardCore.Stripe.Models;
 using CrestApps.OrchardCore.Stripe.Recipes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Deployment;
 using OrchardCore.Environment.Shell;
@@ -174,12 +174,9 @@ public sealed class StripeSettingsDeploymentTests
     {
         shellReleaseManager = new Mock<IShellReleaseManager>();
 
-        var localizer = new Mock<IStringLocalizer<StripeSettingsStep>>();
-        localizer
-            .Setup(localizer => localizer[It.IsAny<string>(), It.IsAny<object[]>()])
-            .Returns((string name, object[] _) => new LocalizedString(name, name));
-
-        return new StripeSettingsStep(siteService, dataProtectionProvider, shellReleaseManager.Object, localizer.Object);
+        // The step is internal, so its localizer can't be mocked: Moq can't proxy an interface over an internal type from a
+        // strong-named assembly.
+        return new StripeSettingsStep(siteService, dataProtectionProvider, shellReleaseManager.Object, new PassThroughStringLocalizer<StripeSettingsStep>());
     }
 
     private static RecipeExecutionContext CreateContext(JsonObject settings)
