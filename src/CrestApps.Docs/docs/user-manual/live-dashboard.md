@@ -30,6 +30,7 @@ The page updates as events happen and refreshes every 10 seconds. The status at 
 
 | Area | What it shows |
 | --- | --- |
+| **Dialer banner** | When the Contact Center Paced Dialing feature is on: one line saying whether the dialer is stalled, idle, holding back, dialing or has nothing to call (see [Dialer banner](#dialer-banner)). |
 | **Summary** | Total waiting across your queues, available agents, agents, and queues. |
 | **Call-quality alerts** | An agent whose recent calls were rated poor, with the likely cause (for example packet loss on their network). Dismiss an alert once handled. |
 | **Queue tiles** | For each queue: waiting, signed-in agents, available, busy and not-ready agents, the longest wait, and SLA breaches. A tile turns **amber** when the longest wait passes half the SLA threshold and **red** when there is a breach. |
@@ -42,6 +43,21 @@ Use the dashboard to spot a queue that is backing up, an SLA breach or too few a
 The agent board lists only agents who are signed in to a queue or campaign you oversee. To find out why an agent is not getting calls, including an agent the board leaves out, open the **Agent availability and wait time** report (see [Reports](reports.md#agent-availability-and-wait-time)).
 
 An agent on a call of their own (a number they dialed from the keypad, or an extension call) shows **On a call** with the number or colleague and how long the call has lasted.
+
+## Dialer banner
+
+When your site dials campaigns automatically (the Contact Center Paced Dialing feature), a banner above the summary says what the dialer is doing for the campaigns you oversee. It refreshes every 30 seconds, and names up to three campaigns.
+
+| Banner | What it means |
+| --- | --- |
+| Red: *Dialer stalled: due work is waiting but no pacing cycle has completed for N minutes* | Records are waiting, but the dialer has stopped working through the campaign. This is a fault: tell your administrator. |
+| Amber: *Dialer idle: work is due but no agent is available to take it* | The dialer is working, but every agent signed in to the campaign is busy or away. Bring agents back or sign more agents in. |
+| Amber: *Dialer holding back* | The dialer is working but chose not to call: the compliance check refused the numbers, the abandoned-call cap was reached, or calls already ringing cover the free agents. |
+| Blue: *Dialer starting* | Records arrived a moment ago; the dialer has not finished its first pass yet. |
+| Green: *Dialer active: placing calls* | The dialer is placing calls. |
+| Grey: *Nothing to call* | No campaign you oversee has a record the dialer may call right now. |
+
+When several campaigns are in different states, the banner shows the most serious one. The **Dialer activity and health** report gives the details for every campaign: see [Reports](reports.md#dialer-activity-and-health).
 
 ## Listen, whisper or barge
 

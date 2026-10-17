@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -77,13 +78,29 @@ public sealed class DialerPacedStartup : StartupBase
                     options.LockExpiration > TimeSpan.Zero &&
                     options.LockRetryDelay > TimeSpan.Zero &&
                     options.LockRetryDelay < options.LockExpiration &&
-                    options.CycleTimeout > TimeSpan.Zero,
+                    options.CycleTimeout > TimeSpan.Zero &&
+                    options.StalledAfter > TimeSpan.Zero,
                 $"'{ContactCenterDialerPacingOptions.SectionName}' timings must be greater than zero, and 'LockRetryDelay' must be shorter than 'LockExpiration'.")
             .ValidateOnStart();
 
         services
             .AddSingleton<IDialerPacingScheduler, DialerPacingScheduler>()
             .AddScoped<IContactCenterEventHandler, DialerPacingTriggerHandler>();
+
+        // The record of every pacing cycle, written on a scope of its own so a cycle that is rolled back or cut short is on
+        // record too, and the heartbeat, report and dashboard banner read from it. What a cycle decided is gathered from the
+        // events it publishes, so the publisher is wrapped to hand them to the scope's observation.
+        services
+            .AddScoped<IDialerPacingCycleStore, DialerPacingCycleStore>()
+            .AddIndexProvider<DialerPacingCycleIndexProvider>()
+            .AddDataMigration<DialerPacingCycleIndexMigrations>()
+            .AddScoped<IContactCenterRetentionPolicy, DialerPacingCycleRetentionPolicy>()
+            .AddScoped<DialerPacingCycleObservation>()
+            .AddScoped<IDialerPacingCycleRecorder, DialerPacingCycleRecorder>()
+            .AddScoped<IDialerPacingHealthService, DialerPacingHealthService>()
+            .AddScoped<IDialerPacingBannerService, DialerPacingBannerService>();
+
+        ObservePublishedEvents(services);
 
         services
             .AddSingleton<DialerPacingStatisticsCache>()
@@ -125,5 +142,28 @@ public sealed class DialerPacedStartup : StartupBase
                 entry.Matches(ActivitySources.PowerDial, ActivitySources.ProgressiveDial, ActivitySources.PredictiveDial);
             });
         });
+    }
+
+    /// <summary>
+    /// Wraps the registered event publisher so each event a pacing cycle publishes reaches the scope's
+    /// <see cref="DialerPacingCycleObservation"/>. The base feature registers the publisher before this feature runs, so
+    /// it is found and wrapped here; without one there is nothing to wrap.
+    /// </summary>
+    /// <param name="services">The tenant's service collection.</param>
+    internal static void ObservePublishedEvents(IServiceCollection services)
+    {
+        var descriptor = services.LastOrDefault(candidate =>
+            candidate.ServiceType == typeof(IContactCenterEventPublisher) &&
+            !candidate.IsKeyedService);
+
+        if (descriptor?.ImplementationType is not { } publisherType)
+        {
+            return;
+        }
+
+        services.Remove(descriptor);
+        services.AddScoped<IContactCenterEventPublisher>(serviceProvider => new DialerPacingCycleObservingEventPublisher(
+            (IContactCenterEventPublisher)ActivatorUtilities.CreateInstance(serviceProvider, publisherType),
+            serviceProvider.GetRequiredService<DialerPacingCycleObservation>()));
     }
 }
