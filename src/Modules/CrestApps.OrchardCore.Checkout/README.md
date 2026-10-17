@@ -28,6 +28,11 @@ bug to fix later:
 
 - **Checkout** (`CrestApps.OrchardCore.Checkout`) — the checkout engine, the durable payment and refund
   ledgers, reconciliation, the public checkout pages, and the JSON endpoints the payment step uses.
+- **Test payments** (`CrestApps.OrchardCore.Checkout.TestProvider`) — a payment method for development and
+  automated tests. It confirms every payment at once and moves no money, supports refunds, saved payment
+  methods and recurring agreements, and simulates a decline (amounts ending in `.02`) or a payment that stays
+  pending for the reconciliation sweep (amounts ending in `.05`). It is registered only in the Development
+  environment unless `CrestApps:Checkout:TestProvider:AllowOutsideDevelopment` is `true`.
 
 ## Key contracts
 
