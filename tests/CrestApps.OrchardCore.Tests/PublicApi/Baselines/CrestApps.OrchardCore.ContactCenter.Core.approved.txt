@@ -1647,8 +1647,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     public sealed class ContactCenterReportingOptions
     {
         public ContactCenterReportingOptions() { }
+        public System.TimeSpan AgentTimeSummaryBackfill { get; set; }
         public System.TimeSpan DecisionLogQuietThreshold { get; set; }
         public System.TimeSpan MaximumReportRange { get; set; }
+        public System.TimeSpan MaximumWorkforceExportRange { get; set; }
+        public System.TimeSpan MaximumWorkforceReportRange { get; set; }
     }
     public sealed class ContactCenterRetentionOptions
     {

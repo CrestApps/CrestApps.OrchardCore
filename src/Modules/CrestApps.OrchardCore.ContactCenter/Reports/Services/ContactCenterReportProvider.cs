@@ -28,7 +28,8 @@ internal sealed class ContactCenterReportProvider : IReportProvider
     private readonly IStringLocalizer<EnterpriseInteractionReportProvider> _enterpriseLocalizer;
     private readonly IStringLocalizer<AgentWorkforceReportProvider> _workforceLocalizer;
     private readonly ContactCenterReportCatalogOptions _catalogOptions;
-    private readonly TimeSpan _maximumReportRange;
+    private readonly ContactCenterReportingOptions _reportingOptions;
+    private readonly IAgentTimeSummaryReader _summaryReader;
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
 
@@ -45,6 +46,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
     /// <param name="workforceLocalizer">The localizer for agent workforce reports.</param>
     /// <param name="catalogOptions">The configured report catalog.</param>
     /// <param name="reportingOptions">The reporting options that bound the report range.</param>
+    /// <param name="summaryReader">The reader of the daily agent time summaries the time-based workforce reports use.</param>
     /// <param name="clock">The clock, so time that has not happened yet is never reported.</param>
     /// <param name="localClock">The tenant's clock, whose time zone the daily reports' days are in.</param>
     public ContactCenterReportProvider(
@@ -58,6 +60,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         IStringLocalizer<AgentWorkforceReportProvider> workforceLocalizer,
         IOptions<ContactCenterReportCatalogOptions> catalogOptions,
         IOptions<ContactCenterReportingOptions> reportingOptions,
+        IAgentTimeSummaryReader summaryReader,
         IClock clock,
         ILocalClock localClock)
     {
@@ -70,7 +73,8 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         _enterpriseLocalizer = enterpriseLocalizer;
         _workforceLocalizer = workforceLocalizer;
         _catalogOptions = catalogOptions.Value;
-        _maximumReportRange = reportingOptions.Value.MaximumReportRange;
+        _reportingOptions = reportingOptions.Value;
+        _summaryReader = summaryReader;
         _clock = clock;
         _localClock = localClock;
     }
@@ -88,7 +92,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
                 definition,
                 _capabilityGuard,
                 _enterpriseLocalizer,
-                _maximumReportRange);
+                _reportingOptions.MaximumReportRange);
         }
 
         foreach (var definition in _catalogOptions.WorkforceReports)
@@ -101,7 +105,9 @@ internal sealed class ContactCenterReportProvider : IReportProvider
                 _capabilityGuard,
                 _workforceLocalizer,
                 _clock,
-                _localClock);
+                _localClock,
+                _reportingOptions,
+                _summaryReader);
         }
     }
 }
