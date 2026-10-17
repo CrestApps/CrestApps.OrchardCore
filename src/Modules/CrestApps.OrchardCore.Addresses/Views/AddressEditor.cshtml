@@ -82,7 +82,7 @@
         var required = IsRequired(component);
         var disabled = used ? null : "disabled";
 
-        <div class="@column" data-address-component="@component" data-address-page-required="@(component == "Name" && EditorOptions.RequireName)">
+        <div class="@column" data-address-component="@component" data-address-page-required="@(component == "Name" && EditorOptions.RequireName ? "true" : "false")">
             @if (component == "StreetAddress")
             {
                 <label class="form-label" for="@IdOf("AddressLine1")" data-address-label>@EditorLayout.LabelOf(component)</label>

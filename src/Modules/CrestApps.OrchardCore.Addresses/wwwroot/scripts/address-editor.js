@@ -104,7 +104,7 @@
 			offered.forEach(function(component) {
 				var wrapper = wrappers[component];
 				var used = wrapper.parentElement !== unused;
-				var isRequired = required.indexOf(component) >= 0 || wrapper.hasAttribute("data-address-page-required");
+				var isRequired = required.indexOf(component) >= 0 || wrapper.getAttribute("data-address-page-required") === "true";
 				var label = wrapper.querySelector("[data-address-label]");
 				var star = wrapper.querySelector("[data-address-required]");
 				if (label && labels[component]) label.textContent = labels[component];
