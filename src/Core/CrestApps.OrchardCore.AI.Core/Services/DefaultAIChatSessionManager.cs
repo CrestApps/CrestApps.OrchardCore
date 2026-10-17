@@ -90,6 +90,13 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             LastActivityUtc = _clock.UtcNow,
         };
 
+        // Kept for reporting: the persona the profile linked to when the session started.
+        if (profile.TryGet<AIPersonaMetadata>(out var personaMetadata) &&
+            !string.IsNullOrWhiteSpace(personaMetadata.PersonaId))
+        {
+            chatSession.PersonaId = personaMetadata.PersonaId;
+        }
+
         var user = _httpContextAccessor.HttpContext?.User;
         var visitorIdentity = _visitorIdentityResolver.Resolve();
         chatSession.RemoteAddress = visitorIdentity.RemoteAddress;

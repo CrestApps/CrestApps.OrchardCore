@@ -39,6 +39,8 @@ Filter the agent board by **Agent** name, **Signed-in queue**, **Signed-in campa
 
 Use the dashboard to spot a queue that is backing up, an SLA breach or too few available agents, then move people between queues or ask agents to come back from a break.
 
+The agent board lists only agents who are signed in to a queue or campaign you oversee. To find out why an agent is not getting calls, including an agent the board leaves out, open the **Agent availability and wait time** report (see [Reports](reports.md#agent-availability-and-wait-time)).
+
 An agent on a call of their own (a number they dialed from the keypad, or an extension call) shows **On a call** with the number or colleague and how long the call has lasted.
 
 ## Listen, whisper or barge

@@ -52,6 +52,10 @@ public sealed class Startup : StartupBase
 
         // Access and erasure requests, and the retention windows for guests' personal data.
         services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();
+
+        // Erasing or exporting a customer covers what the other commerce modules keep about them: checkouts,
+        // transactions, subscriptions, installment plans, coupon redemptions and payment-provider customers.
+        services.AddScoped<ICustomerPrivacyHandler, CommercePersonalDataCustomerPrivacyHandler>();
         services.AddSingleton<IBackgroundTask, CustomerRetentionBackgroundTask>();
         services.AddSiteDisplayDriver<CustomerPrivacySettingsDisplayDriver>();
         services.AddNavigationProvider<CustomerSettingsAdminMenu>();

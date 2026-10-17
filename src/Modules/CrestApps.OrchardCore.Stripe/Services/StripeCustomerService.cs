@@ -135,12 +135,34 @@ public sealed class StripeCustomerService : IStripeCustomerService
             throw;
         }
 
-        return new CustomerResponse()
+        return ToResponse(customer);
+    }
+
+    /// <summary>
+    /// Lists the Stripe customers whose email is exactly the given one.
+    /// </summary>
+    /// <param name="email">The email to match.</param>
+    /// <returns>The matching customers, at most 100.</returns>
+    public async Task<IReadOnlyList<CustomerResponse>> ListByEmailAsync(string email)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(email);
+
+        var customers = await _customerService.ListAsync(new CustomerListOptions
+        {
+            Email = email,
+            Limit = 100,
+        });
+
+        return customers?.Data?.Select(ToResponse).ToArray() ?? [];
+    }
+
+    private static CustomerResponse ToResponse(Customer customer)
+        => new()
         {
             Id = customer.Id,
             Name = customer.Name,
             Email = customer.Email,
             Phone = customer.Phone,
+            Metadata = customer.Metadata,
         };
-    }
 }

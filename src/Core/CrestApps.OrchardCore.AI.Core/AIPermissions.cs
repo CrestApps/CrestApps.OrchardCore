@@ -24,6 +24,11 @@ public static class AIPermissions
     public static readonly Permission ManageAIProfileTemplates = new("ManageAIProfileTemplates", LocalizationSource.Create("Manage AI profile templates", typeof(AIPermissions)));
 
     /// <summary>
+    /// Gets the permission to manage AI personas, the reusable characters AI profiles and chat interactions link to.
+    /// </summary>
+    public static readonly Permission ManageAIPersonas = new("ManageAIPersonas", LocalizationSource.Create("Manage AI personas", typeof(AIPermissions)));
+
+    /// <summary>
     /// Gets the permission to manage AI deployments.
     /// </summary>
     public static readonly Permission ManageAIDeployments = new("ManageAIDeployments", LocalizationSource.Create("Manage AI deployments", typeof(AIPermissions)));

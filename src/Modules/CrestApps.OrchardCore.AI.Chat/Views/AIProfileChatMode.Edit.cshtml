@@ -46,7 +46,7 @@
                 data-voice-name="@Model.VoiceName">
             <option value="">@T["Default voice"]</option>
         </select>
-        <span class="hint">@T["The voice this profile speaks with, in the chat's conversation mode and on phone calls. Leave this empty to use the site's default voice."]</span>
+        <span class="hint">@T["The voice this profile speaks with, in the chat's conversation mode and on phone calls. Leave this empty to use the persona's voice, or the site's default voice when the profile has no persona or the persona has no voice."]</span>
     </div>
 </div>
 
@@ -95,10 +95,42 @@
                     || (realtimeDeploymentNames.length ? realtimeDeploymentNames[0] : '');
             }
 
+            // The persona picker sits on another tab of the same editor. When a persona with a voice is chosen,
+            // leaving the voice empty means "speak with the persona's voice", so the empty option says so.
+            var personaSelect = document.querySelector('[data-ai-persona-select]');
+            var defaultVoiceText = @Html.Raw(JsonSerializer.Serialize(T["Default voice"].Value));
+            var personaVoiceText = @Html.Raw(JsonSerializer.Serialize(T["Use persona voice ({0})"].Value));
+
+            function refreshDefaultVoiceLabel() {
+                if (!voiceSelect) {
+                    return;
+                }
+
+                var emptyOption = voiceSelect.querySelector('option[value=""]');
+
+                if (!emptyOption) {
+                    return;
+                }
+
+                var personaOption = personaSelect && personaSelect.selectedIndex >= 0
+                    ? personaSelect.options[personaSelect.selectedIndex]
+                    : null;
+                var personaVoice = personaOption ? (personaOption.getAttribute('data-voice-name') || '') : '';
+
+                emptyOption.textContent = personaVoice
+                    ? personaVoiceText.replace('{0}', personaVoice)
+                    : defaultVoiceText;
+            }
+
+            if (personaSelect) {
+                personaSelect.addEventListener('change', refreshDefaultVoiceLabel);
+            }
+
             function setVoiceOptions(html) {
                 if (voiceSelect) {
                     voiceSelect.innerHTML = html;
                     voiceSelect.value = selectedVoice;
+                    refreshDefaultVoiceLabel();
                 }
             }
 

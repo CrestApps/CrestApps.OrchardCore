@@ -1,0 +1,18 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIPersona>
+
+<div class="d-flex align-items-center">
+    @if (!string.IsNullOrEmpty(Model.Value.AvatarUrl))
+    {
+        <img src="@Model.Value.AvatarUrl" alt="" class="rounded-circle me-2" width="32" height="32" />
+    }
+    <div>
+        <h5 class="mb-0">@(Model.Value.DisplayText ?? Model.Value.Name)</h5>
+        @if (!string.IsNullOrEmpty(Model.Value.Description))
+        {
+            <p class="text-muted mb-0">@Model.Value.Description</p>
+        }
+    </div>
+</div>

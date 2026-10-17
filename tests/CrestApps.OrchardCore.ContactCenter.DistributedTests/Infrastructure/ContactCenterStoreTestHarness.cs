@@ -125,7 +125,8 @@ internal sealed class ContactCenterStoreTestHarness : IAsyncDisposable
             .Column<string>("Priority", column => column.WithLength(50))
             .Column<string>("AgentId", column => column.WithLength(26))
             .Column<DateTime>("EnqueuedUtc", column => column.NotNull())
-            .Column<DateTime>("DequeuedUtc", column => column.Nullable()),
+            .Column<DateTime>("DequeuedUtc", column => column.Nullable())
+            .Column<string>("DialerProfileId", column => column.Nullable().WithLength(26)),
             collection: ContactCenterStorage.CollectionName);
 
         await CreateUniqueIndexAsync(schemaBuilder, typeof(QueueItemIndex), "UQ_Test_QueueItemIndex_ActivityClaimKey", "ActivityClaimKey");

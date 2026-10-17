@@ -56,6 +56,7 @@ Once enabled, the main AI screens are available under **Artificial Intelligence*
 | --- | --- | --- |
 | **Artificial Intelligence -> Provider Connections** | `ManageProviderConnections` | [Connections and deployments](../user-manual/ai/connections.md) |
 | **Artificial Intelligence -> Deployments** | `ManageAIDeployments` | [Connections and deployments](../user-manual/ai/connections.md) |
+| **Artificial Intelligence -> Personas** | `ManageAIPersonas` | [AI Personas](personas) |
 | **Artificial Intelligence -> Profiles** | `ManageAIProfiles` | [AI profiles](../user-manual/ai/profiles.md) |
 | **Artificial Intelligence -> Templates** | `ManageAIProfileTemplates` | [Templates](../user-manual/ai/prompt-templates.md) |
 | **Artificial Intelligence -> Tool Instances** | `ManageAIToolInstances` | [Tools and agents](../user-manual/ai/tools-and-agents.md) |
