@@ -29,6 +29,14 @@ public sealed class CheckoutSession : Entity, ICheckoutFlowSession
     public bool SettlesExistingBalance { get; set; }
 
     /// <summary>
+    /// Whether the module that settles the existing balance (<see cref="SettlesExistingBalance"/>) takes what the
+    /// invoice's discounts take off off that balance, so a promotion code can be used on this checkout. That module
+    /// also redeems the codes, once the balance is settled; the checkout does not redeem them on completion. When it
+    /// is <see langword="false"/>, a checkout that settles an existing balance offers and applies no discounts.
+    /// </summary>
+    public bool AcceptsDiscountsOnBalance { get; set; }
+
+    /// <summary>
     /// The unique identifier of the checkout session.
     /// </summary>
     public string SessionId { get; set; }

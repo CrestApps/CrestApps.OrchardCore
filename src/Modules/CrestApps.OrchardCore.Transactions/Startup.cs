@@ -56,6 +56,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
+        services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
 
         // The customer pages in the admin and in the site theme, and the links to them sent in messages.

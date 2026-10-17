@@ -24,6 +24,7 @@ namespace CrestApps.OrchardCore.Checkout.Drivers;
 public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 {
     private readonly ICouponStore _couponStore;
+    private readonly CouponScopeEvaluator _scopeEvaluator;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IClock _clock;
 
@@ -33,15 +34,19 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// Initializes a new instance of the <see cref="CouponCheckoutFlowDisplayDriver"/> class.
     /// </summary>
     /// <param name="couponStore">The coupon catalog.</param>
+    /// <param name="scopeEvaluator">The rule that limits a coupon to some sources, reference types or one customer.</param>
+    /// <param name="invoiceBuilder">The builder that rebuilds the invoice once a code is applied or removed.</param>
     /// <param name="clock">The clock used to check the validity window.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CouponCheckoutFlowDisplayDriver(
         ICouponStore couponStore,
+        CouponScopeEvaluator scopeEvaluator,
         CheckoutInvoiceBuilder invoiceBuilder,
         IClock clock,
         IStringLocalizer<CouponCheckoutFlowDisplayDriver> stringLocalizer)
     {
         _couponStore = couponStore;
+        _scopeEvaluator = scopeEvaluator;
         _invoiceBuilder = invoiceBuilder;
         _clock = clock;
         S = stringLocalizer;
@@ -54,11 +59,12 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// <inheritdoc/>
     protected override Task<IDisplayResult> EditStepAsync(CheckoutFlow flow, BuildEditorContext context)
     {
-        if (SettlesExistingBalance(flow))
+        if (RefusesDiscounts(flow))
         {
-            // Paying off a balance that already exists is not a purchase, so there is no price for a code
-            // to reduce. Offering the box would let a customer redeem a code against a total that does not
-            // change, leaving the balance partly unpaid.
+            // Paying off a balance that already exists is not a purchase, so there is no price for a code to
+            // reduce unless the module settling the balance takes the discount off it. Offering the box otherwise
+            // would let a customer redeem a code against a total that does not change, leaving the balance partly
+            // unpaid.
             return Task.FromResult<IDisplayResult>(null);
         }
 
@@ -79,10 +85,10 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// <inheritdoc/>
     protected override async Task<IDisplayResult> UpdateStepAsync(CheckoutFlow flow, UpdateEditorContext context)
     {
-        if (SettlesExistingBalance(flow))
+        if (RefusesDiscounts(flow))
         {
-            // A code posted to a settlement checkout (a stale form, or a hand-built request) is ignored
-            // rather than stored, so it can never reach the invoice or be redeemed.
+            // A code posted to a settlement checkout that takes no discounts (a stale form, or a hand-built
+            // request) is ignored rather than stored, so it can never reach the invoice or be redeemed.
             return null;
         }
 
@@ -113,6 +119,12 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code is no longer available."]);
         }
+        else if (!await _scopeEvaluator.IsInScopeAsync(coupon, flow))
+        {
+            // A coupon limited to some sources, kinds of charge or one customer is refused everywhere else, here
+            // where the customer can still do something about it, and again by the discount provider.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code can't be used for this payment."]);
+        }
         else
         {
             flow.Session.Put(new CheckoutCoupon { Code = coupon.Code });
@@ -126,6 +138,6 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
         return await EditStepAsync(flow, context);
     }
 
-    private static bool SettlesExistingBalance(CheckoutFlow flow)
-        => flow.Session is CheckoutSession { SettlesExistingBalance: true };
+    private static bool RefusesDiscounts(CheckoutFlow flow)
+        => flow.Session is CheckoutSession { SettlesExistingBalance: true, AcceptsDiscountsOnBalance: false };
 }

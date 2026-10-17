@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Tests.Checkout;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Entities;
 using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
@@ -306,6 +308,190 @@ public sealed class TransactionSettlementCheckoutHandlerTests
         Assert.Equal(2, stored.Events.Count(e => e.Type == TransactionEventType.PaymentRecorded));
     }
 
+    /// <summary>
+    /// A 100% code on a settlement checkout leaves nothing to collect, so the checkout completes with no payment. The
+    /// code is recorded as a discount of the whole balance, which settles the transaction, and only then redeemed.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_AFullCouponOnASettlementCheckout_SettlesTheTransactionAndRedeemsTheCode()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var redeemed = new List<string>();
+        var handler = CreateHandler(store, new InMemoryPaymentAttemptStore(), CreateCouponProvider(redeemed));
+        var session = CreateCouponSession(transaction, "FREE100", 108m);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(session)));
+
+        // Assert
+        var stored = await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken);
+        var adjustment = Assert.Single(stored.Events, evt => evt.Type == TransactionEventType.Adjusted);
+
+        Assert.Equal(TransactionStatus.Paid, stored.Status);
+        Assert.Equal(108m, stored.AmountAdjusted);
+        Assert.Equal(0m, stored.AmountPaid);
+        Assert.Equal(0m, stored.OutstandingAmount);
+        Assert.Equal(TransactionAdjustmentKind.Discount, adjustment.AdjustmentKind);
+        Assert.Equal(108m, adjustment.Amount);
+        Assert.Contains("FREE100", adjustment.Reason, StringComparison.Ordinal);
+        Assert.Equal(["FREE100"], redeemed);
+    }
+
+    /// <summary>
+    /// A partial code takes its share off the invoice and the customer pays the rest. The code is recorded as a discount
+    /// of exactly what the invoice took off, so the payment settles the transaction in full.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_APartialCouponPlusThePayment_SettlesTheTransactionInFull()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var redeemed = new List<string>();
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            SessionId = "settlement-1",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 88m,
+        });
+
+        var handler = CreateHandler(store, attempts, CreateCouponProvider(redeemed));
+        var session = CreateCouponSession(transaction, "TWENTY", 20m);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(session)));
+
+        // Assert
+        var stored = await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionStatus.Paid, stored.Status);
+        Assert.Equal(20m, stored.AmountAdjusted);
+        Assert.Equal(88m, stored.AmountPaid);
+        Assert.Equal(0m, stored.OutstandingAmount);
+        Assert.Equal(["TWENTY"], redeemed);
+    }
+
+    [Fact]
+    public async Task CompletedAsync_APartialCouponWithoutAPayment_RecordsNothingAndKeepsTheCode()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var redeemed = new List<string>();
+        var handler = CreateHandler(store, new InMemoryPaymentAttemptStore(), CreateCouponProvider(redeemed));
+        var session = CreateCouponSession(transaction, "TWENTY", 20m);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(session)));
+
+        // Assert
+        var stored = await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionStatus.Outstanding, stored.Status);
+        Assert.Equal(0m, stored.AmountAdjusted);
+        Assert.Empty(redeemed);
+    }
+
+    /// <summary>
+    /// A code is redeemed only when the transaction is settled. When the gateway confirmed less than the rest, the
+    /// transaction still owes money, so the code is not used up.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_APartialCouponWhenLessWasCollected_DoesNotRedeemTheCode()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        var store = new FakeTransactionStore(transaction);
+        var redeemed = new List<string>();
+        var attempts = new InMemoryPaymentAttemptStore(new PaymentAttempt
+        {
+            SessionId = "settlement-1",
+            Currency = "USD",
+            State = PaymentAttemptState.Succeeded,
+            ConfirmedAmount = 50m,
+        });
+
+        var handler = CreateHandler(store, attempts, CreateCouponProvider(redeemed));
+        var session = CreateCouponSession(transaction, "TWENTY", 20m);
+
+        // Act
+        await handler.CompletedAsync(new CheckoutFlowCompletedContext(new CheckoutFlow(session)));
+
+        // Assert
+        var stored = await store.FindByIdAsync(transaction.ItemId, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TransactionStatus.PartiallyPaid, stored.Status);
+        Assert.Equal(38m, stored.OutstandingAmount);
+        Assert.Empty(redeemed);
+    }
+
+    [Fact]
+    public async Task ActivatingAsync_AcceptsAPromotionCodeAndSaysWhatThePaymentIsFor()
+    {
+        // Arrange
+        var transaction = CreateOutstandingTransaction();
+        transaction.Source = "registrations";
+        transaction.ReferenceType = "Registration";
+        transaction.OwnerId = "customer-1";
+
+        var session = new CheckoutSession
+        {
+            SessionId = "settlement-1",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+        };
+
+        // Act
+        await CreateHandler(new FakeTransactionStore(transaction)).ActivatingAsync(new CheckoutFlowActivatingContext(session));
+
+        // Assert
+        Assert.True(session.AcceptsDiscountsOnBalance);
+        Assert.True(session.TryGet<CheckoutDiscountScope>(out var scope));
+        Assert.Equal("registrations", scope.Source);
+        Assert.Equal("Registration", scope.ReferenceType);
+        Assert.Equal("customer-1", scope.CustomerId);
+    }
+
+    private static CheckoutSession CreateCouponSession(Transaction transaction, string code, decimal discount)
+    {
+        var session = CreateSettlementSession(transaction, "settlement-1");
+
+        session.SettlesExistingBalance = true;
+        session.AcceptsDiscountsOnBalance = true;
+        session.Put(new CheckoutInvoice
+        {
+            Currency = "USD",
+            Discounts =
+            [
+                new DiscountLine
+                {
+                    ProviderKey = "coupon",
+                    Code = code,
+                    Description = code,
+                    Amount = discount,
+                    Target = DiscountTarget.OneTime,
+                },
+            ],
+        });
+
+        return session;
+    }
+
+    private static ICheckoutDiscountProvider CreateCouponProvider(List<string> redeemed)
+    {
+        var provider = new Mock<ICheckoutDiscountProvider>();
+        provider.SetupGet(candidate => candidate.Key).Returns("coupon");
+        provider
+            .Setup(candidate => candidate.RedeemAsync(It.IsAny<CheckoutDiscountRedemptionContext>(), It.IsAny<CancellationToken>()))
+            .Callback((CheckoutDiscountRedemptionContext context, CancellationToken _) => redeemed.AddRange(context.Discounts.Select(discount => discount.Code)))
+            .Returns(Task.CompletedTask);
+
+        return provider.Object;
+    }
+
     private static CheckoutSession CreateSettlementSession(Transaction transaction, string sessionId)
         => new()
         {
@@ -471,6 +657,15 @@ public sealed class TransactionSettlementCheckoutHandlerTests
     }
 
     private static TransactionSettlementCheckoutHandler CreateHandler(FakeTransactionStore store, InMemoryPaymentAttemptStore attempts = null, params ITransactionPaymentHandler[] paymentHandlers)
+        => CreateHandler(store, attempts, discountProvider: null, paymentHandlers);
+
+    // The handler with the transaction commands it records a promotion code through, and the discount provider it
+    // redeems the code with once the transaction is settled.
+    private static TransactionSettlementCheckoutHandler CreateHandler(
+        FakeTransactionStore store,
+        InMemoryPaymentAttemptStore attempts,
+        ICheckoutDiscountProvider discountProvider,
+        params ITransactionPaymentHandler[] paymentHandlers)
     {
         var services = new ServiceCollection();
 
@@ -479,18 +674,29 @@ public sealed class TransactionSettlementCheckoutHandlerTests
             services.AddSingleton(paymentHandler);
         }
 
+        if (discountProvider is not null)
+        {
+            services.AddSingleton(discountProvider);
+        }
+
         var manager = TransactionManagerFactory.Create(store);
+        var clock = new TestClock(_now);
+
+        services.AddSingleton<ITransactionCommandService>(provider => TransactionCommandServiceFactory.Create(manager, clock, provider));
+
+        var serviceProvider = services.BuildServiceProvider();
 
         return new(
             manager,
             attempts ?? new InMemoryPaymentAttemptStore(),
             new TransactionSettlementService(
                 manager,
-                services.BuildServiceProvider(),
-                new TestClock(_now),
+                serviceProvider,
+                clock,
                 NullLogger<TransactionSettlementService>.Instance,
                 new PassThroughStringLocalizer<TransactionSettlementService>()),
             new CheckoutPaymentProviderResolver([CreatePayLaterProvider()]),
+            serviceProvider,
             NullLogger<TransactionSettlementCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<TransactionSettlementCheckoutHandler>());
     }

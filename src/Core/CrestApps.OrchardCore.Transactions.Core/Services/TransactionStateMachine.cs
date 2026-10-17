@@ -51,6 +51,24 @@ public static class TransactionStateMachine
         => transaction is not null && IsCollectable(transaction.Status);
 
     /// <summary>
+    /// Returns <see langword="true"/> when what is owed may be lowered by an adjustment (a discount, waiver, credit or
+    /// write-off). Only a collectable transaction that still owes money can be adjusted.
+    /// </summary>
+    /// <param name="transaction">The transaction to evaluate.</param>
+    public static bool CanAdjust(Transaction transaction)
+        => transaction is not null &&
+            IsCollectable(transaction.Status) &&
+            transaction.OutstandingAmount > 0m;
+
+    /// <summary>
+    /// Returns <see langword="true"/> when the invoice may be sent to the owner: the transaction still owes money and
+    /// the owner pays it themselves rather than it being charged automatically.
+    /// </summary>
+    /// <param name="transaction">The transaction to evaluate.</param>
+    public static bool CanSendInvoice(Transaction transaction)
+        => CanSendReminder(transaction) && transaction.AutoCollection is null;
+
+    /// <summary>
     /// Returns <see langword="true"/> when it makes sense to chase the owner for payment.
     /// </summary>
     /// <param name="transaction">The transaction to evaluate.</param>
