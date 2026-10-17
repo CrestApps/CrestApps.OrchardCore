@@ -76,7 +76,8 @@ public sealed class DialerPacedStartup : StartupBase
                 options => options.Debounce > TimeSpan.Zero &&
                     options.LockExpiration > TimeSpan.Zero &&
                     options.LockRetryDelay > TimeSpan.Zero &&
-                    options.LockRetryDelay < options.LockExpiration,
+                    options.LockRetryDelay < options.LockExpiration &&
+                    options.CycleTimeout > TimeSpan.Zero,
                 $"'{ContactCenterDialerPacingOptions.SectionName}' timings must be greater than zero, and 'LockRetryDelay' must be shorter than 'LockExpiration'.")
             .ValidateOnStart();
 
