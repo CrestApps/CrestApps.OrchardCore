@@ -404,6 +404,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
+            // The cancellation is durable before the handlers hear of it, and a handler that fails can't undo it;
+            // whatever they let go is committed with it, still inside the lock.
+            await _handlers.InvokeAsync((handler, context) => handler.CanceledAsync(context), new CheckoutFlowCanceledContext(new CheckoutFlow(session), reason), _logger);
+            await _session.SaveChangesAsync(cancellationToken);
+
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
     }
@@ -454,6 +459,9 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             session.ModifiedUtc = _clock.UtcNow;
 
             await _sessionStore.SaveAsync(session, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            await _handlers.InvokeAsync((handler, context) => handler.ExpiredAsync(context), new CheckoutFlowExpiredContext(new CheckoutFlow(session)), _logger);
             await _session.SaveChangesAsync(cancellationToken);
 
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
@@ -866,6 +874,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         await _session.SaveChangesAsync(cancellationToken);
 
         await _handlers.InvokeAsync((handler, context) => handler.FailedAsync(context), new CheckoutFlowFailedContext(flow), _logger);
+        await _session.SaveChangesAsync(cancellationToken);
 
         return new CheckoutCompletionResult
         {
