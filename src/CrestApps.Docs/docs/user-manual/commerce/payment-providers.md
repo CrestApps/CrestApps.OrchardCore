@@ -1,7 +1,7 @@
 ---
 sidebar_label: Payment Providers
 title: Payment Providers
-description: Connect your Stripe account so buyers can pay by card, Apple Pay or Google Pay, and offer Pay Later so buyers can confirm now and settle the balance afterwards.
+description: Connect your Stripe account so buyers can pay by card, Apple Pay or Google Pay, offer Pay Later so buyers can confirm now and settle the balance afterwards, and try the checkout on a test site with test payments.
 technical_manual:
   - modules/payments
   - modules/pay-later
@@ -12,6 +12,8 @@ A **payment provider** is how the money for a purchase is collected. Your site o
 
 - **Stripe** takes card payments online, and Apple Pay or Google Pay on devices that have them. The payment is confirmed while the buyer waits.
 - **Pay Later** lets the buyer confirm the purchase now and pay afterwards. Nothing is charged at checkout; the amount owed is recorded as an outstanding balance.
+
+For trying out your setup there is also **Test payment**, which confirms a payment without taking any money. It is only available on test and development sites; see [Try the checkout with test payments](#try-the-checkout-with-test-payments).
 
 Every provider that is turned on appears as a choice on the **Payment** step of the [checkout](checkout.md). When both are offered, the card option is selected first.
 
@@ -93,4 +95,32 @@ When the buyer clicks **Pay now** with Pay Later selected:
 
 :::note[Refunds]
 Pay Later collects no money, so there is nothing to refund through it. Money the buyer later pays against the balance is handled like any other payment; see [Payments and refunds](payments-and-refunds.md).
+:::
+
+## Try the checkout with test payments
+
+| | |
+| --- | --- |
+| **Menu** | None. The method appears on the **Payment** step of the checkout. |
+| **Permission** | None |
+| **Feature** | Test payments |
+
+<AskYourAdmin />
+
+**Test payment** lets you and your team go through a whole purchase, pay it, refund it and check what happens afterwards, without a Stripe account and without any money changing hands. It is meant for development and test sites. On a live site it does not appear, even when the feature is turned on, unless your developer has deliberately allowed it.
+
+When the feature is on, the **Payment** step offers **Test payment**. When you pick it, the payment step shows *Test payment: no money moves, and the payment is confirmed at once.* Click **Pay now** and the purchase is confirmed straight away, exactly as a card payment would be: the confirmation page opens, an outstanding balance you paid is marked paid, and the payment appears under **Commerce > Payments**.
+
+You can refund a test payment from **Commerce > Payments** like any other payment (see [Payments and refunds](payments-and-refunds.md)). The refund succeeds at once and shows on the transaction.
+
+The amount being paid decides what happens, so you can also try out what a buyer sees when something goes wrong:
+
+| Amount ends in | What happens |
+| --- | --- |
+| **.02**, for example 10.02 | The payment is declined. The buyer stays on the payment step and sees *The payment was declined. Please try again or choose another payment method.* |
+| **.05**, for example 10.05 | The payment stays pending for about two minutes. The buyer sees *Your payment is still being processed.*, and the purchase completes on its own a few minutes later. |
+| Anything else | The payment is confirmed. |
+
+:::warning[Not for live sites]
+Anyone who picks **Test payment** completes the purchase without paying. If you see it on your live site, ask your administrator to turn the **Test payments** feature off.
 :::

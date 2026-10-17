@@ -86,6 +86,7 @@ Capabilities let the framework select a suitable provider and enforce constraint
 
 - **Pay Later** — provided by the standalone **[Pay Later](pay-later)** module (`CrestApps.OrchardCore.PayLater`). It records an offline commitment instead of moving money through a gateway. Because it never contacts a processor, its verification reports that it is *not* the authoritative source of a charged amount, so the checkout records the commitment on the strength of a recorded transaction id alone — without an amount cross-check — while still flowing through the exact same durable ledger and reconciliation as a real gateway. This keeps the safety guarantees intact and never fabricates a *paid* record a processor could contradict.
 - **Stripe** — provided by the **[Stripe](payments#stripe-as-a-generic-checkout-provider)** module. When both the Stripe and Checkout features are enabled, Stripe registers a generic `ICheckoutPaymentProvider` (and `ICheckoutPaymentRefundProvider`) so *any* checkout — subscriptions today, a storefront tomorrow — can collect and refund a card payment through a Stripe PaymentIntent without depending on the subscription-specific endpoints. It verifies against Stripe's authoritative API and converts every amount through `StripeCurrency`.
+- **Test payments** — the **Test payments** feature (`CrestApps.OrchardCore.Checkout.TestProvider`) in this module. It confirms every payment without moving money, for development and automated tests. See [Test payments](#test-payments).
 
 ## The durable payment ledger
 
@@ -281,6 +282,85 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 - Two JSON endpoints (`checkout/{sessionId}/payment/begin` and `.../status`) carry the begin-then-poll conversation. Both are rate limited per visitor per checkout, resolve the session through the ownership-checked lookup, and require a same-origin request as defense in depth.
 
 A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
+
+## Test payments
+
+| | |
+| --- | --- |
+| **Feature** | `CrestApps.OrchardCore.Checkout.TestProvider` (**Test payments**) |
+| **Category** | Payment Providers |
+| **Dependencies** | `CrestApps.OrchardCore.Checkout` |
+| **Provider key** | `test` |
+
+The **Test payments** feature adds a payment method for development and automated tests. It lets a consumer test a whole checkout, in CI or on a developer's machine, without gateway keys or a browser that can drive a card form. A suite can pay a checkout with two requests:
+
+```http
+POST /checkout/{sessionId}/payment/begin
+Content-Type: application/json
+
+{ "providerKey": "test" }
+```
+
+```http
+POST /checkout/{sessionId}/payment/status
+```
+
+The first request begins the payment and needs no client action (`requiresAction` is `false`). The second completes the checkout, runs the completion handlers, and settles a transaction that the checkout pays.
+
+### When the provider is active
+
+The test method confirms every payment without moving money, so anyone who can open a checkout could take a purchase for free with it. Turning the feature on is therefore not enough on its own:
+
+- In the **Development** environment (`IHostEnvironment.IsDevelopment()`), the provider is registered.
+- In any other environment, the provider is registered only when `CrestApps:Checkout:TestProvider:AllowOutsideDevelopment` is `true`, and a warning is logged at startup that anyone can complete a checkout without paying.
+- Otherwise nothing is registered: the method is not offered on the payment step, a begin request that names `test` is refused like any unknown provider, and a warning is logged that the feature is enabled but inactive.
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "Checkout": {
+        "TestProvider": {
+          "AllowOutsideDevelopment": true
+        }
+      }
+    }
+  }
+}
+```
+
+```text
+OrchardCore__CrestApps__Checkout__TestProvider__AllowOutsideDevelopment=true
+```
+
+The setting is read when the tenant starts, so a change takes effect after the tenant is reloaded. See the [Configuration reference](../configuration.md#test-payments).
+
+### What it does
+
+`TestCheckoutPaymentProvider` implements `ICheckoutPaymentProvider`, `ICheckoutPaymentRefundProvider`, `ICheckoutSavedPaymentMethodProvider` and `ICheckoutRecurringPaymentProvider` under the key `test`, so it goes through the same ledger, reconciliation and checks as a real gateway:
+
+| Operation | Behavior |
+| --- | --- |
+| `BeginAsync` | Succeeds at once with a `test_pay_…` reference and no client action. A retried begin keeps the attempt's reference. |
+| `VerifyAsync` | Reports `Succeeded` with `ReportsAuthoritativeAmount = true`, the attempt's expected amount and tax, its currency, and `GatewayMode.Testing`. Because the amount is authoritative, the checkout cross-checks it exactly as it does for Stripe. |
+| `CancelAsync` | Always succeeds. |
+| `RefundAsync` | Succeeds for the requested amount with `GatewayMode.Testing`. The refund reference is derived from the idempotency key, so a retried refund returns the same refund. Refunds flow back to the transaction like any other refund. |
+| `GetSavedPaymentMethodAsync` | After a payment begun with `CheckoutPaymentDataKeys.SavePaymentMethod`, returns a saved method (`Test •••• 4242`) whose references a later off-session charge (`CheckoutPaymentDataKeys.ForOffSessionCharge`) accepts. An off-session charge naming any other method fails. |
+| `BeginRecurringAsync` | Establishes an agreement with a `test_sub_…` reference. Cancel, pause and update always succeed. |
+
+The provider declares one-time, recurring and combined payments, refunds and saved payment methods. It declares in-page collection (`SupportsEmbeddedElements`) because its panel is shown on the page, which is what lets the installment plan down payment screen offer it. It does not defer payment, so it can pay off an existing balance.
+
+On the payment step it contributes a one-line panel that says no money moves.
+
+### Magic amounts
+
+The last two digits of what an obligation charges, tax included, in the currency's smallest unit (cents for USD, yen for JPY) choose the outcome, the way gateway test cards do:
+
+| Amount ends in | Outcome |
+| --- | --- |
+| `02` (for example `10.02`) | The payment is **declined** when it begins: the attempt is recorded as failed and the begin request returns an error, as a declined card does. Off-session charges and recurring agreements are declined too. |
+| `05` (for example `10.05`) | The payment stays **pending** for two minutes (`TestCheckoutPaymentProvider.PendingSettlementDelay`) after the attempt was created. The status endpoint reports `Pending` and the browser stops waiting; the reconciliation sweep picks the attempt up once it is that old and completes the checkout. |
+| Anything else | The payment succeeds. |
 
 ## Extending checkout
 

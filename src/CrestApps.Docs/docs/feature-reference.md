@@ -202,6 +202,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Feature ID | Name | Docs |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Stripe` | Stripe | [Payments](./modules/payments) |
+| `CrestApps.OrchardCore.Checkout.TestProvider` | Test payments | [Checkout](./modules/checkout#test-payments) |
 
 ## Subscriptions
 
