@@ -111,6 +111,14 @@ An order holds lines, not money. The payment, its tax, the payment attempts and 
 | **Commerce > Orders**: every order, searchable by order number or customer email, with a status filter | `ManageOrders` | Administrator |
 | **Commerce > My Orders**: the signed-in customer's own orders | `ViewOwnOrders` | Authenticated |
 
+## Stock
+
+Products' `IProductAvailabilityProvider` says what can be bought; Inventory provides one, and without it every product can always be bought.
+
+- **Cart.** `CartService` asks for each line with the cart's id. An out-of-stock product that doesn't take backorders is refused (*Mug is out of stock.*), and a line's `MaxQuantity` is capped at what's available. Adding or updating beyond that says *Only 3 of Mug left.*, and a priced line over it gets the problem *Only 3 left. Lower the quantity to check out.*, which stops the checkout.
+- **Add to cart.** `AddToCartDisplayDriver` shows the product's or each variant's availability: *In stock*, *Only N left* at or below the threshold, *Out of stock* (which turns the button off) or *Available on backorder*. The quantity is capped at what's available.
+- **Variant picker.** The `product-variant-picker` script reads each variant's `data-availability`, `data-availability-tone` and `data-buyable`, and updates the line and the button as options change.
+
 ## Checkout line details
 
 Carts are the first checkout source with several products, so a `BillingItem` can carry a `Quantity` (its `Amount` is then the unit amount), a `Sku`, a `TaxCategoryCode`, a `TaxClassificationCode` and a `TaxableKind`. The invoice bills every unit, and the tax calculation uses a line's own codes and kind when it has them and the checkout's defaults otherwise. Handlers that set none of these bill and tax exactly as before.

@@ -45,6 +45,51 @@ public sealed class CartServiceTests
     }
 
     [Fact]
+    public async Task ACountedProduct_CantBeAddedBeyondWhatsLeft()
+    {
+        _harness.AddProduct("mug", unitPrice: 12m);
+        _harness.Stock["mug"] = new ProductAvailability(3, AllowBackorder: false, LowStockThreshold: 5);
+
+        var tooMany = await _harness.NewRequest().AddAsync("mug", null, 4, TestContext.Current.CancellationToken);
+        Assert.False(tooMany.Succeeded);
+        Assert.Equal("Only 3 of mug left.", tooMany.Message.Value);
+
+        var three = await _harness.NewRequest().AddAsync("mug", null, 3, TestContext.Current.CancellationToken);
+        Assert.True(three.Succeeded);
+    }
+
+    [Fact]
+    public async Task AnOutOfStockProduct_IsRefused_UnlessItTakesBackorders()
+    {
+        _harness.AddProduct("mug", unitPrice: 12m);
+        _harness.AddProduct("lamp", unitPrice: 40m);
+        _harness.Stock["mug"] = new ProductAvailability(0, AllowBackorder: false, LowStockThreshold: 5);
+        _harness.Stock["lamp"] = new ProductAvailability(0, AllowBackorder: true, LowStockThreshold: 5);
+
+        var mug = await _harness.NewRequest().AddAsync("mug", null, 1, TestContext.Current.CancellationToken);
+        Assert.Equal("mug is out of stock.", mug.Message.Value);
+
+        Assert.True((await _harness.NewRequest().AddAsync("lamp", null, 5, TestContext.Current.CancellationToken)).Succeeded);
+    }
+
+    [Fact]
+    public async Task ALineThatSoldOutSinceItWasAdded_StopsTheCheckout()
+    {
+        _harness.AddProduct("mug", unitPrice: 12m);
+        await _harness.NewRequest().AddAsync("mug", null, 2, TestContext.Current.CancellationToken);
+
+        _harness.Stock["mug"] = new ProductAvailability(1, AllowBackorder: false, LowStockThreshold: 5);
+
+        var service = _harness.NextRequest();
+        var pricing = await service.PriceAsync(await service.GetCurrentAsync(TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+        var line = Assert.Single(pricing.Lines);
+
+        Assert.False(pricing.CanCheckout);
+        Assert.Equal(1, line.MaxQuantity);
+        Assert.Equal("Only 1 left. Lower the quantity to check out.", line.Problem.Value);
+    }
+
+    [Fact]
     public async Task AnotherBrowser_DoesNotSeeTheCart()
     {
         _harness.AddProduct("mug", unitPrice: 12m);
@@ -217,6 +262,14 @@ public sealed class CartServiceTests
 
         public FakeCartStore Store { get; } = new();
 
+        /// <summary>
+        /// Gets what's available of each counted product, by content item id. A product missing here isn't counted.
+        /// </summary>
+        public Dictionary<string, ProductAvailability> Stock { get; } = [];
+
+        public IEnumerable<IProductAvailabilityProvider> Availability
+            => [new StockProvider(Stock)];
+
         public DateTime Now { get; set; } = new(2026, 10, 13, 12, 0, 0, DateTimeKind.Utc);
 
         public ContentItem AddProduct(string id, decimal unitPrice, string currency = "USD", bool sellable = true, ProductPrice price = null)
@@ -308,6 +361,7 @@ public sealed class CartServiceTests
                 contentManager.Object,
                 snapshots.Object,
                 prices.Object,
+                Availability,
                 clock.Object,
                 Options.Create(new CartOptions()),
                 NullLogger<CartService>.Instance,
@@ -336,6 +390,19 @@ public sealed class CartServiceTests
 
             return quantity is null ? null : new PriceResult(entry.Price.Amount, entry.Price.Currency, quantity.Value, entry.Price);
         }
+    }
+
+    private sealed class StockProvider : IProductAvailabilityProvider
+    {
+        private readonly Dictionary<string, ProductAvailability> _stock;
+
+        public StockProvider(Dictionary<string, ProductAvailability> stock)
+            => _stock = stock;
+
+        public Task<IReadOnlyDictionary<ProductStockKey, ProductAvailability>> GetAvailabilityAsync(ProductAvailabilityRequest request, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyDictionary<ProductStockKey, ProductAvailability>>(request.Products
+                .Where(key => _stock.ContainsKey(key.ContentItemId))
+                .ToDictionary(key => key, key => _stock[key.ContentItemId]));
     }
 
     private sealed class FakeCartStore : ICartStore

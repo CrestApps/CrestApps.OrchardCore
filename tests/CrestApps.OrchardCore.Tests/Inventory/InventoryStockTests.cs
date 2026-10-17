@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
@@ -423,6 +424,47 @@ public sealed class InventoryStockTests : IAsyncLifetime
         var rebuilt = await InSessionAsync(service => service.RebuildAsync(itemId, TestContext.Current.CancellationToken));
 
         Assert.Equal(3, rebuilt.Item.Reserved);
+    }
+
+    [Fact]
+    public async Task Availability_ListsAProductsVariants_AndCountsACartsOwnHoldsAsItsOwn()
+    {
+        var red = await AddItemAsync("shirt", "red", threshold: 2, title: "Shirt (Red)", sku: "RED");
+        var blue = await AddItemAsync("shirt", "blue", threshold: 2, title: "Shirt (Blue)", sku: "BLUE");
+        await StockedServiceAsync(red, 3);
+        await StockedServiceAsync(blue, 1);
+
+        // The buyer started checkout: their unpaid order holds 2 red shirts.
+        await InSessionAsync(service => service.ReserveAsync("order-a", [new StockRequest("shirt", "red", 2)], _now.AddMinutes(60), TestContext.Current.CancellationToken));
+
+        var orders = new Mock<CrestApps.OrchardCore.Orders.Core.Services.IOrderStore>();
+        orders
+            .Setup(store => store.ListUnpaidByCartAsync("cart-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new CrestApps.OrchardCore.Orders.Core.Models.Order { ItemId = "order-a" }]);
+
+        var services = new ServiceCollection()
+            .AddSingleton(orders.Object)
+            .BuildServiceProvider();
+
+        await using var session = _store.CreateSession();
+        var provider = new CrestApps.OrchardCore.Inventory.Services.InventoryAvailabilityProvider(session, services);
+
+        var everyone = await provider.GetAvailabilityAsync(new CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityRequest
+        {
+            Products = [new CrestApps.OrchardCore.Products.Core.Services.ProductStockKey("shirt", null)],
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, everyone.Count);
+        Assert.Equal(1, everyone[new("shirt", "red")].Available);
+        Assert.Equal(CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityStatus.LowStock, everyone[new("shirt", "blue")].Status);
+
+        var theBuyer = await provider.GetAvailabilityAsync(new CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityRequest
+        {
+            Products = [new CrestApps.OrchardCore.Products.Core.Services.ProductStockKey("shirt", "red")],
+            CartId = "cart-1",
+        }, TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, Assert.Single(theBuyer).Value.Available);
     }
 
     private Task<StockChangeResult> StockedServiceAsync(string itemId, int onHand)

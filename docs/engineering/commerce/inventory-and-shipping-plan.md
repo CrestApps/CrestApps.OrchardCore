@@ -111,7 +111,8 @@ rates come through a provider-neutral contract (flat, table, free, carrier) that
 | **IS0 Order lifecycle** | Canceled, Failed and Expired reach handlers; abandoned orders cancel with a reason; sweep; the variant fix in `RemoveBoughtLinesAsync` | An expired checkout cancels its order; buying one variant leaves the others in the cart. |
 | **IN1 Stock and ledger** | Inventory module, part, `StockItem`, movements, admin list, adjust and count, rebuild | An administrator receives 10 mugs, sells none, counts 9, and the history explains the difference. |
 | **IN2 Reservations** | Reserve at checkout start, commit on paid, release on cancel or expiry, holds sweep, concurrency tests | Two buyers racing for the last unit: one pays, the other is told it sold out. |
-| **IN3 Availability** | Availability provider, cart and product display, backorders, low-stock notice, listing filter, CSV and recipe steps | Out-of-stock products can't be bought, unless backorders are allowed. |
+| **IN3a Availability** | Availability provider, cart limits, product page and card display, variant picker | Out-of-stock products can't be bought, unless backorders are allowed. |
+| **IN3b Stock operations** | In-stock listing filter (search index field, reindex on stock change), low-stock notification and workflow event, CSV import and export, recipe and deployment steps | A listing filtered to in-stock products hides a product that just sold out; a CSV round trip restores counts. |
 | **SH1 Zones and rates** | Shipping module, product shipping data, zones, methods, rate providers, admin | Rates for a US and a Canadian address differ as configured. |
 | **SH2 Checkout** | Shipping step, shipping line, tax destination, order fields, emails and order pages | A physical order charges and taxes shipping; a digital-only order skips the step. |
 | **SH3 Fulfillment** | Shipments, partial fulfillment, tracking, shipped email, workflow events, customer views | An order shipped in two parts shows both, and the customer has both tracking links. |
@@ -171,6 +172,16 @@ Each slice is a PR with tests, opened when its tests pass.
   and no commits of its own; the concurrency-checked `StockItem` makes a racing second commit fail. The admin
   actions and the cart checkout commit explicitly and catch the conflict, and the engine's Canceled and Expired paths
   roll back and log it, leaving the work to the sweeps.
+
+### IN3a Availability
+
+- Products.Core: `IProductAvailabilityProvider` (`ProductStockKey`, `ProductAvailabilityRequest` with `CartId`,
+  `ProductAvailability` and its `Status`), and extensions to ask every provider and to combine variants.
+- Inventory: `InventoryAvailabilityProvider`, which adds back the units a cart's own unpaid orders hold, so a buyer
+  returning from checkout isn't told their items sold out.
+- Carts: `CartService` caps quantities and refuses out-of-stock lines (`LimitedByStock` picks the message). The Add to
+  cart display shows the label per variant, and the variant picker keeps the line and the button in step.
+- Listing cards get availability through the Add to cart action they already render; the in-stock *filter* is IN3b.
 
 ## Not in this phase
 

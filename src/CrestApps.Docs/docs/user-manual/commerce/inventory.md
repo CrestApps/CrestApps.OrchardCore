@@ -57,6 +57,21 @@ The history lists every change, newest first, with when it happened, what it was
 
 Two people changing the same line at once can't overwrite each other: the second waits a moment, or is asked to try again.
 
+## What shoppers see
+
+On product pages and listing cards, under the **Add to cart** button, shoppers see one of these:
+
+| Label | When |
+| --- | --- |
+| **In stock** | More than the low-stock threshold is available. |
+| **Only 3 left** | The threshold or fewer is available, with the number. |
+| **Out of stock** | Nothing is available. **Add to cart** is turned off. |
+| **Available on backorder** | Nothing is available, but the product allows backorders. |
+
+Exact numbers above the threshold stay private. For a product with variants, the label follows the options the shopper picks, and the list of variants marks each one, such as *L / Matte — $29 (Out of stock)*.
+
+The cart won't take more than is available. It says *Only 3 of Mug left.* when a shopper adds too many, and stops the checkout when a line has sold out since it was added. Units a shopper's own unpaid checkout holds still count as theirs, so coming back to the cart from checkout doesn't make their items look sold out.
+
 ## When customers buy
 
 With **Orders** enabled, stock follows each order:

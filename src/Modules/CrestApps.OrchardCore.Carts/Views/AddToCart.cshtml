@@ -49,8 +49,10 @@
             <select name="variantId" id="@(formId)-variant" class="form-select form-select-sm" data-product-variant>
                 @foreach (var variant in Model.Variants)
                 {
-                    <option value="@variant.VariantId" data-sku="@variant.Sku" data-price="@variant.Price" data-image="@variant.ImagePath" data-options="@System.Text.Json.JsonSerializer.Serialize(variant.Options)">
-                        @(string.IsNullOrEmpty(variant.Price) ? variant.Title : variant.Title + " — " + variant.Price)
+                    var label = string.IsNullOrEmpty(variant.Price) ? variant.Title : variant.Title + " — " + variant.Price;
+
+                    <option value="@variant.VariantId" data-sku="@variant.Sku" data-price="@variant.Price" data-image="@variant.ImagePath" data-options="@System.Text.Json.JsonSerializer.Serialize(variant.Options)" data-availability="@variant.Availability?.Label" data-availability-tone="@variant.Availability?.Tone" data-buyable="@((variant.Availability?.CanBuy ?? true) ? "true" : "false")">
+                        @(variant.Availability is null ? label : label + " (" + variant.Availability.Label + ")")
                     </option>
                 }
             </select>
@@ -78,8 +80,14 @@
         <input type="hidden" name="priceId" value="@Model.DefaultPriceId" />
     }
 
+    @{
+        var initial = Model.Variants.Count > 0 ? Model.Variants[0].Availability : Model.Availability;
+        var canBuy = initial?.CanBuy ?? true;
+    }
+    <p class="product-availability small mb-2 text-@(initial?.Tone ?? "success")" data-product-availability hidden="@(initial is null)">@initial?.Label</p>
+
     <div class="d-flex gap-2">
-        @if (Model.MaxQuantity > 1)
+        @if (Model.MaxQuantity > 1 && canBuy)
         {
             <input type="number"
                    name="quantity"
@@ -91,7 +99,7 @@
                    style="max-width: 5rem"
                    aria-label="@T["Quantity"]" />
         }
-        <button type="submit" class="btn btn-primary flex-grow-1">
+        <button type="submit" class="btn btn-primary flex-grow-1" disabled="@(!canBuy)">
             <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
             @T["Add to cart"]
         </button>
