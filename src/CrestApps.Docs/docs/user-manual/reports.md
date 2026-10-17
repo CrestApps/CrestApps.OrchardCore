@@ -101,7 +101,7 @@ How it works:
 
 The report always shows the present. The **Date range** does not change it; the times it shows are in the site's time zone. Filter it by **Campaign group** and **Campaign**.
 
-The **Right now** cards at the top add up every row: **Campaign queues**, **Waiting**, **Reserved**, **Assigned**, **Pending records**, **Dialable now**, **Held back**, **Not in any queue** and **Not explained**.
+The **Right now** cards at the top add up every row: **Campaign queues**, **Waiting**, **Reserved**, **Assigned**, **Pending**, **Dialable now**, **Held back**, **Not in any queue** and **Not explained**.
 
 The **Campaign queues by stamped dialer profile** table has one row for each campaign queue and dialer profile its records are stamped with, and one row for each campaign's pending records that are not in its queue at all.
 
@@ -122,7 +122,7 @@ The **Campaign queues by stamped dialer profile** table has one row for each cam
 | **Flags** | Problems to fix, in red: records stamped with a different dialer profile than their activity carries, pending records that are in no queue, and a stamped profile that is turned off or no longer exists. |
 | **Last dialed** | When the queue last placed a call. |
 
-The **Why records are held back** table lists each reason again, with the number of records and, for records that wait by themselves (scheduled for later, retry delay), when the first becomes due.
+The **Why records are held back** table lists each reason again, with the **Count** of records and, for records that wait by themselves (scheduled for later, retry delay), when the first becomes due.
 
 What to do about a flag:
 

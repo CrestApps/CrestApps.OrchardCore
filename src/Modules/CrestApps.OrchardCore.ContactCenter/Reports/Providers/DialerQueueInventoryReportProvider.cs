@@ -103,7 +103,7 @@ public sealed class DialerQueueInventoryReportProvider : ContactCenterReportBase
             new ReportMetric(S["Waiting"].Value, ReportFormat.Number(inventory.Rows.Sum(row => row.WaitingCount))),
             new ReportMetric(S["Reserved"].Value, ReportFormat.Number(inventory.Rows.Sum(row => row.ReservedCount))),
             new ReportMetric(S["Assigned"].Value, ReportFormat.Number(inventory.Rows.Sum(row => row.AssignedCount))),
-            new ReportMetric(S["Pending records"].Value, ReportFormat.Number(inventory.Campaigns.Sum(campaign => campaign.PendingCount))),
+            new ReportMetric(S["Pending"].Value, ReportFormat.Number(inventory.Campaigns.Sum(campaign => campaign.PendingCount))),
             new ReportMetric(S["Dialable now"].Value, ReportFormat.Number(inventory.Campaigns.Sum(campaign => campaign.DialableNowCount))),
             new ReportMetric(S["Held back"].Value, ReportFormat.Number(inventory.Campaigns.Sum(campaign => campaign.HeldBackCount))),
             new ReportMetric(S["Not in any queue"].Value, ReportFormat.Number(inventory.Campaigns.Sum(campaign => campaign.NotInAnyQueueCount))),
@@ -209,7 +209,7 @@ public sealed class DialerQueueInventoryReportProvider : ContactCenterReportBase
                     new ReportColumn(S["Campaign"].Value),
                     new ReportColumn(S["Stamped dialer profile"].Value),
                     new ReportColumn(S["Reason"].Value),
-                    new ReportColumn(S["Records"].Value, ReportColumnAlign.End),
+                    new ReportColumn(S["Count"].Value, ReportColumnAlign.End),
                     new ReportColumn(S["Next due"].Value),
                 ],
                 reasonRows));

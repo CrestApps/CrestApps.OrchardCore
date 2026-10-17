@@ -118,7 +118,7 @@ public sealed class DialerQueueInventoryTests
 
         // Assert
         var summary = document.Sections[0];
-        Assert.Equal("16", Metric(summary, "Pending records"));
+        Assert.Equal("16", Metric(summary, "Pending"));
         Assert.Equal("12", Metric(summary, "Held back"));
         Assert.Equal("4", Metric(summary, "Dialable now"));
         Assert.Equal("3", Metric(summary, "Not in any queue"));
