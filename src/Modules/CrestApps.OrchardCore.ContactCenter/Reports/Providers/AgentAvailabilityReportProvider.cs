@@ -689,8 +689,8 @@ public sealed class AgentAvailabilityReportProvider : ContactCenterReportBase
                 agents.Any(agent => AgentRoutingEligibility.Evaluate(
                     agent,
                     sessions.GetValueOrDefault(agent.UserId ?? string.Empty),
-                    activeCounts.GetValueOrDefault(agent.ItemId),
                     queueId,
+                    activeCounts.GetValueOrDefault(agent.ItemId),
                     liveAfter) == AgentRoutingIneligibility.None))
             {
                 var head = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
