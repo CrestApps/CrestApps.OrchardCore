@@ -44,7 +44,7 @@ jobs:
       shell: bash
       run: |
         set -o pipefail
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj --logger "trx;LogFileName=unit.trx" --results-directory ./TestResults 2>&1 | tee test-output.txt
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 2>&1 | tee test-output.txt
     - name: TEMP report failed tests as annotations
       if: failure()
       shell: python
