@@ -96,6 +96,35 @@ Each run handles up to 500 of each, and queries leave out what is already anonym
 
 **Admin.** `POST customers/{customerId}/erase` and `GET customers/{customerId}/export` (a `customer-{id}.json` download) need **Manage customers**.
 
+## Recipes
+
+The `Customers` recipe step adds or updates guest and business customers, for sample stores and test sites:
+
+```json
+{
+  "name": "Customers",
+  "Customers": [
+    {
+      "Kind": "Business",
+      "CompanyName": "Contoso Supplies",
+      "TaxId": "123456789RT0001",
+      "Email": "purchasing@contoso.example",
+      "Addresses": [
+        {
+          "AddressId": "contoso-office",
+          "Label": "Office",
+          "Address": { "Company": "Contoso Supplies", "AddressLine1": "100 King Street West", "City": "Toronto", "Region": "ON", "PostalCode": "M5X 1C7", "Country": "CA" }
+        }
+      ],
+      "DefaultBillingAddressId": "contoso-office",
+      "DefaultShippingAddressId": "contoso-office"
+    }
+  ]
+}
+```
+
+A customer is matched by `ItemId`, then by the email of a guest, so running a recipe again updates rather than duplicates. Customers with an account are made from their user, and erased or merged customers are left alone. Customers are personal data, so there is no deployment step that exports them. The **Product listing: online store sample** recipe uses this step for its two sample customers.
+
 ## Admin
 
 **Commerce > Customers** lists customers, the most recently active first, with a search by name, company or email and filters for *Active*, *With an account*, *Guests*, *Businesses*, *Disabled* and *All customers*. **Add customer** creates one by hand, for example for an order taken by phone. Each customer opens an editor for their details, with their account, when they became a customer and when they were last active, and their address book (`customers/{customerId}/addresses/...`). An anonymized customer's addresses can't be edited.

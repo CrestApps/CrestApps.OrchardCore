@@ -204,6 +204,16 @@ This is what shipping, guest order lookup and the customer account pages wait on
   only settled orders (paid or canceled) are anonymized. Customers with an account are not expired by inactivity; the
   account holds the same data, so they are erased on request. Erasing a customer does not delete the user account.
 
+### CU6 as built
+
+- `CustomersStep` (recipe step `Customers`): adds or updates guest and business customers, matched by id then a
+  guest's email; account, erased and merged customers are left alone; no deployment step, since customers are
+  personal data.
+- The online store sample enables Orders and Customers and adds two customers (a person with two addresses, a Canadian
+  business with a tax id); its test runs the sample's own step twice.
+- Docs: the user manual's sample section, the technical manual's Recipes section, the sample's description in the
+  Products and Carts and Orders manuals, and the changelog.
+
 Each slice is a PR with tests (unit, and SQLite integration for the store and merge), docs, and a live pass on the test
 store.
 

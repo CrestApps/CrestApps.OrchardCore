@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Customers.Drivers;
 using CrestApps.OrchardCore.Customers.Handlers;
 using CrestApps.OrchardCore.Customers.Migrations;
 using CrestApps.OrchardCore.Customers.Navigation;
+using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Recipes;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using OrchardCore.Users.Events;
@@ -44,6 +46,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();
+
+        // Sample stores add their customers through a recipe. Customers are personal data, so there is no export step.
+        services.AddRecipeExecutionStep<CustomersStep>();
 
         // Access and erasure requests, and the retention windows for guests' personal data.
         services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();

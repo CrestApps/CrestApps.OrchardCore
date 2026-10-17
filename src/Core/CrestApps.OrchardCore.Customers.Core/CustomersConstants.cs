@@ -17,6 +17,14 @@ public static class CustomersConstants
     /// </summary>
     public const string SettingsGroupId = "customers";
 
+    public static class Recipes
+    {
+        /// <summary>
+        /// The recipe step that adds or updates guest and business customers.
+        /// </summary>
+        public const string Customers = "Customers";
+    }
+
     public static class Features
     {
         public const string Customers = "CrestApps.OrchardCore.Customers";

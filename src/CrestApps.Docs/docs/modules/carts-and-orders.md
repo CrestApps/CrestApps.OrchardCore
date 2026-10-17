@@ -111,4 +111,4 @@ Shipping and fulfillment, inventory, saved carts, carts with recurring prices, a
 
 ## Getting started
 
-Enable **Carts** to show **Add to cart** and the cart page. Enable **Orders** and a [payment provider](payments) to check carts out. The **Product listing: online store sample** recipe enables Carts.
+Enable **Carts** to show **Add to cart** and the cart page. Enable **Orders** and a [payment provider](payments) to check carts out. The **Product listing: online store sample** recipe enables Carts, Orders and [Customers](customers); add a payment provider to take payments.
