@@ -18,6 +18,8 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using OrchardCore.Users.Events;
+using OrchardCore.Users.Handlers;
 
 namespace CrestApps.OrchardCore.Customers;
 
@@ -32,6 +34,12 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ICustomerStore, CustomerStore>();
         services.AddScoped<ICustomerService, DefaultCustomerService>();
+
+        // A guest's history joins their account once the account's email is verified.
+        services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
+        services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
+        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvents>();
+        services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();
 
@@ -53,6 +61,7 @@ public sealed class OrdersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, CustomerContactCheckoutHandler>();
+        services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
         services.AddNavigationProvider<CustomerSettingsAdminMenu>();

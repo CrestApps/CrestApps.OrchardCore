@@ -4,11 +4,15 @@ using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Customers.ViewModels;
+using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
@@ -213,7 +217,54 @@ public sealed class CustomersAdminController : Controller
         model.CanManage = await _authorizationService.AuthorizeAsync(User, CustomerPermissions.ManageCustomers);
         model.Addresses = await _addressBook.SummarizeAsync(customer);
 
+        await AddHistoryAsync(model, customer);
+
         return View(await BuildEditorAsync(model));
+    }
+
+    // Recent orders, and the merges that joined guests to this customer or this guest to an account.
+    private async Task AddHistoryAsync(CustomerEditViewModel model, Customer customer)
+    {
+        if (HttpContext.RequestServices.GetService<IOrderStore>() is { } orders)
+        {
+            // An account holder's orders include those from before the customer record existed.
+            var (count, recent) = await orders.PageAsync(new OrderQuery
+            {
+                UserId = customer.UserId,
+                CustomerId = string.IsNullOrEmpty(customer.UserId) ? customer.ItemId : null,
+                Statuses = [OrderStatus.Paid, OrderStatus.AwaitingPayment],
+            }, 0, 20, HttpContext.RequestAborted);
+
+            model.HasOrders = true;
+            model.Orders = recent
+                .Select(order => new CustomerOrderSummary
+                {
+                    OrderId = order.ItemId,
+                    OrderNumber = order.OrderNumber,
+                    CreatedUtc = order.CreatedUtc,
+                    Status = order.Status == OrderStatus.Paid ? S["Paid"].Value : S["Awaiting payment"].Value,
+                    Total = ProductPriceFormatter.Format(order.Total ?? order.Subtotal, order.Currency),
+                })
+                .ToArray();
+        }
+
+        if (!string.IsNullOrEmpty(customer.MergedIntoCustomerId) && await _store.FindByIdAsync(customer.MergedIntoCustomerId, HttpContext.RequestAborted) is { } into)
+        {
+            model.MergedInto = new CustomerMergeSummary { CustomerId = into.ItemId, Name = into.GetName() };
+            model.MergedUtc = customer.MergedUtc;
+        }
+
+        var merged = new List<CustomerMergeSummary>();
+
+        foreach (var mergedId in customer.MergedCustomerIds ?? [])
+        {
+            if (await _store.FindByIdAsync(mergedId, HttpContext.RequestAborted) is { } guest)
+            {
+                merged.Add(new CustomerMergeSummary { CustomerId = guest.ItemId, Name = guest.GetName() });
+            }
+        }
+
+        model.MergedCustomers = merged;
     }
 
     [Admin("customers/{customerId}/addresses/add", "CustomersAddressCreate")]
@@ -316,7 +367,7 @@ public sealed class CustomersAdminController : Controller
     {
         var customer = string.IsNullOrEmpty(customerId) ? null : await _store.FindByIdAsync(customerId, HttpContext.RequestAborted);
 
-        return customer?.Status == CustomerStatus.Anonymized ? null : customer;
+        return customer?.Status is CustomerStatus.Anonymized or CustomerStatus.Merged ? null : customer;
     }
 
     private async Task<bool> TrySaveAsync(Customer customer)

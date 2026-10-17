@@ -36,6 +36,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutHandler, OrderCheckoutHandler>();
         services.AddScoped<ICheckoutHandler, OrderConfirmationCheckoutHandler>();
         services.AddScoped<OrderConfirmationEmailBuilder>();
+        services.AddScoped<OrderLinksEmailBuilder>();
+        services.AddScoped<IOrderLinkService, OrderLinkService>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
         services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();

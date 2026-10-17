@@ -24,6 +24,16 @@ A customer who signs in and places an order becomes a customer the first time th
 
 Someone who buys as a guest becomes a **guest** customer with the name, email, phone and billing address they gave at checkout. Each guest checkout makes its own guest customer: an email typed at checkout proves nothing, so it never joins someone else's record.
 
+## Guests who create an account
+
+When someone who bought as a guest creates an account with the same email, or signs in to one they already have, their guest purchases join the account, but only once the account's email is confirmed. An email typed at checkout proves nothing, so nobody can claim someone else's orders by typing their email.
+
+When that happens:
+
+- the guest's orders and Pay Later balances move to the account, and appear under **My Orders** and **My Transactions**;
+- their addresses join the account's address book, without repeating one already there;
+- the guest customer is marked **Merged**, links to the account's customer, and can no longer be edited. The account's customer lists the guest checkouts merged into it.
+
 ## Find a customer
 
 1. Open **Commerce > Customers**. The most recently active customers come first.
@@ -56,7 +66,7 @@ Click a customer to open them, change their details, and click **Save**.
 | **Phone** | A number to reach them. |
 | **Accepts marketing** | Tick it when the customer agreed to news and offers. Order and payment messages are always sent. |
 
-Below the details, **Account** links to the customer's account when they have one, and shows when they became a customer and when they were last active.
+Below the details, **Account** links to the customer's account when they have one, and shows when they became a customer and when they were last active. **Orders** lists the customer's recent orders, each linking to the order, and **Merged guest checkouts** lists any guest customers merged into this one.
 
 If someone else saved the customer while you were editing, your changes aren't saved and you're asked to review theirs first.
 

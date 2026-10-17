@@ -84,6 +84,21 @@ public sealed class Customer : CatalogItem
     /// </summary>
     public DateTime LastActivityUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets the customer a merged guest's history moved to.
+    /// </summary>
+    public string MergedIntoCustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the guest was merged.
+    /// </summary>
+    public DateTime? MergedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the guest customers merged into this one.
+    /// </summary>
+    public List<string> MergedCustomerIds { get; set; } = [];
+
     public CustomerAddress FindAddress(string addressId)
         => string.IsNullOrEmpty(addressId)
             ? null
@@ -159,4 +174,10 @@ public enum CustomerStatus
     /// The customer's personal data was erased; only what the law requires to keep remains.
     /// </summary>
     Anonymized = 2,
+
+    /// <summary>
+    /// A guest customer whose orders and addresses moved to an account's customer when that account's email was
+    /// verified. <see cref="Customer.MergedIntoCustomerId"/> names it.
+    /// </summary>
+    Merged = 3,
 }

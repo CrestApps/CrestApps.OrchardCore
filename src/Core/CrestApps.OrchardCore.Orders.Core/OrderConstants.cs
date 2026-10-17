@@ -20,6 +20,11 @@ public static class OrderConstants
     /// </summary>
     public const string SettingsGroupId = "orders";
 
+    /// <summary>
+    /// The rate-limit group of Find my order, which anyone can post to.
+    /// </summary>
+    public const string FindRateLimitGroup = "find-order";
+
     public static class Features
     {
         public const string Orders = "CrestApps.OrchardCore.Orders";
@@ -30,5 +35,9 @@ public static class OrderConstants
         public const string MyOrders = "MyOrders";
 
         public const string MyOrder = "MyOrder";
+
+        public const string View = "OrdersView";
+
+        public const string Find = "OrdersFind";
     }
 }

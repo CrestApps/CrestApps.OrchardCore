@@ -69,6 +69,10 @@
                                     {
                                         <span class="badge text-bg-dark">@T["Anonymized"]</span>
                                     }
+                                    else if (customer.Status == CustomerStatus.Merged)
+                                    {
+                                        <span class="badge text-bg-secondary">@T["Merged"]</span>
+                                    }
                                 </div>
                             </div>
                             <div class="metadata mt-1">

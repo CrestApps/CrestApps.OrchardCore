@@ -32,6 +32,7 @@ public sealed class OrderMigrations : DataMigration
             ("IDX_OrderIndex_OrderNumber", "OrderNumber"),
             ("IDX_OrderIndex_UserId", "UserId"),
             ("IDX_OrderIndex_CustomerId", "CustomerId"),
+            ("IDX_OrderIndex_CustomerEmail", "CustomerEmail"),
             ("IDX_OrderIndex_CartId", "CartId"),
             ("IDX_OrderIndex_Status_CreatedUtc", "Status,CreatedUtc"),
         })
@@ -42,7 +43,7 @@ public sealed class OrderMigrations : DataMigration
             );
         }
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -59,5 +60,15 @@ public sealed class OrderMigrations : DataMigration
         await IndexTableIndexCreation.CreateIfMissingAsync<OrderIndex>(SchemaBuilder, "IDX_OrderIndex_CustomerId", OrderConstants.CollectionName, "CustomerId");
 
         return 2;
+    }
+
+    /// <summary>
+    /// Finds orders by the customer's email, for Find my order.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await IndexTableIndexCreation.CreateIfMissingAsync<OrderIndex>(SchemaBuilder, "IDX_OrderIndex_CustomerEmail", OrderConstants.CollectionName, "CustomerEmail");
+
+        return 3;
     }
 }
