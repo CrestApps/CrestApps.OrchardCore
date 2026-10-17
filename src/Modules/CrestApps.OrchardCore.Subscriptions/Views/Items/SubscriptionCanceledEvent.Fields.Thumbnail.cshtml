@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscriptionCanceledEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-ban" aria-hidden="true"></i>
+    @T["Subscription Canceled"]
+</h4>
+<p class="text-muted">@T["Triggered when a subscription is canceled by the customer, an administrator, or the payment gateway."]</p>

@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripeDisputeCreatedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Stripe Dispute Created"])
+    </h4>
+</header>

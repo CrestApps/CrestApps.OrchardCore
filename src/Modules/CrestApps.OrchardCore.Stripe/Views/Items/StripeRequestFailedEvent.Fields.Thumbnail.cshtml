@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripeRequestFailedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-plug-circle-exclamation" aria-hidden="true"></i>
+    @T["Stripe Request Failed"]
+</h4>
+<p class="text-muted">@T["Triggered when a request to Stripe fails, for example because the API key was revoked."]</p>
