@@ -17,6 +17,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Transactions;
 
@@ -75,6 +76,9 @@ public sealed class NotificationStartup : StartupBase
         services
             .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
             .AddNavigationProvider<TransactionReminderSettingsAdminMenu>();
+
+        // Lets a role that holds only the transaction settings permission open Settings > Commerce > Transactions.
+        services.AddSiteSettingsPermission(TransactionsConstants.SettingsGroupId, TransactionsPermissions.ManageTransactionSettings);
 
         services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
     }
