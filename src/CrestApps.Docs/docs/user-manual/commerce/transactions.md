@@ -75,18 +75,19 @@ The transaction's page has a **Summary** card and a **Timeline** on the left, an
 | **Source** | Where the transaction came from. |
 | **Reference** | What the transaction is for, such as the order or plan it belongs to. |
 | **Total** | The full amount. |
+| **Adjusted** | How much was taken off what is owed without being paid, such as a discount or a waiver. Shown once anything has been. |
 | **Paid** | How much has been paid so far. |
 | **Refunded** | How much has been given back, once anything has. |
-| **Outstanding** | How much is still owed. |
+| **Outstanding** | How much is still owed: the total, less what was adjusted and what was paid. |
 | **Created** | When the transaction was recorded. |
 | **Due** | When the payment is due, if it has a due date. |
 | **Invoice** | The invoice number, such as *INV-1001*, once the customer has been sent an invoice. With the **Receipts** feature on, it opens the [printable invoice](invoices-and-receipts.md#print-an-invoice). |
-| **Settled** | When the transaction was settled, and how: *Paid online* or *Recorded by hand*. |
+| **Settled** | When the transaction was settled, and how: *Paid online*, *Recorded by hand*, or *Nothing left to pay after an adjustment*. |
 | **Reminders sent** | How many payment reminders the customer has been sent. |
 
 ### Timeline
 
-The **Timeline** lists everything that happened to the transaction, newest first. Each entry is headed **Created**, **Payment received**, **Reminder sent**, **Status changed**, **Canceled**, **Refunded** or **Note**, and shows who did it, when a person did. A payment entry has a **View receipt** link when the **Receipts** feature is on; see [Invoices and Receipts](invoices-and-receipts.md).
+The **Timeline** lists everything that happened to the transaction, newest first. Each entry is headed **Created**, **Payment received**, **Reminder sent**, **Invoice sent**, **Adjusted**, **Status changed**, **Canceled**, **Refunded** or **Note**, and shows who did it, when a person did. A payment entry has a **View receipt** link when the **Receipts** feature is on; see [Invoices and Receipts](invoices-and-receipts.md).
 
 ### Record a payment taken outside the site
 
@@ -94,8 +95,9 @@ Use this when the customer paid by cash, check or bank transfer.
 
 1. Open the transaction from **Commerce > Transactions**.
 2. In **Record an offline payment**, check the **Amount**. It starts at the full outstanding balance; change it for a part payment.
-3. Optionally, describe how the payment was received in **Note**.
-4. Click **Record payment**, then click **Record payment** again in the confirmation box.
+3. Optionally, type the check number or transfer reference in **Reference**. It is recorded with the payment.
+4. Optionally, describe how the payment was received in **Note**.
+5. Click **Record payment**, then click **Record payment** again in the confirmation box.
 
 If the payment covers the balance, the transaction becomes **Paid**. If it covers part of it, the transaction becomes **Partially paid**. An amount larger than the balance is recorded as the balance, so the customer never owes a negative amount. With the **Send Payment Receipts** feature on, the customer is sent a receipt.
 
@@ -112,7 +114,7 @@ Use this to settle the whole balance at once, for example when the customer paid
 1. Open the transaction.
 2. Click **Mark as paid**, then click **Mark as paid** in the confirmation box.
 
-The remaining balance is recorded as an offline payment and the transaction becomes **Paid**. With the **Send Payment Receipts** feature on, the customer is sent a receipt for that amount.
+The remaining balance is recorded as an offline payment and the transaction becomes **Paid**. What was adjusted is not counted as paid. With the **Send Payment Receipts** feature on, the customer is sent a receipt for that amount.
 
 ### Cancel a transaction
 
@@ -123,6 +125,27 @@ Cancel a transaction when nothing more should be collected for it.
 3. Click **Cancel transaction**, then click **Cancel transaction** in the confirmation box. Click **Keep it** to back out.
 
 The transaction becomes **Canceled**, and no more reminders are sent for it. The reason is shown in the customer's history too. A transaction that is already **Paid**, **Abandoned** or **Refunded** can't be canceled: if money was collected, [refund the payment](payments-and-refunds.md#refund-a-payment) instead.
+
+### Adjust or waive what is owed
+
+Use this to lower what the customer owes without recording money you did not receive: financial aid, a discount given after the fact, a partial waiver, a credit the customer had, or an amount you write off.
+
+1. Open the transaction.
+2. In **Adjust or waive**, pick the **Type**: **Discount**, **Waiver**, **Credit** or **Write-off**.
+3. Check the **Amount**. It starts at the full outstanding balance; change it to take off only part. It can't be more than what is still owed.
+4. Optionally, type a **Reason**. It is printed on the invoice.
+5. Click **Adjust**, then click **Adjust** in the confirmation box.
+
+The amount appears as **Adjusted** in the summary and as an **Adjusted** entry on the timeline, and the customer owes that much less. The invoice lists each adjustment as a line that takes its amount off, and receipts say how much was taken off. If nothing is left to pay, the transaction becomes **Paid** and no more reminders are sent for it. An adjustment is not money received, so the customer is not sent a receipt for it. **Adjust** is only available while the transaction can still be collected and something is owed.
+
+### Send the invoice now
+
+The **Send the invoice** card appears when the **Transaction Reminders** feature is on, for a transaction the customer pays themselves (not one charged automatically to a saved card).
+
+1. Open the transaction.
+2. In **Send the invoice**, click **Send invoice**, then click **Send invoice** in the confirmation box, which names the amount still owed.
+
+The transaction gets its invoice number, such as *INV-1001*, if it has none yet, and the customer is sent a notice titled *Invoice INV-1001* with a link that pays it. It is not worded as a reminder. It counts as the first notice: it adds to **Reminders sent**, and the next scheduled reminder waits a full interval after it. If you see *The invoice could not be sent. The owner may not have a notification channel configured.*, contact the customer another way; the invoice number is kept for the next try.
 
 ### Send a reminder now
 
@@ -203,13 +226,13 @@ Each row shows the status, the **Total**, the **Outstanding** amount when someth
 
 Click the transaction's title or **View**. The page shows:
 
-- **Details:** the **Total**, how much is **Paid**, what is **Outstanding**, when it was **Created**, the **Due** date and the **Invoice** number, once you have been sent an invoice. Click the invoice number to see and print the invoice.
-- **History:** each payment, reminder, refund and change, newest first. A payment has a **View receipt** link to its printable receipt.
+- **Details:** the **Total**, how much was **Adjusted** (taken off without being paid, when anything was), how much is **Paid**, what is **Outstanding**, when it was **Created**, the **Due** date and the **Invoice** number, once you have been sent an invoice. Click the invoice number to see and print the invoice.
+- **History:** each payment, invoice, reminder, adjustment, refund and change, newest first. A payment has a **View receipt** link to its printable receipt.
 
 ### Pay online
 
 1. Click **Pay now**, either on the row in **My Transactions** or on the transaction's page. It is offered only while something is owed and the transaction can still be paid, so not on one that is **Canceled**, **Abandoned** or **Refunded**.
-2. The site opens checkout with the outstanding balance ready to pay. Finish the payment there; see [Checkout](checkout.md).
+2. The site opens checkout with the outstanding balance ready to pay. Finish the payment there; see [Checkout](checkout.md). You can enter a promotion code on the **Payment** step: what it takes off is recorded on the transaction as a discount, and a 100% code pays the whole balance.
 
 When the payment is confirmed, the transaction becomes **Paid**, or **Partially paid** if less than the balance was collected, and you are sent a receipt. If you see *Online settlement is not available*, online payment isn't set up on this site; contact the site's administrator to pay another way.
 

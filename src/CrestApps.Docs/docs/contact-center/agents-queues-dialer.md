@@ -356,6 +356,48 @@ The base **Contact Center** feature registers the log: the `DialerDecisionIndexP
 
 **Quiet queues.** The report lists each queue and campaign with work due now (waiting items, an open queue, and records dialable now by the dispatch diagnostics) with the time of its last routing decision, and flags one with none for longer than `CrestApps:ContactCenter:Reporting:DecisionLogQuietThreshold` (a `TimeSpan`, default `00:15:00`; see [Configuration](../configuration.md#reporting)). The predictive over-dialer places calls without a routing decision until one connects, so a campaign it is dialing can be flagged while its calls are in flight.
 
+### Pacing cycle records and dialer health
+
+A pacing cycle used to leave no trace of its own: its `RoutingDecisionMade` events were committed with the cycle, so a cycle that was rolled back, abandoned at its `CycleTimeout` or cut short by the minute task's time budget left nothing behind, and a stalled dialer looked exactly like an idle one. **Contact Center Paced Dialing** now writes a compact `DialerPacingCycle` record for every way a cycle can end.
+
+| Outcome | Written when |
+| --- | --- |
+| `Placed` | The cycle placed one or more calls and committed them. `CallsPlaced` says how many; the record also names the last call placed (interaction, record and agent) and the last record routing assigned to an agent. |
+| `NothingDue` | No record waits in the queue, or routing was never asked for an agent because nothing is due yet (scheduled for later, inside the retry delay, out of attempts, business hours closed). |
+| `NoAgents` | Routing was asked and found no agent for the record at the head of the queue. |
+| `HeldBack` | The cycle placed nothing because the dialer chose not to: the compliance gate suppressed the attempt (`Detail` lists the reasons), the abandonment policy does not permit a Predictive profile to dial, an over-dial decision found the calls in flight already cover the agents, or the head record's profile is turned off or missing. |
+| `LockNotAcquired` | Another cycle held the queue's pacing lock. For an over-dialing profile, the pacer's own cycle left no decision on the queue's pacing record (its lock was held, or it failed or lost a write race, which it logs). |
+| `TimeBudgetExceeded` | The cycle did not finish within `CycleTimeout` and was abandoned, or the minute `DialerPacingBackgroundTask` ran out of its 90-second budget before it reached the queue (the task now logs this as a warning instead of at debug level). |
+| `Failed` | The cycle threw (`Detail` carries the exception type and message), or no voice provider can route outbound calls for the profile, or its dialing mode is not enabled. |
+| `WriteConflict` | The cycle's commit lost a write race (`ConcurrencyException`); none of its calls were placed and the queue is paced again shortly. |
+
+`Placed`, `NothingDue`, `NoAgents` and `HeldBack` are cycles that ran to the end. They are the dialer's **heartbeat**.
+
+**Written apart from the cycle.** `IDialerPacingCycleRecorder` writes the record through `IContactCenterScopeExecutor` on a scope of its own, deferred until the cycle's scope has ended (`ShellScope` deferred task), so it never shares or waits on the cycle's transaction and is kept whether that transaction committed, was rolled back or was abandoned. `DialerPacingScheduler` catches every failure and lets its scope end normally, so its records always run; `PredictivePacingScheduler` writes a `Failed` record straight away (`RecordNowAsync`) before it rethrows, since deferred work never runs for a failed scope. A record that cannot be written is logged as a warning and never stops pacing.
+
+**What the cycle decided** is gathered without the routing and dialing services knowing they are watched: Paced Dialing wraps the registered `IContactCenterEventPublisher` in `DialerPacingCycleObservingEventPublisher`, which hands each event published on the scope to the scoped `DialerPacingCycleObservation` while a cycle is running. It counts `RoutingDecisionMade` (assigned or not), `DialSuppressed` by reason and `DialerAttemptStarted`. A decision event that stands for several identical decisions and carries a `Count` field in its payload is counted as that many; one without it counts as one.
+
+**Compact.** Consecutive cycles of a queue that end the same way without placing a call (`NothingDue`, `NoAgents`, `HeldBack`, `LockNotAcquired`) with the same profile are folded into the queue's latest record for up to an hour: `CycleCount` counts them, `FirstStartedUtc` is when the first began, and `StartedUtc` and `CompletedUtc` describe the latest. A queue that keeps finding no agent therefore costs one row an hour. Records live in the Contact Center collection, indexed by `DialerPacingCycleIndex` (queue, profile, outcome and `CompletedUtc`).
+
+**Retention.** `DialerPacingCycleRetentionPolicy` ages records from `CompletedUtc` under `CrestApps:ContactCenter:Retention:DialerPacingCycleRetentionDays`. Unlike the windows over business records, this one defaults to **14** days, because a record carries no customer data and one is written for every cycle that places calls; set it to `0` to keep records indefinitely. See [Retention](production-support.md#retention-legal-holds-and-replay-horizon).
+
+**Dialer state.** `IDialerPacingHealthService` reads every campaign queue with a waiting record whose head record carries an enabled Power, Progressive or Predictive profile, and decides its state from the later of its last completed cycle and when its longest-waiting record was queued:
+
+| State | Meaning |
+| --- | --- |
+| `Stalled` | Work has waited longer than `CrestApps:ContactCenter:DialerPacing:StalledAfter` (default 5 minutes) without a cycle of the queue completing. The minute task paces every queue with waiting work, so a healthy dialer completes a cycle at least once a minute even when it finds nothing to do. |
+| `Idle` | The last completed cycle found no agent. |
+| `HeldBack` | The last completed cycle held back. |
+| `Dialing` | The last completed cycle placed calls. |
+| `NothingToCall` | The last completed cycle found nothing due, or no paced campaign has work waiting. |
+| `Starting` | Work arrived less than `StalledAfter` ago and no cycle of the queue has completed yet. |
+
+The same state drives three surfaces:
+
+- The **`contactcenter-dialer-pacing`** health check (registered by Paced Dialing when `OrchardCore.HealthChecks` is enabled, tagged as a dependency check) fails with the registration's failure status and the description *Due work is waiting but no pacing cycle has completed for N minutes in K campaign queue(s).* when any queue is stalled. It is healthy otherwise and reports the count of queues in each state in its `Data`. Every node reads the same records, so it never gates readiness. See [Health checks](production-support.md#health-checks).
+- The **Dialer activity and health** report (Paced Dialing with Reports): see the [report catalog](report-catalog.md#dialer-activity-and-health).
+- The **live dashboard banner**: the supervisor dashboard renders the banner with the page and refreshes it every thirty seconds from `GET Admin/contact-center/dashboard/dialer` (permission `MonitorContactCenter`, limited to the campaign queues the supervisor may see; `204 No Content` when Paced Dialing is off). See [Live dashboard](../user-manual/live-dashboard.md#dialer-banner).
+
 ### Agents stuck on work that is already over
 
 An agent can be left showing **On a call**, Busy or Reserved with nothing on the line: a soft-phone call record the provider can no longer resolve, a Contact Center call the provider reports ended, a reservation or queue item nothing backs. The agent's own *Set Available* repairs Contact Center reservations and queue items but deliberately leaves any call the provider might still hold, so it could not clear this.

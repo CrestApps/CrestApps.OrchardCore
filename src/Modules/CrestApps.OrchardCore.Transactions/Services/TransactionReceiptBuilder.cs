@@ -133,6 +133,12 @@ public sealed class TransactionReceiptBuilder : ITransactionReceiptBuilder
             notes.Add(S["Payment for invoice {0}.", transaction.InvoiceNumber].Value);
         }
 
+        // What was taken off the charge without being paid, so the receipt explains why it is less than the charge.
+        if (transaction.AmountAdjusted > 0m)
+        {
+            notes.Add(S["{0} {1} of the {2} {3} charged was taken off without being paid (a discount, waiver, credit or write-off).", transaction.Currency, CurrencyScale.Format(transaction.AmountAdjusted, transaction.Currency), transaction.Currency, CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)].Value);
+        }
+
         return notes.Count == 0 ? null : string.Join(' ', notes);
     }
 

@@ -1339,12 +1339,19 @@ Every value is validated on start, and an invalid one stops the tenant.
 | `Debounce` | `00:00:00.300` | Greater than zero. |
 | `LockExpiration` | `00:00:30` | Greater than zero. |
 | `LockRetryDelay` | `00:00:01` | Greater than zero and shorter than `LockExpiration`. |
+| `StalledAfter` | `00:05:00` | Greater than zero. |
 
 `Debounce` is how long a pacing request waits for others before the campaign is paced, so a burst of agent and call
 changes paces it once. `LockExpiration` bounds the per-campaign pacing lock should a node stop while holding it, and
 `LockRetryDelay` is how soon a campaign is paced again when its lock was held by another run. These change only when a
 campaign is paced; how many calls each cycle places stays with the dialer profile. The minute dialer pacing task stays
 on as the backstop.
+
+`StalledAfter` is how long work may wait in a paced campaign queue without a pacing cycle of that queue completing before the dialer is reported as stalled: on the **Dialer activity and health** report, on the live dashboard's dialer banner, and by the `contactcenter-dialer-pacing` health check. The minute task paces every queue with waiting work, so a healthy dialer completes a cycle at least once a minute. See [Pacing cycle records and dialer health](contact-center/agents-queues-dialer.md#pacing-cycle-records-and-dialer-health).
+
+```text
+OrchardCore__CrestApps__ContactCenter__DialerPacing__StalledAfter=00:10:00
+```
 
 ```json
 {
@@ -1473,10 +1480,10 @@ See [Report Catalog](contact-center/report-catalog.md).
 | **Section** | `CrestApps:ContactCenter:Retention` |
 | **Controls** | How many days each kind of Contact Center record is kept, the floors that hold records longer, and the purge batch size |
 
-Every `...RetentionDays` key defaults to `0`, which keeps records indefinitely. Keys include
+Every `...RetentionDays` key defaults to `0`, which keeps records indefinitely, except `DialerPacingCycleRetentionDays`, which defaults to `14`: dialer pacing cycle records are diagnostics with no customer data, and `0` keeps them indefinitely too. Keys include
 `InteractionRetentionDays`, `InteractionEventRetentionDays`, `CallSessionRetentionDays`,
 `QueueItemRetentionDays`, `SharedVoicemailRetentionDays`, `CallQualityRecordRetentionDays`,
-`LegalHoldMinimumDays`, `ProjectionReplayHorizonDays`, `PurgeBatchSize` and `MaxPurgeBatchesPerCycle`.
+`DialerPacingCycleRetentionDays`, `LegalHoldMinimumDays`, `ProjectionReplayHorizonDays`, `PurgeBatchSize` and `MaxPurgeBatchesPerCycle`.
 
 ```json
 {

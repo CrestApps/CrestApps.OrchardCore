@@ -71,6 +71,7 @@ The button always shows the range you picked in words, for example *From Jan 1, 
 | How much paid time did each agent spend in each state? | **Reconciled payroll timecard** and the other *Workforce & Payroll* reports |
 | Which dispositions are agents choosing? | **Disposition breakdown** |
 | Which numbers did the dialer call, and how did each call end? | **Dialer call detail** (see [below](#dialer-call-detail)) |
+| Is the dialer dialing, waiting for agents, out of work, or stuck? | **Dialer activity and health** (see [below](#dialer-activity-and-health)) |
 | What is waiting in each campaign queue right now, and why is it not being dialed? | **Dialer queue inventory** (see [below](#dialer-queue-inventory)) |
 | Why was a record not called, or why did an agent not get a call? Has routing stopped looking at a queue? | **Dialer decision log** (see [below](#dialer-decision-log)) |
 | How often did the AI hand a conversation to a person? | **AI handoff & containment** |
@@ -190,6 +191,33 @@ How it works:
 - Filter by **Campaign group**, **Campaign**, **Channel**, **Source**, **Status** and **Disposition**. Tick several dispositions, for example *No answer* and *Busy*, to list the numbers that ended either way.
 - Rows are listed newest first, 100 to a page. The line above the table says which rows you are looking at; type a page number in **Page** and click **Show** to move to another page.
 - **Export CSV** (or **Export Excel (.xlsx)**) downloads every matching row, not only the page on screen, so the list can be worked outside the system or loaded again later.
+
+## Dialer activity and health
+
+**Dialer activity and health**, under *Operations*, tells you what the dialer is doing for each campaign it dials automatically, and what it did over the period you pick. It appears when the Contact Center Paced Dialing feature is on.
+
+A dialer that places no calls can be in three very different situations, and the report keeps them apart:
+
+| State | What it means | What to do |
+| --- | --- | --- |
+| **Stalled** | Records are waiting but the dialer has not finished a pass over the campaign for several minutes (five, unless your administrator changed it). The report shows the warning *Due work is waiting but no pacing cycle has completed for N minutes*. | Tell your administrator: the dialer has stopped, not run out of work. |
+| **Idle: no agent available** | The dialer keeps checking the campaign and finds records it may call, but no agent is free to take the call. | Sign more agents in to the campaign, or bring agents back from a break. |
+| **Nothing to call** / **Nothing due** | The dialer keeps checking and finds nothing it may call right now: the campaign has no records waiting, or they are scheduled for later or waiting out their retry delay. | Nothing, unless you expected records to be due. Load more records if the campaign has run out. |
+
+Other states are **Dialing** (the last pass placed calls), **Holding back** (the dialer chose not to call: the compliance check refused the numbers, the abandoned-call cap was reached, or calls already ringing cover the free agents) and **Starting** (records arrived a moment ago).
+
+The report has these sections:
+
+| Section | What it shows |
+| --- | --- |
+| **Dialer right now** | The overall state, how many campaigns have records waiting, and how many are stalled, idle, holding back, dialing or have nothing due. |
+| **Campaign queues** | One row per campaign: its state, when the dialer's last pass started and finished, how it ended (for example *Placed 2*, *No agents* or *Nothing due*, with how many passes in a row ended that way), why, the **Last call placed** and the **Last call assigned** (when, which agent, which record), and how many passes, calls and routing decisions there were in the period. |
+| **Dialer profiles** | One row per dialer profile: its mode, its last pass, the last call placed, and the calls placed, answered and abandoned and the attempts suppressed in the period. |
+| **Calls per hour** | A chart of calls placed, answered by a person and abandoned, hour by hour (day by day for a period longer than a month). |
+| **Campaign routing decisions per hour** | A chart of how often a record was routed to an agent and how often no agent was available. |
+| **Suppressed attempts by reason** | How many calls the compliance check refused, by reason: do not call, the national do-not-call registry, outside the calling window, number not in service, compliance check unavailable, abandonment rate cap reached, out of attempts, waiting out the retry delay and no number to dial. |
+
+The state and the **Last cycle** columns always describe right now, whatever date range you pick; the counts and charts cover the date range. Times are shown in the site's time zone. The same state is shown as a banner on the [live dashboard](live-dashboard.md#dialer-banner).
 
 ## Dialer queue inventory
 

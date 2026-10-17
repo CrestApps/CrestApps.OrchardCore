@@ -214,6 +214,43 @@ public sealed class DialerPacingBackgroundTaskTests
     }
 
     [Fact]
+    public async Task DoWorkAsync_WhenRunExceedsItsTimeBudget_RecordsEachDeferredQueue()
+    {
+        // Arrange: a run cut short by its time budget used to say so only in a debug log line.
+        var current = new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(() => current);
+
+        var profile1 = new DialerProfile { ItemId = "dp1", Name = "profile-1", Mode = DialerMode.Power };
+        var profile2 = new DialerProfile { ItemId = "dp2", Name = "profile-2", Mode = DialerMode.Progressive };
+
+        var dialerManager = new Mock<IDialerProfileManager>();
+        dialerManager.Setup(m => m.FindByIdAsync("dp1", It.IsAny<CancellationToken>())).ReturnsAsync(profile1);
+        dialerManager.Setup(m => m.FindByIdAsync("dp2", It.IsAny<CancellationToken>())).ReturnsAsync(profile2);
+
+        var queueItemStore = CreateQueueItemStore(
+            (_queue1, "dp1"),
+            (_queue2, "dp2"));
+
+        var pacingScheduler = new Mock<IDialerPacingScheduler>();
+        pacingScheduler
+            .Setup(scheduler => scheduler.RequestBackstop(_queue1))
+            .Callback(() => current = current.AddMilliseconds(100_000));
+
+        var recorder = new RecordingDialerPacingCycleRecorder();
+
+        await using var serviceProvider = CreateServiceProvider(dialerManager, pacingScheduler, queueItemStore, clock, recorder: recorder);
+
+        // Act
+        await new DialerPacingBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert: the queue the run did not reach is on record as cut short, the one it reached is not.
+        var cycle = Assert.Single(recorder.Cycles);
+        Assert.Equal(_queue2, cycle.QueueId);
+        Assert.Equal(DialerPacingCycleOutcome.TimeBudgetExceeded, cycle.Outcome);
+    }
+
+    [Fact]
     public async Task DoWorkAsync_WhenShutdownCancels_PropagatesCancellation()
     {
         // Arrange
@@ -304,6 +341,7 @@ public sealed class DialerPacingBackgroundTaskTests
         Mock<IQueueItemStore> queueItemStore,
         Mock<IClock> clock,
         IContactCenterFeatureWorkManager workManager = null,
+        IDialerPacingCycleRecorder recorder = null,
         ILogger<DialerPacingBackgroundTask> logger = null)
     {
         var services = new ServiceCollection();
@@ -313,6 +351,11 @@ public sealed class DialerPacingBackgroundTaskTests
         services.AddSingleton(clock.Object);
         services.AddSingleton(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();
+
+        if (recorder is not null)
+        {
+            services.AddSingleton(recorder);
+        }
 
         if (logger is not null)
         {

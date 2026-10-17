@@ -28,6 +28,7 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["CallQualityRecord"] = "Runtime state. One measurement per ended call leg, produced by traffic.",
         ["CallRecording"] = "Communication history. One row per recorded call, produced by traffic; its media lives in this environment's encrypted store.",
         ["CallbackRequest"] = "Runtime state. One row per caller waiting to be called back.",
+        ["DialerPacingCycle"] = "Runtime state. The record of what this deployment's dialer did in each pacing cycle; copied elsewhere it would describe cycles that deployment never ran.",
         ["SharedVoicemail"] = "Runtime state. One row per message a caller left in a queue's shared voicemail box; its recording lives on an interaction that does not exist in another environment.",
         ["ContactCenterEventMetric"] = "Derived state. Aggregated counters rebuilt by projecting events.",
         ["ContactCenterEventMetricDelta"] = "Derived state. Counts appended but not yet folded into the daily totals; the roller drains them within a minute.",

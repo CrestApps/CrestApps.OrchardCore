@@ -97,7 +97,8 @@ public sealed class TransactionSettlementService : ITransactionSettlementService
 
         transaction.AmountPaid = CurrencyScale.Round(transaction.AmountPaid + confirmedTotal, transaction.Currency);
 
-        var fullyPaid = transaction.AmountPaid >= transaction.TotalAmount;
+        // What was adjusted (a discount or a waiver) is owed no more, so paying the rest settles the transaction.
+        var fullyPaid = transaction.OutstandingAmount <= 0m;
 
         transaction.PaymentAttemptId = newAttempts.Last().ItemId;
         transaction.Status = fullyPaid ? TransactionStatus.Paid : TransactionStatus.PartiallyPaid;

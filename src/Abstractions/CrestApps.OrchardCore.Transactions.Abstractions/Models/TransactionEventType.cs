@@ -39,4 +39,14 @@ public enum TransactionEventType
     /// Money paid against the transaction was given back.
     /// </summary>
     Refunded = 6,
+
+    /// <summary>
+    /// What is owed was lowered without money being received: a discount, waiver, credit or write-off.
+    /// </summary>
+    Adjusted = 7,
+
+    /// <summary>
+    /// The invoice was sent to the owner.
+    /// </summary>
+    InvoiceSent = 8,
 }

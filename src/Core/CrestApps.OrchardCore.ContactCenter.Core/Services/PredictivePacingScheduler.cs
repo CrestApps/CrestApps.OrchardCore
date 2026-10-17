@@ -128,15 +128,124 @@ public sealed class PredictivePacingScheduler : IPredictivePacingScheduler
             return null;
         }
 
-        var started = await services.GetRequiredService<IDialerService>().RunCycleAsync(profile, queueId, cancellationToken);
+        var recorder = services.GetService<IDialerPacingCycleRecorder>();
+        var observation = recorder is null ? null : services.GetService<DialerPacingCycleObservation>();
+        var startedUtc = _clock.UtcNow;
+        int started;
+
+        observation?.Begin();
+
+        try
+        {
+            started = await services.GetRequiredService<IDialerService>().RunCycleAsync(profile, queueId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException && recorder is not null)
+        {
+            observation?.End();
+
+            // The scope this cycle ran on fails with the exception, and what waits for a failed scope never runs.
+            await recorder.RecordNowAsync(new DialerPacingCycle
+            {
+                QueueId = queueId,
+                DialerProfileId = profile.ItemId,
+                Outcome = DialerPacingCycleOutcome.Failed,
+                Detail = DialerPacingScheduler.DescribeFailure(ex),
+                StartedUtc = startedUtc,
+            });
+
+            throw;
+        }
+
+        observation?.End();
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
             _logger.LogDebug("Paced over-dialing queue '{QueueId}' on request: {Started} call(s) placed.", queueId.SanitizeLogValue(), started);
         }
 
+        if (recorder is not null)
+        {
+            var record = await DialerPacingScheduler.DescribeCompletedCycleAsync(services, queueId, profile, startedUtc, started, observation, cancellationToken);
+
+            if (started == 0)
+            {
+                await DescribeOverDialDecisionAsync(services, record, startedUtc, cancellationToken);
+            }
+
+            await recorder.RecordAsync(record);
+        }
+
         // While calls are being placed the queue is paced again soon; once nothing is placed it waits for the next event
         // (an agent freeing up, a call answered or ending) or the minute dialer pacing task.
         return started > 0 ? _clock.UtcNow.Add(_options.PacingInterval) : null;
+    }
+
+    /// <summary>
+    /// Refines the record of an over-dial cycle that placed nothing with what the over-dial pacer decided, which it keeps on
+    /// the queue's pacing record.
+    /// </summary>
+    /// <param name="services">The services of the scope the cycle ran on.</param>
+    /// <param name="record">The cycle's record.</param>
+    /// <param name="startedUtc">When the cycle started; a pacing decision older than this was not made by it.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    internal static async Task DescribeOverDialDecisionAsync(
+        IServiceProvider services,
+        DialerPacingCycle record,
+        DateTime startedUtc,
+        CancellationToken cancellationToken)
+    {
+        var stateStore = services.GetService<IPredictivePacingStateStore>();
+
+        if (stateStore is null)
+        {
+            return;
+        }
+
+        PredictivePacingState state;
+
+        try
+        {
+            state = await stateStore.FindByQueueIdAsync(record.QueueId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return;
+        }
+
+        var decision = state?.LastCycleUtc is { } lastCycleUtc && lastCycleUtc >= startedUtc
+            ? state.LastDecision
+            : null;
+
+        // The pacer records every cycle it runs under the queue's pacing lock. One that left no decision behind never got
+        // the lock, or was rolled back after failing or losing a write race, which the pacer logs.
+        if (decision is null)
+        {
+            record.Outcome = DialerPacingCycleOutcome.LockNotAcquired;
+            record.Detail = "The over-dial cycle did not run: another cycle held the queue's pacing lock, or it failed or lost a write race (see the log).";
+
+            return;
+        }
+
+        if (decision.Mode == PredictivePacingDecisionMode.Suppressed)
+        {
+            record.Outcome = DialerPacingCycleOutcome.HeldBack;
+            record.Detail = $"The abandonment policy does not permit the profile to dial ({decision.Reason}).";
+
+            return;
+        }
+
+        if (decision.Mode == PredictivePacingDecisionMode.OverDial && decision.DialCount == 0)
+        {
+            if (decision.AvailableAgents + decision.FreeingAgents == 0)
+            {
+                record.Outcome = DialerPacingCycleOutcome.NoAgents;
+                record.Detail = "No agent is available or about to be.";
+            }
+            else
+            {
+                record.Outcome = DialerPacingCycleOutcome.HeldBack;
+                record.Detail = $"The calls already in flight cover the agents ({decision.Reason}).";
+            }
+        }
     }
 }
