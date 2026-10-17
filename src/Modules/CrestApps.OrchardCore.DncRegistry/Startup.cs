@@ -31,6 +31,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<DncRegistrySettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(DncRegistryConstants.SettingsGroupIds.ImportContentSettings, DncRegistryPermissions.ManageDncRegistrySettings);
         services.AddNavigationProvider<DncRegistryAdminMenu>();
         services.AddPermissionProvider<DncRegistryPermissionProvider>();
     }
@@ -47,6 +48,7 @@ public sealed class UsaFtcStartup : StartupBase
         services.AddHttpClient(nameof(UsaFtcDncRegistry));
         services.AddScoped<INationalDoNotCallRegistry, UsaFtcDncRegistry>();
         services.AddSiteDisplayDriver<UsaFtcDncRegistrySettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(DncRegistryConstants.SettingsGroupIds.UsaFtcRegistry, DncRegistryPermissions.ManageDncRegistrySettings);
         services.AddNavigationProvider<UsaFtcDncRegistryAdminMenu>();
     }
 }
@@ -62,6 +64,7 @@ public sealed class CanadaDnclStartup : StartupBase
         services.AddHttpClient(nameof(CanadaDnclRegistry));
         services.AddScoped<INationalDoNotCallRegistry, CanadaDnclRegistry>();
         services.AddSiteDisplayDriver<CanadaDnclRegistrySettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(DncRegistryConstants.SettingsGroupIds.CanadaDnclRegistry, DncRegistryPermissions.ManageDncRegistrySettings);
         services.AddNavigationProvider<CanadaDnclRegistryAdminMenu>();
     }
 }

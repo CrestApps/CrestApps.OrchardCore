@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -17,13 +18,12 @@ namespace CrestApps.OrchardCore.Telnyx.Drivers;
 /// <summary>
 /// Renders and persists the UI-driven Telnyx SMS provider settings on the SMS settings group
 /// (Configuration → Settings → SMS), alongside OrchardCore's general SMS settings and the Twilio provider.
-/// Secrets are stored protected and never re-rendered.
+/// Secrets are stored protected and never re-rendered. Like Orchard Core's own SMS and Twilio settings, the editor is
+/// shown and saved only for users who hold <see cref="SmsPermissions.ManageSmsSettings"/>.
 /// </summary>
 public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSmsSettings>
 {
-    // Matches OrchardCore's SMS settings group so the Telnyx provider appears under /Admin/Settings/sms.
-    private const string SmsSettingsGroupId = "sms";
-
+    private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -31,11 +31,13 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
     internal readonly IStringLocalizer S;
 
     public TelnyxSmsSettingsDisplayDriver(
+        IAuthorizationService authorizationService,
         IDataProtectionProvider dataProtectionProvider,
         IOptionsUpdateNotifier optionsUpdateNotifier,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<TelnyxSmsSettingsDisplayDriver> stringLocalizer)
     {
+        _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
         _optionsUpdateNotifier = optionsUpdateNotifier;
         _httpContextAccessor = httpContextAccessor;
@@ -43,7 +45,10 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
     }
 
     /// <inheritdoc/>
-    protected override string SettingsGroupId => SmsSettingsGroupId;
+    /// <remarks>
+    /// Orchard Core's SMS settings group, so the Telnyx provider appears under /Admin/Settings/sms.
+    /// </remarks>
+    protected override string SettingsGroupId => SmsSettings.GroupId;
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, TelnyxSmsSettings settings, BuildEditorContext context)
@@ -58,7 +63,10 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
                 model.WebhookUrl = BuildWebhookUrl(site);
             })
             .Location("Content:5#Telnyx;20")
-            .OnGroup(SettingsGroupId);
+            .OnGroup(SettingsGroupId)
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                _httpContextAccessor.HttpContext?.User,
+                SmsPermissions.ManageSmsSettings));
     }
 
     // Builds the public webhook URL to show the operator. The tenant's canonical site Base URL wins because it is
@@ -87,6 +95,11 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, TelnyxSmsSettings settings, UpdateEditorContext context)
     {
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, SmsPermissions.ManageSmsSettings))
+        {
+            return null;
+        }
+
         var model = new TelnyxSmsSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
