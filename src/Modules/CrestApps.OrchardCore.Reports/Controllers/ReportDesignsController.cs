@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -57,9 +58,10 @@ public sealed class ReportDesignsController : Controller
     /// </summary>
     /// <param name="q">The optional search text.</param>
     /// <param name="status">Which reports to list: empty for all, <c>published</c>, or <c>unpublished</c>.</param>
+    /// <param name="shapeFactory">The shape factory that builds the status filter of the list.</param>
     /// <returns>The list page.</returns>
     [Admin("reports/designs", "ReportDesignsIndex")]
-    public async Task<IActionResult> Index(string q, string status)
+    public async Task<IActionResult> Index(string q, string status, [FromServices] IShapeFactory shapeFactory)
     {
         var model = new ReportDesignsIndexViewModel
         {
@@ -68,6 +70,8 @@ public sealed class ReportDesignsController : Controller
             Status = status is ReportDesignListStatus.Published or ReportDesignListStatus.Unpublished ? status : ReportDesignListStatus.All,
         };
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var entries = new List<ReportDesignListEntry>();
+        var drafts = new List<ReportDesignListEntry>();
 
         // Every report and draft is authorized; the status filter and the search only narrow what the user may open.
         var showPublished = model.Status != ReportDesignListStatus.Unpublished;
@@ -80,10 +84,11 @@ public sealed class ReportDesignsController : Controller
 
             if (canView && showPublished && Matches(q, design.DisplayText, design.Category))
             {
-                model.Entries.Add(new ReportDesignListEntry
+                entries.Add(new ReportDesignListEntry
                 {
                     Design = design,
                     CanEdit = canEdit,
+                    CanClone = model.CanDesign,
                     IsOwner = string.Equals(design.OwnerId, userId, StringComparison.Ordinal),
                 });
             }
@@ -97,10 +102,11 @@ public sealed class ReportDesignsController : Controller
 
                 if (canEdit && showDrafts && Matches(q, draft.Design.DisplayText))
                 {
-                    model.Drafts.Add(new ReportDesignListEntry
+                    drafts.Add(new ReportDesignListEntry
                     {
                         Design = draft.Design,
                         CanEdit = true,
+                        IsDraft = true,
                         IsOwner = string.Equals(draft.Design.OwnerId, userId, StringComparison.Ordinal),
                         ModifiedUtc = draft.ModifiedUtc,
                     });
@@ -108,9 +114,25 @@ public sealed class ReportDesignsController : Controller
             }
         }
 
-        if (!model.CanDesign && model.Entries.Count == 0 && string.IsNullOrWhiteSpace(q) && model.Status == ReportDesignListStatus.All)
+        if (!model.CanDesign && entries.Count == 0 && string.IsNullOrWhiteSpace(q) && model.Status == ReportDesignListStatus.All)
         {
             return Forbid();
+        }
+
+        // The admin-list tag builds a row per report, drafts first, in the layout (List or Grid) the site or the user
+        // picked. Only a designer filters by status.
+        model.List = new AdminListContext<ReportDesignListEntry>
+        {
+            Source = [.. drafts, .. entries],
+        };
+
+        if (model.CanDesign)
+        {
+            model.List.ToolbarActions = await shapeFactory.CreateAsync("ReportDesignsAdminListFilters", Arguments.From(new
+            {
+                model.Status,
+                model.Search,
+            }));
         }
 
         return View(model);

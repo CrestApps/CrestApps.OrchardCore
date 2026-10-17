@@ -1,0 +1,29 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportViewListEntry>
+
+@{
+    var minutes = Model.Value.View.RefreshIntervalMinutes;
+}
+
+@if (minutes > ReportViewRefreshIntervals.Live)
+{
+    var schedule = minutes switch
+    {
+        ReportViewRefreshIntervals.Minimum => T["Every 15 minutes"],
+        ReportViewRefreshIntervals.Hourly => T["Every hour"],
+        ReportViewRefreshIntervals.EverySixHours => T["Every 6 hours"],
+        ReportViewRefreshIntervals.Daily => T["Every day"],
+        _ => T["Every {0} minutes", minutes],
+    };
+
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The view's result is stored on this schedule, and reports read the stored result."]">
+        <i class="fa-solid fa-clock-rotate-left text-secondary me-1" aria-hidden="true"></i>@schedule
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The view runs every time a report reads it."]">
+        <i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@T["Live"]
+    </span>
+}

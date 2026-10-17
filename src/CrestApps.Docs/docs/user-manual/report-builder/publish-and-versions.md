@@ -26,7 +26,7 @@ The builder saves your changes as you work, from the first change to a new repor
 
 Saved changes are a **draft**: people who run the report keep seeing the published version until you click **Publish**.
 
-- A new report you have not published yet is listed first on the **Report Builder** page, with a **Not published** badge. Click **Edit** to keep working on it, or **Delete** to throw it away. Only you, and the people who manage every report, can see it. It cannot run until it is published. Use the **Status** menu in the header of the list to show only published reports or only the ones not published.
+- A new report you have not published yet is listed first on the **Report Builder** page, with a **Not published** badge. Click **Edit** to keep working on it, or choose **Delete** from its actions to throw it away. Only you, and the people who manage every report, can see it. It cannot run until it is published. Use the **Status** menu in the header of the list to show only published reports or only the ones not published.
 - In the builder, a bar above the tabs says when the report is saved as a draft and was never published, with a **Delete draft** button.
 
 ## Publish

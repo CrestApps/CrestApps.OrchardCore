@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Reports.Designer;
+using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
 using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.AspNetCore.Authorization;
@@ -66,16 +67,26 @@ public sealed class ReportViewsController : Controller
             return Forbid();
         }
 
-        var model = new ReportViewsIndexViewModel();
+        var snapshots = await _snapshots.ListStatusesAsync();
+        var entries = new List<ReportViewListEntry>();
 
         foreach (var view in await _designService.GetAllViewsAsync())
         {
-            model.Entries.Add((view, await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, view)));
+            entries.Add(new ReportViewListEntry
+            {
+                View = view,
+                CanEdit = await _authorizationService.AuthorizeAsync(User, ReportDesignerPermissions.ManageAllReportDesigns, view),
+                Snapshot = view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live ? snapshots.GetValueOrDefault(view.ItemId) : null,
+            });
         }
 
-        model.Snapshots = await _snapshots.ListStatusesAsync();
-
-        return View(model);
+        return View(new ReportViewsIndexViewModel
+        {
+            List = new AdminListContext<ReportViewListEntry>
+            {
+                Source = entries,
+            },
+        });
     }
 
     /// <summary>

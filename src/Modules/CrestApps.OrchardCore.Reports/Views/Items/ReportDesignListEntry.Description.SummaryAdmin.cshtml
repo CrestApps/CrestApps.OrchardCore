@@ -1,0 +1,8 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignListEntry>
+
+@if (!Model.Value.IsDraft && !string.IsNullOrWhiteSpace(Model.Value.Design.Description))
+{
+    <div class="admin-list-secondary">@Model.Value.Design.Description</div>
+}

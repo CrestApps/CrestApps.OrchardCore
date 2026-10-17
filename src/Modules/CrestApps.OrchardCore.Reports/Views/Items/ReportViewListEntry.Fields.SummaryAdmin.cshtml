@@ -1,0 +1,13 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportViewListEntry>
+
+@* A plain link to the editor, or plain text for a view the user may not change. *@
+@if (Model.Value.CanEdit)
+{
+    <a asp-route="ReportViewsEdit" asp-route-id="@Model.Value.View.ItemId">@Model.Value.View.DisplayText</a>
+}
+else
+{
+    @Model.Value.View.DisplayText
+}

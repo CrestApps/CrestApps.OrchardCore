@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Reports.Designer.ViewModels;
 
@@ -67,14 +68,10 @@ public class ReportDesignerPreviewViewModel
 public class ReportDesignsIndexViewModel
 {
     /// <summary>
-    /// Gets or sets the reports the user can see, with what the user may do with each.
+    /// Gets or sets the list of the reports the user may edit that were never published, then of the reports the user
+    /// can see, with what the user may do with each.
     /// </summary>
-    public IList<ReportDesignListEntry> Entries { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the reports the user may edit that were never published.
-    /// </summary>
-    public IList<ReportDesignListEntry> Drafts { get; set; } = [];
+    public AdminListContext List { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the user can design reports.
@@ -135,6 +132,16 @@ public class ReportDesignListEntry
     public bool IsOwner { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the report was never published, so it has nothing to run yet.
+    /// </summary>
+    public bool IsDraft { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the user may make their own copy of the report.
+    /// </summary>
+    public bool CanClone { get; set; }
+
+    /// <summary>
     /// Gets or sets when an unpublished report was last changed, in UTC.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
@@ -146,14 +153,32 @@ public class ReportDesignListEntry
 public class ReportViewsIndexViewModel
 {
     /// <summary>
-    /// Gets or sets the views, with whether the user may change each.
+    /// Gets or sets the list of the views, with whether the user may change each and how its stored result was last
+    /// refreshed.
     /// </summary>
-    public IList<(ReportView View, bool CanEdit)> Entries { get; set; } = [];
+    public AdminListContext List { get; set; }
+}
+
+/// <summary>
+/// One entry of the view list.
+/// </summary>
+public class ReportViewListEntry
+{
+    /// <summary>
+    /// Gets or sets the view.
+    /// </summary>
+    public ReportView View { get; set; }
 
     /// <summary>
-    /// Gets or sets the refresh status of the views that have a stored result, by view identifier.
+    /// Gets or sets a value indicating whether the user may change the view.
     /// </summary>
-    public IReadOnlyDictionary<string, ReportViewSnapshotStatus> Snapshots { get; set; } = new Dictionary<string, ReportViewSnapshotStatus>();
+    public bool CanEdit { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the stored result of a view refreshed on a schedule was last refreshed, or
+    /// <see langword="null"/> for a live view.
+    /// </summary>
+    public ReportViewSnapshotStatus Snapshot { get; set; }
 }
 
 /// <summary>

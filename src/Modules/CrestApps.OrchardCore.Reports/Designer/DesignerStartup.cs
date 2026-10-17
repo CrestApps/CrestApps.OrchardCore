@@ -1,11 +1,13 @@
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Reports.Designer.BackgroundTasks;
 using CrestApps.OrchardCore.Reports.Designer.Deployments;
+using CrestApps.OrchardCore.Reports.Designer.Drivers;
 using CrestApps.OrchardCore.Reports.Designer.Handlers;
 using CrestApps.OrchardCore.Reports.Designer.Indexes;
 using CrestApps.OrchardCore.Reports.Designer.Migrations;
 using CrestApps.OrchardCore.Reports.Designer.Recipes;
 using CrestApps.OrchardCore.Reports.Designer.Services;
+using CrestApps.OrchardCore.Reports.Designer.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -14,6 +16,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.Deployment;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -82,6 +85,10 @@ public sealed class DesignerStartup : StartupBase
         services.AddScoped<IAuthorizationHandler, ReportDesignAuthorizationHandler>();
         services.AddPermissionProvider<ReportDesignerPermissionProvider>();
         services.AddNavigationProvider<ReportDesignerAdminMenu>();
+
+        services
+            .AddDisplayDriver<ReportDesignListEntry, ReportDesignListEntryDisplayDriver>()
+            .AddDisplayDriver<ReportViewListEntry, ReportViewListEntryDisplayDriver>();
     }
 }
 

@@ -1,0 +1,14 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportViewListEntry>
+
+@if (Model.Value.CanEdit)
+{
+    <a asp-route="ReportViewsDelete"
+       asp-route-id="@Model.Value.View.ItemId"
+       class="dropdown-item text-danger"
+       data-url-af="RemoveUrl UnsafeUrl"
+       data-message="@T["Are you sure you want to delete this view?"]"
+       data-ok-text="@T["Yes"]"
+       data-cancel-text="@T["Cancel"]">@T["Delete"]</a>
+}

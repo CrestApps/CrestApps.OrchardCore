@@ -47,11 +47,11 @@ Everything is under **Reports** in the admin menu:
 
 The **Report Builder** page lists the reports you can open.
 
-- Type in **Search reports** to find a report by its title or category, and press Enter or click **Go**.
+- Type in **Search reports** to find a report by its title or category, and press Enter or click the search button.
 - **New Report** opens the builder on a new report. It is shown to people who build reports.
 - The header of the list says how many reports it shows. If you build reports, the **Status** menu on the right of it shows **All** reports, only the **Published** ones, or only the ones **Not published**.
 
-Reports you started but never published are listed first, with a **Not published** badge. Only you, and the people who manage every report, can see them. Click **Edit** to keep working on one, or **Delete** to throw it away.
+Reports you started but never published are listed first, with a **Not published** badge. Only you, and the people who manage every report, can see them. Click **Edit** to keep working on one, or choose **Delete** from its actions to throw it away.
 
 Each published report shows its category, a **Menu** badge when it is in the admin menu, a **Shared** badge when it is shared with other people, and **Yours** or the name of its owner. The buttons depend on what you may do:
 
@@ -59,8 +59,8 @@ Each published report shows its category, a **Menu** badge when it is in the adm
 | --- | --- |
 | **Run** | Opens the report. Set the filters and click **Show**. See [Share and run reports](share-and-run.md#run-and-export-a-report). |
 | **Edit** | Opens the report in the builder. Shown when you may change the report. |
-| **Delete** | Removes the report, its versions and all its share links. Shown when you may change the report. |
-| **Actions > Clone** | Makes your own copy of the report. The copy is not shared with anybody. Shown when you may build reports. |
+| **Clone** (in the actions) | Makes your own copy of the report. The copy is not shared with anybody. Shown when you may build reports. |
+| **Delete** (in the actions) | Removes the report, its versions and all its share links. Shown when you may change the report. |
 
 ## Find your way around the builder
 

@@ -1,0 +1,42 @@
+@using CrestApps.OrchardCore
+@using System.Globalization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportViewListEntry>
+
+@{
+    var view = Model.Value.View;
+    var snapshot = Model.Value.Snapshot;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Result columns"]">
+    <i class="fa-solid fa-table-columns text-secondary me-1" aria-hidden="true"></i>@T.Plural(view.Query?.Columns?.Count ?? 0, "1 column", "{0} columns")
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Designed by"]">
+    <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@(view.Author ?? "?")
+</span>
+
+@if (view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live)
+{
+    if (snapshot?.RefreshedUtc is DateTime refreshedUtc)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last refreshed"]">
+            <i class="fa-solid fa-calendar text-secondary me-1" aria-hidden="true"></i>
+            <time datetime="@refreshedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: refreshedUtc, Format: "g"))</time>
+        </span>
+    }
+    else
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The stored result is made at the next refresh."]">
+            <i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@T["Not refreshed yet"]
+        </span>
+    }
+
+    if (!string.IsNullOrEmpty(snapshot?.LastError))
+    {
+        <span class="badge ta-badge fw-normal text-danger" data-bs-toggle="tooltip" title="@snapshot.LastError">
+            <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["The last refresh failed"]
+        </span>
+    }
+}

@@ -1,0 +1,37 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignListEntry>
+
+@{
+    var design = Model.Value.Design;
+}
+
+@if (Model.Value.IsDraft)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["This report was never published, so it can't be run yet."]">
+        <i class="fa-solid fa-file-pen text-secondary me-1" aria-hidden="true"></i>@T["Not published"]
+    </span>
+}
+else
+{
+    if (!string.IsNullOrWhiteSpace(design.Category))
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Category"]">
+            <i class="fa-solid fa-folder text-secondary me-1" aria-hidden="true"></i>@design.Category
+        </span>
+    }
+
+    if (design.ShowInAdminMenu)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Shown in the admin menu"]">
+            <i class="fa-solid fa-bars text-secondary me-1" aria-hidden="true"></i>@T["Menu"]
+        </span>
+    }
+
+    if ((design.SharedUserNames?.Count ?? 0) + (design.SharedRoles?.Count ?? 0) > 0)
+    {
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Shared with other people"]">
+            <i class="fa-solid fa-share-nodes text-secondary me-1" aria-hidden="true"></i>@T["Shared"]
+        </span>
+    }
+}

@@ -1,0 +1,8 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportViewListEntry>
+
+@if (Model.Value.CanEdit)
+{
+    <a asp-route="ReportViewsEdit" asp-route-id="@Model.Value.View.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

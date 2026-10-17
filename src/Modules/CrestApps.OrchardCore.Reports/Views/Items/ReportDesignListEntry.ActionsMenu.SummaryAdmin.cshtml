@@ -1,0 +1,30 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignListEntry>
+
+@{
+    var entry = Model.Value;
+}
+
+@if (entry.CanClone && !entry.IsDraft)
+{
+    <a asp-route="ReportDesignsClone"
+       asp-route-id="@entry.Design.ItemId"
+       class="dropdown-item"
+       data-url-af="UnsafeUrl"
+       data-title="@T["Clone"]"
+       data-message="@T["Create your own copy of this report? The copy is not shared with anybody."]"
+       data-ok-text="@T["Yes"]"
+       data-cancel-text="@T["Cancel"]">@T["Clone"]</a>
+}
+
+@if (entry.CanEdit)
+{
+    <a asp-route="@(entry.IsDraft ? "ReportDesignsDeleteDraft" : "ReportDesignsDelete")"
+       asp-route-id="@entry.Design.ItemId"
+       class="dropdown-item text-danger"
+       data-url-af="RemoveUrl UnsafeUrl"
+       data-message="@T["Are you sure you want to delete this report?"]"
+       data-ok-text="@T["Yes"]"
+       data-cancel-text="@T["Cancel"]">@T["Delete"]</a>
+}

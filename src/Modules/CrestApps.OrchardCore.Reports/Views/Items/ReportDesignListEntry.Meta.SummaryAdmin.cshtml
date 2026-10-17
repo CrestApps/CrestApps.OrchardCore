@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore
+@using System.Globalization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignListEntry>
+
+@{
+    var entry = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Designed by"]">
+    <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>@(entry.IsOwner ? T["Yours"] : T["By {0}", entry.Design.Author ?? "?"])
+</span>
+
+@if (entry.ModifiedUtc is DateTime modifiedUtc)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last saved"]">
+        <i class="fa-solid fa-calendar text-secondary me-1" aria-hidden="true"></i>
+        <time datetime="@modifiedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: modifiedUtc, Format: "g"))</time>
+    </span>
+}
