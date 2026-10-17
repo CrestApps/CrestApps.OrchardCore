@@ -140,7 +140,7 @@ Prefer configuration through code? Here's how to define the same connection usin
 
 ### Admin Chat UI with Time MCP Server Integration (MCP Demonstration)
 
-![Screen cast of the admin chat](../images/mcp-integration.gif)
+<YouTube video="ai-walkthroughs" title="Video of the admin chat calling tools on an MCP server" start={425} end={500} />
 
 ---
 
