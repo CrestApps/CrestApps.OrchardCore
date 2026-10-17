@@ -35,7 +35,14 @@ public sealed class CiFailureAnnotationAttribute : BeforeAfterTestAttribute
 
             var watched = _watched.Any(name => test.TestDisplayName.Contains(name, StringComparison.Ordinal));
 
-            if (args.Exception.GetType().Namespace == "Xunit.Sdk" || watched)
+            var exceptionNamespace = args.Exception.GetType().Namespace ?? string.Empty;
+            var noise = exceptionNamespace.StartsWith("Microsoft.Data.Sqlite", StringComparison.Ordinal) ||
+                exceptionNamespace.StartsWith("YesSql", StringComparison.Ordinal) ||
+                args.Exception is OperationCanceledException ||
+                args.Exception is IOException ||
+                args.Exception is UnauthorizedAccessException;
+
+            if (exceptionNamespace == "Xunit.Sdk" || (watched && !noise))
             {
                 queue.Enqueue(args.Exception.GetType().Name + ": " + args.Exception.Message + " @ " + args.Exception.StackTrace);
             }
