@@ -301,6 +301,8 @@ public sealed class DialerPacingCyclePersistenceTests
 
         public ITimeZone GetSystemTimeZone() => throw new NotSupportedException();
 
+        public ITimeZone[] GetTimeZones() => [];
+
         public DateTimeOffset ConvertToTimeZone(DateTimeOffset dateTimeOffset, ITimeZone timeZone) => dateTimeOffset;
     }
 }
