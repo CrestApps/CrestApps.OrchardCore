@@ -931,13 +931,31 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
         var numbers = leadsByNumber.Keys.ToArray();
 
-        var matches = await session.QueryIndex<OmnichannelContactIndex>(index =>
-                index.Published &&
-                !index.IsConverted &&
-                (index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers) || index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers)))
-            .ListAsync(cancellationToken);
+        // One query per phone column rather than one OR across both: each can seek on its own phone index, where the
+        // OR made SQL Server scan the contact index for every page of leads.
+        var matches = new Dictionary<string, OmnichannelContactIndex>(StringComparer.Ordinal);
 
-        foreach (var match in matches)
+        foreach (var chunk in numbers.Chunk(OmnichannelContactDuplicateLookupService.MaxParametersPerCommand))
+        {
+            var byCell = await session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published &&
+                    !index.IsConverted &&
+                    index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken);
+
+            var byHome = await session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published &&
+                    !index.IsConverted &&
+                    index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk))
+                .ListAsync(cancellationToken);
+
+            foreach (var match in byCell.Concat(byHome))
+            {
+                matches[match.ContentItemId] = match;
+            }
+        }
+
+        foreach (var match in matches.Values)
         {
             // A row written before the content type was indexed has none; it predates leads, so it is a contact.
             if (!string.IsNullOrEmpty(match.ContentType) && leadTypes.Contains(match.ContentType))
