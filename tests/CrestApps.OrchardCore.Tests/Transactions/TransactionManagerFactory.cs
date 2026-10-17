@@ -24,4 +24,12 @@ internal static class TransactionManagerFactory
 
         return new(store, [], services.BuildServiceProvider(), NullLogger<CatalogManager<Transaction>>.Instance);
     }
+
+    // The manager as the application gets it, through the service container, so a test calls it the way every caller
+    // does: through ITransactionManager.
+    public static ITransactionManager Resolve(FakeTransactionStore store, params ITransactionEventHandler[] eventHandlers)
+        => new ServiceCollection()
+            .AddSingleton<ITransactionManager>(Create(store, eventHandlers))
+            .BuildServiceProvider()
+            .GetRequiredService<ITransactionManager>();
 }

@@ -38,7 +38,7 @@ public sealed class TransactionLifecycleEventsTests
     {
         // Arrange
         var events = new RecordingTransactionEventHandler();
-        ITransactionManager manager = TransactionManagerFactory.Create(new FakeTransactionStore(), events);
+        var manager = TransactionManagerFactory.Resolve(new FakeTransactionStore(), events);
         var transaction = await manager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         transaction.Status = TransactionStatus.Outstanding;
@@ -58,7 +58,7 @@ public sealed class TransactionLifecycleEventsTests
     {
         // Arrange
         var events = new RecordingTransactionEventHandler();
-        ITransactionManager manager = TransactionManagerFactory.Create(new FakeTransactionStore(CreateOutstanding()), events);
+        var manager = TransactionManagerFactory.Resolve(new FakeTransactionStore(CreateOutstanding()), events);
         var transaction = await manager.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken);
 
         transaction.Events.Add(new TransactionEvent { CreatedUtc = _now, Type = TransactionEventType.Note, Message = "Called the customer." });
@@ -77,7 +77,7 @@ public sealed class TransactionLifecycleEventsTests
     {
         // Arrange: the session hands back the same instance, already changed, when it is loaded a second time.
         var events = new RecordingTransactionEventHandler();
-        ITransactionManager manager = TransactionManagerFactory.Create(new FakeTransactionStore(CreateOutstanding()), events);
+        var manager = TransactionManagerFactory.Resolve(new FakeTransactionStore(CreateOutstanding()), events);
         var transaction = await manager.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken);
 
         transaction.Status = TransactionStatus.PartiallyPaid;
@@ -102,7 +102,7 @@ public sealed class TransactionLifecycleEventsTests
 
         var events = new RecordingTransactionEventHandler();
         var store = new FakeTransactionStore(CreateOutstanding());
-        ITransactionManager manager = TransactionManagerFactory.Create(store, failing.Object, events);
+        var manager = TransactionManagerFactory.Resolve(store, failing.Object, events);
         var transaction = await manager.FindByIdAsync("transaction-1", TestContext.Current.CancellationToken);
 
         transaction.Status = TransactionStatus.Paid;
