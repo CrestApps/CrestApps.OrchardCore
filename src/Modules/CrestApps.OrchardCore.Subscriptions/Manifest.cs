@@ -51,14 +51,18 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "Subscriptions - Installment Plans",
     Id = SubscriptionConstants.Features.Installments,
-    Description = "Lets an administrator set up a payment plan for a customer: take a down payment by card, then collect a fixed number of scheduled payments, charged to the saved card or invoiced, with reminders and receipts.",
+    Description = "Lets a balance be paid in installments: an administrator sets up a payment plan for a customer, another module creates one for its own record, or the customer chooses installments when paying an outstanding balance at checkout. The card used for the first payment is saved and charged for the rest, or the payments are invoiced, with reminders and receipts.",
     Category = "Subscriptions",
     Dependencies =
     [
-        SubscriptionConstants.Features.Area,
+        // Installment plans don't sell products or subscription plans, so they don't need the Subscriptions feature
+        // or Products: a club can let families pay a season fee in installments without either.
 
         // Every payment on a plan is a ledger transaction, so the customer sees and pays them like any other.
         TransactionsConstants.Features.Area,
         CheckoutConstants.Features.Area,
+
+        // A plan belongs to a customer account, and a new customer can be created with the plan.
+        "OrchardCore.Users",
     ]
 )]

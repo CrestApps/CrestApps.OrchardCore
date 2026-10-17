@@ -41,6 +41,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 | One step per content type | When a plan asks the buyer to fill in content, such as details about their organization. The step is named after the content type. |
 | **Your new site** | When the plan creates a new site for the buyer. See [Sites](sites.md). |
 | **Outstanding payment** | Paying an outstanding balance. |
+| **Choose how to pay** | Paying an outstanding balance that the site lets customers pay in installments. The buyer picks **Pay in full** or one of the installment choices, such as *3 monthly payments*. See [Pay in installments](transactions.md#pay-in-installments). |
 | **Payment** | Always, as the last step. |
 
 ### The order summary
@@ -67,6 +68,7 @@ If the card's bank asks the cardholder to approve the payment, the approval wind
 | *Please choose a payment method.* | The buyer clicked **Pay now** without picking a method. |
 | *Your payment is still being processed.* | The provider has not confirmed yet. The buyer does not need to pay again; the purchase completes on its own once the provider confirms, even if the buyer closes the browser. |
 | *Your payment could not be completed. Please try again.* | The payment failed, for example a declined card. The buyer stays on the payment step and can try again or pick another method. |
+| *The card you pay with now is saved, and the remaining payments are charged to it automatically on their due dates.* | The buyer chose to pay in installments. Only payment methods that can save a card are shown. |
 
 ## Apply a promotion code
 

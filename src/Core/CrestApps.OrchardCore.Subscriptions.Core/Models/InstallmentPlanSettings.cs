@@ -19,6 +19,27 @@ public sealed class InstallmentPlanSettings
     public InstallmentCollectionMethod DefaultCollectionMethod { get; set; } = InstallmentCollectionMethod.AutoCharge;
 
     /// <summary>
+    /// Gets or sets the transaction sources (<c>Transaction.Source</c>) whose balances a customer may choose to pay in
+    /// installments at checkout. Empty, the default, offers installments only where a module offers them itself.
+    /// </summary>
+    public string[] CheckoutSources { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the numbers of payments a customer may choose from at checkout, for example 3 and 6.
+    /// </summary>
+    public int[] CheckoutInstallmentCounts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how often the payments a customer chooses at checkout fall due.
+    /// </summary>
+    public InstallmentFrequency CheckoutFrequency { get; set; } = InstallmentFrequency.Monthly;
+
+    /// <summary>
+    /// Gets or sets the smallest balance that may be paid in installments at checkout. Zero allows any balance.
+    /// </summary>
+    public decimal CheckoutMinimumAmount { get; set; }
+
+    /// <summary>
     /// Gets the delay before retry <paramref name="attemptsSoFar"/> (the number of failed charges so far), or
     /// <see langword="null"/> when there are no retries left.
     /// </summary>

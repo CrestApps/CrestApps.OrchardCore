@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Transactions.Services;
 /// </summary>
 public sealed class TransactionSettlementCheckoutHandler : CheckoutHandlerBase
 {
-    private const string StepKey = "TransactionSettlement";
+    private const string StepKey = TransactionsConstants.SettlementStepKey;
 
     private readonly ITransactionManager _transactionManager;
     private readonly IPaymentAttemptStore _paymentAttemptStore;

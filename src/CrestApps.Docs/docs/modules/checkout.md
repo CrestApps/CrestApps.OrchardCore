@@ -279,6 +279,8 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 - The payment step lists the payment providers **actually registered on the tenant** and filters out any that cannot settle what the invoice owes, so the page can never offer a method the framework cannot execute.
 - Each provider renders its own panel through an `IDisplayDriver<CheckoutFlowPaymentMethod>` grouped by its provider key. Only the selected panel is shown.
 - Two JSON endpoints (`checkout/{sessionId}/payment/begin` and `.../status`) carry the begin-then-poll conversation. Both are rate limited per visitor per checkout, resolve the session through the ownership-checked lookup, and require a same-origin request as defense in depth.
+- The begin endpoint drops the saved-card keys (`savePaymentMethod`, `offSession`, `savedCustomerReference`, `savedPaymentMethodReference`) from the provider data the browser sends. Only server code decides whether a card is kept, and nothing a browser sends can spend a card kept earlier.
+- A session whose `CheckoutSession.SavePaymentMethod` is set (server code sets it, for example when a customer chooses to pay a balance in [installments](installment-plans#installments-at-checkout)) keeps the payment method for later charges without the customer: the payment step offers only providers with `SupportsSavedPaymentMethods`, tells the customer the card is saved, and renders each provider panel with `CheckoutFlowPaymentMethod.SavePaymentMethod`; `ICheckoutEngine.BeginPaymentAsync` refuses any other provider and adds `CheckoutPaymentDataKeys.SavePaymentMethod` to the provider data itself.
 
 A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
 

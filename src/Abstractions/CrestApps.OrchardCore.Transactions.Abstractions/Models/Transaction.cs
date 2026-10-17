@@ -69,6 +69,19 @@ public sealed class Transaction : CatalogItem
     public string ReferenceVersionId { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of record the transaction ultimately belongs to, when its own reference names an
+    /// intermediate record. For example, a payment of an installment plan references the plan, and its parent
+    /// reference names the record the plan pays for, such as a registration. It is indexed, so the module that owns
+    /// that record finds it from any of the payments without a mapping table of its own.
+    /// </summary>
+    public string ParentReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the record named by <see cref="ParentReferenceType"/>.
+    /// </summary>
+    public string ParentReferenceId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the checkout session that created the transaction, when applicable.
     /// </summary>
     public string CheckoutSessionId { get; set; }

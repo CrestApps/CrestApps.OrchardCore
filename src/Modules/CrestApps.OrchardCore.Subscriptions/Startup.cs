@@ -36,6 +36,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Subscriptions;
@@ -308,9 +309,19 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
 
+        // The "Choose how to pay" step of a checkout that pays an outstanding transaction. The options come from the
+        // providers; the one built in offers what the settings page configures.
+        services.AddScoped<InstallmentOptionResolver>();
+        services.AddScoped<IInstallmentOptionProvider, SiteSettingsInstallmentOptionProvider>();
+        services.AddScoped<ICheckoutHandler, InstallmentOptionsCheckoutHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, InstallmentOptionsCheckoutFlowDisplayDriver>();
+
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
+
+        // Lets a role that holds only the installment plans permission open Settings > Installment Plans.
+        services.AddSiteSettingsPermission(SubscriptionConstants.InstallmentPlans.SettingsGroupId, SubscriptionPermissions.ManageInstallmentPlans);
 
         services.AddSingleton<IBackgroundTask, InstallmentPlanBackgroundTask>();
     }

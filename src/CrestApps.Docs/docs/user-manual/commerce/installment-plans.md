@@ -1,14 +1,16 @@
 ---
 sidebar_label: Installment Plans
 title: Installment Plans
-description: Sell something on a payment plan by taking a down payment by card today and collecting a fixed number of scheduled payments, charged to the saved card or invoiced to the customer.
+description: Sell something on a payment plan by taking a first payment by card today and collecting a fixed number of scheduled payments, charged to the saved card or invoiced to the customer, and let customers choose to pay a balance in installments at checkout.
 technical_manual:
   - modules/installment-plans
   - modules/transactions
   - modules/checkout
 ---
 
-An **installment plan** lets you sell something on a payment plan without the customer going through your online store, for example over the phone or at a counter. You take a **down payment** by card today, and the rest of the price is collected as a fixed number of **scheduled payments**, either charged to the customer's saved card on each due date or invoiced to the customer, who pays each one online.
+An **installment plan** lets you sell something on a payment plan without the customer going through your online store, for example over the phone or at a counter. You take a **down payment** by card today, and the rest of the price is collected as a fixed number of **scheduled payments**, either charged to the customer's saved card on each due date or invoiced to the customer, who pays each one online. A plan can also have no down payment: the first scheduled payment is then taken today instead.
+
+Customers can also set up a plan themselves: when they pay an outstanding balance, checkout can offer them a **Choose how to pay** step where they pick, for example, *3 monthly payments* instead of paying in full. See [Let customers choose installments at checkout](#let-customers-choose-installments-at-checkout).
 
 | | |
 | --- | --- |
@@ -29,14 +31,14 @@ Installment plans need a payment provider that can keep a card for later payment
 A plan is made of:
 
 - a **total**: everything the customer pays, the down payment included;
-- a **down payment**, charged to a card today;
+- a **down payment**, charged to a card today, or none, in which case the first scheduled payment is charged today instead;
 - a **number of payments after it**, which split the rest of the total into equal amounts;
 - how often those payments **fall due** (every week, every two weeks, every month or every three months) and when the **first payment** is due;
 - how the payments are **collected**: charged to the card automatically, or invoiced to the customer.
 
 The rest of the total is split into equal payments. When it does not divide exactly, the last payment takes the difference, so the schedule always adds up to the total. Monthly and three-monthly payments fall on the same day of the month as the first one; in a shorter month they fall on its last day.
 
-Nothing is scheduled until the down payment is received. Every payment on the plan, the down payment included, is also a [transaction](transactions.md), so it appears in **Commerce > Transactions** and in the customer's **My Transactions**, and a payment that was received can be refunded from **Commerce > Payments** like any other (see [Payments and refunds](payments-and-refunds.md)).
+Nothing is scheduled until the down payment (or, without one, the first payment) is received. Every payment on the plan, the down payment included, is also a [transaction](transactions.md), so it appears in **Commerce > Transactions** and in the customer's **My Transactions**, and a payment that was received can be refunded from **Commerce > Payments** like any other (see [Payments and refunds](payments-and-refunds.md)).
 
 ## Create a plan
 
@@ -63,10 +65,10 @@ If someone already has an account with that email, you are asked to choose them 
 | **What the plan is for** | A short description, such as *Kitchen remodel*. It is shown to the customer on every payment, reminder and receipt. Required. |
 | **Currency** | The currency of every payment on the plan. |
 | **Total** | Everything the customer pays, the down payment included. |
-| **Down payment today** | The amount charged to the card today. It must be more than zero and less than the total. |
+| **Down payment today** | The amount charged to the card today. It must be less than the total. Enter **0** for no down payment: the first scheduled payment is then charged today instead, and **First payment due** must be today. |
 | **Number of payments after it** | How many scheduled payments split the rest, from 1 to 120. |
 | **Payments fall due** | **Every week**, **Every two weeks**, **Every month** or **Every three months**. |
-| **First payment due** | The due date of the first scheduled payment. It must be after today, because today's payment is the down payment. |
+| **First payment due** | The due date of the first scheduled payment. With a down payment it must be after today, because today's payment is the down payment. Without one it must be today, because the first payment is the one taken today. |
 
 ### Collecting the payments
 
@@ -76,13 +78,13 @@ If someone already has an account with that email, you are asked to choose them 
 | **Invoice the customer for each payment** | The customer is reminded before each due date and pays from their transactions. The card is used for the down payment only. |
 | **Internal note** | A note for your team. It is shown on the plan page, never to the customer. |
 
-The option that is selected when the form opens is set in the plan settings (see [Change the plan defaults](#change-the-plan-defaults)).
+The option that is selected when the form opens is set in the plan settings (see [Change the plan settings](#change-the-plan-settings)).
 
-**Example:** a total of 1,200.00 with a down payment of 300.00 and **6** payments **Every month** gives a down payment of 300.00 today and six payments of 150.00, one a month from the first due date.
+**Example:** a total of 1,200.00 with a down payment of 300.00 and **6** payments **Every month** gives a down payment of 300.00 today and six payments of 150.00, one a month from the first due date. With a down payment of **0** instead, the same plan is six payments of 200.00: the first today, then one a month.
 
 ## Take the down payment
 
-The **Take the down payment** page shows the card form on the left and a summary of the plan on the right: the customer, the total, the **Down payment now**, the payments that follow, and how they are **Collected by**.
+The **Take the down payment** page shows the card form on the left and a summary of the plan on the right: the customer, the total, the **Down payment now** (or **First payment now** for a plan without a down payment), the payments that follow, and how they are **Collected by**.
 
 1. Make sure the customer has agreed. When the plan charges the card, the page says the card is charged the down payment now and kept for the scheduled payments.
 2. Enter the **Name on card** and the **Card details**.
@@ -107,7 +109,7 @@ Open a plan by clicking its title or **Manage** in the list. The plan page has t
 
 | Card | What it shows |
 | --- | --- |
-| **Summary** | The status, the **Customer**, the **Total**, what has been **Received**, what is **Outstanding**, the **Schedule**, how it is **Collected by** (the card on file and its expiry, or *Invoicing the customer*), when and by whom it was **Created**, and the internal **Note**. |
+| **Summary** | The status, the **Customer**, the **Total**, what has been **Received**, what is **Outstanding**, the **Schedule**, **Pays for** (the record the plan pays for, when another part of the site created it for one), **Replaces** (when the customer chose the plan at checkout to pay an outstanding balance), how it is **Collected by** (the card on file and its expiry, or *Invoicing the customer*), when and by whom it was **Created**, and the internal **Note**. |
 | **Payments** | One row per payment: the **Down payment**, then **Payment 1 of 6** and so on, each with its status, amount, due date, the date it was received, the **Next try** of a declined card, and the reason of the last decline. **Transaction** opens the payment's transaction and **Receipt** opens the receipt of a received payment. |
 | **History** | Everything that happened to the plan, newest first: created, down payment received, payments received, declines and retries, cancellation. |
 | **Cancel the plan** | Shown while the plan is not finished. |
@@ -180,20 +182,44 @@ The list shows one row per plan, with its title, status and these badges: **Cust
 
 The customer can also see every payment of the plan in **My Transactions** and pay what is due from there. When they pay online from a phone with Apple Pay or Google Pay set up, they can pay with the wallet. Reminders need the **Transaction Reminders** feature and receipts are sent with the **Send Payment Receipts** feature. See [Transactions](transactions.md) and [Invoices and receipts](invoices-and-receipts.md).
 
-## Change the plan defaults
+## Let customers choose installments at checkout
 
-The plan defaults are in the **Installment Plans** section of **Settings > Subscriptions**, which needs the **Manage subscriptions settings** permission.
+A customer paying an outstanding balance, from **My Transactions** or from the link in a reminder, can be offered a **Choose how to pay** step before the payment: **Pay in full**, or one of the installment choices you offer, such as **3 monthly payments**. When they choose installments:
+
+1. A plan is created for them, with no down payment: the first payment is charged in the same checkout, and the card is saved.
+2. Once the first payment is received, the plan is **Active**, the original balance is canceled because the plan replaces it, and the remaining payments are charged to the saved card on their due dates, exactly like a plan you set up yourself.
+3. If the customer leaves checkout without paying, the plan is closed and they still owe the original balance.
+
+You turn this on in **Settings > Installment Plans**, in the **Installments at checkout** section (see [Change the plan settings](#change-the-plan-settings)): pick the kinds of balance it is offered for in **Offer for balances from**, and the choices in **Numbers of payments offered**. Other parts of your site can offer their own choices too, for example a registration that lets families pay a season fee in three payments.
+
+Installments are offered only for a balance still owed in full by a customer with an account, and only when a payment provider that can keep a card, such as Stripe, is enabled. A balance that is already a plan payment, or a recurring charge, is never split again.
+
+A plan a customer chose appears in **Subscriptions > Installment Plans** like any other. While its first payment has not been paid, its page says *The customer chose this plan at checkout and has not paid the first payment yet.* and has no **Take the down payment** button: the customer pays it in their own checkout.
+
+## Change the plan settings
+
+The plan settings are on **Settings > Installment Plans**, which needs the **Manage installment plans and charge customers' saved cards** permission.
 
 | Field | What it does |
 | --- | --- |
 | **Collect scheduled payments by** | What a new plan starts with: **Charging the saved card on each due date** or **Invoicing the customer for each payment**. You can still change it on each plan. |
 | **Retry a declined card after (days)** | When charging the saved card fails, it is tried again this many days after each failure, in order, for example *1, 3, 5*. Enter up to 10 whole numbers between 1 and 60, separated by commas. Leave it empty to hand a declined payment to the customer straight away. |
 
+### Installments at checkout
+
+| Field | What it does |
+| --- | --- |
+| **Offer for balances from** | The kinds of balance customers may pay in installments, such as *Pay Later*. Only kinds that are enabled on your site are listed. Leave them all unticked to offer nothing from these settings. |
+| **Numbers of payments offered** | The choices customers see, for example *3, 6* for **3 monthly payments** and **6 monthly payments**. Enter up to 6 whole numbers between 2 and 120, separated by commas. The first payment is taken at checkout. |
+| **Payments fall due** | **Every week**, **Every two weeks**, **Every month** or **Every three months**. |
+| **Smallest balance** | Balances below this amount can only be paid in full. **0** allows any balance. |
+
 How many days before a due date the customer is reminded is set in **Remind before the due date (days)** under **Settings > Commerce > Transactions** (see [Transactions](transactions.md)).
 
 ## Tips and troubleshooting
 
-- **The menu or New plan is missing.** Ask your administrator to enable **Subscriptions - Installment Plans** and to give you the **Manage installment plans and charge customers' saved cards** permission.
+- **The menu or New plan is missing.** Ask your administrator to enable **Subscriptions - Installment Plans** and to give you the **Manage installment plans and charge customers' saved cards** permission. The feature does not need **Subscriptions** or **Products** to be enabled.
+- **Customers don't see Choose how to pay.** Check **Settings > Installment Plans**: the kind of balance must be ticked in **Offer for balances from** and **Numbers of payments offered** must not be empty. The balance must be owed in full by a customer with an account, and a payment provider that can keep a card must be enabled.
 - **The down payment page has no card form.** No payment provider that can keep a card is enabled. Ask your administrator to set one up, such as Stripe.
 - **The customer cannot sign in.** A customer created from the plan has no password. Ask them to use **Forgot password** on the sign-in page with the email you entered.
 - **The card has changed.** The plan keeps the card used for the down payment. Use **Charge now** only after the customer confirms the card works; otherwise let the declined payment become due so the customer pays it themselves from **My Transactions**.

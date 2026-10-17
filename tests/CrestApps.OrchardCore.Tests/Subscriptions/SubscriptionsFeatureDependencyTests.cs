@@ -3,9 +3,12 @@ using System.Reflection;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using CrestApps.OrchardCore.Subscriptions.Controllers;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
+using CrestApps.OrchardCore.Transactions;
 using OrchardCore.Modules.Manifest;
 using Xunit;
+using ModuleFeatureAttribute = OrchardCore.Modules.FeatureAttribute;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 
@@ -82,6 +85,47 @@ public class SubscriptionsFeatureDependencyTests
 
         Assert.DoesNotContain("CrestApps.OrchardCore.Subscriptions.Stripe", featureIds);
         Assert.DoesNotContain("CrestApps.OrchardCore.Subscriptions.PayLater", featureIds);
+    }
+
+    [Fact]
+    public void InstallmentsFeature_NeedsNeitherSubscriptionsNorProducts()
+    {
+        // A club that lets families pay a season fee in installments sells no products and no subscription plans, so
+        // the feature must be enabled without either.
+        var featureAttribute = typeof(SubscriptionPartDisplayDriver).Assembly
+            .GetCustomAttributes<FeatureAttribute>()
+            .Single(attribute => attribute.Id == SubscriptionConstants.Features.Installments);
+
+        Assert.DoesNotContain(SubscriptionConstants.Features.Area, featureAttribute.Dependencies);
+        Assert.DoesNotContain(ProductConstants.Feature.ModuleId, featureAttribute.Dependencies);
+        Assert.DoesNotContain("OrchardCore.Contents", featureAttribute.Dependencies);
+        Assert.Contains(TransactionsConstants.Features.Area, featureAttribute.Dependencies);
+        Assert.Contains(CheckoutConstants.Features.Area, featureAttribute.Dependencies);
+        Assert.Contains("OrchardCore.Users", featureAttribute.Dependencies);
+    }
+
+    [Theory]
+    [InlineData(typeof(InstallmentPlansController))]
+    [InlineData(typeof(InstallmentPlanSettingsDisplayDriver))]
+    [InlineData(typeof(InstallmentOptionsCheckoutFlowDisplayDriver))]
+    public void InstallmentsFeature_ServicesDoNotRequireProducts(Type type)
+    {
+        // Products may be disabled when only installment plans are enabled, so nothing the feature builds may need one
+        // of its services to be constructed.
+        var productsAssembly = typeof(ProductConstants).Assembly;
+
+        var parameters = type.GetConstructors().SelectMany(constructor => constructor.GetParameters());
+
+        Assert.DoesNotContain(parameters, parameter => parameter.ParameterType.Assembly == productsAssembly);
+    }
+
+    [Fact]
+    public void InstallmentPlansController_BelongsToTheInstallmentsFeature()
+    {
+        var feature = typeof(InstallmentPlansController).GetCustomAttribute<ModuleFeatureAttribute>();
+
+        Assert.NotNull(feature);
+        Assert.Equal(SubscriptionConstants.Features.Installments, feature.FeatureName);
     }
 
     private static FeatureAttribute GetSubscriptionsAreaFeature()
