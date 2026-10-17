@@ -254,6 +254,16 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<InteractionEventIndexProvider>()
             .AddDataMigration<InteractionEventIndexMigrations>();
 
+        // The dialer decision log: routing decisions and dial suppressions indexed by queue, campaign, record, agent,
+        // outcome and reason as they are written, with the decisions written before the log existed indexed once by a
+        // background task.
+        services
+            .AddScoped<IDialerDecisionLog, DialerDecisionLog>()
+            .AddIndexProvider<DialerDecisionIndexProvider>()
+            .AddDataMigration<DialerDecisionIndexMigrations>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DialerDecisionIndexBackfillBackgroundTask>());
+
         services
             .AddIndexProvider<ContactCenterOutboxMessageIndexProvider>()
             .AddDataMigration<ContactCenterOutboxMessageIndexMigrations>();

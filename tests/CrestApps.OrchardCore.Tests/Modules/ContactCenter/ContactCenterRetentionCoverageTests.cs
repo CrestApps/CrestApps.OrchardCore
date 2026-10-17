@@ -36,6 +36,8 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterProjectionCheckpointIndex"] = "Bookkeeping. One row per projection handler; deleting one would replay that projection from the beginning.",
         ["PredictivePacingStateIndex"] = "Bookkeeping. One row per over-dialed campaign queue, rewritten every pacing cycle rather than added to.",
         ["CallSessionLegIndex"] = "A second index over call sessions, one row per leg. Its rows leave with the session when the call session policy purges it.",
+        ["DialerDecisionIndex"] = "A second index over interaction events, one row per routing decision or dial suppression. Its rows leave with the event when the interaction event policy purges it.",
+        ["DialerDecisionAgentIndex"] = "A second index over interaction events, one row per agent a decision names. Its rows leave with the event when the interaction event policy purges it.",
         ["CallRecordingIndex"] = "Communication history, kept while its recording is: one row per recorded call. Erasing the recording takes it off the list, and the media's retention is set by the recording settings. A policy that purges erased rows is owed.",
     };
 

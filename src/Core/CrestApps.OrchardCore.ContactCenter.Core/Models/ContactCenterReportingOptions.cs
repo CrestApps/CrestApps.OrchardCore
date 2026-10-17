@@ -15,4 +15,11 @@ public sealed class ContactCenterReportingOptions
     /// bounding an ad-hoc request.
     /// </summary>
     public TimeSpan MaximumReportRange { get; set; } = TimeSpan.FromDays(400);
+
+    /// <summary>
+    /// Gets or sets how long a queue with work due now may go without a routing decision before the dialer decision
+    /// log report flags it as quiet. Routing decides on every pass, about once a minute, so a queue with due work and
+    /// no decision for longer than this is not being looked at. The default is 15 minutes.
+    /// </summary>
+    public TimeSpan DecisionLogQuietThreshold { get; set; } = TimeSpan.FromMinutes(15);
 }

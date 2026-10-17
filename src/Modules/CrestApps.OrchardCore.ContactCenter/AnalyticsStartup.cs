@@ -46,6 +46,9 @@ public sealed class AnalyticsStartup : StartupBase
             .Validate(
                 options => options.MaximumReportRange > TimeSpan.Zero,
                 "'CrestApps:ContactCenter:Reporting:MaximumReportRange' must be greater than zero.")
+            .Validate(
+                options => options.DecisionLogQuietThreshold > TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:DecisionLogQuietThreshold' must be greater than zero.")
             .ValidateOnStart();
 
         services
@@ -59,7 +62,8 @@ public sealed class AnalyticsStartup : StartupBase
             .AddScoped<IReport, QueueUsageReportProvider>()
             .AddScoped<IReport, CampaignSummaryReportProvider>()
             .AddScoped<IReport, DialerQueueInventoryReportProvider>()
-            .AddScoped<IReport, SubjectInventoryReportProvider>();
+            .AddScoped<IReport, SubjectInventoryReportProvider>()
+            .AddScoped<IReport, DialerDecisionLogReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();
         services.AddScoped<IReportProvider, ContactCenterReportProvider>();

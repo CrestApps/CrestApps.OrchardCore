@@ -68,6 +68,16 @@ public class ContactCenterReportFilterViewModel
     public string QueueState { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the record (CRM activity) to show decisions about.
+    /// </summary>
+    public string ActivityItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected dialer decision reason.
+    /// </summary>
+    public string DecisionReason { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the queue filter is displayed.
     /// </summary>
     public bool ShowQueueFilter { get; set; }
@@ -128,6 +138,16 @@ public class ContactCenterReportFilterViewModel
     public bool ShowQueueStateFilter { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the record filter is displayed.
+    /// </summary>
+    public bool ShowActivityItemFilter { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the dialer decision reason filter is displayed.
+    /// </summary>
+    public bool ShowDecisionReasonFilter { get; set; }
+
+    /// <summary>
     /// Gets or sets the queue options.
     /// </summary>
     public IList<SelectListItem> Queues { get; set; } = [];
@@ -186,4 +206,9 @@ public class ContactCenterReportFilterViewModel
     /// Gets or sets the queue state options.
     /// </summary>
     public IList<SelectListItem> QueueStates { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the dialer decision reason options.
+    /// </summary>
+    public IList<SelectListItem> DecisionReasons { get; set; } = [];
 }

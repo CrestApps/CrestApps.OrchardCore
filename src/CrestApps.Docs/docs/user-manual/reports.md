@@ -5,6 +5,7 @@ title: Reports
 description: Find a report, set its date range and filters, and export it to CSV or Excel.
 technical_manual:
   - contact-center/report-catalog
+  - contact-center/agents-queues-dialer
   - modules/reports
   - omnichannel/crm
 ---
@@ -27,7 +28,7 @@ You only see the reports your permissions allow. If the **Reports** page says *N
 
 1. Open **Reports** and pick a category, then a report.
 2. Set the **Date range**. It starts on **today** (from the start to the end of the day), in the site's time zone. Pick a preset or a custom range (see [Date range choices](#date-range-choices)). A Contact Center report covers up to 400 days.
-3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status**, **Interaction type**, **Dialer profile**, **Queue state** or **Disposition**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
+3. Set the filters the report offers, such as **Queue group**, **Queue**, **Agent**, **Channel**, **Direction**, **Campaign group**, **Campaign**, **Source**, **Status**, **Interaction type**, **Dialer profile**, **Queue state**, **Disposition**, **Activity ID** or **Reason**. Each report shows only the filters it uses. In **Disposition** you can tick several dispositions at once.
 4. Click **Show**.
 5. To keep a copy, click **Export CSV**. When the Reports (OpenXml) feature is on, the button becomes an **Export** menu with **Export CSV** and **Export Excel (.xlsx)**. Excel puts each section of the report on its own worksheet.
 
@@ -71,6 +72,7 @@ The button always shows the range you picked in words, for example *From Jan 1, 
 | Which dispositions are agents choosing? | **Disposition breakdown** |
 | Which numbers did the dialer call, and how did each call end? | **Dialer call detail** (see [below](#dialer-call-detail)) |
 | What is waiting in each campaign queue right now, and why is it not being dialed? | **Dialer queue inventory** (see [below](#dialer-queue-inventory)) |
+| Why was a record not called, or why did an agent not get a call? Has routing stopped looking at a queue? | **Dialer decision log** (see [below](#dialer-decision-log)) |
 | How often did the AI hand a conversation to a person? | **AI handoff & containment** |
 | How many leads converted, from which source and list, and what is in the sales pipeline? | **Lead funnel**, **Lead conversion by source and list**, **Opportunity pipeline** (see [Leads, Accounts and Opportunities](leads-accounts-opportunities.md#reports)) |
 
@@ -254,5 +256,60 @@ The **Campaigns** table has these columns beside the progress columns (**Total**
 **Dialable now**, **Held back**, **Scheduled for later**, **Not in any queue**, **Assigned to a user** and **Not explained** always add up to **Pending**. Pending records that belong to no campaign are not split. The split shows where the records the date range covers stand **now**, whatever the date range; with a date range that covers every record, it matches the **Dialer queue inventory** report.
 
 The **Why pending records are not dialing** table lists every reason a campaign's pending records cannot be dialed now, with the number of records and, for records that wait for a time, when the first becomes due.
+
+## Dialer decision log
+
+**Dialer decision log**, under *Queue & Routing*, lists every decision routing and the dialer made about queued work: each time routing looked for an agent for a record, and each time the dialer refused to call a record. Use it to answer "why was this record not called?" or "why did this agent not get that call?" without asking for the system logs.
+
+| | |
+| --- | --- |
+| **Menu** | Reports > Queue & Routing > Dialer decision log |
+| **Permission** | View Contact Center reports |
+| **Feature** | Contact Center Work Distribution and Reports. Suppressions are listed when the Contact Center Outbound Dialer is on. |
+
+<AskYourAdmin />
+
+### See the decisions made about one record or one agent
+
+1. Open **Reports > Queue & Routing > Dialer decision log**.
+2. Set the **Date range**.
+3. To see one record, type its activity ID in **Activity ID**. You find the ID in the address of the activity's page.
+4. To see one agent, pick them in **Agent**. The report then lists every routing decision that considered or chose the agent, and every dialer refusal of a call that was reserved for them.
+5. Click **Show**. The **Decisions** table lists the newest decisions first, with the reason for each.
+
+You can also narrow the report by **Campaign**, **Queue** and **Reason**. Filters combine.
+
+### What the report shows
+
+**Summary** counts the decisions in the period: all of them, the routing decisions, how many assigned work and how many did not, the dialer's suppressions, and how many activities they were about.
+
+**Decisions by reason** counts the decisions of each kind (*Routing* or *Suppression*) by reason, the most frequent first, with when each reason was last seen.
+
+**Queues with work due now** lists each queue and campaign that has work waiting that could be handed out now, with when routing last made a decision for it. Routing looks at a queue about once a minute, so a queue whose **Status** says *No routing decision in the last 15 minutes* (or the time your administrator set) is not being looked at, and its work is stuck. This section describes the queues as they are now, whatever date range you picked. It is shown when no **Agent**, **Activity ID** or **Reason** is picked.
+
+**Decisions** has one row per decision:
+
+| Column | What it shows |
+| --- | --- |
+| **Last made (UTC)** | When the decision was last made. |
+| **First made (UTC)** | When it was first made. |
+| **Times** | How many times in a row routing made exactly this decision. While a queue has work and nobody can take it, routing makes the same decision every minute; the report shows those as one row with the count, instead of one row per minute. |
+| **Kind** | *Routing* (routing looked for an agent) or *Suppression* (the dialer refused to call). |
+| **Queue** | The queue, or *Campaign: name* for a campaign's own queue. |
+| **Campaign** | The campaign the record belongs to. |
+| **Activity** | The ID of the activity (the record) the decision was about. |
+| **Outcome** | *Assigned*, *Not assigned* or *Suppressed*. |
+| **Reason** | Why: for example *No agents available*, *No available agent matched the routing policy*, *Do not call* or *Outside the calling window*. |
+| **Agent** | The agent routing chose, or the agent the suppressed call was reserved for. |
+| **Candidates** | For routing: every agent routing considered, and for each one that could not take the work, why not (for example *At capacity* or a missing skill). |
+| **Destination** | For a suppression: the number that would have been dialed. |
+| **Details** | For a suppression: the dialer's explanation. |
+
+The screen lists the 500 most recent decisions; **Export CSV** and **Export Excel (.xlsx)** list up to 10,000.
+
+Tips:
+
+- A queue that shows *No routing decision* while it has work due is the first place to look when nothing is dialing. Check that agents are signed in to it on the **Live dashboard**.
+- A campaign that uses predictive over-dialing places some calls without asking routing first, so it can show as quiet while those calls are in progress.
 
 The [report catalog](../contact-center/report-catalog.md) in the Technical Manual lists every Contact Center and CRM report with its filters, columns and exact formulas, such as how answer rate, service level and average handle time are calculated.
