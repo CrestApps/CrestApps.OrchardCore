@@ -4,7 +4,9 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -41,9 +43,29 @@ internal sealed class AIPersonaDisplayDriver : DisplayDriver<AIPersona>
     {
         var isFromFile = await IsFromFileAsync(persona);
 
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = persona.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return Combine(
-            View("AIPersona_Fields_SummaryAdmin", persona).Location("Content:1"),
-            View("AIPersona_Tags_SummaryAdmin", new AIPersonaSummaryViewModel(persona, isFromFile)).Location("Tags:5"),
+            // A persona that comes from a file cannot be deleted, so it cannot be selected for a bulk delete either.
+            View("AIPersona_Checkbox_SummaryAdmin", persona)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1")
+                .RenderWhen(() => Task.FromResult(!isFromFile)),
+            View("AIPersona_Fields_SummaryAdmin", persona)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("AIPersona_Description_SummaryAdmin", persona)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"),
+            View("AIPersona_Tags_SummaryAdmin", new AIPersonaSummaryViewModel(persona, isFromFile))
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
             View("AIPersona_Buttons_SummaryAdmin", new AIPersonaSummaryViewModel(persona, isFromFile)).Location("Actions:5")
         );
     }

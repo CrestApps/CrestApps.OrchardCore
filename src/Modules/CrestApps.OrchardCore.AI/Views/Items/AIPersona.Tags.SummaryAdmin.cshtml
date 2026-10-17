@@ -3,14 +3,14 @@
 
 @model ShapeViewModel<AIPersonaSummaryViewModel>
 
-<span class="badge ta-badge font-weight-normal" title="@T["Technical name"]">
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Technical name"]">
     <i class="fa-solid fa-hashtag text-secondary" aria-hidden="true"></i>
     @Model.Value.Persona.Name
 </span>
 
 @if (!string.IsNullOrEmpty(Model.Value.Persona.AssistantName))
 {
-    <span class="badge ta-badge font-weight-normal" title="@T["Assistant name"]">
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Assistant name"]">
         <i class="fa-solid fa-user text-secondary" aria-hidden="true"></i>
         @Model.Value.Persona.AssistantName
     </span>
@@ -18,7 +18,7 @@
 
 @if (!string.IsNullOrEmpty(Model.Value.Persona.VoiceName))
 {
-    <span class="badge ta-badge font-weight-normal" title="@T["Voice"]">
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Voice"]">
         <i class="fa-solid fa-microphone text-secondary" aria-hidden="true"></i>
         @Model.Value.Persona.VoiceName
     </span>
@@ -26,5 +26,5 @@
 
 @if (Model.Value.IsFromFile)
 {
-    <span class="badge text-bg-info" title="@T["This persona comes from a file. Saving it creates a saved persona that replaces the file."]">@T["From file"]</span>
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["This persona comes from a file. Saving it creates a saved persona that replaces the file."]"><i class="fa-solid fa-file-lines text-info" aria-hidden="true"></i> @T["From file"]</span>
 }

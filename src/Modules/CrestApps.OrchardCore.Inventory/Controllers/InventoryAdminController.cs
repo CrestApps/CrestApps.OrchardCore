@@ -96,13 +96,22 @@ public sealed class InventoryAdminController : Controller
             routeData.Values.TryAdd(key, value);
         }
 
+        var pagerShape = await _shapeFactory.PagerAsync(pager, count, routeData);
+
         return View(new InventoryIndexViewModel
         {
             Options = options,
             Items = items,
             TotalCount = count,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
-            Pager = await _shapeFactory.PagerAsync(pager, count, routeData),
+            Pager = pagerShape,
+
+            // The admin-list tag builds a row per stock item, in the layout (List or Grid) the site or the user picked.
+            List = new AdminListContext<StockItem>
+            {
+                Source = items,
+                Pager = pagerShape,
+            },
         });
     }
 

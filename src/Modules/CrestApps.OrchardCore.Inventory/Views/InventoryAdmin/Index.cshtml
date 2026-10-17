@@ -9,12 +9,15 @@
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by SKU or product"]" type="search" autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.Filter" asp-items="Model.Options.Filters" class="selectpicker show-tick" data-width="fit" data-header="@T["Show"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Show"]"></select>
                 </div>
                 @if (Model.CanManage)
                 {
@@ -25,92 +28,26 @@
             </div>
         </div>
     </div>
+
+    @* The stock items, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="Inventory" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No stock matches the current filter. Add the Inventory part to a product type to start counting its stock."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Product"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Sku" position="40" title="@T["SKU"]" width="auto" />
+            <admin-list-column name="Stock" position="50" title="@T["Stock"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
 
 @if (Model.CanManage)
 {
     <form asp-action="Sync" method="post" id="inventory-sync" class="no-multisubmit"></form>
 }
-
-<ul class="list-group">
-    <li class="list-group-item text-bg-theme">
-        <div class="row gx-3 align-items-center">
-            <div class="col text-nowrap">
-                @T.Plural(Model.TotalCount, "1 item", "{0} items")
-            </div>
-            <div class="col col-md-auto text-end">
-                <div class="btn-group filter">
-                    <select asp-for="Options.Filter" asp-items="Model.Options.Filters" form="inventory-filter" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Show"]" data-dropdown-align-right="auto" data-commerce-list-filter aria-label="@T["Show"]"></select>
-                </div>
-            </div>
-        </div>
-    </li>
-    @if (Model.Items.Count > 0)
-    {
-        @foreach (var item in Model.Items)
-        {
-            <li class="list-group-item">
-                <div class="row g-0">
-                    <div class="col-lg col-12 title d-flex align-items-center">
-                        <div class="summary">
-                            <div class="d-flex flex-column flex-md-row align-items-md-center">
-                                <div class="me-2">
-                                    <h5 class="mb-1 mb-md-0"><a asp-action="Item" asp-route-stockItemId="@item.ItemId">@(item.Title ?? T["(untitled)"].Value)</a></h5>
-                                </div>
-                                <div class="tags me-1">
-                                    @if (item.Available < 0)
-                                    {
-                                        <span class="badge text-bg-danger">@T["Backordered"]</span>
-                                    }
-                                    else if (item.Available == 0)
-                                    {
-                                        <span class="badge text-bg-danger">@T["Out of stock"]</span>
-                                    }
-                                    else if (item.IsLow)
-                                    {
-                                        <span class="badge text-bg-warning">@T["Low stock"]</span>
-                                    }
-                                    @if (item.AllowBackorder)
-                                    {
-                                        <span class="badge text-bg-secondary">@T["Backorders allowed"]</span>
-                                    }
-                                </div>
-                            </div>
-                            <div class="metadata mt-1">
-                                @if (!string.IsNullOrEmpty(item.Sku))
-                                {
-                                    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["SKU"]">
-                                        <i class="fa-solid fa-barcode text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["SKU"]</span>
-                                        @item.Sku
-                                    </span>
-                                }
-                                <span class="badge ta-badge font-weight-normal">@T["{0} on hand", item.OnHand]</span>
-                                @if (item.Reserved != 0)
-                                {
-                                    <span class="badge ta-badge font-weight-normal">@T["{0} reserved", item.Reserved]</span>
-                                }
-                                <span class="badge ta-badge font-weight-normal">@T["{0} available", item.Available]</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
-                        <a class="btn btn-primary btn-sm" asp-action="Item" asp-route-stockItemId="@item.ItemId">@(Model.CanManage ? T["Change"] : T["View"])</a>
-                    </div>
-                </div>
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0" role="alert">
-                @T["<strong>Nothing here!</strong> No stock matches the current filter. Add the Inventory part to a product type to start counting its stock."]
-            </div>
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="commerce-admin-list" at="Foot"></script>

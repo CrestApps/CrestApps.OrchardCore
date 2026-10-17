@@ -3,16 +3,11 @@
 
 @model ShapeViewModel<AIPersona>
 
-<div class="d-flex align-items-center">
+@* A plain link to the edit page, after the persona's avatar when it has one. *@
+<span class="d-inline-flex align-items-center">
     @if (!string.IsNullOrEmpty(Model.Value.AvatarUrl))
     {
         <img src="@Model.Value.AvatarUrl" alt="" class="rounded-circle me-2" width="32" height="32" />
     }
-    <div>
-        <h5 class="mb-0">@(Model.Value.DisplayText ?? Model.Value.Name)</h5>
-        @if (!string.IsNullOrEmpty(Model.Value.Description))
-        {
-            <p class="text-muted mb-0">@Model.Value.Description</p>
-        }
-    </div>
-</div>
+    <a asp-controller="AIPersonas" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@(Model.Value.DisplayText ?? Model.Value.Name)</a>
+</span>
