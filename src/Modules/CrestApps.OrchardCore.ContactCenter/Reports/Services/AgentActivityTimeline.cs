@@ -78,15 +78,45 @@ internal static class AgentActivityTimeline
         IEnumerable<InteractionEvent> callEvents,
         DateTime fromUtc,
         DateTime toUtc)
+        => SelectFirst(timelines, sessionEvents, offerEvents, callEvents, fromUtc, toUtc, int.MaxValue).Entries;
+
+    /// <summary>
+    /// Builds the first entries of a period, oldest first, and counts every entry of it.
+    /// </summary>
+    /// <param name="timelines">The agents' state timelines.</param>
+    /// <param name="sessionEvents">The agents' connection events.</param>
+    /// <param name="offerEvents">The offer events, of any agent: only the timelines' agents' offers are shown.</param>
+    /// <param name="callEvents">The call events, of any agent: the calls the timelines' agents worked are shown.</param>
+    /// <param name="fromUtc">The start of the period.</param>
+    /// <param name="toUtc">The end of the period: a state still held then ends at it.</param>
+    /// <param name="limit">The most entries to build.</param>
+    /// <returns>
+    /// The first <paramref name="limit"/> entries in the order they started, exactly the ones building every entry and
+    /// keeping the first would give, and the counts of every entry.
+    /// </returns>
+    /// <remarks>
+    /// Every entry is placed and counted, but only the ones listed are built: their detail text, which is most of the
+    /// cost of an entry, is never written for an entry nobody sees. The first entries are kept in a bounded heap, so
+    /// a wide period costs one pass over its entries rather than a sort of all of them.
+    /// </remarks>
+    public static AgentActivitySelection SelectFirst(
+        IReadOnlyList<AgentStateTimeline> timelines,
+        IEnumerable<InteractionEvent> sessionEvents,
+        IEnumerable<InteractionEvent> offerEvents,
+        IEnumerable<InteractionEvent> callEvents,
+        DateTime fromUtc,
+        DateTime toUtc,
+        int limit)
     {
         ArgumentNullException.ThrowIfNull(timelines);
+        ArgumentOutOfRangeException.ThrowIfNegative(limit);
 
         var agentIds = timelines.Select(timeline => timeline.AgentId).ToHashSet(StringComparer.Ordinal);
-        var entries = new List<AgentActivityEntry>();
+        var selector = new EntrySelector(limit);
 
         foreach (var timeline in timelines)
         {
-            AddStates(entries, timeline, fromUtc, toUtc);
+            AddStates(selector, timeline, fromUtc, toUtc);
         }
 
         foreach (var sessionEvent in sessionEvents ?? [])
@@ -98,19 +128,22 @@ internal static class AgentActivityTimeline
                 continue;
             }
 
-            var detail = new List<string> { string.Create(CultureInfo.InvariantCulture, $"{data.OpenConnectionCount} connection(s) open") };
-
-            if (data.LastHeartbeatUtc.HasValue)
+            selector.Add(AgentActivityKind.Connection, sessionEvent.OccurredUtc, RecordedUtc(sessionEvent), flagged: false, () =>
             {
-                detail.Add("last heard from " + AuditReportFormat.Timestamp(data.LastHeartbeatUtc.Value));
-            }
+                var detail = new List<string> { string.Create(CultureInfo.InvariantCulture, $"{data.OpenConnectionCount} connection(s) open") };
 
-            if (!string.IsNullOrEmpty(data.Reason))
-            {
-                detail.Add(data.Reason);
-            }
+                if (data.LastHeartbeatUtc.HasValue)
+                {
+                    detail.Add("last heard from " + AuditReportFormat.Timestamp(data.LastHeartbeatUtc.Value));
+                }
 
-            entries.Add(Entry(sessionEvent, sessionEvent.AggregateId, AgentActivityKind.Connection, sessionEvent.EventType, string.Join("; ", detail), sessionEvent.OccurredUtc, null, null));
+                if (!string.IsNullOrEmpty(data.Reason))
+                {
+                    detail.Add(data.Reason);
+                }
+
+                return Entry(sessionEvent, sessionEvent.AggregateId, AgentActivityKind.Connection, sessionEvent.EventType, string.Join("; ", detail), sessionEvent.OccurredUtc, null, null);
+            });
         }
 
         var workedInteractions = new HashSet<string>(StringComparer.Ordinal);
@@ -130,7 +163,7 @@ internal static class AgentActivityTimeline
                 workedInteractions.Add(shown.Data.InteractionId);
             }
 
-            entries.Add(Entry(
+            selector.Add(AgentActivityKind.Offer, presentedUtc, RecordedUtc(shown.Event), flagged: false, () => Entry(
                 shown.Event,
                 shown.Data.AgentId,
                 AgentActivityKind.Offer,
@@ -142,13 +175,22 @@ internal static class AgentActivityTimeline
                 shown.Data.RingSeconds));
         }
 
-        foreach (var transition in timelines.SelectMany(timeline => timeline.Transitions))
+        // The agent a call no own agent is named on is shown under is the first timeline whose states name the call.
+        var interactionAgents = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var timeline in timelines)
         {
-            if (!string.IsNullOrEmpty(transition.InteractionId))
+            foreach (var transition in timeline.Transitions)
             {
-                workedInteractions.Add(transition.InteractionId);
+                if (!string.IsNullOrEmpty(transition.InteractionId))
+                {
+                    workedInteractions.Add(transition.InteractionId);
+                    interactionAgents.TryAdd(transition.InteractionId, timeline.AgentId);
+                }
             }
         }
+
+        var fallbackAgentId = agentIds.FirstOrDefault();
 
         foreach (var callEvent in callEvents ?? [])
         {
@@ -176,31 +218,29 @@ internal static class AgentActivityTimeline
                 startUtc = callEvent.OccurredUtc.AddSeconds(-Math.Max(0, data.DurationSeconds.Value));
             }
 
-            var agentId = ownAgent
-                ? data.AgentId
-                : timelines.FirstOrDefault(timeline => timeline.Transitions.Any(transition => string.Equals(transition.InteractionId, interactionId, StringComparison.Ordinal)))?.AgentId
-                    ?? agentIds.FirstOrDefault();
+            selector.Add(AgentActivityKind.Call, startUtc, RecordedUtc(callEvent), flagged: false, () =>
+            {
+                var agentId = ownAgent
+                    ? data.AgentId
+                    : interactionAgents.GetValueOrDefault(interactionId) ?? fallbackAgentId;
 
-            entries.Add(Entry(
-                callEvent,
-                agentId,
-                AgentActivityKind.Call,
-                callEvent.EventType,
-                Join(data.LegRole, data.State, data.HangupCause ?? data.ProviderHangupCause, data.Reason, data.Target),
-                startUtc,
-                endUtc,
-                interactionId,
-                endUtc.HasValue ? data.DurationSeconds : null));
+                return Entry(
+                    callEvent,
+                    agentId,
+                    AgentActivityKind.Call,
+                    callEvent.EventType,
+                    Join(data.LegRole, data.State, data.HangupCause ?? data.ProviderHangupCause, data.Reason, data.Target),
+                    startUtc,
+                    endUtc,
+                    interactionId,
+                    endUtc.HasValue ? data.DurationSeconds : null);
+            });
         }
 
-        return entries
-            .OrderBy(entry => entry.StartUtc)
-            .ThenBy(entry => entry.RecordedUtc)
-            .ThenBy(entry => entry.Kind)
-            .ToArray();
+        return selector.Complete();
     }
 
-    private static void AddStates(List<AgentActivityEntry> entries, AgentStateTimeline timeline, DateTime fromUtc, DateTime toUtc)
+    private static void AddStates(EntrySelector selector, AgentStateTimeline timeline, DateTime fromUtc, DateTime toUtc)
     {
         var effective = timeline.Effective;
 
@@ -216,37 +256,41 @@ internal static class AgentActivityTimeline
 
             var startUtc = transition.ChangedUtc < fromUtc ? fromUtc : transition.ChangedUtc;
             var clippedEnd = endUtc > toUtc ? toUtc : endUtc;
-            var detail = new List<string>();
 
-            if (transition.ChangedUtc < fromUtc)
+            selector.Add(AgentActivityKind.State, startUtc, transition.RecordedUtc, transition.BreaksChain, () =>
             {
-                detail.Add("in this state since " + AuditReportFormat.Timestamp(transition.ChangedUtc));
-            }
+                var detail = new List<string>();
 
-            if (transition.BreaksChain)
-            {
-                detail.Add(string.Create(CultureInfo.InvariantCulture, $"recorded as leaving {transition.PreviousState}, but the record before entered {transition.ExpectedPreviousState}: a change is missing"));
-            }
+                if (transition.ChangedUtc < fromUtc)
+                {
+                    detail.Add("in this state since " + AuditReportFormat.Timestamp(transition.ChangedUtc));
+                }
 
-            if (!transition.FromAudit)
-            {
-                detail.Add("older presence event");
-            }
+                if (transition.BreaksChain)
+                {
+                    detail.Add(string.Create(CultureInfo.InvariantCulture, $"recorded as leaving {transition.PreviousState}, but the record before entered {transition.ExpectedPreviousState}: a change is missing"));
+                }
 
-            entries.Add(new AgentActivityEntry
-            {
-                AgentId = timeline.AgentId,
-                Kind = AgentActivityKind.State,
-                Name = transition.CurrentState.ToString(),
-                Detail = Join([Describe(transition), .. detail]),
-                StartUtc = startUtc,
-                EndUtc = clippedEnd,
-                DurationSeconds = (clippedEnd - startUtc).TotalSeconds,
-                InteractionId = transition.InteractionId,
-                ActorType = transition.ActorType,
-                ActorId = transition.ActorId,
-                RecordedUtc = transition.RecordedUtc,
-                Flagged = transition.BreaksChain,
+                if (!transition.FromAudit)
+                {
+                    detail.Add("older presence event");
+                }
+
+                return new AgentActivityEntry
+                {
+                    AgentId = timeline.AgentId,
+                    Kind = AgentActivityKind.State,
+                    Name = transition.CurrentState.ToString(),
+                    Detail = Join([Describe(transition), .. detail]),
+                    StartUtc = startUtc,
+                    EndUtc = clippedEnd,
+                    DurationSeconds = (clippedEnd - startUtc).TotalSeconds,
+                    InteractionId = transition.InteractionId,
+                    ActorType = transition.ActorType,
+                    ActorId = transition.ActorId,
+                    RecordedUtc = transition.RecordedUtc,
+                    Flagged = transition.BreaksChain,
+                };
             });
         }
 
@@ -254,7 +298,7 @@ internal static class AgentActivityTimeline
         // it takes no time: the agent was already gone.
         foreach (var transition in timeline.Transitions.Where(transition => transition.Superseded && transition.ChangedUtc >= fromUtc && transition.ChangedUtc <= toUtc))
         {
-            entries.Add(new AgentActivityEntry
+            selector.Add(AgentActivityKind.State, transition.ChangedUtc, transition.RecordedUtc, flagged: true, () => new AgentActivityEntry
             {
                 AgentId = timeline.AgentId,
                 Kind = AgentActivityKind.State,
@@ -269,6 +313,9 @@ internal static class AgentActivityTimeline
             });
         }
     }
+
+    private static DateTime RecordedUtc(InteractionEvent interactionEvent)
+        => interactionEvent.RecordedUtc == default ? interactionEvent.OccurredUtc : interactionEvent.RecordedUtc;
 
     private static string Describe(AgentStateTransition transition)
         => Join(
@@ -304,6 +351,123 @@ internal static class AgentActivityTimeline
 
     private static string Join(params string[] parts)
         => string.Join("; ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+
+    /// <summary>
+    /// Keeps the first entries of a timeline in the order they started, building only those, and counts every entry.
+    /// </summary>
+    /// <remarks>
+    /// The order is the one the whole timeline is sorted in: start, then when the change was recorded, then kind, and
+    /// then the order the entries were offered in, which is what a stable sort of every entry falls back to.
+    /// </remarks>
+    private sealed class EntrySelector
+    {
+        private static readonly Comparer<Candidate> _latestFirst = Comparer<Candidate>.Create((left, right) => Compare(right, left));
+
+        private readonly int _limit;
+        private readonly PriorityQueue<Candidate, Candidate> _first;
+        private long _sequence;
+        private int _total;
+        private int _states;
+        private int _offers;
+        private int _calls;
+        private int _flagged;
+
+        public EntrySelector(int limit)
+        {
+            _limit = limit;
+            _first = new PriorityQueue<Candidate, Candidate>(_latestFirst);
+        }
+
+        public void Add(AgentActivityKind kind, DateTime startUtc, DateTime recordedUtc, bool flagged, Func<AgentActivityEntry> build)
+        {
+            _total++;
+
+            switch (kind)
+            {
+                case AgentActivityKind.State:
+                    _states++;
+                    break;
+                case AgentActivityKind.Offer:
+                    _offers++;
+                    break;
+                case AgentActivityKind.Call:
+                    _calls++;
+                    break;
+            }
+
+            if (flagged)
+            {
+                _flagged++;
+            }
+
+            if (_limit == 0)
+            {
+                return;
+            }
+
+            var candidate = new Candidate(startUtc, recordedUtc, kind, _sequence++, build);
+
+            if (_first.Count < _limit)
+            {
+                _first.Enqueue(candidate, candidate);
+
+                return;
+            }
+
+            // The heap's top is the latest entry kept; an entry that sorts before it takes its place.
+            if (Compare(candidate, _first.Peek()) < 0)
+            {
+                _first.DequeueEnqueue(candidate, candidate);
+            }
+        }
+
+        public AgentActivitySelection Complete()
+        {
+            var kept = new List<Candidate>(_first.Count);
+
+            while (_first.Count > 0)
+            {
+                kept.Add(_first.Dequeue());
+            }
+
+            kept.Sort(Compare);
+
+            return new AgentActivitySelection
+            {
+                Entries = [.. kept.Select(candidate => candidate.Build())],
+                TotalCount = _total,
+                StateCount = _states,
+                OfferCount = _offers,
+                CallCount = _calls,
+                FlaggedCount = _flagged,
+            };
+        }
+
+        private static int Compare(Candidate left, Candidate right)
+        {
+            var order = left.StartUtc.CompareTo(right.StartUtc);
+
+            if (order != 0)
+            {
+                return order;
+            }
+
+            order = left.RecordedUtc.CompareTo(right.RecordedUtc);
+
+            if (order != 0)
+            {
+                return order;
+            }
+
+            order = left.Kind.CompareTo(right.Kind);
+
+            return order != 0
+                ? order
+                : left.Sequence.CompareTo(right.Sequence);
+        }
+
+        private sealed record Candidate(DateTime StartUtc, DateTime RecordedUtc, AgentActivityKind Kind, long Sequence, Func<AgentActivityEntry> Build);
+    }
 }
 
 /// <summary>

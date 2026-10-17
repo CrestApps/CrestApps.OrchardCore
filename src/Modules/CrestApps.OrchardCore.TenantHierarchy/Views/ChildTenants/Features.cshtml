@@ -21,9 +21,10 @@ else
         <div class="card-body">
             <div class="row gx-2 align-items-center">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input id="th-feature-search" class="form-control" placeholder="@T["Search features"]" type="search" autocomplete="off" />
+                        @* The features are filtered as you type, so the button submits nothing. *@
+                        <button type="button" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">

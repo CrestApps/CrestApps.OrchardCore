@@ -52,7 +52,8 @@ internal sealed class OpportunityPartDisplayDriver : ContentPartDisplayDriver<Op
             model.Amount = part.Amount?.Value;
             model.CloseDate = part.CloseDate?.Value;
             model.Probability = part.Probability;
-        }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4");
+        }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4")
+        .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:15");
     }
 
     public override IDisplayResult Edit(OpportunityPart part, BuildPartEditorContext context)

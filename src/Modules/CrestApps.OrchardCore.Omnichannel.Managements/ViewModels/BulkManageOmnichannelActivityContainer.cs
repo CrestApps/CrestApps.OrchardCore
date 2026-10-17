@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Views;
 
@@ -24,22 +25,10 @@ public class BulkManageOmnichannelActivityContainer : ShapeViewModel
     public IShape Header { get; set; }
 
     /// <summary>
-    /// Gets or sets the activity container shapes.
+    /// Gets or sets the activities and the pager the admin list renders.
     /// </summary>
     [BindNever]
-    public List<IShape> Containers { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the activity item IDs corresponding to each container (same order).
-    /// </summary>
-    [BindNever]
-    public List<string> ActivityItemIds { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the pager shape.
-    /// </summary>
-    [BindNever]
-    public IShape Pager { get; set; }
+    public AdminListContext List { get; set; }
 
     /// <summary>
     /// Gets or sets the total count of matching activities.
@@ -58,5 +47,4 @@ public class BulkManageOmnichannelActivityContainer : ShapeViewModel
     /// </summary>
     [BindNever]
     public IShape BulkActions { get; set; }
-
 }

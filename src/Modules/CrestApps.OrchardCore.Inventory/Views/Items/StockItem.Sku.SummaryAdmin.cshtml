@@ -1,0 +1,8 @@
+@model ShapeViewModel<StockItem>
+
+@if (!string.IsNullOrEmpty(Model.Value.Sku))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["SKU"]">
+        <i class="fa-solid fa-barcode text-secondary me-1" aria-hidden="true"></i>@Model.Value.Sku
+    </span>
+}

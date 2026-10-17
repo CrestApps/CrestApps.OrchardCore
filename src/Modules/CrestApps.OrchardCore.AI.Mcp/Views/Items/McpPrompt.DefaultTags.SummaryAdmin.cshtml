@@ -1,0 +1,11 @@
+@using CrestApps.Core.AI.Mcp.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@model ShapeViewModel<McpPrompt>
+
+@if (Model.Value.Prompt?.Arguments is not null && Model.Value.Prompt.Arguments.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Arguments"]">
+        <i class="fa-solid fa-sitemap text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Value.Prompt.Arguments.Count, "1 argument", "{0} arguments")
+    </span>
+}

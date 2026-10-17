@@ -10,11 +10,11 @@
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-3">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -35,36 +35,23 @@
         </div>
     </div>
 
-    <ul class="list-group with-checkbox" id="@Model.ListId">
-        @if (Model.Entries.Count > 0)
-        {
-            <li class="list-group-item text-bg-theme ignore-elements">
-                @(Model.Entries.Count == 1 ? T["1 item"] : T["{0} items", Model.Entries.Count])
-            </li>
-
-            @foreach (var entry in Model.Entries)
+    @* The entries, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the
+       site or the user picked. The entries cannot be selected: the catalogs have no bulk actions. *@
+    <admin-list name="@Model.ListName" context="Model.List"
+                show-select-all="false"
+                empty-message="@Model.EmptyMessage">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            @for (var i = 0; i < Model.Columns.Count; i++)
             {
-                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.FilterValue">
-                    <div class="flex-grow-1">
-                        @await DisplayAsync(entry.Shape)
-                    </div>
-                </li>
+                <admin-list-column name="@Model.Columns[i].Name" position="@((30 + i * 10).ToString(System.Globalization.CultureInfo.InvariantCulture))" title="@Model.Columns[i].Title" width="auto" />
             }
-        }
-        else
-        {
-            <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @Model.EmptyMessage
-            </li>
-        }
-    </ul>
-
-    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
-        @T["Your search returned no results."]
-    </div>
+            <admin-list-column name="Modified" position="90" title="@T["Last modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
-
-@await DisplayAsync(Model.Pager)
 
 @if (Model.CreateOptions is { Count: > 1 })
 {

@@ -1,0 +1,5 @@
+@model ChannelViewModel
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Channel"]">
+    <i class="@(string.IsNullOrEmpty(Model.IconCssClass) ? "fa-solid fa-comments" : Model.IconCssClass) text-secondary me-1" aria-hidden="true"></i>@Model.DisplayName
+</span>

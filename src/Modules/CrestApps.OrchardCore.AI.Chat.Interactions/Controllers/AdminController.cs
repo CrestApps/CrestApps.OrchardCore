@@ -128,18 +128,17 @@ public sealed class AdminController : Controller
 
         var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<ChatInteraction>>
         {
-            Models = [],
+            Models = pagedInteractions.Select(model => new CatalogEntryViewModel<ChatInteraction> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, orderedInteractions.Length, routeData),
         };
 
-        // Build display shapes for each interaction
-        viewModel.Models = (await Task.WhenAll(pagedInteractions.Select(async model =>
-        new CatalogEntryViewModel<ChatInteraction>
+        // The admin-list tag builds a row per interaction, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<ChatInteraction>
         {
-            Model = model,
-            Shape = await _interactionDisplayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-        }))).ToList();
+            Source = pagedInteractions,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

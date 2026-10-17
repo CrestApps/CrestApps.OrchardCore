@@ -1,0 +1,6 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIChatSessionEntry>
+
+<a asp-action="Index" asp-controller="Admin" asp-route-profileId="@Model.Value.ProfileId" asp-route-sessionId="@Model.Value.SessionId" class="btn btn-sm btn-success">@T["View"]</a>

@@ -29,6 +29,7 @@ public sealed class AIChatAnalyticsDateRangeFilterDisplayDriver : DisplayDriver<
         {
             model.StartDate = filter.StartDate;
             model.EndDate = filter.EndDate;
+            model.Range = filter.Range;
         }).Location("Content:1");
     }
 
@@ -41,6 +42,7 @@ public sealed class AIChatAnalyticsDateRangeFilterDisplayDriver : DisplayDriver<
         // Store the original local dates for form re-display and export.
         filter.StartDate = model.StartDate;
         filter.EndDate = model.EndDate;
+        filter.Range = model.Range;
 
         // Convert local dates to UTC before applying to the filter.
         if (model.StartDate.HasValue)

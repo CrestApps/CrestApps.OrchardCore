@@ -3,9 +3,12 @@
 
 @model ShapeViewModel<AIDeployment>
 
-<h5>@(Model.Value.Name)</h5>
-
-@if (!string.Equals(Model.Value.Name, Model.Value.ModelName, StringComparison.OrdinalIgnoreCase))
+@* A plain link to the edit page. A deployment defined in configuration cannot be edited, so its name is plain text. *@
+@if (Model.Value.IsReadOnly)
 {
-    <div class="text-muted">@T["Model name: {0}", Model.Value.ModelName]</div>
+    @Model.Value.Name
+}
+else
+{
+    <a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.Name</a>
 }

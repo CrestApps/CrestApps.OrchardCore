@@ -1,0 +1,17 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var item = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Address"]">
+    <i class="fa-solid fa-globe text-secondary" aria-hidden="true"></i>
+    @if (!string.IsNullOrEmpty(item.Info.Address))
+    {
+        <a href="@item.Info.Address" class="text-decoration-none text-break" target="_blank" rel="noopener noreferrer">@item.Info.Entry.Host</a>
+    }
+    else
+    {
+        <span class="text-break">@item.Info.Entry.Host</span>
+    }
+</span>

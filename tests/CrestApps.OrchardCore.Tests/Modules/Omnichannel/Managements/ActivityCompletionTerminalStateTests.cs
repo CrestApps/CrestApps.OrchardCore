@@ -160,7 +160,6 @@ public sealed class ActivityCompletionTerminalStateTests
                 new Mock<global::YesSql.ISession>().Object,
                 new Mock<IUpdateModelAccessor>().Object,
                 new Mock<IContentManager>().Object,
-                new Mock<IDisplayManager<OmnichannelActivityContainer>>().Object,
                 new Mock<IDisplayManager<OmnichannelActivity>>().Object,
                 activityManager.Object,
                 authorization.Object,

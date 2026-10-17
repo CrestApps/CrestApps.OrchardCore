@@ -1,8 +1,5 @@
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using OrchardCore.ContentManagement.Metadata
 @model ListOmnichannelActivity
-
-@inject IContentDefinitionManager ContentDefinitionManager
 
 @{
     var shape = new ContactNavigationAdminShapeViewModel
@@ -14,34 +11,23 @@
 
 @await DisplayAsync(shape)
 
+@* Each list, its toolbar and its pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked for it. *@
 <div class="card text-bg-theme mb-3">
     <div class="card-header">
         @T["Scheduled Activities"]
     </div>
     <div class="card-body">
-        @if (Model.ScheduledContainers.Count == 0)
-        {
-            <div class="alert alert-info mb-0 text-center">
-                @T["No scheduled activities."]
-            </div>
-        }
-        else
-        {
-            <ul class="list-group with-checkbox">
-
-                @foreach (var container in Model.ScheduledContainers)
-                {
-                    <li class="list-group-item list-group-item-action list-group-striped">
-                        @await DisplayAsync(container)
-                    </li>
-                }
-            </ul>
-
-            @if (Model.ScheduledPager is not null)
-            {
-                @await DisplayAsync(Model.ScheduledPager)
-            }
-        }
+        <admin-list name="OmnichannelContactScheduledActivities" context="Model.ScheduledList"
+                    show-select-all="false"
+                    empty-message="@T["No scheduled activities."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Subject" position="20" title="@T["Subject"]" />
+                <admin-list-column name="Details" position="30" title="@T["Details"]" />
+                <admin-list-column name="Handler" position="40" title="@T["Handled by"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
     </div>
 </div>
 
@@ -50,29 +36,16 @@
         @T["Completed Activities"]
     </div>
     <div class="card-body">
-
-        @if (Model.CompletedContainers.Count == 0)
-        {
-            <div class="alert alert-info mb-0 text-center">
-                @T["No completed activities."]
-            </div>
-        }
-        else
-        {
-            <ul class="list-group with-checkbox">
-
-                @foreach (var container in Model.CompletedContainers)
-                {
-                    <li class="list-group-item list-group-item-action list-group-striped">
-                        @await DisplayAsync(container)
-                    </li>
-                }
-            </ul>
-
-            @if (Model.CompletedPager is not null)
-            {
-                @await DisplayAsync(Model.CompletedPager)
-            }
-        }
+        <admin-list name="OmnichannelContactCompletedActivities" context="Model.CompletedList"
+                    show-select-all="false"
+                    empty-message="@T["No completed activities."]">
+            <admin-list-list item-css-class="list-group-item" />
+            <admin-list-grid>
+                <admin-list-column name="Subject" position="20" title="@T["Subject"]" />
+                <admin-list-column name="Details" position="30" title="@T["Details"]" />
+                <admin-list-column name="Handler" position="40" title="@T["Completed by"]" width="auto" />
+                <admin-list-column type="Actions" title="@T["Actions"]" />
+            </admin-list-grid>
+        </admin-list>
     </div>
 </div>

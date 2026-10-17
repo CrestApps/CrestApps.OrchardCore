@@ -1,0 +1,5 @@
+@model ShapeViewModel<MessagingBroadcast>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+    <i class="fa-solid fa-circle-info text-secondary me-1" aria-hidden="true"></i>@Model.Value.Status.ToString()
+</span>

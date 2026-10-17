@@ -3,4 +3,4 @@
 
 @model ShapeViewModel<ChatInteraction>
 
-<h5>@(string.IsNullOrEmpty(Model.Value.Title) ? T["Untitled"] : Model.Value.Title)</h5>
+<a asp-action="Chat" asp-route-itemId="@Model.Value.ItemId">@(string.IsNullOrEmpty(Model.Value.Title) ? T["Untitled"] : Model.Value.Title)</a>

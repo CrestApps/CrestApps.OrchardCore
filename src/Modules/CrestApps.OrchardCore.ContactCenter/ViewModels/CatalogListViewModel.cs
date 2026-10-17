@@ -1,13 +1,14 @@
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Html;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
 /// <summary>
 /// View model for the shared <c>_CatalogList</c> partial that renders the near-identical Contact Center
 /// catalog list screens (queues, skills, entry points, dialer profiles, queue groups, agent state reason
-/// codes, and business-hours calendars). Per-type screens supply only the labels, list identifier, and the
-/// mapped entries; the markup lives in one place.
+/// codes, business-hours calendars, and voice media). Per-type screens supply only the labels, the list name, the
+/// columns particular to the catalog, and the admin list context; the markup lives in one place.
 /// </summary>
 public class CatalogListViewModel
 {
@@ -38,7 +39,8 @@ public class CatalogListViewModel
     public IHtmlContent CreateDialogTitle { get; set; }
 
     /// <summary>
-    /// Gets or sets the identifier applied to the list element.
+    /// Gets or sets the identifier the elements of the screen are named after, e.g. the dialog that asks which kind of
+    /// entry to add.
     /// </summary>
     public string ListId { get; set; }
 
@@ -53,14 +55,38 @@ public class CatalogListViewModel
     public CatalogEntryOptions Options { get; set; }
 
     /// <summary>
-    /// Gets or sets the entries to render.
+    /// Gets or sets the stable name of the admin list, e.g. <c>ContactCenterQueues</c>. It keys the layout the user
+    /// picked for the list, its column providers and its <c>AdminList-{Name}</c> alternates.
     /// </summary>
-    public IList<CatalogListEntry> Entries { get; set; }
+    public string ListName { get; set; }
 
     /// <summary>
-    /// Gets or sets the pager shape rendered beneath the list.
+    /// Gets or sets the entries and the pager the <c>admin-list</c> tag renders, in the layout (List or Grid) the site
+    /// or the user picked.
     /// </summary>
-    public object Pager { get; set; }
+    public AdminListContext List { get; set; }
+
+    /// <summary>
+    /// Gets or sets the columns of the Grid layout that are particular to the catalog. Every catalog list has a name,
+    /// a last modified and an actions column; these sit between the name and the last modified column, in order.
+    /// </summary>
+    public IList<CatalogListColumn> Columns { get; set; } = [];
+}
+
+/// <summary>
+/// A column of a catalog list in the Grid layout. It renders the row zone of the same name.
+/// </summary>
+public class CatalogListColumn
+{
+    /// <summary>
+    /// Gets or sets the name of the column and of the row zone it renders, e.g. <c>Routing</c>.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the localized header of the column.
+    /// </summary>
+    public IHtmlContent Title { get; set; }
 }
 
 /// <summary>

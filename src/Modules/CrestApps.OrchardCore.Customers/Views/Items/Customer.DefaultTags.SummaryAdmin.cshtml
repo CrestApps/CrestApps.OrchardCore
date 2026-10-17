@@ -1,0 +1,32 @@
+@model ShapeViewModel<Customer>
+
+@if (string.IsNullOrEmpty(Model.Value.UserId))
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["The customer has no account."]">
+        <i class="fa-regular fa-user text-secondary me-1" aria-hidden="true"></i>@T["Guest"]
+    </span>
+}
+@if (Model.Value.Kind == CustomerKind.Business)
+{
+    <span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Kind"]">
+        <i class="fa-regular fa-building text-secondary me-1" aria-hidden="true"></i>@T["Business"]
+    </span>
+}
+@if (Model.Value.Status == CustomerStatus.Disabled)
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}
+else if (Model.Value.Status == CustomerStatus.Anonymized)
+{
+    <span class="badge ta-badge bg-dark-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-user-secret text-secondary me-1" aria-hidden="true"></i>@T["Anonymized"]
+    </span>
+}
+else if (Model.Value.Status == CustomerStatus.Merged)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-code-merge text-secondary me-1" aria-hidden="true"></i>@T["Merged"]
+    </span>
+}

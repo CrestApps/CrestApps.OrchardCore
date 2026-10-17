@@ -1,0 +1,4 @@
+@model ShapeViewModel<Customer>
+
+@* A plain link to the customer's page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Edit" asp-route-customerId="@Model.Value.ItemId">@(Model.Value.GetName() ?? T["(no name)"].Value)</a>

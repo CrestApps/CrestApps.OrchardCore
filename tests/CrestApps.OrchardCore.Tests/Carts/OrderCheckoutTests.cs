@@ -34,7 +34,7 @@ public sealed class OrderCheckoutTests
     {
         var pricing = CreatePricing(CreateCart(("mug", 2, 12m), ("lamp", 1, 40m)));
 
-        var order = await CreateService().CreateFromCartAsync(pricing, TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(pricing, TestContext.Current.CancellationToken)).Order;
 
         Assert.Equal(OrderStatus.Draft, order.Status);
         Assert.Equal("cart-1", order.CartId);
@@ -57,8 +57,8 @@ public sealed class OrderCheckoutTests
         var cart = CreateCart(("mug", 1, 12m));
         var service = CreateService();
 
-        var first = await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
-        var second = await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        var first = (await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
+        var second = (await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
 
         Assert.Equal(OrderStatus.Canceled, first.Status);
         Assert.Equal(OrderCancelReason.Replaced, first.CancelReason);
@@ -72,7 +72,7 @@ public sealed class OrderCheckoutTests
     [InlineData("expired", OrderCancelReason.CheckoutExpired)]
     public async Task ACheckoutThatEndsUnpaid_CancelsItsOrder_AndSaysWhy(string end, OrderCancelReason expected)
     {
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken)).Order;
         var session = await StartCheckoutAsync(order);
         var flow = new CheckoutFlow(session);
         var handler = CreateHandler();
@@ -96,7 +96,7 @@ public sealed class OrderCheckoutTests
     [Fact]
     public async Task ACheckoutThatNoLongerOwnsTheOrder_DoesNotCancelIt()
     {
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken)).Order;
         await StartCheckoutAsync(order);
         var other = new CheckoutSession { SessionId = "someone-else", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = order.ItemId };
 
@@ -110,7 +110,7 @@ public sealed class OrderCheckoutTests
     public async Task APaidOrder_IsNeverCanceled()
     {
         var service = CreateService();
-        var order = await service.CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        var order = (await service.CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken)).Order;
         order.Status = OrderStatus.Paid;
 
         Assert.False(await service.CancelAsync(order, OrderCancelReason.Abandoned, TestContext.Current.CancellationToken));
@@ -134,7 +134,7 @@ public sealed class OrderCheckoutTests
         };
         _carts.Carts.Add(cart);
 
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
         order.Lines.RemoveAll(line => line.VariantId == "red");
 
         var session = await StartCheckoutAsync(order);
@@ -158,7 +158,7 @@ public sealed class OrderCheckoutTests
     [Fact]
     public async Task TheCheckout_BillsEveryLineWithItsQuantityAndTaxDetails()
     {
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 3, 12m))), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 3, 12m))), TestContext.Current.CancellationToken)).Order;
         var session = new CheckoutSession { SessionId = "session-1", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = order.ItemId };
 
         await CreateHandler().ActivatingAsync(new CheckoutFlowActivatingContext(session));
@@ -181,7 +181,7 @@ public sealed class OrderCheckoutTests
         var cart = CreateCart(("mug", 2, 12m));
         _carts.Carts.Add(cart);
 
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
         var session = await StartCheckoutAsync(order);
 
         session.Put(new CheckoutContactInfo { DisplayName = "Avery", Email = "avery@example.com" });
@@ -203,7 +203,7 @@ public sealed class OrderCheckoutTests
         var cart = CreateCart(("mug", 1, 12m));
         _carts.Carts.Add(cart);
 
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
 
         // A signed-in buyer's account name, replaced by what they entered for this order.
         order.CustomerName = "avery_l";
@@ -229,7 +229,7 @@ public sealed class OrderCheckoutTests
         var cart = CreateCart(("mug", 2, 12m));
         _carts.Carts.Add(cart);
 
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
         var session = await StartCheckoutAsync(order);
 
         cart.Lines[0].Quantity = 3;
@@ -247,7 +247,7 @@ public sealed class OrderCheckoutTests
     [Fact]
     public async Task ACheckoutThatBillsNothing_IsRefused()
     {
-        var order = await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken);
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(CreateCart(("mug", 1, 12m))), TestContext.Current.CancellationToken)).Order;
         var session = new CheckoutSession { SessionId = "session-1", ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = order.ItemId };
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session))));
@@ -260,7 +260,7 @@ public sealed class OrderCheckoutTests
         var cart = CreateCart(("mug", 1, 12m));
         var service = CreateService();
 
-        var first = await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
+        var first = (await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
         var session = await StartCheckoutAsync(first);
         await service.CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken);
 
@@ -330,7 +330,7 @@ public sealed class OrderCheckoutTests
     }
 
     private OrderCheckoutHandler CreateHandler()
-        => new(_orders, CreateService(), _carts, Clock(), NullLogger<OrderCheckoutHandler>.Instance, new PassThroughStringLocalizer<OrderCheckoutHandler>());
+        => new(_orders, CreateService(), [], _carts, Clock(), NullLogger<OrderCheckoutHandler>.Instance, new PassThroughStringLocalizer<OrderCheckoutHandler>());
 
     private static IClock Clock()
     {

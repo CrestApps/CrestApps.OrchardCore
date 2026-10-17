@@ -1,6 +1,8 @@
 @using CrestApps.Core.Models
 @using CrestApps.OrchardCore.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement
 
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelCampaignGroup>>
 
@@ -8,16 +10,17 @@
     <breadcrumb name="OmnichannelCampaignGroups" title="@T["Campaign groups"]" />
 </zone>
 
+@* The form is necessary to generate an antiforgery token for the delete and toggle actions. *@
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit">
     <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-1">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -27,25 +30,15 @@
         </div>
     </div>
 
-    <ul class="list-group">
-        @if (Model.Models.Count > 0)
-        {
-            @foreach (var entry in Model.Models)
-            {
-                <li class="list-group-item item" data-filter-value="@entry.Model.DisplayText?.ToLowerInvariant()">
-                    @await DisplayAsync(entry.Shape)
-                </li>
-            }
-        }
-        else
-        {
-            <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> There are no campaign groups at the moment."]
-            </li>
-        }
-    </ul>
-
-    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
-        @T["Your search returned no results."]
-    </div>
+    @* The rows, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="OmnichannelCampaignGroups" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no campaign groups at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Modified" position="30" title="@T["Last modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>

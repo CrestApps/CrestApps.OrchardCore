@@ -1,0 +1,5 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<SubscriptionAgreement>
+
+<a asp-action="Detail" asp-route-itemId="@Model.Value.Subscription.ItemId" class="btn btn-secondary btn-sm">@T["Manage"]</a>

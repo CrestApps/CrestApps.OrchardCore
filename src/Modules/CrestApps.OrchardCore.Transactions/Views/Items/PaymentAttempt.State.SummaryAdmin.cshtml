@@ -1,0 +1,15 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentAttempt>
+@inject TransactionDisplayText DisplayText
+
+@{
+    var stateClass = Model.Value.State switch
+    {
+        PaymentAttemptState.Succeeded => "text-bg-success",
+        PaymentAttemptState.Failed => "text-bg-danger",
+        _ => "text-bg-secondary",
+    };
+}
+
+<span class="badge @stateClass">@DisplayText.PaymentStateName(Model.Value.State)</span>

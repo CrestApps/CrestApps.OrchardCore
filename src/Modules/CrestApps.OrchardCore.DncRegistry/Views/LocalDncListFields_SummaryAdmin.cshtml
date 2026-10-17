@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.DncRegistry.ViewModels
+
+@model LocalDncListViewModel
+
+@* A list has no edit page, so its title is plain text: the name the user typed, or the uploaded file name when it
+   has none. *@
+<span>@(string.IsNullOrWhiteSpace(Model.LocalDncList.Name) ? Model.LocalDncList.UploadedFileName : Model.LocalDncList.Name)</span>

@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SubjectActionEntry>
+
+<a class="btn btn-sm btn-primary"
+   asp-route-action="EditAction"
+   asp-route-controller="SubjectFlows"
+   asp-route-id="@Model.Value.Action.ItemId">@T["Edit"]</a>

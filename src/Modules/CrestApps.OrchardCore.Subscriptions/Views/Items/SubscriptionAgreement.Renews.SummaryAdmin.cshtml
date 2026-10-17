@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<SubscriptionAgreement>
+
+@{
+    var subscription = Model.Value.Subscription;
+}
+
+<span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Renews"]">
+    <i class="fa-solid fa-rotate text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Renews"]</span>
+    @if (subscription.NextBillingUtc.HasValue)
+    {
+        @await DisplayAsync(await New.DateTime(Utc: subscription.NextBillingUtc.Value, Format: "d"))
+    }
+    else
+    {
+        @T["Never"]
+    }
+</span>

@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Payments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentRefund>
+
+@* The amount is the title of the row. A refund has no page of its own, so it is plain text. *@
+@Model.Value.Currency @CurrencyScale.Format(Model.Value.RefundGrossAmount, Model.Value.Currency)

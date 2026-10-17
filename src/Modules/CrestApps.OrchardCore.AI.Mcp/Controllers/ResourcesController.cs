@@ -106,20 +106,18 @@ public sealed class ResourcesController : Controller
 
         var viewModel = new ListSourceCatalogEntryViewModel<McpResource>
         {
-            Models = [],
+            Models = result.Entries.Select(model => new CatalogEntryViewModel<McpResource> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _mcpOptions.ResourceTypes.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per resource, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<McpResource>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<McpResource>
-            {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

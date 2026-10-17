@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.DisplayManagement" />

@@ -105,22 +105,22 @@ public sealed class FileSourcesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
+        var page = records.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize).ToList();
+
         var viewModel = new ListSourceModelViewModel<IngestionConnectorDescriptor, CatalogEntryViewModel<FileSource>>
         {
-            Models = [],
+            Models = page.Select(model => new CatalogEntryViewModel<FileSource> { Model = model }).ToList(),
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, records.Count, routeData),
             Sources = _connectors,
         };
 
-        foreach (var model in records.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize))
+        // The admin-list tag builds a row per file source, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<FileSource>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<FileSource>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = page,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

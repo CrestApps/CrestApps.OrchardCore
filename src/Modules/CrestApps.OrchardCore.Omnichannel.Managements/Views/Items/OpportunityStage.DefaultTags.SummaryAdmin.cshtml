@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OpportunityStage>
+
+@if (Model.Value.IsClosed)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["An opportunity at this stage is closed."]">
+        <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["Closed"]
+    </span>
+}
+@if (Model.Value.IsWon)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["An opportunity at this stage is won."]">
+        <i class="fa-solid fa-trophy text-secondary me-1" aria-hidden="true"></i>@T["Won"]
+    </span>
+}

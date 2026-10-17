@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+      <PackageReference Include="OrchardCore.Admin.Abstractions" />
       <PackageReference Include="OrchardCore.ResourceManagement" />
 </ItemGroup>
 

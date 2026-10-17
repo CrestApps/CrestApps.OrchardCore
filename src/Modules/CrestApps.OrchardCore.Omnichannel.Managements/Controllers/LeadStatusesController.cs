@@ -83,18 +83,17 @@ public sealed class LeadStatusesController : Controller
             .OrderBy(entry => entry.Order)
             .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase);
 
-        var models = new List<CatalogEntryViewModel<LeadStatus>>();
-
-        foreach (var entry in entries)
+        // The admin-list tag builds a row per entry, in the layout (List or Grid) the site or the user picked.
+        // Every entry is listed on one page, so the search filters the rows in the browser.
+        var viewModel = new ListCatalogEntryViewModel
         {
-            models.Add(new CatalogEntryViewModel<LeadStatus>
+            List = new AdminListContext<LeadStatus>
             {
-                Model = entry,
-                Shape = await _displayManager.BuildDisplayAsync(entry, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+                Source = entries.ToList(),
+            },
+        };
 
-        return View(models);
+        return View(viewModel);
     }
 
     /// <summary>

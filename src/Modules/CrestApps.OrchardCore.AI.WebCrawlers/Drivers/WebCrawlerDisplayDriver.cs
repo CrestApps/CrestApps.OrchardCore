@@ -7,7 +7,9 @@ using CrestApps.OrchardCore.AI.WebCrawlers.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -47,10 +49,28 @@ internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
             return Task.FromResult<IDisplayResult>(null);
         }
 
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = crawler.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("WebCrawler_Fields_SummaryAdmin", crawler).Location("Content:1"),
+            View("WebCrawler_Checkbox_SummaryAdmin", crawler)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("WebCrawler_Fields_SummaryAdmin", crawler)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
             View("WebCrawler_Buttons_SummaryAdmin", crawler).Location("Actions:5"),
-            View("WebCrawler_DefaultMeta_SummaryAdmin", crawler).Location("Meta:5"),
+            View("WebCrawler_DefaultTags_SummaryAdmin", crawler)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Strategy:5"),
+            View("WebCrawler_DefaultMeta_SummaryAdmin", crawler)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
             View("WebCrawler_ActionsMenu_SummaryAdmin", crawler).Location("ActionsMenu:10")
         );
     }

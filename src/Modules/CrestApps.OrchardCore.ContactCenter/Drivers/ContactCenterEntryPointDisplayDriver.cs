@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -51,15 +52,30 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(ContactCenterEntryPoint entryPoint, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = entryPoint.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
             View("ContactCenterEntryPoint_Fields_SummaryAdmin", entryPoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("ContactCenterEntryPoint_Buttons_SummaryAdmin", entryPoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("ContactCenterEntryPoint_Description_SummaryAdmin", entryPoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrWhiteSpace(entryPoint.Description))),
+            View("ContactCenterEntryPoint_DefaultTags_SummaryAdmin", entryPoint)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Answers:5"),
+            View("ContactCenterEntryPoint_Buttons_SummaryAdmin", entryPoint).Location("Actions:5"),
             View("ContactCenterEntryPoint_DefaultMeta_SummaryAdmin", entryPoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
-            View("ContactCenterEntryPoint_CloneActionsMenu_SummaryAdmin", entryPoint)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
+            View("ContactCenterEntryPoint_CloneActionsMenu_SummaryAdmin", entryPoint).Location("ActionsMenu:5")
         );
     }
 

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using CrestApps.OrchardCore.PhoneNumbers
+@using OrchardCore.DisplayManagement.Views
+
+@inject IPhoneNumberService PhoneNumberService
+
+@model ShapeViewModel<NotInServiceNumberEntry>
+
+@* A mark has no edit page, so the number is plain text. *@
+<span>@PhoneNumberService.FormatForDisplay(Model.Value.Number.PhoneNumber)</span>

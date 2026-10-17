@@ -16,6 +16,11 @@ public class ChatAnalyticsFilterViewModel
     public DateTime? EndDate { get; set; }
 
     /// <summary>
+    /// Gets or sets the relative range picked in the date range selector, e.g. <c>last30</c>, so the selector shows it again.
+    /// </summary>
+    public string Range { get; set; }
+
+    /// <summary>
     /// Gets or sets the profile id.
     /// </summary>
     public string ProfileId { get; set; }

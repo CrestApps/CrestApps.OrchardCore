@@ -133,20 +133,22 @@ public sealed class AdminController : Controller
         options.Statuses = BuildStatusFilterItems(options.Status);
         options.Sources = BuildSourceFilterItems(options.Source);
 
+        // The status and source filters render at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("TransactionsAdminListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         var model = new TransactionsAdminIndexViewModel
         {
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-        };
-
-        foreach (var transaction in result.Entries)
-        {
-            model.Transactions.Add(new TransactionListItemViewModel
+            List = new AdminListContext<Transaction>
             {
-                Transaction = transaction,
-                OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId),
-            });
-        }
+                Source = result.Entries,
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
+        };
 
         return View(model);
     }

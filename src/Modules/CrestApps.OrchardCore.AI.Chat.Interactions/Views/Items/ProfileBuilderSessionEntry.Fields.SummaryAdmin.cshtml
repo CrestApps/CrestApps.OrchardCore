@@ -1,0 +1,6 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ProfileBuilderSessionEntry>
+
+<a asp-action="Session" asp-controller="ProfileBuilder" asp-route-id="@Model.Value.Session.ItemId">@Model.Value.Title</a>

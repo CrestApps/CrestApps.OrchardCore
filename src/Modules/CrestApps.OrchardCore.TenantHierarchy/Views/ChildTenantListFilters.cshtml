@@ -1,0 +1,7 @@
+@model ChildTenantsIndexViewModel
+
+@* The state and sort filters at the end of the toolbar of the child tenants list. A change posts the list form. *@
+<div class="btn-group filter">
+    <select asp-for="Options.State" asp-items="@Model.StateOptions" class="selectpicker show-tick me-2" data-header="@T["Filter by state"]" data-width="fit" data-selected-text-format="static" data-dropdown-align-right="true" title="@T["State"]" data-style="btn-sm" data-filter-submit></select>
+    <select asp-for="Options.OrderBy" asp-items="@Model.SortOptions" class="selectpicker show-tick" data-header="@T["Sort by"]" data-width="fit" data-selected-text-format="static" data-dropdown-align-right="true" title="@T["Sort"]" data-style="btn-sm" data-filter-submit></select>
+</div>

@@ -1,4 +1,3 @@
-@using System.Globalization
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
 @using Microsoft.AspNetCore.Mvc.Localization
 
@@ -20,16 +19,11 @@
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-1">
+            <div class="row gx-2">
                 <div class="col">
                     <div class="input-group">
-                        <div class="has-search flex-grow-1">
-                            <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
-                            <input id="search-box" asp-for="Options.Search" class="form-control rounded-end-0" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
-                        </div>
-                        <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
-                            <i class="fa-solid fa-search me-1" aria-hidden="true"></i>@T["Go"]
-                        </button>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -59,124 +53,24 @@
         </div>
     </div>
 
-    <ul class="list-group with-checkbox" id="profile-builder-sessions-list">
-        @if (Model.Models.Count > 0)
-        {
-            var pager = (dynamic)Model.Pager;
-            int startIndex = (pager.Page - 1) * pager.PageSize + 1;
-            int endIndex = startIndex + Model.Models.Count - 1;
-
-            <li class="list-group-item text-bg-theme ignore-elements">
-                <div class="row gx-3">
-                    <div class="col">
-                        <div class="form-check my-1">
-                            <input type="checkbox" class="form-check-input" id="select-all">
-                            <label class="form-check-label" for="select-all" id="select-all-label" title="@T["Select All"]"></label>
-                            <label id="items" for="select-all">
-                                @T.Plural(Model.Models.Count, "1 item", "{0} items")
-                                <span class="text-muted" title="@T["Items {0} to {1}", startIndex, endIndex]">
-                                    @T.Plural((int)pager.TotalItemCount, " / {0} item in total", " / {0} items in total")
-                                </span>
-                            </label>
-                            <label id="selected-items" class="text-muted" for="select-all"></label>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <div class="dropdown d-none" id="actions">
-                            <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="bulk-action-menu-button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                @T["Actions"]
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bulk-action-menu-button">
-                                @foreach (var item in Model.Options.BulkActions)
-                                {
-                                    <li>
-                                        <a class="dropdown-item" href="javascript:void(0)" data-action="@item.Value" data-title="@T["Bulk Action"]" data-message="@T["Are you sure you want to {0} these items?", @item.Text.ToLower()]">@item.Text</a>
-                                    </li>
-                                }
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </li>
-            @foreach (var entry in Model.Models)
-            {
-                var session = entry.Session;
-                var changedUtc = session.ModifiedUtc ?? session.CreatedUtc;
-                var revisions = session.Revisions.Count > 0 ? session.Revisions.Count - 1 : 0;
-
-                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.Title.ToLowerInvariant()">
-                    <div class="d-flex flex-row">
-                        <div class="form-check">
-                            <input type="checkbox" class="form-check-input" value="@session.ItemId" name="itemIds" id="itemIds-@session.ItemId">
-                            <label class="form-check-label" for="itemIds-@session.ItemId">&nbsp;</label>
-                        </div>
-                    </div>
-
-                    <div class="flex-grow-1">
-                        <div class="row g-0">
-                            <div class="col-lg col-12 title d-flex align-items-center">
-                                <div class="summary">
-                                    <div class="d-flex flex-column flex-md-row">
-                                        <div class="me-2">
-                                            <h5>@entry.Title</h5>
-                                        </div>
-                                        <div class="metadata me-1">
-                                            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: changedUtc, Format: "g"))">
-                                                <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
-                                                <time datetime="@changedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: changedUtc))</time>
-                                            </span>
-                                            <span class="badge ta-badge font-weight-normal" title="@T["Feedback given in this session"]">
-                                                <i class="fa-regular fa-comment-dots text-secondary" aria-hidden="true"></i>
-                                                @T.Plural(session.Feedback.Count, "1 feedback", "{0} feedback")
-                                            </span>
-                                            <span class="badge ta-badge font-weight-normal" title="@T["Changes made to the instructions"]">
-                                                <i class="fa-solid fa-code-branch text-secondary" aria-hidden="true"></i>
-                                                @T.Plural(revisions, "1 revision", "{0} revisions")
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-auto col-12 d-flex justify-content-end align-items-center">
-                                <div class="actions">
-                                    <a asp-action="Session" asp-route-id="@session.ItemId" class="btn btn-primary btn-sm">@T["Open"]</a>
-                                    <div class="btn-group" title="@T["Actions"]">
-                                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle actions" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                            <span>@T["Actions"]</span>
-                                        </button>
-                                        <ul class="actions-menu dropdown-menu dropdown-menu-end">
-                                            <li>
-                                                <a asp-action="Delete"
-                                                   asp-route-id="@session.ItemId"
-                                                   class="dropdown-item text-danger"
-                                                   data-url-af="RemoveUrl UnsafeUrl"
-                                                   data-message="@T["Delete this session, its conversation and its feedback? AI profiles saved from it are kept."]"
-                                                   data-ok-text="@T["Yes"]"
-                                                   data-cancel-text="@T["Cancel"]">@T["Delete"]</a>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </li>
-            }
-        }
-        else
-        {
-            <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> Start a session to build an AI profile by role-play: play the person the AI will talk to, tell it what it got wrong, and it rewrites its own instructions."]
-            </li>
-        }
-    </ul>
+    @* The sessions, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="AIProfileBuilderSessions" context="Model.List"
+                bulk-actions="Model.Options.BulkActions"
+                empty-message="@T["<strong>Nothing here!</strong> Start a session to build an AI profile by role-play: play the person the AI will talk to, tell it what it got wrong, and it rewrites its own instructions."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["Title"]" />
+            <admin-list-column name="Activity" position="30" title="@T["Activity"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 
     <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
         @T["Your search returned no results."]
     </div>
 </form>
-
-@await DisplayAsync(Model.Pager)
 
 @if (Model.Profiles.Count > 0)
 {

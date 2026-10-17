@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
@@ -27,22 +29,13 @@ public class NotInServiceNumbersIndexViewModel
     /// Gets or sets the pager shape.
     /// </summary>
     public dynamic Pager { get; set; }
-}
-
-/// <summary>
-/// One number in the list of numbers known not to be in service.
-/// </summary>
-public class NotInServiceNumberEntry
-{
-    /// <summary>
-    /// Gets or sets the mark.
-    /// </summary>
-    public NotInServiceNumber Number { get; set; }
 
     /// <summary>
-    /// Gets or sets the name of the campaign whose attempt found the number out of service, when there was one.
+    /// Gets or sets the rows, the bulk actions and the pager the <c>admin-list</c> tag renders, in the layout
+    /// (List or Grid) the site or the user picked.
     /// </summary>
-    public string CampaignName { get; set; }
+    [BindNever]
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>

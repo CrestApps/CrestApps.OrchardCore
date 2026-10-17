@@ -45,6 +45,9 @@
                         case OrderCancelReason.CheckoutExpired:
                             @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
                             break;
+                        case OrderCancelReason.Unavailable:
+                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            break;
                         default:
                             @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
                             break;

@@ -54,7 +54,8 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
     {
         return Combine(
             Initialize<LeadPartViewModel>("LeadPart_SummaryAdmin", async model => await PopulateDisplayAsync(model, part))
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:15"),
             Initialize<LeadPartViewModel>("LeadPart_Converted", async model => await PopulateDisplayAsync(model, part))
                 .Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:0")
                 .RenderWhen(() => Task.FromResult(part.IsConverted)));

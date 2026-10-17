@@ -134,13 +134,25 @@ public sealed class CouponsAdminController : Controller
             new SelectListItem(S["Disabled"], nameof(CouponStatusFilter.Disabled), options.Status == CouponStatusFilter.Disabled),
         ];
 
-        return View(new CouponsIndexViewModel
+        var viewModel = new CouponsIndexViewModel
         {
             Options = options,
             Coupons = [.. matching.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
             HasUnboundedCoupons = all.Any(coupon => coupon.IsEnabled && !coupon.MaxRedemptions.HasValue && !coupon.EndsUtc.HasValue),
             Pager = await shapeFactory.PagerAsync(pager, matching.Length, routeData),
-        });
+        };
+
+        // The admin-list tag builds a row per coupon, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<Coupon>
+        {
+            Source = viewModel.Coupons,
+            Pager = (IShape)viewModel.Pager,
+        };
+
+        // The status filter renders at the end of the list's toolbar.
+        viewModel.List.ToolbarActions = await shapeFactory.CreateAsync("CouponsAdminListFilters", Arguments.From(new { Options = options }));
+
+        return View(viewModel);
     }
 
     /// <summary>

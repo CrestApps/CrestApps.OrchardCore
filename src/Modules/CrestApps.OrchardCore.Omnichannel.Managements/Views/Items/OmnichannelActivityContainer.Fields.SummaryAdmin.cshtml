@@ -17,7 +17,7 @@
     };
 }
 
-<h5 class="mb-0 d-flex align-items-center gap-2">
+<span class="d-inline-flex align-items-center gap-2">
     <img src="@Url.Content($"~/CrestApps.OrchardCore.Omnichannel.Managements/images/{urgencyIcon}?v=20260905")"
          alt="@Model.Value.Activity.UrgencyLevel"
          width="20"
@@ -25,4 +25,4 @@
     <a asp-action="Complete" asp-route-id="@Model.Value.Activity.ItemId">
         @(Model.Value.SubjectContentTypeDefinition?.DisplayName ?? T["Unknown Subject"].Value)
     </a>
-</h5>
+</span>

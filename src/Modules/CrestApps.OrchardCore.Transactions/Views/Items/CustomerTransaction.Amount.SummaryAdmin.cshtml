@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Transactions.Core.Services
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CustomerTransaction>
+
+@{
+    var transaction = Model.Value.Transaction;
+    string Money(decimal amount) => $"{transaction.Currency} {CurrencyScale.Format(amount, transaction.Currency)}";
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Total"]">
+    <i class="fa-solid fa-sack-dollar text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Total"]</span>
+    @Money(transaction.TotalAmount)
+</span>
+@if (TransactionStateMachine.CanRecordPayment(transaction))
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Outstanding"]">
+        <i class="fa-solid fa-hourglass-half text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Outstanding"]</span>
+        @Money(transaction.OutstandingAmount)
+    </span>
+}

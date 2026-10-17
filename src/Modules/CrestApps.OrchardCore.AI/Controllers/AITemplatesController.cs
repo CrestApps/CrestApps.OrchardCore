@@ -105,20 +105,17 @@ public sealed class AITemplatesController : Controller
 
         var viewModel = new ListSourceCatalogEntryViewModel<AIProfileTemplate>
         {
-            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _aiOptions.TemplateSources.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per template, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIProfileTemplate>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIProfileTemplate>
-            {
-                Model = model,
-                Shape = await _displayDriver.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin")
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

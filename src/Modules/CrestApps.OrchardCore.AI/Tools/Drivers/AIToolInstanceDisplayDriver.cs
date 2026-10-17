@@ -2,7 +2,9 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -34,11 +36,32 @@ internal sealed class AIToolInstanceDisplayDriver : DisplayDriver<AIToolInstance
 
     public override Task<IDisplayResult> DisplayAsync(AIToolInstance instance, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = instance.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("AIToolInstance_Fields_SummaryAdmin", instance).Location("Content:1"),
+            View("AIToolInstance_Checkbox_SummaryAdmin", instance)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("AIToolInstance_Fields_SummaryAdmin", instance)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("AIToolInstance_Description_SummaryAdmin", instance)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(instance.Description))),
             View("AIToolInstance_Buttons_SummaryAdmin", instance).Location("Actions:5"),
-            View("AIToolInstance_DefaultTags_SummaryAdmin", instance).Location("Tags:5"),
-            View("AIToolInstance_DefaultMeta_SummaryAdmin", instance).Location("Meta:5")
+            View("AIToolInstance_DefaultTags_SummaryAdmin", instance)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
+            View("AIToolInstance_DefaultMeta_SummaryAdmin", instance)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

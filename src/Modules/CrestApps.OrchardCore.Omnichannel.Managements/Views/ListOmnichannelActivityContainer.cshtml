@@ -2,7 +2,9 @@
 
 @model ListOmnichannelActivityContainer
 
-<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="Activities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post">
+<form asp-route-area="CrestApps.OrchardCore.Omnichannel.Managements" asp-action="Activities" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Activities" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
     @if (Model.Header is not null)
     {
         <div class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -12,29 +14,16 @@
         </div>
     }
 
-    <ul class="list-group with-checkbox">
-
-        @if (Model.Containers.Count > 0)
-        {
-            foreach (var container in Model.Containers)
-            {
-                <li class="list-group-item list-group-item-action list-group-striped">
-                    @await DisplayAsync(container)
-                </li>
-            }
-        }
-        else
-        {
-            <li class="list-group-item">
-                <div class="alert alert-info mb-0">
-                    @T["No activities found."]
-                </div>
-            </li>
-        }
-    </ul>
+    @* The activities, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="OmnichannelActivities" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["No activities found."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Subject" position="20" title="@T["Subject"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" />
+            <admin-list-column name="Handler" position="40" title="@T["Handled by"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
-
-@if (Model.Pager is not null)
-{
-    @await DisplayAsync(Model.Pager)
-}

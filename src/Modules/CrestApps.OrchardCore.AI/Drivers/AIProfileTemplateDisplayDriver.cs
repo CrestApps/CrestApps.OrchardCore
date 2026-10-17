@@ -6,7 +6,9 @@ using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -45,16 +47,37 @@ internal sealed class AIProfileTemplateDisplayDriver : DisplayDriver<AIProfileTe
 
     public override Task<IDisplayResult> DisplayAsync(AIProfileTemplate template, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = (template.DisplayText ?? template.Name)?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("AIProfileTemplate_Fields_SummaryAdmin", template).Location("Content:1"),
+            View("AIProfileTemplate_Checkbox_SummaryAdmin", template)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("AIProfileTemplate_Fields_SummaryAdmin", template)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("AIProfileTemplate_Description_SummaryAdmin", template)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(template.Description))),
             // Managing templates and managing profiles are separate permissions, so the shortcut into the
             // "New AI profile" wizard shows only to someone who may create the profile it leads to.
             View("AIProfileTemplate_CreateProfile_SummaryAdmin", template).Location("Actions:1")
             .RenderWhen(async () => string.Equals(template.Source, AITemplateSources.Profile, StringComparison.OrdinalIgnoreCase) &&
                 await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles)),
             View("AIProfileTemplate_Buttons_SummaryAdmin", template).Location("Actions:5"),
-            View("AIProfileTemplate_DefaultTags_SummaryAdmin", template).Location("Tags:5"),
-            View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template).Location("Meta:5")
+            View("AIProfileTemplate_DefaultTags_SummaryAdmin", template)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"),
+            View("AIProfileTemplate_DefaultMeta_SummaryAdmin", template)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5")
         );
     }
 

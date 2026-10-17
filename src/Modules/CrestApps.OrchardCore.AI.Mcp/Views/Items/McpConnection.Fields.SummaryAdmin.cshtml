@@ -3,4 +3,4 @@
 
 @model ShapeViewModel<McpConnection>
 
-<h5>@(Model.Value.DisplayText)</h5>
+<a asp-action="Edit" asp-route-id="@Model.Value.ItemId">@Model.Value.DisplayText</a>

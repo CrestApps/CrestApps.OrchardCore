@@ -90,7 +90,15 @@ Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, 
 | Draft | Made from a cart, not yet sent to the checkout. |
 | Awaiting payment | Its checkout started and has not completed. |
 | Paid | Its checkout completed. |
-| Canceled | Ended unpaid, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired` or `Abandoned` (no checkout was left that could pay it). |
+| Canceled | Ended unpaid, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired`, `Abandoned` (no checkout was left that could pay it) or `Unavailable` (an order event handler refused it, such as for want of stock). |
+
+**Order events.** `IOrderEventHandler` (or `OrderEventHandlerBase`) hears about each order:
+
+- `CreatedAsync` runs right after `IOrderService.CreateFromCartAsync` makes the order; a handler that can't provide what it needs calls `context.Refuse(message)`. The order is then canceled as `Unavailable`, and `OrderCreationResult.Problems` carries the messages, which the cart shows.
+- `PaidAsync` runs in `OrderCheckoutHandler.CompletingAsync`, in the unit of work that marks the order paid, so a handler that throws rolls the completion back for the checkout to retry.
+- `CanceledAsync` runs when an order is canceled.
+
+Inventory uses them to hold, sell and release stock. The cart's checkout commits the new order before the checkout starts, and shows *Someone else is buying the same items right now* when that commit hits a concurrency conflict.
 
 **Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order, records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
 
@@ -102,6 +110,14 @@ An order holds lines, not money. The payment, its tax, the payment attempts and 
 | --- | --- | --- |
 | **Commerce > Orders**: every order, searchable by order number or customer email, with a status filter | `ManageOrders` | Administrator |
 | **Commerce > My Orders**: the signed-in customer's own orders | `ViewOwnOrders` | Authenticated |
+
+## Stock
+
+Products' `IProductAvailabilityProvider` says what can be bought; Inventory provides one, and without it every product can always be bought.
+
+- **Cart.** `CartService` asks for each line with the cart's id. An out-of-stock product that doesn't take backorders is refused (*Mug is out of stock.*), and a line's `MaxQuantity` is capped at what's available. Adding or updating beyond that says *Only 3 of Mug left.*, and a priced line over it gets the problem *Only 3 left. Lower the quantity to check out.*, which stops the checkout.
+- **Add to cart.** `AddToCartDisplayDriver` shows the product's or each variant's availability: *In stock*, *Only N left* at or below the threshold, *Out of stock* (which turns the button off) or *Available on backorder*. The quantity is capped at what's available.
+- **Variant picker.** The `product-variant-picker` script reads each variant's `data-availability`, `data-availability-tone` and `data-buyable`, and updates the line and the button as options change.
 
 ## Checkout line details
 

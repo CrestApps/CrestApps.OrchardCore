@@ -1,0 +1,5 @@
+@model ShapeViewModel<Order>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Customer"]">
+    <i class="fa-regular fa-user text-secondary me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.Value.CustomerName) ? Model.Value.CustomerEmail : $"{Model.Value.CustomerName} <{Model.Value.CustomerEmail}>")
+</span>

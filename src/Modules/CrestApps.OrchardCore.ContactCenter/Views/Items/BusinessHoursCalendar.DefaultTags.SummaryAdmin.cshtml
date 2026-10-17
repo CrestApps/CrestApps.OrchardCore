@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<BusinessHoursCalendar>
+
+@{
+    var openDays = Model.Value.WeeklySchedule?.Count(day => day.IsOpen && day.CloseMinute > day.OpenMinute) ?? 0;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Time zone"]">
+    <i class="fa-solid fa-globe text-secondary me-1" aria-hidden="true"></i>@(string.IsNullOrWhiteSpace(Model.Value.TimeZoneId) ? "UTC" : Model.Value.TimeZoneId)
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Open days per week"]">
+    <i class="fa-solid fa-calendar-week text-secondary me-1" aria-hidden="true"></i>@(openDays == 1 ? T["1 open day"] : T["{0} open days", openDays])
+</span>
+
+@if (Model.Value.Holidays is { Count: > 0 })
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Holidays"]">
+        <i class="fa-solid fa-umbrella-beach text-secondary me-1" aria-hidden="true"></i>@(Model.Value.Holidays.Count == 1 ? T["1 holiday"] : T["{0} holidays", Model.Value.Holidays.Count])
+    </span>
+}
+
+@if (!Model.Value.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

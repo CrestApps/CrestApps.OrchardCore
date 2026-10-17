@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
@@ -42,11 +44,31 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 
     public override Task<IDisplayResult> DisplayAsync(AIDataSource dataSource, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = dataSource.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return CombineAsync(
-            View("AIDataSource_Fields_SummaryAdmin", dataSource).Location("Content:1"),
+            View("AIDataSource_Checkbox_SummaryAdmin", dataSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("AIDataSource_Fields_SummaryAdmin", dataSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("AIDataSource_Description_SummaryAdmin", dataSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"),
             View("AIDataSource_Buttons_SummaryAdmin", dataSource).Location("Actions:5"),
-            View("AIDataSource_DefaultTags_SummaryAdmin", dataSource).Location("Tags:5"),
-            View("AIDataSource_DefaultMeta_SummaryAdmin", dataSource).Location("Meta:5"),
+            View("AIDataSource_DefaultTags_SummaryAdmin", dataSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Indexes:5"),
+            View("AIDataSource_DefaultMeta_SummaryAdmin", dataSource)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
             View("AIDataSource_ActionsMenu_SummaryAdmin", dataSource).Location("ActionsMenu:10")
         );
     }

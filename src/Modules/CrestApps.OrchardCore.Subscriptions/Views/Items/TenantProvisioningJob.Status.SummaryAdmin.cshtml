@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.Services
+
+@model ShapeViewModel<TenantProvisioningJob>
+@inject SubscriptionDisplayText DisplayText
+
+@{
+    var statusClass = Model.Value.Status switch
+    {
+        TenantProvisioningStatus.Succeeded => "text-bg-success",
+        TenantProvisioningStatus.Abandoned => "text-bg-danger",
+        TenantProvisioningStatus.Failed => "text-bg-warning",
+        _ => "text-bg-secondary",
+    };
+}
+
+<span class="badge @statusClass">@DisplayText.ProvisioningStatusName(Model.Value.Status)</span>

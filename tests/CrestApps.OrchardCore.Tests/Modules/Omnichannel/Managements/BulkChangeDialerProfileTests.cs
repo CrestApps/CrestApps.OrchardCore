@@ -310,7 +310,6 @@ public sealed class BulkChangeDialerProfileTests
                 new Mock<global::YesSql.ISession>().Object,
                 new Mock<IUpdateModelAccessor>().Object,
                 new Mock<IContentManager>().Object,
-                new Mock<IDisplayManager<OmnichannelActivityContainer>>().Object,
                 new Mock<IDisplayManager<OmnichannelActivity>>().Object,
                 _activityManager.Object,
                 new Mock<IAuthorizationService>().Object,

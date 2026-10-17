@@ -17,22 +17,6 @@ public class ProfileBuilderIndexViewModel : ListCatalogEntryViewModel<ProfileBui
 }
 
 /// <summary>
-/// One session in the AI Profile Builder session list.
-/// </summary>
-public class ProfileBuilderSessionEntry
-{
-    /// <summary>
-    /// Gets or sets the session.
-    /// </summary>
-    public ProfileBuilderSession Session { get; set; }
-
-    /// <summary>
-    /// Gets or sets the session's title.
-    /// </summary>
-    public string Title { get; set; }
-}
-
-/// <summary>
 /// The AI Profile Builder session page.
 /// </summary>
 public class ProfileBuilderSessionViewModel
