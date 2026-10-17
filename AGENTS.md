@@ -402,7 +402,7 @@ The dividing rule: if it can be done in the browser, it belongs in the User Manu
 ### Documentation Videos
 
 - **Only produce videos when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
-- **Never commit a video file** (`.mp4`, `.webm`, or its captions and poster) to this repository. Videos are published on the CrestApps YouTube channel, and their sources (storyboards, recorder scenes, YouTube metadata) live in the private `CrestApps/CrestApps.Videos` repository, together with the `crestapps-video-producer` skill that makes them.
+- **Never commit a video file** (`.mp4`, `.webm`, an animated `.gif` screencast, or a video's captions and poster) to this repository. Videos are published on the CrestApps YouTube channel, and their sources (storyboards, recorder scenes, YouTube metadata) live in the `CrestApps/CrestApps.Videos` repository, together with the `crestapps-video-producer` skill that makes them.
 - Embed a video by name with the `<YouTube video="<slug>" title="..." />` component (`src/CrestApps.Docs/src/components/YouTube`), available on every page without an import. The slug is the video's folder name in `CrestApps.Videos`; its YouTube id comes from `src/CrestApps.Docs/src/data/videos.json`, which the `CrestApps.Videos` publish workflow updates by pull request. Until the slug is in that map the embed renders nothing, so a page can include it before the video is published. To show one chapter of a longer video, add `start` and `end` in seconds: `<YouTube video="<slug>" title="..." start={99} end={146} />`.
 
 ## Documentation expectations
