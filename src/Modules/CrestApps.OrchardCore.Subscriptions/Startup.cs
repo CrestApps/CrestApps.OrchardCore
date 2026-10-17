@@ -81,6 +81,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
 
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
         services.AddScoped<SubscriptionDisplayText>();
@@ -125,6 +126,7 @@ public sealed class RolesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
 
         // Roles already gate content, features, and permissions across Orchard Core, so granting one for as
         // long as a subscription is current is what makes member-only access enforceable without any of
@@ -172,6 +174,7 @@ public sealed class StripeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
     }
 }
 
@@ -312,6 +315,7 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
 
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
 
