@@ -21,7 +21,7 @@ An **invoice** tells a customer what they owe and gives them a link to pay it. A
 
 ## Invoice numbers
 
-A transaction gets an **invoice number** the first time the customer is told about a payment they pay themselves, which is the first [payment reminder](transactions.md#payment-reminders) for it: either the notice that a payment is coming due, or the first reminder once it is due. Numbers run in order across the whole site: **INV-1001**, **INV-1002**, and so on.
+A transaction gets an **invoice number** the first time the customer is told about a payment they pay themselves: when an administrator clicks [Send invoice](transactions.md#send-the-invoice-now), or with the first [payment reminder](transactions.md#payment-reminders) for it, either the notice that a payment is coming due or the first reminder once it is due. Numbers run in order across the whole site: **INV-1001**, **INV-1002**, and so on.
 
 - A transaction keeps its number for good. Every later reminder, and the printed invoice, shows the same number.
 - A payment charged automatically to a saved card, such as a scheduled payment of an [installment plan](installment-plans.md), gets no invoice. The customer is only told which card will be charged and when.
@@ -64,7 +64,7 @@ The invoice shows:
 - **Invoice:** with the invoice number, and the **Date** the transaction was recorded;
 - **Billed to:** the customer's name and email;
 - the **Status**: **Due** while something is owed, **Paid** once the balance is paid;
-- the line for what the payment is for, any **Tax**, the **Subtotal** and the **Total**;
+- the line for what the payment is for, a line for each [adjustment](transactions.md#adjust-or-waive-what-is-owed) that takes its amount off (such as *Waiver: Financial aid*), any **Tax**, the **Subtotal** and the **Total**, which is what is owed after the adjustments;
 - **Notes** with the due date and, after a part payment, how much has been received and how much is still due;
 - your footer text and contact details.
 
@@ -95,7 +95,7 @@ A receipt shows:
 - **Receipt:** with the receipt number, and the **Date** of the payment;
 - **Billed to**, and the **Status** **Paid**;
 - the amount paid, with its share of the transaction's tax;
-- **Notes**: *Paid offline.* for a payment an administrator recorded, and *Payment for invoice INV-1001.* when the payment settled an invoice;
+- **Notes**: *Paid offline.* for a payment an administrator recorded, *Payment for invoice INV-1001.* when the payment settled an invoice, and how much of the charge was taken off without being paid when the transaction was adjusted;
 - a **Test payment** badge when the payment was made through a payment provider in test mode, unless you turn the badge off;
 - your footer text and contact details.
 

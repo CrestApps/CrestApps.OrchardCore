@@ -28,6 +28,12 @@
             <dt class="col-sm-4">@T["Total"]</dt>
             <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)</dd>
 
+            @if (transaction.AmountAdjusted > 0m)
+            {
+                <dt class="col-sm-4">@T["Adjusted"]</dt>
+                <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountAdjusted, transaction.Currency)</dd>
+            }
+
             <dt class="col-sm-4">@T["Paid"]</dt>
             <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.AmountPaid, transaction.Currency)</dd>
 

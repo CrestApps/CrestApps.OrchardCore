@@ -200,6 +200,62 @@ public sealed class DefaultTransactionReminderService : ITransactionReminderServ
         return true;
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> SendInvoiceAsync(Transaction transaction, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(transaction);
+
+        if (string.IsNullOrEmpty(transaction.OwnerId) || transaction.OutstandingAmount <= 0m || transaction.AutoCollection is not null)
+        {
+            return false;
+        }
+
+        var amount = FormatAmount(transaction.OutstandingAmount, transaction.Currency);
+        var title = GetTitle(transaction);
+        var invoice = await PrepareInvoiceAsync(transaction, cancellationToken);
+        var numbered = !string.IsNullOrEmpty(transaction.InvoiceNumber);
+
+        // The invoice itself, not a reminder: it asks for the payment for the first time.
+        var body = transaction.DueUtc.HasValue
+            ? S["Here is your invoice for {0}: {1}, due on {2:d}.", title, amount, transaction.DueUtc.Value].Value
+            : S["Here is your invoice for {0}: {1}.", title, amount].Value;
+
+        var reminder = new Reminder
+        {
+            Subject = numbered
+                ? S["Invoice {0}", transaction.InvoiceNumber].Value
+                : S["Invoice for {0}", title].Value,
+            Summary = S["Your invoice for {0}: {1}.", title, amount].Value,
+            Body = body + invoice.Instructions,
+            ActionUrl = invoice.PayUrl,
+            ActionText = S["Pay {0}", amount].Value,
+        };
+
+        if (!await DeliverAsync(transaction, reminder, cancellationToken))
+        {
+            await KeepIssuedInvoiceNumberAsync(transaction, invoice, cancellationToken);
+
+            return false;
+        }
+
+        var now = _clock.UtcNow;
+
+        // It counts as the first notice, so the reminder sweep waits the reminder interval before it chases the owner.
+        transaction.ReminderCount++;
+        transaction.LastReminderSentUtc = now;
+        transaction.UpdatedUtc = now;
+        transaction.Events.Add(new TransactionEvent
+        {
+            CreatedUtc = now,
+            Type = TransactionEventType.InvoiceSent,
+            Message = numbered
+                ? S["Invoice {0} for {1} was sent.", transaction.InvoiceNumber, amount].Value
+                : S["The invoice for {0} was sent.", amount].Value,
+        });
+
+        return true;
+    }
+
     // Numbers the invoice the first time the owner is told about it, and creates the link that pays it without signing
     // in. Both services are optional, so a site without them still sends a plain reminder.
     private async Task<InvoiceDetails> PrepareInvoiceAsync(Transaction transaction, CancellationToken cancellationToken)

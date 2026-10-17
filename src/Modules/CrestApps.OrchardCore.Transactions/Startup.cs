@@ -43,6 +43,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
+        services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
     }
 }

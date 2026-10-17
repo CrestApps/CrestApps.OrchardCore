@@ -30,11 +30,23 @@ public sealed class TransactionEvent
     public string Message { get; set; }
 
     /// <summary>
-    /// Gets or sets the reason given for the event, as entered, when the event records a cancellation. Unlike
-    /// <see cref="Message"/>, it holds only what the person or process gave as the reason, so it can be passed on to
-    /// <see cref="Services.ITransactionEventHandler.CanceledAsync"/>.
+    /// Gets or sets the reason given for the event, as entered, when the event records a cancellation or an adjustment.
+    /// Unlike <see cref="Message"/>, it holds only what the person or process gave as the reason, so it can be passed on
+    /// to <see cref="Services.ITransactionEventHandler.CanceledAsync"/> and printed on the invoice.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the amount owed was lowered, when the event is an <see cref="TransactionEventType.Adjusted"/>
+    /// event. Its <see cref="Amount"/> is the amount taken off.
+    /// </summary>
+    public TransactionAdjustmentKind? AdjustmentKind { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reference of a payment recorded by hand, such as a check number or a bank transfer reference,
+    /// when one was given.
+    /// </summary>
+    public string Reference { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier of the user that caused the event, when applicable.

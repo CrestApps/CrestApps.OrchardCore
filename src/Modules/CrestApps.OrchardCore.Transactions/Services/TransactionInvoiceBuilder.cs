@@ -85,6 +85,30 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
             notes.Add(S["{0} has been received; {1} is still due.", Format(transaction.AmountPaid, currency), Format(transaction.OutstandingAmount, currency)].Value);
         }
 
+        var lineItems = new List<ReceiptLineItem>
+        {
+            new()
+            {
+                Description = string.IsNullOrEmpty(transaction.Title) ? S["Payment"].Value : transaction.Title,
+                Quantity = 1,
+                UnitAmount = transaction.TotalAmount - transaction.TaxAmount,
+                Amount = transaction.TotalAmount - transaction.TaxAmount,
+            },
+        };
+
+        // Each adjustment (a discount, waiver, credit or write-off) is a line that takes its amount off, so the invoice
+        // shows why less is owed than the charge.
+        foreach (var adjustment in transaction.Events.Where(evt => evt.Type == TransactionEventType.Adjusted && evt.Amount > 0m))
+        {
+            lineItems.Add(new ReceiptLineItem
+            {
+                Description = DescribeAdjustment(adjustment),
+                Quantity = 1,
+                UnitAmount = -adjustment.Amount.Value,
+                Amount = -adjustment.Amount.Value,
+            });
+        }
+
         var request = new ReceiptRequest
         {
             BilledToName = contact?.DisplayName,
@@ -94,18 +118,9 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
             // The document prints its date as is, so it is given in the site's time zone, not in UTC.
             IssuedAt = await DocumentDates.ToSiteTimeAsync(_localClock, transaction.CreatedUtc),
             Currency = currency,
-            LineItems =
-            [
-                new ReceiptLineItem
-                {
-                    Description = string.IsNullOrEmpty(transaction.Title) ? S["Payment"].Value : transaction.Title,
-                    Quantity = 1,
-                    UnitAmount = transaction.TotalAmount - transaction.TaxAmount,
-                    Amount = transaction.TotalAmount - transaction.TaxAmount,
-                },
-            ],
+            LineItems = lineItems,
             TaxAmount = transaction.TaxAmount,
-            Total = transaction.TotalAmount,
+            Total = transaction.TotalAmount - transaction.AmountAdjusted,
             Status = paid ? ReceiptStatus.Paid : ReceiptStatus.Due,
             Notes = notes.Count == 0 ? null : string.Join(' ', notes),
         };
@@ -124,6 +139,21 @@ public sealed class TransactionInvoiceBuilder : ITransactionInvoiceBuilder
         invoice.HeaderTitle = S["Invoice"].Value;
 
         return invoice;
+    }
+
+    private string DescribeAdjustment(TransactionEvent adjustment)
+    {
+        string kind = adjustment.AdjustmentKind switch
+        {
+            TransactionAdjustmentKind.Waiver => S["Waiver"],
+            TransactionAdjustmentKind.Credit => S["Credit"],
+            TransactionAdjustmentKind.WriteOff => S["Write-off"],
+            _ => S["Discount"],
+        };
+
+        return string.IsNullOrWhiteSpace(adjustment.Reason)
+            ? kind
+            : S["{0}: {1}", kind, adjustment.Reason].Value;
     }
 
     private static string Format(decimal amount, string currency)
