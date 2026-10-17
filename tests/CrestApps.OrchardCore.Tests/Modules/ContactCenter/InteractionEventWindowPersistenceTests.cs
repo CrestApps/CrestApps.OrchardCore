@@ -193,7 +193,10 @@ public sealed class InteractionEventWindowPersistenceTests
     }
 
     [Fact]
-    public async Task LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriod()
+    public Task LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriod()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriodCoreAsync);
+
+    private static async Task LatestBefore_ReturnsEachAgentsLastStateChangeBeforeThePeriodCoreAsync()
     {
         // Arrange
         var databasePath = DatabasePath("latest-before");
@@ -248,6 +251,112 @@ public sealed class InteractionEventWindowPersistenceTests
 
             // Assert
             Assert.Equal("written-second", Assert.Single(anchors).ItemId);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    /// <summary>
+    /// The window is read in pages that continue after the last event read. Several events share an instant across
+    /// every page boundary here, which is where a cursor on the time alone would skip or repeat them.
+    /// </summary>
+    [Fact]
+    public Task Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirst()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirstCoreAsync);
+
+    private static async Task Window_LongerThanOnePage_ReturnsEveryEventOnce_OldestFirstCoreAsync()
+    {
+        // Arrange
+        var databasePath = DatabasePath("window-pages");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var total = (InteractionEventStore.WindowPageSize * 2) + 357;
+            var seeded = Enumerable.Range(0, total)
+                .Select(index => Event(
+                    $"event-{index:00000}",
+                    $"agent-{index % 7}",
+                    _from.AddSeconds(index / 6),
+                    ContactCenterConstants.Events.AgentStateChanged))
+                .ToArray();
+
+            // Written newest first, so the document order is not already the time order.
+            await SeedAsync(store, [.. Enumerable.Reverse(seeded)]);
+            await SeedAsync(store, Event("outside", "agent-1", _from.AddTicks(-1), ContactCenterConstants.Events.AgentStateChanged));
+
+            await using var session = store.CreateSession();
+
+            // Act
+            var unfiltered = await CreateEventStore(session).GetByAggregateWindowAsync(nameof(AgentProfile), _stateTypes, null, _from, _through, TestContext.Current.CancellationToken);
+            var filtered = await CreateEventStore(session).GetByAggregateWindowAsync(nameof(AgentProfile), _stateTypes, ["agent-3"], _from, _through, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(
+                seeded.OrderBy(interactionEvent => interactionEvent.OccurredUtc).ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal).Select(interactionEvent => interactionEvent.ItemId),
+                unfiltered.Select(interactionEvent => interactionEvent.ItemId));
+            Assert.Equal(
+                seeded.Where(interactionEvent => interactionEvent.AggregateId == "agent-3").Select(interactionEvent => interactionEvent.ItemId),
+                filtered.Select(interactionEvent => interactionEvent.ItemId));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    /// <summary>
+    /// The opening states are found by one statement per batch of agents rather than one query per agent. Every agent
+    /// still gets its own latest change, across more agents than one statement holds.
+    /// </summary>
+    [Fact]
+    public Task LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChange()
+        => CrestApps.OrchardCore.Tests.CiFailureAnnotationAttribute.AnnotateAsync(LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChangeCoreAsync);
+
+    private static async Task LatestBefore_ForMoreAgentsThanOneStatement_ReturnsEachAgentsLatestChangeCoreAsync()
+    {
+        // Arrange
+        var databasePath = DatabasePath("latest-batches");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var events = new List<InteractionEvent>();
+
+            for (var agent = 0; agent < 250; agent++)
+            {
+                var agentId = $"agent-{agent:000}";
+
+                // Agents divisible by five have no change before the period at all.
+                if (agent % 5 != 0)
+                {
+                    events.Add(Event($"{agentId}-old", agentId, _from.AddDays(-2).AddMinutes(agent), ContactCenterConstants.Events.AgentPresenceChanged));
+                    events.Add(Event($"{agentId}-latest", agentId, _from.AddMinutes(-1 - (agent % 30)), ContactCenterConstants.Events.AgentStateChanged));
+                }
+
+                events.Add(Event($"{agentId}-not-state", agentId, _from.AddSeconds(-1), ContactCenterConstants.Events.AgentEntitlementsChanged));
+                events.Add(Event($"{agentId}-in-period", agentId, _from.AddMinutes(1), ContactCenterConstants.Events.AgentStateChanged));
+            }
+
+            await SeedAsync(store, [.. events]);
+
+            var agentIds = Enumerable.Range(0, 250).Select(agent => $"agent-{agent:000}").Append("agent-unknown").ToArray();
+
+            await using var session = store.CreateSession();
+
+            // Act
+            var anchors = await CreateEventStore(session).GetLatestBeforeAsync(nameof(AgentProfile), _stateTypes, agentIds, _from, TestContext.Current.CancellationToken);
+
+            // Assert
+            var expected = events
+                .Where(interactionEvent => interactionEvent.ItemId.EndsWith("-latest", StringComparison.Ordinal))
+                .OrderBy(interactionEvent => interactionEvent.OccurredUtc)
+                .ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal)
+                .Select(interactionEvent => interactionEvent.ItemId);
+
+            Assert.Equal(expected, anchors.Select(interactionEvent => interactionEvent.ItemId));
         }
         finally
         {
