@@ -56,6 +56,10 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<CustomerPrivacySettingsDisplayDriver>();
         services.AddNavigationProvider<CustomerSettingsAdminMenu>();
 
+        // Lets a role that holds only the manage customers permission open Settings > Commerce > Customers.
+        // The group is registered here, not with the checkout setting, because the privacy settings share it.
+        services.AddSiteSettingsPermission(CustomersConstants.SettingsGroupId, CustomerPermissions.ManageCustomers);
+
         // Statements, receipts and reminders address a customer by their customer record once there is one.
         services.AddScoped<DefaultCustomerContactResolver>();
         services.Replace(ServiceDescriptor.Scoped<ICustomerContactResolver, CustomerRecordContactResolver>());

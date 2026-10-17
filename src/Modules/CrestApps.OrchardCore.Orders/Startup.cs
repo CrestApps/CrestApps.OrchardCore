@@ -45,6 +45,9 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
 
+        // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
+        services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
+
         services.Configure<TemplateOptions>(options =>
         {
             options.MemberAccessStrategy.Register<Order>();
