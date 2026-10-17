@@ -11,15 +11,41 @@
 
     var liveConnected = !string.IsNullOrEmpty(Model.LiveAccountId);
     var testConnected = !string.IsNullOrEmpty(Model.TestAccountId);
+
+    var anyFromConfiguration = Model.IsLiveFromConfiguration ||
+        Model.LivePublishableKeyFromConfiguration ||
+        Model.LivePrivateSecretFromConfiguration ||
+        Model.LiveWebhookSecretFromConfiguration ||
+        Model.TestPublishableKeyFromConfiguration ||
+        Model.TestPrivateSecretFromConfiguration ||
+        Model.TestWebhookSecretFromConfiguration;
+}
+
+@if (anyFromConfiguration)
+{
+    <div class="alert alert-secondary" role="alert">
+        @T["Some values on this page are configured from the application settings. They take precedence over the values saved here, are shown read-only, and can only be changed where the application settings are kept."]
+    </div>
 }
 
 <div class="ocat-wrapper" asp-validation-class-for="IsLive">
     <div class="ocat-end-offset">
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="IsLive" role="button" />
+            @if (Model.IsLiveFromConfiguration)
+            {
+                <input type="checkbox" class="form-check-input" id="@Html.IdFor(m => m.IsLive)" checked="@Model.IsLive" disabled />
+            }
+            else
+            {
+                <input type="checkbox" class="form-check-input" asp-for="IsLive" role="button" />
+            }
             <label class="form-check-label" asp-for="IsLive">@T["Enable Production"]</label>
         </div>
         <span class="hint">@T["When enabled, the production (live) environment is used. Otherwise the test environment is used."]</span>
+        @if (Model.IsLiveFromConfiguration)
+        {
+            <span class="hint d-block">@T["Configured from the application settings."]</span>
+        }
     </div>
 </div>
 
@@ -39,17 +65,33 @@
     <div class="ocat-wrapper" asp-validation-class-for="LivePublishableKey">
         <label asp-for="LivePublishableKey" class="ocat-label">@T["Production Publishable Key"]</label>
         <div class="ocat-end">
-            <input asp-for="LivePublishableKey" class="form-control" type="text" placeholder="pk_live_..." data-stripe-publishable />
-            <span asp-validation-for="LivePublishableKey"></span>
-            <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
+            @if (Model.LivePublishableKeyFromConfiguration)
+            {
+                <input class="form-control" type="text" value="@Model.LivePublishableKey" readonly disabled />
+                <span class="hint">@T["Configured from the application settings."]</span>
+            }
+            else
+            {
+                <input asp-for="LivePublishableKey" class="form-control" type="text" placeholder="pk_live_..." data-stripe-publishable />
+                <span asp-validation-for="LivePublishableKey"></span>
+                <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
+            }
         </div>
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="LivePrivateSecret">
         <label asp-for="LivePrivateSecret" class="ocat-label">@T["Production Secret Key"]</label>
         <div class="ocat-end">
-            <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_live_...")" data-stripe-secret />
-            <span asp-validation-for="LivePrivateSecret"></span>
+            @if (Model.LivePrivateSecretFromConfiguration)
+            {
+                <input class="form-control" type="text" placeholder="@T["Configured from the application settings."]" readonly disabled />
+                <span class="hint">@T["Configured from the application settings. The key is never shown."]</span>
+            }
+            else
+            {
+                <input asp-for="LivePrivateSecret" class="form-control" type="text" placeholder="@(Model.HasLivePrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_live_...")" data-stripe-secret />
+                <span asp-validation-for="LivePrivateSecret"></span>
+            }
         </div>
     </div>
 
@@ -87,9 +129,17 @@
         <div class="ocat-wrapper mt-2" asp-validation-class-for="LiveWebhookSecret">
             <label asp-for="LiveWebhookSecret" class="ocat-label">@T["Production Webhook Signing Secret"]</label>
             <div class="ocat-end">
-                <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
-                <span asp-validation-for="LiveWebhookSecret"></span>
-                <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+                @if (Model.LiveWebhookSecretFromConfiguration)
+                {
+                    <input class="form-control" type="text" placeholder="@T["Configured from the application settings."]" readonly disabled />
+                    <span class="hint">@T["Configured from the application settings. Connect does not create a webhook while it is set, so register the webhook in the Stripe dashboard with this signing secret."]</span>
+                }
+                else
+                {
+                    <input asp-for="LiveWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasLiveWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                    <span asp-validation-for="LiveWebhookSecret"></span>
+                    <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+                }
             </div>
         </div>
     </details>
@@ -102,17 +152,33 @@
     <div class="ocat-wrapper" asp-validation-class-for="TestPublishableKey">
         <label asp-for="TestPublishableKey" class="ocat-label">@T["Test Publishable Key"]</label>
         <div class="ocat-end">
-            <input asp-for="TestPublishableKey" class="form-control" type="text" placeholder="pk_test_..." data-stripe-publishable />
-            <span asp-validation-for="TestPublishableKey"></span>
-            <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
+            @if (Model.TestPublishableKeyFromConfiguration)
+            {
+                <input class="form-control" type="text" value="@Model.TestPublishableKey" readonly disabled />
+                <span class="hint">@T["Configured from the application settings."]</span>
+            }
+            else
+            {
+                <input asp-for="TestPublishableKey" class="form-control" type="text" placeholder="pk_test_..." data-stripe-publishable />
+                <span asp-validation-for="TestPublishableKey"></span>
+                <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
+            }
         </div>
     </div>
 
     <div class="ocat-wrapper" asp-validation-class-for="TestPrivateSecret">
         <label asp-for="TestPrivateSecret" class="ocat-label">@T["Test Secret Key"]</label>
         <div class="ocat-end">
-            <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_test_...")" data-stripe-secret />
-            <span asp-validation-for="TestPrivateSecret"></span>
+            @if (Model.TestPrivateSecretFromConfiguration)
+            {
+                <input class="form-control" type="text" placeholder="@T["Configured from the application settings."]" readonly disabled />
+                <span class="hint">@T["Configured from the application settings. The key is never shown."]</span>
+            }
+            else
+            {
+                <input asp-for="TestPrivateSecret" class="form-control" type="text" placeholder="@(Model.HasTestPrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_test_...")" data-stripe-secret />
+                <span asp-validation-for="TestPrivateSecret"></span>
+            }
         </div>
     </div>
 
@@ -150,9 +216,17 @@
         <div class="ocat-wrapper mt-2" asp-validation-class-for="TestWebhookSecret">
             <label asp-for="TestWebhookSecret" class="ocat-label">@T["Test Webhook Signing Secret"]</label>
             <div class="ocat-end">
-                <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
-                <span asp-validation-for="TestWebhookSecret"></span>
-                <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+                @if (Model.TestWebhookSecretFromConfiguration)
+                {
+                    <input class="form-control" type="text" placeholder="@T["Configured from the application settings."]" readonly disabled />
+                    <span class="hint">@T["Configured from the application settings. Connect does not create a webhook while it is set, so register the webhook in the Stripe dashboard with this signing secret."]</span>
+                }
+                else
+                {
+                    <input asp-for="TestWebhookSecret" class="form-control" type="text" placeholder="@(Model.HasTestWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                    <span asp-validation-for="TestWebhookSecret"></span>
+                    <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+                }
             </div>
         </div>
     </details>

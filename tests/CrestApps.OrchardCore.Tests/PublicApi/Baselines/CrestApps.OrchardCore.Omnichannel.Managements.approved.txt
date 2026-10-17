@@ -1030,7 +1030,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class AutomatedVoiceActivitySettingsResolver : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedVoiceActivitySettingsResolver
     {
-        public AutomatedVoiceActivitySettingsResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.Settings.ISiteService siteService) { }
+        public AutomatedVoiceActivitySettingsResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.Settings.ISiteService siteService, CrestApps.Core.AI.Profiles.IAIProfileManager profileManager, System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Profiles.IAIPersonaResolver> personaResolvers) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedVoiceActivitySettings> ResolveAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class BulkActivityAdminFormOptionsProvider

@@ -496,7 +496,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         }
 
         // The agent finished speaking; listen for the caller's reply.
-        await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: "en", commandId: $"ai-tx-{prompts.Count}", cancellationToken);
+        var listenLanguage = await GetListenLanguageAsync(media, activity, cancellationToken);
+        await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: listenLanguage, commandId: $"ai-tx-{prompts.Count}", cancellationToken);
         await WatchForSilenceAsync(voiceEvent, prompts.Count, ListeningWait(activity));
     }
 
@@ -564,7 +565,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         if (string.IsNullOrWhiteSpace(reply) && !handoffRequested)
         {
             // Nothing to say; keep listening so the call is not stranded silent.
-            await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: "en", commandId: $"ai-tx-retry-{prompts.Count}", cancellationToken);
+            var listenLanguage = await GetListenLanguageAsync(media, activity, cancellationToken);
+            await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: listenLanguage, commandId: $"ai-tx-retry-{prompts.Count}", cancellationToken);
 
             // The caller's turn has been stored since the prompts above were read, so it counts as said.
             await WatchForSilenceAsync(voiceEvent, prompts.Count + 1);

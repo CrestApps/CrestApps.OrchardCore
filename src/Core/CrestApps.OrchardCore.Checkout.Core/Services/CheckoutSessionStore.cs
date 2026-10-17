@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using YesSql.Services;
 using ISession = YesSql.ISession;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 
@@ -131,6 +132,54 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         }
 
         return query.OrderByDescending(x => x.CreatedUtc).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var normalizedEmail = CheckoutSessionCustomerIndexProvider.NormalizeEmail(email);
+        var hasOwner = !string.IsNullOrEmpty(ownerId);
+
+        if (!hasOwner && normalizedEmail is null)
+        {
+            return [];
+        }
+
+        // Each branch compares against a value that is present. A null captured into the predicate would match every
+        // session that has no owner or no email.
+        var query = hasOwner && normalizedEmail is not null
+            ? _session.Query<CheckoutSession, CheckoutSessionCustomerIndex>(x => x.OwnerId == ownerId || x.NormalizedEmail == normalizedEmail)
+            : hasOwner
+                ? _session.Query<CheckoutSession, CheckoutSessionCustomerIndex>(x => x.OwnerId == ownerId)
+                : _session.Query<CheckoutSession, CheckoutSessionCustomerIndex>(x => x.NormalizedEmail == normalizedEmail);
+
+        var sessions = await query
+            .OrderBy(x => x.CreatedUtc)
+            .ThenBy(x => x.SessionId)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Max(1, take))
+            .ListAsync(cancellationToken);
+
+        return [.. sessions];
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<CheckoutSession>> GetManyAsync(IEnumerable<string> sessionIds, CancellationToken cancellationToken = default)
+    {
+        var ids = sessionIds?
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray() ?? [];
+
+        if (ids.Length == 0)
+        {
+            return [];
+        }
+
+        var sessions = await _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.SessionId.IsIn(ids))
+            .ListAsync(cancellationToken);
+
+        return [.. sessions];
     }
 
     /// <inheritdoc/>

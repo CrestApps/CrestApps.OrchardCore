@@ -31,4 +31,20 @@ public sealed class DialerSuppressionEventData
     /// Gets or sets the destination that would have been dialed.
     /// </summary>
     public string Destination { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the campaign the suppressed record belongs to, when it belongs to one.
+    /// </summary>
+    public string CampaignId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the queue the suppressed attempt was taken from.
+    /// </summary>
+    public string QueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the agent reserved for the suppressed attempt, or <see langword="null"/> when the
+    /// attempt was placed for the campaign without a reserved agent.
+    /// </summary>
+    public string AgentId { get; set; }
 }

@@ -1855,6 +1855,30 @@ public sealed class AIToolInstancesRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the AI personas recipe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.AI.Personas")]
+public sealed class AIPersonasRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, AIPersonaRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers the schema of the AI Personas deployment step, so a recipe that creates deployment plans can describe it.
+/// </summary>
+[RequireFeatures("OrchardCore.Deployment", "CrestApps.OrchardCore.AI.Personas")]
+public sealed class AIPersonasDeploymentRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeploymentStepSchema<AIPersonaDeploymentStepSchema>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the MCP connection recipe feature.
 /// </summary>
 [RequireFeatures("CrestApps.OrchardCore.AI.Mcp")]

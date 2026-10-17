@@ -26,7 +26,7 @@ There is no checkout settings screen. What the checkout offers comes from the pu
 The page has three parts:
 
 - **The steps** across the top, numbered in order. A finished step shows a check mark, and the buyer can click it to go back and change it. Steps not reached yet cannot be opened, so nobody reaches payment with an earlier step unfilled. When the checkout has only one step, the row is not shown.
-- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**. While the payment is being taken it shows **Processing…**.
+- **The current step** on the left, with **Back** (to the previous step) and **Continue**. On the last step the button reads **Pay now**. While the payment is being taken it shows **Processing…**. When the buyer started the checkout from a page of your site that asks to be returned to, such as a payment page or a list of payments, the **Payment** step (and the first step) also has a link back to that page, for example **Back to the payment page**. It reads **Back**, or **Leave checkout** when there is also a **Back** to the previous step, unless the page named its own wording.
 - **The order summary** on the right, on every step, so the total is never a surprise.
 
 ### Steps a buyer may see
@@ -41,6 +41,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 | One step per content type | When a plan asks the buyer to fill in content, such as details about their organization. The step is named after the content type. |
 | **Your new site** | When the plan creates a new site for the buyer. See [Sites](sites.md). |
 | **Outstanding payment** | Paying an outstanding balance. |
+| **Choose how to pay** | Paying an outstanding balance that the site lets customers pay in installments. The buyer picks **Pay in full** or one of the installment choices, such as *3 monthly payments*. See [Pay in installments](transactions.md#pay-in-installments). |
 | **Payment** | Always, as the last step. |
 
 ### The order summary
@@ -67,6 +68,7 @@ If the card's bank asks the cardholder to approve the payment, the approval wind
 | *Please choose a payment method.* | The buyer clicked **Pay now** without picking a method. |
 | *Your payment is still being processed.* | The provider has not confirmed yet. The buyer does not need to pay again; the purchase completes on its own once the provider confirms, even if the buyer closes the browser. |
 | *Your payment could not be completed. Please try again.* | The payment failed, for example a declined card. The buyer stays on the payment step and can try again or pick another method. |
+| *The card you pay with now is saved, and the remaining payments are charged to it automatically on their due dates.* | The buyer chose to pay in installments. Only payment methods that can save a card are shown. |
 
 ## Apply a promotion code
 
@@ -76,7 +78,9 @@ The **Promotion code** box sits under the order summary on the **Payment** step.
 2. Click **Apply**. The page refreshes the order summary; no payment is taken.
 3. When the code takes money off, the box shows the amount, for example *USD 10.00 off applied.*, and the summary shows the new total.
 
-To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. See [Coupons](coupons.md).
+To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.*
+
+When the buyer is paying an existing balance (a transaction, from **My Transactions** or a pay link), what the code takes off is taken off the balance: a 100% code pays it without a card, and a smaller code leaves the rest to pay. See [Coupons](coupons.md#coupons-on-a-payment-for-a-transaction).
 
 ## Who the order is for
 
@@ -102,3 +106,9 @@ Paying an outstanding balance through a payment link needs no account.
 ## The confirmation page
 
 After a successful checkout the buyer sees **Order confirmation** with *Thank you — your purchase is complete.*, followed by the order summary of what they bought.
+
+A checkout that is not an order can carry its own heading instead. Paying from a payment link, for example, shows **Payment received** with *Thank you. A confirmation is shown below.* When the buyer started the checkout from a page that asks to be returned to, the confirmation ends with a button back to it: **Continue**, or the page's own wording such as **Back to the payment page**.
+
+## A checkout that has ended
+
+A checkout that was canceled, expired before it was paid, or could not be completed can't be paid any more. Opening it shows *This checkout is no longer available.* and the reason: *This checkout was canceled.*, *This checkout expired before it was completed.* or *This checkout could not be completed.* When the buyer started the checkout from a page that asks to be returned to, the page has a **Back** link to it (or the page's own wording). Opening a checkout that was already paid shows its confirmation.

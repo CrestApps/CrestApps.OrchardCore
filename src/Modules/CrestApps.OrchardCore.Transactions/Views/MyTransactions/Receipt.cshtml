@@ -1,0 +1,14 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="TransactionsReceipt" title="@T["Receipt"]" />
+</zone>
+
+<div class="container my-4" style="max-width: 860px;">
+    <h1 class="h3 mb-3 no-print">@T["Receipt"]</h1>
+
+    @await DisplayAsync(Model)
+
+    <a class="btn btn-link no-print mt-3 ps-0" href="@Url.RouteUrl(TransactionsConstants.RouteNames.Statement)">@T["Back to my transactions"]</a>
+</div>

@@ -1,0 +1,10 @@
+@model InventorySettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultLowStockThreshold">
+    <label asp-for="DefaultLowStockThreshold" class="ocat-label">@T["Low-stock threshold"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultLowStockThreshold" type="number" min="0" class="form-control" />
+        <span asp-validation-for="DefaultLowStockThreshold"></span>
+        <span class="hint">@T["Stock counts as low at this many available units or fewer, for products without their own threshold. Low stock is flagged under Commerce > Inventory."]</span>
+    </div>
+</div>

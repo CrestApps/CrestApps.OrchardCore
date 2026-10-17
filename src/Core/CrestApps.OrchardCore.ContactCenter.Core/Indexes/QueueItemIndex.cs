@@ -29,6 +29,13 @@ public sealed class QueueItemIndex : CatalogItemIndex
     public string ActivityClaimKey { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the dialer profile the item was loaded under, or <see langword="null"/> for an
+    /// item that is not outbound dialer inventory. It is indexed so a report can group a campaign's queue by the profile
+    /// its items are stamped with without reading every item's document.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the lifecycle status of the item.
     /// </summary>
     public QueueItemStatus Status { get; set; }

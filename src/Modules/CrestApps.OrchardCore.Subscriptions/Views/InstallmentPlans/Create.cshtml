@@ -71,7 +71,15 @@
                 </div>
                 <div class="col-md-4">
                     <label asp-for="Currency" class="form-label">@T["Currency"]</label>
-                    <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" data-installment-input></select>
+                    @if (Model.Currencies.Count > 0)
+                    {
+                        <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" data-installment-input></select>
+                    }
+                    else
+                    {
+                        <input asp-for="Currency" class="form-control" maxlength="3" placeholder="USD" data-installment-input />
+                        <span class="hint">@T["The three-letter currency code, for example USD."]</span>
+                    }
                     <span asp-validation-for="Currency" class="text-danger"></span>
                 </div>
 
@@ -85,6 +93,7 @@
                     <label asp-for="DownPaymentAmount" class="form-label">@T["Down payment today"]</label>
                     <input asp-for="DownPaymentAmount" type="number" min="0" step="any" class="form-control" data-installment-input />
                     <span asp-validation-for="DownPaymentAmount" class="text-danger"></span>
+                    <span class="hint">@T["Enter 0 for no down payment. The first payment is then taken today instead, so its due date must be today."]</span>
                 </div>
                 <div class="col-md-4">
                     <label asp-for="InstallmentCount" class="form-label">@T["Number of payments after it"]</label>
@@ -228,7 +237,7 @@
 
             rows.textContent = '';
 
-            if (!(total > 0) || !(downPayment > 0) || downPayment >= total || !(count > 0) || count > 120 || !firstValue) {
+            if (!(total > 0) || !(downPayment >= 0) || downPayment >= total || !(count > 0) || count > 120 || !firstValue) {
                 table.classList.add('d-none');
                 empty.classList.remove('d-none');
 
@@ -240,7 +249,8 @@
             var remaining = total - downPayment;
             var regular = Math.floor(remaining / count);
             var last = remaining - (regular * (count - 1));
-            var first = new Date(firstValue + 'T00:00:00Z');
+            // Without a down payment the first payment is the one taken today, and the schedule runs from today.
+            var first = downPayment > 0 ? new Date(firstValue + 'T00:00:00Z') : new Date(new Date().toISOString().substring(0, 10) + 'T00:00:00Z');
 
             function money(minor) {
                 return currency + ' ' + (minor / factor).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -263,7 +273,9 @@
                 rows.appendChild(row);
             }
 
-            addRow(labels.downPayment, new Date(), downPayment);
+            if (downPayment > 0) {
+                addRow(labels.downPayment, new Date(), downPayment);
+            }
 
             for (var index = 0; index < count; index++) {
                 addRow(labels.payment.replace('{0}', String(index + 1)), dueDate(first, frequency, index), index === count - 1 ? last : regular);

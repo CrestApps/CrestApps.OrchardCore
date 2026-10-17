@@ -69,4 +69,9 @@ public sealed class ContactCenterReportCriteria
     /// Gets or sets the activity status used to filter CRM activities.
     /// </summary>
     public ActivityStatus? ActivityStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets the interaction type used to filter CRM activities: worked by a person or automatically.
+    /// </summary>
+    public ActivityInteractionType? InteractionType { get; set; }
 }

@@ -14,6 +14,11 @@ public sealed partial class InteractionEventReadBoundaryTests
 {
     private const string StoreFileName = "InteractionEventStore.cs";
 
+    // These read the event log through an index of their own (the dialer decision index), which the store has no
+    // query for. DialerDecisionLog upcasts every event it returns or amends. The backfill saves each event back
+    // unchanged so that the new index is written, and reads nothing from its payload beyond the campaign lookup.
+    private static readonly string[] IndexedReaders = ["DialerDecisionLog.cs", "DialerDecisionIndexBackfill.cs"];
+
     [Fact]
     public void NoProductionSourceOutsideTheStore_ReadsTheEventLogDirectlyFromTheSession()
     {
@@ -60,7 +65,11 @@ public sealed partial class InteractionEventReadBoundaryTests
 
         foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
         {
-            if (IsGenerated(file) || string.Equals(Path.GetFileName(file), StoreFileName, StringComparison.Ordinal))
+            var name = Path.GetFileName(file);
+
+            if (IsGenerated(file) ||
+                string.Equals(name, StoreFileName, StringComparison.Ordinal) ||
+                IndexedReaders.Contains(name, StringComparer.Ordinal))
             {
                 continue;
             }

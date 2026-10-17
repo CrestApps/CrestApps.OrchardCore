@@ -1,0 +1,18 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+@{
+    var invoice = (TransactionInvoiceViewModel)Model;
+}
+
+<zone Name="Title">
+    <breadcrumb name="TransactionsInvoice" title="@T["Invoice {0}", invoice.Transaction.InvoiceNumber]" />
+</zone>
+
+<div class="container my-4" style="max-width: 860px;">
+    <h1 class="h3 mb-3 no-print">@T["Invoice {0}", invoice.Transaction.InvoiceNumber]</h1>
+
+    @await DisplayAsync(Model)
+
+    <a class="btn btn-link no-print mt-3 ps-0" href="@Url.RouteUrl(TransactionsConstants.RouteNames.Statement)">@T["Back to my transactions"]</a>
+</div>

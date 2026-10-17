@@ -95,6 +95,28 @@ Managers build the contact center: contacts, subjects, campaigns, queues and so 
 
 Each User Manual page names the permission it needs in the table at the top.
 
+### A role that looks after one settings page
+
+A settings page under **Settings** opens for anyone who has the permission listed for it below, together with **Access admin panel**. Your administrator can therefore let someone look after, say, the Stripe connection or the telephony provider without giving them the Administrator role or the permission to change every site setting.
+
+| Settings page | Permission that opens it |
+| --- | --- |
+| **Settings > Payments > Stripe** | Manage Stripe Settings |
+| **Settings > Commerce > Transactions** | Manage transaction settings |
+| **Settings > Commerce > Pay Later** | Manage transaction settings |
+| **Settings > Commerce > Receipts** | Manage receipt settings |
+| **Settings > Subscriptions** | Manage subscriptions settings |
+| **Settings > Communication > Telephony** | Manage telephony settings |
+| **Settings > Communication > SMS** (the Telnyx section, when Telnyx SMS is on) | Manage SMS Settings |
+| **Settings > Contact Center** | Manage the Contact Center |
+| **Settings > Artificial Intelligence** | Manage AI profiles. A person with only Manage chat interaction settings, Edit any chat interactions, Manage Copilot Settings, Manage Claude Settings or Manage the MCP Server settings can open the page too, and sees only the sections that permission covers. |
+| **Settings > DNC Registries** and **Settings > Content Import** | Manage DNC registry settings |
+| **Settings > Phone Number Verifications** | Manage phone number verification settings |
+| **Settings > User Display Name** | Manage the user display name settings. |
+| **Settings > User Avatars** | Manage the avatar settings. |
+
+On a page that several features share, such as **Settings > Artificial Intelligence**, each section is shown only to people who have that section's permission. The menu item itself follows the permission shown in the table, so someone who has only one of the other permissions may need the page's address from the administrator.
+
 ## Ask your administrator for access
 
 When a menu, a page or a button is missing, look up the page for that task in this manual. The table at the top names the **Menu**, the **Permission** and the **Feature** it needs. Then send your administrator a message like this one, filled in with what you found:

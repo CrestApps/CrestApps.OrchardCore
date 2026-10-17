@@ -6,7 +6,7 @@ using OrchardCore.Navigation;
 namespace CrestApps.OrchardCore.Subscriptions.Navigation;
 
 /// <summary>
-/// Adds <b>Subscriptions → Installment Plans</b> to the admin menu.
+/// Adds <b>Subscriptions → Installment Plans</b> and <b>Settings → Installment Plans</b> to the admin menu.
 /// </summary>
 public sealed class InstallmentPlansAdminMenu : AdminNavigationProvider
 {
@@ -15,6 +15,12 @@ public sealed class InstallmentPlansAdminMenu : AdminNavigationProvider
         { "area", SubscriptionConstants.Features.Area },
         { "controller", "InstallmentPlans" },
         { "action", "Index" },
+    };
+
+    private static readonly RouteValueDictionary _settingsRouteValues = new()
+    {
+        { "area", "OrchardCore.Settings" },
+        { "groupId", SubscriptionConstants.InstallmentPlans.SettingsGroupId },
     };
 
     internal readonly IStringLocalizer S;
@@ -36,6 +42,15 @@ public sealed class InstallmentPlansAdminMenu : AdminNavigationProvider
                 .Add(S["Installment Plans"], S["Installment Plans"].PrefixPosition("3"), plans => plans
                     .Id("installmentPlans")
                     .Action(_routeValues)
+                    .Permission(SubscriptionPermissions.ManageInstallmentPlans)
+                    .LocalNav()
+                )
+            )
+            .Add(S["Settings"], settings => settings
+                .Add(S["Installment Plans"], S["Installment Plans"].PrefixPosition(), plans => plans
+                    .AddClass("installment-plans-settings")
+                    .Id("installmentPlansSettings")
+                    .Action("Index", "Admin", _settingsRouteValues)
                     .Permission(SubscriptionPermissions.ManageInstallmentPlans)
                     .LocalNav()
                 )

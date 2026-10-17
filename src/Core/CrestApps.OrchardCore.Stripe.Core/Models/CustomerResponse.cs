@@ -24,4 +24,9 @@ public class CustomerResponse
     /// Gets or sets the customer's phone number.
     /// </summary>
     public string Phone { get; set; }
+
+    /// <summary>
+    /// Gets or sets the metadata stored on the customer, such as the checkout session it was created for.
+    /// </summary>
+    public Dictionary<string, string> Metadata { get; set; }
 }

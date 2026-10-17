@@ -32,6 +32,12 @@ public sealed class AnalyticsStartup : StartupBase
     {
         services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
         services.AddScoped<IContactCenterReportCapabilityGuard, ContactCenterReportCapabilityGuard>();
+
+        // What the dialer holds right now, read by the dialer queue inventory and the campaign summary alike, through the
+        // same classification the live dashboard's dispatch card uses.
+        services.AddScoped<DialerRecordClassifier>();
+        services.AddScoped<IDialerQueueInventoryService, DialerQueueInventoryService>();
+
         services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
 
         services
@@ -40,6 +46,9 @@ public sealed class AnalyticsStartup : StartupBase
             .Validate(
                 options => options.MaximumReportRange > TimeSpan.Zero,
                 "'CrestApps:ContactCenter:Reporting:MaximumReportRange' must be greater than zero.")
+            .Validate(
+                options => options.DecisionLogQuietThreshold > TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:DecisionLogQuietThreshold' must be greater than zero.")
             .ValidateOnStart();
 
         services
@@ -47,11 +56,14 @@ public sealed class AnalyticsStartup : StartupBase
             .AddReport<CallQualityReportProvider>()
             .AddReport<CallHandlingReportProvider>()
             .AddReport<AgentActivityTimelineReportProvider>()
+            .AddReport<AgentAvailabilityReportProvider>()
             .AddReport<ReconciledPayrollTimecardReportProvider>()
             .AddReport<AgentProductivityReportProvider>()
             .AddReport<QueueUsageReportProvider>()
             .AddReport<CampaignSummaryReportProvider>()
-            .AddReport<SubjectInventoryReportProvider>();
+            .AddReport<DialerQueueInventoryReportProvider>()
+            .AddReport<SubjectInventoryReportProvider>()
+            .AddReport<DialerDecisionLogReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();
     }

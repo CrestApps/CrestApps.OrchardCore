@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -17,6 +18,11 @@ namespace CrestApps.OrchardCore.Stripe.Drivers;
 /// <summary>
 /// Displays and updates tenant-level Stripe settings in the Orchard Core admin site settings UI.
 /// </summary>
+/// <remarks>
+/// A value supplied by the application configuration (the <c>CrestApps_Stripe</c> section) wins over the stored one, so
+/// the editor shows it as configured from the application settings and never overwrites the stored value with what the
+/// form posts for it.
+/// </remarks>
 public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettings>
 {
     /// <summary>
@@ -33,6 +39,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly StripeConfigurationOptions _configurationOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -43,18 +50,21 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
     /// <param name="httpContextAccessor">The accessor used to read the current HTTP context.</param>
     /// <param name="dataProtectionProvider">The provider used to protect Stripe private keys and webhook secrets.</param>
     /// <param name="shellReleaseManager">The manager used to request a tenant reload after settings change.</param>
+    /// <param name="configurationOptions">The Stripe values supplied by the application configuration.</param>
     /// <param name="stringLocalizer">The localizer used to build validation messages.</param>
     public StripeSettingsDisplayDriver(
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
         IDataProtectionProvider dataProtectionProvider,
         IShellReleaseManager shellReleaseManager,
+        IOptions<StripeConfigurationOptions> configurationOptions,
         IStringLocalizer<StripeSettingsDisplayDriver> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _dataProtectionProvider = dataProtectionProvider;
         _shellReleaseManager = shellReleaseManager;
+        _configurationOptions = configurationOptions.Value;
         S = stringLocalizer;
     }
 
@@ -80,16 +90,29 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         context.AddTenantReloadWarningWrapper();
 
+        var live = _configurationOptions.GetKeys(isLive: true);
+        var test = _configurationOptions.GetKeys(isLive: false);
+
         return Initialize<StripeSettingsViewModel>("StripeSettings_Edit", model =>
         {
-            model.IsLive = settings.IsLive;
-            model.LivePublishableKey = settings.LivePublishableKey;
-            model.HasLivePrivateSecret = !string.IsNullOrEmpty(settings.LivePrivateSecret);
-            model.HasLiveWebhookSecret = !string.IsNullOrEmpty(settings.LiveWebhookSecret);
+            // A configured value is shown as the one in effect; a configured secret is never shown, only reported.
+            model.IsLive = _configurationOptions.IsLive ?? settings.IsLive;
+            model.IsLiveFromConfiguration = _configurationOptions.IsLive.HasValue;
+
+            model.LivePublishableKey = live.HasPublishableKey ? live.PublishableKey.Trim() : settings.LivePublishableKey;
+            model.LivePublishableKeyFromConfiguration = live.HasPublishableKey;
+            model.HasLivePrivateSecret = live.HasSecretKey || !string.IsNullOrEmpty(settings.LivePrivateSecret);
+            model.LivePrivateSecretFromConfiguration = live.HasSecretKey;
+            model.HasLiveWebhookSecret = live.HasWebhookSecret || !string.IsNullOrEmpty(settings.LiveWebhookSecret);
+            model.LiveWebhookSecretFromConfiguration = live.HasWebhookSecret;
             model.LiveAccountId = settings.LiveAccountId;
-            model.TestPublishableKey = settings.TestPublishableKey;
-            model.HasTestPrivateSecret = !string.IsNullOrEmpty(settings.TestPrivateSecret);
-            model.HasTestWebhookSecret = !string.IsNullOrEmpty(settings.TestWebhookSecret);
+
+            model.TestPublishableKey = test.HasPublishableKey ? test.PublishableKey.Trim() : settings.TestPublishableKey;
+            model.TestPublishableKeyFromConfiguration = test.HasPublishableKey;
+            model.HasTestPrivateSecret = test.HasSecretKey || !string.IsNullOrEmpty(settings.TestPrivateSecret);
+            model.TestPrivateSecretFromConfiguration = test.HasSecretKey;
+            model.HasTestWebhookSecret = test.HasWebhookSecret || !string.IsNullOrEmpty(settings.TestWebhookSecret);
+            model.TestWebhookSecretFromConfiguration = test.HasWebhookSecret;
             model.TestAccountId = settings.TestAccountId;
         }).Location("Content:5")
         .OnGroup(SettingsGroupId);
@@ -117,10 +140,15 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
 
         // IsLive is projected into the runtime StripeOptions, so a change to it must reload the tenant even when
         // no secret value changed. The checkout mode is no longer edited here: the payment step always collects
-        // the card on the site, so the stored value is left as it is.
-        var changed = settings.IsLive != model.IsLive;
+        // the card on the site, so the stored value is left as it is. A mode set by the application configuration
+        // wins, so the posted value is ignored and the stored one is left as it is.
+        var changed = false;
 
-        settings.IsLive = model.IsLive;
+        if (!_configurationOptions.IsLive.HasValue)
+        {
+            changed = settings.IsLive != model.IsLive;
+            settings.IsLive = model.IsLive;
+        }
 
         changed |= UpdateEnvironment(settings, model, context, protector, isLive: true);
         changed |= UpdateEnvironment(settings, model, context, protector, isLive: false);
@@ -148,27 +176,34 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
         var secretPrefix = isLive ? "sk_live_" : "sk_test_";
         var storedPublishable = isLive ? settings.LivePublishableKey : settings.TestPublishableKey;
 
+        // A value the application configuration supplies is shown read-only and wins at runtime, so whatever the form
+        // posts for it (usually nothing, since a disabled field is not posted) must never replace the stored value.
+        var configured = _configurationOptions.GetKeys(isLive);
+
         var changed = false;
 
-        if (!string.IsNullOrEmpty(publishable) && !publishable.StartsWith(publishablePrefix, StringComparison.Ordinal))
+        if (!configured.HasPublishableKey)
         {
-            context.Updater.ModelState.AddModelError(Prefix, isLive ? nameof(model.LivePublishableKey) : nameof(model.TestPublishableKey), S["The publishable key must start with: {0}", publishablePrefix]);
-        }
-        else if (!string.Equals(storedPublishable, publishable, StringComparison.Ordinal))
-        {
-            if (isLive)
+            if (!string.IsNullOrEmpty(publishable) && !publishable.StartsWith(publishablePrefix, StringComparison.Ordinal))
             {
-                settings.LivePublishableKey = publishable;
+                context.Updater.ModelState.AddModelError(Prefix, isLive ? nameof(model.LivePublishableKey) : nameof(model.TestPublishableKey), S["The publishable key must start with: {0}", publishablePrefix]);
             }
-            else
+            else if (!string.Equals(storedPublishable, publishable, StringComparison.Ordinal))
             {
-                settings.TestPublishableKey = publishable;
-            }
+                if (isLive)
+                {
+                    settings.LivePublishableKey = publishable;
+                }
+                else
+                {
+                    settings.TestPublishableKey = publishable;
+                }
 
-            changed = true;
+                changed = true;
+            }
         }
 
-        if (!string.IsNullOrEmpty(secret))
+        if (!configured.HasSecretKey && !string.IsNullOrEmpty(secret))
         {
             if (!secret.StartsWith(secretPrefix, StringComparison.Ordinal))
             {
@@ -191,7 +226,7 @@ public sealed class StripeSettingsDisplayDriver : SiteDisplayDriver<StripeSettin
             }
         }
 
-        if (!string.IsNullOrEmpty(webhook))
+        if (!configured.HasWebhookSecret && !string.IsNullOrEmpty(webhook))
         {
             if (!webhook.StartsWith("whsec_", StringComparison.Ordinal))
             {

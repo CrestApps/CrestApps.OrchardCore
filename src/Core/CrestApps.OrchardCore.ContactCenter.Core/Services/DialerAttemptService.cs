@@ -535,7 +535,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             ScheduleExhaustedFinalization(activity.ItemId))
         {
             await RemoveFromQueueAsync(queueItem, cancellationToken);
-            await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+            await PublishSuppressedAsync(profile, activity, eligibility, queueItem.QueueId, agentId: null, cancellationToken);
 
             return;
         }
@@ -562,7 +562,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             await RemoveFromQueueAsync(queueItem, cancellationToken);
         }
 
-        await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+        await PublishSuppressedAsync(profile, activity, eligibility, queueItem.QueueId, agentId: null, cancellationToken);
     }
 
     private async Task RemoveFromQueueAsync(QueueItem queueItem, CancellationToken cancellationToken)
@@ -597,7 +597,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
             ScheduleExhaustedFinalization(activity.ItemId))
         {
             await _compensationService.CompensateAsync(reservation, removeFromQueue: true, cancellationToken);
-            await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+            await PublishSuppressedAsync(profile, activity, eligibility, reservation.QueueId, reservation.AgentId, cancellationToken);
 
             return;
         }
@@ -625,7 +625,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         }
 
         await _compensationService.CompensateAsync(reservation, removeFromQueue: status.HasValue, cancellationToken);
-        await PublishSuppressedAsync(profile, activity, eligibility, cancellationToken);
+        await PublishSuppressedAsync(profile, activity, eligibility, reservation.QueueId, reservation.AgentId, cancellationToken);
     }
 
     private bool ScheduleExhaustedFinalization(string activityItemId)
@@ -636,6 +636,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
         DialerProfile profile,
         OmnichannelActivity activity,
         DialerEligibilityResult eligibility,
+        string queueId,
+        string agentId,
         CancellationToken cancellationToken)
     {
         if (_logger.IsEnabled(LogLevel.Information))
@@ -654,6 +656,9 @@ public sealed class DialerAttemptService : IDialerAttemptService
             Reason = eligibility.Reason,
             Description = eligibility.Description,
             Destination = activity.PreferredDestination,
+            CampaignId = activity.CampaignId,
+            QueueId = queueId,
+            AgentId = agentId,
         };
 
         var suppressionEvent = new InteractionEvent

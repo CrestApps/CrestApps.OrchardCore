@@ -39,6 +39,8 @@ A **`CheckoutSession`** is the provider-agnostic unit of work for any purchase. 
 
 Sessions are persisted by **`ICheckoutSessionStore`**, which enforces ownership: an anonymous session is bound to its originating IP address and user agent so it cannot be resumed by a different visitor.
 
+For access and erasure requests, `ICheckoutSessionStore.GetByCustomerAsync(ownerId, email, skip, take)` returns the sessions owned by a user or whose buyer gave an email (`CheckoutContactInfo.Email`, matched without case sensitivity), oldest first, and `GetManyAsync(sessionIds)` returns sessions by id. Neither enforces ownership or runs the checkout handlers, so their sessions must never resume a customer-facing flow. They read the `CheckoutSessionCustomerIndex` (session id, owner, normalized email and creation time), created by `CheckoutSessionCustomerIndexMigrations`. A session with neither an owner nor an email is not indexed. When the table is created, the sessions saved before it are saved once more in batches of 100 after the migration commits, so they are indexed too. See [Personal data requests](commerce#personal-data-requests).
+
 #### The canonical order reference
 
 The reference triple is intentionally generic so any consumer can drive a checkout, but ecommerce orders use one stable relationship, published as the well-known constants in **`CheckoutReferenceTypes`**:
@@ -53,7 +55,7 @@ The [Orders](carts-and-orders) feature is the consumer of this reference: it che
 
 ### Checkout flow and steps
 
-A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle is `Activating` → `Activated` when the checkout is created, then `Initializing` → `Initialized` → `Loading` → `Loaded` every time it is loaded again, and finally `Completing` → `Completed`, with `Failed` on error.
+A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle is `Activating` → `Activated` when the checkout is created, then `Initializing` → `Initialized` → `Loading` → `Loaded` every time it is loaded again, and finally `Completing` → `Completed`, with `Failed` when the payment is declined. A checkout that ends unpaid also raises `Canceled` (with the caller's reason) when `ICheckoutEngine.CancelAsync` cancels it and `Expired` when the reconciliation sweep expires it; both run after the new status is committed, inside the session lock, and their writes are committed with it.
 
 The load hooks matter because some of what a step carries is true only for one visitor at one moment and so cannot be persisted: whether the account step applies depends on whether *this* request is signed in, and a visitor can sign in on another tab midway through. Deciding that once, when the session was created, would show a signed-in customer a registration step they must not fill in.
 
@@ -185,6 +187,28 @@ A first-cycle coupon reduces only what is due for the first cycle. The recurring
 
 A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything. Redemption takes a lock on the coupon, so two checkouts finishing at the same instant cannot both take the last one.
 
+### Coupons on a checkout that settles an existing balance
+
+A checkout that pays a balance that already exists (`CheckoutSession.SettlesExistingBalance`, set by the [Transactions](transactions) module for a checkout with `ReferenceType = "Transaction"`) has no price of its own to reduce. A discount there is only safe when the module that settles the balance also takes it off the balance, so the session carries a second flag, `CheckoutSession.AcceptsDiscountsOnBalance`:
+
+- When it is `false`, `CouponCheckoutFlowDisplayDriver` renders no promotion code box and ignores a posted code, and `DefaultCheckoutDiscountService` applies no discounts (and clears any recorded earlier), so `InitialPaymentAmount` and `DueNow` are untouched and nothing is redeemed.
+- When it is `true`, discounts apply as on any checkout. `CouponRedemptionCheckoutHandler` still redeems nothing for a session that settles an existing balance: the settling module redeems the codes itself, once the balance is settled.
+
+The Transactions module sets both flags. On completion, `TransactionSettlementCheckoutHandler` records each one-time discount line the invoice applied as a `Discount` adjustment of exactly that amount (`ITransactionCommandService.AdjustAsync`, never more than is still owed), then applies the confirmed payment. A 100% code settles the transaction with no payment attempt; a partial code plus the payment settles it in full. Only when the transaction ends with nothing owed does it call each `ICheckoutDiscountProvider.RedeemAsync`, so a code is never used up by a checkout that left the balance owing. A partial code with no confirmed payment records nothing. See [Transaction commands](transactions.md#transaction-commands).
+
+### Limiting a coupon to a source, a reference type or one customer
+
+A `Coupon` can be limited (`Coupon.IsScoped`) by:
+
+| Property | Matched against |
+| --- | --- |
+| `Sources` | `CheckoutDiscountScope.Source`, for example the source of the transaction a checkout settles. Case-insensitive. |
+| `ReferenceTypes` | `CheckoutSession.ReferenceType`, or `CheckoutDiscountScope.ReferenceType` (what the transaction is for). Case-insensitive. |
+| `CustomerId` | `CheckoutSession.OwnerId`, or `CheckoutDiscountScope.CustomerId` (the transaction's owner, a user id or a guest customer id). |
+| `CustomerEmail` | `CheckoutDiscountScope.CustomerEmail`, the `CheckoutContactInfo.Email` the checkout collected, or the email of the session owner's account through `ICustomerContactResolver`. Case-insensitive. |
+
+`CheckoutDiscountScope` is stored in the session's property bag by the module that knows what the checkout pays for; `TransactionSettlementCheckoutHandler` stores the transaction's `Source`, `ReferenceType`, `OwnerId` and guest email. Every limit set must match, and a scoped coupon is refused on a checkout that does not say what the limit needs (fail closed). `CouponScopeEvaluator` holds the rule, and both places a code is checked use it: `CouponCheckoutFlowDisplayDriver` refuses the code when it is entered (*That code can't be used for this payment.*), and `CouponDiscountProvider` stops applying it when the invoice is rebuilt. The coupon editor sets the limits under **Who and what it is for**; see [Coupons](../user-manual/commerce/coupons.md#limit-who-and-what-a-coupon-is-for).
+
 :::warning
 A coupon with neither a usage limit nor an end date will keep discounting until somebody notices. The coupon list warns when one exists.
 :::
@@ -221,6 +245,33 @@ When a provider reaches the gateway and the payment is refused — a saved card 
 example — it returns `PaymentBeginResult.Decline`. The engine records the attempt as **failed** with the gateway's
 reason, reports it as `PaymentBeginOutcome.Declined` with `ProviderErrorMessage`, and gives the next attempt for the
 same obligation its own idempotency key, so retrying with another card is not answered with the old decline.
+
+### Where the customer returns
+
+The module that starts a checkout can say where the customer goes back to and what the confirmation is called, through three optional `StartCheckoutRequest` properties:
+
+| Property | What it does |
+| --- | --- |
+| `ReturnUrl` | The page the customer returns to, usually the one that started the checkout. The confirmation page shows a **Continue** button to it; the payment step (and the first step, which has no **Back** of its own) and the page of a canceled, expired or failed checkout show a **Back** link to it. |
+| `ReturnText` | The text of that button and link, for example *Back to my payments*. When empty the pages say **Continue** or **Back** (or **Leave checkout** on a payment step that also has a **Back** to the previous step). |
+| `Title` | The confirmation heading, for example *Payment received*, so a checkout that is not an order is not headed *Order confirmation* or thanked for a *purchase*. |
+
+```csharp
+var session = await checkoutEngine.StartAsync(new StartCheckoutRequest
+{
+    ReferenceType = "RegistrationFee",
+    ReferenceId = fee.Id,
+    ReturnUrl = Url.Action("Index", "Payments"),
+    ReturnText = S["Back to my payments"],
+    Title = S["Payment received"],
+});
+```
+
+They are stored on the session as a `CheckoutReturnInfo` and read back with `CheckoutReturnInfo.GetFrom(session)`. `ReturnUrl` must be **local**: a path such as `Url.Action(...)` or `Url.RouteUrl(...)` produces (which includes the tenant's URL prefix), or an application-relative `~/` path. `StartAsync` throws `ArgumentException` for anything else, including absolute and protocol-relative (`//host`) URLs, before the session is created, so a checkout can never send a customer to another site. The rule is `CheckoutReturnInfo.IsLocalUrl`, the same one as ASP.NET Core's `IUrlHelper.IsLocalUrl`, and the pages apply it again when they render the link.
+
+The [Transactions](transactions) pay-link page passes itself as the return URL, with *Back to the payment page* and the heading *Payment received*.
+
+A checkout that is no longer live still has a page rather than a `404`: a completed one redirects to its confirmation, and a canceled, expired or failed one shows *This checkout is no longer available.* with the reason and the **Back** link. The page is only shown to the visitor who owns the checkout, through the same ownership-checked lookup as every other checkout page.
 
 ### Completion never blocks a request
 
@@ -280,6 +331,8 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 - The payment step lists the payment providers **actually registered on the tenant** and filters out any that cannot settle what the invoice owes, so the page can never offer a method the framework cannot execute.
 - Each provider renders its own panel through an `IDisplayDriver<CheckoutFlowPaymentMethod>` grouped by its provider key. Only the selected panel is shown.
 - Two JSON endpoints (`checkout/{sessionId}/payment/begin` and `.../status`) carry the begin-then-poll conversation. Both are rate limited per visitor per checkout, resolve the session through the ownership-checked lookup, and require a same-origin request as defense in depth.
+- The begin endpoint drops the saved-card keys (`savePaymentMethod`, `offSession`, `savedCustomerReference`, `savedPaymentMethodReference`) from the provider data the browser sends. Only server code decides whether a card is kept, and nothing a browser sends can spend a card kept earlier.
+- A session whose `CheckoutSession.SavePaymentMethod` is set (server code sets it, for example when a customer chooses to pay a balance in [installments](installment-plans#installments-at-checkout)) keeps the payment method for later charges without the customer: the payment step offers only providers with `SupportsSavedPaymentMethods`, tells the customer the card is saved, and renders each provider panel with `CheckoutFlowPaymentMethod.SavePaymentMethod`; `ICheckoutEngine.BeginPaymentAsync` refuses any other provider and adds `CheckoutPaymentDataKeys.SavePaymentMethod` to the provider data itself.
 
 A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
 
@@ -368,7 +421,7 @@ To use the framework in your own module:
 
 1. Add a reference to `CrestApps.OrchardCore.Checkout.Core` (services) and `CrestApps.OrchardCore.Checkout.Abstractions` (contracts).
 2. Implement **`ICheckoutHandler`** to contribute your steps and billing items and to react to completion.
-3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself.
+3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself. Set `ReturnUrl`, `ReturnText` and `Title` on the request to bring the customer back to your page (see [Where the customer returns](#where-the-customer-returns)).
 4. Render your step by deriving from **`CheckoutFlowDisplayDriver`** and registering it as an `IDisplayDriver<CheckoutFlow>`.
 5. To add a gateway, implement **`ICheckoutPaymentProvider`**, register it, and add an `IDisplayDriver<CheckoutFlowPaymentMethod>` for its panel (grouped with `.OnGroup(yourProviderKey)`); the framework's reconciliation and ledger handle the safety guarantees for you.
 6. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
