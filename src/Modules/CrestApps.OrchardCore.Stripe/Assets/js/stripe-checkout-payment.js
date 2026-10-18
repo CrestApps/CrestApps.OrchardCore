@@ -66,6 +66,29 @@
 
         mountWallets();
 
+        var savedCards = options.savedCardsSelector ? document.querySelector(options.savedCardsSelector) : null;
+        var newCard = options.newCardSelector ? document.querySelector(options.newCardSelector) : null;
+        var rememberCard = options.rememberCardSelector ? document.querySelector(options.rememberCardSelector) : null;
+
+        // The saved card chosen to pay with, or an empty string for a new card.
+        function selectedSavedCard() {
+            var checked = savedCards ? savedCards.querySelector('input[type=radio]:checked') : null;
+
+            return checked ? checked.value : '';
+        }
+
+        // With a saved card chosen, the new card's fields step aside.
+        function syncSavedCards() {
+            if (newCard) {
+                newCard.classList.toggle('d-none', !!selectedSavedCard());
+            }
+        }
+
+        if (savedCards) {
+            savedCards.addEventListener('change', syncSavedCards);
+            syncSavedCards();
+        }
+
         // Offers Apple Pay, Google Pay and the like through Stripe's Express Checkout Element. A wallet pays with a
         // card the device already holds, so a payer on a phone confirms with a tap or a glance instead of typing a
         // card number. The wallet only produces the payment method; the payment itself goes through the same
@@ -152,6 +175,15 @@
 
         checkoutPayment.register(options.processorKey, {
             prepare: async function () {
+                var savedCardId = selectedSavedCard();
+
+                if (savedCardId && !walletPaymentMethodId) {
+                    // The server checks the card is this buyer's before charging it.
+                    preparedPaymentMethodId = savedCardId;
+
+                    return { savedCardId: savedCardId };
+                }
+
                 if (walletPaymentMethodId) {
                     preparedPaymentMethodId = walletPaymentMethodId;
 
@@ -161,10 +193,12 @@
                 // A card typed in after a wallet attempt must not be confirmed with the wallet's payment method.
                 preparedPaymentMethodId = null;
 
-                // Only a recurring agreement, or a card kept for later charges, needs a reusable payment method
-                // up front. A one-time charge is confirmed straight from the card element, so tokenizing first
-                // would be a wasted round trip.
-                if (!needsReusablePaymentMethod()) {
+                var remember = !!(rememberCard && rememberCard.checked);
+
+                // Only a recurring agreement, or a card kept for later charges or purchases, needs a reusable
+                // payment method up front. A one-time charge is confirmed straight from the card element, so
+                // tokenizing first would be a wasted round trip.
+                if (!needsReusablePaymentMethod() && !remember) {
                     return null;
                 }
 
@@ -181,6 +215,10 @@
                 }
 
                 preparedPaymentMethodId = result.paymentMethod.id;
+
+                if (remember && !needsReusablePaymentMethod()) {
+                    return { paymentMethodId: preparedPaymentMethodId, rememberCard: 'true' };
+                }
 
                 return paymentMethodData(preparedPaymentMethodId);
             },

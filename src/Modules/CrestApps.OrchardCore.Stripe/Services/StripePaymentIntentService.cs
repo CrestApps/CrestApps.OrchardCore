@@ -139,6 +139,11 @@ public sealed class StripePaymentIntentService : IStripePaymentIntentService
             // without them: the bank is told up front that future charges will follow.
             paymentIntentOptions.SetupFutureUsage = "off_session";
         }
+        else if (model.SaveForOnSessionUse)
+        {
+            // Kept for the customer's own later purchases, which they confirm themselves.
+            paymentIntentOptions.SetupFutureUsage = "on_session";
+        }
 
         var paymentIntent = await _paymentIntentService.CreateAsync(paymentIntentOptions, model.ToRequestOptions());
 
