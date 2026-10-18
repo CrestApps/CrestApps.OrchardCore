@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Reports.Designer.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -99,21 +100,7 @@ public sealed class ReportViewRunner
         var fields = result.Columns
             .Select(column => new DataField(column.Id, column.Label, column.DataType))
             .ToList();
-        var rows = new List<object[]>(result.Rows.Count);
-
-        foreach (var source in result.Rows)
-        {
-            var row = new object[source.Length];
-
-            for (var index = 0; index < source.Length; index++)
-            {
-                row[index] = result.Columns[index].DataType == DataFieldType.DateTime && source[index] is DateTime local
-                    ? executionContext.ToUtc(local)
-                    : source[index];
-            }
-
-            rows.Add(row);
-        }
+        var rows = result.Rows.Select(row => ToUtc(row, result.Columns, executionContext)).ToList();
 
         return new ReportViewRunResult
         {
@@ -150,6 +137,54 @@ public sealed class ReportViewRunner
     }
 
     /// <summary>
+    /// Streams the rows of a planned view's query, in batches, with date-times in UTC, without keeping them, such as
+    /// for a report that reads the view.
+    /// </summary>
+    /// <param name="plan">The valid plan of the view's query.</param>
+    /// <param name="context">The context of the reader, whose access runs the query.</param>
+    /// <param name="maxRows">The most rows to read.</param>
+    /// <param name="batchSize">The most rows of a batch.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The batches of rows.</returns>
+    public async IAsyncEnumerable<DataBatch> ReadAsync(
+        ReportQueryPlan plan,
+        DataSourceContext context,
+        int maxRows,
+        int batchSize,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(context);
+
+        var executionContext = await _contextFactory.CreateAsync(context.User, context);
+        var columns = ReportQueryEngine.DescribeColumns(plan);
+        var fields = columns.Select(column => new DataField(column.Id, column.Label, column.DataType)).ToList();
+        var size = batchSize > 0 ? batchSize : DataSourceQuery.DefaultBatchSize;
+        var rows = new List<object[]>(size);
+        var any = false;
+
+        await foreach (var row in _engine.Value.ReadAsync(plan, executionContext, maxRows, warnings: null, cancellationToken).WithCancellation(cancellationToken))
+        {
+            rows.Add(ToUtc(row, columns, executionContext));
+
+            if (rows.Count == size)
+            {
+                any = true;
+
+                yield return new DataBatch(fields, rows);
+
+                rows = new List<object[]>(size);
+            }
+        }
+
+        // A view without rows still yields its fields.
+        if (rows.Count > 0 || !any)
+        {
+            yield return new DataBatch(fields, rows);
+        }
+    }
+
+    /// <summary>
     /// Runs an action while a view is being read, refusing a view that is already being read in the same run (a loop)
     /// or views nested too deeply.
     /// </summary>
@@ -161,9 +196,25 @@ public sealed class ReportViewRunner
     /// <exception cref="ReportQueryException">The view reads itself, or views are nested too deeply.</exception>
     public async Task<T> EnterAsync<T>(ReportView view, DataSourceContext context, Func<Task<T>> action)
     {
+        ArgumentNullException.ThrowIfNull(action);
+
+        using var entered = Enter(view, context);
+
+        return await action();
+    }
+
+    /// <summary>
+    /// Marks a view as being read until the returned object is disposed, refusing a view that is already being read in
+    /// the same run (a loop) or views nested too deeply.
+    /// </summary>
+    /// <param name="view">The view.</param>
+    /// <param name="context">The context of the run, which tracks the views being read.</param>
+    /// <returns>Ends the read of the view when disposed.</returns>
+    /// <exception cref="ReportQueryException">The view reads itself, or views are nested too deeply.</exception>
+    public IDisposable Enter(ReportView view, DataSourceContext context)
+    {
         ArgumentNullException.ThrowIfNull(view);
         ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(action);
 
         if (!context.Properties.TryGetValue(StackKey, out var value) || value is not HashSet<string> stack)
         {
@@ -183,14 +234,7 @@ public sealed class ReportViewRunner
 
         stack.Add(view.ItemId);
 
-        try
-        {
-            return await action();
-        }
-        finally
-        {
-            stack.Remove(view.ItemId);
-        }
+        return new ViewEntry(stack, view.ItemId);
     }
 
     /// <summary>
@@ -210,6 +254,35 @@ public sealed class ReportViewRunner
                     column.Field.FieldName.EndsWith("Id", StringComparison.Ordinal),
             })
             .ToList();
+    }
+
+    // A row of the view's result with its date-times, which a run keeps in the tenant time zone, in UTC.
+    private static object[] ToUtc(object[] source, IReadOnlyList<ReportResultColumn> columns, ReportQueryExecutionContext context)
+    {
+        var row = new object[source.Length];
+
+        for (var index = 0; index < source.Length; index++)
+        {
+            row[index] = columns[index].DataType == DataFieldType.DateTime && source[index] is DateTime local
+                ? context.ToUtc(local)
+                : source[index];
+        }
+
+        return row;
+    }
+
+    private sealed class ViewEntry : IDisposable
+    {
+        private readonly HashSet<string> _stack;
+        private readonly string _viewId;
+
+        public ViewEntry(HashSet<string> stack, string viewId)
+        {
+            _stack = stack;
+            _viewId = viewId;
+        }
+
+        public void Dispose() => _stack.Remove(_viewId);
     }
 }
 

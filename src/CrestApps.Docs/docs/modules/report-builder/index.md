@@ -48,12 +48,12 @@ A run goes through these steps:
 
 1. **Plan.** Every data set's schema is read with the principal the run reads data for. A data set the principal may not read fails the plan. Joins, calculated fields, columns, filters, sorts and the limit are checked, and every problem is reported at once.
 2. **Read.** Each data source is resolved by name through `IDataSourceManager` and streams only the fields the query uses, in batches, up to the row limit, in the order the source reads (newest first for the CrestApps sources). Row filters on data sets that no outer join can fill with empty values are offered to the source as `DataCondition`s, which it may apply to read less; the engine always applies every filter again. Data sets are read in join order: a joined data set is read only for the keys the rows before it hold (see [Large data](large-data.md#joins-read-only-what-can-match)). A simple report over one data set can be answered by the source itself (see [Large data](large-data.md#grouping-in-the-data-source)).
-3. **Join.** Data sets are hash-joined in order (inner, left, right or full). Keys of different types (text and number) are compared as text; empty keys never match.
+3. **Join.** Data sets are joined in order (inner, left, right or full) by Orchard Core's `DataJoin`. Keys of different types (text and number) are compared as text, and text keys ignore case; empty keys never match.
 4. **Calculate, filter, group.** Row-level calculated fields are evaluated, then fixed filters, then the exposed filters with the viewer's values. When any column is a measure, rows are grouped by the dimension columns.
 5. **Shape.** Result filters, sorts, the row limit and the result-size limit are applied.
-6. **Render.** Visuals regroup the rows behind the result by fewer dimensions (charts, metrics, pivot tables, totals and table subtotals), so non-additive measures such as averages and distinct counts stay correct. A table with `ShowSubtotals` keeps its rows together by its leading dimensions and adds a subtotal after each group, innermost first: with Role, User and Status, a subtotal per user within each role, then per role, then the grand total.
+6. **Render.** Visuals regroup the rows behind the result by fewer dimensions (charts, metrics, pivot tables, totals and table subtotals), so non-additive measures such as averages and distinct counts stay correct. The rows behind a grouped result aren't kept, so the runner asks for these groupings before the query runs (`ReportQueryExecutionContext.Groupings`, from `ReportDesignDocumentBuilder.GetGroupings`), and the engine computes them as it runs. A table with `ShowSubtotals` keeps its rows together by its leading dimensions and adds a subtotal after each group, innermost first: with Role, User and Status, a subtotal per user within each role, then per role, then the grand total.
 
-Processing runs in memory over the rows the sources return, so every source gets joins, formulas and aggregation without implementing them. Sources can take on part of the work to handle large data; see [Large data](large-data.md).
+Every source gets joins, formulas and aggregation without implementing them. The rows stream through these steps a batch at a time, and the joins, groupings and sorts are Orchard Core's data operations, which keep a bounded amount of rows in memory and write the others to temporary files, so a run takes about the same memory whatever the size of its data. Sources can take on part of the work to handle large data; see [Large data](large-data.md).
 
 ### Time zones
 
@@ -95,7 +95,10 @@ The size limits of one run and the number of versions kept can be changed in the
             "MaxResultRows": 10000,
             "MaxFilterOptions": 500,
             "MaxJoinKeys": 10000,
-            "JoinKeyBatchSize": 500
+            "JoinKeyBatchSize": 500,
+            "MemoryLimitMegabytes": 16,
+            "TemporaryDirectory": null,
+            "MaxConcurrentRuns": 4
           },
           "Versions": {
             "MaxVersions": 50
@@ -116,6 +119,8 @@ OrchardCore__CrestApps__Reports__Builder__Limits__MaxResultRows=10000
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxFilterOptions=500
 OrchardCore__CrestApps__Reports__Builder__Limits__MaxJoinKeys=10000
 OrchardCore__CrestApps__Reports__Builder__Limits__JoinKeyBatchSize=500
+OrchardCore__CrestApps__Reports__Builder__Limits__MemoryLimitMegabytes=16
+OrchardCore__CrestApps__Reports__Builder__Limits__MaxConcurrentRuns=4
 OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 ```
 
@@ -127,6 +132,9 @@ OrchardCore__CrestApps__Reports__Builder__Versions__MaxVersions=50
 | `MaxFilterOptions` | `500` | Values listed by a drop-down filter. |
 | `MaxJoinKeys` | `10000` | Distinct keys a join sends to the data set it joins; with more, that data set is read in full. |
 | `JoinKeyBatchSize` | `500` | Keys sent in one read of a joined data set. |
+| `MemoryLimitMegabytes` | `16` | Megabytes of rows one operation of a run (a join, a grouping, a sort) keeps in memory before it writes the others to temporary files. |
+| `TemporaryDirectory` | the system's | Where runs write their temporary files. Each run uses a folder of its own and deletes it when it ends. |
+| `MaxConcurrentRuns` | `4` | Reports a tenant runs at once; the others wait. A report that reads a view runs the view within its own run. |
 | `Versions:MaxVersions` | `50` | Published versions kept per report; the oldest are deleted. `0` keeps them all. |
 
 The sections are also listed in [Configuration](../../configuration.md).

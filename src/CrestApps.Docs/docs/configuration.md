@@ -1753,10 +1753,12 @@ See [Transactions](modules/transactions.md#links-in-messages) and [Test payments
 | --- | --- |
 | **Section** | `CrestApps:Reports:Builder:Limits` |
 | **Feature** | Report Builder |
-| **Controls** | The size limits of one designed report run |
+| **Controls** | The size and memory limits of designed report runs |
 
 Keys: `MaxRowsPerDataSet` (default `50000`), `MaxJoinedRows` (`250000`), `MaxResultRows` (`10000`),
-`MaxFilterOptions` (`500`), `MaxJoinKeys` (`10000`) and `JoinKeyBatchSize` (`500`).
+`MaxFilterOptions` (`500`), `MaxJoinKeys` (`10000`), `JoinKeyBatchSize` (`500`), `MemoryLimitMegabytes` (`16`, the rows
+one join, grouping or sort keeps in memory before it writes the others to temporary files), `TemporaryDirectory` (the
+system's temporary directory) and `MaxConcurrentRuns` (`4`, the reports a tenant runs at once).
 
 ```json
 {

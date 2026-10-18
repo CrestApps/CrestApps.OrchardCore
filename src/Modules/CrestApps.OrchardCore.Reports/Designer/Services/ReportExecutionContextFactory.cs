@@ -58,13 +58,7 @@ public sealed class ReportExecutionContextFactory
             UtcNow = _clock.UtcNow,
             ToLocal = value => DateTime.SpecifyKind(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(value, DateTimeKind.Utc), zone), DateTimeKind.Unspecified),
             ToUtc = value => ToUtc(value, zone),
-            Limits = new ReportQueryLimits
-            {
-                MaxRowsPerDataSet = _limits.MaxRowsPerDataSet,
-                MaxJoinedRows = _limits.MaxJoinedRows,
-                MaxResultRows = _limits.MaxResultRows,
-                MaxFilterOptions = _limits.MaxFilterOptions,
-            },
+            Limits = _limits.Clone(),
         };
     }
 

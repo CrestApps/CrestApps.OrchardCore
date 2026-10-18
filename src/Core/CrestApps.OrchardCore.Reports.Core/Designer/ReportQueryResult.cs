@@ -73,11 +73,13 @@ public sealed class ReportQueryResult
     /// </summary>
     /// <param name="columnId">The column identifier.</param>
     /// <returns>The index, or <c>-1</c> when there is no such column.</returns>
-    public int IndexOf(string columnId)
+    public int IndexOf(string columnId) => IndexOf(Columns, columnId);
+
+    private static int IndexOf(IReadOnlyList<ReportResultColumn> columns, string columnId)
     {
-        for (var index = 0; index < Columns.Count; index++)
+        for (var index = 0; index < columns.Count; index++)
         {
-            if (string.Equals(Columns[index].Id, columnId, StringComparison.Ordinal))
+            if (string.Equals(columns[index].Id, columnId, StringComparison.Ordinal))
             {
                 return index;
             }
@@ -90,19 +92,32 @@ public sealed class ReportQueryResult
     /// Aggregates the rows behind the result again, grouped only by the given dimension columns. Measures are
     /// recomputed from the underlying rows, so an average stays a true average. Only rows that contributed to a result
     /// row count, so result filters and the row limit are respected. When the result is not aggregated, numeric columns
-    /// are summed and other columns keep their first value.
+    /// are summed and other columns keep their first value. An aggregated result is regrouped while the query runs, by
+    /// the groupings of <see cref="ReportQueryExecutionContext.Groupings"/>, since the rows behind it aren't kept.
     /// </summary>
     /// <param name="dimensionColumnIds">The identifiers of the dimension columns to group by; empty for a grand total.</param>
     /// <returns>The groups, ordered by where each first appears in the result.</returns>
+    /// <exception cref="InvalidOperationException">The result is aggregated and wasn't asked for this grouping.</exception>
     public IReadOnlyList<ReportResultGroup> Regroup(IEnumerable<string> dimensionColumnIds)
     {
-        var indexes = (dimensionColumnIds ?? [])
-            .Select(IndexOf)
+        return _regroup?.Invoke(ResolveIndexes(Columns, dimensionColumnIds)) ?? [];
+    }
+
+    /// <summary>
+    /// Finds the positions of columns by their identifiers, once each, ignoring unknown identifiers.
+    /// </summary>
+    /// <param name="columns">The columns.</param>
+    /// <param name="columnIds">The identifiers.</param>
+    /// <returns>The positions, in the order of the identifiers.</returns>
+    public static IReadOnlyList<int> ResolveIndexes(IReadOnlyList<ReportResultColumn> columns, IEnumerable<string> columnIds)
+    {
+        ArgumentNullException.ThrowIfNull(columns);
+
+        return (columnIds ?? [])
+            .Select(id => IndexOf(columns, id))
             .Where(index => index >= 0)
             .Distinct()
             .ToArray();
-
-        return _regroup?.Invoke(indexes) ?? [];
     }
 
     /// <summary>

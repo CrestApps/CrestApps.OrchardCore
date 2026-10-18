@@ -66,8 +66,8 @@ public sealed class ReportAggregatePushDownTests
         var grouping = new GroupingDataSource(SalesData());
 
         // Act
-        var expected = await Engine(rowsOnly).ExecuteAsync(query(), LocalContext(), TestContext.Current.CancellationToken);
-        var actual = await Engine(new TestDataSourceEntry("Memory", grouping)).ExecuteAsync(query(), LocalContext(), TestContext.Current.CancellationToken);
+        var expected = await Engine(rowsOnly).ExecuteAsync(query(), RegroupedContext(query()), TestContext.Current.CancellationToken);
+        var actual = await Engine(new TestDataSourceEntry("Memory", grouping)).ExecuteAsync(query(), RegroupedContext(query()), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(actual.GroupedBySource, "The source should have grouped the report.");
@@ -124,6 +124,21 @@ public sealed class ReportAggregatePushDownTests
         Assert.False(result.GroupedBySource);
         Assert.Equal(1, grouping.AggregateCalls);
         Assert.Equal(4, result.Rows.Count);
+    }
+
+    // A context that regroups the result by nothing (the totals) and by each of its columns.
+    private static ReportQueryExecutionContext RegroupedContext(ReportQueryDefinition query)
+    {
+        var context = LocalContext();
+
+        context.Groupings.Add([]);
+
+        foreach (var column in query.Columns)
+        {
+            context.Groupings.Add([column.Id]);
+        }
+
+        return context;
     }
 
     private static ReportQueryExecutionContext LocalContext()

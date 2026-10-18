@@ -1,13 +1,25 @@
 ---
 sidebar_label: Large Data
 title: Report Builder and Large Data
-description: How the Report Builder stays fast and complete over large data sets - row limits, date push-down, grouping in the source, join key narrowing, and scheduled views.
+description: How the Report Builder stays fast and complete over large data sets - bounded memory, row limits, date push-down, grouping in the source, join key narrowing, and scheduled views.
 user_manual:
   - user-manual/report-builder/views
   - user-manual/report-builder/filters
 ---
 
-The engine processes rows in memory, so every data source gets joins, formulas and aggregation for free. To keep that fast and complete over large data sets, it bounds what it reads and lets sources take on part of the work.
+Every data source gets joins, formulas and aggregation for free. To keep that fast, complete, and safe for the server over large data sets, the engine streams its rows with a bounded amount of memory, bounds what it reads, and lets sources take on part of the work.
+
+## Bounded memory
+
+A run never holds a whole data set in memory. Its rows stream from the data sources through the joins, calculations, filters and groupings a batch at a time, and every step that must see many rows at once is one of Orchard Core's data operations, which keep up to `MemoryLimitMegabytes` of rows in memory and write the others to temporary files:
+
+- **Joins.** The rows before a join are held in a buffer that writes the rows that don't fit to a temporary file, while the engine collects the keys they hold to read the joined data set for them. Orchard Core's `DataJoin` then matches them: in memory when the joined rows fit, otherwise by sorting both sides in temporary files and merging them.
+- **Grouping.** Orchard Core's `DataAggregator` computes the measures of each group as the rows arrive, without keeping them, including calculated fields that aggregate, such as `SUM([o.Total]) / COUNT()`. Only the values of a median and of a distinct count stay with their group.
+- **Totals, subtotals, charts and pivots.** A grouped result keeps a copy of the rows it grouped, reduced to the values its groups need, in a buffer that writes them to a temporary file, and regroups them while the query runs.
+- **Sorting.** Orchard Core's `DataSorter` sorts the result in sorted runs written to temporary files when it doesn't fit.
+- **Reading less.** A result that is neither grouped nor sorted stops reading once it has its rows, unless a viewer filter lists the values found in the data. A report that reads a live view reads the view's rows as its query computes them.
+
+Each run writes its temporary files to a folder of its own under `TemporaryDirectory`, and deletes it when it ends. At most `MaxConcurrentRuns` reports run at once in a tenant; the others wait for one to end.
 
 ## Limits
 
@@ -48,7 +60,7 @@ A view's **Refresh** setting (`ReportView.RefreshIntervalMinutes`: `0` for live;
 
 - The **Report view refresh** background task runs every 5 minutes and refreshes each due view in its own scope, with a distributed lock so two nodes never refresh the same view. A failed refresh keeps the previous rows and records the error. Tenants can turn the task off under **Background Tasks**.
 - A scheduled view runs with its **owner's** current access, since there is no reader at refresh time; it does not refresh when its owner is deleted or disabled or can no longer read it. Reports that read the view still need to be allowed to read it and to plan its query, but they get the rows the owner's access produced. Schedule only views whose data everyone who can read the view may see.
-- Reports read the stored rows (at most `MaxRowsPerDataSet`) while the stored fields match the view. Editing the view's query, switching it to live, or importing a changed view drops the stored rows, and reports run the view live until the next refresh.
+- Reports read the stored rows (at most `MaxRowsPerDataSet`, held in memory while they're read) while the stored fields match the view. Editing the view's query, switching it to live, or importing a changed view drops the stored rows, and reports run the view live until the next refresh.
 - **Refresh now** (`POST /Admin/reports/views/{id}/refresh`, which needs `ManageAllReportDesigns` on the view) refreshes a view at once and returns its status.
 - Deleting a view deletes its stored rows.
 
@@ -61,4 +73,4 @@ How people schedule a view is described in the User Manual: [Reusable views](../
 - Implement grouping in the source for the fields its index holds.
 - For a heavy view that many reports read, schedule it.
 - Read the store a page at a time (`ReportIndexPages` for YesSql) rather than loading every record at once.
-- Raise the limits in [Configuration](index.md#configuration) only after the above, and watch memory: every row read is held in memory during the run.
+- Raise the row limits in [Configuration](index.md#configuration) only after the above: memory stays bounded, but every row read takes time, and rows that don't fit in memory are written to disk.

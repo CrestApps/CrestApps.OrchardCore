@@ -24,10 +24,10 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
     public async Task Build_WithoutVisuals_ShowsATableWithATotalsRow()
     {
         // Arrange
-        var result = await RevenueByRegionAndCustomer();
+        var query = RevenueByRegionAndCustomer();
 
         // Act
-        var document = DocumentBuilder().Build("Revenue", [], result);
+        var document = DocumentBuilder().Build("Revenue", [], await RunAsync(query, [], SalesData()));
 
         // Assert
         var section = Assert.Single(document.Sections);
@@ -43,7 +43,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
     public async Task Build_ChartByCategory_RegroupsTheResult()
     {
         // Arrange
-        var result = await RevenueByRegionAndCustomer();
+        var query = RevenueByRegionAndCustomer();
         var visual = new ReportVisualDefinition
         {
             Id = "chart",
@@ -55,7 +55,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         };
 
         // Act
-        var document = DocumentBuilder().Build("Revenue", [visual], result);
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
 
         // Assert
         var chart = Assert.Single(document.Sections).Chart;
@@ -68,7 +68,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
     public async Task Build_ChartWithSeriesColumn_SpreadsValuesIntoOneDatasetPerSeries()
     {
         // Arrange
-        var result = await RevenueByRegionAndCustomer();
+        var query = RevenueByRegionAndCustomer();
         var visual = new ReportVisualDefinition
         {
             Id = "chart",
@@ -81,7 +81,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         };
 
         // Act
-        var document = DocumentBuilder().Build("Revenue", [visual], result);
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
 
         // Assert
         var chart = Assert.Single(document.Sections).Chart;
@@ -94,7 +94,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
     public async Task Build_Metrics_ShowGrandTotals()
     {
         // Arrange
-        var result = await RevenueByRegionAndCustomer();
+        var query = RevenueByRegionAndCustomer();
         var visual = new ReportVisualDefinition
         {
             Id = "kpi",
@@ -103,7 +103,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         };
 
         // Act
-        var document = DocumentBuilder().Build("Revenue", [visual], result);
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
 
         // Assert
         var metric = Assert.Single(Assert.Single(document.Sections).Metrics);
@@ -115,7 +115,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
     public async Task Build_Pivot_CrossTabsWithRowAndColumnTotals()
     {
         // Arrange
-        var result = await RevenueByRegionAndCustomer();
+        var query = RevenueByRegionAndCustomer();
         var visual = new ReportVisualDefinition
         {
             Id = "pivot",
@@ -127,7 +127,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
         };
 
         // Act
-        var document = DocumentBuilder().Build("Revenue", [visual], result);
+        var document = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData()));
 
         // Assert
         var section = Assert.Single(document.Sections);
@@ -140,7 +140,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
     public async Task Validate_VisualsThatReferToMissingOrTextColumns_AreRejected()
     {
         // Arrange
-        var result = await RevenueByRegionAndCustomer();
+        var result = await RunAsync(RevenueByRegionAndCustomer(), [], SalesData());
         var visuals = new[]
         {
             new ReportVisualDefinition { Id = "a", Type = ReportVisualType.Chart, Title = "Broken chart", CategoryColumnId = "gone", ValueColumnIds = ["customer"] },
@@ -171,11 +171,10 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
             new ReportColumnDefinition { Id = "average", Field = "o.Total", Label = "Average", Aggregate = DataAggregate.Average, Format = "0.00" },
         ];
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
         var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ShowTotals = true, ShowSubtotals = true };
 
         // Act
-        var section = DocumentBuilder().Build("Revenue", [visual], result).Sections.Single();
+        var section = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData())).Sections.Single();
 
         // Assert
         // The region average is the average of its orders (170 / 3), not the average of its customers' averages.
@@ -210,11 +209,10 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
         ];
         query.Sorts = [new ReportSortDefinition { ColumnId = "revenue", Descending = true }];
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
         var visual = new ReportVisualDefinition { Id = "t", Type = ReportVisualType.Table, ShowSubtotals = true };
 
         // Act
-        var section = DocumentBuilder().Build("Revenue", [visual], result).Sections.Single();
+        var section = DocumentBuilder().Build("Revenue", [visual], await RunAsync(query, [visual], SalesData())).Sections.Single();
 
         // Assert: East comes first (its first row is the largest), West's customers stay in revenue order.
         Assert.Equal(
@@ -222,7 +220,7 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             section.Rows.Select(row => row.Cells[1].Length > 0 ? row.Cells[1] : row.Cells[0]));
     }
 
-    private static Task<ReportQueryResult> RevenueByRegionAndCustomer()
+    private static ReportQueryDefinition RevenueByRegionAndCustomer()
     {
         var query = CustomersWithOrders();
         query.Columns =
@@ -232,6 +230,6 @@ public sealed class ReportDesignDocumentBuilderTests : IDisposable
             new ReportColumnDefinition { Id = "revenue", Field = "o.Total", Label = "Revenue", Aggregate = DataAggregate.Sum, Format = "0" },
         ];
 
-        return Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        return query;
     }
 }

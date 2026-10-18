@@ -107,6 +107,97 @@ public sealed class ReportDesignDocumentBuilder
     }
 
     /// <summary>
+    /// Lists the groupings the visuals regroup the result by (see <see cref="ReportQueryResult.Regroup"/>), for
+    /// <see cref="ReportQueryExecutionContext.Groupings"/>: an aggregated result is regrouped while the query runs.
+    /// </summary>
+    /// <param name="visuals">The visuals. When empty, a single table of the result is shown.</param>
+    /// <param name="columns">The columns of the result.</param>
+    /// <returns>The identifiers of the dimension columns of each grouping; an empty list for the grand total.</returns>
+    public static IReadOnlyList<IReadOnlyList<string>> GetGroupings(IEnumerable<ReportVisualDefinition> visuals, IReadOnlyList<ReportResultColumn> columns)
+    {
+        ArgumentNullException.ThrowIfNull(columns);
+
+        var isAggregated = columns.Any(column => column.IsMeasure);
+        var groupings = new List<IReadOnlyList<string>>();
+        var list = (visuals ?? []).Where(visual => visual is not null).ToList();
+
+        string IdOf(string id) => columns.Any(column => column.Id == id) ? id : null;
+
+        if (list.Count == 0)
+        {
+            if (isAggregated)
+            {
+                groupings.Add([]);
+            }
+
+            return groupings;
+        }
+
+        foreach (var visual in list)
+        {
+            switch (visual.Type)
+            {
+                case ReportVisualType.Metrics:
+                    groupings.Add([]);
+                    break;
+
+                case ReportVisualType.Chart:
+                    var category = IdOf(visual.CategoryColumnId);
+                    var series = IdOf(visual.SeriesColumnId);
+
+                    if (category is not null)
+                    {
+                        groupings.Add(series is not null && series != category ? [category, series] : [category]);
+                    }
+
+                    break;
+
+                case ReportVisualType.Pivot:
+                    var rowIds = visual.ColumnIds.Where(id => IdOf(id) is not null).ToArray();
+                    var pivotSeries = IdOf(visual.SeriesColumnId);
+
+                    if (rowIds.Length > 0 && pivotSeries is not null)
+                    {
+                        groupings.Add([.. rowIds, pivotSeries]);
+                        groupings.Add(rowIds);
+
+                        if (visual.ShowTotals)
+                        {
+                            groupings.Add([pivotSeries]);
+                            groupings.Add([]);
+                        }
+                    }
+
+                    break;
+
+                default:
+                    if (visual.ShowTotals)
+                    {
+                        groupings.Add([]);
+                    }
+
+                    if (visual.ShowSubtotals && isAggregated)
+                    {
+                        // A subtotal after each group of the leading dimensions shown: every shown dimension but the last.
+                        var shown = visual.ColumnIds.Count > 0
+                            ? visual.ColumnIds.Select(id => columns.FirstOrDefault(column => column.Id == id)).Where(column => column is not null)
+                            : columns.Where(column => !column.Hidden);
+                        var dimensions = shown.Where(column => !column.IsMeasure).Select(column => column.Id).ToArray();
+
+                        for (var level = 1; level < dimensions.Length; level++)
+                        {
+                            groupings.Add(dimensions[..level]);
+                        }
+                    }
+
+                    break;
+            }
+        }
+
+        return groupings;
+    }
+
+    /// <summary>
     /// Builds the report document.
     /// </summary>
     /// <param name="title">The report title.</param>

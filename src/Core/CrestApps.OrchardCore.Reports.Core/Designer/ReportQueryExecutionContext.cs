@@ -37,4 +37,11 @@ public sealed class ReportQueryExecutionContext
     /// Gets or sets the size limits of the run.
     /// </summary>
     public ReportQueryLimits Limits { get; set; } = new();
+
+    /// <summary>
+    /// Gets the groupings an aggregated result is regrouped by while the query runs, each the identifiers of the
+    /// dimension columns to group by, an empty list for the grand total: see <see cref="ReportQueryResult.Regroup"/>.
+    /// The rows behind the result aren't kept, so it can only be regrouped as asked here.
+    /// </summary>
+    public IList<IReadOnlyList<string>> Groupings { get; } = [];
 }

@@ -118,7 +118,10 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("region", "c.Region"), Column("name", "c.Name"), Column("avg", "o.Total", DataAggregate.Average)];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        var context = Context();
+        context.Groupings.Add(["region"]);
+        context.Groupings.Add([]);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
         var byRegion = result.Regroup(["region"]);
 
         // Assert
@@ -271,7 +274,9 @@ public sealed class ReportQueryEngineTests
         query.Limit = 2;
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        var context = Context();
+        context.Groupings.Add([]);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["Globex", "Acme"], result.Rows.Select(row => (string)row[0]));
@@ -333,7 +338,10 @@ public sealed class ReportQueryEngineTests
         query.Columns = [Column("region", "c.Region"), Column("total", "o.Total")];
 
         // Act
-        var result = await Engine(SalesData()).ExecuteAsync(query, Context(), TestContext.Current.CancellationToken);
+        var context = Context();
+        context.Groupings.Add(["region"]);
+        context.Groupings.Add([]);
+        var result = await Engine(SalesData()).ExecuteAsync(query, context, TestContext.Current.CancellationToken);
         var byRegion = result.Regroup(["region"]);
 
         // Assert

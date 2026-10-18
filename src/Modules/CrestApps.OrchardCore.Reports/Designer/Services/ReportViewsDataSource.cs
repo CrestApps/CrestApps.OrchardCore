@@ -102,34 +102,34 @@ public sealed class ReportViewsDataSource : IDataSource
             yield break;
         }
 
-        // A view's result is computed whole, so it is returned as one batch.
-        var result = await ReadViewAsync(view, query, cancellationToken);
-
-        yield return new DataBatch(result.Fields, [.. result.Rows]);
-    }
-
-    private Task<DataRowSet> ReadViewAsync(ReportView view, DataSourceQuery query, CancellationToken cancellationToken)
-    {
         var maxRows = query.MaxRows > 0 ? query.MaxRows : int.MaxValue;
 
-        return _runner.EnterAsync(view, query.Context, async () =>
+        // The view is being read until its rows are, so a view that reads itself is refused.
+        using var entered = _runner.Enter(view, query.Context);
+
+        var plan = await _runner.PlanAsync(view, query.Context, cancellationToken);
+
+        if (view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live && plan.IsValid)
         {
-            var plan = await _runner.PlanAsync(view, query.Context, cancellationToken);
+            var snapshot = await _snapshots.FindAsync(view.ItemId);
 
-            if (view.RefreshIntervalMinutes > ReportViewRefreshIntervals.Live && plan.IsValid)
+            // A snapshot taken before the view changed its fields is ignored, and the view runs, until the next
+            // refresh. A view whose first refresh has not happened yet runs too.
+            if (snapshot?.RefreshedUtc is not null && ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)))
             {
-                var snapshot = await _snapshots.FindAsync(view.ItemId);
+                var table = ReportViewSnapshotData.ToTable(snapshot, query.Fields, maxRows);
 
-                // A snapshot taken before the view changed its fields is ignored, and the view runs, until the next
-                // refresh. A view whose first refresh has not happened yet runs too.
-                if (snapshot?.RefreshedUtc is not null && ReportViewSnapshotData.Matches(snapshot, ReportViewRunner.DescribeFields(plan)))
-                {
-                    return ReportViewSnapshotData.ToTable(snapshot, query.Fields, maxRows);
-                }
+                yield return new DataBatch(table.Fields, [.. table.Rows]);
+
+                yield break;
             }
+        }
 
-            return await _runner.ExecuteAsync(plan, query.Context, maxRows, cancellationToken);
-        });
+        // A live view streams its rows as its query computes them, without keeping them.
+        await foreach (var batch in _runner.ReadAsync(plan, query.Context, maxRows, query.BatchSize, cancellationToken).WithCancellation(cancellationToken))
+        {
+            yield return batch;
+        }
     }
 
     private async Task<ReportView> FindReadableAsync(string viewId, DataSourceContext context, CancellationToken cancellationToken)

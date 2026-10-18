@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
@@ -7,13 +8,16 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 
 /// <summary>
 /// Runs designed queries: reads each data set, joins them, evaluates calculated fields, applies filters, groups and
-/// aggregates, then sorts and limits the result. Every step runs in memory over the rows the data sources return, so the
-/// same features work for every source; the sources only need to describe and read their data sets.
+/// aggregates, then sorts and limits the result. The rows stream through these steps a batch at a time: the joins,
+/// groupings and sorts are Orchard Core's data operations, which keep a bounded amount of rows in memory and write the
+/// others to temporary files, so a run takes about the same memory whatever the size of its data. The same features
+/// work for every source; the sources only need to describe and read their data sets.
 /// </summary>
 public sealed partial class ReportQueryEngine
 {
     private readonly ReportQueryPlanner _planner;
     private readonly ReportValueFormatter _formatter;
+    private readonly ReportQueryGate _gate;
     private readonly IStringLocalizer S;
 
     /// <summary>
@@ -21,14 +25,17 @@ public sealed partial class ReportQueryEngine
     /// </summary>
     /// <param name="planner">The query planner.</param>
     /// <param name="formatter">The value formatter used for filter options.</param>
+    /// <param name="gate">The gate that bounds how many runs the tenant runs at once.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReportQueryEngine(
         ReportQueryPlanner planner,
         ReportValueFormatter formatter,
+        ReportQueryGate gate,
         IStringLocalizer<ReportQueryEngine> stringLocalizer)
     {
         _planner = planner;
         _formatter = formatter;
+        _gate = gate;
         S = stringLocalizer;
     }
 
@@ -59,7 +66,8 @@ public sealed partial class ReportQueryEngine
     }
 
     /// <summary>
-    /// Runs a planned query.
+    /// Runs a planned query, and keeps the first <see cref="ReportQueryLimits.MaxResultRows"/> rows of its result, with
+    /// the groupings of <see cref="ReportQueryExecutionContext.Groupings"/>.
     /// </summary>
     /// <param name="plan">The valid plan.</param>
     /// <param name="context">The run context.</param>
@@ -78,60 +86,38 @@ public sealed partial class ReportQueryEngine
             throw new ReportQueryException([.. plan.Errors]);
         }
 
-        var warnings = new List<string>();
-        var today = context.ToLocal(context.UtcNow);
-        var filters = plan.Filters
-            .Select(filter => new ActiveFilter(filter, EffectiveValues(filter.Definition, context)))
-            .ToList();
+        await using var lease = await _gate.EnterAsync(context, cancellationToken);
+        using var run = new QueryRun(plan, context, groupings: true);
 
-        // A simple aggregated report over one data set can be grouped by its source, which then reads a few groups
-        // instead of every row.
-        if (await TryAggregateAsync(plan, filters, context, today, warnings, cancellationToken) is { } grouped)
+        var grouped = await TryAggregateAsync(run, cancellationToken);
+        var rows = grouped is null ? ReadFilteredRowsAsync(run, cancellationToken) : ToAsync(grouped, cancellationToken);
+        var maxResultRows = Math.Max(1, context.Limits.MaxResultRows);
+
+        run.Weighted = grouped is not null;
+
+        var kept = await TakeAsync(ReadResultRowsAsync(run, rows, cancellationToken), maxResultRows + 1, drain: run.ReadsOnlyWhatItKeeps && run.ListsOptions, cancellationToken);
+
+        if (kept.Count > maxResultRows)
         {
-            return grouped;
+            run.Warnings.Add(S["The result has more than {0} rows, so only the first {0} are shown.", maxResultRows]);
+            kept.RemoveRange(maxResultRows, kept.Count - maxResultRows);
         }
 
-        // Data sets are read in join order, so a joined data set can be read for the keys the rows before it hold.
-        var current = await ReadAsync(plan, plan.DataSets[0], filters, context, warnings, keys: null, cancellationToken);
-        var sourceRows = current.Count;
+        var result = await CreateResultAsync(run, kept, cancellationToken);
 
-        foreach (var join in plan.Joins)
+        result.SourceRowCount = (int)Math.Min(int.MaxValue, run.SourceRows);
+        result.FilteredRowCount = (int)Math.Min(int.MaxValue, run.FilteredRows);
+        result.GroupedBySource = grouped is not null;
+
+        foreach (var (filterId, options) in run.Options)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var keys = JoinKeys(join, current, context.Limits);
-            var right = keys is { Values.Count: 0 }
-                ? []
-                : await ReadAsync(plan, join.DataSet, filters, context, warnings, keys, cancellationToken);
-
-            sourceRows += right.Count;
-            current = Join(current, right, join, context.Limits.MaxJoinedRows, warnings);
+            result.FilterOptions[filterId] = options
+                .Take(Math.Max(1, context.Limits.MaxFilterOptions))
+                .Select(value => new ReportFilterOption(DataValues.ToText(value), _formatter.Format(value, run.OptionTypes[filterId])))
+                .ToArray();
         }
 
-        var expressionContext = new ExpressionContext
-        {
-            Now = today,
-        };
-
-        EvaluateRowCalculations(plan, current, expressionContext);
-
-        var rowFilters = filters.Where(filter => filter.Filter.Definition.Stage == ReportFilterStage.Rows).ToList();
-        var filtered = ApplyRowFilters(current, rowFilters.Where(filter => !filter.Filter.Definition.Exposed), today);
-        var filterOptions = BuildFilterOptions(filtered, rowFilters, context.Limits.MaxFilterOptions);
-
-        filtered = ApplyRowFilters(filtered, rowFilters.Where(filter => filter.Filter.Definition.Exposed), today);
-
-        var result = BuildResult(plan, filtered, filters, today, expressionContext, context.Limits, warnings);
-
-        result.SourceRowCount = sourceRows;
-        result.FilteredRowCount = filtered.Count;
-
-        foreach (var (filterId, options) in filterOptions)
-        {
-            result.FilterOptions[filterId] = options;
-        }
-
-        foreach (var warning in warnings.Distinct(StringComparer.Ordinal))
+        foreach (var warning in run.Warnings.Distinct(StringComparer.Ordinal))
         {
             result.Warnings.Add(warning);
         }
@@ -139,125 +125,245 @@ public sealed partial class ReportQueryEngine
         return result;
     }
 
-    private static IList<string> EffectiveValues(ReportFilterDefinition filter, ReportQueryExecutionContext context)
+    /// <summary>
+    /// Runs a planned query and streams its result rows, in their order, up to <paramref name="maxRows"/>, without
+    /// keeping them, such as for a view that another report reads.
+    /// </summary>
+    /// <param name="plan">The valid plan.</param>
+    /// <param name="context">The run context.</param>
+    /// <param name="maxRows">The most rows to read.</param>
+    /// <param name="warnings">Receives the warnings of the run, such as a data set read in part.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The rows, each holding the values of the columns of the plan.</returns>
+    public async IAsyncEnumerable<object[]> ReadAsync(
+        ReportQueryPlan plan,
+        ReportQueryExecutionContext context,
+        int maxRows,
+        ICollection<string> warnings,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        if (filter.Exposed && context.FilterValues.TryGetValue(filter.Id, out var values))
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (!plan.IsValid)
         {
-            return values ?? [];
+            throw new ReportQueryException([.. plan.Errors]);
         }
 
-        return filter.Values ?? [];
+        await using var lease = await _gate.EnterAsync(context, cancellationToken);
+        using var run = new QueryRun(plan, context, groupings: false);
+
+        try
+        {
+            var grouped = await TryAggregateAsync(run, cancellationToken);
+            var rows = grouped is null ? ReadFilteredRowsAsync(run, cancellationToken) : ToAsync(grouped, cancellationToken);
+            var read = 0;
+
+            run.Weighted = grouped is not null;
+
+            await foreach (var row in ReadResultRowsAsync(run, rows, cancellationToken).WithCancellation(cancellationToken))
+            {
+                if (read++ >= maxRows)
+                {
+                    yield break;
+                }
+
+                yield return row;
+            }
+        }
+        finally
+        {
+            foreach (var warning in run.Warnings.Distinct(StringComparer.Ordinal))
+            {
+                warnings?.Add(warning);
+            }
+        }
     }
 
-    // The keys a join can send to the data set it joins, so that data set reads only the records that can match: the
-    // distinct values of a pair of fields whose right side the source can filter on exactly. Only joins that drop the
-    // joined data set's unmatched records (inner and left) qualify. Returns null when the joined data set must be read
-    // in full: no such pair, keys compared as text across types, or more keys than the limit.
-    private static JoinKeyFilter JoinKeys(PlannedJoin join, List<object[]> left, ReportQueryLimits limits)
+    /// <summary>
+    /// Describes the columns of the result of a plan.
+    /// </summary>
+    /// <param name="plan">The plan.</param>
+    /// <returns>The columns.</returns>
+    public static IReadOnlyList<ReportResultColumn> DescribeColumns(ReportQueryPlan plan)
     {
-        if (join.Type is not (DataJoinType.Inner or DataJoinType.Left) || limits.MaxJoinKeys < 1)
+        ArgumentNullException.ThrowIfNull(plan);
+
+        return plan.Columns.Select(ToResultColumn).ToArray();
+    }
+
+    /// <summary>
+    /// Determines whether an exposed filter renders as a list of the values found in the data.
+    /// </summary>
+    /// <param name="filter">The filter.</param>
+    /// <param name="dataType">The type of the filtered values.</param>
+    /// <returns><see langword="true"/> for drop-down and multi-select filters.</returns>
+    public static bool UsesOptions(ReportFilterDefinition filter, DataFieldType dataType)
+    {
+        ArgumentNullException.ThrowIfNull(filter);
+
+        return filter.Control switch
         {
-            return null;
+            ReportFilterControl.Select or ReportFilterControl.MultiSelect => true,
+            ReportFilterControl.Auto => dataType == DataFieldType.Text && filter.Operator is DataFilterOperator.Equals or DataFilterOperator.In or DataFilterOperator.NotEquals or DataFilterOperator.NotIn,
+            _ => false,
+        };
+    }
+
+    // The rows of the data sets, joined, calculated and filtered.
+    private async IAsyncEnumerable<object[]> ReadFilteredRowsAsync(QueryRun run, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var plan = run.Plan;
+
+        // Data sets are read in join order, so a joined data set can be read for the keys the rows before it hold.
+        var rows = ReadDataSetAsync(run, plan.DataSets[0], keys: null, cancellationToken);
+
+        foreach (var join in plan.Joins)
+        {
+            rows = JoinAsync(run, rows, join, cancellationToken);
         }
 
-        foreach (var (leftSlot, rightSlot, compareAsText) in join.Pairs)
+        var rowFilters = run.Filters.Where(filter => filter.Filter.Definition.Stage == ReportFilterStage.Rows).ToList();
+        var fixedFilters = Predicates(rowFilters.Where(filter => !filter.Filter.Definition.Exposed), run.Today);
+        var exposedFilters = Predicates(rowFilters.Where(filter => filter.Filter.Definition.Exposed), run.Today);
+        var expressionContext = new ExpressionContext
         {
-            var field = join.DataSet.UsedFields.Values.FirstOrDefault(candidate => candidate.Slot == rightSlot);
-            var descriptor = field is null ? null : join.DataSet.Schema?.FindField(field.FieldName);
+            Now = run.Today,
+        };
 
-            if (compareAsText ||
-                descriptor is not { IsKeyFilterable: true } ||
-                field.DataType is not (DataFieldType.Text or DataFieldType.Integer))
+        await foreach (var row in rows.WithCancellation(cancellationToken))
+        {
+            if (plan.RowCalculations.Count > 0)
+            {
+                expressionContext.Row = row;
+
+                foreach (var calculation in plan.RowCalculations)
+                {
+                    row[calculation.Slot] = SafeEvaluate(calculation.Expression, expressionContext);
+                }
+            }
+
+            if (!Passes(row, fixedFilters))
             {
                 continue;
             }
 
-            var values = new Dictionary<string, object>(StringComparer.Ordinal);
+            // The options of an exposed filter are the values the other exposed filters leave out too.
+            run.AddOptions(row);
 
-            foreach (var row in left)
+            if (!Passes(row, exposedFilters))
             {
-                var value = DataValues.Coerce(row[leftSlot], field.DataType);
-
-                if (DataValues.IsEmpty(value))
-                {
-                    continue;
-                }
-
-                values.TryAdd(DataValues.ToKey(value), value);
-
-                if (values.Count > limits.MaxJoinKeys)
-                {
-                    return null;
-                }
+                continue;
             }
 
-            return new JoinKeyFilter(field.FieldName, values.Values.ToList());
-        }
+            run.FilteredRows++;
 
-        return null;
+            yield return row;
+        }
     }
 
-    private async Task<List<object[]>> ReadAsync(
-        ReportQueryPlan plan,
+    private async IAsyncEnumerable<object[]> ReadDataSetAsync(
+        QueryRun run,
         PlannedDataSet dataSet,
-        IReadOnlyList<ActiveFilter> filters,
-        ReportQueryExecutionContext context,
-        List<string> warnings,
         JoinKeyFilter keys,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var maxRows = Math.Max(1, context.Limits.MaxRowsPerDataSet);
+        var limits = run.Context.Limits;
+        var maxRows = Math.Max(1, limits.MaxRowsPerDataSet);
         var batches = keys is null
             ? [null]
-            : keys.Values.Chunk(Math.Max(1, context.Limits.JoinKeyBatchSize)).ToList();
-        var rows = new List<object[]>();
+            : keys.Values.Chunk(Math.Max(1, limits.JoinKeyBatchSize)).ToList();
+        var read = 0L;
         var truncated = false;
 
-        for (var index = 0; index < batches.Count; index++)
+        try
         {
-            var query = CreateQuery(dataSet, filters, context, maxRows - rows.Count);
-
-            if (batches[index] is { } batch)
+            for (var index = 0; index < batches.Count && !truncated; index++)
             {
-                query.Conditions.Add(new DataCondition
+                var query = CreateQuery(dataSet, run.Filters, run.Context);
+
+                // One more row than kept, to tell whether the data set has more.
+                query.MaxRows = (int)Math.Min(int.MaxValue, maxRows - read + 1);
+
+                if (batches[index] is { } batch)
                 {
-                    Field = keys.FieldName,
-                    Operator = DataFilterOperator.In,
-                    Values = batch,
-                    IsJoinKey = true,
-                });
-            }
+                    query.Conditions.Add(new DataCondition
+                    {
+                        Field = keys.FieldName,
+                        Operator = DataFilterOperator.In,
+                        Values = batch,
+                        IsJoinKey = true,
+                    });
+                }
 
-            var read = await ReadTableAsync(plan, dataSet, query, context, cancellationToken);
+                IReadOnlyList<DataField> fields = null;
+                (int Slot, int SourceIndex, DataFieldType DataType)[] mappings = [];
 
-            rows.AddRange(read.Rows);
-            truncated |= read.Truncated;
+                await foreach (var source in dataSet.Source.ReadAsync(query, cancellationToken).WithCancellation(cancellationToken))
+                {
+                    if (!ReferenceEquals(source.Fields, fields))
+                    {
+                        fields = source.Fields;
+                        mappings = dataSet.UsedFields.Values
+                            .Select(field => (field.Slot, SourceIndex: fields.IndexOf(field.FieldName), field.DataType))
+                            .ToArray();
+                    }
 
-            if (rows.Count >= maxRows)
-            {
-                truncated |= index < batches.Count - 1;
+                    foreach (var sourceRow in source.Rows)
+                    {
+                        if (read >= maxRows)
+                        {
+                            truncated = true;
 
-                break;
+                            break;
+                        }
+
+                        read++;
+
+                        yield return MapRow(run, sourceRow, mappings);
+                    }
+
+                    if (truncated)
+                    {
+                        break;
+                    }
+                }
             }
         }
-
-        if (truncated)
+        finally
         {
-            var label = dataSet.Reference.DisplayName ?? dataSet.Schema.DataSet?.DisplayName ?? dataSet.Reference.DataSet;
+            run.SourceRows += read;
 
-            warnings.Add(S["Only the first {0} rows of '{1}' were read. Add filters to narrow the data.", maxRows, label]);
+            if (truncated)
+            {
+                var label = dataSet.Reference.DisplayName ?? dataSet.Schema.DataSet?.DisplayName ?? dataSet.Reference.DataSet;
+
+                run.Warnings.Add(S["Only the first {0} rows of '{1}' were read. Add filters to narrow the data.", maxRows, label]);
+            }
         }
-
-        return rows;
     }
 
-    private static DataSourceQuery CreateQuery(PlannedDataSet dataSet, IReadOnlyList<ActiveFilter> filters, ReportQueryExecutionContext context, int maxRows)
+    private static object[] MapRow(QueryRun run, object[] sourceRow, (int Slot, int SourceIndex, DataFieldType DataType)[] mappings)
+    {
+        var row = new object[run.Plan.Width];
+
+        foreach (var (slot, sourceIndex, dataType) in mappings)
+        {
+            if (sourceIndex >= 0 && sourceIndex < sourceRow.Length)
+            {
+                row[slot] = Normalize(sourceRow[sourceIndex], dataType, run.Context.ToLocal);
+            }
+        }
+
+        return row;
+    }
+
+    private static DataSourceQuery CreateQuery(PlannedDataSet dataSet, IReadOnlyList<ActiveFilter> filters, ReportQueryExecutionContext context)
     {
         var query = new DataSourceQuery
         {
             DataSet = dataSet.Reference.DataSet,
             Fields = new HashSet<string>(dataSet.UsedFields.Keys, StringComparer.Ordinal),
-            MaxRows = Math.Max(1, maxRows),
             Context = context.DataSourceContext,
         };
 
@@ -285,37 +391,6 @@ public sealed partial class ReportQueryEngine
         }
 
         return query;
-    }
-
-    private static async Task<(List<object[]> Rows, bool Truncated)> ReadTableAsync(
-        ReportQueryPlan plan,
-        PlannedDataSet dataSet,
-        DataSourceQuery query,
-        ReportQueryExecutionContext context,
-        CancellationToken cancellationToken)
-    {
-        var read = await dataSet.Source.ReadRowsAsync(query, query.MaxRows, cancellationToken);
-        var mappings = dataSet.UsedFields.Values
-            .Select(field => (field.Slot, SourceIndex: read.Fields.IndexOf(field.FieldName), field.DataType))
-            .ToArray();
-        var rows = new List<object[]>(read.Rows.Count);
-
-        foreach (var sourceRow in read.Rows)
-        {
-            var row = new object[plan.Width];
-
-            foreach (var (slot, sourceIndex, dataType) in mappings)
-            {
-                if (sourceIndex >= 0 && sourceIndex < sourceRow.Length)
-                {
-                    row[slot] = Normalize(sourceRow[sourceIndex], dataType, context.ToLocal);
-                }
-            }
-
-            rows.Add(row);
-        }
-
-        return (rows, read.Truncated);
     }
 
     private static object Normalize(object value, DataFieldType dataType, Func<DateTime, DateTime> toLocal)
@@ -351,136 +426,185 @@ public sealed partial class ReportQueryEngine
         }
     }
 
-    private List<object[]> Join(
-        List<object[]> left,
-        List<object[]> right,
+    // Joins the rows read so far with a data set. The rows read so far are held in a buffer that writes the rows that
+    // don't fit in memory to a temporary file, while the keys they hold are collected, so the joined data set is read
+    // only for the records that can match; then Orchard Core's join matches them with a bounded amount of memory too.
+    private async IAsyncEnumerable<object[]> JoinAsync(
+        QueryRun run,
+        IAsyncEnumerable<object[]> left,
         PlannedJoin join,
-        int maxRows,
-        List<string> warnings)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        var width = run.Plan.Width;
+        var pairs = join.Pairs;
         var rightSlots = join.DataSet.UsedFields.Values.Select(field => field.Slot).ToArray();
-        var index = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+        var keyField = FindKeyField(join, run.Context.Limits);
+        var keys = keyField is null ? null : new Dictionary<string, object>(StringComparer.Ordinal);
+        var maxJoinKeys = run.Context.Limits.MaxJoinKeys;
 
-        for (var rightIndex = 0; rightIndex < right.Count; rightIndex++)
+        using var leftRows = new DataRowBuffer(run.CreateSpillOptions());
+
+        // Each row carries its key values after its fields: the text of a pair compared as text, the value otherwise.
+        await foreach (var row in left.WithCancellation(cancellationToken))
         {
-            var key = JoinKey(right[rightIndex], join, useRight: true);
+            leftRows.Add(WithKeys(row, width, pairs));
 
-            if (key is null)
+            if (keys is not null && DataValues.Coerce(row[pairs[keyField.Pair].LeftSlot], keyField.DataType) is { } value && !DataValues.IsEmpty(value))
             {
-                continue;
-            }
+                keys.TryAdd(DataValues.ToKey(value), value);
 
-            if (!index.TryGetValue(key, out var matches))
-            {
-                index[key] = matches = [];
-            }
-
-            matches.Add(rightIndex);
-        }
-
-        var matchedRight = new bool[right.Count];
-        var output = new List<object[]>();
-        var keepLeft = join.Type is DataJoinType.Left or DataJoinType.Full;
-        var keepRight = join.Type is DataJoinType.Right or DataJoinType.Full;
-
-        foreach (var leftRow in left)
-        {
-            var key = JoinKey(leftRow, join, useRight: false);
-
-            if (key is not null && index.TryGetValue(key, out var matches))
-            {
-                foreach (var rightIndex in matches)
+                // With more keys than the limit, the joined data set is read like the others.
+                if (keys.Count > maxJoinKeys)
                 {
-                    var merged = (object[])leftRow.Clone();
-                    var rightRow = right[rightIndex];
-
-                    foreach (var slot in rightSlots)
-                    {
-                        merged[slot] = rightRow[slot];
-                    }
-
-                    matchedRight[rightIndex] = true;
-
-                    if (!TryAdd(output, merged, maxRows, warnings))
-                    {
-                        return output;
-                    }
-                }
-            }
-            else if (keepLeft && !TryAdd(output, leftRow, maxRows, warnings))
-            {
-                return output;
-            }
-        }
-
-        if (keepRight)
-        {
-            for (var rightIndex = 0; rightIndex < right.Count; rightIndex++)
-            {
-                if (!matchedRight[rightIndex] && !TryAdd(output, right[rightIndex], maxRows, warnings))
-                {
-                    return output;
+                    keys = null;
                 }
             }
         }
 
-        return output;
+        var right = keys is null
+            ? ReadDataSetAsync(run, join.DataSet, keys: null, cancellationToken)
+            : keys.Count == 0
+                ? Empty()
+                : ReadDataSetAsync(run, join.DataSet, new JoinKeyFilter(keyField.FieldName, [.. keys.Values]), cancellationToken);
+
+        var leftWidth = width + pairs.Count;
+        var rightWidth = rightSlots.Length + pairs.Count;
+        var joined = DataJoin.JoinAsync(
+            ToAsync(leftRows.Read(), cancellationToken),
+            CompactAsync(right, rightSlots, pairs, cancellationToken),
+            leftWidth,
+            rightWidth,
+            [.. Enumerable.Range(width, pairs.Count)],
+            [.. Enumerable.Range(rightSlots.Length, pairs.Count)],
+            join.Type,
+            ignoreCase: true,
+            run.CreateSpillOptions(),
+            cancellationToken);
+
+        var maxRows = Math.Max(1, run.Context.Limits.MaxJoinedRows);
+        var produced = 0L;
+
+        await foreach (var pair in joined.WithCancellation(cancellationToken))
+        {
+            if (produced++ >= maxRows)
+            {
+                run.Warnings.Add(S["The joins produced more than {0} rows, so the result is incomplete. Add filters or change the joins.", maxRows]);
+
+                yield break;
+            }
+
+            // The fields of the left row, with the fields of the joined data set in their slots.
+            var row = new object[width];
+
+            Array.Copy(pair, row, width);
+
+            for (var index = 0; index < rightSlots.Length; index++)
+            {
+                row[rightSlots[index]] = pair[leftWidth + index];
+            }
+
+            yield return row;
+        }
     }
 
-    private bool TryAdd(List<object[]> output, object[] row, int maxRows, List<string> warnings)
+    // The rows of a joined data set with only the values of its fields, followed by their key values.
+    private static async IAsyncEnumerable<object[]> CompactAsync(
+        IAsyncEnumerable<object[]> rows,
+        int[] slots,
+        IList<(int LeftSlot, int RightSlot, bool CompareAsText)> pairs,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (output.Count >= maxRows)
+        await foreach (var row in rows.WithCancellation(cancellationToken))
         {
-            warnings.Add(S["The joins produced more than {0} rows, so the result is incomplete. Add filters or change the joins.", maxRows]);
+            var compact = new object[slots.Length + pairs.Count];
 
-            return false;
+            for (var index = 0; index < slots.Length; index++)
+            {
+                compact[index] = row[slots[index]];
+            }
+
+            for (var index = 0; index < pairs.Count; index++)
+            {
+                compact[slots.Length + index] = KeyValue(row[pairs[index].RightSlot], pairs[index].CompareAsText);
+            }
+
+            yield return compact;
+        }
+    }
+
+    // A row read so far, followed by its key values.
+    private static object[] WithKeys(object[] row, int width, IList<(int LeftSlot, int RightSlot, bool CompareAsText)> pairs)
+    {
+        var keyed = new object[width + pairs.Count];
+
+        Array.Copy(row, keyed, Math.Min(row.Length, width));
+
+        for (var index = 0; index < pairs.Count; index++)
+        {
+            keyed[width + index] = KeyValue(row[pairs[index].LeftSlot], pairs[index].CompareAsText);
         }
 
-        output.Add(row);
-
-        return true;
+        return keyed;
     }
 
-    private static string JoinKey(object[] row, PlannedJoin join, bool useRight)
+    // The value a join matches: a missing value never matches, and the values of a pair compared as text match by their
+    // text. The join ignores the case of text, like a lookup by DataValues.ToKey.
+    private static object KeyValue(object value, bool compareAsText)
     {
-        var parts = new string[join.Pairs.Count];
+        if (DataValues.IsEmpty(value))
+        {
+            return null;
+        }
+
+        return compareAsText ? DataValues.ToText(value) : value;
+    }
+
+    // The field of a joined data set the keys of the rows read so far can be sent to, so it reads only the records that
+    // can match: the right side of a pair the source can filter on exactly. Only joins that drop the joined data set's
+    // unmatched records (inner and left) qualify, and not keys compared as text across types.
+    private static JoinKeyField FindKeyField(PlannedJoin join, ReportQueryLimits limits)
+    {
+        if (join.Type is not (DataJoinType.Inner or DataJoinType.Left) || limits.MaxJoinKeys < 1)
+        {
+            return null;
+        }
 
         for (var index = 0; index < join.Pairs.Count; index++)
         {
-            var (leftSlot, rightSlot, compareAsText) = join.Pairs[index];
-            var value = row[useRight ? rightSlot : leftSlot];
+            var (_, rightSlot, compareAsText) = join.Pairs[index];
+            var field = join.DataSet.UsedFields.Values.FirstOrDefault(candidate => candidate.Slot == rightSlot);
+            var descriptor = field is null ? null : join.DataSet.Schema?.FindField(field.FieldName);
 
-            if (DataValues.IsEmpty(value))
+            if (!compareAsText &&
+                descriptor is { IsKeyFilterable: true } &&
+                field.DataType is DataFieldType.Text or DataFieldType.Integer)
             {
-                return null;
+                return new JoinKeyField(index, field.FieldName, field.DataType);
             }
-
-            parts[index] = compareAsText
-                ? "s:" + DataValues.ToText(value).ToUpperInvariant()
-                : DataValues.ToKey(value);
         }
 
-        return string.Join('\u001F', parts);
+        return null;
     }
 
-    private static void EvaluateRowCalculations(ReportQueryPlan plan, List<object[]> rows, ExpressionContext context)
+    private static List<(int Slot, Func<object, bool> Predicate)> Predicates(IEnumerable<ActiveFilter> filters, DateTime today)
     {
-        if (plan.RowCalculations.Count == 0)
-        {
-            return;
-        }
+        return filters
+            .Select(filter => (filter.Filter.Field.Slot, Predicate: DataFilterPredicates.Build(filter.Filter.Definition.Operator, filter.Filter.DataType, filter.Values, today)))
+            .Where(entry => entry.Predicate is not null)
+            .ToList();
+    }
 
-        foreach (var row in rows)
+    private static bool Passes(object[] row, List<(int Slot, Func<object, bool> Predicate)> predicates)
+    {
+        foreach (var (slot, predicate) in predicates)
         {
-            context.Row = row;
-
-            foreach (var calculation in plan.RowCalculations)
+            if (!predicate(row[slot]))
             {
-                row[calculation.Slot] = SafeEvaluate(calculation.Expression, context);
+                return false;
             }
         }
 
-        context.Row = null;
+        return true;
     }
 
     private static object SafeEvaluate(CompiledExpression expression, ExpressionContext context)
@@ -495,82 +619,181 @@ public sealed partial class ReportQueryEngine
         }
     }
 
-    private static List<object[]> ApplyRowFilters(List<object[]> rows, IEnumerable<ActiveFilter> filters, DateTime today)
+    private static async Task<List<object[]>> TakeAsync(IAsyncEnumerable<object[]> rows, int count, bool drain, CancellationToken cancellationToken)
     {
-        var predicates = filters
-            .Select(filter => (filter.Filter.Field.Slot, Predicate: DataFilterPredicates.Build(filter.Filter.Definition.Operator, filter.Filter.DataType, filter.Values, today)))
-            .Where(entry => entry.Predicate is not null)
-            .ToArray();
+        var taken = new List<object[]>();
 
-        if (predicates.Length == 0)
+        await foreach (var row in rows.WithCancellation(cancellationToken))
         {
-            return rows;
+            if (taken.Count < count)
+            {
+                taken.Add(row);
+            }
+            else if (!drain)
+            {
+                break;
+            }
         }
 
-        return rows
-            .Where(row => predicates.All(entry => entry.Predicate(row[entry.Slot])))
-            .ToList();
+        return taken;
     }
 
-    private Dictionary<string, IReadOnlyList<ReportFilterOption>> BuildFilterOptions(
-        List<object[]> rows,
-        IEnumerable<ActiveFilter> filters,
-        int maxOptions)
+    private static async IAsyncEnumerable<object[]> ToAsync(IEnumerable<object[]> rows, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var options = new Dictionary<string, IReadOnlyList<ReportFilterOption>>(StringComparer.Ordinal);
+        var count = 0;
 
-        foreach (var filter in filters)
+        foreach (var row in rows)
         {
-            var definition = filter.Filter.Definition;
-
-            if (!definition.Exposed || !UsesOptions(definition, filter.Filter.DataType))
+            if (++count % 4096 == 0)
             {
-                continue;
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await Task.Yield();
             }
 
-            var slot = filter.Filter.Field.Slot;
-            var distinct = new Dictionary<string, object>(StringComparer.Ordinal);
+            yield return row;
+        }
+    }
 
-            foreach (var row in rows)
-            {
-                var value = row[slot];
+#pragma warning disable CS1998 // An empty sequence awaits nothing.
+    private static async IAsyncEnumerable<object[]> Empty()
+    {
+        yield break;
+    }
+#pragma warning restore CS1998
 
-                if (!DataValues.IsEmpty(value))
-                {
-                    distinct.TryAdd(DataValues.ToKey(value), value);
-                }
-            }
-
-            options[definition.Id] = distinct.Values
-                .Order(Comparer<object>.Create(DataValues.Compare))
-                .Take(Math.Max(1, maxOptions))
-                .Select(value => new ReportFilterOption(DataValues.ToText(value), _formatter.Format(value, filter.Filter.DataType)))
-                .ToArray();
+    private static IList<string> EffectiveValues(ReportFilterDefinition filter, ReportQueryExecutionContext context)
+    {
+        if (filter.Exposed && context.FilterValues.TryGetValue(filter.Id, out var values))
+        {
+            return values ?? [];
         }
 
-        return options;
-    }
-
-    /// <summary>
-    /// Determines whether an exposed filter renders as a list of the values found in the data.
-    /// </summary>
-    /// <param name="filter">The filter.</param>
-    /// <param name="dataType">The type of the filtered values.</param>
-    /// <returns><see langword="true"/> for drop-down and multi-select filters.</returns>
-    public static bool UsesOptions(ReportFilterDefinition filter, DataFieldType dataType)
-    {
-        ArgumentNullException.ThrowIfNull(filter);
-
-        return filter.Control switch
-        {
-            ReportFilterControl.Select or ReportFilterControl.MultiSelect => true,
-            ReportFilterControl.Auto => dataType == DataFieldType.Text && filter.Operator is DataFilterOperator.Equals or DataFilterOperator.In or DataFilterOperator.NotEquals or DataFilterOperator.NotIn,
-            _ => false,
-        };
+        return filter.Values ?? [];
     }
 
     private sealed record ActiveFilter(PlannedFilter Filter, IList<string> Values);
 
     // The keys of a join, for the field of the joined data set they are matched against.
     private sealed record JoinKeyFilter(string FieldName, IReadOnlyList<object> Values);
+
+    // The field of a joined data set its keys can be read for, and the pair it is the right side of.
+    private sealed record JoinKeyField(int Pair, string FieldName, DataFieldType DataType);
+
+    // The state of one run: its filters, counts, filter options and warnings, and the directory of its temporary files,
+    // deleted when it ends.
+    private sealed class QueryRun : IDisposable
+    {
+        private readonly string _directory;
+        private readonly long _memoryLimit;
+        private readonly List<(string FilterId, int Slot, SortedSet<object> Values)> _optionFilters = [];
+        private readonly int _maxOptions;
+        private int _spills;
+
+        public QueryRun(ReportQueryPlan plan, ReportQueryExecutionContext context, bool groupings)
+        {
+            Plan = plan;
+            Context = context;
+            Today = context.ToLocal(context.UtcNow);
+            Filters = plan.Filters
+                .Select(filter => new ActiveFilter(filter, EffectiveValues(filter.Definition, context)))
+                .ToList();
+            Groupings = groupings ? [.. context.Groupings] : [];
+            _maxOptions = Math.Max(1, context.Limits.MaxFilterOptions);
+            _memoryLimit = Math.Max(1, context.Limits.MemoryLimitMegabytes) * 1024L * 1024L;
+            _directory = Path.Combine(
+                string.IsNullOrEmpty(context.Limits.TemporaryDirectory) ? Path.GetTempPath() : context.Limits.TemporaryDirectory,
+                "CrestApps.Reports",
+                Guid.NewGuid().ToString("n"));
+
+            foreach (var filter in Filters)
+            {
+                var definition = filter.Filter.Definition;
+
+                if (definition.Stage == ReportFilterStage.Rows && definition.Exposed && UsesOptions(definition, filter.Filter.DataType))
+                {
+                    _optionFilters.Add((definition.Id, filter.Filter.Field.Slot, new SortedSet<object>(Comparer<object>.Create(DataValues.Compare))));
+                    OptionTypes[definition.Id] = filter.Filter.DataType;
+                }
+            }
+
+            // A grouped result keeps a copy of the rows it grouped, reduced to what its groups need, to regroup them.
+            if (plan.IsAggregated && Groupings.Count > 0)
+            {
+                GroupedRows = new DataRowBuffer(CreateSpillOptions());
+            }
+        }
+
+        public ReportQueryPlan Plan { get; }
+
+        public ReportQueryExecutionContext Context { get; }
+
+        public DateTime Today { get; }
+
+        public List<ActiveFilter> Filters { get; }
+
+        public IList<IReadOnlyList<string>> Groupings { get; }
+
+        public List<string> Warnings { get; } = [];
+
+        public long SourceRows { get; set; }
+
+        public long FilteredRows { get; set; }
+
+        // Whether each row is a group a data source computed, which stands for several rows.
+        public bool Weighted { get; set; }
+
+        public DataRowBuffer GroupedRows { get; }
+
+        // Whether the run must read every row for the options of its exposed filters, even once its result is complete.
+        public bool ListsOptions => _optionFilters.Count > 0;
+
+        // Whether the result streams the rows it reads, so it can stop reading once it has them: a result that is
+        // grouped or sorted reads every row before its first one.
+        public bool ReadsOnlyWhatItKeeps => !Plan.IsAggregated && Plan.Sorts.Count == 0;
+
+        public Dictionary<string, DataFieldType> OptionTypes { get; } = new(StringComparer.Ordinal);
+
+        // The smallest distinct values of each exposed filter that lists options, in order.
+        public IEnumerable<(string FilterId, IEnumerable<object> Values)> Options => _optionFilters.Select(filter => (filter.FilterId, (IEnumerable<object>)filter.Values));
+
+        public void AddOptions(object[] row)
+        {
+            foreach (var (_, slot, values) in _optionFilters)
+            {
+                var value = row[slot];
+
+                // Only the smallest values are listed, so only they are kept.
+                if (!DataValues.IsEmpty(value) && values.Add(value) && values.Count > _maxOptions)
+                {
+                    values.Remove(values.Max);
+                }
+            }
+        }
+
+        public DataSpillOptions CreateSpillOptions()
+        {
+            return new DataSpillOptions(Path.Combine(_directory, (++_spills).ToString(System.Globalization.CultureInfo.InvariantCulture)), _memoryLimit);
+        }
+
+        public void Dispose()
+        {
+            GroupedRows?.Dispose();
+
+            try
+            {
+                if (Directory.Exists(_directory))
+                {
+                    Directory.Delete(_directory, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+                // A file still open is deleted with the temporary directory of the system.
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+        }
+    }
 }

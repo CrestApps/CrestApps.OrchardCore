@@ -219,12 +219,29 @@ internal static class ReportDesignerTestServices
 
     public static ReportQueryEngine Engine(params InMemoryReportDataSource[] dataSources)
     {
-        return new ReportQueryEngine(Planner(dataSources), Formatter, new PassThroughStringLocalizer<ReportQueryEngine>());
+        return new ReportQueryEngine(Planner(dataSources), Formatter, new ReportQueryGate(), new PassThroughStringLocalizer<ReportQueryEngine>());
     }
 
     public static ReportQueryEngine Engine(params TestDataSourceEntry[] dataSources)
     {
-        return new ReportQueryEngine(Planner(dataSources), Formatter, new PassThroughStringLocalizer<ReportQueryEngine>());
+        return new ReportQueryEngine(Planner(dataSources), Formatter, new ReportQueryGate(), new PassThroughStringLocalizer<ReportQueryEngine>());
+    }
+
+    /// <summary>
+    /// Runs a query like the report runner does: the groupings the visuals regroup the result by, such as totals and
+    /// subtotals, are computed while the query runs.
+    /// </summary>
+    public static async Task<ReportQueryResult> RunAsync(ReportQueryDefinition query, IEnumerable<ReportVisualDefinition> visuals, params InMemoryReportDataSource[] dataSources)
+    {
+        var context = Context();
+        var plan = await Planner(dataSources).PlanAsync(query, context.DataSourceContext, TestContext.Current.CancellationToken);
+
+        foreach (var grouping in ReportDesignDocumentBuilder.GetGroupings(visuals, ReportQueryEngine.DescribeColumns(plan)))
+        {
+            context.Groupings.Add(grouping);
+        }
+
+        return await Engine(dataSources).ExecuteAsync(plan, context, TestContext.Current.CancellationToken);
     }
 
     public static ReportDesignDocumentBuilder DocumentBuilder()

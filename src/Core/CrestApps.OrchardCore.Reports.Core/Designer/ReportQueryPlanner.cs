@@ -296,6 +296,15 @@ public sealed partial class ReportQueryPlanner
                 continue;
             }
 
+            // A report aggregates its rows as they arrive, without keeping them, so each aggregate of a formula must be
+            // one it can compute that way.
+            if (compiled.IsAggregate && !compiled.CanAggregateAsRowsArrive)
+            {
+                plan.Errors.Add(S["The calculated field '{0}' calls an aggregate function that reports can't compute.", calculated.Label ?? calculated.Name]);
+
+                continue;
+            }
+
             var field = new PlannedField
             {
                 Key = calculated.Name,

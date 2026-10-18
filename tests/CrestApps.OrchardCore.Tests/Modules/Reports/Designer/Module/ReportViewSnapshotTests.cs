@@ -546,6 +546,7 @@ public sealed class ReportViewSnapshotTests : IAsyncLifetime
             ]))
             .AddScoped<ReportQueryPlanner>()
             .AddScoped<ReportQueryEngine>()
+            .AddSingleton<ReportQueryGate>()
             .AddScoped(sp => new Lazy<ReportQueryPlanner>(sp.GetRequiredService<ReportQueryPlanner>))
             .AddScoped(sp => new Lazy<ReportQueryEngine>(sp.GetRequiredService<ReportQueryEngine>))
             .AddScoped<ReportExecutionContextFactory>()

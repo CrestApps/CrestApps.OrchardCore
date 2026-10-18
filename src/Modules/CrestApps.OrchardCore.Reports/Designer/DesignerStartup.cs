@@ -55,6 +55,7 @@ public sealed class DesignerStartup : StartupBase
         services
             .AddScoped<ReportQueryPlanner>()
             .AddScoped<ReportQueryEngine>()
+            .AddSingleton<ReportQueryGate>()
             .AddScoped<ReportValueFormatter>()
             .AddScoped<ReportDesignDocumentBuilder>()
             .AddScoped(sp => new Lazy<ReportQueryPlanner>(sp.GetRequiredService<ReportQueryPlanner>))

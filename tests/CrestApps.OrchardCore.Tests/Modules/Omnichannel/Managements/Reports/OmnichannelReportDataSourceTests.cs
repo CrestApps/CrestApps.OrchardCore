@@ -236,8 +236,8 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
         var rowsOnly = new RowsOnly(grouping);
 
         // Act
-        var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
-        var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(GroupedQueries[report](), LocalContext(), TestContext.Current.CancellationToken);
+        var expected = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, rowsOnly)).ExecuteAsync(GroupedQueries[report](), TotalledContext(), TestContext.Current.CancellationToken);
+        var actual = await ReportDesignerTestServices.Engine(new TestDataSourceEntry(OmnichannelReportDataSource.SourceName, grouping)).ExecuteAsync(GroupedQueries[report](), TotalledContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(actual.GroupedBySource, "The database should have grouped the report.");
@@ -314,6 +314,16 @@ public sealed class OmnichannelReportDataSourceTests : IAsyncLifetime
     }
 
     // The tenant is five hours behind UTC, so local days differ from UTC ones.
+    // A context whose grouped results are totalled while the query runs.
+    private static ReportQueryExecutionContext TotalledContext()
+    {
+        var context = LocalContext();
+
+        context.Groupings.Add([]);
+
+        return context;
+    }
+
     private static ReportQueryExecutionContext LocalContext()
     {
         var context = ReportDesignerTestServices.Context(_day.AddDays(4));

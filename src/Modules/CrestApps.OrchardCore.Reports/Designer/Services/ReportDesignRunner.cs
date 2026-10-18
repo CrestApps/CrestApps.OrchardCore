@@ -116,8 +116,16 @@ public sealed class ReportDesignRunner
                 return result;
             }
 
-            var queryResult = await _engine.ExecuteAsync(plan, context, cancellationToken);
             var visuals = design.Visuals ?? [];
+
+            // The rows behind a grouped result aren't kept, so the totals, subtotals, charts and pivots of the visuals
+            // are grouped while the query runs.
+            foreach (var grouping in ReportDesignDocumentBuilder.GetGroupings(visuals, ReportQueryEngine.DescribeColumns(plan)))
+            {
+                context.Groupings.Add(grouping);
+            }
+
+            var queryResult = await _engine.ExecuteAsync(plan, context, cancellationToken);
 
             foreach (var error in _documentBuilder.Validate(visuals, queryResult.Columns))
             {

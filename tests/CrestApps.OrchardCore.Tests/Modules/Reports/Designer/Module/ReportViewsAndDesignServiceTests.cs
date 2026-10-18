@@ -278,7 +278,7 @@ public sealed class ReportViewsAndDesignServiceTests
             NoSnapshots());
 
         planner = Planner(new TestDataSourceEntry("Memory", SalesData()), new TestDataSourceEntry(ReportsConstants.ViewsDataSource, source));
-        engine = new ReportQueryEngine(planner, Formatter, new PassThroughStringLocalizer<ReportQueryEngine>());
+        engine = new ReportQueryEngine(planner, Formatter, new ReportQueryGate(), new PassThroughStringLocalizer<ReportQueryEngine>());
 
         return (engine, source);
     }

@@ -1,5 +1,4 @@
 using OrchardCore.DataSources;
-using OrchardCore.DataSources.Expressions;
 using OrchardCore.DataSources.Operations;
 
 namespace CrestApps.OrchardCore.Reports.Designer;
@@ -7,9 +6,9 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 /// <summary>
 /// Lets a data source group and aggregate a simple report itself (see <see cref="IDataAggregateSource"/>). The
 /// source returns, per group, the row count and the count, sum, smallest, and largest value of each measured field;
-/// the engine turns each group into one row that stands for its rows, and merges these partial aggregates wherever it
-/// would have aggregated rows, so sorting, result filters, totals, charts, and pivots give the same result as reading
-/// every row.
+/// the engine turns each group into one row that stands for its rows, holding these partial aggregates, and Orchard
+/// Core's aggregator merges them wherever it would have aggregated rows, so sorting, result filters, totals, charts,
+/// and pivots give the same result as reading every row.
 /// </summary>
 public sealed partial class ReportQueryEngine
 {
@@ -23,14 +22,14 @@ public sealed partial class ReportQueryEngine
         Month,
     }
 
-    private async Task<ReportQueryResult> TryAggregateAsync(
-        ReportQueryPlan plan,
-        IReadOnlyList<ActiveFilter> filters,
-        ReportQueryExecutionContext context,
-        DateTime today,
-        List<string> warnings,
-        CancellationToken cancellationToken)
+    // The groups the data source computed, each as a row that stands for its rows, with how many after the fields of
+    // the plan; or null when the source can't group the report exactly.
+    private static async Task<List<object[]>> TryAggregateAsync(QueryRun run, CancellationToken cancellationToken)
     {
+        var plan = run.Plan;
+        var context = run.Context;
+        var today = run.Today;
+
         if (plan.DataSets.Count != 1 ||
             plan.Joins.Count > 0 ||
             plan.RowCalculations.Count > 0 ||
@@ -50,7 +49,7 @@ public sealed partial class ReportQueryEngine
 
         // Every row filter must be on a field of the data set and expressible exactly; filters that list options need
         // the rows themselves.
-        foreach (var filter in filters.Where(filter => filter.Filter.Definition.Stage == ReportFilterStage.Rows))
+        foreach (var filter in run.Filters.Where(filter => filter.Filter.Definition.Stage == ReportFilterStage.Rows))
         {
             var field = filter.Filter.Field;
 
@@ -241,24 +240,10 @@ public sealed partial class ReportQueryEngine
             rows.Add(row);
         }
 
-        var expressionContext = new ExpressionContext
-        {
-            Now = today,
-            WeightSlot = plan.Width,
-        };
+        run.SourceRows = total;
+        run.FilteredRows = total;
 
-        var result = BuildResult(plan, rows, filters, today, expressionContext, context.Limits, warnings);
-
-        result.SourceRowCount = (int)Math.Min(int.MaxValue, total);
-        result.FilteredRowCount = result.SourceRowCount;
-        result.GroupedBySource = true;
-
-        foreach (var warning in warnings.Distinct(StringComparer.Ordinal))
-        {
-            result.Warnings.Add(warning);
-        }
-
-        return result;
+        return rows;
     }
 
     // How a dimension groups a field: by its value (no transform), or by local hour, day, or month for a date transform;
