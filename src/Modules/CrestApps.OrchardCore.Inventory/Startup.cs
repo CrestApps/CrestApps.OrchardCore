@@ -147,11 +147,14 @@ public sealed class DeploymentStartup : StartupBase
 }
 
 /// <summary>
-/// Adds the stock on hand report to Reports > Commerce.
+/// Adds the stock on hand and stock movements reports to Reports > Commerce.
 /// </summary>
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IReport, StockOnHandReport>();
+    {
+        services.AddScoped<IReport, StockOnHandReport>();
+        services.AddScoped<IReport, StockMovementsReport>();
+    }
 }

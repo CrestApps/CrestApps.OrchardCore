@@ -86,7 +86,8 @@
     }
     <p class="product-availability small mb-2 text-@(initial?.Tone ?? "success")" data-product-availability hidden="@(initial is null)">@initial?.Label</p>
 
-    <div class="d-flex gap-2">
+    @* On a narrow card the button wraps under the quantity rather than breaking its label. *@
+    <div class="d-flex flex-wrap gap-2">
         @if (Model.MaxQuantity > 1 && canBuy)
         {
             <input type="number"
@@ -96,10 +97,10 @@
                    max="@Model.MaxQuantity"
                    value="1"
                    class="form-control product-add-to-cart-quantity"
-                   style="max-width: 5rem"
+                   style="flex: 0 0 4.5rem; max-width: 4.5rem"
                    aria-label="@T["Quantity"]" />
         }
-        <button type="submit" class="btn btn-primary flex-grow-1" disabled="@(!canBuy)">
+        <button type="submit" class="btn btn-primary text-nowrap" style="flex: 1 1 8rem" disabled="@(!canBuy)">
             <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
             @T["Add to cart"]
         </button>

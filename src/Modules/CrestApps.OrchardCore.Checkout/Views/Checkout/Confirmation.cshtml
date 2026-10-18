@@ -36,7 +36,7 @@
         @if (!string.IsNullOrEmpty(Model.ReturnUrl))
         {
             <div class="text-center my-4">
-                <a class="btn btn-primary btn-lg" href="@Url.Content(Model.ReturnUrl)" data-checkout-return>
+                <a class="btn btn-primary px-4" href="@Url.Content(Model.ReturnUrl)" data-checkout-return>
                     @(string.IsNullOrEmpty(Model.ReturnText) ? T["Continue"].Value : Model.ReturnText)
                 </a>
             </div>

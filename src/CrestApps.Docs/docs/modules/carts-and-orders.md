@@ -124,8 +124,11 @@ With the [Reports](reports) feature on, the Orders feature adds these reports un
 
 | Report | Shows |
 | --- | --- |
-| Sales | Orders, items, gross sales (the lines), discounts, shipping, tax, total charged, refunded and net, per currency, by day in the site's time zone (by month for periods over 62 days), with a chart. |
-| Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units. |
+| Sales | Orders, items, average order value (total charged over orders), items per order, gross sales (the lines), discounts, shipping, tax, total charged, refunded and net, per currency, by day in the site's time zone (by month for periods over 62 days), with a chart. |
+| Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units, and the same by kind of product (goods, digital, services). |
+| Sales by category | Orders, units and sales per category: the taxonomy terms in `OrderLine.CategoryIds`, named from the site's published taxonomies (`ProductCategoryNames`). A line in two categories counts in both; one in none counts under *No category*. |
+| Customers | Buyers in the period, per currency: first-time (no paid order before the period) and returning, the share who have paid for more than one order, the average lifetime spend (net of refunds, up to the period's end), and the top 25 buyers. A buyer is known by their customer record, else their account, else their email. |
+| Checkouts | Order checkouts (`CheckoutSessionIndex`, reference type `Order`) started in the period by how they ended: paid, payment failed, left or expired, or still open, with the paid rate, by day or month. |
 | Sales by country | Orders, tax and total per country the orders ship to, or are billed to. |
 | Tax on orders | Tax charged and what it was charged on, by day or month. |
 | Discounts on orders | Orders that used each promotion code and what it took off. |
@@ -133,6 +136,16 @@ With the [Reports](reports) feature on, the Orders feature adds these reports un
 | Orders to ship | Paid orders with a shipping method not shipped in full, oldest first, whatever the period. |
 
 Refunded in **Sales** is what was given back for the period's orders, whenever it was; **Refunds** lists refunds by the day they were given.
+
+Other commerce features add their own reports under **Reports > Commerce** when Reports is on:
+
+| Report | Feature | Permission | Shows |
+| --- | --- | --- | --- |
+| Shipping times | Shipping | `FulfillOrders` | Shipments sent in the period: average and median time from the order's payment to shipping, the share shipped within 2 days, delivery time for shipments marked delivered, returns, the same by carrier, and the 15 slowest. |
+| Stock on hand | Inventory | `ViewInventory` | Every counted item now, out of stock and low first. |
+| Stock movements | Inventory | `ViewInventory` | Per item, the units received, sold, returned and corrected (adjustments and counts) in the period, what is on hand now, and the days it lasts at the period's rate of sale. |
+| Downloads | Digital Downloads | `ManageDigitalDownloads` | Download links given in the period, per product and file: used, never used, downloads made, used up, expired and taken back. |
+| Product reviews | Product Reviews | `ManageProductReviews` | Reviews written in the period: waiting, approved and rejected, the stars given, verified purchases, and each product's average from its approved reviews. |
 
 ### Workflow events
 

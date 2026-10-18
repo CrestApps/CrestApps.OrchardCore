@@ -10,6 +10,8 @@ using CrestApps.OrchardCore.Shipping.Migrations;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Navigation;
 using CrestApps.OrchardCore.Shipping.Recipes;
+using CrestApps.OrchardCore.Shipping.Reports;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
@@ -102,4 +104,14 @@ public sealed class DeploymentStartup : StartupBase
     {
         services.AddDeployment<ShippingZonesDeploymentSource, ShippingZonesDeploymentStep, ShippingZonesDeploymentStepDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Adds the shipping times report to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IReport, ShippingPerformanceReport>();
 }

@@ -48,6 +48,6 @@ public sealed class ProductDetailsDisplayDriver : ContentPartDisplayDriver<Produ
         return Combine(
             Initialize<ProductDetailsShapeViewModel>("ProductBreadcrumb", LoadAsync).Location("Detail", "Header:before"),
             Initialize<ProductDetailsShapeViewModel>("ProductSummary", LoadAsync).Location("Detail", "Content:before"),
-            Initialize<ProductDetailsShapeViewModel>("ProductSpecifications", LoadAsync).Location("Detail", "Content:after"));
+            Initialize<ProductDetailsShapeViewModel>("ProductSpecifications", LoadAsync).Location("Detail", "Content:50"));
     }
 }

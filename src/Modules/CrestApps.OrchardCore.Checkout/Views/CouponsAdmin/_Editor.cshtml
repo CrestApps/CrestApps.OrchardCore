@@ -30,17 +30,17 @@
         </select>
         <span class="hint">@T["Free shipping takes off the shipping charged at checkout, whatever the method."]</span>
     </div>
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3" data-coupon-kinds="@((int)CouponKind.Percentage)">
         <label asp-for="Percentage" class="form-label">@T["Percentage"]</label>
         <input asp-for="Percentage" type="number" step="0.01" min="0" max="100" class="form-control" />
         <span asp-validation-for="Percentage"></span>
     </div>
-    <div class="col-md-2 mb-3">
+    <div class="col-md-2 mb-3" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
         <label asp-for="Amount" class="form-label">@T["Amount"]</label>
         <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
         <span asp-validation-for="Amount"></span>
     </div>
-    <div class="col-md-2 mb-3">
+    <div class="col-md-2 mb-3" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
         <label asp-for="Currency" class="form-label">@T["Currency"]</label>
         @if (Model.Currencies is { Count: > 0 })
         {
@@ -57,13 +57,13 @@
 </div>
 
 <div class="row">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-4 mb-3" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount)">
         <label asp-for="Target" class="form-label">@T["Applies to"]</label>
         <select asp-for="Target" class="form-select">
             <option value="@((int)DiscountTarget.OneTime)">@T["The one-time amount"]</option>
             <option value="@((int)DiscountTarget.FirstCycle)">@T["The first billing cycle"]</option>
         </select>
-        <span class="hint">@T["A first-cycle discount applies once. It does not reduce later cycles. Not used by free shipping."]</span>
+        <span class="hint">@T["A first-cycle discount applies once. It does not reduce later cycles."]</span>
     </div>
     <div class="col-md-4 mb-3">
         <label asp-for="MinimumAmount" class="form-label">@T["Minimum amount"]</label>
@@ -163,3 +163,23 @@
         }
     </p>
 }
+
+@* Shows only what the chosen kind of coupon uses: a percentage, or an amount in a currency; free shipping uses neither. *@
+<script at="Foot">
+    (function () {
+        var kind = document.getElementById('@Html.IdFor(m => m.Kind)');
+
+        if (!kind) {
+            return;
+        }
+
+        var sync = function () {
+            document.querySelectorAll('[data-coupon-kinds]').forEach(function (field) {
+                field.hidden = field.getAttribute('data-coupon-kinds').split(' ').indexOf(kind.value) < 0;
+            });
+        };
+
+        kind.addEventListener('change', sync);
+        sync();
+    })();
+</script>

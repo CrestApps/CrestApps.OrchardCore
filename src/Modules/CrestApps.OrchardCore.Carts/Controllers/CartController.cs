@@ -84,7 +84,7 @@ public sealed class CartController : Controller
         // The message names a product, so it is encoded. Themes without a cart link in their header still let the
         // shopper reach the cart from the notice.
         var message = result.Succeeded && linkToCart && !redirectsToCart
-            ? H["{0} <a href=\"{1}\">View cart</a>", result.Message?.Value ?? string.Empty, Url.RouteUrl(CartConstants.RouteNames.Cart)]
+            ? H["{0} <a href=\"{1}\" class=\"alert-link text-reset text-decoration-underline\">View cart</a>", result.Message?.Value ?? string.Empty, Url.RouteUrl(CartConstants.RouteNames.Cart)]
             : new LocalizedHtmlString(result.Message?.Name ?? string.Empty, "{0}", false, result.Message?.Value ?? string.Empty);
 
         if (result.Succeeded)

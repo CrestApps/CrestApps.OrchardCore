@@ -32,6 +32,11 @@
             }
         </h5>
 
+        @if (Model.Requirement == BillingAddressRequirement.Optional)
+        {
+            <p class="form-text mt-n2">@T["Leave it blank, or fill in the starred fields."]</p>
+        }
+
         @if (Model.SavedAddresses.Count > 0)
         {
             <div class="mb-3">

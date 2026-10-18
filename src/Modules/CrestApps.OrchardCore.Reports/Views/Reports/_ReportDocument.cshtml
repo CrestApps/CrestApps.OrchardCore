@@ -24,7 +24,8 @@
                 percentageScale = reportSection.Chart.PercentageScale,
             });
 
-        <section class="report-section col-12 col-xl-@sectionWidth">
+        @* A column of the title and its content; a chart card fills what the title leaves, so sections side by side line up without spilling into the next row. *@
+        <section class="report-section col-12 col-xl-@sectionWidth d-flex flex-column">
         @if (sectionIndex > 0 && !string.IsNullOrEmpty(reportSection.Title))
         {
             <h2 class="h5">@reportSection.Title</h2>
@@ -131,7 +132,7 @@
                 break;
 
             case ReportSectionKind.Chart:
-                <div class="card h-100 border-0 shadow-sm">
+                <div class="card flex-grow-1 border-0 shadow-sm">
                     <div class="card-body">
                         <div style="position: relative; min-height: 20rem;">
                             <canvas data-report-chart="@chartData" role="img" aria-label="@reportSection.Title"></canvas>

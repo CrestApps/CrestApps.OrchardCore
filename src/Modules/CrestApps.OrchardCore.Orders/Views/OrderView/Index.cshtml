@@ -1,6 +1,12 @@
 @using CrestApps.OrchardCore.Products.Core.Services
 @model OrderViewViewModel
 @inject IServiceProvider Services
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 @{
     var order = Model.Order;
     string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
@@ -15,7 +21,7 @@
 
 <div class="container my-4" style="max-width: 860px;">
     <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
-    <p class="text-muted">@T["Placed {0:D}", order.CreatedUtc]</p>
+    <p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
 
     @if (!string.IsNullOrEmpty(Model.PayUrl))
     {
@@ -80,7 +86,7 @@
                     @foreach (var refund in order.Refunds ?? [])
                     {
                         <tr>
-                            <th scope="row" colspan="2" class="text-end fw-normal">@T["Refunded {0:d}", refund.CreatedUtc]</th>
+                            <th scope="row" colspan="2" class="text-end fw-normal">@T["Refunded {0:d}", await LocalAsync(refund.CreatedUtc)]</th>
                             <td class="text-end">&minus;@Format(refund.Amount)</td>
                         </tr>
                     }

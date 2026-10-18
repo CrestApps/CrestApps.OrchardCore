@@ -21,7 +21,7 @@ The **Product Reviews** feature lets buyers rate and review the products they bo
 
 ## Submitting
 
-`ProductReviewsDisplayDriver` adds two shapes to a product's `Detail` display: **`ProductRating`** (stars, average and count, at `Content:before:5`) and **`ProductReviews`** (the approved reviews, newest first, and the form, at `Content:after:20`). A signed-in user with **Review products bought** (granted to Authenticated) sees the form when `ReviewService.GetEligibilityAsync` allows it: they bought the product on a paid order, or `BuyersOnly` is off. The form posts to `POST /reviews/{productId}`.
+`ProductReviewsDisplayDriver` adds two shapes to a product's `Detail` display: **`ProductRating`** (stars, average and count, at `Content:before:5`) and **`ProductReviews`** (the approved reviews, newest first, and the form, at `Content:60`, after the specifications at `Content:50`). A signed-in user with **Review products bought** (granted to Authenticated) sees the form when `ReviewService.GetEligibilityAsync` allows it: they bought the product on a paid order, or `BuyersOnly` is off. The form posts to `POST /reviews/{productId}`.
 
 A user has one review per product: reviewing again changes it and, with `RequireApproval`, sends it for approval again. A review written by a buyer is a **verified purchase**, recorded with its order.
 

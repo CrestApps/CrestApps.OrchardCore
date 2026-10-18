@@ -44,6 +44,10 @@
 
     <h5 class="mt-4">@T["Shipping method"]</h5>
     <span asp-validation-for="RateId" class="text-danger d-block mb-2"></span>
+    @if (Model.IsChoosing)
+    {
+        <p class="text-body-secondary mb-2">@T["Here are the ways to ship to this address. Choose one, then continue."]</p>
+    }
 
     @if (Model.Rates.Count > 0)
     {
