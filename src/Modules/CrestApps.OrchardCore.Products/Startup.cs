@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Builder;
+using CrestApps.OrchardCore.Products.Endpoints;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
@@ -109,6 +112,23 @@ public sealed class TaxationStartup : StartupBase
         // When taxation is enabled, expose products as taxable items with product-aware kind mapping.
         services.AddScoped<ITaxableItemProvider, ProductTaxableItemProvider>();
     }
+}
+
+/// <summary>
+/// Recommends products: upsells and cross-sells chosen per product, related products and recently viewed ones.
+/// </summary>
+[Feature(ProductConstants.Feature.Recommendations)]
+public sealed class RecommendationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ProductRecommendationService>();
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductRecommendationsDisplayDriver>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddProductSearchEndpoints();
 }
 
 [Feature(ProductConstants.Feature.Listing)]

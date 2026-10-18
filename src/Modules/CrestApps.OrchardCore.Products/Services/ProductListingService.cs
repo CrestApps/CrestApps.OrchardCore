@@ -1046,6 +1046,18 @@ public sealed class ProductListingService
             : $"{url}?width={width}&rmode=max";
     }
 
+    /// <summary>
+    /// Builds the listing cards of the products, in the order given, leaving out any that aren't published or listed.
+    /// </summary>
+    public async Task<IList<IShape>> BuildCardsAsync(IReadOnlyList<string> contentItemIds, ProductImageAspectRatio ratio = ProductImageAspectRatio.Square)
+    {
+        var model = new ProductListingViewModel { ImageAspectRatio = GetAspectRatio(ratio) };
+
+        await BuildProductsAsync(model, contentItemIds ?? [], [], ProductListingView.Grid, ratio);
+
+        return model.Products;
+    }
+
     private async Task BuildProductsAsync(ProductListingViewModel model, IReadOnlyList<string> ids, IReadOnlyList<ProductAttributeDescriptor> attributes, ProductListingView view, ProductImageAspectRatio ratio)
     {
         var (imageWidth, imageHeight) = GetCardImageSize(ratio);

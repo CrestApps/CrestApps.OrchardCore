@@ -22,6 +22,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Recommendations,
+    Name = "Product Recommendations",
+    Description = "Recommends products to shoppers: the upsells and cross-sells you choose for each product, related products from the same categories, and the products a shopper viewed recently.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Listing,
     Name = "Product Listing",
     Description = "Lists products on the front end with filters, sorting, grid and list views, and product pages. Products can be listed without being sold online.",
