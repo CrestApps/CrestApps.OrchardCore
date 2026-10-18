@@ -28,6 +28,9 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: ./.github/actions/cache-nuget-packages
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
