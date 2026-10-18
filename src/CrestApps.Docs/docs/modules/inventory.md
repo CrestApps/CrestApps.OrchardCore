@@ -97,6 +97,10 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 `ExpiredStockHoldsBackgroundTask` releases expired holds every five minutes, up to 500 per run. The cart's **Checkout** commits the order, and what it holds, before the checkout starts, and turns a concurrency conflict into *Someone else is buying the same items right now.* An item's admin page lists the orders holding it.
 
+## Reports
+
+With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Commerce**, permission `ViewInventory`) lists every counted item with its units on hand, held and available, out of stock and low first, with totals. It shows stock as it is when it runs.
+
 ## Availability
 
 `InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items at the default location: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.

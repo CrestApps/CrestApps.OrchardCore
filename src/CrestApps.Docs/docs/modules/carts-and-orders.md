@@ -118,6 +118,22 @@ A user with `ManageOrders` manages an order from its page, through `OrderOperati
 
 Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
 
+### Reports
+
+With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports > Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
+
+| Report | Shows |
+| --- | --- |
+| Sales | Orders, items, gross sales (the lines), discounts, shipping, tax, total charged, refunded and net, per currency, by day in the site's time zone (by month for periods over 62 days), with a chart. |
+| Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units. |
+| Sales by country | Orders, tax and total per country the orders ship to, or are billed to. |
+| Tax on orders | Tax charged and what it was charged on, by day or month. |
+| Discounts on orders | Orders that used each promotion code and what it took off. |
+| Refunds | Each refund given in the period, for orders paid up to 180 days before it. |
+| Orders to ship | Paid orders with a shipping method not shipped in full, oldest first, whatever the period. |
+
+Refunded in **Sales** is what was given back for the period's orders, whenever it was; **Refunds** lists refunds by the day they were given.
+
 ### Workflow events
 
 With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.

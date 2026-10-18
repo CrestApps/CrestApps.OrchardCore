@@ -78,6 +78,23 @@ Click **Send the confirmation again** to email the order confirmation to the cus
 
 Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
 
+## Store reports
+
+With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
+
+| Report | Shows |
+| --- | --- |
+| **Sales** | The orders paid in the period: how many, what the items came to, discounts, shipping, tax, the total charged, what was refunded and what you kept, day by day with a chart. |
+| **Sales by product** | How many of each product and variant sold, and for how much before discounts. |
+| **Sales by country** | Orders and totals for each country they ship to. |
+| **Tax on orders** | The tax orders charged, day by day. |
+| **Discounts on orders** | How many orders used each promotion code, and what it took off. |
+| **Refunds** | Each refund given in the period, with its order and reason. |
+| **Orders to ship** | Paid orders that haven't shipped in full, oldest first, and how many days each has waited. |
+| **Stock on hand** | With Inventory on: every counted item's stock, out of stock and low first. |
+
+Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
+
 ## Guests and their orders
 
 A guest has no account to sign in to, so they reach their order through a **link**:

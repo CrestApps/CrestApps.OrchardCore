@@ -27,6 +27,8 @@ using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 using CrestApps.OrchardCore.Orders.Workflows;
+using CrestApps.OrchardCore.Orders.Reports;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Orders;
@@ -83,6 +85,26 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.AddCouponItemSearchEndpoints();
+}
+
+/// <summary>
+/// Adds the order reports to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<OrderReportReader>();
+        services
+            .AddScoped<IReport, OrderSalesReport>()
+            .AddScoped<IReport, OrderProductSalesReport>()
+            .AddScoped<IReport, OrderCountrySalesReport>()
+            .AddScoped<IReport, OrderTaxReport>()
+            .AddScoped<IReport, OrderDiscountsReport>()
+            .AddScoped<IReport, OrderRefundsReport>()
+            .AddScoped<IReport, UnfulfilledOrdersReport>();
+    }
 }
 
 /// <summary>
