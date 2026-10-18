@@ -356,6 +356,7 @@ const sidebars = {
                 'modules/subscriptions',
                 'modules/installment-plans',
                 'modules/taxation',
+                'modules/commerce-operations',
             ],
         },
         {

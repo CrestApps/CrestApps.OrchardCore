@@ -160,6 +160,71 @@ public sealed class DigitalDownloadsTests : IAsyncLifetime
         Assert.Contains("3 downloads", link.Note, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task TheDigitalFilesRecipeStep_PutsSampleFilesOnProducts_Once()
+    {
+        var product = new ContentItem { ContentItemId = "ebook", ContentItemVersionId = "ebook-v1", ContentType = "DigitalProduct" };
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(value => value.GetAsync("ebook", It.IsAny<VersionOptions>())).ReturnsAsync(product);
+
+        var step = new CrestApps.OrchardCore.Downloads.Recipes.DigitalFilesStep(contentManager.Object, FileStore());
+        var json = new System.Text.Json.Nodes.JsonObject
+        {
+            ["name"] = "DigitalFiles",
+            ["Files"] = new System.Text.Json.Nodes.JsonArray
+            {
+                new System.Text.Json.Nodes.JsonObject { ["ProductId"] = "ebook", ["FileName"] = "guide.pdf", ["Base64"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("%PDF-1.4 sample")) },
+                new System.Text.Json.Nodes.JsonObject { ["ProductId"] = "missing", ["FileName"] = "x.pdf", ["Text"] = "x" },
+                new System.Text.Json.Nodes.JsonObject { ["ProductId"] = "ebook", ["FileName"] = "broken.pdf", ["Base64"] = "not base64!" },
+            },
+        };
+
+        var first = new global::OrchardCore.Recipes.Models.RecipeExecutionContext { Name = "DigitalFiles", Step = json };
+        await step.ExecuteAsync(first);
+        await step.ExecuteAsync(new global::OrchardCore.Recipes.Models.RecipeExecutionContext { Name = "DigitalFiles", Step = (System.Text.Json.Nodes.JsonObject)json.DeepClone() });
+
+        var file = Assert.Single(product.GetOrCreate<DigitalFilesPart>().Files);
+        Assert.Equal("guide.pdf", file.FileName);
+        Assert.NotNull(await FileStore().FindAsync(file.FileId, TestContext.Current.CancellationToken));
+        Assert.Equal(2, first.Errors.Count);
+    }
+
+    [Fact]
+    public void TheDigitalSample_TurnsOnWhatAFreshStoreNeedsToSellAndDeliver()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+
+        var recipe = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(directory.FullName, "src", "Modules", "CrestApps.OrchardCore.Downloads", "Recipes", "digital-downloads-sample.recipe.json")));
+        var steps = recipe["steps"].AsArray();
+        var features = steps[0]["enable"].AsArray().Select(feature => (string)feature).ToList();
+
+        // Product pages and Add to cart come from Product Listing; the contact step that asks a guest for the email
+        // their links go to comes from Customers.
+        Assert.Contains("CrestApps.OrchardCore.Products.Listing", features);
+        Assert.Contains("CrestApps.OrchardCore.Customers", features);
+        Assert.Contains(DownloadsConstants.Feature, features);
+
+        var files = steps.Single(step => (string)step["name"] == "DigitalFiles")["Files"].AsArray();
+        Assert.Equal(2, files.Count);
+        Assert.All(files, file => Assert.StartsWith("%PDF", Encoding.ASCII.GetString(Convert.FromBase64String((string)file["Base64"]))));
+
+        // The files go on products the recipe has already created.
+        var filesAt = steps.IndexOf(steps.Single(step => (string)step["name"] == "DigitalFiles"));
+        var content = steps.Take(filesAt).Where(step => string.Equals((string)step["name"], "Content", StringComparison.OrdinalIgnoreCase)).SelectMany(step => step["data"].AsArray()).ToList();
+        var ids = content.Select(item => (string)item["ContentItemId"]).ToHashSet();
+        Assert.All(files, file => Assert.Contains((string)file["ProductId"], ids));
+        Assert.Contains(content, item => (string)item["ContentType"] == "ProductListing");
+
+        Assert.Contains(steps, step => (string)step["name"] == "Coupons");
+    }
+
     private async Task<bool> DownloadAsync(string token)
         => await InSessionAsync(async service =>
         {

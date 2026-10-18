@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Downloads.Indexes;
 using CrestApps.OrchardCore.Downloads.Migrations;
 using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Downloads.Navigation;
+using CrestApps.OrchardCore.Downloads.Recipes;
+using OrchardCore.Recipes;
 using CrestApps.OrchardCore.Downloads.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -57,4 +59,14 @@ public sealed class Startup : StartupBase
         services.AddPermissionProvider<DownloadsPermissionsProvider>();
         services.AddSiteSettingsPermission(DownloadsConstants.SettingsGroupId, DownloadsPermissions.ManageDownloads);
     }
+}
+
+/// <summary>
+/// Puts sample files on products from a recipe.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddRecipeExecutionStep<DigitalFilesStep>();
 }

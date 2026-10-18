@@ -18,7 +18,11 @@ technical_manual:
 
 ## Set up a digital product
 
-Your content type needs the **Product** part with the product type **Digital**, and the **Digital files** part. The **Digital downloads sample** recipe adds a ready **Digital Product** type with two sample ebooks.
+Your content type needs the **Product** part with the product type **Digital**, and the **Digital files** part. The **Digital downloads sample** recipe adds a ready **Digital Product** type with two sample ebooks and their PDF files, an **Ebooks** page at */ebooks*, and two coupons. See [Try a store sample](index.md#try-a-store-sample).
+
+:::note[Guests need to give an email]
+Download links are sent to the email the buyer gives at checkout, which the **Customers** feature asks for. The sample turns it on. If you set up your own store, turn it on too.
+:::
 
 1. Open the product and find **Digital files**.
 2. Under **Files**, choose one or more files. Each uploads right away, up to 1 GB, and appears in the list.

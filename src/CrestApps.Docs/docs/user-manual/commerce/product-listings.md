@@ -154,7 +154,7 @@ Three recipes under **Configuration > Recipes** set up a complete example you ca
 
 | Recipe | Creates |
 | --- | --- |
-| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, a **Shop** page at */shop*, orders, stock (a few products running low and one sold out) under **Commerce > Inventory**, shipping zones for the United States, Canada and the rest of the world under **Commerce > Shipping**, and two sample customers with addresses under **Commerce > Customers** |
+| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, a **Shop** page at */shop*, orders, stock (a few products running low and one sold out) under **Commerce > Inventory**, shipping zones for the United States, Canada and the rest of the world under **Commerce > Shipping**, two sample customers with addresses under **Commerce > Customers**, product reviews, and the coupons WELCOME10 and FREESHIP75 |
 | **Product listing: real estate sample** | 20 homes that are listed but not sold online, some with the price on request and a *Schedule a viewing* button, and a **Homes for sale** page at */homes* |
 | **Product listing: vehicle dealership sample** | 28 vehicles, some sold online and the rest listed, filtered by make, model, year, mileage and more, and a **Vehicles** page at */vehicles* |
 

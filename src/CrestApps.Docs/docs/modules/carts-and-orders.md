@@ -42,11 +42,11 @@ Signing in merges the guest cart into the user's cart: lines of the same product
 | --- | --- | --- |
 | `AddToCart` | The quantity, the price choice when a product has several one-time prices, and **Add to cart** | The **Actions** zone of the product's `ProductAction` display, so on listing cards and product pages |
 | `Cart` | The cart page at `/cart`, with each line, its price, a quantity box, a remove button and the subtotal | `CartController` |
-| `CartLink` | A cart link with the item count | The site's navigation bar, beside the user menu |
+| `CartLink` | A cart link with the item count | The `Navbar` shape, beside the user menu, in themes that render it (TheTheme does; TheAgencyTheme and TheBlogTheme don't) |
 
 Each shape can be overridden in Razor or Liquid. A theme hides the cart link with an empty `CartLink` template.
 
-The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
+The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. When adding redirects back to the page the buyer was on, the notification links to the cart, so a theme without a cart link still leads there. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
 
 ### Options
 

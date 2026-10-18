@@ -1,7 +1,7 @@
 {
   "name": "ProductListingStore",
   "displayName": "Product listing: online store sample",
-  "description": "Creates a Store Product type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, with stock (a few running low and one sold out) and shipping weights, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, shipping zones for the United States, Canada and the rest of the world with carriers, and two sample customers with their addresses.",
+  "description": "Creates a Store Product type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, with stock (a few running low and one sold out) and shipping weights, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, shipping zones for the United States, Canada and the rest of the world with carriers, and two sample customers with their addresses, product reviews, and two coupons: WELCOME10 (10% off, once per customer) and FREESHIP75 (free shipping on orders of $75 or more).",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -35,7 +35,8 @@
         "CrestApps.OrchardCore.Products",
         "CrestApps.OrchardCore.Products.Listing",
         "CrestApps.OrchardCore.Inventory",
-        "CrestApps.OrchardCore.Shipping"
+        "CrestApps.OrchardCore.Shipping",
+        "CrestApps.OrchardCore.Reviews"
       ]
     },
     {
@@ -3781,6 +3782,26 @@
           ],
           "DefaultBillingAddressId": "sample-contoso-office",
           "DefaultShippingAddressId": "sample-contoso-office"
+        }
+      ]
+    },
+    {
+      "name": "Coupons",
+      "Coupons": [
+        {
+          "Code": "WELCOME10",
+          "Description": "10% off your first order",
+          "Kind": "Percentage",
+          "Percentage": 10,
+          "MaxRedemptionsPerCustomer": 1,
+          "IsEnabled": true
+        },
+        {
+          "Code": "FREESHIP75",
+          "Description": "Free shipping on orders of $75 or more",
+          "Kind": "FreeShipping",
+          "MinimumAmount": 75,
+          "IsEnabled": true
         }
       ]
     }

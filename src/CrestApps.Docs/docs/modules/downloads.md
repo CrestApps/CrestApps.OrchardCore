@@ -46,6 +46,30 @@ Opening a link shows the file with a **Download** button; the download is a `POS
 - `OrderDownloadsDisplayDriver` adds a **Downloads** section to the order's admin page (counts, status, the buyer's link, and the actions) and **Your downloads** to the buyer's page, with links that still work.
 - `DownloadEmailSectionProvider` adds **Your downloads** to the confirmation email through the Orders feature's `IOrderEmailSectionProvider` seam, with each link and how many downloads and days it allows.
 
+## Recipe step
+
+The `DigitalFiles` step puts files in the store and on products, so a recipe can ship a product ready to sell. Each file names its product and gives its bytes as `Base64`, or as `Text` for a small text file, up to 10 MB. A product that already has a file of that name keeps it, so running the recipe again adds nothing.
+
+```json
+{
+  "name": "DigitalFiles",
+  "Files": [
+    { "ProductId": "4dgtlprod0trailguide00000a", "FileName": "trail-field-guide.pdf", "Base64": "JVBERi0xLjQK..." },
+    { "ProductId": "4dgtlprod0notes0000000000a", "FileName": "read-me.txt", "Text": "Thanks for buying." }
+  ]
+}
+```
+
+The step runs with the tenant's recipe services (feature `OrchardCore.Recipes.Core`). Put it after the `Content` step that creates the products.
+
 ## Sample
 
-The **Digital downloads sample** recipe adds a **Digital Product** type (product type `Digital`, with the Digital files part) and two ebooks, and sets links to 3 downloads for 14 days. Upload a file to each product before selling it. An order of digital products only has no shipping step.
+The **Digital downloads sample** recipe makes a store that sells and delivers ebooks once a payment provider is on:
+
+- a **Digital Product** type (product type `Digital`, with the Digital files part) and two ebooks, each with a PDF;
+- an **Ebooks** listing at */ebooks*;
+- the Customers feature, whose contact step asks a guest for the email the links go to;
+- links that work for 3 downloads and 14 days;
+- the coupons **WELCOME10** (10% off, once per customer) and **EBOOKS5** ($5 off orders of $15 or more).
+
+An order of digital products only has no shipping step. Running the online store sample first makes a store that sells both.

@@ -1,7 +1,7 @@
 {
   "name": "DigitalDownloadsSample",
   "displayName": "Digital downloads sample",
-  "description": "Creates a Digital Product type whose buyers download files after paying, with two sample ebooks priced in US dollars and links that work 14 days for 3 downloads. Upload each product's file under Digital files before selling it.",
+  "description": "Creates a Digital Product type and an Ebooks listing at /ebooks whose buyers download files after paying, with two sample ebooks priced in US dollars and their PDF files, links that work 14 days for 3 downloads, and two coupons: WELCOME10 (10% off, once per customer) and EBOOKS5 ($5 off orders of $15 or more).",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -25,9 +25,12 @@
         "OrchardCore.Autoroute",
         "OrchardCore.Html",
         "CrestApps.OrchardCore.Products",
+        "CrestApps.OrchardCore.Products.Listing",
         "CrestApps.OrchardCore.Carts",
         "CrestApps.OrchardCore.Orders",
-        "CrestApps.OrchardCore.Downloads"
+        "CrestApps.OrchardCore.Customers",
+        "CrestApps.OrchardCore.Downloads",
+        "CrestApps.OrchardCore.Checkout"
       ]
     },
     {
@@ -182,6 +185,63 @@
           "DigitalFilesPart": {
             "Files": []
           }
+        },
+        {
+          "ContentItemId": "4dgtllisting0ebooks000000a",
+          "ContentItemVersionId": "4dgtllisting0ebooks000000b",
+          "ContentType": "ProductListing",
+          "DisplayText": "Ebooks",
+          "Latest": true,
+          "Published": true,
+          "ModifiedUtc": "2026-10-18T12:00:00Z",
+          "PublishedUtc": "2026-10-18T12:00:00Z",
+          "CreatedUtc": "2026-10-18T12:00:00Z",
+          "Owner": null,
+          "Author": "admin",
+          "TitlePart": {
+            "Title": "Ebooks"
+          },
+          "AutoroutePart": {
+            "Path": "ebooks",
+            "SetHomepage": false,
+            "Disabled": false,
+            "RouteContainedItems": false,
+            "Absolute": false
+          },
+          "ProductListingPart": {
+            "ContentTypes": [
+              "DigitalProduct"
+            ],
+            "AutomaticFacets": true,
+            "Facets": [],
+            "AutomaticSorts": true,
+            "Sorts": [],
+            "DefaultSort": "newest",
+            "DefaultView": "Grid",
+            "AllowViewSwitching": true,
+            "ImageAspectRatio": "Square",
+            "PageSizes": [
+              12,
+              24
+            ],
+            "DefaultPageSize": 12,
+            "EnableKeywordSearch": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "DigitalFiles",
+      "Files": [
+        {
+          "ProductId": "4dgtlprod0trailguide00000a",
+          "FileName": "trail-field-guide.pdf",
+          "Base64": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxMjEgPj4Kc3RyZWFtCkJUIC9GMSAyNCBUZiA3MiA3MjAgVGQgKFRyYWlsIEZpZWxkIEd1aWRlKSBUaiAvRjEgMTIgVGYgMCAtMzYgVGQgKEEgc2FtcGxlIGZpbGUgZnJvbSB0aGUgZGlnaXRhbCBkb3dubG9hZHMgc2FtcGxlLikgVGogRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDA0MTMgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0ODMKJSVFT0YK"
+        },
+        {
+          "ProductId": "4dgtlprod0camprecipes0000a",
+          "FileName": "camp-kitchen-recipes.pdf",
+          "Base64": "JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MTIgNzkyXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxMjQgPj4Kc3RyZWFtCkJUIC9GMSAyNCBUZiA3MiA3MjAgVGQgKENhbXAgS2l0Y2hlbiBSZWNpcGVzKSBUaiAvRjEgMTIgVGYgMCAtMzYgVGQgKEEgc2FtcGxlIGZpbGUgZnJvbSB0aGUgZGlnaXRhbCBkb3dubG9hZHMgc2FtcGxlLikgVGogRVQKZW5kc3RyZWFtCmVuZG9iago1IDAgb2JqCjw8IC9UeXBlIC9Gb250IC9TdWJ0eXBlIC9UeXBlMSAvQmFzZUZvbnQgL0hlbHZldGljYSA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDA5IDAwMDAwIG4gCjAwMDAwMDAwNTggMDAwMDAgbiAKMDAwMDAwMDExNSAwMDAwMCBuIAowMDAwMDAwMjQxIDAwMDAwIG4gCjAwMDAwMDA0MTYgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA2IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgo0ODYKJSVFT0YK"
         }
       ]
     },
@@ -191,6 +251,29 @@
         "DownloadLimit": 3,
         "LinkLifetimeDays": 14
       }
+    },
+    {
+      "name": "Coupons",
+      "Coupons": [
+        {
+          "Code": "WELCOME10",
+          "Description": "10% off your first order",
+          "Kind": "Percentage",
+          "Percentage": 10,
+          "MaxRedemptionsPerCustomer": 1,
+          "IsEnabled": true
+        },
+        {
+          "Code": "EBOOKS5",
+          "Description": "$5 off ebooks",
+          "Kind": "FixedAmount",
+          "Amount": 5,
+          "Currency": "USD",
+          "MinimumAmount": 15,
+          "MaxRedemptions": 500,
+          "IsEnabled": true
+        }
+      ]
     }
   ]
 }

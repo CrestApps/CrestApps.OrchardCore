@@ -10,7 +10,7 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 | | |
 | --- | --- |
-| **Menu** | **Commerce > Orders** for you, and **Commerce > My Orders** for your customers. The cart has no menu: buyers reach it from the cart link in your site's navigation bar. |
+| **Menu** | **Commerce > Orders** for you, and **Commerce > My Orders** for your customers. The cart has no menu: buyers reach it from the cart link in your site's navigation bar, or from **View cart** in the message shown when they add a product. |
 | **Permission** | **Manage orders** to see every order. **View own orders** for customers to see theirs; signed-in users have it by default. |
 | **Feature** | Carts to show **Add to cart** and the cart. Orders, plus a [payment provider](payment-providers.md), to check out. |
 
@@ -19,7 +19,7 @@ When products are sold online, visitors can add them to a **cart** from your pro
 ## What buyers see
 
 - **Add to cart** appears on each product that can be bought online, on its listing card and its page. Buyers choose how many, and the option when a product has several prices. Products that are only listed, and subscription plans, do not show it; plans have their own **Sign up** button.
-- The **Cart** link in the navigation bar shows how many items are in the cart.
+- The **Cart** link in the navigation bar shows how many items are in the cart. Only themes with a navigation bar, such as **TheTheme**, show it; in any theme, the message shown after adding a product has a **View cart** link.
 - The **cart page** lists each product with its price, a quantity box and a remove button, and the subtotal. Discounts and tax are worked out at checkout.
 - **Checkout** takes the buyer to the [checkout](checkout.md), where they enter a promotion code and pay. The confirmation shows their **order number**.
 
