@@ -458,6 +458,32 @@ public sealed class CouponsAdminController : Controller
     {
         model.Redemptions = await _redemptions.ListAsync(coupon.Code, RecentUses, HttpContext.RequestAborted);
         model.HeldCount = await _redemptions.CountHeldAsync(coupon.Code, HttpContext.RequestAborted);
+
+        // What each use paid for, such as an order, reads by its number rather than its id when a module knows it.
+        var describers = HttpContext.RequestServices.GetServices<ICheckoutReferenceDescriber>().ToArray();
+        var references = new Dictionary<string, CheckoutReferenceDescription>(StringComparer.Ordinal);
+
+        foreach (var redemption in model.Redemptions.Where(redemption => !string.IsNullOrEmpty(redemption.ReferenceId)))
+        {
+            var key = redemption.ReferenceType + "|" + redemption.ReferenceId;
+
+            if (references.ContainsKey(key))
+            {
+                continue;
+            }
+
+            foreach (var describer in describers)
+            {
+                if (await describer.DescribeAsync(redemption.ReferenceType, redemption.ReferenceId, HttpContext.RequestAborted) is { } description)
+                {
+                    references[key] = description;
+
+                    break;
+                }
+            }
+        }
+
+        model.References = references;
     }
 
     // A typed code was easy to get wrong and a wrong one silently never matched a checkout, so the currencies the

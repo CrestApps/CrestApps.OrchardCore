@@ -1,4 +1,10 @@
 @model DownloadPageViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var entitlement = Model.Entitlement;
@@ -16,11 +22,11 @@
             }
             @if (entitlement.ExpiresUtc.HasValue)
             {
-                @T[" The link works until {0:d}.", entitlement.ExpiresUtc.Value]
+                @T[" The link works until {0:d}.", await LocalAsync(entitlement.ExpiresUtc.Value)]
             }
         </p>
         <form method="post">
-            <button type="submit" class="btn btn-primary btn-lg">
+            <button type="submit" class="btn btn-primary px-4">
                 <i class="fa-solid fa-download me-1" aria-hidden="true"></i>@T["Download"]
             </button>
         </form>

@@ -84,14 +84,21 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 
 | Report | Shows |
 | --- | --- |
-| **Sales** | The orders paid in the period: how many, what the items came to, discounts, shipping, tax, the total charged, what was refunded and what you kept, day by day with a chart. |
-| **Sales by product** | How many of each product and variant sold, and for how much before discounts. |
+| **Sales** | The orders paid in the period: how many, the average order value, items per order, what the items came to, discounts, shipping, tax, the total charged, what was refunded and what you kept, day by day with a chart. |
+| **Sales by product** | How many of each product and variant sold, and for how much before discounts, and the same for goods, digital products and services. |
+| **Sales by category** | What each category sold. A product in two categories counts in both. |
+| **Customers** | Who bought: first-time and returning buyers, how many have bought more than once, what buyers have spent in all on average, and your top buyers. |
+| **Checkouts** | The checkouts buyers started and how they ended: paid, payment failed, left or expired, or still open, with the share that were paid. |
 | **Sales by country** | Orders and totals for each country they ship to. |
 | **Tax on orders** | The tax orders charged, day by day. |
 | **Discounts on orders** | How many orders used each promotion code, and what it took off. |
 | **Refunds** | Each refund given in the period, with its order and reason. |
 | **Orders to ship** | Paid orders that haven't shipped in full, oldest first, and how many days each has waited. |
 | **Stock on hand** | With Inventory on: every counted item's stock, out of stock and low first. |
+| **Stock movements** | With Inventory on: what each item received, sold, got back and was corrected by, and how many days its stock lasts at the rate it sold. |
+| **Shipping times** | With Shipping on: how long orders waited from payment to shipping, how long deliveries took, by carrier, and the slowest shipments. |
+| **Downloads** | With Digital Downloads on: the download links buyers got, and how many were used, never used, used up, expired or taken back. |
+| **Product reviews** | With Product Reviews on: the reviews written, how many wait for approval, the stars given, and each product's rating. |
 
 Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
 

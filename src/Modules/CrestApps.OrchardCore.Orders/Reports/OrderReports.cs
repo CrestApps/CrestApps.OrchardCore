@@ -1,6 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -143,6 +144,8 @@ public sealed class OrderSalesReport : OrderReportBase
             [
                 new ReportMetric(S["Orders"].Value, ReportFormat.Number(totals.Orders)),
                 new ReportMetric(S["Items sold"].Value, ReportFormat.Number(totals.Units)),
+                new ReportMetric(S["Average order value"].Value, Money(totals.AverageOrderValue, currency), S["What was charged, over the orders."].Value),
+                new ReportMetric(S["Items per order"].Value, totals.ItemsPerOrder.ToString("0.0", CultureInfo.CurrentCulture)),
                 new ReportMetric(S["Gross sales"].Value, Money(totals.Gross, currency), S["The lines, before discounts, shipping and tax."].Value),
                 new ReportMetric(S["Discounts"].Value, Money(totals.Discounts, currency)),
                 new ReportMetric(S["Shipping"].Value, Money(totals.Shipping, currency)),
@@ -182,6 +185,7 @@ public sealed class OrderSalesReport : OrderReportBase
                 new ReportColumn(S["Shipping"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Tax"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Total charged"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Average order value"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Refunded"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Net"].Value, ReportColumnAlign.End),
             ], rows));
@@ -200,6 +204,7 @@ public sealed class OrderSalesReport : OrderReportBase
             Money(totals.Shipping, totals.Currency),
             Money(totals.Tax, totals.Currency),
             Money(totals.Total, totals.Currency),
+            Money(totals.AverageOrderValue, totals.Currency),
             Money(totals.Refunded, totals.Currency),
             Money(totals.Net, totals.Currency),
         ], emphasize);
@@ -216,6 +221,15 @@ public sealed class OrderProductSalesReport : OrderReportBase
     }
 
     public override string Name => "order-product-sales";
+
+    private string KindName(ProductType productType)
+        => productType switch
+        {
+            ProductType.Good => S["Goods"].Value,
+            ProductType.Digital => S["Digital"].Value,
+            ProductType.Service => S["Services"].Value,
+            _ => S["Other"].Value,
+        };
 
     public override LocalizedString DisplayName => S["Sales by product"];
 
@@ -256,6 +270,20 @@ public sealed class OrderProductSalesReport : OrderReportBase
             new ReportColumn(S["Units"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Sales"].Value, ReportColumnAlign.End),
         ], rows));
+
+        document.Add(ReportSection.ForTable(S["By kind of product"].Value,
+        [
+            new ReportColumn(S["Kind"].Value),
+            new ReportColumn(S["Orders"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Units"].Value, ReportColumnAlign.End),
+            new ReportColumn(S["Sales"].Value, ReportColumnAlign.End),
+        ], [.. OrderReportAggregator.ByProductType(orders).Select(type => new ReportRow(
+        [
+            KindName(type.ProductType),
+            ReportFormat.Number(type.Orders),
+            ReportFormat.Number(type.Units),
+            Money(type.Sales, type.Currency),
+        ]))]));
 
         return document;
     }

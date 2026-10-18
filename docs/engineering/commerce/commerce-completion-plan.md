@@ -49,6 +49,8 @@ The audit found these gaps, ranked by what they cost a store owner:
 
 Each slice is a PR with tests, opened when its tests pass, stacked on the previous one until they merge.
 
+What comes after this plan, to match and pass WooCommerce and Shopify, is in the [commerce parity plan](commerce-parity-plan.md).
+
 ## As built
 
 ### D1 Discounts
@@ -118,3 +120,8 @@ Each slice is a PR with tests, opened when its tests pass, stacked on the previo
 - Operations docs: *Running a Store* (features per store kind, background tasks, backups including `DigitalFiles` and the data protection keys, several nodes, throttling, isolation, staff permissions) and *Try a store sample* in the user manual, whose commerce index now covers the store features.
 - Found while verifying on a fresh tenant: the digital sample had no Add to cart (Product Listing off) and asked a guest for no email (Customers off); in themes without a navbar (TheAgencyTheme, TheBlogTheme) shoppers had no way back to the cart, so the *added to your cart* notice now links to it, and encodes the product's name, which it wrote as HTML.
 - Verified live: a fresh Agency tenant ran the digital sample; a guest added the Trail Field Guide from */ebooks*, gave a name and email, applied WELCOME10 ($12.00 less $1.20), paid with the test provider, opened the order from the confirmation and downloaded the 666-byte PDF; the page showed 3 downloads for 14 days, each POST used one, and the link answered 410 once used up. Running the sample again left two coupons and one file per product. On the store tenant, a guest bought the watch and an ebook in one order: a Shipping step for the watch, and the ebook's downloads on the order page beside *Ships to*.
+
+### After the plan: more reports and a UX pass
+
+- Reports the plan's phase 11 listed but R1 left out: **Sales by category** (a table per taxonomy, terms by path), **Customers** (first-time, returning and repeat buyers, lifetime spend), **Checkouts** (started, paid, failed, left), **Shipping times**, **Stock movements** (with days of stock left), **Downloads** and **Product reviews**, plus average order value and sales by kind of product. Each module adds its own under Reports > Commerce.
+- A browser pass on a fresh tenant with both samples and Stripe test mode (4242, a declined card and 3-D Secure, a refund back through Stripe with its webhooks), and at every Bootstrap breakpoint (320 to 1400), found and fixed: UTC times shown as local, a cramped Add to cart on narrow cards, oversized checkout buttons and missing spacing, an error shown when the ways to ship first appear, an unreadable chosen payment method, the sample's fixed rating contradicting real reviews, reviews above specifications, report charts overlapping what followed, coupon fields that didn't apply to the coupon's kind, and coupon uses naming orders by id.

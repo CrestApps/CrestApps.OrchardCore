@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
@@ -73,6 +74,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
         services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
+        services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
 
@@ -96,8 +98,12 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<OrderReportReader>();
+        services.AddScoped<ProductCategoryNames>();
         services
             .AddScoped<IReport, OrderSalesReport>()
+            .AddScoped<IReport, OrderCategorySalesReport>()
+            .AddScoped<IReport, OrderCustomersReport>()
+            .AddScoped<IReport, CheckoutConversionReport>()
             .AddScoped<IReport, OrderProductSalesReport>()
             .AddScoped<IReport, OrderCountrySalesReport>()
             .AddScoped<IReport, OrderTaxReport>()

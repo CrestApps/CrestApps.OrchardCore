@@ -1,4 +1,10 @@
 @model ProductReviewsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 <section id="reviews" class="product-reviews mt-5">
     <h2 class="h4 mb-3">@T["Customer reviews"]</h2>
@@ -27,7 +33,7 @@
                 }
             </div>
             <div class="small text-muted">
-                @review.AuthorName · @review.CreatedUtc.ToString("d")
+                @review.AuthorName · @((await LocalAsync(review.CreatedUtc)).ToString("d"))
                 @if (review.VerifiedPurchase)
                 {
                     <span class="badge text-bg-success ms-1">@T["Verified purchase"]</span>

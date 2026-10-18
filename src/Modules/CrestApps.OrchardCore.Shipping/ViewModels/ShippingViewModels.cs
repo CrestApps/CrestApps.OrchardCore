@@ -228,6 +228,12 @@ public class ShippingCheckoutStepViewModel
 {
     public string AddressId { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the ways to ship were just shown for the address, for the buyer to choose from.
+    /// </summary>
+    [BindNever]
+    public bool IsChoosing { get; set; }
+
     public AddressEditorViewModel Address { get; set; } = new();
 
     public string RateId { get; set; }

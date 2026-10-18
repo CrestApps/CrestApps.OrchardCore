@@ -2,6 +2,12 @@
 @using CrestApps.OrchardCore.Products.Core.Services
 
 @model OrderDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var order = Model.Order;
@@ -41,29 +47,29 @@
                     @switch (cancelReason)
                     {
                         case OrderCancelReason.Replaced:
-                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.PaymentFailed:
-                            @T["Canceled {0:g}: the payment was declined.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the payment was declined.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutCanceled:
-                            @T["Canceled {0:g}: the checkout was canceled.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the checkout was canceled.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutExpired:
-                            @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
+                            @T["Canceled {0:g}: nobody finished the checkout in time.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.Unavailable:
-                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CanceledByStore:
-                            @T["Canceled {0:g} by the store.", order.CanceledUtc]
+                            @T["Canceled {0:g} by the store.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             @if (!string.IsNullOrEmpty(order.CancelNote))
                             {
                                 <span>@order.CancelNote</span>
                             }
                             break;
                         default:
-                            @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
+                            @T["Canceled {0:g}: no checkout was left that could pay for it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                     }
                 </div>
@@ -126,7 +132,7 @@
                 @foreach (var refund in order.Refunds ?? [])
                 {
                     <div class="d-flex justify-content-between text-info">
-                        <span>@T["Refunded {0:d}", refund.CreatedUtc]</span>
+                        <span>@T["Refunded {0:d}", await LocalAsync(refund.CreatedUtc)]</span>
                         <span>&minus;@Format(refund.Amount)</span>
                     </div>
                 }
@@ -163,11 +169,11 @@
                     <dt>@T["Order number"]</dt>
                     <dd>@order.OrderNumber</dd>
                     <dt>@T["Placed"]</dt>
-                    <dd>@order.CreatedUtc.ToString("f")</dd>
+                    <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
                     @if (order.PaidUtc.HasValue)
                     {
                         <dt>@T["Paid"]</dt>
-                        <dd>@order.PaidUtc.Value.ToString("f")</dd>
+                        <dd>@((await LocalAsync(order.PaidUtc.Value)).ToString("f"))</dd>
                     }
                     @if (order.ShippingAddress is not null)
                     {

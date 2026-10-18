@@ -1,4 +1,10 @@
 @model OrderShipmentsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 <div class="card mt-4 mb-3">
     <div class="card-header">@T["Shipments"]</div>
@@ -23,7 +29,7 @@
                 }
                 @if (shipment.ShippedUtc is { } shipped)
                 {
-                    <div class="small text-muted">@T["Shipped {0:D}", shipped]</div>
+                    <div class="small text-muted">@T["Shipped {0:D}", await LocalAsync(shipped)]</div>
                 }
             </li>
         }

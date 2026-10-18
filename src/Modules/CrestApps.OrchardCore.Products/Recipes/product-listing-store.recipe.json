@@ -1,7 +1,7 @@
 {
   "name": "ProductListingStore",
   "displayName": "Product listing: online store sample",
-  "description": "Creates a Store Product type with category and brand taxonomies, color, size, material and rating attributes, 30 products that can all be bought online, with stock (a few running low and one sold out) and shipping weights, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, shipping zones for the United States, Canada and the rest of the world with carriers, and two sample customers with their addresses, product reviews, and two coupons: WELCOME10 (10% off, once per customer) and FREESHIP75 (free shipping on orders of $75 or more).",
+  "description": "Creates a Store Product type with category and brand taxonomies, color, size and material attributes, 30 products that can all be bought online, with stock (a few running low and one sold out) and shipping weights, a Shop listing page at /shop with filters, sorting, keyword search and grid and list views, orders, shipping zones for the United States, Canada and the rest of the world with carriers, and two sample customers with their addresses, product reviews with a customer rating filter, and two coupons: WELCOME10 (10% off, once per customer) and FREESHIP75 (free shipping on orders of $75 or more).",
   "author": "CrestApps",
   "website": "https://crestapps.com",
   "version": "1.0.0",
@@ -527,29 +527,6 @@
               }
             },
             {
-              "FieldName": "NumericField",
-              "Name": "Rating",
-              "Settings": {
-                "ContentPartFieldSettings": {
-                  "DisplayName": "Rating",
-                  "Position": "5"
-                },
-                "NumericFieldSettings": {
-                  "Scale": 1,
-                  "Minimum": 0,
-                  "Maximum": 5
-                },
-                "ProductAttributeSettings": {
-                  "Filterable": true,
-                  "Sortable": true,
-                  "ShowOnCard": true,
-                  "ShowInSpecifications": true,
-                  "NumberFormat": "0.0",
-                  "Suffix": "★"
-                }
-              }
-            },
-            {
               "FieldName": "BooleanField",
               "Name": "Featured",
               "Settings": {
@@ -890,9 +867,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.6
-            },
             "Featured": {
               "Value": true
             },
@@ -973,9 +947,6 @@
             },
             "Material": {
               "Text": "Cotton"
-            },
-            "Rating": {
-              "Value": 4.5
             },
             "Featured": {
               "Value": false
@@ -1058,9 +1029,6 @@
             "Material": {
               "Text": "Organic cotton"
             },
-            "Rating": {
-              "Value": 4.3
-            },
             "Featured": {
               "Value": false
             },
@@ -1142,9 +1110,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.1
-            },
             "Featured": {
               "Value": false
             },
@@ -1223,9 +1188,6 @@
             },
             "Material": {
               "Text": "Organic cotton"
-            },
-            "Rating": {
-              "Value": 3.9
             },
             "Featured": {
               "Value": false
@@ -1308,9 +1270,6 @@
             "Material": {
               "Text": "Fleece"
             },
-            "Rating": {
-              "Value": 4.7
-            },
             "Featured": {
               "Value": true
             },
@@ -1392,9 +1351,6 @@
             "Material": {
               "Text": "Fleece"
             },
-            "Rating": {
-              "Value": 4.4
-            },
             "Featured": {
               "Value": false
             },
@@ -1473,9 +1429,6 @@
             },
             "Material": {
               "Text": "Fleece"
-            },
-            "Rating": {
-              "Value": 4.8
             },
             "Featured": {
               "Value": false
@@ -1558,9 +1511,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.0
-            },
             "Featured": {
               "Value": false
             },
@@ -1642,9 +1592,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.5
-            },
             "Featured": {
               "Value": true
             },
@@ -1723,9 +1670,6 @@
             },
             "Material": {
               "Text": "Nylon"
-            },
-            "Rating": {
-              "Value": 4.2
             },
             "Featured": {
               "Value": false
@@ -1806,9 +1750,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.3
-            },
             "Featured": {
               "Value": false
             },
@@ -1888,9 +1829,6 @@
             },
             "Material": {
               "Text": "Wool blend"
-            },
-            "Rating": {
-              "Value": 4.1
             },
             "Featured": {
               "Value": false
@@ -1973,9 +1911,6 @@
             },
             "Material": {
               "Text": "Leather"
-            },
-            "Rating": {
-              "Value": 4.6
             },
             "Featured": {
               "Value": true
@@ -2060,9 +1995,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.4
-            },
             "Featured": {
               "Value": false
             },
@@ -2144,9 +2076,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.0
-            },
             "Featured": {
               "Value": false
             },
@@ -2227,9 +2156,6 @@
             },
             "Material": {
               "Text": "Nylon"
-            },
-            "Rating": {
-              "Value": 4.5
             },
             "Featured": {
               "Value": false
@@ -2313,9 +2239,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.7
-            },
             "Featured": {
               "Value": true
             },
@@ -2398,9 +2321,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.6
-            },
             "Featured": {
               "Value": false
             },
@@ -2482,9 +2402,6 @@
             "Material": {
               "Text": "Leather"
             },
-            "Rating": {
-              "Value": 4.3
-            },
             "Featured": {
               "Value": false
             },
@@ -2559,9 +2476,6 @@
             },
             "Material": {
               "Text": "Canvas"
-            },
-            "Rating": {
-              "Value": 4.5
             },
             "Featured": {
               "Value": false
@@ -2639,9 +2553,6 @@
             "Material": {
               "Text": "Nylon"
             },
-            "Rating": {
-              "Value": 4.8
-            },
             "Featured": {
               "Value": true
             },
@@ -2717,9 +2628,6 @@
             "Material": {
               "Text": "Canvas"
             },
-            "Rating": {
-              "Value": 4.2
-            },
             "Featured": {
               "Value": false
             },
@@ -2794,9 +2702,6 @@
             },
             "Material": {
               "Text": "Leather"
-            },
-            "Rating": {
-              "Value": 4.1
             },
             "Featured": {
               "Value": false
@@ -2875,9 +2780,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 4.4
-            },
             "Featured": {
               "Value": false
             },
@@ -2954,9 +2856,6 @@
             },
             "Material": {
               "Text": "Wool blend"
-            },
-            "Rating": {
-              "Value": 4.6
             },
             "Featured": {
               "Value": false
@@ -3038,9 +2937,6 @@
             "Material": {
               "Text": "Cotton"
             },
-            "Rating": {
-              "Value": 3.8
-            },
             "Featured": {
               "Value": false
             },
@@ -3115,9 +3011,6 @@
             },
             "Material": {
               "Text": "Stainless steel"
-            },
-            "Rating": {
-              "Value": 4.5
             },
             "Featured": {
               "Value": false
@@ -3195,9 +3088,6 @@
             "Material": {
               "Text": "Stainless steel"
             },
-            "Rating": {
-              "Value": 4.7
-            },
             "Featured": {
               "Value": true
             },
@@ -3272,9 +3162,6 @@
             },
             "Material": {
               "Text": "Stainless steel"
-            },
-            "Rating": {
-              "Value": 4.2
             },
             "Featured": {
               "Value": false
@@ -3372,10 +3259,22 @@
                 "Collapsed": true
               },
               {
-                "Key": "rating",
-                "AttributeKey": "Rating",
-                "Label": "Rating",
+                "Key": "avg-rating",
+                "AttributeKey": "Product.Rating",
+                "Label": "Customer rating",
                 "Kind": "Range",
+                "ShowRanges": true,
+                "Ranges": [
+                  {
+                    "Min": 4
+                  },
+                  {
+                    "Min": 3
+                  },
+                  {
+                    "Min": 2
+                  }
+                ],
                 "Collapsed": true
               },
               {
