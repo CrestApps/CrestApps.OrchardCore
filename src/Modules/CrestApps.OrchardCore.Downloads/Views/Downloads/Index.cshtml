@@ -4,6 +4,10 @@
     var entitlement = Model.Entitlement;
 }
 
+<zone Name="Title">
+    <breadcrumb name="DigitalDownload" title="@(Model.Problem == DownloadProblem.None ? entitlement.FileName : T["Download"].Value)" />
+</zone>
+
 <div class="container my-5" style="max-width: 640px">
     @if (Model.Problem == DownloadProblem.None)
     {
