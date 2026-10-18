@@ -258,6 +258,7 @@ Orchard Core's settings screen (`/Admin/Settings/{groupId}`) authorizes `Setting
 | `paylater` | `ManageTransactionSettings` | Pay Later |
 | `receipts` | `ManageReceiptSettings` | Receipts |
 | `inventory` | `ManageInventory` | Inventory |
+| `shipping` | `ManageShipping` | Shipping |
 | `subscriptions` | `ManageSubscriptionSettings` | Subscriptions, and its roles, Stripe currency and installment plan features |
 | `telephony` | `ManageTelephonySettings` | Telephony, the soft phone widget, Asterisk and Telnyx |
 | `sms` | `ManageSmsSettings` | Telnyx SMS (`CrestApps.OrchardCore.Telnyx.Sms`), whose settings section now also requires this permission, as Orchard Core's own SMS and Twilio sections do |

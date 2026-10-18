@@ -1,0 +1,19 @@
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ShippingZonesCreate" title="@(T["Create {0}", Model.DisplayName])">
+        <breadcrumb-item id="ShippingZones" action="Index" controller="ShippingZones" area="@ShippingConstants.Features.Shipping" permission="@ShippingPermissions.ManageShipping.Name">@T["Shipping"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Save"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>

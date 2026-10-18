@@ -1,0 +1,13 @@
+@model FlatRateSettingsViewModel
+
+<div class="mb-3" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="form-label">@T["Amount per order"]</label>
+    <input asp-for="Amount" type="number" min="0" step="any" class="form-control w-auto" />
+    <span asp-validation-for="Amount"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="PerItemAmount" class="form-label">@T["Amount per item"]</label>
+    <input asp-for="PerItemAmount" type="number" min="0" step="any" class="form-control w-auto" />
+    <span class="hint">@T["Added for each item shipped. Leave it at 0 to charge the same whatever the order holds."]</span>
+</div>

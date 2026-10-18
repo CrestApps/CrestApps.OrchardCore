@@ -58,6 +58,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Reports.Core/CrestApps.OrchardCore.Reports.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Roles.Core/CrestApps.OrchardCore.Roles.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Shipping.Core/CrestApps.OrchardCore.Shipping.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Stripe.Core/CrestApps.OrchardCore.Stripe.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Subscriptions.Core/CrestApps.OrchardCore.Subscriptions.Core.csproj" />
@@ -86,6 +87,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Resources/CrestApps.OrchardCore.Resources.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Shipping/CrestApps.OrchardCore.Shipping.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.SignalR/CrestApps.OrchardCore.SignalR.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TenantHierarchy/CrestApps.OrchardCore.TenantHierarchy.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.TimeZones/CrestApps.OrchardCore.TimeZones.csproj" />

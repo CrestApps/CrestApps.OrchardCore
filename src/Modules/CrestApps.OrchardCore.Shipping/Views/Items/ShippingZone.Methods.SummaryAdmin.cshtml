@@ -1,0 +1,10 @@
+@model ShapeViewModel<ShippingZone>
+
+@{
+    var enabled = Model.Value.Methods.Count(method => method.Enabled);
+}
+
+<span class="badge ta-badge fw-normal" title="@string.Join(", ", Model.Value.Methods.Where(method => method.Enabled).Select(method => method.Name))">
+    <i class="fa-solid fa-truck text-secondary" aria-hidden="true"></i>
+    @T.Plural(enabled, "1 method", "{0} methods")
+</span>
