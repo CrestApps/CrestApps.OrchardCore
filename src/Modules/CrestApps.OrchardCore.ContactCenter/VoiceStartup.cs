@@ -1,4 +1,5 @@
 ﻿using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
@@ -214,6 +215,14 @@ public sealed class VoiceStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>());
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>());
+
+        // The approved external transfer destinations tab of the Contact Center settings. Voice owns it: only Voice
+        // and the features built on it transfer to the catalog, and the dial destination policy that validates each
+        // number comes with Telephony, which Voice depends on.
+        services
+            .AddResourceConfiguration<ContactCenterExternalTransferResourceConfiguration>()
+            .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
