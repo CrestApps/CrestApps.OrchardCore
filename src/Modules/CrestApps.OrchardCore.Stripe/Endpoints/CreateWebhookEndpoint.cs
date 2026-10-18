@@ -39,6 +39,8 @@ public static class CreateWebhookEndpoint
         EventTypes.RefundUpdated,
         EventTypes.RefundFailed,
         EventTypes.ChargeDisputeCreated,
+        EventTypes.ChargeDisputeUpdated,
+        EventTypes.ChargeDisputeClosed,
     ];
 
     /// <summary>
@@ -502,6 +504,33 @@ public static class CreateWebhookEndpoint
                 foreach (var handler in paymentEvents)
                 {
                     await handler.PaymentDisputeCreatedAsync(disputeContext, cancellationToken);
+                }
+
+                break;
+
+            case EventTypes.ChargeDisputeUpdated:
+            case EventTypes.ChargeDisputeClosed:
+                if (stripeEvent.Data.Object is not Dispute changedDispute)
+                {
+                    break;
+                }
+
+                var updatedContext = new PaymentDisputeUpdatedContext()
+                {
+                    OriginalTransactionId = changedDispute.PaymentIntentId ?? changedDispute.ChargeId,
+                    DisputeReference = changedDispute.Id,
+                    GatewayMode = changedDispute.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    Currency = changedDispute.Currency,
+                    Amount = StripeCurrency.FromMinorUnits(changedDispute.Amount, changedDispute.Currency),
+                    Reason = changedDispute.Reason,
+                    Status = changedDispute.Status,
+                    IsClosed = stripeEvent.Type == EventTypes.ChargeDisputeClosed || changedDispute.Status is "won" or "lost" or "warning_closed",
+                };
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.PaymentDisputeUpdatedAsync(updatedContext, cancellationToken);
                 }
 
                 break;

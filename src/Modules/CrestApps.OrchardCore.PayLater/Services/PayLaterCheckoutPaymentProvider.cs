@@ -1,47 +1,53 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
+using CrestApps.OrchardCore.PayLater.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.PayLater.Services;
 
 /// <summary>
-/// A deferred <see cref="ICheckoutPaymentProvider"/> that records an offline "pay later" commitment
-/// instead of moving money through an external processor. Because it never touches a gateway, its
-/// verification reports that it is <em>not</em> the authoritative source of a charged amount, which tells
-/// the checkout to accept the commitment without cross-checking a processor's charged total while still
-/// requiring a recorded transaction id. This keeps the same reconciliation guarantees as a real gateway
-/// without ever fabricating a "paid" record that a processor would contradict.
+/// Pay Later: an offline commitment to pay an invoice by its due date, for one-time purchases and subscriptions.
 /// </summary>
-public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider, ICheckoutRecurringPaymentProvider
+/// <remarks>
+/// Like the other offline methods it never touches a gateway; what makes a subscription recur is the schedule the
+/// checkout handler writes on the resulting transaction, which the renewal sweep follows.
+/// </remarks>
+public sealed class PayLaterCheckoutPaymentProvider : OfflineCheckoutPaymentProvider, ICheckoutRecurringPaymentProvider
 {
     /// <summary>
     /// The stable processor key that identifies the Pay Later provider.
     /// </summary>
     public const string ProcessorKey = "pay-later";
 
-    private readonly IHostEnvironment _hostEnvironment;
+    private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
 
     public PayLaterCheckoutPaymentProvider(
+        ISiteService siteService,
         IHostEnvironment hostEnvironment,
         IStringLocalizer<PayLaterCheckoutPaymentProvider> stringLocalizer)
+        : base(hostEnvironment)
     {
-        _hostEnvironment = hostEnvironment;
+        _siteService = siteService;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    public string Key => ProcessorKey;
+    public override string Key => ProcessorKey;
 
     /// <inheritdoc/>
-    public string DisplayName => S["Pay Later"];
+    public override string DisplayName => S["Pay Later"];
 
     /// <inheritdoc/>
-    public PaymentProviderCapabilities Capabilities { get; } = new()
+    public override string Description => S["Confirm now and pay later."];
+
+    /// <inheritdoc/>
+    public override PaymentProviderCapabilities Capabilities { get; } = new()
     {
         SupportsOneTimePayments = true,
         SupportsRecurringPayments = true,
@@ -56,66 +62,21 @@ public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider, 
     };
 
     /// <inheritdoc/>
-    public Task<PaymentBeginResult> BeginAsync(BeginPaymentContext context, CancellationToken cancellationToken = default)
+    public override async Task<DateTime?> GetDueUtcAsync(DateTime now)
     {
-        ArgumentNullException.ThrowIfNull(context);
+        var settings = await _siteService.GetSettingsAsync<PayLaterSettings>();
 
-        // There is no external resource to create for an offline commitment, so a locally generated
-        // reference is the provider's authoritative reference for the attempt.
-        var reference = string.IsNullOrEmpty(context.Attempt?.ProviderReference)
-            ? IdGenerator.GenerateId()
-            : context.Attempt.ProviderReference;
-
-        return Task.FromResult(PaymentBeginResult.Success(reference));
+        return settings.NetTermDays > 0 ? now.AddDays(settings.NetTermDays) : null;
     }
 
     /// <inheritdoc/>
-    public Task<PaymentVerificationResult> VerifyAsync(VerifyPaymentContext context, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(context.Attempt);
-
-        // A non-production deployment records its offline commitments as test data, mirroring how a real
-        // gateway reports its mode, instead of always reporting Live.
-        var gatewayMode = _hostEnvironment.IsProduction() ? GatewayMode.Live : GatewayMode.Testing;
-
-        // The commitment is only confirmable once it has been begun and its reference persisted. If the
-        // attempt was created but never begun (for example a crash between persisting the attempt and
-        // calling BeginAsync), there is nothing to confirm yet, so report Unknown and leave the obligation
-        // outstanding rather than fabricating a settlement from the attempt id.
-        if (string.IsNullOrEmpty(context.Attempt.ProviderReference))
-        {
-            return Task.FromResult(new PaymentVerificationResult
-            {
-                Status = PaymentStatus.Unknown,
-            });
-        }
-
-        return Task.FromResult(new PaymentVerificationResult
-        {
-            Status = PaymentStatus.Succeeded,
-
-            // Pay Later never moves money at a processor, so it is not the authoritative source of a
-            // charged amount. The reconciliation service therefore records the commitment on the strength
-            // of the transaction id alone, without an amount cross-check.
-            ReportsAuthoritativeAmount = false,
-            TransactionId = context.Attempt.ProviderReference,
-            Amount = context.Attempt.ExpectedAmount,
-            TaxAmount = context.Attempt.ExpectedTaxAmount,
-            Currency = context.Attempt.Currency,
-            GatewayMode = gatewayMode,
-        });
-    }
-
-    /// <inheritdoc/>
-    public Task<PaymentCancelResult> CancelAsync(CancelPaymentContext context, CancellationToken cancellationToken = default)
-        => Task.FromResult(PaymentCancelResult.Success());
+    public override async Task<bool> IsAvailableAsync(ICheckoutFlowSession session, CancellationToken cancellationToken = default)
+        => (await _siteService.GetSettingsAsync<PayLaterSettings>()).Enabled;
 
     /// <inheritdoc/>
     /// <remarks>
-    /// There is no gateway to establish an agreement with, so the commitment is recorded locally exactly
-    /// like a one-time one. What makes it recur is the schedule the checkout handler writes onto the
-    /// resulting transaction, which the renewal sweep then follows.
+    /// There is no gateway to establish an agreement with, so the commitment is recorded locally exactly like a
+    /// one-time one.
     /// </remarks>
     public Task<PaymentBeginResult> BeginRecurringAsync(BeginRecurringPaymentContext context, CancellationToken cancellationToken = default)
     {
@@ -130,24 +91,20 @@ public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider, 
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Stopping an offline agreement is a local decision, so this always succeeds. The caller is what marks
-    /// the ledger's recurrence canceled, which is what actually stops the next cycle from being created.
+    /// Stopping an offline agreement is a local decision, so this always succeeds. The caller is what marks the
+    /// ledger's recurrence canceled, which is what actually stops the next cycle from being created.
     /// </remarks>
     public Task<RecurringCancelResult> CancelRecurringAsync(CancelRecurringPaymentContext context, CancellationToken cancellationToken = default)
         => Task.FromResult(RecurringCancelResult.Success());
 
     /// <inheritdoc/>
-    /// <remarks>
-    /// Nothing collects on an offline agreement until the ledger says the next cycle is due, so suspending
-    /// collection is entirely a local decision and always succeeds.
-    /// </remarks>
     public Task<RecurringPauseResult> PauseRecurringAsync(PauseRecurringPaymentContext context, CancellationToken cancellationToken = default)
         => Task.FromResult(RecurringPauseResult.Success());
 
     /// <inheritdoc/>
     /// <remarks>
-    /// The amount billed each cycle is read from the ledger when the next cycle is created, so there is
-    /// nothing to change at a gateway.
+    /// The amount billed each cycle is read from the ledger when the next cycle is created, so there is nothing to
+    /// change at a gateway.
     /// </remarks>
     public Task<RecurringUpdateResult> UpdateRecurringAsync(UpdateRecurringPaymentContext context, CancellationToken cancellationToken = default)
         => Task.FromResult(RecurringUpdateResult.Success());

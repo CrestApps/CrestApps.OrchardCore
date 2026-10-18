@@ -42,6 +42,45 @@ public static class CheckoutPaymentMethodSelector
     }
 
     /// <summary>
+    /// Keeps the providers that are available for this checkout: a provider that implements
+    /// <see cref="ICheckoutPaymentProviderAvailability"/> decides for itself, and any other always is.
+    /// </summary>
+    /// <param name="providers">The providers that can settle what the checkout owes.</param>
+    /// <param name="session">The checkout being paid.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public static async Task<ICheckoutPaymentProvider[]> GetAvailableAsync(IEnumerable<ICheckoutPaymentProvider> providers, ICheckoutFlowSession session, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(providers);
+        ArgumentNullException.ThrowIfNull(session);
+
+        var available = new List<ICheckoutPaymentProvider>();
+
+        foreach (var provider in providers)
+        {
+            if (await IsAvailableAsync(provider, session, cancellationToken))
+            {
+                available.Add(provider);
+            }
+        }
+
+        return [.. available];
+    }
+
+    /// <summary>
+    /// Returns whether a provider is available for this checkout.
+    /// </summary>
+    /// <param name="provider">The provider.</param>
+    /// <param name="session">The checkout being paid.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public static async Task<bool> IsAvailableAsync(ICheckoutPaymentProvider provider, ICheckoutFlowSession session, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        return provider is not ICheckoutPaymentProviderAvailability availability ||
+            await availability.IsAvailableAsync(session, cancellationToken);
+    }
+
+    /// <summary>
     /// Returns the provider to preselect: the configured default when it can settle the invoice, otherwise a
     /// real gateway in preference to an offline commitment, so the common case is one click.
     /// </summary>

@@ -75,6 +75,16 @@ What a Pay Later order still owes is canceled, so the customer isn't reminded to
 
 Click **Send the confirmation again** to email the order confirmation to the customer once more, for example when they can't find it. It needs your site's email to be set up.
 
+### Disputes
+
+When a buyer disputes a card payment with their bank (a chargeback), Stripe tells your site and the order shows it: a red **Disputed** box under the items, with the amount, why the buyer disputed it (for example *they don't recognize the payment*) and its status, such as *needs your response*. The orders list marks the order **Disputed** while it is open, and a note records each change.
+
+Answer a dispute from your Stripe dashboard before its deadline, with evidence such as the shipping tracking: otherwise the money goes back to the buyer. When it is decided, the box says *won, the money stays with you* or *lost, the money went back to the payer*. It needs Stripe's webhook, which Stripe Connect sets up.
+
+### Fraud risk
+
+Stripe's fraud checks rate every card payment. An order whose payment was rated **elevated** or **highest** risk shows a warning on its page, with the score out of 99 when Stripe gives one, and a **Risky** badge in the orders list. Look at it before shipping: does the shipping address fit the billing address and the email, is it a large first order of easy-to-resell goods? Refund and cancel it if it doesn't look right. A normal rating is a quiet line on the order's page.
+
 ### Notes
 
 Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
@@ -94,6 +104,7 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Tax on orders** | The tax orders charged, day by day. |
 | **Discounts on orders** | How many orders used each promotion code, and what it took off. |
 | **Refunds** | Each refund given in the period, with its order and reason. |
+| **Disputes** | The payments buyers disputed with their bank in the period, open ones first: why, their status, and how many were won and lost. |
 | **Orders to ship** | Paid orders that haven't shipped in full, oldest first, and how many days each has waited. |
 | **Stock on hand** | With Inventory on: every counted item's stock, out of stock and low first. |
 | **Stock movements** | With Inventory on: what each item received, sold, got back and was corrected by, and how many days its stock lasts at the rate it sold. |
@@ -115,6 +126,7 @@ A signed-in buyer opens **My account** from the user menu, or `/account` on your
 | **Balances and invoices** | What they owe and their invoices and receipts. | Transactions |
 | **Addresses** | Their address book: add, edit, delete, and pick the default billing and shipping addresses. | Customers |
 | **Account details** | Whether they buy for themselves or a business, their name, phone and marketing consent, and a link to change their password. | Customers |
+| **Payment methods** | The cards they saved at checkout, to remove one. | Stripe |
 
 ### An account from the confirmation
 

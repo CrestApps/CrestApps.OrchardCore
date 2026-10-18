@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Orders.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@model ShapeViewModel<Order>
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@inject Microsoft.Extensions.Localization.IStringLocalizer<OrderDisputeRecorder> S
+
+@*
+    The disputes the payer opened with their bank against the order's payment. An open one has a deadline at the
+    payment provider, so it comes first on the page.
+*@
+
+@foreach (var dispute in Model.Value.Disputes.OrderByDescending(entry => entry.CreatedUtc))
+{
+    var opened = (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(dispute.CreatedUtc, DateTimeKind.Utc))).DateTime;
+
+    <div class="alert @(dispute.IsClosed ? (dispute.Status == "lost" ? "alert-secondary" : "alert-success") : "alert-danger") mb-3" role="@(dispute.IsClosed ? "status" : "alert")">
+        <div class="d-flex flex-wrap justify-content-between gap-2">
+            <strong>
+                <span class="fa-solid fa-scale-unbalanced me-1" aria-hidden="true"></span>
+                @T["Disputed: {0}", ProductPriceFormatter.Format(dispute.Amount, dispute.Currency ?? Model.Value.Currency)]
+            </strong>
+            <span class="badge text-bg-light border">@OrderDisputeText.Status(S, dispute.Status)</span>
+        </div>
+        <div class="small mt-1">
+            @T["Opened {0:g} through {1}: {2}.", opened, dispute.Gateway, OrderDisputeText.Reason(S, dispute.Reason)]
+            @if (!dispute.IsClosed)
+            {
+                @T["Respond with your evidence from the payment provider's dashboard before its deadline, or the money goes back to the payer."]
+            }
+        </div>
+        <div class="small text-body-secondary mt-1 font-monospace">@dispute.Reference</div>
+    </div>
+}

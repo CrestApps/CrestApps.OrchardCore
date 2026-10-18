@@ -1,0 +1,23 @@
+@model CashOnDeliverySettingsViewModel
+
+@* The Cash on delivery section of Settings › Commerce › Offline payments. *@
+
+<h2 class="h5 mt-4">@T["Cash on delivery"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Offer Cash on delivery at checkout"]</label>
+            <span class="hint dashed">@T["Offered only for orders that are delivered. You record the payment on the order's balance when the courier hands it over."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label">@T["Note for buyers"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Instructions" rows="2" class="form-control" maxlength="1000"></textarea>
+        <span class="hint">@T["Optional, shown at checkout. For example: \"Our courier takes cash and cards.\""]</span>
+    </div>
+</div>

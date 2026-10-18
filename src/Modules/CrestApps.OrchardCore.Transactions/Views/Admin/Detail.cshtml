@@ -42,7 +42,23 @@
                     <dd class="col-sm-8">@(DisplayText.SourceName(transaction.Source) ?? T["None"].Value)</dd>
 
                     <dt class="col-sm-4">@T["Reference"]</dt>
-                    <dd class="col-sm-8">@transaction.ReferenceType @(string.IsNullOrEmpty(transaction.ReferenceId) ? "" : $"({transaction.ReferenceId})")</dd>
+                    <dd class="col-sm-8">
+                        @if (Model.Reference is { } reference)
+                        {
+                            @if (string.IsNullOrEmpty(reference.Url))
+                            {
+                                @reference.Text
+                            }
+                            else
+                            {
+                                <a href="@reference.Url">@reference.Text</a>
+                            }
+                        }
+                        else
+                        {
+                            @transaction.ReferenceType @(string.IsNullOrEmpty(transaction.ReferenceId) ? "" : $"({transaction.ReferenceId})")
+                        }
+                    </dd>
 
                     <dt class="col-sm-4">@T["Total"]</dt>
                     <dd class="col-sm-8">@transaction.Currency @CurrencyScale.Format(transaction.TotalAmount, transaction.Currency)</dd>

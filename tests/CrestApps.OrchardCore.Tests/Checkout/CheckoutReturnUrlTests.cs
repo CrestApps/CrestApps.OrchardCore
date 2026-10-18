@@ -217,7 +217,7 @@ public sealed class CheckoutReturnUrlTests
         var controller = CreateController(sessionStore);
 
         // Act
-        var result = await controller.Confirmation("session-1");
+        var result = await controller.Confirmation("session-1", new InMemoryPaymentAttemptStore(), Mock.Of<ICheckoutPaymentProviderResolver>());
 
         // Assert
         var view = Assert.IsType<ViewResult>(result);
@@ -237,7 +237,7 @@ public sealed class CheckoutReturnUrlTests
         var controller = CreateController(sessionStore);
 
         // Act
-        var result = await controller.Confirmation("session-1");
+        var result = await controller.Confirmation("session-1", new InMemoryPaymentAttemptStore(), Mock.Of<ICheckoutPaymentProviderResolver>());
 
         // Assert
         var model = Assert.IsType<CheckoutViewModel>(Assert.IsType<ViewResult>(result).Model);

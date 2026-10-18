@@ -159,6 +159,23 @@ public sealed class Order : CatalogItem
     public List<OrderRefund> Refunds { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the disputes, or chargebacks, the payer opened against the order's payment, oldest first.
+    /// </summary>
+    public List<OrderDispute> Disputes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how risky the gateway's fraud checks rated the order's payment, or <see langword="null"/> when it
+    /// doesn't rate payments.
+    /// </summary>
+    public OrderPaymentRisk PaymentRisk { get; set; }
+
+    /// <summary>
+    /// Gets whether a dispute against the order's payment is still open.
+    /// </summary>
+    public bool HasOpenDispute
+        => Disputes?.Any(dispute => !dispute.IsClosed) == true;
+
+    /// <summary>
     /// Gets how much was given back.
     /// </summary>
     public decimal RefundedAmount

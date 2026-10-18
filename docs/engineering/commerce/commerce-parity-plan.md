@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phase 1 built, 2026-10-18 (see [Phase 1 as built](#phase-1-as-built)); phases 2 to 12 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 and 2 built, 2026-10-18 (see [Phase 1 as built](#phase-1-as-built) and [Phase 2 as built](#phase-2-as-built)); phases 3 to 12 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -184,7 +184,7 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | Phase | Slices | Exit gate |
 | --- | --- | --- |
 | **1. Accounts and conversion** (built) | PA1 account pages, passwordless sign-in; PE1 abandoned checkout emails; PE2 one-page option, custom fields, account after checkout, mini cart | A guest who leaves at payment gets a recovery email, comes back, pays on one page, creates an account, and finds the order and downloads on their account page on a phone. |
-| **2. Payments** | PB1 PayPal, a second card gateway, bank transfer and cash on delivery, saved cards for one-time purchases; PB2 express buttons on product and cart pages, buy now pay later; PB3 fraud scoring, disputes on orders | One store takes PayPal, Stripe and bank transfer; a disputed Stripe payment shows on its order and in a report. |
+| **2. Payments** (built, but PayPal, Square, PB2) | PB1 PayPal, a second card gateway, bank transfer and cash on delivery, saved cards for one-time purchases; PB2 express buttons on product and cart pages, buy now pay later; PB3 fraud scoring, disputes on orders | One store takes PayPal, Stripe and bank transfer; a disputed Stripe payment shows on its order and in a report. |
 | **3. Merchandising** | PC1 scheduled sales, upsells, cross-sells, related, recently viewed, order bumps and post-purchase offers; PC2 grouped, external, bundles, product options; PC3 quantity rules, tier and group pricing, comparison; PC4 CSV import and export, migration importers | A bundle with a personalized part sells at a tier price to a wholesale group, and a WooCommerce product export imports with its variants. |
 | **4. Fulfillment** | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
 | **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
@@ -213,6 +213,20 @@ Moved out of phase 1, as the gap table now says:
 - **Saved cards for one-time purchases** to phase 2 (PB1): they need the gateway work there, and the account's payment methods page comes with them.
 - **Order bumps and post-purchase offers** to phase 3 (PC1), with upsells and cross-sells, which they share their product picking with.
 - **Address autocomplete** to phase 6 (PG1): it needs a third-party places provider, chosen with the market work. Address forms already carry the browser autofill attributes.
+
+## Phase 2 as built
+
+One branch, a commit per slice:
+
+- **PB1 bank transfer and cash on delivery.** Offline methods in the Pay Later feature (now **Settings > Commerce > Offline payments**), each recording an outstanding balance the store settles with **Record payment** from the order's page. Cash on delivery only for orders that are delivered. Providers can rule themselves out of a checkout and describe themselves; the confirmation says an order paid offline is placed, not paid.
+- **PB1 saved cards for one-time purchases.** Stripe keeps one customer per user; buyers keep a card at checkout, pay with it next time, and remove it under **Payment methods** in their account.
+- **PB3 disputes on orders.** Stripe's dispute webhooks are recorded on the order, with a badge in the list, a box on the page, notes, and a **Disputes** report.
+- **PB3 fraud scoring.** Stripe Radar's rating is kept on the order, with a warning and a **Risky** badge for elevated and highest risk.
+
+Not built yet, and why:
+
+- **PayPal and Square** (PB1, P-D6). They need sandbox accounts to build against and verify; ready to start once the store has them.
+- **Express buttons on product and cart pages, and buy now pay later** (PB2). Apple Pay and Google Pay need a verified domain and a real device to test, and buy now pay later moves Stripe to its Payment Element with redirects. The checkout already offers Apple Pay and Google Pay on its payment step.
 
 ## Decisions needed
 

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Commerce.Navigation;
 using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Downloads.Navigation;
 using CrestApps.OrchardCore.Orders.Navigation;
+using CrestApps.OrchardCore.Stripe.Navigation;
 using CrestApps.OrchardCore.Subscriptions.Navigation;
 using CrestApps.OrchardCore.Transactions.Navigation;
 using Microsoft.Extensions.Localization;
@@ -24,6 +25,7 @@ public sealed class CommerceAccountMenuTests
         typeof(DownloadsAccountMenu),
         typeof(SubscriptionsAccountMenu),
         typeof(TransactionsAccountMenu),
+        typeof(StripeAccountMenu),
     };
 
     [Theory]

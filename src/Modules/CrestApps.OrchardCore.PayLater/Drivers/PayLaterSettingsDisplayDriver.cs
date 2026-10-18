@@ -39,6 +39,7 @@ public sealed class PayLaterSettingsDisplayDriver : SiteDisplayDriver<PayLaterSe
     {
         return Initialize<PayLaterSettingsViewModel>("PayLaterSettings_Edit", model =>
         {
+            model.Enabled = settings.Enabled;
             model.NetTermDays = settings.NetTermDays;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
@@ -59,6 +60,7 @@ public sealed class PayLaterSettingsDisplayDriver : SiteDisplayDriver<PayLaterSe
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        settings.Enabled = model.Enabled;
         settings.NetTermDays = Math.Max(0, model.NetTermDays);
 
         return Edit(site, settings, context);

@@ -193,8 +193,13 @@ public sealed class CheckoutController : Controller
     /// Displays the confirmation of a completed checkout.
     /// </summary>
     /// <param name="sessionId">The checkout session id.</param>
+    /// <param name="attemptStore">The payment attempts, which say how the checkout was paid.</param>
+    /// <param name="providers">The payment providers.</param>
     [HttpGet("Checkout/Confirmation/{sessionId}", Name = CheckoutConstants.RouteNames.Confirmation)]
-    public async Task<IActionResult> Confirmation(string sessionId)
+    public async Task<IActionResult> Confirmation(
+        string sessionId,
+        [FromServices] CrestApps.OrchardCore.Transactions.Services.IPaymentAttemptStore attemptStore,
+        [FromServices] ICheckoutPaymentProviderResolver providers)
     {
         var session = await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Completed);
 
@@ -216,6 +221,8 @@ public sealed class CheckoutController : Controller
             ReturnUrl = returnInfo?.ReturnUrl,
             ReturnText = returnInfo?.ReturnText,
             Title = returnInfo?.Title,
+            PaymentDeferred = (await attemptStore.GetBySessionAsync(session.SessionId))
+                .Any(attempt => attempt.State == CrestApps.OrchardCore.Transactions.Models.PaymentAttemptState.Succeeded && providers.GetProvider(attempt.ProviderKey)?.Capabilities.DefersPayment == true),
         });
     }
 
