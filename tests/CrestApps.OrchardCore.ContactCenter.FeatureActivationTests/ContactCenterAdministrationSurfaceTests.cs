@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Navigation;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
@@ -70,9 +71,6 @@ public sealed class ContactCenterAdministrationSurfaceTests
 
     [Theory]
     [InlineData(
-        ContactCenterConstants.Feature.Area,
-        "CrestApps.OrchardCore.ContactCenter.Services.ContactCenterSettingsAdminMenu")]
-    [InlineData(
         ContactCenterConstants.Feature.Agents,
         "CrestApps.OrchardCore.ContactCenter.Drivers.AgentStateReasonCodeDisplayDriver")]
     [InlineData(
@@ -108,6 +106,61 @@ public sealed class ContactCenterAdministrationSurfaceTests
         var surface = await GetSurfaceAsync(host, featureId, [featureId]);
 
         Assert.Contains(expectedSurfaceType, surface);
+    }
+
+    [Theory]
+    [InlineData(ContactCenterConstants.Feature.Area, false)]
+    [InlineData(ContactCenterConstants.Feature.Agents, false)]
+    [InlineData(ContactCenterConstants.Feature.Queues, false)]
+    [InlineData(ContactCenterConstants.Feature.InboundVoice, true)]
+    [InlineData(ContactCenterConstants.Feature.Dialer, true)]
+    [InlineData(ContactCenterConstants.Feature.Recording, true)]
+    [InlineData(ContactCenterConstants.Feature.SecureCapture, true)]
+    public async Task ContactCenterSettingsMenu_IsRegisteredOnce_OnlyWhenTheSettingsScreenHasATab(
+        string featureId,
+        bool expectsTab)
+    {
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = $"settings-menu-{featureId}",
+            ProviderProfile = "none",
+            Features = [featureId],
+        });
+
+        var (tabs, menus) = await host.ExecuteInTenantScopeAsync(
+            tenant,
+            serviceProvider => Task.FromResult(FindContactCenterSettingsScreen(serviceProvider)));
+
+        Assert.Equal(expectsTab, tabs.Length > 0);
+        Assert.True(
+            menus == (tabs.Length > 0 ? 1 : 0),
+            $"With '{featureId}' enabled, the Contact Center settings screen has {tabs.Length} tab(s) " +
+            $"({string.Join(", ", tabs)}) and {menus} settings menu registration(s). Register " +
+            "ContactCenterSettingsAdminMenu in each startup that adds a tab, and nowhere else.");
+    }
+
+    /// <summary>
+    /// Reports the tabs of the Contact Center settings screen and how many times its menu is registered.
+    /// </summary>
+    /// <param name="serviceProvider">The tenant service provider to resolve against.</param>
+    /// <returns>The name of each settings driver on the Contact Center group, and the number of menu instances.</returns>
+    private static (string[] Tabs, int Menus) FindContactCenterSettingsScreen(IServiceProvider serviceProvider)
+    {
+        var tabs = serviceProvider.GetServices<IDisplayDriver<ISite>>()
+            .Where(driver => IsProductSurface(driver.GetType()))
+            .Where(driver => driver.GetType()
+                .GetProperty("SettingsGroupId", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?
+                .GetValue(driver) is ContactCenterConstants.Settings.GroupId)
+            .Select(driver => driver.GetType().Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        var menus = serviceProvider.GetServices<INavigationProvider>()
+            .Count(provider => provider.GetType().FullName == "CrestApps.OrchardCore.ContactCenter.Services.ContactCenterSettingsAdminMenu");
+
+        return (tabs, menus);
     }
 
     private static async Task<List<string>> GetSurfaceAsync(

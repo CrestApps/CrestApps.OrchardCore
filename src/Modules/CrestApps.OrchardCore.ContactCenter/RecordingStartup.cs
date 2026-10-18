@@ -68,6 +68,7 @@ public sealed class RecordingStartup : StartupBase
         // Recording and monitoring settings screens.
         services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
+        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
 
         // The call recordings page: search, playback and the transcript beside it.
         services
