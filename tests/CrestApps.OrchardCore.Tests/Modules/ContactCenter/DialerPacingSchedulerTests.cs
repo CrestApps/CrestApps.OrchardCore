@@ -322,6 +322,49 @@ public sealed class DialerPacingSchedulerTests
     }
 
     [Fact]
+    public async Task ALockThatIsNeverAcquired_IsWarnedAbout_OncePastTheThreshold_AndNotAgainUntilTheInterval()
+    {
+        // Arrange: a holder that never lets go, as when the distributed lock refuses every attempt.
+        var clock = new TestClock();
+        var logger = new RecordingLogger();
+        var deadlines = new DueRecordingDeadlineScheduler();
+        var scheduler = CreateScheduler(deadlines, clock, logger);
+        var fixture = new RunFixture();
+        var threshold = DialerPacingScheduler.GetLockStarvationThreshold(_options);
+        var held = await fixture.Lock.AcquireLockAsync(DialerPacingScheduler.GetPacingLockKey(_campaignQueue));
+
+        // Act: misses inside the threshold, then past it, then again shortly after.
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+        clock.Advance(threshold / 2);
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+        var warningsInsideTheThreshold = logger.Warnings.Count;
+
+        clock.Advance(threshold);
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+        clock.Advance(TimeSpan.FromSeconds(10));
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+        var warningsShortlyAfter = logger.Warnings.Count;
+
+        clock.Advance(DialerPacingScheduler.LockMissWarningInterval);
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, warningsInsideTheThreshold);
+        Assert.Equal(1, warningsShortlyAfter);
+        Assert.Equal(2, logger.Warnings.Count);
+        Assert.Contains(_campaignQueue, logger.Warnings[0], StringComparison.Ordinal);
+        Assert.Contains("is not being paced: its pacing lock", logger.Warnings[0], StringComparison.Ordinal);
+
+        // Once the lock is acquired again the streak ends, and a new miss starts counting afresh.
+        await held.DisposeAsync();
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+        await using var heldAgain = await fixture.Lock.AcquireLockAsync(DialerPacingScheduler.GetPacingLockKey(_campaignQueue));
+        await scheduler.RunAsync(fixture.BuildServices(), _campaignQueue, TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, logger.Warnings.Count);
+    }
+
+    [Fact]
     public async Task TwoRunsOfOneCampaignAtOnce_OnlyOnePaces()
     {
         // Arrange: two nodes asked to pace the same campaign at the same moment.

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,6 +17,7 @@ using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -62,6 +64,7 @@ public sealed class SecureCaptureStartup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SecureCaptureExpiryBackgroundTask>());
         services.AddSiteDisplayDriver<SecureCaptureSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
+        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
