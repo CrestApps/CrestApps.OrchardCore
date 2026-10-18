@@ -23,7 +23,7 @@
     <label asp-for="Carriers" class="ocat-label">@T["Carriers"]</label>
     <div class="ocat-end">
         <textarea asp-for="Carriers" rows="4" class="form-control font-monospace"></textarea>
-        <span class="hint">@T["One per line: the carrier's name, then | and its tracking link with {{0}} where the tracking number goes, such as UPS | https://www.ups.com/track?tracknum={{0}}. A shipment sent with the carrier gets its tracking link from here."]</span>
+        <span class="hint">@T["One per line: the carrier's name, then | and its tracking link with {0} where the tracking number goes, such as {1}. A shipment sent with the carrier gets its tracking link from here.", "{0}", "UPS | https://www.ups.com/track?tracknum={0}"]</span>
     </div>
 </div>
 

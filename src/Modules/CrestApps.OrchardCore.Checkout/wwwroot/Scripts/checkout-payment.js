@@ -198,7 +198,7 @@
 			showNotice();
 		}
 		function showNotice() {
-			var notice = null;
+			var notice;
 			try {
 				notice = window.sessionStorage.getItem(noticeKey);
 				window.sessionStorage.removeItem(noticeKey);
