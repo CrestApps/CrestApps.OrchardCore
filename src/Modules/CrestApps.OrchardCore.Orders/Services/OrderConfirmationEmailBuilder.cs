@@ -3,6 +3,7 @@ using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Addresses.Services;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -97,6 +98,14 @@ public sealed class OrderConfirmationEmailBuilder
             .Append("<td style=\"padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;text-align:right\">").Append(_encoder.Encode(Money(total))).Append("</td></tr>")
             .Append("</table>");
 
+        foreach (var provider in _serviceProvider.GetServices<IOrderEmailSectionProvider>())
+        {
+            if (await provider.GetSectionAsync(order) is { Links.Count: > 0 } section)
+            {
+                AppendSection(text, html, section);
+            }
+        }
+
         AppendAddress(text, html, S["Ships to:"].Value, S["Ships to"].Value, shipsTo);
         AppendAddress(text, html, S["Billed to:"].Value, S["Billed to"].Value, billedTo);
 
@@ -111,6 +120,35 @@ public sealed class OrderConfirmationEmailBuilder
         html.Append("</div>");
 
         return new OrderConfirmationEmail(S["Your order {0}", order.OrderNumber].Value, text.ToString(), html.ToString());
+    }
+
+    private static void AppendSection(StringBuilder text, StringBuilder html, OrderEmailSection section)
+    {
+        text.AppendLine().AppendLine(section.Title + ":");
+        html.Append("<p style=\"margin-top:16px\"><strong>").Append(_encoder.Encode(section.Title ?? string.Empty)).Append("</strong></p>");
+
+        if (!string.IsNullOrEmpty(section.Intro))
+        {
+            text.AppendLine(section.Intro);
+            html.Append("<p>").Append(_encoder.Encode(section.Intro)).Append("</p>");
+        }
+
+        html.Append("<ul style=\"padding-left:18px\">");
+
+        foreach (var link in section.Links)
+        {
+            text.AppendLine(string.IsNullOrEmpty(link.Note) ? $"{link.Text}: {link.Url}" : $"{link.Text}: {link.Url} ({link.Note})");
+            html.Append("<li><a href=\"").Append(_encoder.Encode(link.Url ?? string.Empty)).Append("\">").Append(_encoder.Encode(link.Text ?? string.Empty)).Append("</a>");
+
+            if (!string.IsNullOrEmpty(link.Note))
+            {
+                html.Append(" <span style=\"color:#6c757d\">").Append(_encoder.Encode(link.Note)).Append("</span>");
+            }
+
+            html.Append("</li>");
+        }
+
+        html.Append("</ul>");
     }
 
     private static void AppendAddress(StringBuilder text, StringBuilder html, string textLabel, string htmlLabel, IReadOnlyList<string> lines)

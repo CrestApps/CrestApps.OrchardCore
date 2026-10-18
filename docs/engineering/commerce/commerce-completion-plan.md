@@ -85,3 +85,13 @@ Each slice is a PR with tests, opened when its tests pass, stacked on the previo
 - No new index: `OrderReportReader` pages through `OrderIndex` by `CreatedUtc` (from the period start less seven days, the longest payment lag) and keeps orders whose `PaidUtc` falls in the period; `OrderQuery.CreatedOnOrAfter` is new. Paid and canceled orders both count, so a refund reads as a refund. Refunds are listed by refund date for orders paid up to 180 days before the period.
 - Orders to ship counts paid orders whose fulfillment is Unfulfilled or Partially fulfilled, or not recorded yet when the order has a shipping method (the status is only written from the first shipment).
 - Verified live: Sales for today on the test store showed 4 orders, $624 gross, $33.70 discounts, $34 shipping, $62.43 tax, $686.73 charged, $236.50 refunded and $450.23 net, which match the four orders line by line; the other reports render with matching figures (both refunds listed, LAST1 and SAVE10 with their amounts, stock out-of-stock first).
+
+### G1 Digital delivery
+
+- New module `CrestApps.OrchardCore.Downloads` (feature *Digital Downloads*), one project. Files sit in a `FileSystemStore` under `App_Data/Sites/{tenant}/DigitalFiles/{fileId}/{fileName}`; ids are letters and digits only.
+- The part editor uploads through an admin endpoint (`[RequestSizeLimit]` 1 GB, antiforgery token from the content form) rather than the content form, so large files aren't capped by the default request limit; saving keeps only ids the store knows, and takes name and size from the store.
+- Entitlements per order line and file, granted in `IOrderEventHandler.PaidAsync` from the product version ordered, revoked on cancel and on a full refund (`RefundedAsync`, `RefundStatus == Refunded`).
+- Links are data-protection signatures of the entitlement id, not stored tokens, so they can be shown again; the landing page is a GET and the download a POST, so mail link scanners don't spend downloads. Counting is under a per-entitlement lock.
+- `IOrderEmailSectionProvider` (Orders.Core) lets modules add link sections to the confirmation email.
+- Found while verifying: the admin Take back / Give back redirect lost the tenant prefix (`Request.Path` without `PathBase`).
+- Verified live: the sample recipe made two ebooks; a PDF uploaded from the product editor; a guest bought it with no shipping step; the confirmation email had the link (3 downloads, 14 days); three POSTs returned the PDF and the fourth answered 410 *This download link no longer works*; Give downloads back restored it; a full refund from the order page revoked it (*Taken back: The order was refunded*) and the link answered 410 with the reason; the guest order page shows the refund and the downloads section.
