@@ -102,6 +102,30 @@ Keep `.AddClass("commerce").Id("commerce")` on the node: the icon is attached to
 
 `CommerceConstants.Features.Area` is exposed by `CrestApps.OrchardCore.Abstractions`, which commerce modules already reference.
 
+### Storefront account
+
+The Commerce feature serves the buyer's account at `account` (route `CommerceAccount`, signed-in users only) and adds **My account** to Orchard Core's user menu. The account is the `commerce-account` navigation menu (`CommerceConstants.Account.MenuName`): each module adds its pages with an `INavigationProvider` that builds only for that name, and the `CommerceAccountNavigation` shape renders the menu beside each account page, marking the page whose link the current path starts with.
+
+```csharp
+public sealed class MyAccountMenu : INavigationProvider
+{
+    public ValueTask BuildNavigationAsync(string name, NavigationBuilder builder)
+    {
+        if (name == CommerceConstants.Account.MenuName)
+        {
+            builder.Add(S["Gift cards"], "60", item => item
+                .Id("account-gift-cards")
+                .AddClass("fa-solid fa-gift")
+                .Action("Index", "AccountGiftCards", new { area = "My.Module" }));
+        }
+
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+An account page renders `await DisplayAsync(await New.CommerceAccountNavigation())` in its side column. Orders, Digital Downloads, Subscriptions, Transactions and Customers add **Orders**, **Downloads**, **Subscriptions**, **Balances and invoices**, **Addresses** and **Account details**.
+
 ### The shared admin list UI
 
 The commerce lists (installment plans, subscriptions, transactions, payments, refunds, coupons and others) share one layout: search in the action bar, filters in the list header, each row's details as badges, and Orchard Core's pager with a page size selector. A module's list can reuse the Commerce feature's **`commerce-admin-list` script**: a `<select>` with the `data-commerce-list-filter` attribute submits its filter form when it changes, so header filters work without a button. Header selects use the HTML `form` attribute to post with the filter form outside the list. Require it with `<script asp-name="commerce-admin-list" at="Foot"></script>`.

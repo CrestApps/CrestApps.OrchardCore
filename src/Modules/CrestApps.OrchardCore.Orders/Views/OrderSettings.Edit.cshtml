@@ -17,6 +17,12 @@
             <label asp-for="SendRecoveryEmails" class="form-check-label">@T["Email buyers who leave a checkout"]</label>
             <span class="hint dashed">@T["A buyer who gave their email and left without paying gets one email with what they chose and a link back to it, unless they paid since. Needs the site's email and its base URL."]</span>
         </div>
+        @if (Model.SendRecoveryEmails && !Model.HasBaseUrl)
+        {
+            <div class="alert alert-warning mt-2 mb-0" role="alert">
+                @T["No recovery email is sent until the site has a base URL to link back to. Set it under <a href=\"{0}\">Settings › General</a>.", Url.Action("Index", "Admin", new { area = "OrchardCore.Settings", groupId = "general" })]
+            </div>
+        }
     </div>
 </div>
 

@@ -104,7 +104,8 @@
             </div>
         </div>
 
-        <div class="col-lg-5">
+        @* On a phone the summary comes first, so the total is in view before the buyer starts. *@
+        <div class="col-lg-5 order-first order-lg-last">
             @if (Model.Aside is not null)
             {
                 <div class="checkout-one-page-aside">

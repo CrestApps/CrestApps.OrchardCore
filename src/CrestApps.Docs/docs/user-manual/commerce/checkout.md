@@ -17,7 +17,7 @@ The **checkout** is the page where a buyer reviews what they are buying, fills i
 
 <AskYourAdmin />
 
-There is no checkout settings screen. What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
+**Settings > Commerce > Checkout** picks how the checkout is laid out (see [One page or a page per step](#one-page-or-a-page-per-step)). What the checkout offers comes from the purchase itself, from your [payment providers](payment-providers.md), your [coupons](coupons.md) and your [tax setup](taxes.md).
 
 <YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
@@ -35,7 +35,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 
 | Step | When it appears |
 | --- | --- |
-| **Contact** | Buying from the cart, when the [Customers](customers.md) feature is on. Asks who the order is for and, as your settings say, where it is billed. A signed-in buyer skips it when no billing address is asked for. See [Who the order is for](#who-the-order-is-for). |
+| **Contact** | Buying from the cart, when the [Customers](customers.md) feature is on. Asks who the order is for and, as your settings say, where it is billed, and any [fields of your own](#your-own-checkout-fields). A signed-in buyer skips it when it has nothing to ask. See [Who the order is for](#who-the-order-is-for). |
 | **Shipping** | Buying goods from the cart, when the [Shipping](shipping.md) feature is on. Asks where the order goes and how, from the methods of the zone the address is in, with what each costs. Orders of downloads and services skip it. |
 | **Plan** | Signing up to a subscription plan. |
 | **Registration** | Signing up to a subscription while not signed in. See [Buy without an account](#buy-without-an-account). |
@@ -44,6 +44,15 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 | **Outstanding payment** | Paying an outstanding balance. |
 | **Choose how to pay** | Paying an outstanding balance that the site lets customers pay in installments. The buyer picks **Pay in full** or one of the installment choices, such as *3 monthly payments*. See [Pay in installments](transactions.md#pay-in-installments). |
 | **Payment** | Always, as the last step. |
+
+### One page or a page per step
+
+Under **Settings > Commerce > Checkout**, **Checkout layout** is one of:
+
+- **A page per step**, the default: the steps described above, one page each.
+- **One page**: every step is a numbered section of one page, with the order summary beside them (below them on a phone). The buyer fills in their details and presses **Continue**. Once every step is complete, **Payment** appears below them on the same page, with **Pay now**. If the buyer then changes a detail, such as the shipping method, **Pay now** gives way to **Update order** with *You changed your details. Update your order to see the total before you pay.* Updating saves the change and shows the new total, so what they pay is what they see.
+
+Opening the settings page takes the **Manage checkout settings** permission.
 
 ### The order summary
 
@@ -98,6 +107,17 @@ Under **Settings > Commerce > Customers**, **Billing address at checkout** is **
 
 When the order is paid, it keeps its own copy of the name, email, phone and billing address, so later changes never change it. A guest becomes a customer of their own, listed under **Commerce > Customers** with the address they entered.
 
+## Your own checkout fields
+
+To ask buyers for something of your own, such as a gift message, a delivery date or a purchase order number:
+
+1. Enable the **Checkout details** feature (**Tools > Features**).
+2. Go to **Design > Content Types**, open **Checkout details** and add the fields you need, for example a **Text Field** named *Gift message*. Tick **Required** in a field's settings to make buyers fill it in.
+
+The fields appear under **Order details** on the **Contact** step, in the order the content type lists them. What the buyer enters is kept on the order and shown under **Order details** on the order's page, for you and for the buyer. A field left out while required keeps the buyer on the step with *A value is required for …*. With no fields on the content type, the checkout asks for nothing extra.
+
+When a buyer picks one of their saved addresses on the **Contact** or **Shipping** step, the form for a new address is hidden until they choose **A new address, entered below**.
+
 ## Buy without an account
 
 When someone signs up to a subscription without being signed in, the **Registration** step asks them to create an account. It starts with *Already registered?* and a **Click here to log in.** link that brings the buyer back to the checkout after signing in. A buyer who is already signed in never sees this step.
@@ -109,6 +129,8 @@ Buying from the cart needs no account: a guest gives their name and email on the
 Paying an outstanding balance through a payment link needs no account.
 
 ## The confirmation page
+
+A guest's confirmation page offers **Save your details for next time**: they choose a password, and an account is made with the email on the order, which joins the account. See [Carts and orders](carts-and-orders.md#an-account-from-the-confirmation).
 
 After a successful checkout the buyer sees **Order confirmation** with *Thank you — your purchase is complete.*, followed by the order summary of what they bought.
 

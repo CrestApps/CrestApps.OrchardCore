@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Controllers;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
@@ -14,6 +15,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
+using OrchardCore.Settings;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
@@ -379,9 +381,22 @@ public sealed class CheckoutReturnUrlTests
             Mock.Of<IDisplayManager<CheckoutFlow>>(),
             updateModelAccessor.Object,
             Mock.Of<INotifier>(),
+            StepsLayoutSiteService(),
             new TestClock(_now),
             NullLogger<CheckoutController>.Instance,
             Mock.Of<IHtmlLocalizer<CheckoutController>>());
+    }
+
+    // The stepped layout, the default: a page per step.
+    private static ISiteService StepsLayoutSiteService()
+    {
+        var site = new Mock<ISite>();
+        site.Setup(s => s.GetOrCreate<CheckoutSettings>()).Returns(new CheckoutSettings());
+
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+
+        return siteService.Object;
     }
 
     private static string GetViewsRoot()

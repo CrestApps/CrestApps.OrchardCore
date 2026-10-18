@@ -317,10 +317,10 @@ public sealed class CheckoutController : Controller
         return page;
     }
 
-    private static bool IsReadyToPay(CheckoutFlow flow)
+    internal static bool IsReadyToPay(CheckoutFlow flow)
         => FirstUnsavedStep(flow) is null;
 
-    private static CheckoutFlowStep FirstUnsavedStep(CheckoutFlow flow)
+    internal static CheckoutFlowStep FirstUnsavedStep(CheckoutFlow flow)
         => flow.GetSortedSteps().FirstOrDefault(step => !IsPayment(step) && step.CollectData && !flow.Session.SavedSteps.ContainsKey(step.Key));
 
     private static bool IsPayment(CheckoutFlowStep step)

@@ -153,6 +153,12 @@ public class OrderSettingsViewModel
     public bool SendRecoveryEmails { get; set; }
 
     public int RecoveryDelayHours { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets whether the site has the base URL recovery emails link back through.
+    /// </summary>
+    [BindNever]
+    public bool HasBaseUrl { get; set; }
 }
 
 public class OrderViewViewModel

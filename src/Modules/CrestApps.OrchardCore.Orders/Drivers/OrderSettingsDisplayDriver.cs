@@ -33,6 +33,7 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
             model.SendConfirmations = settings.SendConfirmations;
             model.SendRecoveryEmails = settings.SendRecoveryEmails;
             model.RecoveryDelayHours = settings.RecoveryDelayHours;
+            model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
         .OnGroup(SettingsGroupId);
