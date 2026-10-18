@@ -31,6 +31,7 @@ A guest customer has no user. Customers builds no registration of its own; a gue
 | `UserId` | The Orchard Core user, or `null` for a guest. |
 | `DisplayName`, `FirstName`, `LastName` | How the store addresses the customer. `GetName()` returns the display name, then a business's company, then the person's name, then the email. |
 | `CompanyName`, `TaxId` | For a business, such as a VAT number. |
+| `IsTaxExempt`, `TaxExemptionReason` | A customer who pays no tax, such as a reseller, and why, such as a certificate number. A signed-in exempt customer pays no tax at checkout; see [Taxation at checkout](checkout#taxation). |
 | `Email`, `Phone` | For a customer with an account, `Email` is the account's email when the record was made. |
 | `AcceptsMarketing` | Whether the customer agreed to news and offers. Order and payment messages are always sent. |
 | `ExternalIds` | Ids at outside services, such as a payment provider's customer id, by service name. |

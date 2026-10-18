@@ -14,7 +14,7 @@ else
 {
     <span class="badge ta-badge fw-normal" title="@T["Countries the zone covers"]">
         <i class="fa-solid fa-flag text-secondary" aria-hidden="true"></i>
-        @(zone.Countries.Count <= 4 ? string.Join(", ", zone.Countries) : T["{0} countries", zone.Countries.Count].Value)
+        @if (zone.Countries.Count <= 4) { @string.Join(", ", zone.Countries) } else { @T.Plural(zone.Countries.Count, "1 country", "{0} countries") }
     </span>
     @if (zone.Regions.Count > 0)
     {

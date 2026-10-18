@@ -32,6 +32,33 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
   - Built in: `Flat`, `Table` (the row with the largest `From` at or below the value; none below the first row or above `Maximum`) and `Free` (from `MinimumSubtotal`).
   - A carrier module registers its own provider, and a `DisplayDriver<ShippingMethod>` for its settings that renders only for methods with its `ProviderName`.
 
+## Checkout
+
+- **`ShippingCheckoutHandler`** adds the **Shipping** step (`ShippingConstants.CheckoutStepKey`, order 2, after Contact) to an order's checkout when a line is a good (`ProductType.Good`). On completion it adds a signed-in buyer's new address to their address book when they asked, as their default shipping address if they had none.
+- **`ShippingCheckoutFlowDisplayDriver`** renders and posts the step.
+  - The address comes from the customer's address book (Customers, optional) or the address editor, with the recipient's name and phone.
+  - **`ShippingOrderRateService`** prices the order's goods: their weight and class come from the product version bought, and the currency is the order's.
+  - An address posted without a rate chosen for it (or with a rate the address doesn't offer) comes back with its rates and the error *Choose how to ship your order*, so the step finishes only with a rate priced on the server. One rate is chosen for the buyer.
+  - The step's billing item is the shipping line (`TaxableKind = Shipping`, the method's `TaxCategoryCode`), then the invoice is rebuilt. The choice is kept as `ShippingCheckoutStep` in `SavedSteps` and as **`CheckoutShippingInfo`** (address, rate, method, zone, name, amount) in the session.
+- **Tax destination.** `DefaultCheckoutTaxProfileProvider` now sets `CheckoutTaxProfile.Destination` to the `CheckoutShippingInfo` address, else the `CheckoutContactInfo` billing address. The Contact step rebuilds the invoice when it's saved, so an order that doesn't ship is taxed where it's billed.
+- **Orders.** `OrderCheckoutHandler.CompletingAsync` copies `CheckoutShippingInfo` to `Order.ShippingAddress` and `Order.Shipping` (`OrderShipping`: method, rate, zone, provider, name, description, amount). `Order.Anonymize` keeps only the country and region of both addresses. The admin order page, the guest order page and the confirmation email show both.
+- The price is the one shown when the buyer chose the method; editing a method later doesn't change checkouts already past the step.
+
+## Shipments
+
+- **`Shipment`** (YesSql, `Shipping` collection, `ShipmentIndex` on order, status and dates): `OrderId`, `OrderNumber`, `Number` (1, 2, … per order), `Lines` (`ShipmentLine`: order `LineId`, `Title`, `Sku`, `Quantity`), `Status` (`Pending`, `Shipped`, `Delivered`, `Returned`), `Carrier`, `TrackingNumber`, `TrackingUrl`, `Note`, and the created, shipped, delivered, returned and emailed times.
+- **`IShipmentService`** (Core), in the caller's unit of work:
+  - `GetRemainingAsync(order)`: units of each good not in a shipment, ignoring returned ones.
+  - `CreateAsync(order, lines, details, ship)`: only for a paid order, never more than is left; pending, or shipped at once.
+  - `ShipAsync`, `DeliverAsync` (shipped only), `ReturnAsync` (shipped or delivered; its units can be shipped again), `DeleteAsync` (pending only).
+  - Each change sets `Order.FulfillmentStatus` (`OrderFulfillmentStatus`: `Unfulfilled`, `PartiallyFulfilled`, `Fulfilled`, from the units in shipments that left; `null` for an order without goods).
+  - A tracking link must be `http` or `https`; an empty one is made from the carrier's template in `ShippingSettings.Carriers` (`{0}` is the escaped number).
+- **`IShipmentEventHandler`** (`CreatedAsync`, `ShippedAsync`, `DeliveredAsync`, `ReturnedAsync`, with `ShipmentEventHandlerBase`) runs in the same unit of work. Shipping registers:
+  - `ShippedEmailShipmentHandler`: the shipped email (`ShipmentEmailBuilder`), once per shipment (`ShippedEmailSentUtc`), when `SendShippedEmails` is on and an `IEmailService` is set up; a guest gets the order link from `IOrderLinkService`.
+  - `ShipmentWorkflowHandler` (with **Workflows**): `ShipmentCreatedEvent`, `ShipmentShippedEvent`, `ShipmentDeliveredEvent`, `ShipmentReturnedEvent`, with the `Order`, the `Shipment`, its number, carrier, tracking number and link and the buyer's email as input, correlated by the shipment id.
+- **Order pages.** Orders builds the order with `IDisplayManager<Order>` in the display types `OrderConstants.DisplayTypes.DetailAdmin` (the admin page, also My Orders) and `Detail` (the guest page), and renders the shapes in its pages. `OrderShipmentsDisplayDriver` adds `OrderShipments_DetailAdmin` (the shipments, a new-shipment form and the actions, for **Ship orders and update their shipments**) or `OrderShipments_Detail` (what left, with tracking links, for the buyer).
+- **Admin actions** (`ShipmentsAdminController`): `shipping/orders/{orderId}/shipments` (create), and `shipping/shipments/{id}/ship`, `/deliver`, `/return`, `/delete`, each back to the order.
+
 ## Admin
 
 - **Commerce > Shipping** (`shipping/zones`, `ShippingZonesController`) lists zones in the order they are tried. A zone's page edits it and lists its methods; **Add method** opens the method editor for a provider (`shipping/zones/{zoneId}/methods/create/{providerName}`).
@@ -43,6 +70,7 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 | Permission | Allows |
 | --- | --- |
 | **Manage shipping zones, methods and settings** (`ManageShipping`) | Commerce > Shipping and Settings > Commerce > Shipping (registered for the `shipping` settings group). |
+| **Ship orders and update their shipments** (`FulfillOrders`) | The Shipments section of an order's page, and its actions. |
 
 Administrators have it by default.
 
@@ -69,6 +97,6 @@ The **ShippingZones** step creates or updates zones, found by `ItemId` or `Name`
 
 The **Shipping Zones** deployment step (*Commerce*) exports every zone with its methods.
 
-## Coming next
+## Not included
 
-A shipping step at checkout with a taxed shipping line and the shipping address as the tax destination, then shipments.
+Live carrier rates and labels (a carrier module adds an `IShippingRateProvider`), returns beyond marking a shipment returned, postal-code zones, dimensional weight, and pick lists.

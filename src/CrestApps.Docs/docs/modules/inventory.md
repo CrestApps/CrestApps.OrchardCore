@@ -90,9 +90,16 @@ With Orders enabled, `InventoryOrderEventHandler` (an `IOrderEventHandler`) ties
 
 - **Created:** reserves the order's lines for `HoldMinutes`. A shortage refuses the order with a message for the buyer: *Only 1 of Mug left. Lower the quantity to check out.* or *Mug is out of stock. Remove it to check out.*
 - **Paid:** sells them in the checkout's own unit of work. A concurrent change to the same item rolls the completion back, and the checkout's reconciliation sweep retries it.
-- **Canceled:** releases them.
+- **Canceled:** releases them, and when the store asks, puts back what a paid order sold.
+- **Refunded:** when the store refunds everything and asks for it, puts back what the order sold.
+
+`IInventoryService.RestockAsync(orderId, reason, actor)` returns an order's sold units to stock with a `Returned` movement per item, once: the reservation is marked `Returned`, so asking again changes nothing.
 
 `ExpiredStockHoldsBackgroundTask` releases expired holds every five minutes, up to 500 per run. The cart's **Checkout** commits the order, and what it holds, before the checkout starts, and turns a concurrency conflict into *Someone else is buying the same items right now.* An item's admin page lists the orders holding it.
+
+## Reports
+
+With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Commerce**, permission `ViewInventory`) lists every counted item with its units on hand, held and available, out of stock and low first, with totals. It shows stock as it is when it runs.
 
 ## Availability
 

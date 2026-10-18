@@ -22,9 +22,16 @@ public interface IOrderEventHandler
     Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Runs after an unpaid order was canceled, in the same unit of work.
+    /// Runs after an order was canceled, in the same unit of work: an unpaid one whose checkout ended, or any one the
+    /// store canceled.
     /// </summary>
     Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs after money was given back for the order and recorded on it.
+    /// </summary>
+    Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 public abstract class OrderEventHandlerBase : IOrderEventHandler
@@ -36,6 +43,9 @@ public abstract class OrderEventHandlerBase : IOrderEventHandler
         => Task.CompletedTask;
 
     public virtual Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    public virtual Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }
 
@@ -88,4 +98,31 @@ public sealed class OrderCanceledContext
     public Order Order { get; }
 
     public OrderCancelReason Reason { get; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether what the order sold goes back into stock.
+    /// </summary>
+    public bool Restock { get; set; }
+}
+
+public sealed class OrderRefundedContext
+{
+    public OrderRefundedContext(Order order, OrderRefund refund)
+    {
+        Order = order;
+        Refund = refund;
+    }
+
+    public Order Order { get; }
+
+    /// <summary>
+    /// Gets the refund just recorded.
+    /// </summary>
+    public OrderRefund Refund { get; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether what the order sold goes back into stock, which the store chooses
+    /// when it refunds everything.
+    /// </summary>
+    public bool Restock { get; set; }
 }

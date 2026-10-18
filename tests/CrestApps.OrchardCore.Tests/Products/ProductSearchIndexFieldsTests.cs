@@ -105,8 +105,9 @@ public sealed class ProductSearchIndexFieldsTests
         var definitions = ProductSearchIndexFields.GetDefinitions(["Vehicle.Make", "Vehicle.Make", "Vehicle.Year"]);
 
         Assert.Single(definitions, definition => definition.IsKey);
-        Assert.Equal(12 + (7 * 6), definitions.Count);
+        Assert.Equal(12 + (8 * 6), definitions.Count);
         Assert.Contains(definitions, definition => definition.Name == ProductSearchIndexFields.Values(ProductAttributeKeys.InStock));
+        Assert.Contains(definitions, definition => definition.Name == ProductSearchIndexFields.SortNumber(ProductAttributeKeys.Rating));
         Assert.Contains(definitions, definition => definition.Name == ProductSearchIndexFields.Facets("Vehicle.Year") && definition.IsFacetable && definition.IsCollection);
     }
 }
