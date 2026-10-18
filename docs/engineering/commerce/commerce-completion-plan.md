@@ -102,3 +102,11 @@ Each slice is a PR with tests, opened when its tests pass, stacked on the previo
 - Customers: `Customer.IsTaxExempt` and `TaxExemptionReason` (editor, recipe step, erasure); `CustomerCheckoutTaxProfileHandler` fills `CheckoutTaxProfile.Customer` for a signed-in buyer (B2B or B2C, tax id, exemption, certificate ids from the Taxation certificate store when present). Guests aren't trusted with an exemption.
 - Taxation: `TaxOriginSettings` with a plain-field editor at Commerce > Taxation > Origin; Checkout's Taxation startup adds `TaxOriginCheckoutTaxProfileHandler`.
 - Verified live: marking the store account's business customer exempt took the WA sales tax off a $129 watch with $6 shipping to Seattle ($135 due instead of $148.50); clearing it brought the tax back; the Origin settings page renders.
+
+### V1 Reviews
+
+- New module `CrestApps.OrchardCore.Reviews` (feature *Product Reviews*). Reviews are YesSql documents in their own collection; one per user per product; buyers only by default (a paid order with the product), approval required by default.
+- Ratings reach listings through the existing search record: a contributor writes `Product.Rating` and `Product.ReviewCount` as numeric attributes, so the database search and the search servers sort and filter with no new columns (Azure's declared fields gain `Product.Rating`). Products gain `IProductListingEntryProvider` for automatic filters and sorts; keys `avg-rating` and `avg-rating-desc` avoid clashing with the store sample's own Rating field.
+- Moderation refreshes the product's record (`IProductSearchIndexRefresher`). The rating sum lives in `ProductRatingReader`, apart from `ReviewService`: the refresher builds records through the contributors, so the contributor depending on the review service made a circular dependency (found live).
+- Found while verifying: the admin list needed a `ProductReview.SummaryAdmin` row template.
+- Verified live: the store account, which bought the watch, reviewed it 5 stars from the product page; it waited for approval; approving it under Commerce > Reviews put *5.0 (1 review)* under the price and the review with *Verified purchase* on the page; the shop offers *Customer rating: highest first*, which puts the watch first where the default order put the cap first.
