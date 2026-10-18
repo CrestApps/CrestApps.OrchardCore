@@ -248,6 +248,11 @@ The framework never calculates tax itself. It consumes the [Taxation](taxation) 
 
 An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes. The default provider's destination is the address the order ships to (`CheckoutShippingInfo`, set by [Shipping](shipping)), else the buyer's billing address (`CheckoutContactInfo`); with neither, only rules without a jurisdiction apply.
 
+The default provider then runs every **`ICheckoutTaxProfileHandler`**, at checkout and when a recurring charge is taxed, so modules add what they know without replacing it:
+
+- `TaxOriginCheckoutTaxProfileHandler` (with Taxation) sets `CheckoutTaxProfile.Origin` from the store's address under **Commerce > Taxation > Origin** (`TaxOriginSettings`), for taxes sourced where the seller is.
+- `CustomerCheckoutTaxProfileHandler` (with [Customers](customers)) sets `CheckoutTaxProfile.Customer` for a signed-in buyer: business (`B2B`) or person, their tax id as the registration and VAT number, `IsTaxExempt`, and the ids of the exemption certificates on file for them. A rule the customer is exempt from charges nothing (`TaxTreatment.Exempt`). A guest is taxed as a person.
+
 A billing item whose tax was already decided sets **`BillingItem.ExcludeFromTax`** and is left out of the
 determination. Settling an outstanding [transaction](transactions) does this: the transaction already carries its
 own tax, and paying it is not a new sale.

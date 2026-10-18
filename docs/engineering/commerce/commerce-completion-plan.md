@@ -95,3 +95,10 @@ Each slice is a PR with tests, opened when its tests pass, stacked on the previo
 - `IOrderEmailSectionProvider` (Orders.Core) lets modules add link sections to the confirmation email.
 - Found while verifying: the admin Take back / Give back redirect lost the tenant prefix (`Request.Path` without `PathBase`).
 - Verified live: the sample recipe made two ebooks; a PDF uploaded from the product editor; a guest bought it with no shipping step; the confirmation email had the link (3 downloads, 14 days); three POSTs returned the PDF and the fourth answered 410 *This download link no longer works*; Give downloads back restored it; a full refund from the order page revoked it (*Taken back: The order was refunded*) and the link answered 410 with the reason; the guest order page shows the refund and the downloads section.
+
+### T1 Customer tax
+
+- `ICheckoutTaxProfileHandler` (Checkout.Abstractions), run by `DefaultCheckoutTaxProfileProvider` after it builds the profile, at checkout and for recurring charges, so modules add to the profile without replacing the provider.
+- Customers: `Customer.IsTaxExempt` and `TaxExemptionReason` (editor, recipe step, erasure); `CustomerCheckoutTaxProfileHandler` fills `CheckoutTaxProfile.Customer` for a signed-in buyer (B2B or B2C, tax id, exemption, certificate ids from the Taxation certificate store when present). Guests aren't trusted with an exemption.
+- Taxation: `TaxOriginSettings` with a plain-field editor at Commerce > Taxation > Origin; Checkout's Taxation startup adds `TaxOriginCheckoutTaxProfileHandler`.
+- Verified live: marking the store account's business customer exempt took the WA sales tax off a $129 watch with $6 shipping to Seattle ($135 due instead of $148.50); clearing it brought the tax back; the Origin settings page renders.
