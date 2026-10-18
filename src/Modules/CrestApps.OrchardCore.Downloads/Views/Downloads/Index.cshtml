@@ -11,7 +11,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="DigitalDownload" title="@(Model.Problem == DownloadProblem.None ? entitlement.FileName : T["Download"].Value)" />
+    <breadcrumb name="DigitalDownload" title="@(Model.Problem == DownloadProblem.None ? (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(entitlement.FileName) : T["Download"])" />
 </zone>
 
 <div class="container my-5" style="max-width: 640px">

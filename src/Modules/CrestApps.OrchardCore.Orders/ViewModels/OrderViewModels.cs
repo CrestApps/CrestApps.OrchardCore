@@ -119,6 +119,31 @@ public class OrderConfirmationViewModel
     /// Gets or sets the link to create an account, for a guest on a site that lets visitors register.
     /// </summary>
     public string RegisterUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the token that lets a guest make an account from this page and take the order into it, or
+    /// <see langword="null"/> when they can't (not a guest, no email, or the site doesn't let visitors register).
+    /// </summary>
+    public string AccountToken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email the account would get: the order's.
+    /// </summary>
+    public string Email { get; set; }
+
+    /// <summary>
+    /// Gets or sets the page to come back to after making the account fails.
+    /// </summary>
+    public string ReturnUrl { get; set; }
+}
+
+public class OrderCreateAccountViewModel
+{
+    public string Token { get; set; }
+
+    public string Password { get; set; }
+
+    public string ConfirmPassword { get; set; }
 }
 
 public class OrderSettingsViewModel
