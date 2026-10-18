@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
 
@@ -262,8 +263,16 @@ public sealed class ContactCenterFeatureDependencyAuditTests
     /// <summary>
     /// Gets the service contracts the audit probes.
     /// </summary>
-    /// <returns>The interfaces declared by the Contact Center and Telephony assemblies.</returns>
+    /// <returns>
+    /// The interfaces declared by the Contact Center and Telephony assemblies, and the display driver contracts their
+    /// drivers implement.
+    /// </returns>
     /// <remarks>
+    /// A display driver is registered against Orchard Core's <see cref="IDisplayDriver{TModel}"/>, never against an
+    /// interface of these assemblies, so the closed contracts their drivers implement are probed as well. A site
+    /// settings driver whose dependency belongs to an undeclared feature fails every settings screen of the tenant,
+    /// because all the settings drivers are built together.
+    /// <para>
     /// Interfaces are probed rather than implementation types because a manifest gap surfaces when something
     /// resolves a contract, and because <c>ITypeFeatureProvider</c> is not a sound oracle for "what did this
     /// feature register". It is populated from two sources, and only one of them is the container.
@@ -277,16 +286,28 @@ public sealed class ContactCenterFeatureDependencyAuditTests
     /// tenant with only the base feature enabled attributed 147 types to that feature, including
     /// <c>ContactCenterRealTimeEventHandler</c>, whose registering startup never ran. An implementation-driven
     /// audit built on it would therefore report registrations that do not exist.
+    /// </para>
     /// </remarks>
     private static Type[] GetCandidateServiceTypes()
-        => AppDomain.CurrentDomain.GetAssemblies()
+    {
+        var types = AppDomain.CurrentDomain.GetAssemblies()
             .Where(assembly => _auditedAssemblyPrefixes.Any(prefix =>
                 assembly.GetName().Name?.StartsWith(prefix, StringComparison.Ordinal) == true))
             .SelectMany(GetLoadableTypes)
+            .ToArray();
+
+        var displayDriverContracts = types
+            .Where(type => type is { IsClass: true, IsAbstract: false })
+            .SelectMany(type => type.GetInterfaces())
+            .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IDisplayDriver<>));
+
+        return types
             .Where(type => type.IsInterface && !type.ContainsGenericParameters)
+            .Concat(displayDriverContracts)
             .Distinct()
             .OrderBy(type => type.FullName, StringComparer.Ordinal)
             .ToArray();
+    }
 
     /// <summary>
     /// Gets the types an assembly exposes, tolerating types whose dependencies cannot be loaded.

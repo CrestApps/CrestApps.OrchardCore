@@ -71,7 +71,7 @@ Needs the **Omnichannel Channel Endpoints** feature, which adds the **Omnichanne
 
 ## External transfer destinations
 
-The outside numbers agents and IVR menus may transfer calls to.
+Needs a voice feature, such as **Contact Center Inbound Voice** or **Contact Center Outbound Dialer**, which brings **Contact Center Voice**. These are the outside numbers agents and IVR menus may transfer calls to.
 
 1. Add a row for each destination with a **Display name** (for example *After-hours answering service*) and its **E.164 address** (for example `+17025550199`).
 2. Untick **Enabled** to keep a row but stop offering it.
