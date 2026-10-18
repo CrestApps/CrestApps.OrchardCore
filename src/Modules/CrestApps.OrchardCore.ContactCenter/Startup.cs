@@ -305,10 +305,9 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>());
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
 
-        // The Contact Center settings menu. Each capability owns its tabs on that screen so enabling a capability
-        // provides a complete management experience without another toggle.
-        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
-        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
+        // The base feature adds no tab to the Contact Center settings screen. Each startup that adds one registers
+        // the settings menu with it, so the menu never leads to an empty screen. AddNavigationProvider registers the
+        // menu once however many startups add it.
     }
 }
 
@@ -366,6 +365,7 @@ public sealed class ContactCenterAgentNumbersStartup : StartupBase
         services.AddScoped<IAgentAddressResolver, AgentAddressResolver>();
         services.AddSiteDisplayDriver<ContactCenterDefaultAddressSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
+        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 }
 

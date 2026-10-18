@@ -45,10 +45,16 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
     /// </summary>
     private const int MaxDetailLength = 500;
 
+    /// <summary>
+    /// How often a queue whose pacing lock stays out of reach is warned about again while it stays so.
+    /// </summary>
+    internal static readonly TimeSpan LockMissWarningInterval = TimeSpan.FromMinutes(15);
+
     private readonly ConcurrentDictionary<string, DateTime> _pending = new(StringComparer.Ordinal);
 
-    // Consecutive times a queue's run found its pacing lock held, so a lock that stays held is retried less and less often.
-    private readonly ConcurrentDictionary<string, int> _lockMisses = new(StringComparer.Ordinal);
+    // Consecutive times a queue's run found its pacing lock held, so a lock that stays held is retried less and less often,
+    // and since when, so a lock that is never acquired is warned about rather than only logged at Debug.
+    private readonly ConcurrentDictionary<string, LockMissStreak> _lockMisses = new(StringComparer.Ordinal);
     private readonly IContactCenterDeadlineScheduler _deadlineScheduler;
     private readonly IClock _clock;
     private readonly ContactCenterDialerPacingOptions _options;
@@ -86,6 +92,21 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
     /// <param name="queueId">The campaign queue.</param>
     public static string GetPacingLockKey(string queueId)
         => $"ContactCenterDialerPacing:{queueId}";
+
+    /// <summary>
+    /// Gets how long every pacing run of a queue may find its pacing lock out of reach before that is a fault rather than
+    /// another run holding it: two lock lifetimes, or the cycle timeout when that is longer, since an in-process lock never
+    /// expires and a cycle may hold it until its timeout abandons it.
+    /// </summary>
+    /// <param name="options">The dialer pacing options.</param>
+    public static TimeSpan GetLockStarvationThreshold(ContactCenterDialerPacingOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        var twoLifetimes = options.LockExpiration * 2;
+
+        return options.CycleTimeout > twoLifetimes ? options.CycleTimeout : twoLifetimes;
+    }
 
     /// <summary>
     /// Whether the profile is paced by the reserve-then-dial cycle this scheduler runs. An over-dialing Predictive profile
@@ -234,8 +255,15 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
             // Each miss doubles the wait, up to a third of the lock's lifetime: retrying a held lock every second kept
             // reading the queue's head and profile, and recording a cycle, for as long as the holder took.
-            var misses = _lockMisses.AddOrUpdate(queueId, 1, static (_, count) => count + 1);
-            var backoff = TimeSpan.FromTicks(_options.LockRetryDelay.Ticks << Math.Min(misses - 1, 4));
+            var streak = _lockMisses.AddOrUpdate(
+                queueId,
+                static (_, nowUtc) => new LockMissStreak(1, nowUtc, null),
+                static (_, current, _) => current with { Count = current.Count + 1 },
+                startedUtc);
+
+            WarnWhenStarved(queueId, streak, startedUtc);
+
+            var backoff = TimeSpan.FromTicks(_options.LockRetryDelay.Ticks << Math.Min(streak.Count - 1, 4));
             var cap = _options.LockExpiration / 3;
 
             Request(queueId, backoff < cap ? backoff : (cap > _options.LockRetryDelay ? cap : _options.LockRetryDelay));
@@ -247,7 +275,16 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
 
         await using var acquiredLock = locker;
 
-        _lockMisses.TryRemove(queueId, out _);
+        if (_lockMisses.TryRemove(queueId, out var endedStreak) &&
+            endedStreak.LastWarnedUtc is not null &&
+            _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Acquired the pacing lock of queue '{QueueId}' again after {Misses} pacing run(s) since {SinceUtc:o} could not.",
+                queueId.SanitizeLogValue(),
+                endedStreak.Count,
+                endedStreak.SinceUtc);
+        }
 
         var session = services.GetRequiredService<ISession>();
         var observation = recorder is null ? null : services.GetService<DialerPacingCycleObservation>();
@@ -512,6 +549,29 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         }
     }
 
+    // Warns once a queue's run has found its pacing lock out of reach for longer than any holder should keep it, and again
+    // every LockMissWarningInterval while that lasts. Each miss on its own is ordinary and stays at Debug.
+    private void WarnWhenStarved(string queueId, LockMissStreak streak, DateTime nowUtc)
+    {
+        var starvedFor = nowUtc - streak.SinceUtc;
+
+        if (starvedFor < GetLockStarvationThreshold(_options) ||
+            (streak.LastWarnedUtc is { } lastWarnedUtc && nowUtc - lastWarnedUtc < LockMissWarningInterval))
+        {
+            return;
+        }
+
+        _lockMisses.TryUpdate(queueId, streak with { LastWarnedUtc = nowUtc }, streak);
+
+        _logger.LogWarning(
+            "Queue '{QueueId}' is not being paced: its pacing lock '{LockKey}' has not been acquired since {SinceUtc:o} ({Misses} pacing run(s) over {StarvedFor}). Check that the distributed lock is reachable and that no node holds the lock without releasing it.",
+            queueId.SanitizeLogValue(),
+            GetPacingLockKey(queueId).SanitizeLogValue(),
+            streak.SinceUtc,
+            streak.Count,
+            starvedFor);
+    }
+
     private static Task RecordAsync(
         IDialerPacingCycleRecorder recorder,
         string queueId,
@@ -534,4 +594,12 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             StartedUtc = startedUtc,
         });
     }
+
+    /// <summary>
+    /// The pacing runs of a queue in a row that found its pacing lock out of reach.
+    /// </summary>
+    /// <param name="Count">How many runs in a row missed the lock.</param>
+    /// <param name="SinceUtc">When the first of them started.</param>
+    /// <param name="LastWarnedUtc">When the streak was last warned about, or <see langword="null"/>.</param>
+    private readonly record struct LockMissStreak(int Count, DateTime SinceUtc, DateTime? LastWarnedUtc);
 }

@@ -21,7 +21,7 @@ The **Contact Center** settings page holds the rules that apply to every queue a
 
 <YouTube video="contact-center-setup-walkthroughs" title="Video of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture" start={75} end={112} />
 
-The page has up to four tabs. A tab only appears when its feature is enabled.
+The page has up to four tabs. A tab only appears when its feature is enabled, and the **Settings > Contact Center** menu item only appears once a tab does.
 
 ## Recording governance
 

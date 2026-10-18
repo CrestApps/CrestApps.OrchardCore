@@ -6,7 +6,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// <remarks>
 /// <see cref="Stalled"/>, <see cref="Idle"/> and <see cref="NothingToCall"/> are told apart on purpose: a dialer whose
 /// cycles stopped, one whose cycles run but find no agent, and one whose cycles run but find nothing due all place no
-/// calls, and only the first is a fault.
+/// calls, and only the first is a fault. <see cref="LockNotAcquired"/> is a fault too, with its cause named: the cycles
+/// still run, but every one of them skips itself because it cannot take the queue's pacing lock.
 /// </remarks>
 public enum DialerPacingHealthState
 {
@@ -40,4 +41,10 @@ public enum DialerPacingHealthState
     /// Work is waiting but no pacing cycle of the queue has completed for longer than the stall threshold.
     /// </summary>
     Stalled = 5,
+
+    /// <summary>
+    /// Work is waiting but, for longer than any holder should keep it, every pacing cycle of the queue skipped itself
+    /// because it could not take the queue's pacing lock.
+    /// </summary>
+    LockNotAcquired = 6,
 }

@@ -43,6 +43,7 @@ public sealed class Startup : StartupBase
     {
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
+        services.AddScoped<ICheckoutSessionAnonymizer, CheckoutSessionAnonymizer>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
         services.AddScoped<ICheckoutReconciliationService, CheckoutReconciliationService>();

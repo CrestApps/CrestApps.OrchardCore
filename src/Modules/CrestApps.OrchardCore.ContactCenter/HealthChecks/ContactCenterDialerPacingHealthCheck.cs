@@ -10,7 +10,8 @@ namespace CrestApps.OrchardCore.ContactCenter.HealthChecks;
 /// </summary>
 /// <remarks>
 /// A dialer that runs but finds no agent, or nothing due, is healthy: its cycles complete and say so. Only a queue whose
-/// cycles stopped completing fails the check. The verdict is the same on every node, because it is read from the shared
+/// cycles stopped completing, or whose cycles all skip themselves because they cannot take its pacing lock, fails the
+/// check. The verdict is the same on every node, because it is read from the shared
 /// record of pacing cycles, so the check is an alerting dependency check and never gates readiness.
 /// </remarks>
 public sealed class ContactCenterDialerPacingHealthCheck : IHealthCheck
@@ -61,12 +62,31 @@ public sealed class ContactCenterDialerPacingHealthCheck : IHealthCheck
         {
             ["paced_queues"] = snapshot.Queues.Count,
             ["stalled_queues"] = Count(snapshot, DialerPacingHealthState.Stalled),
+            ["lock_not_acquired_queues"] = Count(snapshot, DialerPacingHealthState.LockNotAcquired),
             ["idle_queues"] = Count(snapshot, DialerPacingHealthState.Idle),
             ["held_back_queues"] = Count(snapshot, DialerPacingHealthState.HeldBack),
             ["dialing_queues"] = Count(snapshot, DialerPacingHealthState.Dialing),
             ["nothing_to_call_queues"] = Count(snapshot, DialerPacingHealthState.NothingToCall),
             ["stalled_after_minutes"] = snapshot.StalledAfter.TotalMinutes,
         };
+
+        var lockNotAcquired = snapshot.Queues
+            .Where(queue => queue.State == DialerPacingHealthState.LockNotAcquired)
+            .ToArray();
+
+        if (lockNotAcquired.Length > 0)
+        {
+            data["lock_not_acquired_queue_ids"] = string.Join(",", lockNotAcquired.Select(queue => queue.QueueId));
+
+            var sinceUtc = lockNotAcquired.Min(queue => queue.LockNotAcquiredSinceUtc) ?? snapshot.EvaluatedUtc;
+            var description = string.Format(
+                CultureInfo.InvariantCulture,
+                "Due work is waiting but the pacing lock of {0} campaign queue(s) has not been acquired since {1:o}, so every pacing cycle skips itself.",
+                lockNotAcquired.Length,
+                sinceUtc);
+
+            return new HealthCheckResult(failureStatus, description, data: data);
+        }
 
         var stalled = snapshot.Queues
             .Where(queue => queue.State == DialerPacingHealthState.Stalled)

@@ -12,7 +12,9 @@ namespace CrestApps.OrchardCore.Customers.Handlers;
 /// </summary>
 /// <remarks>
 /// The customer is identified by their account, when they have one, and by their email, which is what ties their guest
-/// checkouts to them. Names are cleared rather than replaced, the same way the customer record itself is.
+/// checkouts to them. Names are cleared rather than replaced, the same way the customer record itself is. It runs before
+/// the other handlers, because those erase the very checkout emails and owners it follows to the person's guest
+/// transactions, subscriptions and installment plans.
 /// </remarks>
 public sealed class CommercePersonalDataCustomerPrivacyHandler : ICustomerPrivacyHandler
 {
@@ -28,6 +30,9 @@ public sealed class CommercePersonalDataCustomerPrivacyHandler : ICustomerPrivac
     {
         _personalDataService = personalDataService;
     }
+
+    /// <inheritdoc/>
+    public int Order => -100;
 
     /// <inheritdoc/>
     public async Task ErasingAsync(CustomerPrivacyContext context, CancellationToken cancellationToken = default)
