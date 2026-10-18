@@ -122,6 +122,10 @@ A recipe can set counts with a **Stock** step, finding each item by its ids or i
 
 To copy counts to another site, add the **Stock** step to a deployment plan (**Commerce** category). It exports every item with its ids and SKU. The products themselves need a content step, before the **Stock** step.
 
+## Try a sample
+
+The **Product listing: online store sample** recipe (**Configuration > Recipes**) counts every product it adds: most have 25, a few are running low, and the *Adventure Works Everyday Backpack* is sold out, so the shop shows each label.
+
 ## Related pages
 
 - [Products and currencies](products-and-currencies.md)

@@ -1,6 +1,6 @@
 # Inventory and shipping plan
 
-Status: decisions agreed 2026-10-17 (Mike chose inventory first, no live carrier in this phase, and availability with a low-stock count for shoppers; the rest stand as proposed). Phases 6 and 7 of the [e-commerce plan](../../ecommerce-plan.md), after
+Status: built (IS0 to IS9). Decisions agreed 2026-10-17 (Mike chose inventory first, no live carrier in this phase, and availability with a low-stock count for shoppers; the rest stand as proposed). Phases 6 and 7 of the [e-commerce plan](../../ecommerce-plan.md), after
 Customers (#919 to #936) and Addresses (#927 to #932).
 
 ## Goal
@@ -232,6 +232,14 @@ Each slice is a PR with tests, opened when its tests pass.
   display types, which Shipping fills with the shipments card. No new order index.
 - `IShipmentEventHandler` drives the shipped email (once per shipment) and four workflow events. Carriers with
   tracking templates live in the Shipping settings, with a new **Ship orders** (`FulfillOrders`) permission.
+
+### IS9 Docs and sample
+
+- The online store sample enables Inventory and Shipping, adds the Inventory and Shipping parts to its product type,
+  weights by kind of product (boots *Bulky*), and `Stock`, `ShippingZones` and `Settings` (carriers) steps: 25 of most
+  products, a few at 2 to 4, and one sold out; United States, Canada and rest-of-world zones.
+- Manuals: inventory and shipping user and technical pages were written slice by slice; IS9 adds the sample to them, the
+  product listings page and the changelog.
 
 ## Not in this phase
 

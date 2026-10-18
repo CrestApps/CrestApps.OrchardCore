@@ -99,6 +99,10 @@ With **Workflows** on, the **Shipment Created**, **Shipment Shipped**, **Shipmen
 
 **Try rates**, on **Commerce > Shipping**, shows which zone an address falls in and what each of its methods charges for an order you describe: country, region, currency, subtotal, weight, number of items and shipping class. No order is placed. Use it to check your zones and tables before buyers see them.
 
+## Try a sample
+
+The **Product listing: online store sample** recipe (**Configuration > Recipes**) adds shipping zones for the United States (Standard, Express by weight and free shipping from $100), Canada and the rest of the world, weights for every product with boots in a *Bulky* class, and UPS, FedEx and USPS as carriers. Buy something from **/shop**, then ship it from the order's page.
+
 ## Related pages
 
 - [Products and currencies](products-and-currencies.md)
