@@ -32,6 +32,11 @@ public static class CheckoutConstants
     public const string PaymentStepKey = "Payment";
 
     /// <summary>
+    /// The site settings group of the checkout settings, under Settings › Commerce › Checkout.
+    /// </summary>
+    public const string SettingsGroupId = "checkout";
+
+    /// <summary>
     /// The feature identifiers exposed by the checkout module.
     /// </summary>
     public static class Features
@@ -69,6 +74,11 @@ public static class CheckoutConstants
         /// Saves the entered promotion code and re-renders the step with the recalculated invoice.
         /// </summary>
         public const string ApplyCoupon = "apply-coupon";
+
+        /// <summary>
+        /// Saves what was changed on a one-page checkout and shows it again with the new total, instead of paying.
+        /// </summary>
+        public const string Update = "update";
     }
 
     public static class RouteNames

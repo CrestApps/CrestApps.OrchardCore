@@ -12,6 +12,7 @@ internal sealed class CheckoutPermissionsProvider : IPermissionProvider
     private readonly IEnumerable<Permission> _allPermissions =
     [
         CheckoutPermissions.ManageCoupons,
+        CheckoutPermissions.ManageCheckoutSettings,
     ];
 
     /// <inheritdoc/>

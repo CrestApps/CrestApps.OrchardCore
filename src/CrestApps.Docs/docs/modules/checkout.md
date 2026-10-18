@@ -371,6 +371,14 @@ Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{
 
 A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
 
+### One-page layout
+
+`CheckoutSettings.Layout` (**Settings > Commerce > Checkout**, group `checkout`, permission `ManageCheckoutSettings`) is `CheckoutLayout.Steps` (the default) or `CheckoutLayout.OnePage`. On one page, `CheckoutController` builds the editor of every visible step in order, each with the flow's current step set to it, and renders their `Header`, `Content` and `Footer` zones as sections of the `OnePage` view, with the last section's `Aside` zone (the invoice summary and the coupon box). Step drivers need no change.
+
+- A post updates every section it showed, in order, and redirects back (post, redirect, get). The payment section joins the page once every visible step with `CollectData` before it has its key in `SavedSteps`.
+- With payment showing, the payment script takes the submit as on the stepped layout. A post from that page with no `checkout-action` completes the checkout, for a purchase that needs no gateway.
+- A change to a section above payment switches the button to **Update order**, a submit named `checkout-action` with `CheckoutConstants.FormActions.Update`, which saves and shows the new total before anything is charged.
+
 ## Test payments
 
 | | |

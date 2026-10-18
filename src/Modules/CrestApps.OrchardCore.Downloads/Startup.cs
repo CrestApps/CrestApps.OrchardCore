@@ -58,6 +58,7 @@ public sealed class Startup : StartupBase
 
         services.AddSiteDisplayDriver<DownloadSettingsDisplayDriver>();
         services.AddNavigationProvider<DownloadSettingsAdminMenu>();
+        services.AddNavigationProvider<DownloadsAccountMenu>();
         services.AddPermissionProvider<DownloadsPermissionsProvider>();
         services.AddSiteSettingsPermission(DownloadsConstants.SettingsGroupId, DownloadsPermissions.ManageDownloads);
     }

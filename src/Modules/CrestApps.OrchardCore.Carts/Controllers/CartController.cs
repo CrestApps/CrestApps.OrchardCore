@@ -49,6 +49,22 @@ public sealed class CartController : Controller
         return View(shape);
     }
 
+    /// <summary>
+    /// The cart as a fragment for the slide-out mini cart: its lines, subtotal and the way to the cart and checkout.
+    /// </summary>
+    [HttpGet("cart/mini", Name = "CartMini")]
+    public async Task<IActionResult> Mini()
+    {
+        var cart = await _cartService.GetCurrentAsync(HttpContext.RequestAborted);
+        var pricing = await _cartService.PriceAsync(cart, HttpContext.RequestAborted);
+
+        return PartialView("MiniCart", new CartViewModel
+        {
+            Pricing = pricing,
+            CheckoutUrl = Url.RouteUrl(CartConstants.RouteNames.Checkout),
+        });
+    }
+
     [HttpPost("cart/add", Name = CartConstants.RouteNames.Add)]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(CartConstants.RateLimitGroup)]

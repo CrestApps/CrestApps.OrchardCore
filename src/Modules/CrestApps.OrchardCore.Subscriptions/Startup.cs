@@ -85,6 +85,7 @@ public sealed class Startup : StartupBase
         services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
+        services.AddNavigationProvider<SubscriptionsAccountMenu>();
         services.AddScoped<SubscriptionDisplayText>();
 
         // The rows of the agreements report and of the customer's own plans.

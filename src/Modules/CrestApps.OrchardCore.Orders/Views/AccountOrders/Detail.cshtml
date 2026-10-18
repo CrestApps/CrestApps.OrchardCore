@@ -1,0 +1,19 @@
+@model OrderViewViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AccountOrder" title="@T["Order {0}", Model.Order.OrderNumber]">
+        <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
+        <breadcrumb-item id="AccountOrders" title="@T["Orders"]" href="@Url.RouteUrl("AccountOrders")" />
+    </breadcrumb>
+</zone>
+
+<div class="container my-4">
+    <div class="row g-4">
+        <div class="col-lg-3">
+            @await DisplayAsync(await New.CommerceAccountNavigation())
+        </div>
+        <div class="col-lg-9">
+            <partial name="_OrderViewBody" model="Model" />
+        </div>
+    </div>
+</div>

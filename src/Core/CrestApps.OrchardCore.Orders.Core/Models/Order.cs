@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -98,6 +99,12 @@ public sealed class Order : CatalogItem
     public OrderShipping Shipping { get; set; }
 
     /// <summary>
+    /// Gets or sets what the buyer entered in the store's own checkout fields, as the content of a Checkout details
+    /// item, or <see langword="null"/> when the store asks for none.
+    /// </summary>
+    public JsonObject CheckoutDetails { get; set; }
+
+    /// <summary>
     /// Gets or sets how much of the order has been shipped, or <see langword="null"/> when nothing in it ships or
     /// nothing records shipments.
     /// </summary>
@@ -113,6 +120,12 @@ public sealed class Order : CatalogItem
     /// Gets or sets when the order confirmation was emailed to the customer, so it is sent once.
     /// </summary>
     public DateTime? ConfirmationSentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the buyer was emailed a link back to this order's checkout after leaving it unpaid, or
+    /// <see langword="null"/> when they weren't.
+    /// </summary>
+    public DateTime? RecoveryEmailSentUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when the order's personal details were removed, at the customer's request or after the retention
@@ -160,8 +173,9 @@ public sealed class Order : CatalogItem
             : Total.HasValue && RefundedAmount >= Total.Value ? OrderRefundStatus.Refunded : OrderRefundStatus.PartiallyRefunded;
 
     /// <summary>
-    /// Removes who the order was for: the name, email and phone, and the billing address but its country and region,
-    /// which tax records need. The lines, totals and dates stay for the store's accounts.
+    /// Removes who the order was for: the name, email and phone, what was entered in the store's checkout fields, and the
+    /// billing address but its country and region, which tax records need. The lines, totals and dates stay for the
+    /// store's accounts.
     /// </summary>
     public void Anonymize(DateTime now)
     {
@@ -170,6 +184,7 @@ public sealed class Order : CatalogItem
         CustomerPhone = null;
         BillingAddress = BillingAddress is null ? null : new Address { Country = BillingAddress.Country, Region = BillingAddress.Region };
         ShippingAddress = ShippingAddress is null ? null : new Address { Country = ShippingAddress.Country, Region = ShippingAddress.Region };
+        CheckoutDetails = null;
         AnonymizedUtc ??= now;
         ModifiedUtc = now;
     }

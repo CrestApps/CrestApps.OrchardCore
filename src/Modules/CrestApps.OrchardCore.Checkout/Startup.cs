@@ -31,6 +31,8 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.ResourceManagement;
+using OrchardCore.Settings;
+using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Customers.PersonalData;
@@ -79,6 +81,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();
+        services.AddSiteDisplayDriver<CheckoutSettingsDisplayDriver>();
+        services.AddNavigationProvider<CheckoutSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(CheckoutConstants.SettingsGroupId, CheckoutPermissions.ManageCheckoutSettings);
         services.AddScoped<ICheckoutPaymentRefundProviderResolver, CheckoutPaymentRefundProviderResolver>();
         services.AddScoped<ICheckoutRefundService, DefaultCheckoutRefundService>();
         services.AddScoped<ICheckoutRefundReconciliationService, DefaultCheckoutRefundReconciliationService>();
