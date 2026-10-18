@@ -186,6 +186,7 @@ public sealed class StripeCheckoutCustomerTests
             Mock.Of<IStripeSubscriptionService>(),
             Mock.Of<IStripeRefundService>(),
             new StripeCheckoutCustomerResolver(customerService.Object),
+            Mock.Of<IStripeWalletService>(),
             new InMemoryPaymentRefundStore(),
             new TestClock(DateTime.UtcNow),
             NullLogger<StripeCheckoutPaymentProvider>.Instance,

@@ -20,6 +20,7 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 - **Add to cart** appears on each product that can be bought online, on its listing card and its page. Buyers choose how many, and the option when a product has several prices. Products that are only listed, and subscription plans, do not show it; plans have their own **Sign up** button.
 - The **Cart** link in the navigation bar shows how many items are in the cart. Only themes with a navigation bar, such as **TheTheme**, show it; in any theme, the message shown after adding a product has a **View cart** link.
+- Clicking **Cart** slides out the **mini cart** from the side: each product with its quantity and price, a **Remove** link, the subtotal, **Checkout** and **View cart**. With the cart link on the page, **Add to cart** adds without leaving the page and opens the mini cart with *added to your cart*.
 - The **cart page** lists each product with its price, a quantity box and a remove button, and the subtotal. Discounts and tax are worked out at checkout.
 - **Checkout** takes the buyer to the [checkout](checkout.md), where they enter a promotion code and pay. The confirmation shows their **order number**.
 
@@ -74,6 +75,16 @@ What a Pay Later order still owes is canceled, so the customer isn't reminded to
 
 Click **Send the confirmation again** to email the order confirmation to the customer once more, for example when they can't find it. It needs your site's email to be set up.
 
+### Disputes
+
+When a buyer disputes a card payment with their bank (a chargeback), Stripe tells your site and the order shows it: a red **Disputed** box under the items, with the amount, why the buyer disputed it (for example *they don't recognize the payment*) and its status, such as *needs your response*. The orders list marks the order **Disputed** while it is open, and a note records each change.
+
+Answer a dispute from your Stripe dashboard before its deadline, with evidence such as the shipping tracking: otherwise the money goes back to the buyer. When it is decided, the box says *won, the money stays with you* or *lost, the money went back to the payer*. It needs Stripe's webhook, which Stripe Connect sets up.
+
+### Fraud risk
+
+Stripe's fraud checks rate every card payment. An order whose payment was rated **elevated** or **highest** risk shows a warning on its page, with the score out of 99 when Stripe gives one, and a **Risky** badge in the orders list. Look at it before shipping: does the shipping address fit the billing address and the email, is it a large first order of easy-to-resell goods? Refund and cancel it if it doesn't look right. A normal rating is a quiet line on the order's page.
+
 ### Notes
 
 Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
@@ -93,6 +104,7 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Tax on orders** | The tax orders charged, day by day. |
 | **Discounts on orders** | How many orders used each promotion code, and what it took off. |
 | **Refunds** | Each refund given in the period, with its order and reason. |
+| **Disputes** | The payments buyers disputed with their bank in the period, open ones first: why, their status, and how many were won and lost. |
 | **Orders to ship** | Paid orders that haven't shipped in full, oldest first, and how many days each has waited. |
 | **Stock on hand** | With Inventory on: every counted item's stock, out of stock and low first. |
 | **Stock movements** | With Inventory on: what each item received, sold, got back and was corrected by, and how many days its stock lasts at the rate it sold. |
@@ -101,6 +113,32 @@ With the **Reports** feature on, **Reports > Commerce** answers what the store s
 | **Product reviews** | With Product Reviews on: the reviews written, how many wait for approval, the stars given, and each product's rating. |
 
 Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
+
+## The buyer's account
+
+A signed-in buyer opens **My account** from the user menu, or `/account` on your site. The account lists what the enabled features offer, as tiles and as a menu beside every account page (pills across the top on a phone):
+
+| Page | What it shows | Feature |
+| --- | --- | --- |
+| **Orders** | Their orders, newest first, with the status and total. Each opens the order's page; an order awaiting payment has **Pay now**. | Orders |
+| **Downloads** | The files of their paid orders, with the downloads left and the date each link expires, and why a link stopped working. | Digital Downloads |
+| **Subscriptions** | Their subscriptions, with **Cancel** at the end of the period. | Subscriptions |
+| **Balances and invoices** | What they owe and their invoices and receipts. | Transactions |
+| **Addresses** | Their address book: add, edit, delete, and pick the default billing and shipping addresses. | Customers |
+| **Account details** | Whether they buy for themselves or a business, their name, phone and marketing consent, and a link to change their password. | Customers |
+| **Payment methods** | The cards they saved at checkout, to remove one. | Stripe |
+
+### An account from the confirmation
+
+A guest's confirmation page shows **Save your details for next time** with a password and a confirmation box. The account is made with the email on the order, the order joins it, and the guest is signed in and taken to the order in their account. When your site asks new users to confirm their email or waits for an administrator to approve them, the account follows those settings, and the guest signs in after. An email that already has an account is told to sign in instead. The offer works for two hours after the order.
+
+## Buyers who leave without paying
+
+Under **Settings > Commerce > Orders**, turn on **Email buyers who leave a checkout** to send a **recovery email** to a buyer who started a checkout, gave their email and left without paying: they canceled, the payment failed, or the checkout expired or was left. **Send it after** sets how long to wait, one hour by default. The email lists what they chose and has **Return to your cart**, which opens their checkout when it is still open, or fills a cart with the same products.
+
+- Each order gets one recovery email at most, and only within a week of the order.
+- Nobody is emailed who paid for an order since, or whose order you canceled.
+- The emails link back to your site through its **Base URL** under **Settings > General**; without one, none is sent. Your site's email must be set up too.
 
 ## Guests and their orders
 

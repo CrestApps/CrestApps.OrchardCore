@@ -31,6 +31,9 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
         => Initialize<OrderSettingsViewModel>("OrderSettings_Edit", model =>
         {
             model.SendConfirmations = settings.SendConfirmations;
+            model.SendRecoveryEmails = settings.SendRecoveryEmails;
+            model.RecoveryDelayHours = settings.RecoveryDelayHours;
+            model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
         .OnGroup(SettingsGroupId);
@@ -47,6 +50,8 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
         settings.SendConfirmations = model.SendConfirmations;
+        settings.SendRecoveryEmails = model.SendRecoveryEmails;
+        settings.RecoveryDelayHours = Math.Clamp(model.RecoveryDelayHours, 1, 72);
 
         return Edit(site, settings, context);
     }

@@ -75,7 +75,7 @@ public sealed class OrderViewController : Controller
         {
             Order = order,
             Sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail),
-            PayUrl = await GetPayUrlAsync(order),
+            PayUrl = await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order),
             RegisterUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
                 ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
                 : null,
@@ -156,23 +156,4 @@ public sealed class OrderViewController : Controller
     }
 
     // What is still owed on an order paid later, payable from its own link.
-    private async Task<string> GetPayUrlAsync(Order order)
-    {
-        if (HttpContext.RequestServices.GetService<ITransactionStore>() is not { } transactions ||
-            HttpContext.RequestServices.GetService<ITransactionPayLinkService>() is not { } payLinks)
-        {
-            return null;
-        }
-
-        var result = await transactions.PageAsync(1, 1, new TransactionQuery
-        {
-            ReferenceType = CheckoutReferenceTypes.Order,
-            ReferenceId = order.ItemId,
-            OutstandingOnly = true,
-        });
-
-        var outstanding = result.Entries.FirstOrDefault();
-
-        return outstanding is null ? null : await payLinks.CreatePayUrlAsync(outstanding);
-    }
 }

@@ -6,7 +6,7 @@
 
     @if (Model.SavedAddresses.Count > 0)
     {
-        <div class="mb-3">
+        <div class="mb-3" data-address-choice>
             @foreach (var address in Model.SavedAddresses)
             {
                 <div class="form-check">
@@ -32,15 +32,17 @@
         </div>
     }
 
-    @await DisplayAsync(Model.AddressEditor)
+    <fieldset data-new-address>
+        @await DisplayAsync(Model.AddressEditor)
 
-    @if (Model.CanSaveAddress)
-    {
-        <div class="form-check mb-3">
-            <input asp-for="SaveAddress" type="checkbox" class="form-check-input" />
-            <label asp-for="SaveAddress" class="form-check-label">@T["Save a new address to my address book"]</label>
-        </div>
-    }
+        @if (Model.CanSaveAddress)
+        {
+            <div class="form-check mb-3">
+                <input asp-for="SaveAddress" type="checkbox" class="form-check-input" />
+                <label asp-for="SaveAddress" class="form-check-label">@T["Save a new address to my address book"]</label>
+            </div>
+        }
+    </fieldset>
 
     <h5 class="mt-4">@T["Shipping method"]</h5>
     <span asp-validation-for="RateId" class="text-danger d-block mb-2"></span>
@@ -76,3 +78,34 @@
         <p class="text-muted">@T["Enter where the order goes, then continue to see the ways to ship it there."]</p>
     }
 </div>
+
+@* With saved addresses to pick from, the new address form shows only when "A new address" is chosen. Without script
+   it stays in view, and the server reads it only for a new address. *@
+<script at="Foot">
+    (function () {
+        if (window.crestAppsAddressChoice) {
+            return;
+        }
+
+        window.crestAppsAddressChoice = true;
+
+        document.querySelectorAll('[data-address-choice]').forEach(function (choice) {
+            var form = choice.parentElement.querySelector('[data-new-address]');
+
+            if (!form) {
+                return;
+            }
+
+            function sync() {
+                var checked = choice.querySelector('input[type=radio]:checked');
+                var isNew = !checked || checked.value === '';
+
+                form.hidden = !isNew;
+                form.disabled = !isNew;
+            }
+
+            choice.addEventListener('change', sync);
+            sync();
+        });
+    })();
+</script>

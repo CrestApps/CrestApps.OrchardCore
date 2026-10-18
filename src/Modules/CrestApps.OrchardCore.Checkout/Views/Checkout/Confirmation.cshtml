@@ -22,6 +22,12 @@
         <h1 class="h3">@Model.Title</h1>
         <p class="text-body-secondary">@T["Thank you. A confirmation is shown below."]</p>
     }
+    else if (Model.PaymentDeferred)
+    {
+        @* Nothing was paid yet: the buyer pays later, by transfer or on delivery, as the page below says. *@
+        <h1 class="h3">@T["Thank you — your order is placed."]</h1>
+        <p class="text-body-secondary">@T["How to pay, and what you ordered, are below."]</p>
+    }
     else
     {
         <h1 class="h3">@T["Thank you — your purchase is complete."]</h1>

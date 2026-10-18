@@ -58,6 +58,14 @@ public interface IPaymentEvent
     Task PaymentDisputeCreatedAsync(PaymentDisputeCreatedContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Triggered when a dispute changes at the gateway: its evidence goes under review, or it is won or lost.
+    /// </summary>
+    /// <param name="context">The context describing the dispute.</param>
+    /// <param name="cancellationToken">A token to cancel the operation.</param>
+    Task PaymentDisputeUpdatedAsync(PaymentDisputeUpdatedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <summary>
     /// Triggered when a recurring-cycle payment fails at the gateway, so an existing subscription can enter a
     /// past-due state and start dunning instead of silently stopping.
     /// </summary>

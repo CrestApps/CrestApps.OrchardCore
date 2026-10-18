@@ -79,17 +79,29 @@ Click **Disconnect** under **Status** and confirm. The confirmation warns that t
 There is nothing to turn on. After a successful **Connect** on a public domain, the wallet buttons appear above the card form, followed by *or pay by card*, when all of these are true: the buyer's device and browser have a wallet set up, and the checkout has an amount greater than zero due now. On a computer with no wallet, buyers simply see the card form. If you move the site to a new domain name, disconnect, re-enter and save your keys, and connect again so the new domain is registered.
 :::
 
-## Offer Pay Later
+## Offline payments: Pay Later, bank transfer and cash on delivery
 
 | | |
 | --- | --- |
-| **Menu** | Settings > Commerce > Pay Later |
+| **Menu** | Settings > Commerce > Offline payments |
 | **Permission** | Manage transaction settings |
 | **Feature** | Pay Later |
 
 <AskYourAdmin />
 
-Once the **Pay Later** feature is on, **Pay Later** is offered on every checkout that buys something new, with the note *Confirm now and pay later.* There is no separate on or off switch. It isn't offered when a customer pays a balance they already owe, from **My Transactions** or from the link in a reminder: that balance has to be paid now. When the buyer picks it, the payment step explains: *Your order will be confirmed now and the balance recorded as outstanding.* and *You will be able to pay it from your account, and we will send you a reminder before it is due.*
+The **Pay Later** feature adds three ways to buy now and pay afterwards. None of them takes money at checkout: each records what the buyer owes as a **transaction** with an outstanding balance, which you mark paid when the money arrives. Turn each on or off under **Settings > Commerce > Offline payments**.
+
+| Method | Offered | What the buyer is told |
+| --- | --- | --- |
+| **Pay Later** | On by default. On every checkout that buys something new, subscriptions included. | *Confirm now and pay later.* |
+| **Bank transfer** | Off until you turn it on and add your bank details. One-time purchases only. | *Place the order now and transfer the money from your bank.* Your bank details, at checkout, on the confirmation and on the order's page, with the order number as the reference to quote. |
+| **Cash on delivery** | Off until you turn it on. Only for orders that are delivered: an order of downloads or services doesn't offer it. | *Pay when your order is delivered.* and your note, such as *Our courier takes cash and cards.* |
+
+The confirmation of an order paid by bank transfer or on delivery reads *Thank you — your order is placed.* rather than *your purchase is complete*. While money is still owed, the order's page shows **Payment due** with the amount, how to pay and the due date, for the buyer, and **Record payment**, for you. Click it, enter the amount received and a reference, such as the transfer's, and confirm: the balance is settled and the notice goes away.
+
+### Pay Later
+
+Pay Later isn't offered when a customer pays a balance they already owe, from **My Transactions** or from the link in a reminder: that balance has to be paid now. When the buyer picks it, the payment step explains: *Your order will be confirmed now and the balance recorded as outstanding.* and *You will be able to pay it from your account, and we will send you a reminder before it is due.*
 
 When the buyer clicks **Pay now** with Pay Later selected:
 
@@ -98,18 +110,29 @@ When the buyer clicks **Pay now** with Pay Later selected:
 3. For a subscription or another recurring purchase, a new outstanding balance is recorded at the start of each billing period. A free trial or a delayed start owes nothing until it ends.
 4. A buyer who checked out without an account is recorded as a guest. Reminders can only reach a guest whose email address the checkout collected.
 
-### Set the payment term
+### Set up the offline methods
 
-1. Open **Settings > Commerce > Pay Later**.
-2. Enter the **Net term (days)** and click **Save**.
+Open **Settings > Commerce > Offline payments**, change what you need, and click **Save**.
 
 | Field | What it does |
 | --- | --- |
+| **Offer Pay Later at checkout** | Whether Pay Later is offered. On by default. |
 | **Net term (days)** | How many days after the purchase a Pay Later balance falls due. The due date drives the reminders. Enter 0 to record the balance without a due date. The default is 30. |
+| **Offer Bank transfer at checkout** | Whether Bank transfer is offered. It can't be turned on without bank details. |
+| **Bank details** | The account name, bank, account number or IBAN, and anything else buyers need to transfer the money. Shown exactly as you type it, line by line. |
+| **Due within (days)** | When a transfer falls due, which drives the reminders. 0 for no due date. The default is 7. |
+| **Offer Cash on delivery at checkout** | Whether Cash on delivery is offered, for orders that are delivered. |
+| **Note for buyers** | Optional, shown under Cash on delivery at checkout. |
 
 :::note[Refunds]
 Pay Later collects no money, so there is nothing to refund through it. Money the buyer later pays against the balance is handled like any other payment; see [Payments and refunds](payments-and-refunds.md).
 :::
+
+## Saved cards
+
+With Stripe connected, a signed-in buyer paying for a one-time purchase can tick **Save this card for next time** under the card fields. Next time, the payment step offers **Pay with**: their saved cards, such as *VISA ending in 4242 expires 12/2034*, and **A new card**. Choosing a saved card hides the card fields; the buyer clicks **Pay now** and approves the payment if their bank asks.
+
+The cards are kept by Stripe, not on your site. A buyer sees and removes theirs under **Payment methods** in their account. Guests, subscriptions and installment plans don't offer the box: a subscription or a plan keeps its card for its own charges.
 
 ## Try the checkout with test payments
 

@@ -1,0 +1,25 @@
+@model OfflinePaymentMethodViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@*
+    On the store's order page, what is still owed for an order placed with an offline method, and where to record
+    the payment when it arrives.
+*@
+
+<div class="alert alert-warning d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mt-3" role="status">
+    <div>
+        <strong>@T["Payment due: {0}", Model.AmountDue]</strong>
+        <span class="d-block small">
+            @T["Paid with {0}.", Model.MethodName]
+            @if (Model.DueUtc is { } dueUtc)
+            {
+                @T["Due by {0:d}.", (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(dueUtc, DateTimeKind.Utc))).DateTime]
+            }
+            @T["Record the payment on its balance when the money arrives."]
+        </span>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.TransactionId))
+    {
+        <a class="btn btn-sm btn-primary text-nowrap" href="@Url.RouteUrl("TransactionsDetail", new { itemId = Model.TransactionId })">@T["Record payment"]</a>
+    }
+</div>

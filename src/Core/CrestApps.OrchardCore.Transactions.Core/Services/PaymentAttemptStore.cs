@@ -86,6 +86,11 @@ public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, Paymen
             records = records.Where(x => x.SessionId == query.SessionId);
         }
 
+        if (!string.IsNullOrEmpty(query.ProviderReference))
+        {
+            records = records.Where(x => x.ProviderReference == query.ProviderReference);
+        }
+
         var count = await records.CountAsync(cancellationToken);
 
         var entries = await records

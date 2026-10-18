@@ -529,6 +529,79 @@ public sealed class OrderRefundsReport : OrderReportBase, IReport
 }
 
 /// <summary>
+/// The disputes, or chargebacks, payers opened in the period, with the ones still needing a response first.
+/// </summary>
+public sealed class OrderDisputesReport : OrderReportBase, IReport
+{
+    // A dispute comes after the payment: disputes of orders paid up to this long before the period are found.
+    private static readonly TimeSpan _disputeWindow = TimeSpan.FromDays(180);
+
+    public OrderDisputesReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderDisputesReport> stringLocalizer)
+        : base(reader, siteService, clock, stringLocalizer)
+    {
+    }
+
+    public static string Name => "order-disputes";
+
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderDisputesReport>("Disputes");
+
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderDisputesReport>("The payments disputed with the payer's bank in the period, open ones first, for orders paid up to 180 days before it.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
+
+    public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
+    {
+        var (from, to) = GetPeriod(context);
+        var orders = await ReadPaidAsync(from - _disputeWindow, to, cancellationToken);
+        var timeZone = await GetTimeZoneAsync();
+        var disputes = orders
+            .SelectMany(order => (order.Disputes ?? []).Select(dispute => (Order: order, Dispute: dispute)))
+            .Where(entry => entry.Dispute.CreatedUtc >= from && entry.Dispute.CreatedUtc < to)
+            .OrderBy(entry => entry.Dispute.IsClosed)
+            .ThenByDescending(entry => entry.Dispute.CreatedUtc)
+            .ToList();
+
+        var document = new ReportDocument { Title = DisplayName.Value };
+        var metrics = new List<ReportMetric>
+        {
+            new(S["Disputes"].Value, ReportFormat.Number(disputes.Count)),
+            new(S["Still open"].Value, ReportFormat.Number(disputes.Count(entry => !entry.Dispute.IsClosed))),
+            new(S["Won"].Value, ReportFormat.Number(disputes.Count(entry => entry.Dispute.Status == "won"))),
+            new(S["Lost"].Value, ReportFormat.Number(disputes.Count(entry => entry.Dispute.Status == "lost"))),
+        };
+
+        foreach (var currency in disputes.GroupBy(entry => entry.Dispute.Currency ?? entry.Order.Currency ?? string.Empty))
+        {
+            metrics.Add(new ReportMetric(S["Disputed ({0})", currency.Key].Value, Money(currency.Sum(entry => entry.Dispute.Amount), currency.Key)));
+        }
+
+        document.Add(ReportSection.ForMetrics(S["Summary"].Value, metrics));
+
+        document.Add(ReportSection.ForTable(S["Disputes"].Value,
+        [
+            new ReportColumn(S["Opened"].Value),
+            new ReportColumn(S["Order"].Value),
+            new ReportColumn(S["Why"].Value),
+            new ReportColumn(S["Status"].Value),
+            new ReportColumn(S["Amount"].Value, ReportColumnAlign.End),
+        ], [.. disputes.Select(entry => new ReportRow(
+        [
+            Day(entry.Dispute.CreatedUtc, timeZone),
+            entry.Order.OrderNumber,
+            Services.OrderDisputeText.Reason(S, entry.Dispute.Reason),
+            Services.OrderDisputeText.Status(S, entry.Dispute.Status),
+            Money(entry.Dispute.Amount, entry.Dispute.Currency ?? entry.Order.Currency),
+        ]))]));
+
+        return document;
+    }
+}
+
+/// <summary>
 /// Paid orders not shipped in full yet, oldest first.
 /// </summary>
 public sealed class UnfulfilledOrdersReport : OrderReportBase, IReport

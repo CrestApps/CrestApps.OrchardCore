@@ -16,4 +16,9 @@ public static class CheckoutPermissions
     /// site.
     /// </remarks>
     public static readonly Permission ManageCoupons = new("ManageCoupons", "Manage coupons");
+
+    /// <summary>
+    /// The permission required to change how the checkout works, under Settings › Commerce › Checkout.
+    /// </summary>
+    public static readonly Permission ManageCheckoutSettings = new("ManageCheckoutSettings", "Manage checkout settings");
 }
