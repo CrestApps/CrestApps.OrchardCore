@@ -307,7 +307,7 @@ window.checkoutPayment = (function () {
 
     // Shows the message a reload carried, such as why the total changed, once.
     function showNotice() {
-        var notice = null;
+        var notice;
 
         try {
             notice = window.sessionStorage.getItem(noticeKey);

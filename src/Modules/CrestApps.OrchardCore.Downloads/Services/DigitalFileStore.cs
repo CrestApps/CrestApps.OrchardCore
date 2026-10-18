@@ -28,6 +28,8 @@ public sealed record StoredDigitalFile(string FileId, string FileName, long Size
 
 internal sealed class DigitalFileStore : IDigitalFileStore
 {
+    private static readonly char[] _invalidFileNameChars = [.. "\"<>|:*?", .. Enumerable.Range(0, 32).Select(code => (char)code)];
+
     private readonly IFileStore _fileStore;
 
     public DigitalFileStore(IFileStore fileStore)
@@ -80,9 +82,12 @@ internal sealed class DigitalFileStore : IDigitalFileStore
 
     internal static string Sanitize(string fileName)
     {
-        var name = Path.GetFileName(fileName ?? string.Empty).Trim();
+        // A name can come from any system, so both separators end a folder and the characters Windows refuses are
+        // replaced on every server: the same upload gets the same name wherever the site runs.
+        var name = fileName ?? string.Empty;
+        name = name[(name.LastIndexOfAny(['/', '\\']) + 1)..].Trim();
 
-        foreach (var invalid in Path.GetInvalidFileNameChars())
+        foreach (var invalid in _invalidFileNameChars)
         {
             name = name.Replace(invalid, '_');
         }
