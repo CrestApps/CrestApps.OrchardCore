@@ -1049,11 +1049,12 @@ public sealed class ProductListingService
     /// <summary>
     /// Builds the listing cards of the products, in the order given, leaving out any that aren't published or listed.
     /// </summary>
-    public async Task<IList<IShape>> BuildCardsAsync(IReadOnlyList<string> contentItemIds, ProductImageAspectRatio ratio = ProductImageAspectRatio.Square)
+    public async Task<IList<IShape>> BuildCardsAsync(IReadOnlyList<string> contentItemIds, ProductImageAspectRatio ratio = ProductImageAspectRatio.Square, bool withSpecifications = false)
     {
         var model = new ProductListingViewModel { ImageAspectRatio = GetAspectRatio(ratio) };
+        var attributes = withSpecifications ? await _attributeCatalog.GetAttributesAsync([]) : [];
 
-        await BuildProductsAsync(model, contentItemIds ?? [], [], ProductListingView.Grid, ratio);
+        await BuildProductsAsync(model, contentItemIds ?? [], attributes, ProductListingView.Grid, ratio);
 
         return model.Products;
     }

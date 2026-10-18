@@ -32,6 +32,14 @@ public class ProductCardStripViewModel
 }
 
 /// <summary>
+/// The products a shopper compares, as their listing cards with their specifications.
+/// </summary>
+public class ProductCompareViewModel
+{
+    public IList<IShape> Cards { get; set; } = [];
+}
+
+/// <summary>
 /// The place on a product's page where the shopper's recently viewed products load.
 /// </summary>
 public class ProductRecentlyViewedViewModel

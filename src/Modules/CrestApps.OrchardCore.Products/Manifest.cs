@@ -22,6 +22,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Comparison,
+    Name = "Product Comparison",
+    Description = "Lets shoppers pick up to four products and compare their prices and specifications side by side.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Recommendations,
     Name = "Product Recommendations",
     Description = "Recommends products to shoppers: the upsells and cross-sells you choose for each product, related products from the same categories, and the products a shopper viewed recently.",

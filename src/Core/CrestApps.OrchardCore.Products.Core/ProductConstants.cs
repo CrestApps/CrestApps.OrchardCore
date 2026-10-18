@@ -17,5 +17,7 @@ public static class ProductConstants
         public const string Listing = "CrestApps.OrchardCore.Products.Listing";
 
         public const string Recommendations = "CrestApps.OrchardCore.Products.Recommendations";
+
+        public const string Comparison = "CrestApps.OrchardCore.Products.Comparison";
     }
 }

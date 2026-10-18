@@ -115,6 +115,17 @@ public sealed class TaxationStartup : StartupBase
 }
 
 /// <summary>
+/// Lets shoppers compare up to four products side by side.
+/// </summary>
+[Feature(ProductConstants.Feature.Comparison)]
+public sealed class ComparisonStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductCompareActionDisplayDriver>();
+}
+
+/// <summary>
 /// Recommends products: upsells and cross-sells chosen per product, related products and recently viewed ones.
 /// </summary>
 [Feature(ProductConstants.Feature.Recommendations)]
