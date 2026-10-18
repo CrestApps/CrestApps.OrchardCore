@@ -9,3 +9,39 @@
         </div>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="SendRecoveryEmails" type="checkbox" class="form-check-input" data-recovery-toggle />
+            <label asp-for="SendRecoveryEmails" class="form-check-label">@T["Email buyers who leave a checkout"]</label>
+            <span class="hint dashed">@T["A buyer who gave their email and left without paying gets one email with what they chose and a link back to it, unless they paid since. Needs the site's email and its base URL."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" data-recovery-delay>
+    <label asp-for="RecoveryDelayHours" class="ocat-label">@T["Send it after"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 12rem">
+            <input asp-for="RecoveryDelayHours" type="number" min="1" max="72" class="form-control" />
+            <span class="input-group-text">@T["hours"]</span>
+        </div>
+        <span class="hint">@T["From 1 to 72 hours after they left."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var toggle = document.querySelector('[data-recovery-toggle]');
+        var delay = document.querySelector('[data-recovery-delay]');
+
+        if (!toggle || !delay) {
+            return;
+        }
+
+        var sync = function () { delay.hidden = !toggle.checked; };
+        toggle.addEventListener('change', sync);
+        sync();
+    })();
+</script>

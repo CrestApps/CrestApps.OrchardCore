@@ -115,6 +115,12 @@ public sealed class Order : CatalogItem
     public DateTime? ConfirmationSentUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the buyer was emailed a link back to this order's checkout after leaving it unpaid, or
+    /// <see langword="null"/> when they weren't.
+    /// </summary>
+    public DateTime? RecoveryEmailSentUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when the order's personal details were removed, at the customer's request or after the retention
     /// window.
     /// </summary>

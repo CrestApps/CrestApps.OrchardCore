@@ -193,3 +193,16 @@ public sealed class DisplayNameRecipesSchemaStartup : StartupBase
         services.AddScoped<IContentSchemaDefinition, UserFullNamePartSchemaDefinition>();
     }
 }
+
+/// <summary>
+/// Signing in with an emailed code.
+/// </summary>
+[Feature(UsersConstants.Feature.EmailCodeSignIn)]
+public sealed class EmailCodeSignInStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<EmailSignInCodes>();
+        services.AddDisplayDriver<LoginForm, EmailCodeLoginFormDisplayDriver>();
+    }
+}

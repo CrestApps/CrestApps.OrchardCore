@@ -149,6 +149,10 @@ public class OrderCreateAccountViewModel
 public class OrderSettingsViewModel
 {
     public bool SendConfirmations { get; set; }
+
+    public bool SendRecoveryEmails { get; set; }
+
+    public int RecoveryDelayHours { get; set; } = 1;
 }
 
 public class OrderViewViewModel
