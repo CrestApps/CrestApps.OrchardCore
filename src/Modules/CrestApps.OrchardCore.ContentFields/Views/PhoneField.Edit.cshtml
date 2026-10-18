@@ -19,9 +19,9 @@
     };
     var verificationTitle = verificationStatus switch
     {
-        "Verified" when verification.LastVerifiedUtc.HasValue => T["Phone number verified on {0}.", verification.LastVerifiedUtc.Value.ToString("g")].Value,
+        "Verified" when verification.LastVerifiedUtc.HasValue => T.GetString("Phone number verified on {0}.", verification.LastVerifiedUtc.Value.ToString("g")).Value,
         "Verified" => T["Phone number is verified."].Value,
-        "Invalid" when verification.LastVerifiedUtc.HasValue => T["Phone number is invalid. Last checked on {0}.", verification.LastVerifiedUtc.Value.ToString("g")].Value,
+        "Invalid" when verification.LastVerifiedUtc.HasValue => T.GetString("Phone number is invalid. Last checked on {0}.", verification.LastVerifiedUtc.Value.ToString("g")).Value,
         "Invalid" => T["Phone number is invalid."].Value,
         "Failed" => T["Phone number verification failed."].Value,
         _ => T["Phone number has not been verified."].Value,
@@ -74,8 +74,10 @@
     {
         var info = new PhoneVerificationInfo();
 
-        if (part?.ContentItem?.Content is not JsonObject content ||
-            !content.TryGetPropertyValue("PhoneNumberVerificationPart", out var partNode) ||
+        // ContentItem.Content is a JsonDynamicObject, never a JsonObject; the cast goes through its implicit
+        // conversion to the underlying JSON.
+        if (part?.ContentItem is null ||
+            !((JsonObject)part.ContentItem.Content).TryGetPropertyValue("PhoneNumberVerificationPart", out var partNode) ||
             partNode is not JsonObject verificationPart)
         {
             return info;

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Customers.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Indexes;
 using CrestApps.OrchardCore.Customers.Core.Models;
@@ -84,6 +85,9 @@ public sealed class OrdersStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, CustomerContactCheckoutHandler>();
+
+        // Who is buying, a business or a person, and whether they are exempt, reaches checkout tax.
+        services.AddScoped<ICheckoutTaxProfileHandler, CustomerCheckoutTaxProfileHandler>();
         services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
         services.AddScoped<OrderAnonymizer>();
         services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();

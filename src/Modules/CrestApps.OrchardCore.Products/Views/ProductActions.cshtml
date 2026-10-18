@@ -33,7 +33,7 @@
     {
         @if (!string.IsNullOrEmpty(product.InquiryLabel) && !string.IsNullOrEmpty(product.InquiryUrl))
         {
-            <a class="btn btn-primary btn-lg w-100" href="@product.InquiryUrl">@product.InquiryLabel</a>
+            <a class="btn btn-primary w-100" href="@product.InquiryUrl">@product.InquiryLabel</a>
         }
         <p class="product-actions-availability text-muted small mt-2 mb-0">@T["Not sold online. Contact us to buy."]</p>
     }

@@ -15,6 +15,10 @@ using CrestApps.OrchardCore.Checkout.Drivers;
 using CrestApps.OrchardCore.Checkout.Endpoints;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.Tasks;
+using CrestApps.OrchardCore.Checkout.Deployments;
+using CrestApps.OrchardCore.Checkout.Recipes;
+using OrchardCore.Deployment;
+using OrchardCore.Recipes;
 using CrestApps.OrchardCore.Payments;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -43,6 +47,7 @@ public sealed class Startup : StartupBase
     {
         services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ICheckoutSessionStore, CheckoutSessionStore>();
+        services.AddScoped<ICheckoutSessionAnonymizer, CheckoutSessionAnonymizer>();
         services.AddScoped<IPaymentAttemptStore, PaymentAttemptStore>();
         services.AddScoped<IPaymentRefundStore, PaymentRefundStore>();
         services.AddScoped<ICheckoutReconciliationService, CheckoutReconciliationService>();
@@ -61,13 +66,16 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CheckoutConstants.CouponCollectionName));
 
         services.AddDataMigration<CouponMigrations>()
-            .AddIndexProvider<CouponIndexProvider>();
+            .AddIndexProvider<CouponIndexProvider>()
+            .AddIndexProvider<CouponRedemptionIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
         services.AddScoped<CouponScopeEvaluator>();
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
+        services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
+        services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
         services.AddScoped<IPermissionProvider, CheckoutPermissionsProvider>();
         services.AddNavigationProvider<CouponsAdminMenu>();
@@ -82,8 +90,10 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, CheckoutReconciliationBackgroundTask>();
 
         // The default tax service is a no-op. The Taxation integration feature replaces it with a
-        // taxation-aware implementation when the Taxation feature is enabled.
-        services.AddScoped<ICheckoutTaxService, NullCheckoutTaxService>();
+        // taxation-aware implementation when the Taxation feature is enabled. It is only a fallback: the order the
+        // two startups run in depends on which other features are on, and adding it unconditionally after the
+        // taxation-aware one would silently stop every checkout charging tax.
+        services.TryAddScoped<ICheckoutTaxService, NullCheckoutTaxService>();
 
         services.AddDataMigration<CheckoutMigrations>()
             .AddIndexProvider<CheckoutSessionIndexProvider>()
@@ -113,4 +123,26 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.AddCheckoutPaymentEndpoints();
+}
+
+/// <summary>
+/// Sets coupons from a recipe.
+/// </summary>
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class CouponRecipesStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddRecipeExecutionStep<CouponsStep>();
+}
+
+/// <summary>
+/// Exports coupons in a deployment plan.
+/// </summary>
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class CouponDeploymentStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddDeployment<CouponsDeploymentSource, CouponsDeploymentStep, CouponsDeploymentStepDisplayDriver>();
 }

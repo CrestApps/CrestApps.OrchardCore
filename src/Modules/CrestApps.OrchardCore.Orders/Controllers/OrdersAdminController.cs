@@ -9,9 +9,16 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using CrestApps.OrchardCore.Orders.Core;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Routing;
 using OrchardCore.Navigation;
+using CrestApps.OrchardCore.Orders.Services;
+using CrestApps.OrchardCore.Products.Core.Services;
+using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Orders.Controllers;
 
@@ -26,22 +33,28 @@ public sealed class OrdersAdminController : Controller
     private readonly IOrderStore _orderStore;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
+    private readonly INotifier _notifier;
     private readonly PagerOptions _pagerOptions;
 
     internal readonly IStringLocalizer S;
+    internal readonly IHtmlLocalizer H;
 
     public OrdersAdminController(
         IOrderStore orderStore,
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
+        INotifier notifier,
         IOptions<PagerOptions> pagerOptions,
-        IStringLocalizer<OrdersAdminController> stringLocalizer)
+        IStringLocalizer<OrdersAdminController> stringLocalizer,
+        IHtmlLocalizer<OrdersAdminController> htmlLocalizer)
     {
         _orderStore = orderStore;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
+        _notifier = notifier;
         _pagerOptions = pagerOptions.Value;
         S = stringLocalizer;
+        H = htmlLocalizer;
     }
 
     [Admin("orders", "OrdersIndex")]
@@ -84,7 +97,10 @@ public sealed class OrdersAdminController : Controller
     }
 
     [Admin("orders/{orderId}", "OrdersDetail")]
-    public async Task<IActionResult> Detail(string orderId)
+    public async Task<IActionResult> Detail(
+        string orderId,
+        [FromServices] IDisplayManager<Order> displayManager,
+        [FromServices] IUpdateModelAccessor updateModelAccessor)
     {
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
@@ -109,7 +125,128 @@ public sealed class OrdersAdminController : Controller
             }
         }
 
-        return View(new OrderDetailViewModel { Order = order, CanManage = canManage });
+        var model = new OrderDetailViewModel
+        {
+            Order = order,
+            CanManage = canManage,
+            Sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.DetailAdmin),
+        };
+
+        if (canManage)
+        {
+            var operations = HttpContext.RequestServices.GetRequiredService<OrderOperationsService>();
+
+            model.Money = await operations.GetMoneyAsync(order, HttpContext.RequestAborted);
+            model.CanResendConfirmation = order.Status == OrderStatus.Paid &&
+                !string.IsNullOrWhiteSpace(order.CustomerEmail) &&
+                HttpContext.RequestServices.GetRequiredService<OrderConfirmationSender>().CanSend;
+        }
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [Admin("orders/{orderId}/notes", "OrdersAddNote")]
+    public async Task<IActionResult> AddNote(string orderId, string text, [FromServices] IOrderService orderService)
+    {
+        if (await FindManagedAsync(orderId) is not { } order)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            await _notifier.WarningAsync(H["Write the note first."]);
+        }
+        else
+        {
+            await orderService.AddNoteAsync(order, text, OrderNoteKind.Note, User.Identity?.Name, HttpContext.RequestAborted);
+        }
+
+        return RedirectToAction(nameof(Detail), new { orderId });
+    }
+
+    [HttpPost]
+    [Admin("orders/{orderId}/refund", "OrdersRefund")]
+    public async Task<IActionResult> Refund(string orderId, OrderRefundInputModel model, [FromServices] OrderOperationsService operations)
+    {
+        if (await FindManagedAsync(orderId) is not { } order)
+        {
+            return NotFound();
+        }
+
+        var result = await operations.RefundAsync(order, model?.Amount, model?.Reason, model?.Restock == true, User.Identity?.Name, HttpContext.RequestAborted);
+
+        await NotifyAsync(result, result.Refunded > 0m ? H["Refunded {0}.", ProductPriceFormatter.Format(result.Refunded, order.Currency)] : null);
+
+        return RedirectToAction(nameof(Detail), new { orderId });
+    }
+
+    [HttpPost]
+    [Admin("orders/{orderId}/cancel", "OrdersCancel")]
+    public async Task<IActionResult> Cancel(string orderId, OrderCancelInputModel model, [FromServices] OrderOperationsService operations)
+    {
+        if (await FindManagedAsync(orderId) is not { } order)
+        {
+            return NotFound();
+        }
+
+        var result = await operations.CancelAsync(order, model?.Note, model?.Refund == true, model?.Restock == true, User.Identity?.Name, HttpContext.RequestAborted);
+
+        await NotifyAsync(result, result.Refunded > 0m
+            ? H["The order was canceled and {0} refunded.", ProductPriceFormatter.Format(result.Refunded, order.Currency)]
+            : H["The order was canceled."]);
+
+        return RedirectToAction(nameof(Detail), new { orderId });
+    }
+
+    [HttpPost]
+    [Admin("orders/{orderId}/resend", "OrdersResendConfirmation")]
+    public async Task<IActionResult> ResendConfirmation(string orderId, [FromServices] OrderOperationsService operations)
+    {
+        if (await FindManagedAsync(orderId) is not { } order)
+        {
+            return NotFound();
+        }
+
+        if (await operations.ResendConfirmationAsync(order, User.Identity?.Name, HttpContext.RequestAborted))
+        {
+            await _notifier.SuccessAsync(H["The confirmation was sent again to {0}.", order.CustomerEmail]);
+        }
+        else
+        {
+            await _notifier.ErrorAsync(H["The confirmation couldn't be sent. Check the site's email settings."]);
+        }
+
+        return RedirectToAction(nameof(Detail), new { orderId });
+    }
+
+    private async Task<Order> FindManagedAsync(string orderId)
+    {
+        if (string.IsNullOrEmpty(orderId) || !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ManageOrders))
+        {
+            return null;
+        }
+
+        return await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
+    }
+
+    private async Task NotifyAsync(OrderOperationResult result, LocalizedHtmlString success)
+    {
+        foreach (var error in result.Errors)
+        {
+            await _notifier.ErrorAsync(H["{0}", error]);
+        }
+
+        foreach (var message in result.Messages)
+        {
+            await _notifier.InformationAsync(H["{0}", message]);
+        }
+
+        if (result.Succeeded && success is not null)
+        {
+            await _notifier.SuccessAsync(success);
+        }
     }
 
     private async Task<OrdersIndexViewModel> BuildListAsync(OrdersIndexOptions options, PagerParameters pagerParameters, string userId)

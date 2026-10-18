@@ -19,7 +19,8 @@ public sealed class DefaultCustomerPrivacyService : ICustomerPrivacyService
     public DefaultCustomerPrivacyService(ICustomerStore store, IEnumerable<ICustomerPrivacyHandler> handlers, IClock clock)
     {
         _store = store;
-        _handlers = handlers;
+        // A stable sort, so handlers with the same order keep their registration order.
+        _handlers = handlers.OrderBy(handler => handler.Order).ToArray();
         _clock = clock;
     }
 

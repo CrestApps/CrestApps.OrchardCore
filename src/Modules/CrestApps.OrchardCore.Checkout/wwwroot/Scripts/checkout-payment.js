@@ -8,6 +8,7 @@
 		"use strict";
 		var handlers = {};
 		var config = null;
+		var noticeKey = "checkout-payment-notice";
 		/**
 		* Registers a provider handler.
 		*
@@ -135,6 +136,13 @@
 					providerData: providerData || void 0
 				});
 				if (!begun.ok) {
+					if (begun.payload && begun.payload.invoiceChanged) {
+						try {
+							window.sessionStorage.setItem(noticeKey, begun.payload.errorMessage || "");
+						} catch (e) {}
+						window.location.assign(window.location.href);
+						return false;
+					}
 					showError(begun.payload && begun.payload.errorMessage);
 					return false;
 				}
@@ -187,6 +195,17 @@
 			syncPanels();
 			var form = document.getElementById("checkout-form");
 			if (form) form.addEventListener("submit", pay);
+			showNotice();
+		}
+		function showNotice() {
+			var notice;
+			try {
+				notice = window.sessionStorage.getItem(noticeKey);
+				window.sessionStorage.removeItem(noticeKey);
+			} catch (e) {
+				return;
+			}
+			if (notice) showError(notice);
 		}
 		return {
 			initialize,

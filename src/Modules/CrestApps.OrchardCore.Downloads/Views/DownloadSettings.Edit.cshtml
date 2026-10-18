@@ -1,0 +1,15 @@
+@model DownloadSettingsViewModel
+
+<div class="mb-3">
+    <label asp-for="DownloadLimit" class="form-label">@T["Downloads per buyer"]</label>
+    <input asp-for="DownloadLimit" type="number" min="0" max="10000" class="form-control" />
+    <span asp-validation-for="DownloadLimit"></span>
+    <span class="hint">@T["How many times a buyer can download each file they bought. 0 means no limit. A product can set its own."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="LinkLifetimeDays" class="form-label">@T["Days the links work"]</label>
+    <input asp-for="LinkLifetimeDays" type="number" min="0" max="3650" class="form-control" />
+    <span asp-validation-for="LinkLifetimeDays"></span>
+    <span class="hint">@T["How long after paying a buyer's download links work. 0 means they never expire. A product can set its own."]</span>
+</div>

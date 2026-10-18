@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Shipping.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ShipmentShippedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
+    @T["Shipment Shipped"]
+</h4>
+<p>@T["Starts when a shipment leaves, with its carrier and tracking number."]</p>

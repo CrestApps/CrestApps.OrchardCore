@@ -2,6 +2,12 @@
 @using CrestApps.OrchardCore.Products.Core.Services
 
 @model OrderDetailViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var order = Model.Order;
@@ -26,7 +32,14 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>@T.Plural(order.ItemCount, "1 item", "{0} items")</span>
-                @await Html.PartialAsync("_OrderStatus", order.Status)
+                <span>
+                    @if (order.Status == OrderStatus.Paid)
+                    {
+                        @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
+                    }
+                    @await Html.PartialAsync("_OrderRefundStatus", order.RefundStatus)
+                    @await Html.PartialAsync("_OrderStatus", order.Status)
+                </span>
             </div>
             @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
             {
@@ -34,22 +47,29 @@
                     @switch (cancelReason)
                     {
                         case OrderCancelReason.Replaced:
-                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.PaymentFailed:
-                            @T["Canceled {0:g}: the payment was declined.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the payment was declined.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutCanceled:
-                            @T["Canceled {0:g}: the checkout was canceled.", order.CanceledUtc]
+                            @T["Canceled {0:g}: the checkout was canceled.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.CheckoutExpired:
-                            @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
+                            @T["Canceled {0:g}: nobody finished the checkout in time.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                         case OrderCancelReason.Unavailable:
-                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
+                            break;
+                        case OrderCancelReason.CanceledByStore:
+                            @T["Canceled {0:g} by the store.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
+                            @if (!string.IsNullOrEmpty(order.CancelNote))
+                            {
+                                <span>@order.CancelNote</span>
+                            }
                             break;
                         default:
-                            @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
+                            @T["Canceled {0:g}: no checkout was left that could pay for it.", await LocalAsync(order.CanceledUtc ?? order.ModifiedUtc)]
                             break;
                     }
                 </div>
@@ -81,6 +101,20 @@
                     <span>@T["Subtotal"]</span>
                     <span>@Format(order.Subtotal)</span>
                 </div>
+                @foreach (var discount in order.Discounts ?? [])
+                {
+                    <div class="d-flex justify-content-between text-success">
+                        <span>@(string.IsNullOrEmpty(discount.Code) ? T["Discount: {0}", discount.Description] : T["Discount ({0})", discount.Code])</span>
+                        <span>&minus;@Format(discount.Amount)</span>
+                    </div>
+                }
+                @if (order.Shipping is not null)
+                {
+                    <div class="d-flex justify-content-between">
+                        <span>@T["Shipping ({0})", order.Shipping.Name]</span>
+                        <span>@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</span>
+                    </div>
+                }
                 @if (order.TaxAmount > 0)
                 {
                     <div class="d-flex justify-content-between text-muted">
@@ -95,22 +129,65 @@
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
+                @foreach (var refund in order.Refunds ?? [])
+                {
+                    <div class="d-flex justify-content-between text-info">
+                        <span>@T["Refunded {0:d}", await LocalAsync(refund.CreatedUtc)]</span>
+                        <span>&minus;@Format(refund.Amount)</span>
+                    </div>
+                }
+                @if (order.RefundedAmount > 0 && order.Total.HasValue)
+                {
+                    <div class="d-flex justify-content-between fw-semibold">
+                        <span>@T["Net"]</span>
+                        <span>@Format(order.Total.Value - order.RefundedAmount)</span>
+                    </div>
+                }
             </div>
         </div>
+
+        @* What other modules add to the order, such as its shipments. *@
+        @if (Model.Sections is not null)
+        {
+            @await DisplayAsync(Model.Sections)
+        }
+
+        @if (Model.CanManage)
+        {
+            <partial name="_OrderNotes" model="Model" />
+        }
     </div>
 
     <div class="col-lg-4">
-        <div class="card">
+        @if (Model.CanManage)
+        {
+            <partial name="_OrderActions" model="Model" />
+        }
+        <div class="card mb-4">
             <div class="card-body">
                 <dl class="mb-0">
                     <dt>@T["Order number"]</dt>
                     <dd>@order.OrderNumber</dd>
                     <dt>@T["Placed"]</dt>
-                    <dd>@order.CreatedUtc.ToString("f")</dd>
+                    <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
                     @if (order.PaidUtc.HasValue)
                     {
                         <dt>@T["Paid"]</dt>
-                        <dd>@order.PaidUtc.Value.ToString("f")</dd>
+                        <dd>@((await LocalAsync(order.PaidUtc.Value)).ToString("f"))</dd>
+                    }
+                    @if (order.ShippingAddress is not null)
+                    {
+                        <dt>@T["Ships to"]</dt>
+                        <dd>
+                            @foreach (var line in await BillingLinesAsync(order.ShippingAddress))
+                            {
+                                <div>@line</div>
+                            }
+                            @if (!string.IsNullOrEmpty(order.ShippingAddress.Phone))
+                            {
+                                <div class="text-muted small">@order.ShippingAddress.Phone</div>
+                            }
+                        </dd>
                     }
                     @if (order.BillingAddress is not null)
                     {

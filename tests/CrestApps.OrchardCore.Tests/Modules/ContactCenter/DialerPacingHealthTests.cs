@@ -2,9 +2,11 @@ using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.HealthChecks;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -26,6 +28,7 @@ public sealed class DialerPacingHealthTests
     private static readonly string _stalledQueue = ContactCenterConstants.CampaignQueue.CreateId("stalled");
     private static readonly string _idleQueue = ContactCenterConstants.CampaignQueue.CreateId("idle");
     private static readonly string _nothingQueue = ContactCenterConstants.CampaignQueue.CreateId("nothing");
+    private static readonly string _lockedQueue = ContactCenterConstants.CampaignQueue.CreateId("locked");
 
     [Fact]
     public async Task AStalledAnIdleAndANothingToCallDialer_AreThreeDifferentStates()
@@ -199,6 +202,234 @@ public sealed class DialerPacingHealthTests
         Assert.Equal(TimeSpan.FromSeconds(45), silence);
     }
 
+    [Fact]
+    public void TheLockStarvationThreshold_IsTwoLockLifetimes_OrTheCycleTimeoutWhenThatIsLonger()
+    {
+        // Act
+        var lockBound = DialerPacingScheduler.GetLockStarvationThreshold(new ContactCenterDialerPacingOptions
+        {
+            LockExpiration = TimeSpan.FromSeconds(90),
+            CycleTimeout = TimeSpan.FromMinutes(2),
+        });
+        var cycleBound = DialerPacingScheduler.GetLockStarvationThreshold(new ContactCenterDialerPacingOptions
+        {
+            LockExpiration = TimeSpan.FromSeconds(30),
+            CycleTimeout = TimeSpan.FromMinutes(2),
+        });
+
+        // Assert
+        Assert.Equal(TimeSpan.FromSeconds(180), lockBound);
+        Assert.Equal(TimeSpan.FromMinutes(2), cycleBound);
+    }
+
+    [Fact]
+    public void ALockMissStreakLongerThanTheThreshold_IsLockNotAcquired_SinceTheLastCycleThatRan()
+    {
+        // Arrange: the last cycle that got past the lock ran ten minutes ago; every one since missed it.
+        var ran = Cycle(_lockedQueue, DialerPacingCycleOutcome.NoAgents, _now.AddMinutes(-10));
+        var missed = LockMiss(_lockedQueue, firstStartedUtc: _now.AddMinutes(-9), completedUtc: _now.AddSeconds(-5));
+
+        // Act
+        var since = DialerPacingHealthEvaluator.FindLockNotAcquiredSince(_now, TimeSpan.FromMinutes(2), missed, ran);
+
+        // Assert
+        Assert.Equal(ran.CompletedUtc, since);
+    }
+
+    [Fact]
+    public void ALockMissStreakWithNoCycleThatRan_CountsFromTheFirstMissOnRecord()
+    {
+        // Arrange
+        var missed = LockMiss(_lockedQueue, firstStartedUtc: _now.AddMinutes(-7), completedUtc: _now.AddSeconds(-5));
+
+        // Act
+        var since = DialerPacingHealthEvaluator.FindLockNotAcquiredSince(_now, TimeSpan.FromMinutes(2), missed, lastCycleNotLockMiss: null);
+
+        // Assert
+        Assert.Equal(_now.AddMinutes(-7), since);
+    }
+
+    [Fact]
+    public void AShortLockMissStreak_IsAnotherRunHoldingTheLock_NotAFault()
+    {
+        // Arrange: a cycle ran ninety seconds ago; a two minute threshold has not passed since.
+        var ran = Cycle(_lockedQueue, DialerPacingCycleOutcome.Placed, _now.AddSeconds(-90));
+        var missed = LockMiss(_lockedQueue, firstStartedUtc: _now.AddSeconds(-80), completedUtc: _now.AddSeconds(-1));
+
+        // Act
+        var since = DialerPacingHealthEvaluator.FindLockNotAcquiredSince(_now, TimeSpan.FromMinutes(2), missed, ran);
+
+        // Assert
+        Assert.Null(since);
+    }
+
+    [Theory]
+    [InlineData(DialerPacingCycleOutcome.Placed)]
+    [InlineData(DialerPacingCycleOutcome.NothingDue)]
+    [InlineData(DialerPacingCycleOutcome.TimeBudgetExceeded)]
+    [InlineData(DialerPacingCycleOutcome.Failed)]
+    public void ALatestCycleThatDidNotMissTheLock_IsNeverLockNotAcquired(DialerPacingCycleOutcome outcome)
+    {
+        // Arrange: older lock misses do not count once a later cycle ended another way.
+        var latest = Cycle(_lockedQueue, outcome, _now.AddSeconds(-5));
+        latest.FirstStartedUtc = _now.AddHours(-1);
+
+        // Act
+        var since = DialerPacingHealthEvaluator.FindLockNotAcquiredSince(_now, TimeSpan.FromMinutes(2), latest, latest);
+
+        // Assert
+        Assert.Null(since);
+    }
+
+    [Fact]
+    public async Task AQueueWhoseCyclesAllMissTheLock_IsLockNotAcquired_NotNothingToCall()
+    {
+        // Arrange: records waited all morning; the last cycle that ran found nothing due, and every cycle since could not
+        // take the queue's pacing lock.
+        var ran = Cycle(_lockedQueue, DialerPacingCycleOutcome.NothingDue, _now.AddMinutes(-20));
+        var service = CreateService(new QueueSetup(
+            _lockedQueue,
+            _now.AddHours(-3),
+            LastCycle: LockMiss(_lockedQueue, firstStartedUtc: _now.AddMinutes(-19), completedUtc: _now.AddSeconds(-10)),
+            LastCompleted: ran,
+            LastNotLockMiss: ran));
+
+        // Act
+        var snapshot = await service.EvaluateAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var queue = Assert.Single(snapshot.Queues);
+        Assert.Equal(DialerPacingHealthState.LockNotAcquired, queue.State);
+        Assert.Equal(ran.CompletedUtc, queue.LockNotAcquiredSinceUtc);
+        Assert.Equal(DialerPacingHealthState.LockNotAcquired, snapshot.State);
+    }
+
+    [Fact]
+    public async Task ALockMissWithinTheThreshold_KeepsTheStateTheLastCycleDecided()
+    {
+        // Arrange: a cycle that ran thirty seconds ago found no agent; the one after it found the lock held.
+        var ran = Cycle(_idleQueue, DialerPacingCycleOutcome.NoAgents, _now.AddSeconds(-30));
+        var service = CreateService(new QueueSetup(
+            _idleQueue,
+            _now.AddHours(-1),
+            LastCycle: LockMiss(_idleQueue, firstStartedUtc: _now.AddSeconds(-20), completedUtc: _now.AddSeconds(-20)),
+            LastCompleted: ran,
+            LastNotLockMiss: ran));
+
+        // Act
+        var snapshot = await service.EvaluateAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var queue = Assert.Single(snapshot.Queues);
+        Assert.Equal(DialerPacingHealthState.Idle, queue.State);
+        Assert.Null(queue.LockNotAcquiredSinceUtc);
+    }
+
+    [Fact]
+    public void ACycleThatCompletedBeforeTheWorkArrived_SaysNothingAboutIt()
+    {
+        // Act: yesterday's last cycle found nothing due; the records waiting now arrived two minutes ago.
+        var (state, _) = DialerPacingHealthEvaluator.Evaluate(
+            _now,
+            _stalledAfter,
+            _now.AddMinutes(-2),
+            Cycle(_nothingQueue, DialerPacingCycleOutcome.NothingDue, _now.AddHours(-16)));
+
+        // Assert
+        Assert.Equal(DialerPacingHealthState.Starting, state);
+    }
+
+    [Fact]
+    public void TheBanner_NamesTheCampaignWhosePacingLockIsNotAcquired_AndSinceWhen()
+    {
+        // Arrange
+        var localizer = new FormattingLocalizer();
+        var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["locked"] = "Renewals" };
+        var queue = Queue(_lockedQueue, DialerPacingHealthState.LockNotAcquired, TimeSpan.FromMinutes(20));
+        queue.LockNotAcquiredSinceUtc = _now.AddMinutes(-20);
+
+        // Act
+        var banner = DialerPacingBannerService.Build(Snapshot(queue), localizer, names);
+
+        // Assert
+        Assert.Equal("danger", banner.Level);
+        Assert.Equal(DialerPacingHealthState.LockNotAcquired, banner.State);
+        Assert.Contains("the pacing lock of Renewals has not been acquired since 2026-10-17 11:40 UTC (20 minutes ago)", banner.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheBanner_NeverSaysNoCampaignHasWork_WhileRecordsWaitInAPacedQueue()
+    {
+        // Arrange
+        var localizer = new FormattingLocalizer();
+        var names = new Dictionary<string, string>(StringComparer.Ordinal) { ["nothing"] = "Win-back" };
+
+        // Act
+        var waiting = DialerPacingBannerService.Build(Snapshot(Queue(_nothingQueue, DialerPacingHealthState.NothingToCall, TimeSpan.FromSeconds(20))), localizer, names);
+        var empty = DialerPacingBannerService.Build(Snapshot(), localizer, names);
+
+        // Assert
+        Assert.Equal(DialerPacingHealthState.NothingToCall, waiting.State);
+        Assert.DoesNotContain("no paced campaign", waiting.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Win-back", waiting.Message, StringComparison.Ordinal);
+        Assert.Equal("Nothing to call: no paced campaign has work waiting.", empty.Message);
+    }
+
+    [Fact]
+    public void TheHealthCheck_FailsForAQueueWhosePacingLockIsNotAcquired()
+    {
+        // Arrange
+        var queue = Queue(_lockedQueue, DialerPacingHealthState.LockNotAcquired, TimeSpan.FromMinutes(20));
+        queue.LockNotAcquiredSinceUtc = _now.AddMinutes(-20);
+
+        // Act
+        var result = ContactCenterDialerPacingHealthCheck.Describe(Snapshot(queue), HealthStatus.Unhealthy);
+
+        // Assert
+        Assert.Equal(HealthStatus.Unhealthy, result.Status);
+        Assert.Contains("pacing lock of 1 campaign queue(s) has not been acquired since 2026-10-17T11:40:00", result.Description, StringComparison.Ordinal);
+        Assert.Equal(_lockedQueue, (string)result.Data["lock_not_acquired_queue_ids"]);
+    }
+
+    [Fact]
+    public void TheDispatchCard_CarriesThePacingLockProblem()
+    {
+        // Arrange
+        var queue = Queue(_lockedQueue, DialerPacingHealthState.LockNotAcquired, TimeSpan.FromMinutes(20));
+        queue.LockNotAcquiredSinceUtc = _now.AddMinutes(-20);
+        var lockedCard = new SupervisorDispatchViewModel();
+        var stalledCard = new SupervisorDispatchViewModel();
+        var unpacedCard = new SupervisorDispatchViewModel();
+
+        // Act
+        SupervisorDashboardEndpoints.ApplyPacing(lockedCard, queue);
+        SupervisorDashboardEndpoints.ApplyPacing(stalledCard, Queue(_stalledQueue, DialerPacingHealthState.Stalled, TimeSpan.FromMinutes(12)));
+        SupervisorDashboardEndpoints.ApplyPacing(unpacedCard, null);
+
+        // Assert
+        Assert.Equal(nameof(DialerPacingHealthState.LockNotAcquired), lockedCard.PacingState);
+        Assert.Equal(_now.AddMinutes(-20), lockedCard.PacingLockNotAcquiredSinceUtc);
+        Assert.Null(lockedCard.PacingStalledMinutes);
+
+        Assert.Equal(nameof(DialerPacingHealthState.Stalled), stalledCard.PacingState);
+        Assert.Null(stalledCard.PacingLockNotAcquiredSinceUtc);
+        Assert.Equal(12, stalledCard.PacingStalledMinutes);
+
+        Assert.Null(unpacedCard.PacingState);
+    }
+
+    private static DialerPacingCycle LockMiss(string queueId, DateTime firstStartedUtc, DateTime completedUtc)
+        => new()
+        {
+            QueueId = queueId,
+            DialerProfileId = "dp1",
+            Outcome = DialerPacingCycleOutcome.LockNotAcquired,
+            CycleCount = 40,
+            FirstStartedUtc = firstStartedUtc,
+            StartedUtc = completedUtc,
+            CompletedUtc = completedUtc,
+        };
+
     private static DialerPacingHealthState StateOf(DialerPacingHealthSnapshot snapshot, string queueId)
         => snapshot.Queues.Single(queue => queue.QueueId == queueId).State;
 
@@ -259,6 +490,14 @@ public sealed class DialerPacingHealthTests
             cycleStore
                 .Setup(store => store.FindLatestByQueueAsync(queue.QueueId, It.IsNotNull<IEnumerable<DialerPacingCycleOutcome>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(queue.LastCompleted);
+
+            // Asked for every outcome but a missed lock: the last cycle that got past the queue's pacing lock.
+            cycleStore
+                .Setup(store => store.FindLatestByQueueAsync(
+                    queue.QueueId,
+                    It.Is<IEnumerable<DialerPacingCycleOutcome>>(outcomes => outcomes != null && outcomes.Contains(DialerPacingCycleOutcome.Failed)),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(queue.LastNotLockMiss);
         }
 
         var profile = new DialerProfile
@@ -285,7 +524,12 @@ public sealed class DialerPacingHealthTests
             Options.Create(new ContactCenterDialerPacingOptions { StalledAfter = _stalledAfter }));
     }
 
-    private sealed record QueueSetup(string QueueId, DateTime WaitingSinceUtc, DialerPacingCycle LastCycle, DialerPacingCycle LastCompleted)
+    private sealed record QueueSetup(
+        string QueueId,
+        DateTime WaitingSinceUtc,
+        DialerPacingCycle LastCycle,
+        DialerPacingCycle LastCompleted,
+        DialerPacingCycle LastNotLockMiss = null)
     {
         public QueueSetup(string queueId, DateTime waitingSinceUtc, DialerPacingCycle completedCycle)
             : this(queueId, waitingSinceUtc, completedCycle, completedCycle)

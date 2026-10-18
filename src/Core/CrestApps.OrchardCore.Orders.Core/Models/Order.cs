@@ -52,6 +52,17 @@ public sealed class Order : CatalogItem
     /// </summary>
     public decimal? TaxAmount { get; set; }
 
+    /// <summary>
+    /// Gets or sets what the discounts took off, such as a coupon, as the checkout applied them.
+    /// </summary>
+    public List<OrderDiscount> Discounts { get; set; } = [];
+
+    /// <summary>
+    /// Gets the total of the discounts.
+    /// </summary>
+    public decimal DiscountTotal
+        => Discounts?.Sum(discount => discount.Amount) ?? 0m;
+
     public OrderStatus Status { get; set; }
 
     /// <summary>
@@ -75,6 +86,22 @@ public sealed class Order : CatalogItem
     /// address it came from never changes it.
     /// </summary>
     public Address BillingAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the order is shipped, or <see langword="null"/> when nothing in it ships.
+    /// </summary>
+    public Address ShippingAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets how the order is shipped and what it cost, or <see langword="null"/> when nothing in it ships.
+    /// </summary>
+    public OrderShipping Shipping { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much of the order has been shipped, or <see langword="null"/> when nothing in it ships or
+    /// nothing records shipments.
+    /// </summary>
+    public OrderFulfillmentStatus? FulfillmentStatus { get; set; }
 
     public DateTime CreatedUtc { get; set; }
 
@@ -104,6 +131,35 @@ public sealed class Order : CatalogItem
     public OrderCancelReason? CancelReason { get; set; }
 
     /// <summary>
+    /// Gets or sets why the store canceled the order, in its own words, when it was canceled from its page.
+    /// </summary>
+    public string CancelNote { get; set; }
+
+    /// <summary>
+    /// Gets or sets the notes on the order, oldest first: what the store wrote, and what happened, such as a refund.
+    /// </summary>
+    public List<OrderNote> Notes { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the money given back for the order, one entry per refund that went through.
+    /// </summary>
+    public List<OrderRefund> Refunds { get; set; } = [];
+
+    /// <summary>
+    /// Gets how much was given back.
+    /// </summary>
+    public decimal RefundedAmount
+        => Refunds?.Sum(refund => refund.Amount) ?? 0m;
+
+    /// <summary>
+    /// Gets whether money was given back: none, part of what was paid, or all of it.
+    /// </summary>
+    public OrderRefundStatus RefundStatus
+        => RefundedAmount <= 0m
+            ? OrderRefundStatus.None
+            : Total.HasValue && RefundedAmount >= Total.Value ? OrderRefundStatus.Refunded : OrderRefundStatus.PartiallyRefunded;
+
+    /// <summary>
     /// Removes who the order was for: the name, email and phone, and the billing address but its country and region,
     /// which tax records need. The lines, totals and dates stay for the store's accounts.
     /// </summary>
@@ -113,6 +169,7 @@ public sealed class Order : CatalogItem
         CustomerEmail = null;
         CustomerPhone = null;
         BillingAddress = BillingAddress is null ? null : new Address { Country = BillingAddress.Country, Region = BillingAddress.Region };
+        ShippingAddress = ShippingAddress is null ? null : new Address { Country = ShippingAddress.Country, Region = ShippingAddress.Region };
         AnonymizedUtc ??= now;
         ModifiedUtc = now;
     }
@@ -172,11 +229,135 @@ public sealed class OrderLine
     public string TaxCategoryCode { get; set; }
 
     public string TaxClassificationCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the product was in when it was ordered (taxonomy term ids), for discounts limited
+    /// to some categories.
+    /// </summary>
+    public string[] CategoryIds { get; set; } = [];
 }
 
 /// <summary>
 /// Where an order is in its life.
 /// </summary>
+/// <summary>
+/// A note on an order.
+/// </summary>
+public sealed class OrderNote
+{
+    public string Id { get; set; }
+
+    public string Text { get; set; }
+
+    public OrderNoteKind Kind { get; set; }
+
+    /// <summary>
+    /// Gets or sets who wrote it or did what it records, or <see langword="null"/> for the site itself.
+    /// </summary>
+    public string AuthorName { get; set; }
+
+    public DateTime CreatedUtc { get; set; }
+}
+
+/// <summary>
+/// What an <see cref="OrderNote"/> is.
+/// </summary>
+public enum OrderNoteKind
+{
+    /// <summary>
+    /// Something the store wrote.
+    /// </summary>
+    Note = 0,
+
+    /// <summary>
+    /// Something that happened to the order, such as a refund or a cancellation.
+    /// </summary>
+    Event = 1,
+}
+
+/// <summary>
+/// Money given back for an order.
+/// </summary>
+public sealed class OrderRefund
+{
+    /// <summary>
+    /// Gets or sets the identifier of the payment refund, so the same refund is never counted twice.
+    /// </summary>
+    public string RefundId { get; set; }
+
+    public decimal Amount { get; set; }
+
+    public string Currency { get; set; }
+
+    public string Reason { get; set; }
+
+    public DateTime CreatedUtc { get; set; }
+}
+
+/// <summary>
+/// Whether money was given back for an order.
+/// </summary>
+public enum OrderRefundStatus
+{
+    None = 0,
+
+    PartiallyRefunded = 1,
+
+    Refunded = 2,
+}
+
+/// <summary>
+/// A discount an order was given, such as a coupon.
+/// </summary>
+public sealed class OrderDiscount
+{
+    /// <summary>
+    /// Gets or sets the code the buyer entered, or <see langword="null"/> for a discount without one.
+    /// </summary>
+    public string Code { get; set; }
+
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key of the discount provider that gave it, such as <c>Coupons</c>.
+    /// </summary>
+    public string ProviderKey { get; set; }
+}
+
+/// <summary>
+/// The shipping method an order was shipped by, and what it cost before tax.
+/// </summary>
+public sealed class OrderShipping
+{
+    public string MethodId { get; set; }
+
+    public string RateId { get; set; }
+
+    public string ZoneId { get; set; }
+
+    public string ProviderName { get; set; }
+
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
+}
+
+public enum OrderFulfillmentStatus
+{
+    Unfulfilled = 0,
+
+    /// <summary>
+    /// Some of the goods have left, in one or more shipments.
+    /// </summary>
+    PartiallyFulfilled = 1,
+
+    Fulfilled = 2,
+}
+
 public enum OrderStatus
 {
     /// <summary>

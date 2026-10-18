@@ -1,6 +1,6 @@
 # Inventory and shipping plan
 
-Status: decisions agreed 2026-10-17 (Mike chose inventory first, no live carrier in this phase, and availability with a low-stock count for shoppers; the rest stand as proposed). Phases 6 and 7 of the [e-commerce plan](../../ecommerce-plan.md), after
+Status: built (IS0 to IS9). Decisions agreed 2026-10-17 (Mike chose inventory first, no live carrier in this phase, and availability with a low-stock count for shoppers; the rest stand as proposed). Phases 6 and 7 of the [e-commerce plan](../../ecommerce-plan.md), after
 Customers (#919 to #936) and Addresses (#927 to #932).
 
 ## Goal
@@ -195,6 +195,51 @@ Each slice is a PR with tests, opened when its tests pass.
   see it. Contributors are part of the index fingerprint, and `BuildVersion` went to 9.
 - CSV export and import on Commerce > Inventory (`StockCsv`, `StockCountImporter`): counts, found by ids or SKU, all or
   nothing. The `Stock` recipe step and deployment step use the same importer.
+
+### SH1 Zones and rates
+
+- `Shipping.Core`: `ShippingZone` in a named catalog (one document, no index), holding its `ShippingMethod`s; provider
+  settings live in each method's property bag (`FlatRateSettings`, `TableRateSettings`, `FreeShippingSettings`), so a
+  carrier module adds its own provider and a `DisplayDriver<ShippingMethod>` without a schema change. No separate
+  Abstractions project yet, as with Inventory.
+- `IShippingRateService` finds the zone (first by position, then name; rest of world last) and prices its enabled
+  methods; methods in another currency are skipped, class surcharges are per unit and matched ignoring case (a
+  dictionary read back from JSON loses its comparer), and amounts are rounded to the currency.
+- Zones store regions as ISO 3166-2 codes (`US-AK`); `Address.Region` is the code without the country.
+- `ShippingPart` keeps per-variant weights by variant id; new variants get a row once the product is saved.
+- Admin: Commerce > Shipping (zones in try order), a zone page listing its methods, a method editor per provider, and
+  *Try rates*. Settings: weight unit and shipping classes. `ShippingZones` recipe and deployment step.
+
+### SH2 Checkout
+
+- `CheckoutShippingInfo` in Checkout.Abstractions carries where and how the order ships; the default tax profile provider
+  uses its address as the destination, else the billing address. No separate order tax profile provider was needed.
+- The Contact step rebuilds the invoice, so orders that don't ship are taxed where they're billed.
+- `Order.ShippingAddress` and `Order.Shipping` (`OrderShipping`), copied by `OrderCheckoutHandler` like the contact info;
+  anonymizing keeps country and region.
+- The step: an address posted without a rate for it comes back with that address's rates as a validation error, so the
+  checkout controller needed no new action. One rate is chosen automatically.
+- Shipping depends on Orders now; the address book comes from Customers when it's on.
+- Not done: re-pricing a chosen rate at payment. The price is fixed when chosen.
+
+### SH3 Fulfillment
+
+- `Shipment` documents in a `Shipping` collection with `ShipmentIndex` (migration step 2, indexes through
+  `IndexTableIndexCreation`); `IShipmentService` and `ShippingOrderRateService` moved to Core so shipments tell goods
+  from the rest.
+- `Order.FulfillmentStatus`, set on every shipment change; returned shipments free their units.
+- Orders gained an extension point: the order is built with `IDisplayManager<Order>` in `DetailAdmin` and `Detail`
+  display types, which Shipping fills with the shipments card. No new order index.
+- `IShipmentEventHandler` drives the shipped email (once per shipment) and four workflow events. Carriers with
+  tracking templates live in the Shipping settings, with a new **Ship orders** (`FulfillOrders`) permission.
+
+### IS9 Docs and sample
+
+- The online store sample enables Inventory and Shipping, adds the Inventory and Shipping parts to its product type,
+  weights by kind of product (boots *Bulky*), and `Stock`, `ShippingZones` and `Settings` (carriers) steps: 25 of most
+  products, a few at 2 to 4, and one sold out; United States, Canada and rest-of-world zones.
+- Manuals: inventory and shipping user and technical pages were written slice by slice; IS9 adds the sample to them, the
+  product listings page and the changelog.
 
 ## Not in this phase
 

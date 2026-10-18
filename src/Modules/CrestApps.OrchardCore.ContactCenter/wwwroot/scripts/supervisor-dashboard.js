@@ -882,7 +882,7 @@
 			}
 			function dispatchCard(queue, reference) {
 				var cls = "cc-dispatch__card";
-				var pacingStuck = queue.pacing === "ProfileDisabled" || queue.pacing === "ProfileMissing";
+				var pacingStuck = queue.pacing === "ProfileDisabled" || queue.pacing === "ProfileMissing" || !!queue.pacingLockNotAcquiredSinceUtc || queue.pacingStalledMinutes != null;
 				if (!!queue.queueBlocker || !!queue.routing || pacingStuck || queue.profileMismatchCount > 0 || queue.dialableNowCount > 0 && queue.availableAgentCount === 0) cls += " is-stalled";
 				else if (queue.heldBackCount > 0 && queue.dialableNowCount === 0) cls += " is-held";
 				var headline = format(label("dispatchHeadline", "Pending {0}: {1} dialable now, {2} held back"), queue.pendingCount, queue.dialableNowCount, queue.heldBackCount);
@@ -896,6 +896,10 @@
 					return "<li><span>" + escapeHtml(text) + "</span><span class=\"cc-strong\">" + bucket.count + "</span></li>";
 				}).join("");
 				var notes = [];
+				if (queue.pacingLockNotAcquiredSinceUtc) {
+					var lockSince = Date.parse(queue.pacingLockNotAcquiredSinceUtc);
+					if (isFinite(lockSince)) notes.push(format(label("dispatchLockNotAcquired", "Not being paced: its pacing lock has not been acquired since {0} ({1} ago), so every pacing cycle skips itself. Check the distributed lock."), new Date(lockSince).toLocaleString(), formatWait(Math.max(0, (reference - lockSince) / 1e3))));
+				} else if (queue.pacingStalledMinutes != null) notes.push(format(label("dispatchPacingStalled", "Pacing stalled: no pacing cycle has completed for {0} minutes."), queue.pacingStalledMinutes));
 				if (queue.queueBlocker) notes.push(label("blocker." + queue.queueBlocker, queue.queueBlocker));
 				notes.push(queue.signedInAgentCount === 0 ? label("dispatchNoAgents", "No agents are signed in.") : format(label("dispatchAgents", "{0} of {1} signed-in agents are available."), queue.availableAgentCount, queue.signedInAgentCount));
 				if (queue.routing) {
@@ -905,7 +909,7 @@
 					(routing.candidateReasons || []).slice(0, 4).forEach(function(reason) {
 						notes.push(format(label("dispatchCandidate", "{0} agents: {1}"), reason.agentCount, reason.reason));
 					});
-				} else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) notes.push(label("dispatchWaiting", "Work and available agents are both here; it is waiting for the next dispatch pass."));
+				} else if (!queue.queueBlocker && !pacingStuck && queue.dialableNowCount > 0 && queue.availableAgentCount > 0) notes.push(label("dispatchWaiting", "Work and available agents are both here; it is waiting for the next dispatch pass."));
 				else if (!queue.queueBlocker && queue.dialableNowCount > 0 && queue.availableAgentCount === 0) notes.push(label("dispatchNoAvailable", "Dialable work is waiting for an available agent."));
 				if (queue.staleAgentCount > 0) notes.push(format(label("dispatchStaleAgents", "{0} signed-in agents look available or busy only because of stale work. Free them from the agent list."), queue.staleAgentCount));
 				var loaded = loadedLines(queue);

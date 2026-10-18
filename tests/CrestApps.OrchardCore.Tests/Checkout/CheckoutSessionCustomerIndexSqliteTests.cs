@@ -65,6 +65,42 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
     }
 
     [Fact]
+    public async Task ListByReferenceAsync_ReturnsEveryAttemptForTheReference_OldestFirst()
+    {
+        // Arrange
+        var path = Path.Combine(Path.GetTempPath(), $"crestapps-checkout-reference-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(path, withCustomerIndex: false);
+
+        try
+        {
+            await SeedAsync(store,
+                Session("s2", referenceId: "o1", minutes: 2),
+                Session("s1", referenceId: "o1", minutes: 1),
+                Session("s3", referenceId: "o2", minutes: 3),
+                Session("s4", referenceId: "o1", minutes: 4));
+
+            await using var session = store.CreateSession();
+            var sessionStore = CreateSessionStore(session);
+
+            // Act
+            var all = await sessionStore.ListByReferenceAsync(CheckoutReferenceTypes.Order, "o1", 0, 10, TestContext.Current.CancellationToken);
+            var paged = await sessionStore.ListByReferenceAsync(CheckoutReferenceTypes.Order, "o1", 1, 1, TestContext.Current.CancellationToken);
+            var otherType = await sessionStore.ListByReferenceAsync("Transaction", "o1", 0, 10, TestContext.Current.CancellationToken);
+            var newest = await sessionStore.GetByReferenceAsync(CheckoutReferenceTypes.Order, "o1", cancellationToken: TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(new[] { "s1", "s2", "s4" }, all.Select(item => item.SessionId));
+            Assert.Equal(new[] { "s2" }, paged.Select(item => item.SessionId));
+            Assert.Empty(otherType);
+            Assert.Equal("s4", newest.SessionId);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, path);
+        }
+    }
+
+    [Fact]
     public async Task BackfillAsync_IndexesSessionsSavedBeforeTheIndexExisted()
     {
         // Arrange
@@ -108,11 +144,13 @@ public sealed class CheckoutSessionCustomerIndexSqliteTests
         }
     }
 
-    private static CheckoutSession Session(string sessionId, string ownerId = null, string email = null, int minutes = 0)
+    private static CheckoutSession Session(string sessionId, string ownerId = null, string email = null, int minutes = 0, string referenceId = null)
     {
         var session = new CheckoutSession
         {
             SessionId = sessionId,
+            ReferenceType = referenceId is null ? null : CheckoutReferenceTypes.Order,
+            ReferenceId = referenceId,
             OwnerId = ownerId,
             Status = CheckoutSessionStatus.Completed,
             CreatedUtc = _now.AddMinutes(minutes),

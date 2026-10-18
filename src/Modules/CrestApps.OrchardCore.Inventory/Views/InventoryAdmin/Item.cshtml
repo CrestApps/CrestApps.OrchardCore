@@ -1,4 +1,10 @@
 @model StockItemViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
 
 @{
     var item = Model.Item;
@@ -92,7 +98,7 @@
                     {
                         <li class="list-group-item d-flex justify-content-between">
                             <a asp-route="OrdersDetail" asp-route-orderId="@hold.OrderId">@T["Order"]</a>
-                            <span>@T.Plural(hold.Quantity, "1 unit", "{0} units") · @T["until {0:g}", hold.ExpiresUtc]</span>
+                            <span>@T.Plural(hold.Quantity, "1 unit", "{0} units") · @T["until {0:g}", await LocalAsync(hold.ExpiresUtc)]</span>
                         </li>
                     }
                 </ul>
@@ -128,7 +134,7 @@
                         @foreach (var movement in Model.Movements)
                         {
                             <tr>
-                                <td class="text-nowrap">@movement.Utc.ToString("g")</td>
+                                <td class="text-nowrap">@((await LocalAsync(movement.Utc)).ToString("g"))</td>
                                 <td>
                                     @switch (movement.Kind)
                                     {

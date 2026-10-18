@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Email;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
@@ -55,7 +57,10 @@ public sealed class OrderViewController : Controller
     }
 
     [HttpGet("orders/view/{token}", Name = OrderConstants.RouteNames.View)]
-    public async Task<IActionResult> Index(string token)
+    public async Task<IActionResult> Index(
+        string token,
+        [FromServices] IDisplayManager<Order> displayManager,
+        [FromServices] IUpdateModelAccessor updateModelAccessor)
     {
         var orderId = _orderLinks.GetOrderId(token);
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
@@ -69,6 +74,7 @@ public sealed class OrderViewController : Controller
         return View(new OrderViewViewModel
         {
             Order = order,
+            Sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail),
             PayUrl = await GetPayUrlAsync(order),
             RegisterUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
                 ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })

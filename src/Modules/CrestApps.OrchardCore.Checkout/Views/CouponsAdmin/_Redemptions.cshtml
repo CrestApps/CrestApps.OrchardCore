@@ -1,0 +1,75 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Payments
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+<h5 class="mt-4">@T["Recent uses"]</h5>
+
+@if (Model.Redemptions.Count == 0)
+{
+    <p class="text-muted">@T["Nobody has used this coupon yet."]</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["When"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col">@T["Customer"]</th>
+                    <th scope="col">@T["For"]</th>
+                    <th scope="col" class="text-end">@T["Discount"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var redemption in Model.Redemptions)
+                {
+                    Model.References.TryGetValue(redemption.ReferenceType + "|" + redemption.ReferenceId, out var reference);
+                    <tr>
+                        <td class="text-nowrap">@((await LocalAsync(redemption.RedeemedUtc ?? redemption.CreatedUtc)).ToString("g"))</td>
+                        <td>
+                            @switch (redemption.Status)
+                            {
+                                case CouponRedemptionStatus.Held:
+                                    <span class="badge text-bg-warning">@T["Held at checkout"]</span>
+                                    break;
+                                case CouponRedemptionStatus.Redeemed:
+                                    <span class="badge text-bg-success">@T["Used"]</span>
+                                    break;
+                                case CouponRedemptionStatus.Released:
+                                    <span class="badge text-bg-secondary">@T["Let go"]</span>
+                                    break;
+                                default:
+                                    <span class="badge text-bg-info">@T["Given back"]</span>
+                                    break;
+                            }
+                        </td>
+                        <td>@(redemption.CustomerEmail ?? redemption.CustomerId ?? T["Unknown"].Value)</td>
+                        <td>
+                            @if (reference is null)
+                            {
+                                @T["{0} {1}", redemption.ReferenceType, redemption.ReferenceId]
+                            }
+                            else if (string.IsNullOrEmpty(reference.Url))
+                            {
+                                @reference.Text
+                            }
+                            else
+                            {
+                                <a href="@reference.Url">@reference.Text</a>
+                            }
+                        </td>
+                        <td class="text-end">@redemption.Currency @CurrencyScale.Format(redemption.Amount, redemption.Currency)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -18,8 +18,9 @@
                 : T["Leave checkout"].Value;
 }
 
-<div class="d-flex justify-content-between align-items-center mt-4">
-    <div class="d-flex flex-wrap align-items-center gap-2">
+@* On a phone the main button spans the width, with the way back under it. *@
+<div class="d-flex flex-column-reverse flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mt-4 mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-sm-start gap-2">
         @if (previousStep is not null)
         {
             <a class="btn btn-link"
@@ -38,7 +39,7 @@
         }
     </div>
 
-    <button type="submit" class="btn btn-primary btn-lg" id="checkout-submit">
+    <button type="submit" class="btn btn-primary px-4" id="checkout-submit">
         <span class="checkout-submit-label">@(isPaymentStep ? T["Pay now"] : T["Continue"])</span>
         <span class="checkout-submit-busy d-none">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
