@@ -269,6 +269,8 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             Sku = line.Sku,
             TaxCategoryCode = line.TaxCategoryCode,
             TaxClassificationCode = line.TaxClassificationCode,
+            ProductId = line.ContentItemId,
+            CategoryIds = line.CategoryIds,
             TaxableKind = line.ProductType switch
             {
                 ProductType.Service => TaxableItemKind.Service,

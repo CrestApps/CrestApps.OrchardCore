@@ -200,6 +200,12 @@ public sealed class OrderLine
     public string TaxCategoryCode { get; set; }
 
     public string TaxClassificationCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the categories the product was in when it was ordered (taxonomy term ids), for discounts limited
+    /// to some categories.
+    /// </summary>
+    public string[] CategoryIds { get; set; } = [];
 }
 
 /// <summary>

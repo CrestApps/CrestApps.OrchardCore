@@ -95,7 +95,9 @@ public static class PaymentEndpoints
 
         if (!outcome.Succeeded)
         {
-            return Error(outcome.ErrorMessage, StatusCodes.Status400BadRequest);
+            return outcome.InvoiceChanged
+                ? TypedResults.Json(new CheckoutErrorResponse(outcome.ErrorMessage, outcome.ErrorMessage) { InvoiceChanged = true }, statusCode: StatusCodes.Status409Conflict)
+                : Error(outcome.ErrorMessage, StatusCodes.Status400BadRequest);
         }
 
         return TypedResults.Ok(new
@@ -252,7 +254,13 @@ public static class PaymentEndpoints
 
     // Both shapes are emitted because the checkout script reads 'errorMessage' while other clients (and the
     // subscription scripts this replaces) read 'error'.
-    private sealed record CheckoutErrorResponse(string Error, string ErrorMessage);
+    // 'invoiceChanged' tells the script the total changed, such as a promotion code that ran out, so it shows the
+    // page again with the new total and the message.
+    private sealed record CheckoutErrorResponse(string Error, string ErrorMessage)
+    {
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+        public bool InvoiceChanged { get; init; }
+    }
 
     /// <summary>
     /// The body of a begin-payment request.

@@ -1,17 +1,21 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Orders.BackgroundTasks;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Indexes;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Drivers;
+using CrestApps.OrchardCore.Orders.Endpoints;
 using CrestApps.OrchardCore.Orders.Handlers;
 using CrestApps.OrchardCore.Orders.Migrations;
 using CrestApps.OrchardCore.Orders.Navigation;
 using CrestApps.OrchardCore.Orders.Services;
 using Fluid;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -56,10 +60,18 @@ public sealed class Startup : StartupBase
         // Lets a role that holds only the manage orders permission open Settings > Commerce > Orders.
         services.AddSiteSettingsPermission(OrderConstants.SettingsGroupId, OrderPermissions.ManageOrders);
 
+        // A canceled order gives back its coupon uses, and coupons can be limited to some products and categories.
+        services.AddScoped<IOrderEventHandler, OrderCouponEventHandler>();
+        services.AddScoped<CouponItemLookup>();
+        services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
+
         services.Configure<TemplateOptions>(options =>
         {
             options.MemberAccessStrategy.Register<Order>();
             options.MemberAccessStrategy.Register<OrderLine>();
         });
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddCouponItemSearchEndpoints();
 }

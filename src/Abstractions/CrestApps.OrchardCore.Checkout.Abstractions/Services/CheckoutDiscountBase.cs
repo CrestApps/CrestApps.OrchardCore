@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Checkout.Services;
 
 /// <summary>
 /// What a discount can take off: for a one-time discount, what is bought now, but not shipping; for a first-cycle
-/// discount, the recurring charges collected now. Shipping is discounted only by a discount aimed at it.
+/// discount, the recurring charges collected now; for a shipping discount, the shipping charged now and nothing else.
 /// </summary>
 public static class CheckoutDiscountBase
 {
@@ -17,26 +17,40 @@ public static class CheckoutDiscountBase
     {
         ArgumentNullException.ThrowIfNull(line);
 
-        return target == DiscountTarget.FirstCycle
-            ? line.Plan is not null && CheckoutObligations.GetDeferralDays([line]) == 0
-            : line.Plan is null && line.TaxableKind != TaxableItemKind.Shipping;
+        return target switch
+        {
+            DiscountTarget.FirstCycle => line.Plan is not null && CheckoutObligations.GetDeferralDays([line]) == 0,
+            DiscountTarget.Shipping => line.Plan is null && line.TaxableKind == TaxableItemKind.Shipping,
+            _ => line.Plan is null && line.TaxableKind != TaxableItemKind.Shipping,
+        };
     }
 
     /// <summary>
     /// Gets the amount a discount aimed at <paramref name="target"/> applies to: the lines it can discount. An
-    /// invoice without lines (one built by hand) falls back to the whole bucket.
+    /// invoice without lines (one built by hand) falls back to the whole bucket, and has no shipping.
     /// </summary>
     public static decimal GetAmount(CheckoutInvoice invoice, DiscountTarget target)
+        => GetAmount(invoice, target, line => true);
+
+    /// <summary>
+    /// Gets the amount a discount aimed at <paramref name="target"/> applies to, counting only the lines that
+    /// <paramref name="predicate"/> accepts, such as the products a coupon is limited to.
+    /// </summary>
+    public static decimal GetAmount(CheckoutInvoice invoice, DiscountTarget target, Func<CheckoutLineItem, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(invoice);
+        ArgumentNullException.ThrowIfNull(predicate);
 
         if (invoice.LineItems is not { Length: > 0 } lines)
         {
-            return target == DiscountTarget.FirstCycle
-                ? invoice.FirstRecurringPaymentAmount ?? 0m
-                : invoice.InitialPaymentAmount ?? 0m;
+            return target switch
+            {
+                DiscountTarget.FirstCycle => invoice.FirstRecurringPaymentAmount ?? 0m,
+                DiscountTarget.Shipping => 0m,
+                _ => invoice.InitialPaymentAmount ?? 0m,
+            };
         }
 
-        return Money.Round(lines.Where(line => IsDiscountable(line, target)).Sum(line => line.GetLineTotal(invoice.Currency)), invoice.Currency);
+        return Money.Round(lines.Where(line => IsDiscountable(line, target) && predicate(line)).Sum(line => line.GetLineTotal(invoice.Currency)), invoice.Currency);
     }
 }

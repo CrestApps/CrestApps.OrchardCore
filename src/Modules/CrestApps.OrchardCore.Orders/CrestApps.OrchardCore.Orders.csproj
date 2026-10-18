@@ -27,6 +27,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
     <PackageReference Include="OrchardCore.Liquid.Abstractions" />
@@ -43,6 +44,7 @@
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Checkout.Abstractions\CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Transactions.Abstractions\CrestApps.OrchardCore.Transactions.Abstractions.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Carts.Core\CrestApps.OrchardCore.Carts.Core.csproj" />
+    <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Checkout.Core\CrestApps.OrchardCore.Checkout.Core.csproj" />
     <ProjectReference Include="..\..\Core\CrestApps.OrchardCore.Orders.Core\CrestApps.OrchardCore.Orders.Core.csproj" />
   </ItemGroup>
 

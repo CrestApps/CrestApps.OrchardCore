@@ -101,27 +101,29 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
     {
         var currency = invoice.Currency;
 
-        var oneTimeDiscount = Sum(invoice, DiscountTarget.OneTime);
-        var firstCycleDiscount = Sum(invoice, DiscountTarget.FirstCycle);
-
         // Clamping each bucket separately, rather than the grand total, is what keeps a large one-time
         // coupon from eating into a recurring charge the customer did agree to pay every month. Within a bucket a
-        // discount takes off only what it can discount: shipping, for one, stays whole.
-        var oneTimeApplied = ClampAndApply(invoice.InitialPaymentAmount, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.OneTime), oneTimeDiscount, currency, out var newInitial);
-        var firstCycleApplied = ClampAndApply(invoice.FirstRecurringPaymentAmount, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.FirstCycle), firstCycleDiscount, currency, out var newFirstCycle);
-
-        // Each line knows its share, so it is taxed on what the customer actually pays for it.
-        Allocate(invoice, DiscountTarget.OneTime, oneTimeApplied, currency);
-        Allocate(invoice, DiscountTarget.FirstCycle, firstCycleApplied, currency);
+        // discount takes off only what it can discount: shipping, for one, stays whole unless a discount is aimed at
+        // it, and both come out of the amount paid now.
+        var oneTimeApplied = ClampAndApply(invoice.InitialPaymentAmount, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.OneTime), Sum(invoice, DiscountTarget.OneTime), currency, out var newInitial);
+        var shippingApplied = ClampAndApply(newInitial, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.Shipping), Sum(invoice, DiscountTarget.Shipping), currency, out newInitial);
+        var firstCycleApplied = ClampAndApply(invoice.FirstRecurringPaymentAmount, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.FirstCycle), Sum(invoice, DiscountTarget.FirstCycle), currency, out var newFirstCycle);
 
         invoice.InitialPaymentAmount = newInitial;
         invoice.FirstRecurringPaymentAmount = newFirstCycle;
-        invoice.DueNow = Money.Round(Math.Max(0m, invoice.DueNow - oneTimeApplied - firstCycleApplied), currency);
+        invoice.DueNow = Money.Round(Math.Max(0m, invoice.DueNow - oneTimeApplied - shippingApplied - firstCycleApplied), currency);
 
         // What is recorded has to be what was actually taken off, or a receipt shows a discount larger than
         // the price it was applied to.
         Rewrite(invoice, DiscountTarget.OneTime, oneTimeApplied, currency);
+        Rewrite(invoice, DiscountTarget.Shipping, shippingApplied, currency);
         Rewrite(invoice, DiscountTarget.FirstCycle, firstCycleApplied, currency);
+
+        // Each line knows its share of every discount, so it is taxed on what the customer actually pays for it.
+        foreach (var discount in invoice.Discounts)
+        {
+            Allocate(invoice, discount, currency);
+        }
 
         for (var i = invoice.Discounts.Count - 1; i >= 0; i--)
         {
@@ -151,16 +153,19 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
         return applied;
     }
 
-    // Spreads what a bucket's discounts took off across the lines they can discount, in proportion to each line's
-    // total; the last line takes what rounding leaves, so the shares add up to the discount exactly.
-    private static void Allocate(CheckoutInvoice invoice, DiscountTarget target, decimal applied, string currency)
+    // Spreads what a discount took off across the lines it can discount, in proportion to each line's total; the
+    // last line takes what rounding leaves, so the shares add up to the discount exactly. A line another discount
+    // already took from has less room, and what it can't take goes to the lines that still have some.
+    private static void Allocate(CheckoutInvoice invoice, DiscountLine discount, string currency)
     {
-        if (applied <= 0m || invoice.LineItems is not { Length: > 0 } lines)
+        if (discount.Amount <= 0m || invoice.LineItems is not { Length: > 0 } lines)
         {
             return;
         }
 
-        var eligible = lines.Where(line => CheckoutDiscountBase.IsDiscountable(line, target) && line.GetLineTotal(currency) > 0m).ToArray();
+        var eligible = lines
+            .Where(line => CheckoutDiscountBase.IsDiscountable(line, discount.Target) && discount.IsLimitedTo(line) && line.GetLineTotal(currency) > 0m)
+            .ToArray();
         var total = eligible.Sum(line => line.GetLineTotal(currency));
 
         if (total <= 0m)
@@ -168,21 +173,37 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
             return;
         }
 
-        var remaining = applied;
+        var remaining = discount.Amount;
 
         for (var i = 0; i < eligible.Length; i++)
         {
             var lineTotal = eligible[i].GetLineTotal(currency);
             var share = i == eligible.Length - 1
                 ? remaining
-                : Money.Round(applied * (lineTotal / total), currency);
+                : Money.Round(discount.Amount * (lineTotal / total), currency);
 
-            share = Math.Max(0m, Math.Min(Math.Min(share, remaining), lineTotal));
+            share = Math.Max(0m, Math.Min(Math.Min(share, remaining), Room(eligible[i], currency)));
 
             eligible[i].DiscountAmount += share;
             remaining -= share;
         }
+
+        foreach (var line in eligible)
+        {
+            if (remaining <= 0m)
+            {
+                break;
+            }
+
+            var extra = Math.Min(remaining, Room(line, currency));
+
+            line.DiscountAmount += extra;
+            remaining -= extra;
+        }
     }
+
+    private static decimal Room(CheckoutLineItem line, string currency)
+        => Math.Max(0m, line.GetLineTotal(currency) - line.DiscountAmount);
 
     // Scales the recorded lines down proportionally when the bucket could not absorb the whole discount, so
     // the sum of what is shown equals what was taken off.

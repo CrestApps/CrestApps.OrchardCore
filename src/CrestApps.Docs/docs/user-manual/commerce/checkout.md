@@ -81,7 +81,9 @@ The **Promotion code** box sits under the order summary on the **Payment** step.
 
 The summary lists the discount as *Discount (CODE)*. It comes off the items, never shipping, and tax is worked out on the discounted prices.
 
-To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.*
+To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.* A buyer who has used a code as often as it allows one customer sees *You have already used that code as many times as it allows.* Trying many codes in a row shows *Too many codes were tried. Wait a few minutes, then try again.*
+
+If a code runs out or stops working while the buyer is paying, for example someone else took its last use, the payment does not go through. The page shows the order again without the code, with the new total, and says why, for example *The code LAST1 ran out before you paid, so it was taken off. Check your new total, then pay again.*
 
 When the buyer is paying an existing balance (a transaction, from **My Transactions** or a pay link), what the code takes off is taken off the balance: a 100% code pays it without a card, and a smaller code leaves the rest to pay. See [Coupons](coupons.md#coupons-on-a-payment-for-a-transaction).
 

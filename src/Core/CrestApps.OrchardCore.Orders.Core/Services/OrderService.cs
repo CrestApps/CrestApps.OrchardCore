@@ -91,6 +91,7 @@ public sealed class OrderService : IOrderService
                 ProductType = line.Product?.ProductType ?? default,
                 TaxCategoryCode = line.Product?.TaxCategoryCode,
                 TaxClassificationCode = line.Product?.TaxClassificationCode,
+                CategoryIds = ProductCategories.GetIds(line.ContentItem),
             }).ToList(),
         };
 
