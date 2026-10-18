@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Customers.Core;
 using CrestApps.OrchardCore.Customers.Core.Models;
 using CrestApps.OrchardCore.Customers.Core.Services;
@@ -36,6 +37,7 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
     private readonly CustomerAddressBook _addressBook;
     private readonly IAddressEditorService _addressEditor;
     private readonly IShapeFactory _shapeFactory;
+    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
     internal readonly IStringLocalizer S;
@@ -45,6 +47,7 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
         CustomerAddressBook addressBook,
         IAddressEditorService addressEditor,
         IShapeFactory shapeFactory,
+        CheckoutInvoiceBuilder invoiceBuilder,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IStringLocalizer<CustomerContactCheckoutFlowDisplayDriver> stringLocalizer)
     {
@@ -52,6 +55,7 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
         _addressBook = addressBook;
         _addressEditor = addressEditor;
         _shapeFactory = shapeFactory;
+        _invoiceBuilder = invoiceBuilder;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         S = stringLocalizer;
     }
@@ -155,6 +159,9 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
             Phone = phone,
             BillingAddress = billingAddress,
         });
+
+        // An order that doesn't ship is taxed where it is billed, so the invoice is priced again for this address.
+        await _invoiceBuilder.BuildAsync(flow);
 
         return BuildEditor(flow, posted: null);
     }

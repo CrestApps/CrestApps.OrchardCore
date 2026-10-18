@@ -44,6 +44,17 @@ public sealed class Customer : CatalogItem
     public string TaxId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the customer pays no tax, such as a reseller or a charity the store
+    /// holds a certificate for.
+    /// </summary>
+    public bool IsTaxExempt { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the customer is exempt, such as a resale certificate number, for the store's records.
+    /// </summary>
+    public string TaxExemptionReason { get; set; }
+
+    /// <summary>
     /// Gets or sets the email the store writes to. For a customer with an account, it is the account's email.
     /// </summary>
     public string Email { get; set; }
@@ -121,6 +132,7 @@ public sealed class Customer : CatalogItem
         LastName = null;
         CompanyName = null;
         TaxId = null;
+        TaxExemptionReason = null;
         Email = null;
         Phone = null;
         AcceptsMarketing = false;

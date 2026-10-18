@@ -1,0 +1,26 @@
+@model ShapeViewModel<ShippingZone>
+
+@{
+    var zone = Model.Value;
+}
+
+@if (zone.RestOfWorld)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Covers every address no other zone covers"]">
+        <i class="fa-solid fa-earth-americas text-secondary" aria-hidden="true"></i> @T["Rest of the world"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" title="@T["Countries the zone covers"]">
+        <i class="fa-solid fa-flag text-secondary" aria-hidden="true"></i>
+        @if (zone.Countries.Count <= 4) { @string.Join(", ", zone.Countries) } else { @T.Plural(zone.Countries.Count, "1 country", "{0} countries") }
+    </span>
+    @if (zone.Regions.Count > 0)
+    {
+        <span class="badge ta-badge fw-normal" title="@string.Join(", ", zone.Regions)">
+            <i class="fa-solid fa-map-location-dot text-secondary" aria-hidden="true"></i>
+            @T.Plural(zone.Regions.Count, "1 region", "{0} regions")
+        </span>
+    }
+}

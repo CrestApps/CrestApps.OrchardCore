@@ -56,7 +56,7 @@ else if (contentItem.ContentType == OmnichannelConstants.ContentTypes.PhoneNumbe
                 {
                     @* The dialer, automated calls and campaign loads all skip this number; the reason is what the
                        network or the lookup said. *@
-                    <span class="badge text-bg-danger" title="@(string.IsNullOrEmpty(notInService.Reason) ? T["This number is not dialed."].Value : T["This number is not dialed: {0}", notInService.Reason].Value)">@T["Not in service"]</span>
+                    <span class="badge text-bg-danger" title="@(string.IsNullOrEmpty(notInService.Reason) ? T["This number is not dialed."].Value : T.GetString("This number is not dialed: {0}", notInService.Reason).Value)">@T["Not in service"]</span>
                 }
                 @* The call and SMS buttons are added by the soft phone and messaging modules when they are enabled.
                    Only a mobile number gets the SMS button. *@

@@ -1,3 +1,4 @@
+using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Localization;
@@ -89,8 +90,20 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
         var inState = snapshot.Queues.Where(queue => queue.State == state).ToArray();
         var campaigns = Name(inState, S, campaignNames);
 
+        // The queue whose lock has been out of reach longest says how long the dialer has not paced.
+        var lockNotAcquiredSinceUtc = inState.Min(queue => queue.LockNotAcquiredSinceUtc) ?? snapshot.EvaluatedUtc;
+
         return state switch
         {
+            DialerPacingHealthState.LockNotAcquired => new DialerPacingBanner
+            {
+                State = state,
+                Level = "danger",
+                Message = S["Dialer not pacing: the pacing lock of {0} has not been acquired since {1} ({2} minutes ago), so every pacing cycle skips itself. Check the distributed lock.",
+                    campaigns,
+                    lockNotAcquiredSinceUtc.ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture),
+                    (int)(snapshot.EvaluatedUtc - lockNotAcquiredSinceUtc).TotalMinutes].Value,
+            },
             DialerPacingHealthState.Stalled => new DialerPacingBanner
             {
                 State = state,
@@ -123,11 +136,19 @@ public sealed class DialerPacingBannerService : IDialerPacingBannerService
                 Level = "success",
                 Message = S["Dialer active: placing calls ({0}).", campaigns].Value,
             },
+            // Records waiting in a paced queue are never "nothing to call": the cycles found none due yet, which is a
+            // different thing to tell a supervisor looking at a loaded campaign.
+            _ when inState.Length > 0 => new DialerPacingBanner
+            {
+                State = DialerPacingHealthState.NothingToCall,
+                Level = "secondary",
+                Message = S["Nothing due yet: records wait ({0}), but the latest pacing cycle found none it may dial now.", campaigns].Value,
+            },
             _ => new DialerPacingBanner
             {
                 State = DialerPacingHealthState.NothingToCall,
                 Level = "secondary",
-                Message = S["Nothing to call: no paced campaign has work due right now."].Value,
+                Message = S["Nothing to call: no paced campaign has work waiting."].Value,
             },
         };
     }

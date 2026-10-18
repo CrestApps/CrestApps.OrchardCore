@@ -35,6 +35,12 @@ public sealed class PaymentBeginOutcome
     public bool Declined { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the payment was refused because what the checkout costs changed,
+    /// such as a promotion code that ran out, so the buyer has to see the new total before paying.
+    /// </summary>
+    public bool InvoiceChanged { get; set; }
+
+    /// <summary>
     /// Gets the per-obligation steps the client must complete.
     /// </summary>
     public IList<PaymentBeginStep> Steps { get; init; } = [];

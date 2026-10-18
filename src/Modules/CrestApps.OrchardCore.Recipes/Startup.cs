@@ -1940,6 +1940,54 @@ public sealed class TimeZonesRecipeStartup : StartupBase
 }
 
 /// <summary>
+/// Registers recipe step schemas for the Customers feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Customers")]
+public sealed class CustomersRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, CustomersRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the Inventory feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Inventory")]
+public sealed class InventoryRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, StockRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the Stripe feature.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Stripe")]
+public sealed class StripeRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, StripeSettingsRecipeStep>();
+    }
+}
+
+/// <summary>
+/// Registers recipe step schemas for the CrestApps Users feature, whose user re-index step needs Orchard Core Users.
+/// </summary>
+[RequireFeatures("CrestApps.OrchardCore.Users", "OrchardCore.Users")]
+public sealed class CrestAppsUsersRecipeStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IRecipeStep, IndexUsersRecipeStep>();
+    }
+}
+
+/// <summary>
 /// Registers workflow activity schemas for the Contact Center workflows feature.
 /// </summary>
 [RequireFeatures("OrchardCore.Workflows", "CrestApps.OrchardCore.ContactCenter")]
