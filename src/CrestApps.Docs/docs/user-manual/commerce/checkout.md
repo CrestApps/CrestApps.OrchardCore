@@ -63,8 +63,8 @@ The **Order summary** card lists each item with its price. A recurring item show
 On the **Payment** step, the buyer:
 
 1. Optionally enters a promotion code (see below).
-2. Picks a **Payment method**. Each method is a large button: **Credit or debit card (Stripe)** (*Pay securely online and confirm immediately.*) and **Pay Later** (*Confirm now and pay later.*). Only methods that can pay for this purchase are shown. On a test or development site there may also be **Test payment**, which confirms the payment without taking any money; see [Try the checkout with test payments](payment-providers.md#try-the-checkout-with-test-payments).
-3. For card: enters the **Name on card** and the **Card details**, or taps an Apple Pay or Google Pay button when the device offers one.
+2. Picks a **Payment method**. Each method is a large button: **Credit or debit card (Stripe)** (*Pay securely online and confirm immediately.*), **Pay Later** (*Confirm now and pay later.*), **Bank transfer** and **Cash on delivery**, as you turned them on (see [Offline payments](payment-providers.md#offline-payments-pay-later-bank-transfer-and-cash-on-delivery)). Only methods that can pay for this purchase are shown: cash on delivery only for an order that is delivered. On a test or development site there may also be **Test payment**, which confirms the payment without taking any money; see [Try the checkout with test payments](payment-providers.md#try-the-checkout-with-test-payments).
+3. For card: picks one of their [saved cards](payment-providers.md#saved-cards), or enters the **Name on card** and the **Card details**, optionally ticking **Save this card for next time**, or taps an Apple Pay or Google Pay button when the device offers one.
 4. Clicks **Pay now**.
 
 If the card's bank asks the cardholder to approve the payment, the approval window opens on top of the page. When the payment is confirmed, the buyer lands on the confirmation page.
