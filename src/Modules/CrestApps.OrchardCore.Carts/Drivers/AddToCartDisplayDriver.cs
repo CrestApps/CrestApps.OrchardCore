@@ -151,6 +151,21 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                 : defaultPrice.AllowQuantity ? Math.Min(defaultPrice.MaximumQuantity ?? _options.MaxQuantity, _options.MaxQuantity) : 1;
             model.ReturnUrl = request is null ? null : request.PathBase + request.Path + request.QueryString;
 
+            // The product's quantity rules and volume discounts.
+            if (productPart is not null)
+            {
+                model.MaxQuantity = productPart.MaxQuantity is > 0 and var max ? Math.Min(model.MaxQuantity, max) : model.MaxQuantity;
+                model.MinQuantity = ProductVolumePricing.GetStartingQuantity(productPart);
+                model.QuantityStep = Math.Max(1, productPart.QuantityStep ?? 1);
+                model.PriceTiers = [.. (productPart.PriceTiers ?? []).Where(tier => tier.MinQuantity > 1 && tier.PercentOff > 0).OrderBy(tier => tier.MinQuantity)];
+
+                var user = _httpContextAccessor.HttpContext?.User;
+                model.RoleDiscount = (productPart.RoleDiscounts ?? [])
+                    .Where(entry => !string.IsNullOrEmpty(entry.Role) && entry.PercentOff > 0 && user?.IsInRole(entry.Role) == true)
+                    .OrderByDescending(entry => entry.PercentOff)
+                    .FirstOrDefault();
+            }
+
             // A buyer can't add more than is left.
             if (model.Availability is { CanBuy: true } && stock.GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, null)) is { AllowBackorder: false } counted)
             {

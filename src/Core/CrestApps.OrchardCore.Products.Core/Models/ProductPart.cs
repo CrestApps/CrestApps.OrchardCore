@@ -52,6 +52,31 @@ public sealed class ProductPart : ContentPart
     public DateTime? SaleEndsUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the fewest units a cart can hold of the product, or <see langword="null"/> for one.
+    /// </summary>
+    public int? MinQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the most units a cart can hold of the product, or <see langword="null"/> for the store's limit.
+    /// </summary>
+    public int? MaxQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pack size the product is sold in: the quantity has to be a multiple of it.
+    /// </summary>
+    public int? QuantityStep { get; set; }
+
+    /// <summary>
+    /// Gets or sets the volume discounts: from a quantity on, each unit costs a percentage less.
+    /// </summary>
+    public List<ProductPriceTier> PriceTiers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the discounts buyers in a role get, such as a wholesale price for the Wholesale role.
+    /// </summary>
+    public List<ProductRoleDiscount> RoleDiscounts { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether this product can be bought online. It is honored only when the content type's
     /// <see cref="ProductPartSettings.SalesMode"/> is <see cref="ProductSalesMode.PerItem"/>.
     /// </summary>

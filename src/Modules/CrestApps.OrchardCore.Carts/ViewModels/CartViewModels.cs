@@ -34,6 +34,26 @@ public class AddToCartViewModel
     public int MaxQuantity { get; set; }
 
     /// <summary>
+    /// Gets or sets the quantity the box starts at: the product's minimum, in packs.
+    /// </summary>
+    public int MinQuantity { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the pack size the quantity steps by.
+    /// </summary>
+    public int QuantityStep { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the product's volume discounts, smallest quantity first.
+    /// </summary>
+    public IList<CrestApps.OrchardCore.Products.Core.Models.ProductPriceTier> PriceTiers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the discount the signed-in buyer's role gets, when any.
+    /// </summary>
+    public CrestApps.OrchardCore.Products.Core.Models.ProductRoleDiscount RoleDiscount { get; set; }
+
+    /// <summary>
     /// Gets or sets where the visitor returns to after adding: the page they added from.
     /// </summary>
     public string ReturnUrl { get; set; }

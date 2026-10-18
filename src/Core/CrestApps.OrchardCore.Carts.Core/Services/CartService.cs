@@ -119,6 +119,11 @@ public sealed class CartService : ICartService
 
         var total = (existing?.Quantity ?? 0) + quantity;
 
+        if (QuantityProblem(resolved, total) is { } rule)
+        {
+            return CartResult.Failure(rule, cart);
+        }
+
         if (total > resolved.MaxQuantity)
         {
             return CartResult.Failure(resolved.LimitedByStock
@@ -163,7 +168,9 @@ public sealed class CartService : ICartService
         }
         else
         {
+            // The buyer just saw and accepted the price for the new quantity, such as a volume discount reached.
             existing.Quantity = total;
+            existing.AddedUnitPrice = resolved.Price.UnitPrice;
         }
 
         cart.Currency = resolved.Price.Currency;
@@ -205,7 +212,15 @@ public sealed class CartService : ICartService
                 : S["You can buy at most {0} of {1}.", resolved.MaxQuantity, resolved.Title], cart);
         }
 
+        if (QuantityProblem(resolved, quantity) is { } rule)
+        {
+            return CartResult.Failure(rule, cart);
+        }
+
         line.Quantity = quantity;
+
+        // A new quantity can reach or leave a volume discount: the price it gives is the one the buyer now expects.
+        line.AddedUnitPrice = resolved.Price?.UnitPrice ?? line.AddedUnitPrice;
 
         if (!await SaveAsync(cart, isNew: false, cancellationToken))
         {
@@ -341,6 +356,8 @@ public sealed class CartService : ICartService
                     : S["You can buy at most {0} of this product.", resolved.MaxQuantity];
             }
 
+            problem ??= QuantityProblem(resolved, line.Quantity);
+
             var unitPrice = resolved.Price?.UnitPrice ?? line.AddedUnitPrice;
 
             lines.Add(new CartLinePricing
@@ -415,6 +432,16 @@ public sealed class CartService : ICartService
             MaxQuantity = GetMaxQuantity(price),
         };
 
+        // The product's own limits: at most so many, at least so many, and in packs.
+        if (contentItem.TryGet<ProductPart>(out var productPart))
+        {
+            resolved = resolved with
+            {
+                ProductPart = productPart,
+                MaxQuantity = productPart.MaxQuantity is > 0 and var max ? Math.Min(resolved.MaxQuantity, max) : resolved.MaxQuantity,
+            };
+        }
+
         // A product whose stock is counted can't be bought beyond what's available, unless it takes backorders. The
         // units this cart's own unpaid orders hold count as available to it.
         var availability = (await _availability.GetAvailabilityAsync([new ProductStockKey(contentItem.ContentItemId, product.VariantId)], cartId, cancellationToken))
@@ -450,6 +477,14 @@ public sealed class CartService : ICartService
 
         return resolved;
     }
+
+    private LocalizedString QuantityProblem(ResolvedLine resolved, int quantity)
+        => ProductVolumePricing.Check(resolved.ProductPart, quantity) switch
+        {
+            ProductQuantityRule.BelowMinimum => S["Buy at least {0} of {1}.", resolved.ProductPart.MinQuantity, resolved.Title],
+            ProductQuantityRule.NotAMultiple => S["{0} is sold in packs of {1}. Choose a multiple of {1}.", resolved.Title, resolved.ProductPart.QuantityStep],
+            _ => null,
+        };
 
     private int GetMaxQuantity(PriceResult price)
     {
@@ -537,6 +572,11 @@ public sealed class CartService : ICartService
         public string Title { get; init; }
 
         public int MaxQuantity { get; init; } = 1;
+
+        /// <summary>
+        /// Gets the product's part, whose quantity rules the line follows.
+        /// </summary>
+        public ProductPart ProductPart { get; init; }
 
         /// <summary>
         /// Gets whether <see cref="MaxQuantity"/> is what's left in stock rather than what the price allows.

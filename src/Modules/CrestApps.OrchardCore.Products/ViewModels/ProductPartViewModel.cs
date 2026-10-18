@@ -22,6 +22,25 @@ public class ProductPartViewModel
     /// </summary>
     public DateTime? SaleEnds { get; set; }
 
+    public int? MinQuantity { get; set; }
+
+    public int? MaxQuantity { get; set; }
+
+    public int? QuantityStep { get; set; }
+
+    /// <summary>
+    /// Gets or sets the volume discount rows: the existing ones and empty ones to fill in.
+    /// </summary>
+    public List<ProductPriceTierViewModel> PriceTiers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the role discount rows: the existing ones and empty ones to fill in.
+    /// </summary>
+    public List<ProductRoleDiscountViewModel> RoleDiscounts { get; set; } = [];
+
+    [BindNever]
+    public IList<SelectListItem> Roles { get; set; } = [];
+
     public string Currency { get; set; }
 
     public string Sku { get; set; }
@@ -48,4 +67,18 @@ public class ProductPartViewModel
 
     [BindNever]
     public IEnumerable<SelectListItem> PriceDisplays { get; set; }
+}
+
+public class ProductPriceTierViewModel
+{
+    public int? MinQuantity { get; set; }
+
+    public decimal? PercentOff { get; set; }
+}
+
+public class ProductRoleDiscountViewModel
+{
+    public string Role { get; set; }
+
+    public decimal? PercentOff { get; set; }
 }

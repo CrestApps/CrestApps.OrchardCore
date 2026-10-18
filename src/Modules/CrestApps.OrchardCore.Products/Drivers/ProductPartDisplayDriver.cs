@@ -13,18 +13,24 @@ namespace CrestApps.OrchardCore.Products.Drivers;
 
 public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductPart>
 {
+    private const int TierRows = 4;
+    private const int RoleRows = 3;
+
     private readonly IProductCurrencyProvider _currencyProvider;
     private readonly ILocalClock _localClock;
+    private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
 
     public ProductPartDisplayDriver(
         IProductCurrencyProvider currencyProvider,
         ILocalClock localClock,
+        IServiceProvider serviceProvider,
         IStringLocalizer<ProductPartDisplayDriver> stringLocalizer)
     {
         _currencyProvider = currencyProvider;
         _localClock = localClock;
+        _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
 
@@ -39,6 +45,24 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             model.SalePrice = part.SalePrice;
             model.SaleStarts = await ToLocalAsync(part.SaleStartsUtc);
             model.SaleEnds = await ToLocalAsync(part.SaleEndsUtc);
+            model.MinQuantity = part.MinQuantity;
+            model.MaxQuantity = part.MaxQuantity;
+            model.QuantityStep = part.QuantityStep;
+            model.PriceTiers = [.. (part.PriceTiers ?? []).OrderBy(tier => tier.MinQuantity).Select(tier => new ProductPriceTierViewModel { MinQuantity = tier.MinQuantity, PercentOff = tier.PercentOff })];
+            model.RoleDiscounts = [.. (part.RoleDiscounts ?? []).Select(entry => new ProductRoleDiscountViewModel { Role = entry.Role, PercentOff = entry.PercentOff })];
+
+            // Empty rows to add more, up to the limit.
+            while (model.PriceTiers.Count < TierRows)
+            {
+                model.PriceTiers.Add(new ProductPriceTierViewModel());
+            }
+
+            while (model.RoleDiscounts.Count < RoleRows)
+            {
+                model.RoleDiscounts.Add(new ProductRoleDiscountViewModel());
+            }
+
+            model.Roles = await GetRolesAsync();
             model.Currency = string.IsNullOrEmpty(part.Currency)
                 ? settings.DefaultCurrency
                 : part.Currency;
@@ -59,6 +83,20 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
                 new SelectListItem(S["Hide the price"], nameof(ProductPriceDisplay.Hidden)),
             ];
         });
+    }
+
+    // The site's roles, but Anonymous: a role discount is for signed-in buyers.
+    private async Task<IList<SelectListItem>> GetRolesAsync()
+    {
+        if (_serviceProvider.GetService(typeof(global::OrchardCore.Security.Services.IRoleService)) is not global::OrchardCore.Security.Services.IRoleService roles)
+        {
+            return [];
+        }
+
+        return [.. (await roles.GetRolesAsync()).Select(role => role.RoleName)
+            .Where(name => !string.Equals(name, "Anonymous", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Select(name => new SelectListItem(name, name))];
     }
 
     // The editor takes the sale's dates in the site's time zone; the product keeps them in UTC.
@@ -121,6 +159,44 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
         part.SalePrice = model.SalePrice;
         part.SaleStartsUtc = model.SaleStarts is { } starts ? await ToUtcAsync(starts) : null;
         part.SaleEndsUtc = model.SaleEnds is { } ends ? await ToUtcAsync(ends) : null;
+
+        if (model.MinQuantity < 1 || model.MaxQuantity < 1 || model.QuantityStep < 1)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MinQuantity), S["Quantities have to be 1 or more."]);
+        }
+        else if (model.MinQuantity.HasValue && model.MaxQuantity.HasValue && model.MaxQuantity < model.MinQuantity)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxQuantity), S["The most a buyer can buy can't be less than the least."]);
+        }
+
+        part.MinQuantity = model.MinQuantity is > 1 ? model.MinQuantity : null;
+        part.MaxQuantity = model.MaxQuantity;
+        part.QuantityStep = model.QuantityStep is > 1 ? model.QuantityStep : null;
+
+        var tiers = (model.PriceTiers ?? []).Where(tier => tier.MinQuantity.HasValue || tier.PercentOff.HasValue).ToList();
+
+        if (tiers.Any(tier => tier.MinQuantity is not > 1 || tier.PercentOff is not (> 0 and <= 100)))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PriceTiers), S["Each volume discount needs a quantity of 2 or more and a percentage between 0 and 100."]);
+        }
+
+        part.PriceTiers = [.. tiers
+            .Where(tier => tier.MinQuantity > 1 && tier.PercentOff is > 0 and <= 100)
+            .GroupBy(tier => tier.MinQuantity.Value)
+            .Select(group => new ProductPriceTier { MinQuantity = group.Key, PercentOff = group.Max(tier => tier.PercentOff.Value) })
+            .OrderBy(tier => tier.MinQuantity)];
+
+        var roleDiscounts = (model.RoleDiscounts ?? []).Where(entry => !string.IsNullOrEmpty(entry.Role) || entry.PercentOff.HasValue).ToList();
+
+        if (roleDiscounts.Any(entry => string.IsNullOrEmpty(entry.Role) || entry.PercentOff is not (> 0 and <= 100)))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.RoleDiscounts), S["Each role discount needs a role and a percentage between 0 and 100."]);
+        }
+
+        part.RoleDiscounts = [.. roleDiscounts
+            .Where(entry => !string.IsNullOrEmpty(entry.Role) && entry.PercentOff is > 0 and <= 100)
+            .GroupBy(entry => entry.Role, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new ProductRoleDiscount { Role = group.Key, PercentOff = group.Max(entry => entry.PercentOff.Value) })];
 
         var normalizedCurrency = NormalizeCurrencyCode(model.Currency);
 
