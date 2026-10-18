@@ -36,11 +36,11 @@
                 <input type="text" name="username" value="@Model.Email" autocomplete="username" hidden />
                 <div class="col-sm">
                     <label for="order-account-password" class="form-label small">@T["Password"]</label>
-                    <input id="order-account-password" name="Password" type="password" class="form-control" autocomplete="new-password" required />
+                    <input id="order-account-password" name="Password" type="password" class="form-control" autocomplete="new-password" data-account-password required />
                 </div>
                 <div class="col-sm">
                     <label for="order-account-confirm" class="form-label small">@T["Confirm password"]</label>
-                    <input id="order-account-confirm" name="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" required />
+                    <input id="order-account-confirm" name="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-account-password required />
                 </div>
                 <div class="col-sm-auto">
                     <button type="submit" class="btn btn-primary w-100 px-4">@T["Create account"]</button>
