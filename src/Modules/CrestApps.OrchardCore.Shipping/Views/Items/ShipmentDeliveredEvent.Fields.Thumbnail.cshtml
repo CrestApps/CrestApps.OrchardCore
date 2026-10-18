@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Shipping.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ShipmentDeliveredEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-house-circle-check" aria-hidden="true"></i>
+    @T["Shipment Delivered"]
+</h4>
+<p>@T["Starts when a shipment is marked delivered."]</p>

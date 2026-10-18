@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using CrestApps.OrchardCore.Orders.Core;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Routing;
 using OrchardCore.Navigation;
 
@@ -84,7 +86,10 @@ public sealed class OrdersAdminController : Controller
     }
 
     [Admin("orders/{orderId}", "OrdersDetail")]
-    public async Task<IActionResult> Detail(string orderId)
+    public async Task<IActionResult> Detail(
+        string orderId,
+        [FromServices] IDisplayManager<Order> displayManager,
+        [FromServices] IUpdateModelAccessor updateModelAccessor)
     {
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
@@ -109,7 +114,12 @@ public sealed class OrdersAdminController : Controller
             }
         }
 
-        return View(new OrderDetailViewModel { Order = order, CanManage = canManage });
+        return View(new OrderDetailViewModel
+        {
+            Order = order,
+            CanManage = canManage,
+            Sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.DetailAdmin),
+        });
     }
 
     private async Task<OrdersIndexViewModel> BuildListAsync(OrdersIndexOptions options, PagerParameters pagerParameters, string userId)

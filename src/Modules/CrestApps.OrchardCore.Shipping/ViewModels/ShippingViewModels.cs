@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Addresses.Core.Editing;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -37,6 +38,65 @@ public class ShippingSettingsViewModel
     public WeightUnit WeightUnit { get; set; }
 
     public string ShippingClasses { get; set; }
+
+    public string Carriers { get; set; }
+
+    public bool SendShippedEmails { get; set; }
+}
+
+public class OrderShipmentsViewModel
+{
+    public Order Order { get; set; }
+
+    public IReadOnlyList<Shipment> Shipments { get; set; } = [];
+
+    public IReadOnlyList<ShipmentLineChoice> Remaining { get; set; } = [];
+
+    public bool CanFulfill { get; set; }
+
+    public IReadOnlyList<string> Carriers { get; set; } = [];
+}
+
+public class ShipmentLineChoice
+{
+    public string LineId { get; set; }
+
+    public string Title { get; set; }
+
+    public string Sku { get; set; }
+
+    public int Remaining { get; set; }
+}
+
+public class CreateShipmentViewModel
+{
+    public List<ShipmentLineQuantityViewModel> Lines { get; set; } = [];
+
+    public string Carrier { get; set; }
+
+    public string TrackingNumber { get; set; }
+
+    public string TrackingUrl { get; set; }
+
+    public string Note { get; set; }
+
+    public bool Ship { get; set; }
+}
+
+public class ShipmentLineQuantityViewModel
+{
+    public string LineId { get; set; }
+
+    public int Quantity { get; set; }
+}
+
+public class ShipShipmentViewModel
+{
+    public string Carrier { get; set; }
+
+    public string TrackingNumber { get; set; }
+
+    public string TrackingUrl { get; set; }
 }
 
 public class ShippingZoneViewModel

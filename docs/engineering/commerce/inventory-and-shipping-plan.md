@@ -222,6 +222,17 @@ Each slice is a PR with tests, opened when its tests pass.
 - Shipping depends on Orders now; the address book comes from Customers when it's on.
 - Not done: re-pricing a chosen rate at payment. The price is fixed when chosen.
 
+### SH3 Fulfillment
+
+- `Shipment` documents in a `Shipping` collection with `ShipmentIndex` (migration step 2, indexes through
+  `IndexTableIndexCreation`); `IShipmentService` and `ShippingOrderRateService` moved to Core so shipments tell goods
+  from the rest.
+- `Order.FulfillmentStatus`, set on every shipment change; returned shipments free their units.
+- Orders gained an extension point: the order is built with `IDisplayManager<Order>` in `DetailAdmin` and `Detail`
+  display types, which Shipping fills with the shipments card. No new order index.
+- `IShipmentEventHandler` drives the shipped email (once per shipment) and four workflow events. Carriers with
+  tracking templates live in the Shipping settings, with a new **Ship orders** (`FulfillOrders`) permission.
+
 ## Not in this phase
 
 Multiple locations in the admin (the schema allows them), preorders, live carrier rates and labels, returns (RMA)

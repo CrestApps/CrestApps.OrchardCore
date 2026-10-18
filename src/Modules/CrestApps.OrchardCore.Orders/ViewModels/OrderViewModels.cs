@@ -64,6 +64,11 @@ public class OrderDetailViewModel
     /// Gets or sets whether the viewer manages orders, rather than looking at one of their own.
     /// </summary>
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets what other modules add to the order's page, such as its shipments.
+    /// </summary>
+    public IShape Sections { get; set; }
 }
 
 public class OrderConfirmationViewModel
@@ -96,6 +101,11 @@ public class OrderSettingsViewModel
 public class OrderViewViewModel
 {
     public Order Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets what other modules add to the order's page, such as its shipments and their tracking links.
+    /// </summary>
+    public IShape Sections { get; set; }
 
     /// <summary>
     /// Gets or sets the link to pay what is still owed on the order, or <see langword="null"/>.

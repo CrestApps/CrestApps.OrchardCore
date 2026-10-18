@@ -86,6 +86,12 @@ public sealed class Order : CatalogItem
     /// </summary>
     public OrderShipping Shipping { get; set; }
 
+    /// <summary>
+    /// Gets or sets how much of the order has been shipped, or <see langword="null"/> when nothing in it ships or
+    /// nothing records shipments.
+    /// </summary>
+    public OrderFulfillmentStatus? FulfillmentStatus { get; set; }
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime ModifiedUtc { get; set; }
@@ -206,6 +212,18 @@ public sealed class OrderShipping
     public string Description { get; set; }
 
     public decimal Amount { get; set; }
+}
+
+public enum OrderFulfillmentStatus
+{
+    Unfulfilled = 0,
+
+    /// <summary>
+    /// Some of the goods have left, in one or more shipments.
+    /// </summary>
+    PartiallyFulfilled = 1,
+
+    Fulfilled = 2,
 }
 
 public enum OrderStatus

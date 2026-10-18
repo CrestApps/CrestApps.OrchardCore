@@ -44,6 +44,21 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 - **Orders.** `OrderCheckoutHandler.CompletingAsync` copies `CheckoutShippingInfo` to `Order.ShippingAddress` and `Order.Shipping` (`OrderShipping`: method, rate, zone, provider, name, description, amount). `Order.Anonymize` keeps only the country and region of both addresses. The admin order page, the guest order page and the confirmation email show both.
 - The price is the one shown when the buyer chose the method; editing a method later doesn't change checkouts already past the step.
 
+## Shipments
+
+- **`Shipment`** (YesSql, `Shipping` collection, `ShipmentIndex` on order, status and dates): `OrderId`, `OrderNumber`, `Number` (1, 2, … per order), `Lines` (`ShipmentLine`: order `LineId`, `Title`, `Sku`, `Quantity`), `Status` (`Pending`, `Shipped`, `Delivered`, `Returned`), `Carrier`, `TrackingNumber`, `TrackingUrl`, `Note`, and the created, shipped, delivered, returned and emailed times.
+- **`IShipmentService`** (Core), in the caller's unit of work:
+  - `GetRemainingAsync(order)`: units of each good not in a shipment, ignoring returned ones.
+  - `CreateAsync(order, lines, details, ship)`: only for a paid order, never more than is left; pending, or shipped at once.
+  - `ShipAsync`, `DeliverAsync` (shipped only), `ReturnAsync` (shipped or delivered; its units can be shipped again), `DeleteAsync` (pending only).
+  - Each change sets `Order.FulfillmentStatus` (`OrderFulfillmentStatus`: `Unfulfilled`, `PartiallyFulfilled`, `Fulfilled`, from the units in shipments that left; `null` for an order without goods).
+  - A tracking link must be `http` or `https`; an empty one is made from the carrier's template in `ShippingSettings.Carriers` (`{0}` is the escaped number).
+- **`IShipmentEventHandler`** (`CreatedAsync`, `ShippedAsync`, `DeliveredAsync`, `ReturnedAsync`, with `ShipmentEventHandlerBase`) runs in the same unit of work. Shipping registers:
+  - `ShippedEmailShipmentHandler`: the shipped email (`ShipmentEmailBuilder`), once per shipment (`ShippedEmailSentUtc`), when `SendShippedEmails` is on and an `IEmailService` is set up; a guest gets the order link from `IOrderLinkService`.
+  - `ShipmentWorkflowHandler` (with **Workflows**): `ShipmentCreatedEvent`, `ShipmentShippedEvent`, `ShipmentDeliveredEvent`, `ShipmentReturnedEvent`, with the `Order`, the `Shipment`, its number, carrier, tracking number and link and the buyer's email as input, correlated by the shipment id.
+- **Order pages.** Orders builds the order with `IDisplayManager<Order>` in the display types `OrderConstants.DisplayTypes.DetailAdmin` (the admin page, also My Orders) and `Detail` (the guest page), and renders the shapes in its pages. `OrderShipmentsDisplayDriver` adds `OrderShipments_DetailAdmin` (the shipments, a new-shipment form and the actions, for **Ship orders and update their shipments**) or `OrderShipments_Detail` (what left, with tracking links, for the buyer).
+- **Admin actions** (`ShipmentsAdminController`): `shipping/orders/{orderId}/shipments` (create), and `shipping/shipments/{id}/ship`, `/deliver`, `/return`, `/delete`, each back to the order.
+
 ## Admin
 
 - **Commerce > Shipping** (`shipping/zones`, `ShippingZonesController`) lists zones in the order they are tried. A zone's page edits it and lists its methods; **Add method** opens the method editor for a provider (`shipping/zones/{zoneId}/methods/create/{providerName}`).
@@ -55,6 +70,7 @@ The **Shipping** feature prices shipping. Zones say where; each zone's methods s
 | Permission | Allows |
 | --- | --- |
 | **Manage shipping zones, methods and settings** (`ManageShipping`) | Commerce > Shipping and Settings > Commerce > Shipping (registered for the `shipping` settings group). |
+| **Ship orders and update their shipments** (`FulfillOrders`) | The Shipments section of an order's page, and its actions. |
 
 Administrators have it by default.
 
@@ -81,6 +97,6 @@ The **ShippingZones** step creates or updates zones, found by `ItemId` or `Name`
 
 The **Shipping Zones** deployment step (*Commerce*) exports every zone with its methods.
 
-## Coming next
+## Not included
 
-Shipments: shipping an order in one or several parts, with tracking.
+Live carrier rates and labels (a carrier module adds an `IShippingRateProvider`), returns beyond marking a shipment returned, postal-code zones, dimensional weight, and pick lists.

@@ -27,6 +27,10 @@ A cart always shows today's prices. If a price changed since a product was added
 
 Guests do not need an account to use a cart. If a guest signs in, what they put in the cart is kept and joins anything already in their account's cart. A cart nobody changes is cleared after 30 days for guests and 90 days for signed-in users.
 
+## Shipped orders
+
+With the [Shipping](shipping.md) feature on, an order with goods shows where it ships, how, and its shipments: each with what's in it, the carrier and the tracking link. The orders list and the order page say whether an order is *Unfulfilled*, *Partially fulfilled* or *Fulfilled*. See [Ship an order](shipping.md#ship-an-order).
+
 ## Finding orders
 
 **Commerce > Orders** lists the orders placed on your site, newest first. Search by order number or by the customer's email, and filter by status:

@@ -17,6 +17,11 @@ public static class ShippingConstants
     /// </summary>
     public const string CheckoutStepKey = "Shipping";
 
+    /// <summary>
+    /// The YesSql collection shipments and their index live in.
+    /// </summary>
+    public const string CollectionName = "Shipping";
+
     public static class Features
     {
         public const string Shipping = "CrestApps.OrchardCore.Shipping";

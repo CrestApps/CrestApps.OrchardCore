@@ -26,7 +26,13 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>@T.Plural(order.ItemCount, "1 item", "{0} items")</span>
-                @await Html.PartialAsync("_OrderStatus", order.Status)
+                <span>
+                    @if (order.Status == OrderStatus.Paid)
+                    {
+                        @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
+                    }
+                    @await Html.PartialAsync("_OrderStatus", order.Status)
+                </span>
             </div>
             @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
             {
@@ -104,10 +110,16 @@
                 }
             </div>
         </div>
+
+        @* What other modules add to the order, such as its shipments. *@
+        @if (Model.Sections is not null)
+        {
+            @await DisplayAsync(Model.Sections)
+        }
     </div>
 
     <div class="col-lg-4">
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-body">
                 <dl class="mb-0">
                     <dt>@T["Order number"]</dt>

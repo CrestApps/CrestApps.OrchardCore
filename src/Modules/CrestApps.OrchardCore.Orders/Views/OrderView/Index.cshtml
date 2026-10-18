@@ -75,6 +75,12 @@
         </div>
     </div>
 
+    @* What other modules add to the order, such as its shipments and their tracking links. *@
+    @if (Model.Sections is not null)
+    {
+        @await DisplayAsync(Model.Sections)
+    }
+
     @if (shipsTo is { Count: > 0 })
     {
         <h2 class="h6">@T["Ships to"]</h2>

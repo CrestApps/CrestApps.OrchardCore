@@ -6,6 +6,7 @@
         <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
             <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["Paid"]
         </span>
+        @await Html.PartialAsync("_OrderFulfillment", Model.Value.FulfillmentStatus)
         break;
     case OrderStatus.AwaitingPayment:
         <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">

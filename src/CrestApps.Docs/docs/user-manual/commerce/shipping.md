@@ -11,7 +11,7 @@ technical_manual:
 | | |
 | --- | --- |
 | **Menu** | Commerce > Shipping; Settings > Commerce > Shipping |
-| **Permission** | **Manage shipping zones, methods and settings** |
+| **Permission** | **Manage shipping zones, methods and settings**; **Ship orders and update their shipments** to ship orders |
 | **Feature** | Shipping |
 
 <AskYourAdmin />
@@ -63,6 +63,8 @@ Under **Settings > Commerce > Shipping**:
 | --- | --- | --- |
 | **Weight unit** | Kilograms or pounds, for product weights and weight tables. Changing it doesn't convert weights already entered. | Kilograms |
 | **Shipping classes** | The classes products can be in, one per line, such as *Bulky* or *Fragile*. | None |
+| **Carriers** | One per line: the carrier's name, then a vertical bar and its tracking link with `{0}` where the number goes, such as `UPS \| https://www.ups.com/track?tracknum={0}`. Carriers are suggested when shipping, and fill in the tracking link. | None |
+| **Email the buyer when a shipment leaves** | Sends the shipped email. Needs an email service. | On |
 
 ## What buyers see at checkout
 
@@ -76,6 +78,22 @@ The method chosen becomes a line of the order, such as *Shipping: Standard*, and
 A buyer whose address no zone covers is told the store doesn't ship there. Orders of downloads and services have no Shipping step.
 
 The order page, the order link a guest gets and the confirmation email show where the order ships and the shipping method with what it cost.
+
+## Ship an order
+
+A paid order with goods gets a **Shipments** section on its page (**Commerce > Orders**, then the order). It lists what has been shipped, and what is left.
+
+1. Under **New shipment**, set how many of each item go in the parcel. All that's left is filled in; lower a number to ship in parts.
+2. Enter the **Carrier** and the **Tracking number**. A carrier listed under **Settings > Commerce > Shipping** fills in the tracking link itself; otherwise paste the **Tracking link**.
+3. Leave **It has left: mark it shipped now** ticked, and click **Create shipment**. Untick it to set the items aside while they're packed: the shipment shows as *Being packed*, and **Mark shipped** sends it later.
+
+The buyer gets an email that the shipment is on its way, with what's in it and the tracking link, and sees the shipment and its link on their order page: under **My Orders** for a customer, or on the order link a guest has.
+
+When the carrier says it arrived, click **Delivered**. If it comes back, click **Returned**: its items count as not shipped, so they can be sent again. A shipment still being packed can be **Removed**, which puts its items back.
+
+The order shows how far it has gone: *Unfulfilled*, *Partially fulfilled* (some items have left) or *Fulfilled*, on its page and in the orders list.
+
+With **Workflows** on, the **Shipment Created**, **Shipment Shipped**, **Shipment Delivered** and **Shipment Returned** events start workflows, for example to tell a warehouse or a carrier.
 
 ## Try your rates
 
