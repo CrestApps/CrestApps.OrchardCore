@@ -43,6 +43,8 @@ Find your symptom below and work through the checks in order. Most problems are 
 
 **A colleague says your extension "is not available right now".** Your soft phone is not open and signed in, so your extension cannot be reached. Open the phone app. To call an extension yourself, your own soft phone must be signed in too.
 
+**You accepted an offer, the call never connected, and your state is now *Away* with the reason *Phone unreachable*.** Your soft phone could not be reached when the call was sent to it, usually because its connection to the phone service dropped while the workspace stayed connected. The caller followed the queue's unanswered-offer action (offered to the next agent, or sent to voicemail) instead of being lost, and you were set Away so no other call is sent to the phone. Check that the soft phone is open, signed in and connected (reload it if needed), then set yourself **Available** again.
+
 **Nothing rings for anyone.** Ask your administrator. With Telnyx, every call event is rejected until the **Webhook public key** is set in [Phone and SMS setup](telephony-settings.md). IT can follow the provider steps in the [runbooks](../contact-center/runbooks.md) and the [Telnyx reference](../telephony/telnyx.md).
 
 ## My calls have no audio, or the audio is poor

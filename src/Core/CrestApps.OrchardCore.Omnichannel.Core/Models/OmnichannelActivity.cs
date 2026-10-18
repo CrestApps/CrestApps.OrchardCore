@@ -202,6 +202,13 @@ public sealed class OmnichannelActivity : CatalogItem
     public int Attempts { get; set; } = 1;
 
     /// <summary>
+    /// Gets or sets the most attempts the subject flow allows this contact's chain of activities, set when a "Try
+    /// again" action that names a maximum creates the activity. <see langword="null"/> leaves the limit to whatever
+    /// carries the work, such as the dialer profile's Max attempts.
+    /// </summary>
+    public int? MaxAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of times the automated-activities background processor has attempted to start this
     /// activity and failed. This is an internal technical retry counter used only to back off and eventually fail a
     /// permanently failing automated activity. It is deliberately separate from <see cref="Attempts"/>, which is a

@@ -17,48 +17,134 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
     public IContentTransferFileWriter CreateWriter(Stream stream, string sheetName)
         => new CsvFileWriter(stream);
 
+    /// <summary>
+    /// Reads the rows of a CSV file as they are needed. The rows used to be read into memory when the reader was
+    /// created, and every run of a long import read the whole file again, so a large file held hundreds of megabytes
+    /// for the length of the run. A seekable stream is read twice instead: once to count the rows, once to return them.
+    /// </summary>
     private sealed class CsvFileReader : IContentTransferFileReader
     {
-        private readonly StreamReader _reader;
+        private readonly Stream _stream;
+        private readonly long _startPosition;
         private readonly List<string> _columnNames;
-        private readonly List<string[]> _rows;
+
+        private StreamReader _reader;
+        private List<string[]> _bufferedRows;
+        private int? _rowCount;
 
         public CsvFileReader(Stream stream)
         {
-            _reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            ArgumentNullException.ThrowIfNull(stream);
+
+            _stream = stream;
+            _startPosition = stream.CanSeek ? stream.Position : 0;
+            _reader = CreateStreamReader(stream);
 
             var headerLine = ReadLogicalLine(_reader)
                 ?? throw new InvalidOperationException("The CSV file is empty.");
 
             _columnNames = ParseLine(headerLine);
-
-            // Read all rows into memory for GetRowCount() support.
-            _rows = [];
-            string line;
-
-            while ((line = ReadLogicalLine(_reader)) != null)
-            {
-                var values = ParseLine(line);
-                var row = new string[_columnNames.Count];
-
-                for (var i = 0; i < Math.Min(values.Count, row.Length); i++)
-                {
-                    row[i] = values[i];
-                }
-
-                _rows.Add(row);
-            }
         }
 
         public IReadOnlyList<string> GetColumnNames() => _columnNames;
 
-        public int GetRowCount() => _rows.Count;
+        public int GetRowCount()
+        {
+            if (_rowCount is { } rowCount)
+            {
+                return rowCount;
+            }
 
-        public IEnumerable<string[]> ReadRows() => _rows;
+            if (!_stream.CanSeek)
+            {
+                _rowCount = GetBufferedRows().Count;
+
+                return _rowCount.Value;
+            }
+
+            var count = 0;
+
+            using (var reader = OpenAfterHeader())
+            {
+                while (ReadLogicalLine(reader) != null)
+                {
+                    count++;
+                }
+            }
+
+            _rowCount = count;
+
+            return count;
+        }
+
+        public IEnumerable<string[]> ReadRows()
+        {
+            if (!_stream.CanSeek)
+            {
+                foreach (var bufferedRow in GetBufferedRows())
+                {
+                    yield return bufferedRow;
+                }
+
+                yield break;
+            }
+
+            using var reader = OpenAfterHeader();
+            string line;
+
+            while ((line = ReadLogicalLine(reader)) != null)
+            {
+                yield return ToRow(line);
+            }
+        }
 
         public void Dispose()
         {
-            _reader.Dispose();
+            _reader?.Dispose();
+            _reader = null;
+        }
+
+        private static StreamReader CreateStreamReader(Stream stream)
+            => new(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 64 * 1024, leaveOpen: true);
+
+        private StreamReader OpenAfterHeader()
+        {
+            _stream.Position = _startPosition;
+
+            var reader = CreateStreamReader(_stream);
+            ReadLogicalLine(reader);
+
+            return reader;
+        }
+
+        // A stream that cannot seek can be read only once, so its rows are kept in memory, as they always were.
+        private List<string[]> GetBufferedRows()
+        {
+            if (_bufferedRows is null)
+            {
+                _bufferedRows = [];
+                string line;
+
+                while ((line = ReadLogicalLine(_reader)) != null)
+                {
+                    _bufferedRows.Add(ToRow(line));
+                }
+            }
+
+            return _bufferedRows;
+        }
+
+        private string[] ToRow(string line)
+        {
+            var values = ParseLine(line);
+            var row = new string[_columnNames.Count];
+
+            for (var i = 0; i < Math.Min(values.Count, row.Length); i++)
+            {
+                row[i] = values[i];
+            }
+
+            return row;
         }
 
         /// <summary>
@@ -82,6 +168,9 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
             var buffer = new StringBuilder();
             buffer.Append(firstLine);
 
+            // The quotes are counted line by line; counting the whole buffer again after each line was quadratic.
+            var quotes = CountQuotes(firstLine);
+
             while (true)
             {
                 var nextLine = reader.ReadLine();
@@ -92,8 +181,9 @@ public sealed class CsvContentTransferFileFormatProvider : IContentTransferFileF
 
                 buffer.Append('\n');
                 buffer.Append(nextLine);
+                quotes += CountQuotes(nextLine);
 
-                if (CountQuotes(buffer.ToString()) % 2 == 0)
+                if (quotes % 2 == 0)
                 {
                     break;
                 }

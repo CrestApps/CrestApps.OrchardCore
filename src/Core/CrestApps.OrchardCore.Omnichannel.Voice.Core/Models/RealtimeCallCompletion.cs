@@ -42,6 +42,12 @@ public sealed class RealtimeCallCompletion
     public string EndCallReason { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the call was ended on a voicemail or answering machine after a message
+    /// was left on it, by the model or by the session on its behalf.
+    /// </summary>
+    public bool ReachedVoicemail { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the live session was lost with the caller still on the line, so
     /// somebody has to take the call over rather than leave it silent.
     /// </summary>

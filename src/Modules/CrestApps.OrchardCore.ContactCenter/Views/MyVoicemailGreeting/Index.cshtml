@@ -13,7 +13,11 @@
 
 <div class="card mb-3" data-vm-greeting>
     <div class="card-body">
-        @if (Model.HasAudioGreeting)
+        @if (Model.IsProviderCopyOnly)
+        {
+            <p class="alert alert-warning py-2">@T["Your greeting is stored only at the phone provider. Record or upload it again to protect it, so it keeps playing if the provider changes."]</p>
+        }
+        else if (Model.HasAudioGreeting)
         {
             <p class="alert alert-info py-2">@T["You currently have a greeting. Record or upload a new one to replace it, or remove it to fall back to the default."]</p>
         }

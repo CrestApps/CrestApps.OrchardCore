@@ -95,8 +95,22 @@ public sealed class DialerAbandonmentTracker : IDialerAbandonmentTracker
     {
         var answeredUtc = DialerCallMetadata.GetLiveAnsweredUtc(interaction);
 
-        if (answeredUtc is null || DialerCallMetadata.IsAbandoned(interaction) || connectedUtc - answeredUtc.Value <= DialerAbandonment.ConnectThreshold)
+        if (answeredUtc is null || DialerCallMetadata.IsAbandoned(interaction))
         {
+            return false;
+        }
+
+        if (connectedUtc - answeredUtc.Value <= DialerAbandonment.ConnectThreshold)
+        {
+            // Logged too, so the answer-to-agent time of every connected call can be read, not only of the late ones.
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Dialer call '{CallId}' was connected to an agent {Seconds:0.0} seconds after the answer, within the abandonment threshold.",
+                    interaction.ProviderInteractionId.SanitizeLogValue(),
+                    (connectedUtc - answeredUtc.Value).TotalSeconds);
+            }
+
             return false;
         }
 

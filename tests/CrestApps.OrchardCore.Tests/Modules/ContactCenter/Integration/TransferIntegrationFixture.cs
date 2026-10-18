@@ -319,7 +319,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             Harness.AgentManager,
             availability,
             queueManager.Object,
-            Mock.Of<IVoiceMediaItemManager>(),
+            Mock.Of<IVoiceMediaProvisioningService>(),
             consults,
             agentRelease,
             services.GetRequiredService<IAgentPresenceManager>(),

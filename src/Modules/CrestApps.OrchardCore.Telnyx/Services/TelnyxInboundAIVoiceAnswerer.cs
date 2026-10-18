@@ -32,11 +32,13 @@ public sealed class TelnyxInboundAIVoiceAnswerer : IInboundAIVoiceAnswerer
             return false;
         }
 
+        // The API client owns the base64 transport encoding, as it does for the calls the AI places.
         var clientState = new TelnyxOutboundBridgeState
         {
             Intent = TelnyxOutboundBridgeState.AiVoiceLegIntent,
             ActivityId = activityId,
-        }.ToClientState();
+            Inbound = true,
+        }.ToClientStateJson();
 
         var result = await _apiClient.AnswerAsync(providerCallId, clientState, cancellationToken);
 

@@ -160,14 +160,15 @@ public static class DialerCallMetadata
     /// <param name="interaction">The interaction of the call.</param>
     /// <param name="profile">The dialer profile placing the call.</param>
     /// <param name="attemptNumber">The attempt number of the call, counted from one.</param>
-    public static void StampDial(Interaction interaction, DialerProfile profile, int attemptNumber)
+    /// <param name="maxAttempts">The most attempts allowed for the record, or <see langword="null"/> for the profile's.</param>
+    public static void StampDial(Interaction interaction, DialerProfile profile, int attemptNumber, int? maxAttempts = null)
     {
         ArgumentNullException.ThrowIfNull(interaction);
         ArgumentNullException.ThrowIfNull(profile);
 
         interaction.TechnicalMetadata[DialerProfileIdKey] = profile.ItemId;
         interaction.TechnicalMetadata[AttemptNumberKey] = attemptNumber.ToString(CultureInfo.InvariantCulture);
-        interaction.TechnicalMetadata[MaxAttemptsKey] = profile.MaxAttempts.ToString(CultureInfo.InvariantCulture);
+        interaction.TechnicalMetadata[MaxAttemptsKey] = (maxAttempts ?? profile.MaxAttempts).ToString(CultureInfo.InvariantCulture);
     }
 
     /// <summary>
@@ -299,6 +300,58 @@ public static class DialerCallMetadata
     /// <param name="interaction">The interaction of the call.</param>
     public static bool IsAwaitingAgent(Interaction interaction)
         => IsCampaignDial(interaction) && !HasAgentJoined(interaction);
+
+    /// <summary>
+    /// Records that the provider was asked to tell a person from an answering machine when the call is answered, so the
+    /// agent is held until it says which.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static void MarkAnswerDetectionRequested(Interaction interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        interaction.TechnicalMetadata[ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested] = bool.TrueString;
+    }
+
+    /// <summary>
+    /// Whether the provider was asked to tell a person from an answering machine when the call is answered.
+    /// </summary>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static bool IsAnswerDetectionRequested(Interaction interaction)
+        => bool.TryParse(Read(interaction, ContactCenterConstants.TelephonyMetadata.AnswerDetectionRequested), out var requested) && requested;
+
+    /// <summary>
+    /// Where a campaign dial stands while its agent is held for it: the customer is ringing, the answer is being screened
+    /// for an answering machine, or a person answered and the agent is being joined. A call whose agent has joined, or
+    /// that is not a campaign dial, has no such phase.
+    /// </summary>
+    /// <remarks>
+    /// An ended call reports the phase it ended in, so a screen that reads it before the agent is released keeps showing
+    /// what the dialer was doing rather than a call the agent was never on.
+    /// </remarks>
+    /// <param name="interaction">The interaction of the call.</param>
+    public static DialAttemptPhase GetAttemptPhase(Interaction interaction)
+    {
+        if (!IsAwaitingAgent(interaction))
+        {
+            return DialAttemptPhase.None;
+        }
+
+        if (!interaction.AnsweredUtc.HasValue &&
+            interaction.Status is InteractionStatus.Created or InteractionStatus.Ringing or InteractionStatus.Ended or InteractionStatus.Failed)
+        {
+            return DialAttemptPhase.Dialing;
+        }
+
+        // A machine's answer is being hung up; until it is, the call is still the screening the agent was waiting on.
+        if (IsAnswerDetectionRequested(interaction) &&
+            (string.IsNullOrEmpty(Read(interaction, ContactCenterConstants.TelephonyMetadata.AnswerClassification)) || WasAnsweredByMachine(interaction)))
+        {
+            return DialAttemptPhase.Screening;
+        }
+
+        return DialAttemptPhase.Connecting;
+    }
 
     /// <summary>
     /// Records how the attempt ended.

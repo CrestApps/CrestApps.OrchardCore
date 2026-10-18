@@ -44,10 +44,10 @@ The CRM configuration a contact centre routes and reports on travels the same wa
 
 A step only appears when the feature that owns its entity is enabled, so a tenant that does not run the dialer is not offered a dialer profile step.
 
-A voice media clip travels as its library entry: its name, description, provider, format and the provider's media reference. The audio itself stays in the telephony provider's media storage and is not part of the plan. When the destination uses the same provider account, the imported clip plays as it did in the source. When it uses a different account, open the imported clip in the destination and upload its audio again; because the clip keeps its identifier, the queues, entry points and IVR prompts that reference it keep pointing at it and start playing the new audio as soon as it is uploaded. Until then an IVR menu falls back to its prompt text, as described in [Voice Routing](voice-routing.md#prompts).
+A voice media clip travels as its library entry: its name, description, format and content type, the reference of its master copy in the platform's media store (`MasterStorageReference`), and the copy each telephony provider holds (`ProviderReferences`, keyed by provider technical name). The older `ProviderName` and `MediaReference` pair is still carried and still imported; it is folded into `ProviderReferences` when the entry is read. The audio itself is not part of the plan. When the destination shares the source's media store, the imported clip is sent from its master copy to the destination's provider the first time it is played, or when **Re-sync media** is clicked. When it does not, open the imported clip in the destination and upload its audio again; because the clip keeps its identifier, the queues, entry points and IVR prompts that reference it keep pointing at it and start playing the new audio as soon as it is uploaded. Until then an IVR menu falls back to its prompt text, as described in [Voice Routing](voice-routing.md#prompts).
 
 :::caution
-Deleting a voice media clip also deletes its audio from the provider's media storage. When two environments share one provider account, deleting a clip in one environment removes the audio the other environment plays.
+Deleting a voice media clip also deletes its master copy and every provider copy. When two environments share one media store or one provider account, deleting a clip in one environment removes the audio the other environment plays.
 :::
 
 Shared voicemail messages do not travel: each is a message a caller left, not configuration.
@@ -140,9 +140,14 @@ The steps are plain recipe steps, so a tenant can also be scripted from scratch.
           "ItemId": "4xk6r3m7y0q8c2z5v9b1n3h6t",
           "Name": "Support hold music",
           "Description": "Played while callers wait in the support queue.",
+          "Format": "mp3",
+          "ContentType": "audio/mpeg",
+          "MasterStorageReference": "voice-media-5n2k8w3r1q7c4z9v6b0m2h8t",
+          "ProviderReferences": {
+            "Telnyx": "cc-voice-media-3f2a9c1e4b7d4e8f9a0b1c2d3e4f5a6b"
+          },
           "ProviderName": "Telnyx",
-          "MediaReference": "support-hold-music",
-          "Format": "mp3"
+          "MediaReference": "cc-voice-media-3f2a9c1e4b7d4e8f9a0b1c2d3e4f5a6b"
         }
       ]
     },

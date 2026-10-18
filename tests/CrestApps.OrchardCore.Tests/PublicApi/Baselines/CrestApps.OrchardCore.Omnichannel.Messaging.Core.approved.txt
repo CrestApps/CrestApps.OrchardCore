@@ -96,6 +96,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
         System.Collections.Generic.IReadOnlyList<string> GetContactAddresses(OrchardCore.ContentManagement.ContentItem contact);
         bool IsOptedOut(OrchardCore.ContentManagement.ContentItem contact);
         bool IsValidAddress(string address);
+        bool IsValidNewAddress(string address);
         string NormalizeAddress(string address);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> SearchContactIdsByAddressAsync(string term, System.Collections.Generic.IReadOnlyCollection<string> contactTypes, int take, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult> SendAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingOutboundMessage message, System.Threading.CancellationToken cancellationToken = default);
@@ -126,6 +127,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
     public sealed class MessagingChannelCapabilities
     {
         public MessagingChannelCapabilities() { }
+        public bool AddressesArePhoneNumbers { get; init; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingAttachmentCapabilities Attachments { get; init; }
         public int? MaxBodyLength { get; init; }
         public bool ObservesQuietHours { get; init; }

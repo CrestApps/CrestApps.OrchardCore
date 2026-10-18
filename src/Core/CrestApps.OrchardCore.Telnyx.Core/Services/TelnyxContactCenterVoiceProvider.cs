@@ -195,7 +195,12 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             // browser to answer, a second or more after the invite, and the caller's answer returns long before
             // that, so nothing depends on the order; doing them one after the other only added the answer's round
             // trip to the time the agent waited after clicking Answer.
-            var answerTask = _apiClient.AnswerAsync(callerCallControlId, cancellationToken: cancellationToken);
+            //
+            // An outbound call the customer picked up is already answered, and Telnyx refuses to answer a leg it placed
+            // (422 "Can not issue an answer command on an outbound call"), so nothing is asked of it.
+            var answerTask = request.CallerAnswered
+                ? null
+                : _apiClient.AnswerAsync(callerCallControlId, cancellationToken: cancellationToken);
 
             // Originate the agent leg to the agent's registered browser SIP endpoint. The browser auto-answers
             // the invite; when its call.answered webhook arrives, the outbound-bridge orchestration bridges it
@@ -236,9 +241,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 
             var originateTask = _apiClient.OriginateAsync(originate, cancellationToken);
 
-            var answerResult = await answerTask;
+            var answerResult = answerTask is null ? null : await answerTask;
 
-            if (!answerResult.Succeeded)
+            if (answerResult is { Succeeded: false })
             {
                 _logger.LogWarning(
                     "Telnyx returned {StatusCode} answering the caller leg before an agent bridge (it may already be answered).",

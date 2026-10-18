@@ -55,6 +55,11 @@ public class BulkManageActivityFilterViewModel
     public string CampaignId { get; set; }
 
     /// <summary>
+    /// Gets or sets the dialer profile identifier filter.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the assigned to user IDs filter.
     /// </summary>
     public string[] AssignedToUserIds { get; set; } = [];
@@ -182,6 +187,12 @@ public class BulkManageActivityFilterViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Campaigns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the available dialer profiles. Empty when no dialer is available, which hides the filter.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> DialerProfiles { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the available urgency levels.

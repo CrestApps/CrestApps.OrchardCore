@@ -667,6 +667,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IAICompletionService>(),
                 Mock.Of<IOmnichannelHandoffTurn>(),
                 Mock.Of<IVoiceCallEndTurn>(),
+                Mock.Of<IAnsweringMachineSignals>(),
                 Mock.Of<IRealtimeCallCompletionRunner>(),
                 [],
                 [],

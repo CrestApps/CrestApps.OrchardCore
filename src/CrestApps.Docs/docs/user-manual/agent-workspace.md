@@ -72,7 +72,7 @@ Open **Interaction Center > My workspace**. Keep it open, with the soft phone, f
 | **Live dashboard** | A shortcut, shown to supervisors only. |
 | **Queue chips** | The queues you are signed in to, with how many items are waiting in each, so you can see where the pressure is. Sign in and out from the soft phone Work tab. |
 | **Offer card** | A new offer, with the caller, the queue and a countdown (*Respond in 25s*). Click **Accept** or **Decline**. See [Answer or decline an offer](#answer-or-decline-an-offer). |
-| **Active interaction** | The interaction you are working: customer, direction, queue, number, status and talk time, with **Open customer record**, **Complete activity**, and the recording controls below. It says *No active interactions right now* until you accept something. It fills in while the call is live: an inbound call once you accept it, and an outbound dialer call (preview, power or progressive) as soon as it is dialed. The status follows the call (*Ringing*, *Connected*, *Held*). When the call ends it shows *Ended* for as long as you are in wrap-up, and clears once you complete the activity. A dial nobody answered clears straight away. The docked agent bar shows the same call. |
+| **Active interaction** | The interaction you are working: customer, direction, queue, number, status and talk time, with **Open customer record**, **Complete activity**, and the recording controls below. It says *No active interactions right now* until you accept something. It fills in while the call is live: an inbound call once you accept it, and a preview call as soon as it is dialed. A power or progressive call shows *Dialing…*, *Screening…* or *Connecting…* with the customer's name until you are connected (see [Calls from a dialer campaign](#calls-from-a-dialer-campaign)). The status follows the call (*Ringing*, *Connected*, *Held*). When the call ends it shows *Ended* for as long as you are in wrap-up, and clears once you complete the activity. A dial nobody answered clears straight away. The docked agent bar shows the same call. |
 | **Recent activity** | Your latest interactions. See [Review your recent activity](#review-your-recent-activity). |
 
 When you accept a preview or dialer offer that is set to open the activity automatically, the workspace goes straight to the activity's **Complete** page.
@@ -87,6 +87,8 @@ When routing picks you for a call, an offer card appears in **My workspace** and
 2. Or click **Decline**. The caller goes back to the queue and is offered to another agent first. The call comes back to you only when nobody else can take it.
 
 If you do nothing, the offer ends with the countdown and the queue's **Unanswered offer action** applies: the call is offered to the next agent (the default), sent to voicemail, or ended. See [Queues](queues.md). A call to your personal line that you decline or do not answer goes to your voicemail when the line is set to send unanswered calls to voicemail.
+
+If you accept but your soft phone cannot be reached (for example, its connection to the phone service dropped while the workspace stayed connected), the caller is not lost: the queue's **Unanswered offer action** applies as if nobody had answered, and your state changes to **Away** with the reason *Phone unreachable* so no other call is sent to the phone. Check your soft phone, then set yourself **Available** again.
 
 :::tip
 If you refresh the page while an offer is ringing, the offer comes back, so you can still answer it.
@@ -106,6 +108,17 @@ When you are signed in to a campaign, the outbound dialer gives you calls in one
 **Power and progressive**
 
 You do not press anything. Stay signed in to the campaign and **Available**. The dialer places the call, reserves you for it, and the activity's **Complete activity** page opens as the call connects. Handle the call like an inbound call, then complete the activity to become **Available** for the next one.
+
+While the dialer works on the call, your status on the docked agent bar and in **My workspace** says what it is doing. You are not on the call until it says *On a call*.
+
+| Status | What is happening | What you do |
+| --- | --- | --- |
+| **Dialing…** | The customer's phone is ringing. The bar shows their name or number. | Wait. |
+| **Screening…** | The customer answered, and the system is checking whether a person or an answering machine picked up. It shows only when the dialer profile screens for answering machines. | Wait. Do not hang up or call the customer. |
+| **Connecting…** | A person answered and your phone is being joined to the call. | Get ready to talk. |
+| **On a call** | You are connected to the customer. | Talk to the customer. |
+
+If nobody answers, the line is busy, or a machine answers, the dialer hangs up and records the outcome itself. You go straight back to **Available**, with nothing to complete.
 
 ## Protect card details on a recorded call
 
@@ -130,7 +143,7 @@ The bar sits as a small tab at the bottom of every admin page while you are sign
 | --- | --- | --- |
 | **Incoming call** | **Accept** / **Decline** | The bar beeps once. When you accept, the activity's **Complete activity** page opens. |
 | **Preview** (*Preview — review then dial*) | **Dial** / **Skip** | The activity opens so you can read it first, unless the page you are on has unsaved changes. **Dial** places the call. |
-| **Power or progressive call** | none | The system has already dialed; the activity opens as the call connects. |
+| **Power or progressive call** | none | The system dials for you. The bar shows *Dialing…*, then *Screening…* or *Connecting…*, and the activity opens once you are connected. |
 
 During the call the bar shows the direction, contact, number, queue, status and a talk timer, plus **Open activity** or **Complete activity** and **Open customer record**. The headset icon opens **My workspace**. Your presence shows on the bar but is changed from the soft phone. The bar has no disposition controls; you pick the disposition on the activity's **Complete activity** page.
 

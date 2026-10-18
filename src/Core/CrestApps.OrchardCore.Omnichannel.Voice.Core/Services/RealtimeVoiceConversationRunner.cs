@@ -316,6 +316,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _providerHeardCallerTicks, 0);
         Interlocked.Exchange(ref _callerTurnOpenSinceTicks, 0);
         Interlocked.Exchange(ref _responseInFlight, 0);
+        Interlocked.Exchange(ref _machineAnswered, 0);
+        Interlocked.Exchange(ref _machineHeardTicks, 0);
+        Interlocked.Exchange(ref _voicemailMessageRequested, 0);
+        Interlocked.Exchange(ref _voicemailMessageStarted, 0);
+        Interlocked.Exchange(ref _voicemailMessageDone, 0);
+        Volatile.Write(ref _openingLine, null);
 
         // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
         // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was
@@ -354,6 +360,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // answered, the line carried it, and the provider never reported hearing it.
         var unheard = AskAgainWhenAReplyGoesUnheardAsync(live, context, callScope.Token);
 
+        // The provider saying a machine answered. A recording sounds exactly like a person picking up, and the model
+        // talks to it as to one: live, the message a customer's voicemail kept was the end of the opening line. From
+        // that report on the call stops being a conversation and a message is left instead: see the Voicemail partial.
+        var voicemail = LeaveAMessageWhenAMachineAnswersAsync(media, live, context, callScope.Token);
+
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
         // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
         var ambience = context.UseCallAmbience
@@ -385,7 +396,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             LogVoiceLevel(context);
 
             // All of them are awaited so none is left writing to a disposed session.
-            await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle), Settle(unheard));
+            await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle), Settle(unheard), Settle(voicemail));
             await media.StopAsync(CancellationToken.None);
         }
 
@@ -462,8 +473,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             {
                 await Task.Delay(IdlePollInterval, callToken);
 
-                // The call is closing, and the silence at the end of it is deliberate.
-                if (context.EndCallRequested.IsCancellationRequested || context.HandoffRequested.IsCancellationRequested)
+                // The call is closing, and the silence at the end of it is deliberate. On a machine, the silence is
+                // the recording waiting for its message, and there is nobody to ask.
+                if (context.EndCallRequested.IsCancellationRequested || context.HandoffRequested.IsCancellationRequested || OnAMachine())
                 {
                     return;
                 }
@@ -637,11 +649,25 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             var now = DateTime.UtcNow.Ticks;
             var lastAssistantTicks = Interlocked.Read(ref _lastAssistantAudioTicks);
 
+            // Whether the call is being ended on a recording: the model said so as it ended it, or the provider said
+            // a machine answered.
+            var onVoicemail = reachedVoicemail?.Invoke() == true || OnAMachine();
+
             // The caller spoke after the model decided it was done. They get the call back: the assistant is
-            // already answering them, and hanging up mid-answer would be worse than never having closed at all.
-            if (Interlocked.Read(ref _lastCallerSpeechTicks) > requestedAtTicks)
+            // already answering them, and hanging up mid-answer would be worse than never having closed at all. A
+            // recording cannot take the call back: its tone, and whatever plays after the message, is not somebody
+            // speaking.
+            if (!onVoicemail && Interlocked.Read(ref _lastCallerSpeechTicks) > requestedAtTicks)
             {
                 return false;
+            }
+
+            // The message owed to a machine is still to be left: the model ended the call on one that was kept off
+            // the line with its other replies to the greeting. Bounded, so a message that never comes does not hold
+            // the recording open.
+            if (VoicemailMessageOwed() && now - requestedAtTicks < VoicemailMessageLimit.Ticks)
+            {
+                continue;
             }
 
             // A goodbye the assistant pump has already marked as said counts as started: anything the model says
@@ -667,7 +693,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             // Measured from the end of the assistant's playback rather than from the tool call, so a long closing
             // line does not eat the window the caller was supposed to get. A voicemail has no caller to give it
             // to, so there the call ends as soon as the message has reached the far end.
-            var afterGoodbye = reachedVoicemail?.Invoke() == true ? VoicemailTailGrace : ClosingListeningGrace;
+            var afterGoodbye = onVoicemail ? VoicemailTailGrace : ClosingListeningGrace;
 
             // From the goodbye's last word rather than the silence it is padded with, when that word was still to be
             // heard after the request: the padding is about a second, and counted as speech it was heard as the call

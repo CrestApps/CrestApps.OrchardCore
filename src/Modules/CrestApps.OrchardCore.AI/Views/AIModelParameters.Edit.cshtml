@@ -11,6 +11,18 @@
     var bindingRoot = string.Join('.', new[] { htmlFieldPrefix, Model.BindingPrefix }
         .Where(part => !string.IsNullOrEmpty(part)));
 
+    // The AI profile and profile template editors render admin editor rows so each parameter lines up with the
+    // deployment picker above it. The chat interaction settings panel stacks each label above its input.
+    var wrapperClass = Model.UseStackedLayout
+        ? "mb-3 d-none"
+        : "ocat-wrapper d-none";
+    var labelClass = Model.UseStackedLayout
+        ? "form-label"
+        : "ocat-label";
+    var inputColumnClass = Model.UseStackedLayout
+        ? null
+        : "ocat-end";
+
     <div class="model-parameters" id="@(Model.ElementPrefix)-container"
          data-deployment-field="@Model.DeploymentFieldName"
          data-capabilities="@Model.CapabilitiesJson">
@@ -25,41 +37,50 @@
             var settingKey = string.IsNullOrEmpty(Model.SettingKeyPrefix) ? null : $"{Model.SettingKeyPrefix}:{parameter.Name}";
             var selectClass = settingKey is null ? "form-select" : "form-select setting-input";
             var inputClass = settingKey is null ? "form-control" : "form-control setting-input";
-            <div class="mb-3 d-none" data-model-parameter="@parameter.Name" id="@(fieldId)-wrapper">
-                <label class="form-label" for="@fieldId">@parameter.DisplayName</label>
-                @switch (parameter.Kind)
-                {
-                    case AIDeploymentParameterKind.Choice:
-                        <select class="@selectClass" id="@fieldId" name="@fieldName" data-setting="@settingKey" disabled>
-                            <option value="" data-default-option>@T["Use deployment default"]</option>
-                            @foreach (var option in parameter.AllowedValues)
-                            {
-                                <option value="@option.Value" selected="@(string.Equals(option.Value, parameter.Value, StringComparison.OrdinalIgnoreCase))">@option.DisplayName</option>
-                            }
-                        </select>
-                        break;
-                    case AIDeploymentParameterKind.Boolean:
-                        <select class="@selectClass" id="@fieldId" name="@fieldName" data-setting="@settingKey" disabled>
-                            <option value="" data-default-option>@T["Use deployment default"]</option>
-                            <option value="true" selected="@(string.Equals(parameter.Value, "true", StringComparison.OrdinalIgnoreCase))">@T["Enabled"]</option>
-                            <option value="false" selected="@(string.Equals(parameter.Value, "false", StringComparison.OrdinalIgnoreCase))">@T["Disabled"]</option>
-                        </select>
-                        break;
-                    case AIDeploymentParameterKind.Number:
-                    case AIDeploymentParameterKind.Integer:
-                        <input type="number" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
-                               value="@parameter.Value" placeholder="@T["Use deployment default"]"
-                               step="@(parameter.Kind == AIDeploymentParameterKind.Integer ? "1" : "any")" disabled />
-                        break;
-                    default:
-                        <input type="text" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
-                               value="@parameter.Value" placeholder="@T["Use deployment default"]" disabled />
-                        break;
-                }
-                @if (!string.IsNullOrWhiteSpace(parameter.Description))
-                {
-                    <div class="form-text">@parameter.Description</div>
-                }
+            <div class="@wrapperClass" data-model-parameter="@parameter.Name" id="@(fieldId)-wrapper">
+                <label class="@labelClass" for="@fieldId">@parameter.DisplayName</label>
+                <div class="@inputColumnClass">
+                    @switch (parameter.Kind)
+                    {
+                        case AIDeploymentParameterKind.Choice:
+                            <select class="@selectClass" id="@fieldId" name="@fieldName" data-setting="@settingKey" disabled>
+                                <option value="" data-default-option>@T["Use deployment default"]</option>
+                                @foreach (var option in parameter.AllowedValues)
+                                {
+                                    <option value="@option.Value" selected="@(string.Equals(option.Value, parameter.Value, StringComparison.OrdinalIgnoreCase))">@option.DisplayName</option>
+                                }
+                            </select>
+                            break;
+                        case AIDeploymentParameterKind.Boolean:
+                            <select class="@selectClass" id="@fieldId" name="@fieldName" data-setting="@settingKey" disabled>
+                                <option value="" data-default-option>@T["Use deployment default"]</option>
+                                <option value="true" selected="@(string.Equals(parameter.Value, "true", StringComparison.OrdinalIgnoreCase))">@T["Enabled"]</option>
+                                <option value="false" selected="@(string.Equals(parameter.Value, "false", StringComparison.OrdinalIgnoreCase))">@T["Disabled"]</option>
+                            </select>
+                            break;
+                        case AIDeploymentParameterKind.Number:
+                        case AIDeploymentParameterKind.Integer:
+                            <input type="number" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
+                                   value="@parameter.Value" placeholder="@T["Use deployment default"]"
+                                   step="@(parameter.Kind == AIDeploymentParameterKind.Integer ? "1" : "any")" disabled />
+                            break;
+                        default:
+                            <input type="text" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
+                                   value="@parameter.Value" placeholder="@T["Use deployment default"]" disabled />
+                            break;
+                    }
+                    @if (!string.IsNullOrWhiteSpace(parameter.Description))
+                    {
+                        if (Model.UseStackedLayout)
+                        {
+                            <div class="form-text">@parameter.Description</div>
+                        }
+                        else
+                        {
+                            <span class="hint">@parameter.Description</span>
+                        }
+                    }
+                </div>
             </div>
         }
     </div>

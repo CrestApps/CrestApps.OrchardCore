@@ -48,7 +48,7 @@ When it is done:
 10. **Agents dial.** Agents sign in to the campaign from the soft phone's **Work** tab and set themselves **Available**. With preview, each record is offered with **Dial** and **Skip**; with power or progressive, the call is placed for them and the record opens as it rings. See [Agent workspace](../agent-workspace.md) and [Placing and handling calls](../calls.md).
 11. **Agents record the outcome.** After the call, the agent completes the activity with a disposition and notes, which ends wrap-up and runs the subject flow. See [Activities](../activities.md).
 12. **Watch and adjust.** Supervisors filter the live dashboard by the campaign. Managers reassign, reschedule or move work to another dialer profile in bulk, and review dead numbers. See [Live dashboard](../live-dashboard.md), [Managing activities in bulk](../bulk-activities.md) and [Numbers not in service](../numbers-not-in-service.md).
-13. **Measure.** Use **Campaign summary**, **Subject inventory**, **Disposition breakdown** and **Agent productivity**. See [Reports](../reports.md).
+13. **Measure.** Use **Campaign summary**, **Subject inventory**, **Disposition breakdown** and **Agent productivity**, and **Dialer call detail** for the numbers behind the counts: every number that ended as *No answer*, for example. See [Reports](../reports.md).
 
 ## Check that it works
 
@@ -61,7 +61,7 @@ When it is done:
 ## Tips
 
 - **Start with Preview.** It is the easiest to train, and agents see the record before every call. Move to Power or Progressive once agents are comfortable.
-- The dialer does not disposition a call that rang out, was busy or reached a machine: it dials the record again after the retry delay, up to **Max attempts**.
+- A call that rang out, was busy or reached a machine is dispositioned by the system with that outcome. If the subject flow has a disposition for it, the flow decides whether to call again, through **Try Again** and its **Maximum attempts**. If it has none, the dialer calls the record again after the retry delay, up to the profile's **Max attempts**.
 - Tick **Prevent duplicate activity with the same subject** on the load so contacts who already have an open activity are not loaded twice.
 - A call outside the calling window is not dropped; it is tried again in a later cycle.
 - To text the customers you could not reach, use a workflow on the **Dialer attempt completed** event. See [Contact Center workflows](../workflows.md).

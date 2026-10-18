@@ -233,6 +233,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string ContactContentType { get; set; }
         public string CreatedById { get; set; }
         public System.DateTime CreatedUtc { get; set; }
+        public string DialerProfileId { get; set; }
         public string DispositionId { get; set; }
         public long DocumentId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
@@ -329,12 +330,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         InProgress = 4,
         Released = 5,
     }
+    public readonly struct ActivityAttemptRange : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAttemptRange>
+    {
+        public ActivityAttemptRange(int? Minimum, int? Maximum) { }
+        public int? Maximum { get; init; }
+        public int? Minimum { get; init; }
+        public override string ToString() { }
+        public static bool TryParse(string value, out CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAttemptRange range) { }
+    }
     public sealed class ActivityBatchLoadContext
     {
         public ActivityBatchLoadContext(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch batch, string loaderId, string loaderUserName) { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch Batch { get; }
+        public bool IsPreview { get; init; }
+        public bool IsResume { get; init; }
         public string LoaderId { get; }
         public string LoaderUserName { get; }
+        public string StopReason { get; set; }
     }
     public sealed class ActivityBatchSourceEntry
     {
@@ -362,6 +374,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public ActivityChannelOptions() { }
         public System.Collections.Generic.IReadOnlyDictionary<string, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityChannelEntry> Channels { get; }
         public void AddChannel(string channel, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityChannelEntry> configure = null) { }
+    }
+    public enum ActivityDialerCampaignMoveResult
+    {
+        NotQueued = 0,
+        AlreadyThere = 1,
+        Moved = 2,
+        InFlight = 3,
     }
     public sealed class ActivityDialerProfileDescriptor
     {
@@ -410,6 +429,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public ActivityDispositionResult() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public string ErrorMessage { get; set; }
+        public bool HandledBySubjectFlow { get; set; }
         public bool Succeeded { get; set; }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult Failure(string errorMessage) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult Success(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
@@ -547,6 +567,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         ClearAssignment = 7,
         ChangeSource = 8,
         ChangeDialerProfile = 9,
+        ChangeCampaign = 10,
     }
     public sealed class BulkManageActivityFilter : OrchardCore.Entities.Entity
     {
@@ -560,6 +581,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public System.DateTime? CreatedFrom { get; set; }
         public string CreatedRange { get; set; }
         public System.DateTime? CreatedTo { get; set; }
+        public string DialerProfileId { get; set; }
         public System.DateTime? DoNotCallFrom { get; set; }
         public string DoNotCallRange { get; set; }
         public System.DateTime? DoNotCallTo { get; set; }
@@ -655,7 +677,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string CancelReason { get; set; }
         public string CreatedBy { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity FollowUpActivity { get; set; }
+        public bool HasChosenSchedule { get; set; }
         public bool HasNamedOwner { get; set; }
+        public int? MaxAttempts { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity PreviousActivity { get; set; }
     }
     public enum HandoffDisposition
@@ -893,6 +917,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityKind Kind { get; set; }
         public System.DateTime? LastReEngagementUtc { get; set; }
+        public int? MaxAttempts { get; set; }
         public string Notes { get; set; }
         public string PreferredDestination { get; set; }
         public int ProcessingAttempts { get; set; }
@@ -941,11 +966,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool IncludeDoNoEmail { get; set; }
         public bool IncludeDoNoSms { get; set; }
         public string Instructions { get; set; }
+        public string LastActivityAttempts { get; set; }
         public string LastActivityDispositionId { get; set; }
         public string LastActivitySubjectContentType { get; set; }
         public System.DateTime? LeadCreatedFrom { get; set; }
         public System.DateTime? LeadCreatedTo { get; set; }
         public int? Limit { get; set; }
+        public long? LoadCursor { get; set; }
+        public string LoadError { get; set; }
+        public System.DateTime? LoadHeartbeatUtc { get; set; }
+        public int LoadResumeCount { get; set; }
+        public string LoadStartedById { get; set; }
+        public string LoadStartedByUsername { get; set; }
+        public System.DateTime? LoadStartedUtc { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public bool OnlyPublishedLeads { get; set; }
         public string OwnerId { get; set; }
@@ -978,6 +1011,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string[] UserIds { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch Clone() { }
         public void ResetLoadCounts() { }
+        public void ResetLoadProgress() { }
     }
     public enum OmnichannelActivityBatchStatus
     {
@@ -1471,8 +1505,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlySet<string>> GetActivitiesInFlightAsync(System.Collections.Generic.IEnumerable<string> activityIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerWaitingRecord>> GetWaitingRecordsAsync(string campaignId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerCampaignMoveResult> MoveToCampaignAsync(string activityId, string campaignId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityDispositionHandler
     {

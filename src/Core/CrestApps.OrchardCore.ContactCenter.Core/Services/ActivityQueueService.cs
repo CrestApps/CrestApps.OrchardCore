@@ -139,13 +139,24 @@ public sealed class ActivityQueueService : IActivityQueueService
 
         await _session.SaveChangesAsync(cancellationToken);
 
-        await _publisher.PublishAsync(new InteractionEvent
+        var addedEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.QueueItemAdded,
             AggregateType = nameof(QueueItem),
             AggregateId = item.ItemId,
             SourceComponent = ContactCenterConstants.Components.Queues,
-        }, cancellationToken);
+        };
+
+        // Carries the queue, so a handler that only needs to know which queue gained work does not have to load the item.
+        addedEvent.SetData(new QueueItemAddedEventData
+        {
+            QueueItemId = item.ItemId,
+            QueueId = item.QueueId,
+            ActivityItemId = item.ActivityItemId,
+            DialerProfileId = item.DialerProfileId,
+        });
+
+        await _publisher.PublishAsync(addedEvent, cancellationToken);
 
         await _auditRecorder.RecordQueueChangeAsync(
             ContactCenterConstants.Events.CallQueued,

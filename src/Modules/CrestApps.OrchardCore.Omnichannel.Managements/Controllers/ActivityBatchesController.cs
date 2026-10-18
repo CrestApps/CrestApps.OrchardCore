@@ -20,6 +20,7 @@ using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using YesSql;
@@ -45,6 +46,7 @@ public sealed class ActivityBatchesController : Controller
     private readonly IDisplayManager<OmnichannelActivityBatch> _batchDisplayDriver;
     private readonly INotifier _notifier;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
+    private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -60,6 +62,7 @@ public sealed class ActivityBatchesController : Controller
     /// <param name="activityBatchSourceOptions">The configured activity batch sources.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="clock">The clock used to stamp when a load starts.</param>
     public ActivityBatchesController(
         ICatalogManager<OmnichannelActivityBatch> manager,
         IAuthorizationService authorizationService,
@@ -68,7 +71,8 @@ public sealed class ActivityBatchesController : Controller
         INotifier notifier,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IHtmlLocalizer<ActivityBatchesController> htmlLocalizer,
-        IStringLocalizer<ActivityBatchesController> stringLocalizer)
+        IStringLocalizer<ActivityBatchesController> stringLocalizer,
+        IClock clock = null)
     {
         _manager = manager;
         _authorizationService = authorizationService;
@@ -76,6 +80,7 @@ public sealed class ActivityBatchesController : Controller
         _batchDisplayDriver = batchDisplayManager;
         _notifier = notifier;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
+        _clock = clock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -269,6 +274,46 @@ public sealed class ActivityBatchesController : Controller
         }
 
         return View(viewModel);
+    }
+
+    /// <summary>
+    /// Counts the records the activity load in the posted editor would load right now, without saving the load or
+    /// creating anything, so an operator can see how many records a set of filters reaches before loading them.
+    /// </summary>
+    /// <param name="source">The source of a new activity load.</param>
+    /// <param name="id">The identifier of the saved activity load being edited, if any.</param>
+    /// <param name="coordinator">The load coordinator that counts the records.</param>
+    [HttpPost]
+    [Admin("omnichannel/activity/batches/count", "OmnichannelActivityBatchesCount")]
+    public async Task<IActionResult> CountMatches(string source, string id, [FromServices] IActivityBatchLoadCoordinator coordinator)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageActivityBatches))
+        {
+            return Forbid();
+        }
+
+        var saved = string.IsNullOrWhiteSpace(id) ? null : await _manager.FindByIdAsync(id);
+        OmnichannelActivityBatch batch;
+
+        if (saved is not null)
+        {
+            // Counted on a copy, so the editor's values never reach the saved load.
+            batch = saved.Clone();
+        }
+        else if (TryGetActivityBatchSource(source, out var sourceEntry))
+        {
+            batch = await _manager.NewAsync();
+            batch.Source = sourceEntry.Source;
+        }
+        else
+        {
+            return BadRequest();
+        }
+
+        // Validation is not the point here: a load missing its title can still be counted.
+        await _batchDisplayDriver.UpdateEditorAsync(batch, _updateModelAccessor.ModelUpdater, isNew: saved is null);
+
+        return Json(await coordinator.PreviewAsync(batch, HttpContext.RequestAborted));
     }
 
     /// <summary>
@@ -490,11 +535,17 @@ public sealed class ActivityBatchesController : Controller
     // so the job reads the batch as it was saved here. Shared by the Load action and by Save & Load.
     private async Task<ActionResult> StartLoadAsync(OmnichannelActivityBatch model)
     {
-        model.Status = OmnichannelActivityBatchStatus.Started;
-        await _manager.UpdateAsync(model);
-
         var loaderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var loaderUserName = User.Identity.Name;
+
+        // A new load starts from the beginning, with no error from the last one, and records who started it and when,
+        // so the watchdog can tell it from a load that stalled and resume it as the same user.
+        model.ResetLoadProgress();
+        model.Status = OmnichannelActivityBatchStatus.Started;
+        model.LoadStartedUtc = _clock?.UtcNow ?? DateTime.UtcNow;
+        model.LoadStartedById = loaderId;
+        model.LoadStartedByUsername = loaderUserName;
+        await _manager.UpdateAsync(model);
         var batchId = model.ItemId;
 
         ShellScope.AddDeferredTask(async s =>

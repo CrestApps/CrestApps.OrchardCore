@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxIvrProvider : IIvrProvider
 {
     private readonly TelnyxApiClient _apiClient;
-    private readonly IVoiceMediaItemManager _voiceMediaItemManager;
+    private readonly IVoiceMediaProvisioningService _voiceMediaProvisioning;
     private readonly IOptionsMonitor<TelnyxOptions> _options;
     private readonly ILogger _logger;
 
@@ -27,17 +28,17 @@ public sealed class TelnyxIvrProvider : IIvrProvider
     /// Initializes a new instance of the <see cref="TelnyxIvrProvider"/> class.
     /// </summary>
     /// <param name="apiClient">The typed Telnyx client.</param>
-    /// <param name="voiceMediaItemManager">The voice media catalog, used to resolve a recorded menu to its Telnyx name.</param>
+    /// <param name="voiceMediaProvisioning">Resolves a recorded menu to the name Telnyx plays it by, giving Telnyx a copy when it has none.</param>
     /// <param name="options">The tenant's Telnyx options, for the voice and language menus are spoken in.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxIvrProvider(
         TelnyxApiClient apiClient,
-        IVoiceMediaItemManager voiceMediaItemManager,
+        IVoiceMediaProvisioningService voiceMediaProvisioning,
         IOptionsMonitor<TelnyxOptions> options,
         ILogger<TelnyxIvrProvider> logger)
     {
         _apiClient = apiClient;
-        _voiceMediaItemManager = voiceMediaItemManager;
+        _voiceMediaProvisioning = voiceMediaProvisioning;
         _options = options;
         _logger = logger;
     }
@@ -177,11 +178,13 @@ public sealed class TelnyxIvrProvider : IIvrProvider
 
     /// <summary>
     /// Turns the menu's configured media into what Telnyx will play: the <c>media_name</c> a voice media catalog clip
-    /// was stored under, or an <c>audio_url</c> for externally hosted audio.
+    /// is held under at Telnyx, or an <c>audio_url</c> for externally hosted audio.
     /// </summary>
     /// <remarks>
     /// The menu stores a catalog identifier, which means nothing to Telnyx; sending it as a URL was refused and the
-    /// caller heard silence. This is the same resolution queue hold music uses.
+    /// caller heard silence. This is the same resolution queue hold music uses: Telnyx is given a copy of the clip
+    /// from the platform's master copy when it has none, so a clip uploaded while another provider was in use, or
+    /// one Telnyx has since lost, still plays.
     /// </remarks>
     private async Task<(string Field, string Value)?> ResolveAudioAsync(string mediaId, CancellationToken cancellationToken)
     {
@@ -191,13 +194,20 @@ public sealed class TelnyxIvrProvider : IIvrProvider
             return ("audio_url", mediaId);
         }
 
-        var item = await _voiceMediaItemManager.FindByIdAsync(mediaId, cancellationToken);
+        var resolution = await _voiceMediaProvisioning.ResolveAsync(mediaId, TelnyxConstants.ProviderTechnicalName, cancellationToken);
 
-        if (item is null || string.IsNullOrWhiteSpace(item.MediaReference))
+        if (string.IsNullOrWhiteSpace(resolution.Reference))
         {
+            if (resolution.Item is not null && resolution.Status == VoiceMediaProvisioningStatus.NoAudio)
+            {
+                _logger.LogWarning(
+                    "Voice media '{MediaId}' has no master copy and Telnyx holds no copy of it; upload the clip again. The menu is spoken instead.",
+                    mediaId.SanitizeLogValue());
+            }
+
             return null;
         }
 
-        return ("media_name", item.MediaReference);
+        return ("media_name", resolution.Reference);
     }
 }

@@ -3,6 +3,52 @@
 ** Edit its sources under Assets/ and rebuild; see Assets.json for the files it is built from.
 */
 (function() {
+	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/shared/messaging-recipient-address.js
+	var e164Pattern = /^\+[1-9]\d{6,14}$/;
+	/**
+	* Whether the text is a phone number in E.164 form, exactly as typed.
+	* @param {unknown} text
+	* @returns {boolean}
+	*/
+	function isE164(text) {
+		return typeof text === "string" && e164Pattern.test(text);
+	}
+	/**
+	* Whether the text reads as an attempt at a phone number: digits, perhaps with the punctuation people write numbers
+	* with, and no letters.
+	* @param {unknown} text
+	* @returns {boolean}
+	*/
+	function looksLikePhoneNumber(text) {
+		var value = typeof text === "string" ? text.trim() : "";
+		return /\d/.test(value) && /^[+\d\s().-]+$/.test(value);
+	}
+	/**
+	* Whether a search result that is not a contact (a typed address the server accepted) may be offered for the term.
+	* It must be the term itself, not a reshaped version of it, and on a phone channel it must be E.164.
+	* @param {{ id?: string | null, address?: string | null }} item The search result.
+	* @param {string} term The text typed in the search box.
+	* @param {boolean} isPhoneChannel Whether the channel's addresses are phone numbers.
+	* @returns {boolean}
+	*/
+	function acceptsTypedAddress(item, term, isPhoneChannel) {
+		if (!item || item.id || !item.address) return false;
+		var typed = String(term || "").trim();
+		if (item.address.toLowerCase() !== typed.toLowerCase()) return false;
+		return !isPhoneChannel || isE164(typed);
+	}
+	/**
+	* Whether to show the hint that a number outside the contacts must be in international format: on a phone channel,
+	* when the term looks like a number but none could be offered for it.
+	* @param {string} term The text typed in the search box.
+	* @param {boolean} isPhoneChannel Whether the channel's addresses are phone numbers.
+	* @param {boolean} offeredTypedAddress Whether the typed address was offered.
+	* @returns {boolean}
+	*/
+	function shouldShowPhoneHint(term, isPhoneChannel, offeredTypedAddress) {
+		return isPhoneChannel && !offeredTypedAddress && looksLikePhoneNumber(term);
+	}
+	//#endregion
 	//#region src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Assets/js/messaging-contact-picker.js
 	(function(root) {
 		"use strict";
@@ -19,17 +65,45 @@
 			}
 			var picker = Selectpicker.getOrCreateInstance(select);
 			if (!picker || !picker.searchbox) return;
+			var newAddressText = select.getAttribute("data-new-address-text") || "";
+			var phoneHint = select.getAttribute("data-phone-hint") || "";
+			var phoneChannels = [];
+			try {
+				phoneChannels = JSON.parse(select.getAttribute("data-phone-channels") || "[]");
+			} catch (e) {
+				phoneChannels = [];
+			}
+			/** @type {HTMLElement | null} */
+			var hint = null;
 			var timer = null;
 			var suppress = false;
 			function currentChannel() {
 				return endpointSelect ? endpointChannels[endpointSelect.value] || "" : "";
 			}
+			function isPhoneChannel() {
+				return phoneChannels.indexOf(currentChannel()) >= 0;
+			}
+			function showHint(show) {
+				if (!phoneHint) return;
+				if (!hint && show) {
+					hint = document.createElement("div");
+					hint.className = "small text-body-secondary px-2 pt-1";
+					hint.setAttribute("role", "status");
+					hint.textContent = phoneHint;
+					picker.searchbox.insertAdjacentElement("afterend", hint);
+				}
+				if (hint) hint.hidden = !show;
+			}
+			initNumberEntry(select, picker, isPhoneChannel, endpointSelect, newAddressText);
 			picker.searchbox.addEventListener("input", function() {
 				if (suppress) return;
 				var q = picker.searchbox.value.trim();
 				var channel = currentChannel();
 				clearTimeout(timer);
-				if (q.length < 2 || !channel) return;
+				if (q.length < 2 || !channel) {
+					showHint(false);
+					return;
+				}
 				timer = setTimeout(function() {
 					fetch(url + "?q=" + encodeURIComponent(q) + "&channel=" + encodeURIComponent(channel), {
 						headers: { "Accept": "application/json" },
@@ -37,17 +111,33 @@
 					}).then(function(response) {
 						return response.ok ? response.json() : [];
 					}).then(function(items) {
-						var added = false;
+						var changed = false;
+						var phone = isPhoneChannel();
+						var offeredTypedAddress = false;
+						Array.prototype.forEach.call(select.querySelectorAll("option[data-messaging-new-address]"), function(option) {
+							if (!option.selected) {
+								option.remove();
+								changed = true;
+							}
+						});
 						(items || []).forEach(function(item) {
-							if (!item.address || select.querySelector("option[value=\"" + CSS.escape(item.address) + "\"]")) return;
+							if (!item.address || !item.id && !acceptsTypedAddress(item, q, phone)) return;
+							if (!item.id) offeredTypedAddress = true;
+							if (select.querySelector("option[value=\"" + CSS.escape(item.address) + "\"]")) return;
 							var option = document.createElement("option");
 							option.value = item.address;
 							option.textContent = item.name || item.displayAddress || item.address;
-							option.setAttribute("data-subtext", item.displayAddress || item.address);
+							if (item.id) option.setAttribute("data-subtext", item.displayAddress || item.address);
+							else {
+								option.setAttribute("data-messaging-new-address", "");
+								if (newAddressText) option.setAttribute("data-subtext", newAddressText);
+							}
+							option.setAttribute("data-tokens", item.address + " " + q);
 							select.appendChild(option);
-							added = true;
+							changed = true;
 						});
-						if (added) picker.refresh();
+						if (changed) picker.refresh();
+						showHint(shouldShowPhoneHint(q, phone, offeredTypedAddress));
 						suppress = true;
 						picker.searchbox.dispatchEvent(new Event("input", { bubbles: true }));
 						suppress = false;
@@ -76,6 +166,99 @@
 			}
 			if (endpointSelect) endpointSelect.addEventListener("change", update);
 			update();
+		}
+		function initNumberEntry(select, picker, isPhoneChannel, endpointSelect, newAddressText) {
+			var entrySelector = select.getAttribute("data-number-entry");
+			/** @type {HTMLElement | null} */
+			var entry = entrySelector ? document.querySelector(entrySelector) : null;
+			var toggleSelector = entry ? entry.getAttribute("data-number-toggle") : null;
+			/** @type {HTMLElement | null} */
+			var toggle = toggleSelector ? document.querySelector(toggleSelector) : null;
+			/** @type {HTMLInputElement | null} */
+			var input = entry ? entry.querySelector("[data-number-input]") : null;
+			var addButton = entry ? entry.querySelector("[data-number-add]") : null;
+			/** @type {HTMLElement | null} */
+			var error = entry ? entry.querySelector("[data-number-error]") : null;
+			var intlTelInput = root.intlTelInput;
+			if (!entry || !toggle || !input || !addButton || typeof intlTelInput !== "function") return;
+			var entryElement = entry;
+			var toggleElement = toggle;
+			var inputElement = input;
+			var invalidText = entry.getAttribute("data-invalid-text") || "";
+			var telephoneInput = null;
+			function ensureInput() {
+				if (telephoneInput) return telephoneInput;
+				/** @type {Record<string, unknown>} */
+				var options = {
+					containerClass: "w-100",
+					dropdownParent: document.body,
+					strictMode: true
+				};
+				var region = (navigator.language || "").split("-")[1];
+				if (region && region.length === 2) options.initialCountry = region.toLowerCase();
+				telephoneInput = intlTelInput(inputElement, options);
+				return telephoneInput;
+			}
+			function setOpen(open) {
+				entryElement.hidden = !open;
+				toggleElement.setAttribute("aria-expanded", open ? "true" : "false");
+			}
+			function setError(message) {
+				inputElement.classList.toggle("is-invalid", !!message);
+				if (error) {
+					error.textContent = message || "";
+					error.hidden = !message;
+				}
+			}
+			function syncToggle() {
+				var phone = isPhoneChannel();
+				toggleElement.hidden = !phone;
+				if (!phone) setOpen(false);
+			}
+			function add() {
+				var iti = ensureInput();
+				var number = inputElement.value.trim() ? iti.getNumber() : "";
+				if (!number || !iti.isValidNumber() || !isE164(number)) {
+					setError(invalidText);
+					return;
+				}
+				var option = select.querySelector("option[value=\"" + CSS.escape(number) + "\"]");
+				if (!option) {
+					option = document.createElement("option");
+					option.value = number;
+					option.textContent = number;
+					option.setAttribute("data-messaging-new-address", "");
+					if (newAddressText) option.setAttribute("data-subtext", newAddressText);
+					select.appendChild(option);
+				}
+				option.selected = true;
+				picker.refresh();
+				select.dispatchEvent(new Event("change", { bubbles: true }));
+				iti.setNumber("");
+				setError("");
+				setOpen(false);
+				toggleElement.focus();
+			}
+			toggleElement.addEventListener("click", function() {
+				var open = entryElement.hidden;
+				setOpen(open);
+				if (open) {
+					ensureInput();
+					inputElement.focus();
+				}
+			});
+			addButton.addEventListener("click", add);
+			inputElement.addEventListener("keydown", function(e) {
+				if (e.key === "Enter") {
+					e.preventDefault();
+					add();
+				}
+			});
+			inputElement.addEventListener("input", function() {
+				setError("");
+			});
+			if (endpointSelect) endpointSelect.addEventListener("change", syncToggle);
+			syncToggle();
 		}
 		function initAll() {
 			Array.prototype.forEach.call(document.querySelectorAll("[data-messaging-contact-picker]"), init);

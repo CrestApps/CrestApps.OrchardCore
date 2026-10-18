@@ -17,6 +17,11 @@ public sealed class SupervisorDashboardIndexViewModel
     public string StateUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the URL that explains why each queue's and campaign's pending work is or is not being handed to agents.
+    /// </summary>
+    public string DispatchUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the URL that starts a supervisor live-monitoring engagement.
     /// </summary>
     public string EngageUrl { get; set; }

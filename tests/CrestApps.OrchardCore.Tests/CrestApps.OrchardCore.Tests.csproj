@@ -46,6 +46,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Agent/CrestApps.OrchardCore.AI.Agent.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Copilot/CrestApps.OrchardCore.AI.Chat.Copilot.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Claude/CrestApps.OrchardCore.AI.Chat.Claude.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Chat.Interactions/CrestApps.OrchardCore.AI.Chat.Interactions.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentTransfer/CrestApps.OrchardCore.ContentTransfer.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentTransfer.OpenXml/CrestApps.OrchardCore.ContentTransfer.OpenXml.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />

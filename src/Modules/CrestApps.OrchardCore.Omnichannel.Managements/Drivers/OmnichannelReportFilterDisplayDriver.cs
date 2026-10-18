@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reports.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -15,14 +16,19 @@ using OrchardCore.DisplayManagement.Views;
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 /// <summary>
-/// Adds campaign, channel, source, and status filters to Omnichannel reports. A report that declares its filters
-/// through <see cref="IReportFilterMetadata"/> gets them only when it names <see cref="FilterName"/>.
+/// Adds campaign, channel, source, status, and disposition filters to Omnichannel reports, and a page picker to the
+/// reports that page their rows. A report that declares its filters through <see cref="IReportFilterMetadata"/> gets
+/// the filters only when it names <see cref="FilterName"/>, and the page picker only when it names
+/// <see cref="PageFilterName"/>. A report that implements <see cref="IOmnichannelReportFilterDefaults"/> has its
+/// defaults applied the first time it is opened, before the filter form has been submitted.
 /// </summary>
 public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
+    private readonly INamedCatalogManager<OmnichannelDisposition> _dispositionManager;
     private readonly IReportManager _reportManager;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly ActivityChannelOptions _activityChannelOptions;
 
@@ -32,25 +38,36 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
     public const string FilterName = "OmnichannelActivity";
 
     /// <summary>
+    /// The filter name a report lists in <see cref="IReportFilterMetadata.FilterNames"/> to get the page picker.
+    /// </summary>
+    public const string PageFilterName = "OmnichannelActivityPage";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelReportFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="campaignManager">The campaign manager.</param>
     /// <param name="campaignGroupManager">The campaign group manager.</param>
+    /// <param name="dispositionManager">The disposition manager.</param>
     /// <param name="reportManager">The report manager.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor, used to tell a first opening from a submitted filter form.</param>
     /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     /// <param name="activityChannelOptions">The activity channels registered by the enabled features.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelReportFilterDisplayDriver(
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
+        INamedCatalogManager<OmnichannelDisposition> dispositionManager,
         IReportManager reportManager,
+        IHttpContextAccessor httpContextAccessor,
         IOptions<ActivitySourceOptions> activitySourceOptions,
         IOptions<ActivityChannelOptions> activityChannelOptions,
         IStringLocalizer<OmnichannelReportFilterDisplayDriver> stringLocalizer)
     {
         _campaignManager = campaignManager;
         _campaignGroupManager = campaignGroupManager;
+        _dispositionManager = dispositionManager;
         _reportManager = reportManager;
+        _httpContextAccessor = httpContextAccessor;
         _activitySourceOptions = activitySourceOptions.Value;
         _activityChannelOptions = activityChannelOptions.Value;
         S = stringLocalizer;
@@ -88,6 +105,15 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         filter.Set(OmnichannelReportFilter.Channel, model.Channel);
         filter.Set(OmnichannelReportFilter.Source, model.Source);
         filter.Set(OmnichannelReportFilter.Status, model.Status);
+        filter.Set(OmnichannelReportFilter.DispositionIds, GetSelectedDispositionIds(model.DispositionIds));
+        filter.Set<int?>(OmnichannelReportFilter.Page, model.Page > 1 ? model.Page : null);
+
+        // Until the filter form has been submitted once, nothing has been chosen, and a report may start with its
+        // own defaults. Once it has, an empty value is a choice ("All sources") and is kept.
+        if (!WasSubmitted() && _reportManager.FindByName(filter.ReportName) is IOmnichannelReportFilterDefaults defaults)
+        {
+            defaults.ApplyDefaults(filter);
+        }
 
         return Edit(filter, context);
     }
@@ -103,6 +129,49 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
             metadata.FilterNames.Contains(FilterName, StringComparer.Ordinal);
     }
 
+    private bool PagesRows(string reportName)
+    {
+        return _reportManager.FindByName(reportName) is IReportFilterMetadata metadata &&
+            metadata.FilterNames.Contains(PageFilterName, StringComparer.Ordinal);
+    }
+
+    private bool WasSubmitted()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        if (request is null)
+        {
+            // There is no form to inspect, so the filter is taken as it is.
+            return true;
+        }
+
+        // The Source list is always part of the form, so a submitted form carries its field even for "All sources".
+        var sourceField = nameof(OmnichannelReportFilterViewModel.Source);
+        var key = string.IsNullOrEmpty(Prefix)
+            ? sourceField
+            : $"{Prefix}.{sourceField}";
+
+        return request.Query.ContainsKey(key);
+    }
+
+    private static string[] GetSelectedDispositionIds(string[] dispositionIds)
+    {
+        if (dispositionIds is null)
+        {
+            return null;
+        }
+
+        var selected = dispositionIds
+            .Where(dispositionId => !string.IsNullOrWhiteSpace(dispositionId))
+            .Select(dispositionId => dispositionId.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        return selected.Length > 0
+            ? selected
+            : null;
+    }
+
     private async Task PopulateAsync(OmnichannelReportFilterViewModel model, ReportFilter filter)
     {
         model.CampaignId = filter.GetOrDefault<string>(OmnichannelReportFilter.CampaignId);
@@ -110,6 +179,11 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         model.Channel = filter.GetOrDefault<string>(OmnichannelReportFilter.Channel);
         model.Source = filter.GetOrDefault<string>(OmnichannelReportFilter.Source);
         model.Status = filter.GetOrDefault<string>(OmnichannelReportFilter.Status);
+        model.DispositionIds = filter.GetOrDefault<string[]>(OmnichannelReportFilter.DispositionIds) ?? [];
+        model.Page = filter.TryGet<int>(OmnichannelReportFilter.Page, out var page) && page > 1
+            ? page
+            : 1;
+        model.ShowPage = PagesRows(filter.ReportName);
 
         var campaigns = await _campaignManager.GetAllAsync();
 
@@ -123,6 +197,13 @@ public sealed class OmnichannelReportFilterDisplayDriver : DisplayDriver<ReportF
         model.CampaignGroups = campaignGroups
             .OrderBy(group => group.DisplayText)
             .Select(group => new SelectListItem(group.DisplayText ?? group.ItemId, group.ItemId))
+            .ToList();
+
+        var dispositions = await _dispositionManager.GetAllAsync();
+
+        model.Dispositions = dispositions
+            .OrderBy(disposition => disposition.Name)
+            .Select(disposition => new SelectListItem(disposition.Name ?? disposition.ItemId, disposition.ItemId))
             .ToList();
 
         // Only the channels and sources the enabled features can put on activities are offered. A value saved

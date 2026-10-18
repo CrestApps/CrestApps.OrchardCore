@@ -124,6 +124,12 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         {
             results.Add(View("OmnichannelActivityBatch_LoadReport", batch).Location("Description:5"));
         }
+        else if (batch.Status is OmnichannelActivityBatchStatus.Started or OmnichannelActivityBatchStatus.Loading ||
+            !string.IsNullOrEmpty(batch.LoadError))
+        {
+            // A load in progress says how far it has got, and one that stopped says why, so neither looks stuck.
+            results.Add(View("OmnichannelActivityBatch_LoadStatus", batch).Location("Description:5"));
+        }
 
         return CombineAsync(results);
     }
@@ -158,6 +164,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.DisplayText = batch.DisplayText;
             model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
             model.SourceDisplayName = GetSourceEntry(model.Source)?.DisplayName.Value ?? model.Source;
+            model.BatchId = batch.ItemId;
+            model.LoadError = batch.LoadError;
             model.RequiresUserAssignment = GetSourceEntry(model.Source)?.RequiresUserAssignment ?? true;
             model.ScheduleAt = context.IsNew ? (await _localClock.GetLocalNowAsync()).DateTime : batch.ScheduleAt;
             model.SubjectContentType = batch.SubjectContentType;
@@ -183,6 +191,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             model.TimeZoneIds = batch.TimeZoneIds ?? [];
             model.LastActivitySubjectContentType = batch.LastActivitySubjectContentType;
             model.LastActivityDispositionId = batch.LastActivityDispositionId;
+            model.LastActivityAttempts = batch.LastActivityAttempts;
 
             var subjectContentTypes = new List<SelectListItem>();
             var contactContentTypes = new List<SelectListItem>();
@@ -613,6 +622,20 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         batch.TimeZoneIds = model.TimeZoneIds;
         batch.LastActivitySubjectContentType = model.LastActivitySubjectContentType;
         batch.LastActivityDispositionId = model.LastActivityDispositionId;
+
+        // Stored the way the operator wrote it once it reads as a range, so the editor shows it back unchanged.
+        if (string.IsNullOrWhiteSpace(model.LastActivityAttempts))
+        {
+            batch.LastActivityAttempts = null;
+        }
+        else if (ActivityAttemptRange.TryParse(model.LastActivityAttempts, out var attempts))
+        {
+            batch.LastActivityAttempts = attempts.ToString();
+        }
+        else
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.LastActivityAttempts), S["Enter the attempts as a number (4), a number or more (4+), a number or fewer (4-), or a range (2..5)."]);
+        }
 
         if (model.ScheduleAt.HasValue)
         {

@@ -44,6 +44,7 @@ public sealed class SupervisorDashboardController : Controller
             HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(HttpContext),
             StateUrl = Url.RouteUrl(SupervisorDashboardEndpoints.StateRouteName),
             EngageUrl = Url.RouteUrl(SupervisorDashboardEndpoints.EngageRouteName),
+            DispatchUrl = Url.RouteUrl(SupervisorDashboardEndpoints.DispatchRouteName),
             InterventionUrls = new Dictionary<string, string>(StringComparer.Ordinal)
             {
                 ["stop"] = Url.RouteUrl(SupervisorInterventionEndpoints.StopRouteName),

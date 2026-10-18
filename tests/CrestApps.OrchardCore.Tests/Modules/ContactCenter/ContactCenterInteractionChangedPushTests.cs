@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
@@ -65,6 +66,55 @@ public sealed class ContactCenterInteractionChangedPushTests
                     notification.Status == status.ToString() &&
                     notification.Direction == nameof(InteractionDirection.Outbound) &&
                     notification.ServerTimeUtc == _now),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // Live: with answering-machine screening on, the customer's answer pushed CallConnected while the agent was still
+    // held for the verdict, and the agent took the call for one they were on. The push says where the dial stands.
+    [Theory]
+    [InlineData(ContactCenterConstants.Events.DialStarted, InteractionStatus.Ringing, false, DialAttemptPhase.Dialing)]
+    [InlineData(ContactCenterConstants.Events.CallConnected, InteractionStatus.Connected, false, DialAttemptPhase.Screening)]
+    [InlineData(ContactCenterConstants.Events.AgentLegAnswered, InteractionStatus.Connected, true, DialAttemptPhase.None)]
+    public async Task HandleAsync_ACampaignDialForAHeldAgent_PushesWhereTheDialStands(
+        string eventType,
+        InteractionStatus status,
+        bool agentJoined,
+        DialAttemptPhase expected)
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            AgentId = "agent-1",
+            ActivityItemId = "activity-1",
+            Direction = InteractionDirection.Outbound,
+            AnsweredUtc = status == InteractionStatus.Connected ? _now : null,
+        }.RestorePersistedStatus(status);
+        interaction.TechnicalMetadata[DialerCallMetadata.DialerProfileIdKey] = "profile-1";
+        DialerCallMetadata.MarkAnswerDetectionRequested(interaction);
+
+        if (agentJoined)
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.TelephonyMetadata.AnswerClassification] = nameof(AnswerClassification.Human);
+            DialerCallMetadata.MarkAgentJoined(interaction, _now);
+        }
+
+        var harness = new HandlerHarness(interaction);
+
+        // Act
+        await harness.Handler.HandleAsync(new InteractionEvent
+        {
+            EventType = eventType,
+            AggregateId = "interaction-1",
+            InteractionId = "interaction-1",
+            OccurredUtc = _now,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.Notifier.Verify(
+            notifier => notifier.NotifyInteractionChangedAsync(
+                It.Is<AgentInteractionNotification>(notification => notification.DialPhase == expected),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }

@@ -1,6 +1,8 @@
 @using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Messaging.Core
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
 @model BroadcastCreateViewModel
+@inject IMessagingChannelResolver ChannelResolver
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
@@ -33,7 +35,10 @@
                 data-messaging-contact-picker
                 data-search-url="@Url.RouteUrl("MessagingSearchContacts")"
                 data-endpoint-select="#endpoint-select"
-                data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"></select>
+                data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
+                data-new-address-text="@T["Not in your contacts"]"
+                data-phone-channels="@JsonSerializer.Serialize(ChannelResolver.GetAll().Where(channel => channel.Capabilities.AddressesArePhoneNumbers).Select(channel => channel.Name))"
+                data-phone-hint="@T["A number that is not in your contacts must be in international format, for example +12015550123."]"></select>
         <span class="hint">@T["Type a name or address to search the contacts reachable on the selected channel, then select recipients."]</span>
     </div>
 

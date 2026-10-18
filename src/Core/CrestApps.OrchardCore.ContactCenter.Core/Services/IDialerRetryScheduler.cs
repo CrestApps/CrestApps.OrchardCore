@@ -16,4 +16,14 @@ public interface IDialerRetryScheduler
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>What became of the request, and the next attempt when one was created.</returns>
     Task<DialerRetryScheduleResult> ScheduleRetryAsync(string activityItemId, int? delayMinutes, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tries a completed dialer campaign record again because its subject's flow has no rule for how its call ended,
+    /// such as a No answer the flow sends nowhere. The next attempt is due after the profile's retry delay, and none is
+    /// created past the dialer profile's Max attempts.
+    /// </summary>
+    /// <param name="activityItemId">The completed dialer activity to try again.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>What became of the request, and the next attempt when one was created.</returns>
+    Task<DialerRetryScheduleResult> ScheduleUnhandledOutcomeRetryAsync(string activityItemId, CancellationToken cancellationToken = default);
 }

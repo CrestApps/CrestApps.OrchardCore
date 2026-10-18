@@ -33,6 +33,21 @@ public class OmnichannelReportFilterViewModel
     public string Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the selected disposition identifiers. Several can be chosen together.
+    /// </summary>
+    public string[] DispositionIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the one-based page of rows to show, for a report that pages its rows.
+    /// </summary>
+    public int Page { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the report pages its rows, so the page picker is shown.
+    /// </summary>
+    public bool ShowPage { get; set; }
+
+    /// <summary>
     /// Gets or sets the campaign options.
     /// </summary>
     public IList<SelectListItem> Campaigns { get; set; } = [];
@@ -56,4 +71,9 @@ public class OmnichannelReportFilterViewModel
     /// Gets or sets the status options.
     /// </summary>
     public IList<SelectListItem> Statuses { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the disposition options.
+    /// </summary>
+    public IList<SelectListItem> Dispositions { get; set; } = [];
 }
