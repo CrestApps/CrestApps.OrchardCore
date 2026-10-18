@@ -11,7 +11,7 @@ technical_manual:
 | | |
 | --- | --- |
 | **Menu** | Commerce > Shipping; Settings > Commerce > Shipping |
-| **Permission** | **Manage shipping zones, methods and settings** |
+| **Permission** | **Manage shipping zones, methods and settings**; **Ship orders and update their shipments** to ship orders |
 | **Feature** | Shipping |
 
 <AskYourAdmin />
@@ -63,10 +63,45 @@ Under **Settings > Commerce > Shipping**:
 | --- | --- | --- |
 | **Weight unit** | Kilograms or pounds, for product weights and weight tables. Changing it doesn't convert weights already entered. | Kilograms |
 | **Shipping classes** | The classes products can be in, one per line, such as *Bulky* or *Fragile*. | None |
+| **Carriers** | One per line: the carrier's name, then a vertical bar and its tracking link with `{0}` where the number goes, such as `UPS \| https://www.ups.com/track?tracknum={0}`. Carriers are suggested when shipping, and fill in the tracking link. | None |
+| **Email the buyer when a shipment leaves** | Sends the shipped email. Needs an email service. | On |
+
+## What buyers see at checkout
+
+An order with goods in it gets a **Shipping** step after **Contact**:
+
+1. **Ship to:** a signed-in customer picks an address from their address book, their default shipping address first, or enters a new one and can save it. Anyone else starts with the billing address they just gave, and can change it. The address needs a recipient's name; a phone helps the carrier.
+2. **Shipping method:** the methods of the address's zone, with what each costs for this order, such as *Standard — 3 to 5 business days — $7.00*. With one method there is nothing to choose. After changing the address, the buyer continues once to see the methods for the new one.
+
+The method chosen becomes a line of the order, such as *Shipping: Standard*, and is taxed like the rest of the order, where it goes: tax rules for the shipping address's jurisdiction apply, and a rule applies to shipping only when **Applies to shipping** is ticked on it. An order that doesn't ship is taxed where it's billed.
+
+A buyer whose address no zone covers is told the store doesn't ship there. Orders of downloads and services have no Shipping step.
+
+The order page, the order link a guest gets and the confirmation email show where the order ships and the shipping method with what it cost.
+
+## Ship an order
+
+A paid order with goods gets a **Shipments** section on its page (**Commerce > Orders**, then the order). It lists what has been shipped, and what is left.
+
+1. Under **New shipment**, set how many of each item go in the parcel. All that's left is filled in; lower a number to ship in parts.
+2. Enter the **Carrier** and the **Tracking number**. A carrier listed under **Settings > Commerce > Shipping** fills in the tracking link itself; otherwise paste the **Tracking link**.
+3. Leave **It has left: mark it shipped now** ticked, and click **Create shipment**. Untick it to set the items aside while they're packed: the shipment shows as *Being packed*, and **Mark shipped** sends it later.
+
+The buyer gets an email that the shipment is on its way, with what's in it and the tracking link, and sees the shipment and its link on their order page: under **My Orders** for a customer, or on the order link a guest has.
+
+When the carrier says it arrived, click **Delivered**. If it comes back, click **Returned**: its items count as not shipped, so they can be sent again. A shipment still being packed can be **Removed**, which puts its items back.
+
+The order shows how far it has gone: *Unfulfilled*, *Partially fulfilled* (some items have left) or *Fulfilled*, on its page and in the orders list.
+
+With **Workflows** on, the **Shipment Created**, **Shipment Shipped**, **Shipment Delivered** and **Shipment Returned** events start workflows, for example to tell a warehouse or a carrier.
 
 ## Try your rates
 
 **Try rates**, on **Commerce > Shipping**, shows which zone an address falls in and what each of its methods charges for an order you describe: country, region, currency, subtotal, weight, number of items and shipping class. No order is placed. Use it to check your zones and tables before buyers see them.
+
+## Try a sample
+
+The **Product listing: online store sample** recipe (**Configuration > Recipes**) adds shipping zones for the United States (Standard, Express by weight and free shipping from $100), Canada and the rest of the world, weights for every product with boots in a *Bulky* class, and UPS, FedEx and USPS as carriers. Buy something from **/shop**, then ship it from the order's page.
 
 ## Related pages
 

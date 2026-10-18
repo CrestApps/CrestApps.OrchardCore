@@ -11,6 +11,11 @@ public static class CheckoutConstants
     public const string CouponCollectionName = "Coupon";
 
     /// <summary>
+    /// The name of the recipe and deployment step that sets coupons.
+    /// </summary>
+    public const string CouponsRecipeStep = "Coupons";
+
+    /// <summary>
     /// The name of the cookie that carries a guest's checkout ownership tokens.
     /// </summary>
     public const string GuestTokenCookieName = "checkout_owner";

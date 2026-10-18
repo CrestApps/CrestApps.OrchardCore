@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Orders.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<OrderPaidEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Order Paid"]
+</h4>
+<p>@T["Starts when an order is paid, with its number, total and customer email."]</p>

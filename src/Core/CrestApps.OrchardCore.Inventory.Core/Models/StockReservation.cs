@@ -49,4 +49,9 @@ public enum StockReservationStatus
     /// The hold ended without a sale.
     /// </summary>
     Released = 2,
+
+    /// <summary>
+    /// The units were sold, then put back into stock, such as when the order was refunded.
+    /// </summary>
+    Returned = 3,
 }

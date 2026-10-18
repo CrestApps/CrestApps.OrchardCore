@@ -1,0 +1,18 @@
+@model ShapeViewModel<ProductReview>
+
+@switch (Model.Value.Status)
+{
+    case ReviewStatus.Approved:
+        <span class="badge ta-badge bg-success-subtle fw-normal">@T["Approved"]</span>
+        break;
+    case ReviewStatus.Rejected:
+        <span class="badge ta-badge bg-secondary-subtle fw-normal">@T["Rejected"]</span>
+        break;
+    default:
+        <span class="badge ta-badge bg-warning-subtle fw-normal">@T["Waiting for approval"]</span>
+        break;
+}
+@if (Model.Value.VerifiedPurchase)
+{
+    <span class="badge ta-badge bg-info-subtle fw-normal">@T["Verified purchase"]</span>
+}

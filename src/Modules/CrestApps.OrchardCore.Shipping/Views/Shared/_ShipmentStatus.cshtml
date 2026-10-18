@@ -1,0 +1,17 @@
+@model ShipmentStatus
+
+@switch (Model)
+{
+    case ShipmentStatus.Shipped:
+        <span class="badge bg-info-subtle text-info-emphasis fw-normal"><i class="fa-solid fa-truck-fast me-1" aria-hidden="true"></i>@T["Shipped"]</span>
+        break;
+    case ShipmentStatus.Delivered:
+        <span class="badge bg-success-subtle text-success-emphasis fw-normal"><i class="fa-solid fa-house-circle-check me-1" aria-hidden="true"></i>@T["Delivered"]</span>
+        break;
+    case ShipmentStatus.Returned:
+        <span class="badge bg-secondary-subtle text-secondary-emphasis fw-normal"><i class="fa-solid fa-rotate-left me-1" aria-hidden="true"></i>@T["Returned"]</span>
+        break;
+    default:
+        <span class="badge bg-warning-subtle text-warning-emphasis fw-normal"><i class="fa-solid fa-box-open me-1" aria-hidden="true"></i>@T["Being packed"]</span>
+        break;
+}

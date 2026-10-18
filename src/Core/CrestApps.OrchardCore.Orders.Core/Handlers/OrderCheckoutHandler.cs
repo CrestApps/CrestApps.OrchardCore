@@ -129,6 +129,17 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.Total = invoice.GrandTotal;
         order.TaxAmount = invoice.TaxAmount;
 
+        // What the discounts took off, so the order's lines, shipping, discounts and tax add up to what was paid.
+        order.Discounts = [.. (invoice.Discounts ?? [])
+            .Where(discount => discount.Amount > 0m)
+            .Select(discount => new OrderDiscount
+            {
+                Code = discount.Code,
+                Description = discount.Description,
+                Amount = discount.Amount,
+                ProviderKey = discount.ProviderKey,
+            })];
+
         // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's
         // name or email for it.
         if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutContactInfo>(session, out var contact))
@@ -137,6 +148,21 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             order.CustomerEmail = Prefer(contact.Email, order.CustomerEmail);
             order.CustomerPhone = Prefer(contact.Phone, order.CustomerPhone);
             order.BillingAddress = contact.BillingAddress?.Clone() ?? order.BillingAddress;
+        }
+
+        if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutShippingInfo>(session, out var shipping) && shipping.Address is not null)
+        {
+            order.ShippingAddress = shipping.Address.Clone();
+            order.Shipping = new OrderShipping
+            {
+                MethodId = shipping.MethodId,
+                RateId = shipping.RateId,
+                ZoneId = shipping.ZoneId,
+                ProviderName = shipping.ProviderName,
+                Name = shipping.Name,
+                Description = shipping.Description,
+                Amount = shipping.Amount,
+            };
         }
 
         await _orderStore.UpdateAsync(order);
@@ -243,6 +269,8 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             Sku = line.Sku,
             TaxCategoryCode = line.TaxCategoryCode,
             TaxClassificationCode = line.TaxClassificationCode,
+            ProductId = line.ContentItemId,
+            CategoryIds = line.CategoryIds,
             TaxableKind = line.ProductType switch
             {
                 ProductType.Service => TaxableItemKind.Service,

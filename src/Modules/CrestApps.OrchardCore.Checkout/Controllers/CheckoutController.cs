@@ -283,6 +283,13 @@ public sealed class CheckoutController : Controller
         switch (result.Status)
         {
             case CheckoutCompletionStatus.Blocked:
+                // A step the buyer missed says nothing; a payment gate that refused, such as a promotion code that
+                // ran out, says why.
+                if (!string.IsNullOrEmpty(result.ErrorMessage))
+                {
+                    await _notifier.ErrorAsync(H["{0}", result.ErrorMessage]);
+                }
+
                 return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId, step = result.BlockingStepKey });
 
             case CheckoutCompletionStatus.Pending:

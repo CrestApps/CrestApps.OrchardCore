@@ -33,6 +33,8 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
         {
             model.WeightUnit = settings.WeightUnit;
             model.ShippingClasses = string.Join(Environment.NewLine, settings.ShippingClasses ?? []);
+            model.Carriers = string.Join(Environment.NewLine, (settings.Carriers ?? []).Select(carrier => string.IsNullOrEmpty(carrier.TrackingUrlTemplate) ? carrier.Name : $"{carrier.Name} | {carrier.TrackingUrlTemplate}"));
+            model.SendShippedEmails = settings.SendShippedEmails;
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ShippingPermissions.ManageShipping))
         .OnGroup(SettingsGroupId);
@@ -50,9 +52,29 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
 
         settings.WeightUnit = Enum.IsDefined(model.WeightUnit) ? model.WeightUnit : WeightUnit.Kilogram;
         settings.ShippingClasses = ParseClasses(model.ShippingClasses);
+        settings.Carriers = ParseCarriers(model.Carriers);
+        settings.SendShippedEmails = model.SendShippedEmails;
 
         return Edit(site, settings, context);
     }
+
+    // One carrier per line: its name, then optionally "|" and its tracking link with {0} for the number.
+    internal static List<ShippingCarrier> ParseCarriers(string text)
+        => (text ?? string.Empty)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(line => line.Split('|', 2, StringSplitOptions.TrimEntries))
+            .Where(parts => parts[0].Length > 0)
+            .Select(parts => new ShippingCarrier
+            {
+                Name = parts[0],
+                TrackingUrlTemplate = parts.Length > 1 && IsWebLink(parts[1]) ? parts[1] : null,
+            })
+            .DistinctBy(carrier => carrier.Name, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxClasses)
+            .ToList();
+
+    private static bool IsWebLink(string value)
+        => Uri.TryCreate(value.Replace("{0}", "0", StringComparison.Ordinal), UriKind.Absolute, out var url) && url.Scheme is "http" or "https";
 
     internal static List<string> ParseClasses(string text)
         => (text ?? string.Empty)

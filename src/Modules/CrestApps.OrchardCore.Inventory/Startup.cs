@@ -9,6 +9,8 @@ using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Recipes;
+using CrestApps.OrchardCore.Inventory.Reports;
+using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Inventory.Workflows;
 using CrestApps.OrchardCore.Orders.Core;
@@ -142,4 +144,14 @@ public sealed class DeploymentStartup : StartupBase
     {
         services.AddDeployment<StockDeploymentSource, StockDeploymentStep, StockDeploymentStepDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Adds the stock on hand report to Reports > Commerce.
+/// </summary>
+[RequireFeatures(ReportsConstants.Feature)]
+public sealed class ReportsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IReport, StockOnHandReport>();
 }

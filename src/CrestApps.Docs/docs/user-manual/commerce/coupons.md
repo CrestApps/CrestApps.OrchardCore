@@ -6,7 +6,7 @@ technical_manual:
   - modules/checkout
 ---
 
-A **coupon** is a promotion code a buyer types at checkout to get a discount, for example *SPRING10* for 10% off. Each coupon takes either a percentage or a fixed amount off, applies to the one-time amount or the first billing cycle of a subscription, and can be limited by dates, a usage limit and a minimum order amount.
+A **coupon** is a promotion code a buyer types at checkout to get a discount, for example *SPRING10* for 10% off. Each coupon takes a percentage or a fixed amount off, or makes shipping free. It applies to the one-time amount or the first billing cycle of a subscription. It can be limited by dates, a usage limit, uses per customer, a minimum or maximum order amount, and some products or categories.
 
 | | |
 | --- | --- |
@@ -33,8 +33,8 @@ Each coupon shows its code (click it to edit), a status badge and a row of detai
 | **Active** | Enabled and usable right now. |
 | **Not available** | Enabled, but not usable right now: its start date has not come yet, its end date has passed, or its usage limit is used up. |
 | **Disabled** | Turned off. Buyers who type it are told it is no longer available. |
-| Discount | The percentage, such as *10%*, or the currency and amount, such as *USD 5.00*. |
-| Applies to | **One-time amount** or **First cycle**. |
+| Discount | The percentage, such as *10%*, the currency and amount, such as *USD 5.00*, or **Free shipping**. |
+| Applies to | **One-time amount**, **First cycle** or **Shipping**. |
 | Used | How many times it has been used, for example *3 of 100 used*, or *3 used* when there is no limit. |
 | Valid until | The end date, or **No end date**, which is highlighted. |
 | Description | Shown when the coupon has one. |
@@ -57,17 +57,21 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 | --- | --- |
 | **Code** | What the buyer types. Capital letters do not matter: *spring10* and *SPRING10* are the same code. Required, and two coupons cannot share a code. |
 | **Description** | Shown on the buyer's invoice, for example *Spring sale*. |
-| **Discount type** | **Percentage** takes a share off. **Fixed amount** takes a set amount off. |
-| **Percentage** | For **Percentage**: a number from 1 to 100. |
+| **Discount type** | **Percentage** takes a share off. **Fixed amount** takes a set amount off. **Free shipping** takes off the shipping charged at checkout, whatever the method. |
+| **Percentage** | For **Percentage**: a number from 1 to 100. It is taken off the items bought, not off shipping. |
 | **Amount** | For **Fixed amount**: how much to take off. Never more than the amount it applies to. |
 | **Currency** | For **Fixed amount**: the three-letter currency code, such as *USD*. Required for a fixed amount. The coupon takes nothing off a purchase in another currency. |
 | **Applies to** | **The one-time amount** discounts the part of the purchase that is paid once. **The first billing cycle** discounts the first payment of a subscription only; later cycles are charged in full. |
-| **Minimum amount** | Optional. Below this amount the coupon does nothing. |
+| **Minimum amount** | Optional. Below this amount the coupon does nothing. Only the items count toward it, not shipping. |
+| **Maximum amount** | Optional. Above this amount the coupon does nothing, for example a code meant for small orders. Only the items count. |
 | **Usage limit** | Optional. How many purchases can use the coupon in total. Leave blank for unlimited. |
+| **Uses per customer** | Optional. How many times one customer can use it. A customer is their account, or the email a guest checks out with. |
 | **Valid from (UTC)** / **Valid until (UTC)** | Optional dates and times, in UTC, between which the coupon works. The end must come after the start. |
 | **Enabled** | Clear it to stop the coupon working without deleting it. |
 
-A use is counted when a purchase that used the coupon completes, not when the buyer applies the code.
+A use is counted when a purchase that used the coupon completes, not when the buyer applies the code. While a buyer is paying, one use is **held** for them, so two buyers can't both get a code's last use: the second is told before paying that it ran out, and sees the new total. A use held by a checkout that is canceled or left unfinished is let go, and a use of an order that is canceled is given back.
+
+A coupon never takes anything off shipping. Its discount is shared among the items in proportion to their prices, and tax is charged on what is left of each one, so a buyer is never taxed on money the coupon took off. The order, its page and its confirmation email show the discount next to the code.
 
 ### Limit who and what a coupon is for
 
@@ -79,6 +83,12 @@ Under **Who and what it is for** you can keep a code from working anywhere it wa
 | **Only for reference types** | The code works only on a checkout for one of these kinds of thing, such as *Transaction*, or when paying a transaction that is for one of these. Separate several with commas. |
 | **Only for the customer with ID** | The code works only for this one customer: their user ID, or the guest customer ID on their transaction. |
 | **Only for the customer with email** | The code works only for this one customer, matched against the email the checkout collected, the email on the transaction, or the email on the customer's account. Capital letters do not matter. |
+
+### Limit a coupon to some products or categories
+
+With the Orders feature on, **Products and categories** at the bottom of the coupon form limits a code to the products you choose in **Only for products**, and to products in the categories you choose in **Only for categories**. Categories are the terms of your taxonomies, such as a brand or a product category. Type in the box to search, and tick what you want.
+
+The coupon then takes its discount off those products only, and only they count toward its minimum and maximum amounts. For example, *CONTOSO15* limited to the *Contoso* brand takes 15% off a Contoso watch in an order, and nothing off the backpack next to it. An order with none of them gets nothing off.
 
 ### Coupons on a payment for a transaction
 
@@ -92,7 +102,7 @@ The code is counted as used only when the transaction is settled. If less was co
 ## Change a coupon
 
 1. In the list, click the coupon's code or **Edit**.
-2. Change what you need. The page shows how many times the coupon has been redeemed, for example *Redeemed 12 times.*
+2. Change what you need. The page shows how many times the coupon has been redeemed, for example *Redeemed 12 times.*, how many uses are held by buyers who are paying, and **Recent uses**: when, whether it was **Used**, **Held at checkout**, **Let go** or **Given back**, by whom, for which order, and how much it took off.
 3. Click **Save**. The message *The coupon was updated.* confirms it.
 
 To pause a coupon, clear **Enabled** and save. To end a campaign on a date, set **Valid until (UTC)**.
@@ -103,6 +113,10 @@ To pause a coupon, clear **Enabled** and save. To end a campaign on a date, set 
 2. Confirm with **Delete** in the dialog *Are you sure you want to delete this coupon?*
 
 Buyers can no longer use the code. If you may want it again, clear **Enabled** instead.
+
+## Copy coupons to another site
+
+Coupons can travel in a deployment plan: add the **Coupons** step to export every coupon, with its discount, dates, limits, products and categories, but not how often it was used. Importing it on the other site updates the coupons with the same codes, and adds the rest.
 
 ## How a buyer applies a coupon
 
@@ -118,5 +132,7 @@ On the **Payment** step of the checkout, the buyer types the code in **Promotion
 | *Enter an amount greater than zero.* | Fix the **Amount**. |
 | *A fixed amount needs a currency.* | Enter the **Currency**. |
 | *The end date must be after the start date.* | Fix **Valid from (UTC)** or **Valid until (UTC)**. |
+| *The maximum amount can't be less than the minimum amount.* | Fix **Maximum amount** or **Minimum amount**. |
+| *Leave the limit blank for no limit, or enter a number greater than zero.* | Fix **Uses per customer**. |
 | *Leave the limit blank for unlimited, or enter a number greater than zero.* | Fix the **Usage limit**. |
 | *Enter the customer's email address, or leave it blank.* | Fix **Only for the customer with email**. |

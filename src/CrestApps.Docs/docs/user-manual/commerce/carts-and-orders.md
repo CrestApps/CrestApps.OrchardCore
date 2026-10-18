@@ -10,7 +10,7 @@ When products are sold online, visitors can add them to a **cart** from your pro
 
 | | |
 | --- | --- |
-| **Menu** | **Commerce > Orders** for you, and **Commerce > My Orders** for your customers. The cart has no menu: buyers reach it from the cart link in your site's navigation bar. |
+| **Menu** | **Commerce > Orders** for you, and **Commerce > My Orders** for your customers. The cart has no menu: buyers reach it from the cart link in your site's navigation bar, or from **View cart** in the message shown when they add a product. |
 | **Permission** | **Manage orders** to see every order. **View own orders** for customers to see theirs; signed-in users have it by default. |
 | **Feature** | Carts to show **Add to cart** and the cart. Orders, plus a [payment provider](payment-providers.md), to check out. |
 
@@ -19,13 +19,17 @@ When products are sold online, visitors can add them to a **cart** from your pro
 ## What buyers see
 
 - **Add to cart** appears on each product that can be bought online, on its listing card and its page. Buyers choose how many, and the option when a product has several prices. Products that are only listed, and subscription plans, do not show it; plans have their own **Sign up** button.
-- The **Cart** link in the navigation bar shows how many items are in the cart.
+- The **Cart** link in the navigation bar shows how many items are in the cart. Only themes with a navigation bar, such as **TheTheme**, show it; in any theme, the message shown after adding a product has a **View cart** link.
 - The **cart page** lists each product with its price, a quantity box and a remove button, and the subtotal. Discounts and tax are worked out at checkout.
 - **Checkout** takes the buyer to the [checkout](checkout.md), where they enter a promotion code and pay. The confirmation shows their **order number**.
 
 A cart always shows today's prices. If a price changed since a product was added, the cart says so. If a product can no longer be bought, the cart says why, and the buyer has to remove it before checking out.
 
 Guests do not need an account to use a cart. If a guest signs in, what they put in the cart is kept and joins anything already in their account's cart. A cart nobody changes is cleared after 30 days for guests and 90 days for signed-in users.
+
+## Shipped orders
+
+With the [Shipping](shipping.md) feature on, an order with goods shows where it ships, how, and its shipments: each with what's in it, the carrier and the tracking link. The orders list and the order page say whether an order is *Unfulfilled*, *Partially fulfilled* or *Fulfilled*. See [Ship an order](shipping.md#ship-an-order).
 
 ## Finding orders
 
@@ -35,13 +39,61 @@ Guests do not need an account to use a cart. If a guest signs in, what they put 
 | --- | --- |
 | Paid | The checkout completed. |
 | Awaiting payment | The buyer started the checkout and has not finished it yet. |
-| Canceled | The order was never paid. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, nobody finished it in time, or an item was out of stock when the buyer checked out. |
+| Canceled | The order was canceled. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, nobody finished it in time, an item was out of stock when the buyer checked out, or you canceled it, with your reason. |
+
+An order you gave money back for also shows **Partially refunded** or **Refunded** next to its status.
 
 Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
 
-Open an order to see what was bought, the quantities and prices, the tax and the total paid, when it was placed and paid, who placed it, and the address it was billed to. Refunds are made from the [payment screens](payments-and-refunds.md).
+Open an order to see what was bought, the quantities and prices, any discount such as a promotion code, the tax and the total paid, each refund and what's left, when it was placed and paid, who placed it, and the address it was billed to.
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
+
+## Manage an order
+
+Open an order from **Commerce > Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.
+
+### Refund an order
+
+1. Under **Refund**, enter the **Amount**. It starts at everything that can still be refunded.
+2. Optionally give a **Reason**, such as *Scratched strap*. It is kept with the refund and in the notes.
+3. Tick **Put the items back in stock** only when you refund everything: after a partial refund the customer keeps the goods.
+4. Click **Refund**.
+
+The money goes back the way it was paid: to the card or wallet for an order paid online, or through its transaction for an order paid with Pay Later. The order shows *Partially refunded* or *Refunded*, and the refund in its totals. A payment method that can't refund by itself records the refund for you to settle by hand on the [Refunds page](payments-and-refunds.md). Refunds made from the payment screens show on the order too.
+
+### Cancel an order
+
+1. Under **Cancel the order**, say **Why**, for example *Customer changed their mind*.
+2. For a paid order, leave **Refund everything paid** ticked to give the money back, and **Put the items back in stock** ticked to return what it sold to stock.
+3. Click **Cancel order** and confirm.
+
+What a Pay Later order still owes is canceled, so the customer isn't reminded to pay it. A promotion code the order used can be used again. A canceled order can't be reopened.
+
+### Send the confirmation again
+
+Click **Send the confirmation again** to email the order confirmation to the customer once more, for example when they can't find it. It needs your site's email to be set up.
+
+### Notes
+
+Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
+
+## Store reports
+
+With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
+
+| Report | Shows |
+| --- | --- |
+| **Sales** | The orders paid in the period: how many, what the items came to, discounts, shipping, tax, the total charged, what was refunded and what you kept, day by day with a chart. |
+| **Sales by product** | How many of each product and variant sold, and for how much before discounts. |
+| **Sales by country** | Orders and totals for each country they ship to. |
+| **Tax on orders** | The tax orders charged, day by day. |
+| **Discounts on orders** | How many orders used each promotion code, and what it took off. |
+| **Refunds** | Each refund given in the period, with its order and reason. |
+| **Orders to ship** | Paid orders that haven't shipped in full, oldest first, and how many days each has waited. |
+| **Stock on hand** | With Inventory on: every counted item's stock, out of stock and low first. |
+
+Amounts in different currencies are never added together: each currency gets its own summary. Days follow your site's time zone, and a period longer than two months is shown by month. Reports count orders by the day they were paid, including orders canceled since, so a refund shows as a refund rather than making a sale disappear.
 
 ## Guests and their orders
 
@@ -55,6 +107,6 @@ Link to **Find my order** from your site's footer or help page so guests can fin
 
 ## Order confirmations
 
-When an order is paid, the customer is emailed a confirmation with the order number, what they bought, the total and the billing address. It goes to the email given at checkout, once per order.
+When an order is paid, the customer is emailed a confirmation with the order number, what they bought, any discount, the total and the billing address. It goes to the email given at checkout, once per order.
 
 Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.
