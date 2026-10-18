@@ -164,6 +164,12 @@ public sealed class Order : CatalogItem
     public List<OrderDispute> Disputes { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets how risky the gateway's fraud checks rated the order's payment, or <see langword="null"/> when it
+    /// doesn't rate payments.
+    /// </summary>
+    public OrderPaymentRisk PaymentRisk { get; set; }
+
+    /// <summary>
     /// Gets whether a dispute against the order's payment is still open.
     /// </summary>
     public bool HasOpenDispute

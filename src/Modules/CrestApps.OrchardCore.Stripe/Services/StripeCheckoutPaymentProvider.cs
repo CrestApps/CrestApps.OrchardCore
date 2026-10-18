@@ -255,6 +255,8 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
                     TaxSnapshot = attempt.TaxSnapshot,
                     Currency = intent.Currency,
                     GatewayMode = gatewayMode,
+                    RiskLevel = intent.RiskLevel,
+                    RiskScore = intent.RiskScore,
                 };
 
             case "canceled":

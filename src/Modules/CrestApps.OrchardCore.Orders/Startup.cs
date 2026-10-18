@@ -83,6 +83,10 @@ public sealed class Startup : StartupBase
         // A dispute reported by a gateway is recorded on its order, and shown on its page and in the orders list.
         services.AddScoped<CrestApps.OrchardCore.Payments.IPaymentEvent, OrderDisputeRecorder>();
         services.AddDisplayDriver<Order, OrderDisputesDisplayDriver>();
+
+        // The fraud rating of an order's payment, kept on the order, shown on its page and in the orders list.
+        services.AddScoped<ICheckoutHandler, OrderPaymentRiskCheckoutHandler>();
+        services.AddDisplayDriver<Order, OrderPaymentRiskDisplayDriver>();
         services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();

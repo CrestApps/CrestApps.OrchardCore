@@ -150,6 +150,8 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
                 attempt.ConfirmedAmount = verification.ReportsAuthoritativeAmount ? verification.Amount : attempt.ExpectedAmount;
                 attempt.ConfirmedTaxAmount = verification.ReportsAuthoritativeAmount ? verification.TaxAmount : attempt.ExpectedTaxAmount;
                 attempt.TaxSnapshot = verification.TaxSnapshot ?? attempt.TaxSnapshot;
+                attempt.RiskLevel = verification.RiskLevel ?? attempt.RiskLevel;
+                attempt.RiskScore = verification.RiskScore ?? attempt.RiskScore;
                 attempt.FailureReason = null;
                 await _attemptStore.UpdateAsync(attempt, cancellationToken);
 

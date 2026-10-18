@@ -42,6 +42,16 @@ public sealed class PaymentIntentDetails
     public string LatestChargeId { get; set; }
 
     /// <summary>
+    /// Gets or sets how risky Stripe Radar rated the latest charge: <c>normal</c>, <c>elevated</c> or <c>highest</c>.
+    /// </summary>
+    public string RiskLevel { get; set; }
+
+    /// <summary>
+    /// Gets or sets Stripe Radar's score of the latest charge, from 0 to 99, when the account has one.
+    /// </summary>
+    public int? RiskScore { get; set; }
+
+    /// <summary>
     /// Gets or sets the Stripe customer the PaymentIntent was created for, when any.
     /// </summary>
     public string CustomerId { get; set; }
