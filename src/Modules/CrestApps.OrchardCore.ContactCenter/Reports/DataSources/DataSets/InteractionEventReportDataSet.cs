@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -60,6 +61,14 @@ public sealed class InteractionEventReportDataSet : ContactCenterReportDataSet<I
             ["ItemId"] = index => index.ItemId,
             ["InteractionId"] = index => index.InteractionId,
         };
+
+    /// <inheritdoc/>
+    protected override void DescribeColumns(ReportIndexConditions<InteractionEventIndex> columns)
+    {
+        columns
+            .Text(nameof(InteractionEvent.EventType), nameof(InteractionEventIndex.EventType))
+            .Text(nameof(InteractionEvent.AggregateType), nameof(InteractionEventIndex.AggregateType));
+    }
 
     /// <inheritdoc/>
     protected override (string Field, Expression<Func<InteractionEventIndex, DateTime>> Column)? DateColumn

@@ -103,7 +103,12 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
         var invoiceIds = DataConditions.Keys(query.Conditions, "InvoiceId")?.Select(key => key?.ToString()).ToArray();
         var customerIds = DataConditions.Keys(query.Conditions, "CustomerId")?.Select(key => key?.ToString()).ToArray();
 
-        if (invoiceIds is { Length: 0 } || customerIds is { Length: 0 })
+        // A viewer's filter that limits the status to a list of values is applied by the database, without regard to
+        // case like the engine's own filter.
+        var columns = new ReportIndexConditions<InvoiceIndex>(query.Conditions)
+            .Text("Status", nameof(InvoiceIndex.Status));
+
+        if (invoiceIds is { Length: 0 } || customerIds is { Length: 0 } || columns.MatchesNothing)
         {
             yield break;
         }
@@ -111,10 +116,10 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
         // The period the report's filters put on the main date, never narrower than the filters.
         var (from, to) = DataConditions.DateRange(query.Conditions, "IssuedUtc");
 
-        // Called once per page, with a stable order.
-        IQuery<Invoice> Query()
+        // The conditions on the index rows, added to the query of every page.
+        IQueryIndex<InvoiceIndex> Filter(IQueryIndex<InvoiceIndex> invoices)
         {
-            var invoices = _session.Query<Invoice, InvoiceIndex>();
+            invoices = columns.Apply(invoices);
 
             if (invoiceIds is not null)
             {
@@ -138,13 +143,11 @@ public sealed class InvoicesReportDataSet : RecordDataSet<Invoice>
                 invoices = invoices.Where(index => index.IssuedUtc <= latest);
             }
 
-            return invoices
-                .OrderByDescending(index => index.IssuedUtc)
-                .ThenByDescending(index => index.Id);
+            return invoices;
         }
 
-        // Newest first, a page at a time; the base class stops reading at the row limit.
-        await foreach (var invoice in ReportIndexPages.ReadAsync(_session, Query, cancellationToken: cancellationToken))
+        // Newest first by the issue date, a page at a time; the base class stops reading at the row limit.
+        await foreach (var invoice in ReportIndexPages.ReadAsync<Invoice, InvoiceIndex>(_session, Filter, index => index.IssuedUtc, cancellationToken: cancellationToken))
         {
             yield return invoice;
         }
@@ -203,8 +206,9 @@ public sealed class DataSourcesStartup : StartupBase
 | --- | --- |
 | `field.Identifier(params DataFieldReference[] references)` | Marks a field as identifying a record (`IsIdentifier`) and adds the data sets its values point to (`References`). |
 | `Fields.MarkKeyFilterable(names)` | Sets `IsKeyFilterable` on the named fields; see [Join keys](#join-keys). |
-| `ReportIndexPages.ReadAsync(session, () => query, collection, cancellationToken)` | Reads a YesSql query 500 records at a time and detaches each page from the session once it was read, so a long read does not keep every record in memory. The query is created once per page and needs a stable order. |
+| `ReportIndexPages.ReadAsync<TRecord, TIndex>(session, filter, date, collection, cancellationToken)` | Reads the records of a map index 500 at a time, newest first by a date column of the index (then by index row), and detaches each page from the session once it was read, so a long read does not keep every record in memory. Each page is found in the index table alone, after the last row of the page before, and only then are its records loaded, so every page costs the same however far the read has gone. `filter` adds the conditions on the index rows; a nullable date column reads the records without a date last; a `null` date orders by index row only. |
 | `ReportIndexPages.ReadPagesAsync(...)` | The same, one page at a time, such as to look up what the records of a page refer to in one call. |
+| `ReportIndexConditions<TIndex>` | Applies the conditions that limit a field to a list of values, such as a viewer's status or channel filter, to the index rows: `.Text(field, column)` compares in upper case and leaves text that isn't ASCII to the engine, `.Enum(field, index => index.Column)` compares enumeration values by name, and `MatchesNothing` tells when no value can match. Pass `Apply` to the filter of `ReportIndexPages`. |
 | `ReportIndexAggregator` | Answers an aggregate query with one `GROUP BY` over a map index; see [Grouping in the data source](#grouping-in-the-data-source). |
 
 ## Sources for external systems
@@ -392,8 +396,24 @@ Use `DataValues.Coerce(value, fieldType)` to normalize raw values. A missing val
 
 - Ignoring every condition is always correct.
 - `DataConditions.DateRange(conditions, field)` returns the narrowest inclusive bounds the conditions allow; a missing bound is `null`. Apply them to an indexed date column.
-- Text compares ignoring case in the engine, so do not push text equality to a case-sensitive collation.
+- Text compares ignoring case in the engine, so do not push text equality to a case-sensitive collation; `ReportIndexConditions` compares it in upper case.
+- Push a condition only to a column that holds the same value as the field. A column the index normalizes, such as a canonical provider name, can drop rows the field's value matches.
 - Conditions are offered only for data sets that no outer join can fill with empty values.
+
+### Index the date you read by
+
+`ReportIndexPages` seeks to each page through the date column and the index row identifier, so create a database index on both as a step of the migration that creates the index table, which runs after the table exists on a new site and an upgraded one alike, with `IndexTableIndexCreation.CreateIfMissingAsync` (namespace `CrestApps.OrchardCore.YesSql.Core.Migrations`) so the step can run again safely:
+
+```csharp
+public async Task<int> UpdateFrom3Async()
+{
+    await IndexTableIndexCreation.CreateIfMissingAsync<InvoiceIndex>(SchemaBuilder, "IDX_InvoiceIndex_Report", null, "IssuedUtc", "Id");
+
+    return 4;
+}
+```
+
+Without it the database sorts the whole index table for every page.
 
 ## Join keys
 

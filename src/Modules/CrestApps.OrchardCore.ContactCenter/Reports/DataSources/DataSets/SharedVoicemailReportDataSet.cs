@@ -84,7 +84,7 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
         => (nameof(SharedVoicemail.ReceivedUtc), index => index.ReceivedUtc);
 
     /// <inheritdoc/>
-    protected override async Task<Func<IQuery<SharedVoicemail, SharedVoicemailIndex>, IQuery<SharedVoicemail, SharedVoicemailIndex>>> RestrictAsync(
+    protected override async Task<Func<IQueryIndex<SharedVoicemailIndex>, IQueryIndex<SharedVoicemailIndex>>> RestrictAsync(
         DataSourceContext context,
         CancellationToken cancellationToken)
     {
@@ -97,11 +97,11 @@ public sealed class SharedVoicemailReportDataSet : ContactCenterReportDataSet<Sh
 
         if (access.AllQueues)
         {
-            return records => records;
+            return rows => rows;
         }
 
         var queueIds = access.QueueIds?.Where(queueId => !string.IsNullOrEmpty(queueId)).Distinct(StringComparer.Ordinal).ToArray() ?? [];
 
-        return queueIds.Length == 0 ? null : records => records.Where(index => index.QueueId.IsIn(queueIds));
+        return queueIds.Length == 0 ? null : rows => rows.Where(index => index.QueueId.IsIn(queueIds));
     }
 }

@@ -23,7 +23,7 @@ Each run writes its temporary files to a folder of its own under `TemporaryDirec
 
 ## Limits
 
-Data sources stream their rows in batches (500 rows by default), and record-backed sources read their store a page at a time, so a source never loads more than the engine asks for. The engine reads each data set up to `MaxRowsPerDataSet` rows, in the order the source reads (newest first for the CrestApps sources), and warns when a data set has more: it asks for one row more than the limit to tell. Joins may produce at most `MaxJoinedRows` rows, and a result keeps at most `MaxResultRows` rows after sorting. The defaults and how to change them are in [Configuration](index.md#configuration).
+Data sources stream their rows in batches (500 rows by default), and record-backed sources read their store a page at a time, so a source never loads more than the engine asks for. The CrestApps sources find each page through a database index on their main date (keyset paging), so the thousandth page costs the same as the first. The engine reads each data set up to `MaxRowsPerDataSet` rows, in the order the source reads (newest first for the CrestApps sources), and warns when a data set has more: it asks for one row more than the limit to tell. Joins may produce at most `MaxJoinedRows` rows, and a result keeps at most `MaxResultRows` rows after sorting. The defaults and how to change them are in [Configuration](index.md#configuration).
 
 Four mechanisms keep large data sets fast and complete.
 
@@ -47,6 +47,12 @@ The engine asks the source only when the report:
 Row filters are sent as exact conditions and date periods as UTC boundaries of local hours, days or months (at most 1,000 buckets per date). Whatever a source cannot answer exactly (a computed field, a text "contains" filter, a median or distinct count, a calculated field, an exposed filter that lists options) is read row by row as before, and so is anything the source declines by returning `null`. A source may return at most `MaxRowsPerDataSet` groups.
 
 `ReportIndexAggregator` answers such a query with one `GROUP BY` statement over a YesSql index table; Omnichannel activities and the Contact Center data sets use it for the fields their index holds. See [Grouping in the data source](custom-data-sources.md#grouping-in-the-data-source) to add it to your own data sets.
+
+## Viewer filters read only what matches
+
+A row filter on a data set is passed to its source, which applies what it can in the database and leaves the rest to the engine, which applies every filter again. The CrestApps sources apply date ranges on their main date, and filters that limit a field to a list of values (such as **Channel is SMS** or **Status is one of**) on the fields their index holds, comparing text without regard to case. A data set then reads only the matching records, so `MaxRowsPerDataSet` counts matching records, and a filter on a rare value returns all of them instead of the matches among the newest records.
+
+A filter the source cannot apply, such as one on a field its index doesn't hold or a text "contains" filter, is applied by the engine to the rows read, so with large data combine it with a date filter.
 
 ## Joins read only what can match
 

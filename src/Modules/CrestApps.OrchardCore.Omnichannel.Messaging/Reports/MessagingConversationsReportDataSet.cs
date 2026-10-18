@@ -123,10 +123,8 @@ public sealed class MessagingConversationsReportDataSet : RecordDataSet<Messagin
             conversationIds = keys.Select(key => key?.ToString()).ToArray();
         }
 
-        IQuery<MessagingConversation> Query()
+        IQueryIndex<MessagingConversationIndex> Filter(IQueryIndex<MessagingConversationIndex> conversations)
         {
-            var conversations = _session.Query<MessagingConversation, MessagingConversationIndex>(collection: MessagingStorage.CollectionName);
-
             if (conversationIds is not null)
             {
                 conversations = conversations.Where(index => index.ItemId.IsIn(conversationIds));
@@ -144,12 +142,15 @@ public sealed class MessagingConversationsReportDataSet : RecordDataSet<Messagin
                 conversations = conversations.Where(index => index.LastMessageUtc <= latest);
             }
 
-            return conversations
-                .OrderByDescending(index => index.LastMessageUtc)
-                .ThenByDescending(index => index.Id);
+            return conversations;
         }
 
-        await foreach (var documents in ReportIndexPages.ReadPagesAsync(_session, Query, MessagingStorage.CollectionName, cancellationToken))
+        await foreach (var documents in ReportIndexPages.ReadPagesAsync<MessagingConversation, MessagingConversationIndex>(
+            _session,
+            Filter,
+            index => index.LastMessageUtc,
+            MessagingStorage.CollectionName,
+            cancellationToken))
         {
             var agents = await MessagingReportAgents.LoadAsync(
                 _agentProfileStore,

@@ -152,44 +152,64 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
             keyFilters.Add((column, keys.Select(key => key?.ToString()).ToArray()));
         }
 
+        var columns = new ReportIndexConditions<TIndex>(query.Conditions);
+
+        DescribeColumns(columns);
+
+        if (columns.MatchesNothing)
+        {
+            yield break;
+        }
+
         var dateColumn = DateColumn;
         var (from, to) = dateColumn is { } dated
             ? DataConditions.DateRange(query.Conditions, dated.Field)
             : (null, null);
 
-        IQuery<TRecord> Query()
+        IQueryIndex<TIndex> Filter(IQueryIndex<TIndex> rows)
         {
-            var records = restrict(_session.Query<TRecord, TIndex>(collection: ContactCenterStorage.CollectionName));
+            rows = columns.Apply(restrict(rows));
 
             foreach (var (column, values) in keyFilters)
             {
-                records = records.Where(In(column, values));
+                rows = rows.Where(In(column, values));
             }
 
-            if (dateColumn is not { } date)
+            if (dateColumn is { } date)
             {
-                return records.OrderByDescending(index => index.Id);
+                if (from.HasValue)
+                {
+                    rows = rows.Where(Compare(date.Column, ExpressionType.GreaterThanOrEqual, Earlier(from.Value)));
+                }
+
+                if (to.HasValue)
+                {
+                    rows = rows.Where(Compare(date.Column, ExpressionType.LessThanOrEqual, Later(to.Value)));
+                }
             }
 
-            if (from.HasValue)
-            {
-                records = records.Where(Compare(date.Column, ExpressionType.GreaterThanOrEqual, Earlier(from.Value)));
-            }
-
-            if (to.HasValue)
-            {
-                records = records.Where(Compare(date.Column, ExpressionType.LessThanOrEqual, Later(to.Value)));
-            }
-
-            return records
-                .OrderByDescending(Boxed(date.Column))
-                .ThenByDescending(index => index.Id);
+            return rows;
         }
 
-        await foreach (var record in ReportIndexPages.ReadAsync(_session, Query, ContactCenterStorage.CollectionName, cancellationToken))
+        await foreach (var record in ReportIndexPages.ReadAsync<TRecord, TIndex>(
+            _session,
+            Filter,
+            dateColumn?.Column,
+            ContactCenterStorage.CollectionName,
+            cancellationToken))
         {
             yield return record;
         }
+    }
+
+    /// <summary>
+    /// Declares the text and enumeration columns of the index that hold the values of fields, so a viewer's filter
+    /// that limits such a field to a list of values, such as a status filter, narrows the read itself. The default
+    /// declares none.
+    /// </summary>
+    /// <param name="columns">The columns to declare the fields on.</param>
+    protected virtual void DescribeColumns(ReportIndexConditions<TIndex> columns)
+    {
     }
 
     /// <summary>
@@ -198,13 +218,13 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
     /// </summary>
     /// <param name="context">The context of the run.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A function that narrows a query to the records the principal may read, or <see langword="null"/> when
-    /// it may read no record.</returns>
-    protected virtual Task<Func<IQuery<TRecord, TIndex>, IQuery<TRecord, TIndex>>> RestrictAsync(
+    /// <returns>A function that narrows the index rows read to those of the records the principal may read, or
+    /// <see langword="null"/> when it may read no record.</returns>
+    protected virtual Task<Func<IQueryIndex<TIndex>, IQueryIndex<TIndex>>> RestrictAsync(
         DataSourceContext context,
         CancellationToken cancellationToken)
     {
-        return Task.FromResult<Func<IQuery<TRecord, TIndex>, IQuery<TRecord, TIndex>>>(records => records);
+        return Task.FromResult<Func<IQueryIndex<TIndex>, IQueryIndex<TIndex>>>(rows => rows);
     }
 
     /// <summary>
@@ -255,10 +275,5 @@ public abstract class ContactCenterReportDataSet<TRecord, TIndex> : RecordDataSe
         return Expression.Lambda<Func<TIndex, bool>>(
             Expression.Call(_isIn, column.Body, Expression.Constant(values, _isIn.GetParameters()[1].ParameterType)),
             column.Parameters);
-    }
-
-    private static Expression<Func<TIndex, object>> Boxed(Expression<Func<TIndex, DateTime>> column)
-    {
-        return Expression.Lambda<Func<TIndex, object>>(Expression.Convert(column.Body, typeof(object)), column.Parameters);
     }
 }

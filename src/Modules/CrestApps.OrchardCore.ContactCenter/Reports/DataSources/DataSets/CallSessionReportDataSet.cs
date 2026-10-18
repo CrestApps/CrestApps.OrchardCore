@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -75,6 +76,14 @@ public sealed class CallSessionReportDataSet : ContactCenterReportDataSet<CallSe
             ["InteractionId"] = index => index.InteractionId,
             ["ActivityItemId"] = index => index.ActivityItemId,
         };
+
+    /// <inheritdoc/>
+    protected override void DescribeColumns(ReportIndexConditions<CallSessionIndex> columns)
+    {
+        // The index holds the canonical name of the provider rather than the record's, so a filter on the provider is
+        // left to the consumer.
+        columns.Enum(nameof(CallSession.State), index => index.State);
+    }
 
     /// <inheritdoc/>
     protected override (string Field, Expression<Func<CallSessionIndex, DateTime>> Column)? DateColumn

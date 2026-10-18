@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -69,6 +70,14 @@ public sealed class QueueItemReportDataSet : ContactCenterReportDataSet<QueueIte
             ["QueueId"] = index => index.QueueId,
             ["ActivityItemId"] = index => index.ActivityItemId,
         };
+
+    /// <inheritdoc/>
+    protected override void DescribeColumns(ReportIndexConditions<QueueItemIndex> columns)
+    {
+        columns
+            .Enum(nameof(QueueItem.Status), index => index.Status)
+            .Enum(nameof(QueueItem.Priority), index => index.Priority);
+    }
 
     /// <inheritdoc/>
     protected override (string Field, Expression<Func<QueueItemIndex, DateTime>> Column)? DateColumn

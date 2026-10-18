@@ -75,7 +75,7 @@ Password hashes, security stamps and other secrets are never exposed. Content it
 
 ## Business records
 
-CrestApps modules expose their own records as data sources, registered when Data Pipelines Core is enabled with the feature that stores them. Each data set reads its newest records first, a page at a time, and narrows the read to the date range a report's filters put on its main date. Identifier fields reference the data sets they point to, so related data sets join automatically: an activity's assigned user joins **Users**, its disposition joins **Dispositions**, an interaction's activity joins **Activities**, and so on across sources.
+CrestApps modules expose their own records as data sources, registered when Data Pipelines Core is enabled with the feature that stores them. Each data set reads its newest records first, a page at a time, and narrows the read to the date range a report's filters put on its main date and to the values its filters allow for the fields its index holds, such as a status or a channel. Identifier fields reference the data sets they point to, so related data sets join automatically: an activity's assigned user joins **Users**, its disposition joins **Dispositions**, an interaction's activity joins **Activities**, and so on across sources.
 
 | Source | Data sets | Permission |
 | --- | --- | --- |

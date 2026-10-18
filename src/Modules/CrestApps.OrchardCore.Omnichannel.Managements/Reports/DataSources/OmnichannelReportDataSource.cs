@@ -236,17 +236,36 @@ internal sealed class ActivitiesDataSet : RecordDataSet<OmnichannelActivity>, IA
             keyFilters.Add((field, keys.Select(key => key?.ToString()).ToArray()));
         }
 
+        // The viewer's filters on the fields the index holds, such as a channel or a status, narrow the read itself.
+        var columns = new ReportIndexConditions<OmnichannelActivityIndex>(query.Conditions)
+            .Text("Source", nameof(OmnichannelActivityIndex.Source))
+            .Text("Channel", nameof(OmnichannelActivityIndex.Channel))
+            .Text("PreferredDestination", nameof(OmnichannelActivityIndex.PreferredDestination))
+            .Text("SubjectContentType", nameof(OmnichannelActivityIndex.SubjectContentType))
+            .Text("ContactContentType", nameof(OmnichannelActivityIndex.ContactContentType))
+            .Text("TerminalReasonCode", nameof(OmnichannelActivityIndex.TerminalReasonCode))
+            .Enum("Kind", index => index.Kind)
+            .Enum("InteractionType", index => index.InteractionType)
+            .Enum("Status", index => index.Status)
+            .Enum("UrgencyLevel", index => index.UrgencyLevel)
+            .Enum("AssignmentStatus", index => index.AssignmentStatus);
+
+        if (columns.MatchesNothing)
+        {
+            yield break;
+        }
+
         var (createdFrom, createdTo) = DataConditions.DateRange(query.Conditions, "CreatedUtc");
         var (scheduledFrom, scheduledTo) = DataConditions.DateRange(query.Conditions, "ScheduledUtc");
         var (completedFrom, completedTo) = DataConditions.DateRange(query.Conditions, "CompletedUtc");
 
-        IQuery<OmnichannelActivity> Query()
+        IQueryIndex<OmnichannelActivityIndex> Filter(IQueryIndex<OmnichannelActivityIndex> records)
         {
-            var records = _session.Query<OmnichannelActivity, OmnichannelActivityIndex>(collection: OmnichannelConstants.CollectionName);
+            records = columns.Apply(records);
+
 
             foreach (var (field, values) in keyFilters)
             {
-
                 records = field switch
                 {
                     "ItemId" => records.Where(index => index.ItemId.IsIn(values)),
@@ -294,12 +313,15 @@ internal sealed class ActivitiesDataSet : RecordDataSet<OmnichannelActivity>, IA
                 records = records.Where(index => index.CompletedUtc <= value);
             }
 
-            return records
-                .OrderByDescending(index => index.CreatedUtc)
-                .ThenByDescending(index => index.DocumentId);
+            return records;
         }
 
-        await foreach (var record in ReportIndexPages.ReadAsync(_session, Query, OmnichannelConstants.CollectionName, cancellationToken))
+        await foreach (var record in ReportIndexPages.ReadAsync<OmnichannelActivity, OmnichannelActivityIndex>(
+            _session,
+            Filter,
+            index => index.CreatedUtc,
+            OmnichannelConstants.CollectionName,
+            cancellationToken))
         {
             yield return record;
         }
@@ -481,10 +503,8 @@ internal sealed class ActivityBatchesDataSet : RecordDataSet<OmnichannelActivity
     {
         var (from, to) = DataConditions.DateRange(query.Conditions, "CreatedUtc");
 
-        IQuery<OmnichannelActivityBatch> Query()
+        IQueryIndex<OmnichannelActivityBatchIndex> Filter(IQueryIndex<OmnichannelActivityBatchIndex> records)
         {
-            var records = _session.Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName);
-
             if (from.HasValue)
             {
                 var value = from.Value;
@@ -497,11 +517,14 @@ internal sealed class ActivityBatchesDataSet : RecordDataSet<OmnichannelActivity
                 records = records.Where(index => index.CreatedUtc <= value);
             }
 
-            return records
-                .OrderByDescending(index => index.CreatedUtc)
-                .ThenByDescending(index => index.Id);
+            return records;
         }
 
-        return ReportIndexPages.ReadAsync(_session, Query, OmnichannelConstants.CollectionName, cancellationToken);
+        return ReportIndexPages.ReadAsync<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(
+            _session,
+            Filter,
+            index => index.CreatedUtc,
+            OmnichannelConstants.CollectionName,
+            cancellationToken);
     }
 }

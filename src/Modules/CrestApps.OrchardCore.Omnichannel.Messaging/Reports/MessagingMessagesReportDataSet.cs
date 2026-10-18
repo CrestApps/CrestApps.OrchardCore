@@ -112,13 +112,11 @@ public sealed class MessagingMessagesReportDataSet : RecordDataSet<MessagingRepo
             conversationIds = keys.Select(key => key?.ToString()).ToArray();
         }
 
-        IQuery<OmnichannelMessage> Query()
+        IQueryIndex<OmnichannelMessageIndex> Filter(IQueryIndex<OmnichannelMessageIndex> messages)
         {
             // Only the messages of messaging conversations: other channel traffic, such as automated activities, is not
             // the workspace's to report.
-            var messages = _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
-                index => index.ConversationId != null,
-                collection: OmnichannelConstants.CollectionName);
+            messages = messages.Where(index => index.ConversationId != null);
 
             if (conversationIds is not null)
             {
@@ -137,12 +135,15 @@ public sealed class MessagingMessagesReportDataSet : RecordDataSet<MessagingRepo
                 messages = messages.Where(index => index.CreatedUtc <= latest);
             }
 
-            return messages
-                .OrderByDescending(index => index.CreatedUtc)
-                .ThenByDescending(index => index.Id);
+            return messages;
         }
 
-        await foreach (var documents in ReportIndexPages.ReadPagesAsync(_session, Query, OmnichannelConstants.CollectionName, cancellationToken))
+        await foreach (var documents in ReportIndexPages.ReadPagesAsync<OmnichannelMessage, OmnichannelMessageIndex>(
+            _session,
+            Filter,
+            index => index.CreatedUtc,
+            OmnichannelConstants.CollectionName,
+            cancellationToken))
         {
             var agents = await MessagingReportAgents.LoadAsync(
                 _agentProfileStore,

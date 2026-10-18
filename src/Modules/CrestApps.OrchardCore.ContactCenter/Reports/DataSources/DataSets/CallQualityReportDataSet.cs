@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Reports.DataSources;
+using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DataSources;
@@ -65,6 +66,14 @@ public sealed class CallQualityReportDataSet : ContactCenterReportDataSet<CallQu
             ["ItemId"] = index => index.ItemId,
             ["InteractionId"] = index => index.InteractionId,
         };
+
+    /// <inheritdoc/>
+    protected override void DescribeColumns(ReportIndexConditions<CallQualityRecordIndex> columns)
+    {
+        columns
+            .Enum(nameof(CallQualityRecord.Source), index => index.Source)
+            .Enum(nameof(CallQualityRecord.Rating), index => index.Rating);
+    }
 
     /// <inheritdoc/>
     protected override (string Field, Expression<Func<CallQualityRecordIndex, DateTime>> Column)? DateColumn

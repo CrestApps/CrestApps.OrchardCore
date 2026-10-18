@@ -109,10 +109,8 @@ public sealed class AIChatSessionMetricsReportDataSet : RecordDataSet<AIChatRepo
     {
         var (from, to) = DataConditions.DateRange(query.Conditions, SessionStartedUtcField);
 
-        IQuery<AIChatSessionEvent> Query()
+        IQueryIndex<AIChatSessionMetricsIndex> Filter(IQueryIndex<AIChatSessionMetricsIndex> events)
         {
-            var events = _session.Query<AIChatSessionEvent, AIChatSessionMetricsIndex>(collection: _storeOptions.AICollectionName);
-
             if (from.HasValue)
             {
                 var earliest = from.Value;
@@ -125,14 +123,17 @@ public sealed class AIChatSessionMetricsReportDataSet : RecordDataSet<AIChatRepo
                 events = events.Where(index => index.SessionStartedUtc <= latest);
             }
 
-            return events
-                .OrderByDescending(index => index.SessionStartedUtc)
-                .ThenByDescending(index => index.Id);
+            return events;
         }
 
         var profileNames = await AIChatReportProfileNames.LoadAsync(_profileManager, query, cancellationToken);
 
-        await foreach (var document in ReportIndexPages.ReadAsync(_session, Query, _storeOptions.AICollectionName, cancellationToken))
+        await foreach (var document in ReportIndexPages.ReadAsync<AIChatSessionEvent, AIChatSessionMetricsIndex>(
+            _session,
+            Filter,
+            index => index.SessionStartedUtc,
+            _storeOptions.AICollectionName,
+            cancellationToken))
         {
             yield return new AIChatReportRecord<AIChatSessionEvent>(document, AIChatReportProfileNames.Find(profileNames, document.ProfileId));
         }

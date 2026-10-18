@@ -116,10 +116,8 @@ public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportReco
             keyFilters.Add((field, keys.Select(key => key?.ToString()).ToArray()));
         }
 
-        IQuery<AIChatSession> Query()
+        IQueryIndex<AIChatSessionIndex> Filter(IQueryIndex<AIChatSessionIndex> sessions)
         {
-            var sessions = _session.Query<AIChatSession, AIChatSessionIndex>(collection: _storeOptions.AICollectionName);
-
             foreach (var (field, values) in keyFilters)
             {
                 sessions = field == AIChatReportDataSource.SessionIdField
@@ -139,14 +137,17 @@ public sealed class AIChatSessionsReportDataSet : RecordDataSet<AIChatReportReco
                 sessions = sessions.Where(index => index.LastActivityUtc <= latest);
             }
 
-            return sessions
-                .OrderByDescending(index => index.LastActivityUtc)
-                .ThenByDescending(index => index.Id);
+            return sessions;
         }
 
         var profileNames = await AIChatReportProfileNames.LoadAsync(_profileManager, query, cancellationToken);
 
-        await foreach (var document in ReportIndexPages.ReadAsync(_session, Query, _storeOptions.AICollectionName, cancellationToken))
+        await foreach (var document in ReportIndexPages.ReadAsync<AIChatSession, AIChatSessionIndex>(
+            _session,
+            Filter,
+            index => index.LastActivityUtc,
+            _storeOptions.AICollectionName,
+            cancellationToken))
         {
             yield return new AIChatReportRecord<AIChatSession>(document, AIChatReportProfileNames.Find(profileNames, document.ProfileId));
         }
