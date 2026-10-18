@@ -168,6 +168,7 @@ public sealed class ListingStartup : StartupBase
         services.AddIndexProvider<ProductSearchIndexProvider>();
         services.AddScoped<IContentHandler, ProductSearchContentHandler>();
         services.AddSingleton<IBackgroundTask, ProductSearchIndexBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ProductSaleScheduleBackgroundTask>();
 
         services.AddContentPart<ProductListingPart>()
             .UseDisplayDriver<ProductListingPartDisplayDriver>();

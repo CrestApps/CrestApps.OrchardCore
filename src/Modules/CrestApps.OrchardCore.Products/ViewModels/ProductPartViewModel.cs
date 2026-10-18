@@ -10,6 +10,18 @@ public class ProductPartViewModel
 
     public decimal? CompareAtPrice { get; set; }
 
+    public decimal? SalePrice { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the sale starts, in the site's time zone.
+    /// </summary>
+    public DateTime? SaleStarts { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the sale ends, in the site's time zone.
+    /// </summary>
+    public DateTime? SaleEnds { get; set; }
+
     public string Currency { get; set; }
 
     public string Sku { get; set; }

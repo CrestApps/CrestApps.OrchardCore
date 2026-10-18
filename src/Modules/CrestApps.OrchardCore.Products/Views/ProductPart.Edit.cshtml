@@ -46,6 +46,33 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="SalePrice">
+    <label asp-for="SalePrice" class="ocat-label">@T["Sale price"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="0.01" asp-for="SalePrice" class="form-control" />
+        <span class="hint">@T["Optional. The product sells at this price during the sale below, with the price struck through next to it. Leave the dates empty for a sale that runs until you remove the sale price."]</span>
+        <span asp-validation-for="SalePrice"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SaleEnds">
+    <label class="ocat-label" asp-for="SaleStarts">@T["Sale runs"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-sm-6">
+                <label asp-for="SaleStarts" class="form-label small text-body-secondary mb-1">@T["From"]</label>
+                <input type="datetime-local" asp-for="SaleStarts" class="form-control" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="SaleEnds" class="form-label small text-body-secondary mb-1">@T["Until"]</label>
+                <input type="datetime-local" asp-for="SaleEnds" class="form-control" />
+            </div>
+        </div>
+        <span class="hint">@T["In the site's time zone. Listings switch to and from the sale price within a minute of these times."]</span>
+        <span asp-validation-for="SaleEnds"></span>
+    </div>
+</div>
+
 @if (Model.ShowPriceDisplay)
 {
     <div class="ocat-wrapper" asp-validation-class-for="PriceDisplay">

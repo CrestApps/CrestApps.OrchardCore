@@ -121,7 +121,7 @@ public sealed class AddToCartDisplayDriver : ContentPartDisplayDriver<ProductPar
                     VariantId = variant.VariantId,
                     Title = variant.GetTitle(optionNames),
                     Sku = string.IsNullOrEmpty(variant.Sku) ? productPart?.Sku : variant.Sku,
-                    Price = (variant.Price ?? productPrice) is { } amount && !string.IsNullOrEmpty(product.Currency)
+                    Price = ProductSale.GetPrice(productPart, variant, _clock.UtcNow) is { } amount && !string.IsNullOrEmpty(product.Currency)
                         ? ProductPriceFormatter.Format(amount, product.Currency)
                         : null,
                     Options = new Dictionary<string, string>(variant.Options, StringComparer.OrdinalIgnoreCase),

@@ -49,6 +49,7 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
                     Sku = variant.Sku,
                     Price = variant.Price,
                     CompareAtPrice = variant.CompareAtPrice,
+                    SalePrice = variant.SalePrice,
                     ImagePath = variant.ImagePath,
                     Enabled = variant.Enabled,
                 })
@@ -99,7 +100,13 @@ public sealed class ProductVariantsPartDisplayDriver : ContentPartDisplayDriver<
 
             variant.Sku = entry.Sku?.Trim();
             variant.Price = entry.Price;
+            if (entry.SalePrice < 0m)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, $"{nameof(model.Variants)}[{index}].{nameof(entry.SalePrice)}", S["Enter a price of zero or more."]);
+            }
+
             variant.CompareAtPrice = entry.CompareAtPrice;
+            variant.SalePrice = entry.SalePrice;
             variant.ImagePath = string.IsNullOrWhiteSpace(entry.ImagePath) ? null : entry.ImagePath.Trim();
             variant.Enabled = entry.Enabled;
         }

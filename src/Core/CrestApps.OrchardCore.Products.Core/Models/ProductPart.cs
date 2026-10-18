@@ -36,6 +36,22 @@ public sealed class ProductPart : ContentPart
     public decimal? CompareAtPrice { get; set; }
 
     /// <summary>
+    /// Gets or sets the price the product sells at during its sale, between <see cref="SaleStartsUtc"/> and
+    /// <see cref="SaleEndsUtc"/>. Outside it, or when it isn't lower than the price, the price applies.
+    /// </summary>
+    public decimal? SalePrice { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the sale starts, or <see langword="null"/> for a sale that has started.
+    /// </summary>
+    public DateTime? SaleStartsUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the sale ends, or <see langword="null"/> for a sale with no end.
+    /// </summary>
+    public DateTime? SaleEndsUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets whether this product can be bought online. It is honored only when the content type's
     /// <see cref="ProductPartSettings.SalesMode"/> is <see cref="ProductSalesMode.PerItem"/>.
     /// </summary>

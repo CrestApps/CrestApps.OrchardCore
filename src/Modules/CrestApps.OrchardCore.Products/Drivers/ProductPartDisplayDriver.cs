@@ -6,6 +6,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Products.Drivers;
@@ -13,14 +14,17 @@ namespace CrestApps.OrchardCore.Products.Drivers;
 public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductPart>
 {
     private readonly IProductCurrencyProvider _currencyProvider;
+    private readonly ILocalClock _localClock;
 
     internal readonly IStringLocalizer S;
 
     public ProductPartDisplayDriver(
         IProductCurrencyProvider currencyProvider,
+        ILocalClock localClock,
         IStringLocalizer<ProductPartDisplayDriver> stringLocalizer)
     {
         _currencyProvider = currencyProvider;
+        _localClock = localClock;
         S = stringLocalizer;
     }
 
@@ -32,6 +36,9 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
             model.Price = context.IsNew ? null : part.Price;
             model.CompareAtPrice = part.CompareAtPrice;
+            model.SalePrice = part.SalePrice;
+            model.SaleStarts = await ToLocalAsync(part.SaleStartsUtc);
+            model.SaleEnds = await ToLocalAsync(part.SaleEndsUtc);
             model.Currency = string.IsNullOrEmpty(part.Currency)
                 ? settings.DefaultCurrency
                 : part.Currency;
@@ -53,6 +60,13 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             ];
         });
     }
+
+    // The editor takes the sale's dates in the site's time zone; the product keeps them in UTC.
+    private async Task<DateTime?> ToLocalAsync(DateTime? utc)
+        => utc is { } value ? (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(value, DateTimeKind.Utc))).DateTime : null;
+
+    private async Task<DateTime> ToUtcAsync(DateTime local)
+        => DateTime.SpecifyKind(await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(local, DateTimeKind.Unspecified)), DateTimeKind.Utc);
 
     public override async Task<IDisplayResult> UpdateAsync(ProductPart part, UpdatePartEditorContext context)
     {
@@ -88,8 +102,25 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.CompareAtPrice), S["The compare-at price cannot be a negative number."]);
         }
 
+        if (model.SalePrice < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SalePrice), S["The sale price cannot be a negative number."]);
+        }
+        else if (model.SalePrice.HasValue && model.Price.HasValue && model.SalePrice >= model.Price)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SalePrice), S["The sale price has to be lower than the price."]);
+        }
+
+        if (model.SaleStarts.HasValue && model.SaleEnds.HasValue && model.SaleEnds <= model.SaleStarts)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SaleEnds), S["The sale has to end after it starts."]);
+        }
+
         part.Price = model.Price;
         part.CompareAtPrice = model.CompareAtPrice;
+        part.SalePrice = model.SalePrice;
+        part.SaleStartsUtc = model.SaleStarts is { } starts ? await ToUtcAsync(starts) : null;
+        part.SaleEndsUtc = model.SaleEnds is { } ends ? await ToUtcAsync(ends) : null;
 
         var normalizedCurrency = NormalizeCurrencyCode(model.Currency);
 
