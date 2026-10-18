@@ -71,6 +71,10 @@ public sealed class AgentStateReasonCodesController : ContactCenterCatalogContro
     protected override LocalizedHtmlString DeletedNotification
         => H["The agent state reason code has been deleted successfully."];
 
+    /// <inheritdoc/>
+    protected override void SetName(AgentStateReasonCode entry, string name)
+        => entry.Name = name;
+
     /// <summary>
     /// Lists the reason codes.
     /// </summary>

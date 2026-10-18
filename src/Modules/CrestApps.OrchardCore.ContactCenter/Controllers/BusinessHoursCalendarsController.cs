@@ -71,6 +71,10 @@ public sealed class BusinessHoursCalendarsController : ContactCenterCatalogContr
     protected override LocalizedHtmlString DeletedNotification
         => H["The business hours calendar has been deleted successfully."];
 
+    /// <inheritdoc/>
+    protected override void SetName(BusinessHoursCalendar entry, string name)
+        => entry.Name = name;
+
     /// <summary>
     /// Lists the calendars.
     /// </summary>
