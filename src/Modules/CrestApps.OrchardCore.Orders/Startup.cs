@@ -79,6 +79,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
         services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
+
+        // A dispute reported by a gateway is recorded on its order, and shown on its page and in the orders list.
+        services.AddScoped<CrestApps.OrchardCore.Payments.IPaymentEvent, OrderDisputeRecorder>();
+        services.AddDisplayDriver<Order, OrderDisputesDisplayDriver>();
         services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
@@ -114,6 +118,7 @@ public sealed class ReportsStartup : StartupBase
             .AddScoped<IReport, OrderTaxReport>()
             .AddScoped<IReport, OrderDiscountsReport>()
             .AddScoped<IReport, OrderRefundsReport>()
+            .AddScoped<IReport, OrderDisputesReport>()
             .AddScoped<IReport, UnfulfilledOrdersReport>();
     }
 }
