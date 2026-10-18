@@ -71,7 +71,7 @@ public sealed class CheckoutSessionStoreSqliteTests
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-        var migration = new CheckoutMigrations { SchemaBuilder = schemaBuilder };
+        var migration = new CheckoutMigrations(session) { SchemaBuilder = schemaBuilder };
         await migration.CreateAsync();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

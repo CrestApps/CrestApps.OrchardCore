@@ -10,7 +10,9 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Security.Services;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Inventory.Drivers;
@@ -25,16 +27,19 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IRoleService _roleService;
 
     internal readonly IStringLocalizer S;
 
     public InventorySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IRoleService roleService,
         IStringLocalizer<InventorySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _roleService = roleService;
         S = stringLocalizer;
     }
 
@@ -42,10 +47,15 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
         => InventoryConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, InventorySettings settings, BuildEditorContext context)
-        => Initialize<InventorySettingsViewModel>("InventorySettings_Edit", model =>
+        => Initialize<InventorySettingsViewModel>("InventorySettings_Edit", async model =>
         {
             model.DefaultLowStockThreshold = settings.DefaultLowStockThreshold;
             model.HoldMinutes = settings.HoldMinutes;
+            model.LowStockNotificationRoles = settings.LowStockNotificationRoles ?? [];
+            model.Roles = (await _roleService.GetRoleNamesAsync())
+                .Where(role => !IsEveryone(role))
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
         }).Location("Content:1")
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, InventoryPermissions.ManageInventory))
         .OnGroup(SettingsGroupId);
@@ -82,6 +92,18 @@ public sealed class InventorySettingsDisplayDriver : SiteDisplayDriver<Inventory
             ShellScope.AddDeferredTask(scope => scope.ServiceProvider.GetRequiredService<InventorySyncService>().SyncAllAsync());
         }
 
+        // Only roles that exist are kept. Anonymous and Authenticated would mean every visitor or every user.
+        var roles = (await _roleService.GetRoleNamesAsync()).Where(role => !IsEveryone(role)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        settings.LowStockNotificationRoles = (model.LowStockNotificationRoles ?? [])
+            .Where(roles.Contains)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
         return Edit(site, settings, context);
     }
+
+    private static bool IsEveryone(string role)
+        => string.Equals(role, OrchardCoreConstants.Roles.Anonymous, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(role, OrchardCoreConstants.Roles.Authenticated, StringComparison.OrdinalIgnoreCase);
 }

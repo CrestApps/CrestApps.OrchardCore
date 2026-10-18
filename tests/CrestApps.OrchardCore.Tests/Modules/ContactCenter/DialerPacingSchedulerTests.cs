@@ -294,6 +294,34 @@ public sealed class DialerPacingSchedulerTests
     }
 
     [Fact]
+    public async Task ALockThatStaysHeld_IsRetriedLessAndLessOften()
+    {
+        // Arrange: a holder that never lets go, as when its cycle is stuck.
+        var clock = new TestClock();
+        var deadlines = new DueRecordingDeadlineScheduler();
+        var scheduler = CreateScheduler(deadlines, clock);
+        var fixture = new RunFixture();
+        await using var held = await fixture.Lock.AcquireLockAsync(DialerPacingScheduler.GetPacingLockKey(_campaignQueue));
+
+        scheduler.Request(_campaignQueue);
+
+        // Act
+        var delays = new List<TimeSpan>();
+
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            await deadlines.RunAsync(DialerPacingScheduler.GetDeadlineKey(_campaignQueue), fixture.BuildServices());
+            delays.Add(deadlines.Scheduled.Last().DueUtc - clock.UtcNow);
+        }
+
+        // Assert: each miss waits longer than the one before, and never longer than a third of the lock's lifetime.
+        Assert.Equal(_options.LockRetryDelay, delays[0]);
+        Assert.True(delays[1] > delays[0]);
+        Assert.True(delays[2] > delays[1]);
+        Assert.All(delays, delay => Assert.True(delay <= _options.LockExpiration / 3));
+    }
+
+    [Fact]
     public async Task TwoRunsOfOneCampaignAtOnce_OnlyOnePaces()
     {
         // Arrange: two nodes asked to pace the same campaign at the same moment.

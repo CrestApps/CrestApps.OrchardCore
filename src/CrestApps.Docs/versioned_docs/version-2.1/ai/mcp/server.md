@@ -380,7 +380,7 @@ Resources can be exported and imported via recipes:
 
 ## Admin Chat UI with MCP Server Integration
 
-![Screen cast of the admin chat](/img/docs/mcp-integration.gif)
+<YouTube video="ai-walkthroughs" title="Video of the admin chat calling tools on an MCP server" start={425} end={500} />
 
 ## Security considerations
 

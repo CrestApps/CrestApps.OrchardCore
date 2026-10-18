@@ -1,6 +1,7 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using YesSql;
@@ -17,9 +18,8 @@ public sealed partial class PredictiveAgentConnector
     {
         ArgumentException.ThrowIfNullOrEmpty(interactionId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
             GetConnectLockKey(interactionId),
-            TimeSpan.Zero,
             _options.PacingLockExpiration);
 
         if (!locked)
@@ -165,9 +165,8 @@ public sealed partial class PredictiveAgentConnector
 
     internal async Task<bool> AbandonUnconnectedAsync(string interactionId, string queueId, CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+        (var locker, var locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
             GetConnectLockKey(interactionId),
-            TimeSpan.Zero,
             _options.PacingLockExpiration);
 
         if (!locked)

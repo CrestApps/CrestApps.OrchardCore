@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscriptionExpiredEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-hourglass-end" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Subscription Expired"])
+    </h4>
+</header>

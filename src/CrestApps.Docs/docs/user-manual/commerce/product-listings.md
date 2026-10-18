@@ -80,6 +80,8 @@ The settings you change less often open with the **More settings** button at the
 
 To change the order, drag a row by its handle, or focus the handle and press the up and down arrow keys.
 
+Besides your fields, every listing can offer **Price**, **Type**, **Featured** and, when the [Inventory](inventory.md) feature counts stock, **In stock**, which shows only products that can be bought now.
+
 ### Sorting
 
 Untick **Let visitors change the sort** to always show the products in the default sort's order.

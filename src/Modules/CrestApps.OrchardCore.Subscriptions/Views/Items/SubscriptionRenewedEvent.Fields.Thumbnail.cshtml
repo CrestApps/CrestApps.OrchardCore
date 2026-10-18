@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscriptionRenewedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+    @T["Subscription Renewed"]
+</h4>
+<p class="text-muted">@T["Triggered when a subscription billing cycle is paid."]</p>

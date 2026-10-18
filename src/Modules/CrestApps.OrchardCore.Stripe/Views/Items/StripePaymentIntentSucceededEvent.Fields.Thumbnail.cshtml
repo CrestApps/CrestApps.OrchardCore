@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentIntentSucceededEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Stripe Payment Intent Succeeded"]
+</h4>
+<p class="text-muted">@T["Triggered when a Stripe payment intent succeeds."]</p>

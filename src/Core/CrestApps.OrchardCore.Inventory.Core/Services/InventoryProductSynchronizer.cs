@@ -24,20 +24,24 @@ public sealed class InventoryProductSynchronizer
 
     /// <summary>
     /// Brings the product's stock items up to date with it, or archives them all when the product is gone
-    /// (<paramref name="product"/> is <see langword="null"/>) or its type no longer has the Inventory part.
+    /// (<paramref name="product"/> is <see langword="null"/>) or its type no longer has the Inventory part. Returns
+    /// whether a stock item was added or archived, which changes what the product has in stock.
     /// </summary>
-    public async Task SyncAsync(string contentItemId, ContentItem product, bool typeHasInventory, InventorySettings settings, CancellationToken cancellationToken = default)
+    public async Task<bool> SyncAsync(string contentItemId, ContentItem product, bool typeHasInventory, InventorySettings settings, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(contentItemId);
 
         var existing = await _items.ListByProductAsync(contentItemId, cancellationToken);
         var wanted = GetWanted(typeHasInventory ? product : null, settings);
         var now = _clock.UtcNow;
+        var counted = false;
 
         foreach (var item in existing)
         {
             if (wanted.Remove(item.VariantId ?? string.Empty, out var target))
             {
+                counted |= item.Archived;
+
                 if (Apply(item, target, archived: false))
                 {
                     item.ModifiedUtc = now;
@@ -46,6 +50,7 @@ public sealed class InventoryProductSynchronizer
             }
             else if (!item.Archived)
             {
+                counted = true;
                 item.Archived = true;
                 item.ModifiedUtc = now;
                 await _items.UpdateAsync(item, cancellationToken);
@@ -66,7 +71,10 @@ public sealed class InventoryProductSynchronizer
             Apply(item, target, archived: false);
 
             await _items.CreateAsync(item, cancellationToken);
+            counted = true;
         }
+
+        return counted;
     }
 
     // What the product wants counted, keyed by variant id (empty for a product without variants).

@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripePaymentFailedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+    @T["Stripe Payment Failed"]
+</h4>
+<p class="text-muted">@T["Triggered when a Stripe payment fails."]</p>

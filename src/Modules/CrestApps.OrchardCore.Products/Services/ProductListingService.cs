@@ -165,6 +165,15 @@ public sealed class ProductListingService
             Kind = ProductFacetKind.Toggle,
         });
 
+        // Shown only when a module that counts stock, such as Inventory, says what is in stock.
+        facets.Add(new ProductListingFacet
+        {
+            Key = "in-stock",
+            AttributeKey = ProductAttributeKeys.InStock,
+            Label = S["In stock"],
+            Kind = ProductFacetKind.Toggle,
+        });
+
         facets.Add(new ProductListingFacet
         {
             Key = "price",

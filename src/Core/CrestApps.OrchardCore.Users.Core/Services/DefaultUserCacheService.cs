@@ -9,7 +9,9 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 /// </summary>
 public sealed class DefaultUserCacheService : IUserCacheService
 {
-    private readonly Dictionary<string, User> _users = [];
+    // User names are matched case-insensitively, like the normalized store lookup. A name that matched no user is
+    // kept as null, so a list showing a deleted author on many rows looks it up once instead of once per row.
+    private readonly Dictionary<string, User> _users = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly ILookupNormalizer _lookupNormalizer;
     private readonly IUserStore<IUser> _userStore;
@@ -37,11 +39,15 @@ public sealed class DefaultUserCacheService : IUserCacheService
             var normalizedUsername = _lookupNormalizer.NormalizeName(username);
             var appUser = await _userStore.FindByNameAsync(normalizedUsername, default);
 
-            if (appUser is User u)
-            {
-                user = u;
+            user = appUser as User;
 
-                SetInternal(u);
+            if (user is null)
+            {
+                _users[username] = null;
+            }
+            else
+            {
+                SetInternal(user);
             }
         }
 

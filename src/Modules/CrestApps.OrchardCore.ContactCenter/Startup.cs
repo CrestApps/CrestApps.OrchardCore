@@ -305,12 +305,9 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>());
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
 
-        // Contact Center settings screens and administration menu. Each capability owns its administration
-        // screens so enabling a capability provides a complete management experience without another toggle.
-        services
-            .AddResourceConfiguration<ContactCenterExternalTransferResourceConfiguration>()
-            .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>()
-            .AddNavigationProvider<ContactCenterSettingsAdminMenu>();
+        // The Contact Center settings menu. Each capability owns its tabs on that screen so enabling a capability
+        // provides a complete management experience without another toggle.
+        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
         services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
     }
 }

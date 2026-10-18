@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Stripe.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<StripeSubscriptionCreatedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-file-signature" aria-hidden="true"></i>
+    @T["Stripe Subscription Created"]
+</h4>
+<p class="text-muted">@T["Triggered when a Stripe subscription is created."]</p>

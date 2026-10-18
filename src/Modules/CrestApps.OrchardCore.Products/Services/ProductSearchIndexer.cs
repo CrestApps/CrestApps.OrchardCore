@@ -26,7 +26,7 @@ public sealed class ProductSearchIndexer
     private const int BatchSize = 100;
 
     // Bump when the record's shape or the way it is built changes, so every tenant rebuilds once.
-    private const string BuildVersion = "8";
+    private const string BuildVersion = "9";
 
     private readonly ISession _session;
     private readonly ProductSearchDocumentBuilder _documentBuilder;
@@ -34,6 +34,7 @@ public sealed class ProductSearchIndexer
     private readonly Attributes.TaxonomyTermLookup _termLookup;
     private readonly ISignal _signal;
     private readonly IEnumerable<IProductSearchIndexHandler> _handlers;
+    private readonly IEnumerable<IProductSearchDocumentContributor> _contributors;
     private readonly ILogger _logger;
 
     public ProductSearchIndexer(
@@ -43,6 +44,7 @@ public sealed class ProductSearchIndexer
         Attributes.TaxonomyTermLookup termLookup,
         ISignal signal,
         IEnumerable<IProductSearchIndexHandler> handlers,
+        IEnumerable<IProductSearchDocumentContributor> contributors,
         ILogger<ProductSearchIndexer> logger)
     {
         _session = session;
@@ -51,6 +53,7 @@ public sealed class ProductSearchIndexer
         _termLookup = termLookup;
         _signal = signal;
         _handlers = handlers;
+        _contributors = contributors;
         _logger = logger;
     }
 
@@ -110,6 +113,12 @@ public sealed class ProductSearchIndexer
     public async Task<string> GetFingerprintAsync()
     {
         var builder = new StringBuilder(BuildVersion);
+
+        // A module that adds to the records, turned on or off, changes what every record holds.
+        foreach (var contributor in _contributors.Select(contributor => contributor.GetType().FullName).Order(StringComparer.Ordinal))
+        {
+            builder.Append("|contributor:").Append(contributor);
+        }
 
         foreach (var type in await _attributeCatalog.GetProductTypesAsync())
         {

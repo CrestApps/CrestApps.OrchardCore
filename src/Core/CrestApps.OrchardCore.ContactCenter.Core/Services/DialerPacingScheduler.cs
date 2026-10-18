@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Locking;
 using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -45,6 +46,9 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
     private const int MaxDetailLength = 500;
 
     private readonly ConcurrentDictionary<string, DateTime> _pending = new(StringComparer.Ordinal);
+
+    // Consecutive times a queue's run found its pacing lock held, so a lock that stays held is retried less and less often.
+    private readonly ConcurrentDictionary<string, int> _lockMisses = new(StringComparer.Ordinal);
     private readonly IContactCenterDeadlineScheduler _deadlineScheduler;
     private readonly IClock _clock;
     private readonly ContactCenterDialerPacingOptions _options;
@@ -217,9 +221,8 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
             return null;
         }
 
-        (var locker, var locked) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockAsync(
+        (var locker, var locked) = await services.GetRequiredService<IDistributedLock>().TryAcquireLockWithoutWaitingAsync(
             GetPacingLockKey(queueId),
-            TimeSpan.Zero,
             _options.LockExpiration);
 
         if (!locked)
@@ -229,7 +232,13 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
                 _logger.LogDebug("Skipped a pacing run of queue '{QueueId}' because another run holds its pacing lock; it is paced again shortly.", queueId.SanitizeLogValue());
             }
 
-            RequestRetry(queueId);
+            // Each miss doubles the wait, up to a third of the lock's lifetime: retrying a held lock every second kept
+            // reading the queue's head and profile, and recording a cycle, for as long as the holder took.
+            var misses = _lockMisses.AddOrUpdate(queueId, 1, static (_, count) => count + 1);
+            var backoff = TimeSpan.FromTicks(_options.LockRetryDelay.Ticks << Math.Min(misses - 1, 4));
+            var cap = _options.LockExpiration / 3;
+
+            Request(queueId, backoff < cap ? backoff : (cap > _options.LockRetryDelay ? cap : _options.LockRetryDelay));
 
             await RecordAsync(recorder, queueId, profile.ItemId, startedUtc, DialerPacingCycleOutcome.LockNotAcquired, "Another pacing cycle held the queue's pacing lock.");
 
@@ -237,6 +246,8 @@ internal sealed class DialerPacingScheduler : IDialerPacingScheduler
         }
 
         await using var acquiredLock = locker;
+
+        _lockMisses.TryRemove(queueId, out _);
 
         var session = services.GetRequiredService<ISession>();
         var observation = recorder is null ? null : services.GetService<DialerPacingCycleObservation>();
