@@ -111,7 +111,7 @@ Under **Settings > Commerce > Customers**, **Privacy** sets how long you keep gu
 | Setting | What happens | Default |
 | --- | --- | --- |
 | **Erase inactive guests after (months)** | A guest customer who hasn't bought or paid in this many months is erased, as above. | 24 |
-| **Anonymize guest orders after (months)** | A paid or canceled guest order this old loses its name, email, phone and billing address but the country and region. Orders still awaiting payment keep them until they're settled. | 12 |
+| **Anonymize guest orders after (months)** | A paid or canceled guest order this old loses its name, email, phone and billing address but the country and region, and its checkouts lose the same details, the IP address and browser details, and what was typed into the checkout steps. Orders still awaiting payment keep them until they're settled. | 12 |
 
 Enter **0** to keep the data. Customers with an account are kept while the account exists; erase them on request instead.
 

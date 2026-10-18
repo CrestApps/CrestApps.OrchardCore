@@ -9,6 +9,13 @@ namespace CrestApps.OrchardCore.Customers.Core.Services;
 /// </summary>
 public interface ICustomerPrivacyHandler
 {
+    /// <summary>
+    /// Gets where the handler runs among the others; a lower value runs first, and handlers with the same value run in
+    /// the order they were registered. A handler that finds a customer's records through details another handler
+    /// erases, such as the email on a checkout, runs first.
+    /// </summary>
+    int Order => 0;
+
     Task ErasingAsync(CustomerPrivacyContext context, CancellationToken cancellationToken = default);
 
     Task ExportingAsync(CustomerExportContext context, CancellationToken cancellationToken = default);

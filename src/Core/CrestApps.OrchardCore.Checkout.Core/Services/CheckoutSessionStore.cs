@@ -135,6 +135,22 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<CheckoutSession>> ListByReferenceAsync(string referenceType, string referenceId, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(referenceType);
+        ArgumentException.ThrowIfNullOrEmpty(referenceId);
+
+        var sessions = await _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.ReferenceType == referenceType && x.ReferenceId == referenceId)
+            .OrderBy(x => x.CreatedUtc)
+            .ThenBy(x => x.SessionId)
+            .Skip(Math.Max(0, skip))
+            .Take(Math.Max(1, take))
+            .ListAsync(cancellationToken);
+
+        return [.. sessions];
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<CheckoutSession>> GetByCustomerAsync(string ownerId, string email, int skip, int take, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = CheckoutSessionCustomerIndexProvider.NormalizeEmail(email);
