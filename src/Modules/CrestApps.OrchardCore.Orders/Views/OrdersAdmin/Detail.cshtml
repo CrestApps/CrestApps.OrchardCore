@@ -31,6 +31,7 @@
                     {
                         @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
                     }
+                    @await Html.PartialAsync("_OrderRefundStatus", order.RefundStatus)
                     @await Html.PartialAsync("_OrderStatus", order.Status)
                 </span>
             </div>
@@ -53,6 +54,13 @@
                             break;
                         case OrderCancelReason.Unavailable:
                             @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.CanceledByStore:
+                            @T["Canceled {0:g} by the store.", order.CanceledUtc]
+                            @if (!string.IsNullOrEmpty(order.CancelNote))
+                            {
+                                <span>@order.CancelNote</span>
+                            }
                             break;
                         default:
                             @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
@@ -115,6 +123,20 @@
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
+                @foreach (var refund in order.Refunds ?? [])
+                {
+                    <div class="d-flex justify-content-between text-info">
+                        <span>@T["Refunded {0:d}", refund.CreatedUtc]</span>
+                        <span>&minus;@Format(refund.Amount)</span>
+                    </div>
+                }
+                @if (order.RefundedAmount > 0 && order.Total.HasValue)
+                {
+                    <div class="d-flex justify-content-between fw-semibold">
+                        <span>@T["Net"]</span>
+                        <span>@Format(order.Total.Value - order.RefundedAmount)</span>
+                    </div>
+                }
             </div>
         </div>
 
@@ -123,9 +145,18 @@
         {
             @await DisplayAsync(Model.Sections)
         }
+
+        @if (Model.CanManage)
+        {
+            <partial name="_OrderNotes" model="Model" />
+        }
     </div>
 
     <div class="col-lg-4">
+        @if (Model.CanManage)
+        {
+            <partial name="_OrderActions" model="Model" />
+        }
         <div class="card mb-4">
             <div class="card-body">
                 <dl class="mb-0">

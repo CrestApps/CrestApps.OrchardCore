@@ -39,13 +39,44 @@ With the [Shipping](shipping.md) feature on, an order with goods shows where it 
 | --- | --- |
 | Paid | The checkout completed. |
 | Awaiting payment | The buyer started the checkout and has not finished it yet. |
-| Canceled | The order was never paid. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, nobody finished it in time, or an item was out of stock when the buyer checked out. |
+| Canceled | The order was canceled. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, nobody finished it in time, an item was out of stock when the buyer checked out, or you canceled it, with your reason. |
+
+An order you gave money back for also shows **Partially refunded** or **Refunded** next to its status.
 
 Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
 
-Open an order to see what was bought, the quantities and prices, any discount such as a promotion code, the tax and the total paid, when it was placed and paid, who placed it, and the address it was billed to. Refunds are made from the [payment screens](payments-and-refunds.md).
+Open an order to see what was bought, the quantities and prices, any discount such as a promotion code, the tax and the total paid, each refund and what's left, when it was placed and paid, who placed it, and the address it was billed to.
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
+
+## Manage an order
+
+Open an order from **Commerce > Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.
+
+### Refund an order
+
+1. Under **Refund**, enter the **Amount**. It starts at everything that can still be refunded.
+2. Optionally give a **Reason**, such as *Scratched strap*. It is kept with the refund and in the notes.
+3. Tick **Put the items back in stock** only when you refund everything: after a partial refund the customer keeps the goods.
+4. Click **Refund**.
+
+The money goes back the way it was paid: to the card or wallet for an order paid online, or through its transaction for an order paid with Pay Later. The order shows *Partially refunded* or *Refunded*, and the refund in its totals. A payment method that can't refund by itself records the refund for you to settle by hand on the [Refunds page](payments-and-refunds.md). Refunds made from the payment screens show on the order too.
+
+### Cancel an order
+
+1. Under **Cancel the order**, say **Why**, for example *Customer changed their mind*.
+2. For a paid order, leave **Refund everything paid** ticked to give the money back, and **Put the items back in stock** ticked to return what it sold to stock.
+3. Click **Cancel order** and confirm.
+
+What a Pay Later order still owes is canceled, so the customer isn't reminded to pay it. A promotion code the order used can be used again. A canceled order can't be reopened.
+
+### Send the confirmation again
+
+Click **Send the confirmation again** to email the order confirmation to the customer once more, for example when they can't find it. It needs your site's email to be set up.
+
+### Notes
+
+Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
 
 ## Guests and their orders
 

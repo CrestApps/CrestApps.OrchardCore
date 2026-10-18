@@ -104,6 +104,8 @@ With **Orders** enabled, stock follows each order:
 3. **Paid:** the held units are sold. They leave **On hand**, and the history shows **Sold** with the order.
 4. **Not paid:** when the checkout is canceled, declined or abandoned, or the hold runs out, the units are released and can be bought again. A payment that arrives after the hold ran out still sells the units, even if that takes the count below zero.
 
+5. **Refunded or canceled by the store:** when you tick **Put the items back in stock** on the order, what it sold goes back **On hand**, and the history shows **Returned** with the order.
+
 Two buyers can't both get the last unit: the second is told to try again.
 
 ## Settings

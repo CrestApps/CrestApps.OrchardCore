@@ -77,6 +77,13 @@
                         <th scope="row" colspan="2" class="text-end">@T["Total"]</th>
                         <td class="text-end fw-bold">@Format(order.Total ?? order.Subtotal)</td>
                     </tr>
+                    @foreach (var refund in order.Refunds ?? [])
+                    {
+                        <tr>
+                            <th scope="row" colspan="2" class="text-end fw-normal">@T["Refunded {0:d}", refund.CreatedUtc]</th>
+                            <td class="text-end">&minus;@Format(refund.Amount)</td>
+                        </tr>
+                    }
                 </tfoot>
             </table>
         </div>

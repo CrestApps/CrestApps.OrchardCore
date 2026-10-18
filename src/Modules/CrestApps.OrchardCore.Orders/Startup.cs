@@ -25,6 +25,9 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.Orders.Workflows;
+using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Orders;
 
@@ -62,6 +65,12 @@ public sealed class Startup : StartupBase
 
         // A canceled order gives back its coupon uses, and coupons can be limited to some products and categories.
         services.AddScoped<IOrderEventHandler, OrderCouponEventHandler>();
+
+        // What the store does to an order from its page, and the refunds it records wherever they were started.
+        services.AddScoped<OrderOperationScope>();
+        services.AddScoped<OrderConfirmationSender>();
+        services.AddScoped<OrderOperationsService>();
+        services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
 
@@ -74,4 +83,19 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
         => routes.AddCouponItemSearchEndpoints();
+}
+
+/// <summary>
+/// Starts workflows when orders are paid, canceled and refunded.
+/// </summary>
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class WorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<OrderPaidEvent, OrderEventDisplayDriver<OrderPaidEvent>>();
+        services.AddActivity<OrderCanceledEvent, OrderEventDisplayDriver<OrderCanceledEvent>>();
+        services.AddActivity<OrderRefundedEvent, OrderEventDisplayDriver<OrderRefundedEvent>>();
+        services.AddScoped<IOrderEventHandler, OrderWorkflowHandler>();
+    }
 }

@@ -90,19 +90,37 @@ Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, 
 | Draft | Made from a cart, not yet sent to the checkout. |
 | Awaiting payment | Its checkout started and has not completed. |
 | Paid | Its checkout completed. |
-| Canceled | Ended unpaid, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired`, `Abandoned` (no checkout was left that could pay it) or `Unavailable` (an order event handler refused it, such as for want of stock). |
+| Canceled | Ended, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired`, `Abandoned` (no checkout was left that could pay it), `Unavailable` (an order event handler refused it, such as for want of stock) or `CanceledByStore` (from the order's page, with the store's `CancelNote`). |
+
+Money given back is tracked beside the status, so everything that checks for a paid order keeps working: `Order.Refunds` (one `OrderRefund` per refund that went through), `RefundedAmount`, and `RefundStatus`, which is `PartiallyRefunded` or `Refunded` once refunds reach the total. The order list and page show it as a badge.
 
 **Order events.** `IOrderEventHandler` (or `OrderEventHandlerBase`) hears about each order:
 
 - `CreatedAsync` runs right after `IOrderService.CreateFromCartAsync` makes the order; a handler that can't provide what it needs calls `context.Refuse(message)`. The order is then canceled as `Unavailable`, and `OrderCreationResult.Problems` carries the messages, which the cart shows.
 - `PaidAsync` runs in `OrderCheckoutHandler.CompletingAsync`, in the unit of work that marks the order paid, so a handler that throws rolls the completion back for the checkout to retry.
-- `CanceledAsync` runs when an order is canceled.
+- `CanceledAsync` runs when an order is canceled. `context.Restock` says whether what it sold goes back into stock.
+- `RefundedAsync` (a default interface method) runs after a refund is recorded on the order; `context.Restock` is true only when the store asked for it and everything is now refunded.
 
 Inventory uses them to hold, sell and release stock. The cart's checkout commits the new order before the checkout starts, and shows *Someone else is buying the same items right now* when that commit hits a concurrency conflict.
 
-**Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order, records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
+**Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order (a paid one only with `CanceledByStore`), records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
 
-An order holds lines, not money. The payment, its tax, the payment attempts and any refund belong to the checkout session the order names, and refunds are made from the payment screens.
+An order holds lines, not money. The payment, its tax, the payment attempts and any refund belong to the checkout session the order names; the order keeps a record of each refund for its page.
+
+### Managing an order
+
+A user with `ManageOrders` manages an order from its page, through `OrderOperationsService`:
+
+- **Refund** gives back an amount, or everything still refundable. Money paid online at checkout is refunded through `ICheckoutRefundService`, newest payment first; money paid later is refunded through `ITransactionCommandService.RefundAsync` on the order's Pay Later transaction. A refund waiting to be settled by hand blocks another one.
+- **Cancel** refunds everything when asked, cancels what Pay Later still has to collect (`ITransactionCommandService.CancelAsync`), cancels the order as `CanceledByStore`, lets go of an unpaid order's checkout (so its coupon use and stock go back), and with **Put the items back in stock** returns what a paid order sold (`IInventoryService.RestockAsync`).
+- **Send the confirmation again** re-sends the order confirmation (`OrderConfirmationSender`).
+- **Notes** (`Order.Notes`) are what the store writes and what happened: each refund, cancellation and resend adds an event note with who did it.
+
+Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
+
+### Workflow events
+
+With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
 
 ### Screens and permissions
 

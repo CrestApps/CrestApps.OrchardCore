@@ -70,7 +70,9 @@ public sealed class OrderConfirmationEmailTests
         var links = new Mock<IOrderLinkService>();
         links.Setup(l => l.CreateUrlAsync(It.IsAny<Order>())).ReturnsAsync("https://store.test/orders/view/token");
 
-        return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationCheckoutHandler>.Instance);
+        var sender = new OrderConfirmationSender(_orders.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationSender>.Instance);
+
+        return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, sender);
     }
 
     private static CheckoutFlowCompletedContext Completed(Order order)
