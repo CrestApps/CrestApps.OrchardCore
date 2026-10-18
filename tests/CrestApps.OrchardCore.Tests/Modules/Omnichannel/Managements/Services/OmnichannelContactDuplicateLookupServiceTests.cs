@@ -57,19 +57,19 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
 
     [Theory]
     [InlineData(1, 1)]
-    [InlineData(OmnichannelContactDuplicateLookupService.LookupChunkSize, 1)]
-    [InlineData(OmnichannelContactDuplicateLookupService.LookupChunkSize + 1, 2)]
-    [InlineData(5_000, 10)]
-    public async Task GetPhoneNumberOwnersAsync_SplitsTheKeysSoNoQueryPassesTheParameterLimit(int keyCount, int expectedQueries)
+    [InlineData(OmnichannelContactDuplicateLookupService.LookupBatchSize, 1)]
+    [InlineData(OmnichannelContactDuplicateLookupService.LookupBatchSize + 1, 2)]
+    [InlineData(5_000, 100)]
+    public async Task GetPhoneNumberOwnersAsync_LooksUpEachColumnSeparatelyInFixedSizeBatches(int keyCount, int expectedBatches)
     {
         // Arrange
-        // SQL Server refuses a command with more than 2,100 parameters. An import batch larger than the limit allows
-        // must be looked up in several queries rather than fail.
-        var queries = 0;
+        // An OR across the number columns made SQL Server scan the whole contact index for every import batch. Each
+        // column is compared in a query of its own, so it seeks that column's index.
+        var predicates = new List<Expression<Func<OmnichannelContactIndex, bool>>>();
         var indexQuery = new Mock<IQueryIndex<OmnichannelContactIndex>>();
         indexQuery
             .Setup(query => query.Where(It.IsAny<Expression<Func<OmnichannelContactIndex, bool>>>()))
-            .Callback(() => queries++)
+            .Callback<Expression<Func<OmnichannelContactIndex, bool>>>(predicate => predicates.Add(predicate))
             .Returns(indexQuery.Object);
         indexQuery
             .Setup(query => query.ListAsync(It.IsAny<CancellationToken>()))
@@ -92,10 +92,37 @@ public sealed class OmnichannelContactDuplicateLookupServiceTests
         await service.GetPhoneNumberOwnersAsync(keys, include: null, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(expectedQueries, queries);
-        Assert.True(
-            (OmnichannelContactDuplicateLookupService.LookupChunkSize * OmnichannelContactDuplicateLookupService.ComparedNumberColumns) + 1 <= 2_100,
-            "One lookup query must bind fewer parameters than SQL Server accepts.");
+        Assert.Equal(expectedBatches * 4, predicates.Count);
+        Assert.All(predicates, predicate => Assert.DoesNotContain("OrElse", predicate.Body.ToString(), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ToLookupBatches_PadsTheLastBatchWithItsLastValue()
+    {
+        // Arrange
+        // Every lookup must send the same number of parameters, or each list length compiles and caches a plan of its
+        // own. Padding with a value already in the batch matches nothing new.
+        var values = Enumerable.Range(0, OmnichannelContactDuplicateLookupService.LookupBatchSize + 2)
+            .Select(i => $"+1702{i:D7}")
+            .ToArray();
+
+        // Act
+        var batches = OmnichannelContactDuplicateLookupService.ToLookupBatches(values).ToArray();
+
+        // Assert
+        Assert.Equal(2, batches.Length);
+        Assert.All(batches, batch => Assert.Equal(OmnichannelContactDuplicateLookupService.LookupBatchSize, batch.Length));
+        Assert.Equal(values.Take(OmnichannelContactDuplicateLookupService.LookupBatchSize), batches[0]);
+        Assert.Equal(values[^2], batches[1][0]);
+        Assert.All(batches[1].Skip(1), value => Assert.Equal(values[^1], value));
+        Assert.Equal(values.ToHashSet(), batches.SelectMany(batch => batch).ToHashSet());
+    }
+
+    [Fact]
+    public void ToLookupBatches_WhenThereAreNoValues_YieldsNoBatch()
+    {
+        // Act & Assert
+        Assert.Empty(OmnichannelContactDuplicateLookupService.ToLookupBatches([]));
     }
 
     [Fact]
