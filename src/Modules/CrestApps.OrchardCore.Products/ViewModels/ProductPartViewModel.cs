@@ -22,6 +22,10 @@ public class ProductPartViewModel
     /// </summary>
     public DateTime? SaleEnds { get; set; }
 
+    public string ExternalUrl { get; set; }
+
+    public string ExternalButtonText { get; set; }
+
     public int? MinQuantity { get; set; }
 
     public int? MaxQuantity { get; set; }

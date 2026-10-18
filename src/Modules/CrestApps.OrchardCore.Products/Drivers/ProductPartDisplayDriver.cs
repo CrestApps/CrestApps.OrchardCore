@@ -45,6 +45,8 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             model.SalePrice = part.SalePrice;
             model.SaleStarts = await ToLocalAsync(part.SaleStartsUtc);
             model.SaleEnds = await ToLocalAsync(part.SaleEndsUtc);
+            model.ExternalUrl = part.ExternalUrl;
+            model.ExternalButtonText = part.ExternalButtonText;
             model.MinQuantity = part.MinQuantity;
             model.MaxQuantity = part.MaxQuantity;
             model.QuantityStep = part.QuantityStep;
@@ -169,6 +171,16 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxQuantity), S["The most a buyer can buy can't be less than the least."]);
         }
 
+        var externalUrl = model.ExternalUrl?.Trim();
+
+        if (!string.IsNullOrEmpty(externalUrl) &&
+            (!Uri.TryCreate(externalUrl, UriKind.Absolute, out var external) || (external.Scheme != Uri.UriSchemeHttps && external.Scheme != Uri.UriSchemeHttp)))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ExternalUrl), S["Enter a full web address, starting with https://."]);
+        }
+
+        part.ExternalUrl = string.IsNullOrEmpty(externalUrl) ? null : externalUrl;
+        part.ExternalButtonText = string.IsNullOrWhiteSpace(model.ExternalButtonText) ? null : model.ExternalButtonText.Trim();
         part.MinQuantity = model.MinQuantity is > 1 ? model.MinQuantity : null;
         part.MaxQuantity = model.MaxQuantity;
         part.QuantityStep = model.QuantityStep is > 1 ? model.QuantityStep : null;

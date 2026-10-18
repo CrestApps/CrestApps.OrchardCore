@@ -73,6 +73,22 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="ExternalUrl">
+    <label asp-for="ExternalUrl" class="ocat-label">@T["Sold elsewhere"]</label>
+    <div class="ocat-end">
+        <div class="row g-2">
+            <div class="col-md-8">
+                <input type="url" asp-for="ExternalUrl" class="form-control" placeholder="https://" aria-label="@T["Where it's sold"]" />
+            </div>
+            <div class="col-md-4">
+                <input asp-for="ExternalButtonText" class="form-control" placeholder="@T["Buy now"]" aria-label="@T["Button label"]" />
+            </div>
+        </div>
+        <span class="hint">@T["Optional, for an external or affiliate product. It isn't sold here: instead of Add to cart, its card and page link to this address, with this label."]</span>
+        <span asp-validation-for="ExternalUrl"></span>
+    </div>
+</div>
+
 <h5 class="mt-4">@T["Quantities and volume pricing"]</h5>
 
 <div class="ocat-wrapper" asp-validation-class-for="MinQuantity">

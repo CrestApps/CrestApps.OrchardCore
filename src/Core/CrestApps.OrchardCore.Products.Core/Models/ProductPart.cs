@@ -57,6 +57,17 @@ public sealed class ProductPart : ContentPart
     public int? MinQuantity { get; set; }
 
     /// <summary>
+    /// Gets or sets where an external product is bought, such as a partner's store. A product with one isn't sold
+    /// here: its card and page link there instead of offering Add to cart.
+    /// </summary>
+    public string ExternalUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the label of the link to <see cref="ExternalUrl"/>, or <see langword="null"/> for "Buy now".
+    /// </summary>
+    public string ExternalButtonText { get; set; }
+
+    /// <summary>
     /// Gets or sets the most units a cart can hold of the product, or <see langword="null"/> for the store's limit.
     /// </summary>
     public int? MaxQuantity { get; set; }

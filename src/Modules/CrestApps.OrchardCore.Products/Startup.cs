@@ -196,6 +196,10 @@ public sealed class ListingStartup : StartupBase
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<ProductDetailsDisplayDriver>();
 
+        // An external product links to where it's sold instead of offering Add to cart.
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ExternalProductActionDisplayDriver>();
+
         services.AddScoped<IContentPartFieldDefinitionDisplayDriver, ProductAttributeSettingsDisplayDriver>();
         services.AddScoped<IShapePlacementProvider, ProductDetailsPlacementProvider>();
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPageSettingsDisplayDriver>();
