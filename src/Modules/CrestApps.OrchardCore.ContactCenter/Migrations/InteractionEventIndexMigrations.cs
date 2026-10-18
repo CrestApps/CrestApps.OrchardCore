@@ -283,7 +283,7 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
         return 8;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
             SchemaBuilder,

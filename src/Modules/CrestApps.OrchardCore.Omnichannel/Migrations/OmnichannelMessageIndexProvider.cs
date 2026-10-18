@@ -113,7 +113,7 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
         return 4;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelMessageIndex>(
             SchemaBuilder,

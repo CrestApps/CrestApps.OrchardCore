@@ -364,7 +364,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         return 8;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<QueueItemIndex>(
             SchemaBuilder,

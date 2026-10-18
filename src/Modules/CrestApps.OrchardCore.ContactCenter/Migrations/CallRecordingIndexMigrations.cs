@@ -129,7 +129,7 @@ internal sealed class CallRecordingIndexMigrations : DataMigration
         return 5;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<CallRecordingIndex>(
             SchemaBuilder,

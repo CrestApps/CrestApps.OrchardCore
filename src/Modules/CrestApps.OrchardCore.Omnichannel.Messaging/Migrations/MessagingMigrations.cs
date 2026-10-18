@@ -225,7 +225,7 @@ internal sealed class MessagingMigrations : DataMigration
         return 3;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
             SchemaBuilder,

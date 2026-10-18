@@ -281,7 +281,7 @@ internal sealed class InteractionIndexMigrations : DataMigration
         return 9;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<InteractionIndex>(
             SchemaBuilder,

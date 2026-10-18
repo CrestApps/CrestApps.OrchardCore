@@ -89,7 +89,7 @@ internal sealed class SharedVoicemailIndexMigrations : DataMigration
         return 3;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<SharedVoicemailIndex>(
             SchemaBuilder,

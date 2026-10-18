@@ -526,7 +526,7 @@ internal sealed class CallSessionIndexMigrations : DataMigration
         return 7;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<CallSessionIndex>(
             SchemaBuilder,

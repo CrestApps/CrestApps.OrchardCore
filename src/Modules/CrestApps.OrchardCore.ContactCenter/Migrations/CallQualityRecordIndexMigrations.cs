@@ -123,7 +123,7 @@ internal sealed class CallQualityRecordIndexMigrations : DataMigration
         return 4;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<CallQualityRecordIndex>(
             SchemaBuilder,

@@ -97,7 +97,7 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
         return 5;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<AIChatSessionIndex>(
             SchemaBuilder,

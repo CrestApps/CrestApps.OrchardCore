@@ -156,7 +156,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
         return 5;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<CallbackRequestIndex>(
             SchemaBuilder,

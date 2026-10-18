@@ -146,7 +146,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
         return 6;
     }
 
-    private Task CreateReportIndexAsync()
+    private Task<bool> CreateReportIndexAsync()
     {
         return IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelActivityBatchIndex>(
             SchemaBuilder,
