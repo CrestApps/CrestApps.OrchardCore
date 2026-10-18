@@ -21,9 +21,7 @@ An **AI profile** is one AI assistant or task with its own name, instructions, m
 
 Before you create a profile, an administrator must connect at least one AI provider and add a chat deployment. See [Connections and deployments](connections.md).
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a chat AI profile and chatting with the model">
-  <source src="/img/docs/ai-chat.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of creating a chat AI profile and chatting with the model" start={46} end={75} />
 
 ## Profile types
 
@@ -121,8 +119,8 @@ When the **Orchestrator** is GitHub Copilot or Claude, a configuration block app
 | **Chat deployment** | The model the profile talks to. **Default** uses the site default. It also answers typed messages during a spoken conversation. |
 | **Model parameters** | Options the chosen model supports, such as reasoning effort. **Use deployment default** keeps the model's own setting. |
 | **Chat mode** | Chat only. **Text only** (typing), **Audio input** (adds a microphone to dictate) or **Conversation** (adds spoken back-and-forth). Shown only after the profile is saved as a chat profile and the site has a speech model. |
-| **Conversation deployment** | **Conversation** mode only. The voice model that carries the spoken conversation. Leave it empty to use the site's default. |
-| **Voice** | **Conversation** mode only. The voice the assistant speaks with. **Default voice** uses the site's default. |
+| **Conversation deployment** | Chat only. The voice model that carries the profile's spoken conversations: in the chat when the chat mode is **Conversation**, and on every phone call the profile answers or places. Leave it empty to use the site's default realtime deployment. |
+| **Voice** | Chat only. The voice the assistant speaks with, in the chat's **Conversation** mode and on phone calls. **Default voice** uses the site's default. |
 | **Enable text-to-speech playback** | Adds a **Read aloud** button to every answer. |
 | **Utility deployment** | A smaller, cheaper model for side jobs, such as planning and working out what the user wants. Leave it on the default unless told otherwise. |
 

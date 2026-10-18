@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Inventory.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LowStockEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
+    @T["Low Stock"]
+</h4>
+<p>@T["Starts when a product or variant runs low or sells out."]</p>

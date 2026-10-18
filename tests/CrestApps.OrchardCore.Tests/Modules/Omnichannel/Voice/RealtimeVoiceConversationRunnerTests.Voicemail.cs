@@ -25,6 +25,44 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.StartsWith(VoiceCallGuidance.LeavingAVoicemail, prompt, StringComparison.Ordinal);
         Assert.EndsWith("\"Καλησπέρα σας, καλώ από το Studio Athena.\"", prompt, StringComparison.Ordinal);
         Assert.Equal(VoiceCallGuidance.LeavingAVoicemail, RealtimeVoiceConversationRunner.VoicemailPrompt(null));
+
+        // Quoted for its language only: the first line can be the model's reply to the greeting, which the message
+        // must not carry on from.
+        Assert.Contains("not as something to answer or carry on from", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TheVoicemailMessage_QuotesTheFirstLineWithWords_SaidBeforeTheMachineWasReported()
+    {
+        // Arrange
+        var harness = new RealtimeHarness();
+        harness.UseEndCallTurn();
+        using var machine = new CancellationTokenSource();
+        using var greetingEnded = new CancellationTokenSource();
+        harness.AnsweredByMachine = machine.Token;
+        harness.MachineGreetingEnded = greetingEnded.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+        await WaitUntilAsync(() => harness.Conversation.Unprompted.Count == 1);
+
+        // The opening response is cut off before it has any words, and the next one is the call's first real line.
+        QueueResponse(harness, " ");
+        QueueResponse(harness, "Καλησπέρα σας, καλώ από το Studio Athena.");
+        await WaitUntilAsync(() => harness.StoredPrompts.Any(prompt => prompt.Role == ChatRole.Assistant));
+
+        // Act
+        await machine.CancelAsync();
+        await WaitUntilAsync(() => harness.Media.Clears == 1);
+        await greetingEnded.CancelAsync();
+        await WaitUntilAsync(() => harness.Conversation.Standalone.Count == 1);
+
+        // Assert
+        // The blank line did not take the place of the one that tells the message which language to leave it in.
+        Assert.EndsWith("\"Καλησπέρα σας, καλώ από το Studio Athena.\"", harness.Conversation.Standalone[0], StringComparison.Ordinal);
+
+        await LetTheCallGoAsync(harness, run);
     }
 
     [Fact]

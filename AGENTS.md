@@ -182,6 +182,17 @@ dotnet run
 * Optimize framework code for consistency, extensibility, and long-term maintainability across providers and hosts.
 * For optional provider integrations in sample hosts, do not eagerly read validated options in UI setup paths—unconfigured providers should appear unavailable rather than cause failures.
 
+#### Admin Index (CRUD List) Pages
+
+Every admin page that lists records follows one pattern, so all lists look alike and honor the List/Grid layout and the Buttons/Menu row actions picked in **Configuration → Settings → Admin**. Follow `.agents/skills/crestapps-admin-index-views/SKILL.md` for every new list and whenever you touch an existing one; AI Profiles is the reference page.
+
+* Render the list with Orchard Core's `<admin-list name="..." context="Model.List">` tag helper. Never hand-write a `<ul class="list-group">` or `<table>` listing, a toolbar row, a select-all checkbox, an item count, an empty-state row or a pager.
+* The controller passes the records in an `AdminListContext<TModel>` (`Source`, `Pager`, optional `ToolbarActions`/`Header`). It never builds `SummaryAdmin` row shapes.
+* Rows come from a display driver for the domain model. Give every shape a `SummaryAdmin` location and a `SummaryAdminGrid` location in a column zone (`Actions`/`ActionsMenu` serve both), and add a checkbox shape only when the list has bulk actions.
+* Row templates use the shared row layout: the title is a plain link, facts are `badge ta-badge fw-normal` badges with an icon and a tooltip, the description sits under the title, and actions render through `AdminListActions`. `ActionsMenu` items are bare `dropdown-item` elements, never wrapped in `<li>`.
+* The action bar above the list holds only the search (an input group ending with the magnifying-glass button) and the page buttons such as **Add**. Filters (status, type, "Show" selects) go in the list's toolbar through `AdminListContext.ToolbarActions`, never beside the **Add** button.
+* Declare the grid columns in the view (`<admin-list-grid>` with `<admin-list-column>`), give the list a unique PascalCase name, and check the page in both layouts and both action modes before you hand it off.
+
 #### Quality Enforcement
 
 * Treat all warnings as errors and resolve every warning.
@@ -351,6 +362,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
   Messenger, …) to the Omnichannel Messaging workspace, modeled on the SMS channel: the `IMessagingChannel`
   contract, inbound through the durable provider inbox, channel-only inbound rules, delivery receipts, endpoints,
   wiring, tests and docs.
+- **Example**: `.agents/skills/crestapps-admin-index-views` — how every admin list (index) page is built on
+  Orchard Core's `AdminList` shape and `<admin-list>` tag helpers, in the List or Grid layout the site and the user
+  pick: the row display driver, the row template, the controller's `AdminListContext`, the view and its columns.
+  Never hand-write a `<ul class="list-group">` listing.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories
@@ -384,11 +399,11 @@ The dividing rule: if it can be done in the browser, it belongs in the User Manu
 2. **Documentation changes are NOT optional** – code changes without documentation updates are considered incomplete.
 3. **Validate the docs** – run `npm run check:manuals` and `npm run build` in `src/CrestApps.Docs`. The build fails on any broken link or anchor, and CI runs both checks; failing to validate locally will cause workflow failures.
 
-### Documentation Screencasts
+### Documentation Videos
 
-- **Only produce screencasts when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
-- When asked to record documentation screencasts, capture them **full-screen at 1600×1000** resolution to match the existing docs videos.
-- Deliver screencasts as **MP4** (`H.264`, even width/height, `-pix_fmt yuv420p`) stored under `src/CrestApps.Docs/static/img/docs/`, and embed them with an HTML `<video controls preload="metadata" width="100%">` player rather than a GIF.
+- **Only produce videos when the user explicitly asks for them.** Never record or regenerate demo videos as part of a routine documentation update.
+- **Never commit a video file** (`.mp4`, `.webm`, an animated `.gif` screencast, or a video's captions and poster) to this repository. Videos are published on the CrestApps YouTube channel, and their sources (storyboards, recorder scenes, YouTube metadata) live in the `CrestApps/CrestApps.Videos` repository, together with the `crestapps-video-producer` skill that makes them.
+- Embed a video by name with the `<YouTube video="<slug>" title="..." />` component (`src/CrestApps.Docs/src/components/YouTube`), available on every page without an import. The slug is the video's folder name in `CrestApps.Videos`; its YouTube id comes from `src/CrestApps.Docs/src/data/videos.json`, which the `CrestApps.Videos` publish workflow updates by pull request. Until the slug is in that map the embed renders nothing, so a page can include it before the video is published. To show one chapter of a longer video, add `start` and `end` in seconds: `<YouTube video="<slug>" title="..." start={99} end={146} />`.
 
 ## Documentation expectations
 
@@ -474,6 +489,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Global usings**: Do not add `GlobalUsings.cs` files or new global using directives; prefer explicit file-level usings
 - **sealed classes**: Seal all classes by default (`sealed class`), **except** ViewModel classes that are consumed by any Orchard Core display driver — those must remain unsealed because the framework creates runtime proxies for them and proxies cannot be created from sealed types
 - **AI site settings navigation**: Every `SiteDisplayDriver<>` that sets `SettingsGroupId => AIConstants.AISettingsGroupId` must also register `.AddNavigationProvider<AISiteSettingsAdminMenu>()` in its feature's `Startup` class. This ensures the **Settings → Artificial Intelligence** admin menu entry exists whenever the feature is enabled, so users can navigate to the settings page.
+- **Settings group permissions**: Every `SiteDisplayDriver<>` that checks a module permission (anything other than `ManageSettings`) must register it with `services.AddSiteSettingsPermission(groupId, permission)` in the same startup class that registers the driver, and its project must reference `OrchardCore.Settings.Core` (or `OrchardCore.Settings`). Orchard Core's settings screen authorizes `ManageGroupSettings` for the group, so without the registration a role holding only the module permission sees the menu item and gets access denied. `SiteSettingsGroupPermissionRegistrationTests` enforces this.
 
 ### Module Structure Conventions
 

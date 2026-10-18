@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ProfileBuilderSessionEntry>
+
+<div class="form-check">
+    <input type="checkbox" class="form-check-input" value="@Model.Value.Session.ItemId" name="itemIds" id="itemIds-@Model.Value.Session.ItemId">
+    <label class="form-check-label" for="itemIds-@Model.Value.Session.ItemId">&nbsp;</label>
+</div>

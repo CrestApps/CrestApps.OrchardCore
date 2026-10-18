@@ -577,7 +577,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.AssistantTranscriptDone:
                         var spoken = assistantText.Length > 0 ? assistantText.ToString() : conversationEvent.Text;
                         assistantText.Clear();
-                        Interlocked.CompareExchange(ref _openingLine, spoken, null);
+
+                        // A line cut off before it had any words says nothing about the call's language, and taking
+                        // the slot would keep every later line out of it.
+                        if (!string.IsNullOrWhiteSpace(spoken))
+                        {
+                            Interlocked.CompareExchange(ref _openingLine, spoken, null);
+                        }
 
                         var lineStartedUtc = assistantLineStartedUtc;
                         assistantLineStartedUtc = null;
@@ -602,7 +608,11 @@ public sealed partial class RealtimeVoiceConversationRunner
                         utteranceInFlight = false;
                         Volatile.Write(ref spokeSinceCaller, true);
                         Volatile.Write(ref lastAssistantLine, spoken);
-                        Volatile.Write(ref _lastAssistantLine, spoken);
+                        if (!string.IsNullOrWhiteSpace(spoken))
+                        {
+                            Volatile.Write(ref _lastAssistantLine, spoken);
+                        }
+
                         context.AssistantSaid?.Invoke(spoken);
 
                         // The line that was in flight when the call was closed is the goodbye, when it is one. It

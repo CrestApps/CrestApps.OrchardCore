@@ -53,9 +53,10 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
     public override IDisplayResult Display(LeadPart part, BuildPartDisplayContext context)
     {
         return Combine(
-            Initialize<LeadPartViewModel>("LeadPart_SummaryAdmin", async model => await PopulateDisplayAsync(model, part))
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4"),
-            Initialize<LeadPartViewModel>("LeadPart_Converted", async model => await PopulateDisplayAsync(model, part))
+            Initialize<LeadPartViewModel>("LeadPart_SummaryAdmin", async model => await PopulateDisplayAsync(model, part, loadConvertedContact: false))
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:4")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:15"),
+            Initialize<LeadPartViewModel>("LeadPart_Converted", async model => await PopulateDisplayAsync(model, part, loadConvertedContact: true))
                 .Location(OrchardCoreConstants.DisplayType.DetailAdmin, "Content:0")
                 .RenderWhen(() => Task.FromResult(part.IsConverted)));
     }
@@ -64,7 +65,7 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
     {
         if (part.IsConverted)
         {
-            return Initialize<LeadPartViewModel>("LeadPart_Converted", async model => await PopulateDisplayAsync(model, part))
+            return Initialize<LeadPartViewModel>("LeadPart_Converted", async model => await PopulateDisplayAsync(model, part, loadConvertedContact: true))
                 .Location("Parts:0");
         }
 
@@ -110,7 +111,7 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
         return Edit(part, context);
     }
 
-    private async Task PopulateDisplayAsync(LeadPartViewModel model, LeadPart part)
+    private async Task PopulateDisplayAsync(LeadPartViewModel model, LeadPart part, bool loadConvertedContact)
     {
         model.Part = part;
         model.ContentItem = part.ContentItem;
@@ -130,7 +131,9 @@ internal sealed class LeadPartDisplayDriver : ContentPartDisplayDriver<LeadPart>
             model.Statuses = [new SelectListItem(status.Name, status.ItemId, true)];
         }
 
-        if (part.IsConverted && !string.IsNullOrEmpty(part.ConvertedContactItemId))
+        // Only the converted notice shows the contact. The list row renders once per lead, so loading it there would
+        // cost one query per converted lead on every page of the list.
+        if (loadConvertedContact && part.IsConverted && !string.IsNullOrEmpty(part.ConvertedContactItemId))
         {
             model.ConvertedContact = await _contentManager.GetAsync(part.ConvertedContactItemId, VersionOptions.Latest);
         }

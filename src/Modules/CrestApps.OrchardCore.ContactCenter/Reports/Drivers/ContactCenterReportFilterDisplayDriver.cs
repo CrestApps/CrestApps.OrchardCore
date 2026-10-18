@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -22,7 +23,8 @@ using OrchardCore.Users;
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
 
 /// <summary>
-/// Adds queue, agent, campaign, channel, direction, source, and status filters to Contact Center reports.
+/// Adds queue, agent, campaign, channel, direction, source, status, interaction type, dialer profile, queue state,
+/// activity and decision reason filters to Contact Center reports.
 /// </summary>
 public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<ReportFilter>
 {
@@ -36,6 +38,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly ActivitySourceOptions _activitySourceOptions;
     private readonly ActivityChannelOptions _activityChannelOptions;
+    private readonly IDialerProfileManager _dialerProfileManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportFilterDisplayDriver"/> class.
@@ -50,6 +53,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
     /// <param name="displayNameProvider">The user display name provider.</param>
     /// <param name="activitySourceOptions">The activity sources registered by the enabled features.</param>
     /// <param name="activityChannelOptions">The activity channels registered by the enabled features.</param>
+    /// <param name="dialerProfileManagers">The dialer profiles, offered when the Dialer feature is on; empty otherwise.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterReportFilterDisplayDriver(
         IReportManager reportManager,
@@ -62,8 +66,10 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         IDisplayNameProvider displayNameProvider,
         IOptions<ActivitySourceOptions> activitySourceOptions,
         IOptions<ActivityChannelOptions> activityChannelOptions,
+        IEnumerable<IDialerProfileManager> dialerProfileManagers,
         IStringLocalizer<ContactCenterReportFilterDisplayDriver> stringLocalizer)
     {
+        _dialerProfileManager = dialerProfileManagers.FirstOrDefault();
         _activitySourceOptions = activitySourceOptions.Value;
         _activityChannelOptions = activityChannelOptions.Value;
         _reportManager = reportManager;
@@ -113,6 +119,11 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.Direction, model.Direction);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.ActivitySource, model.ActivitySource);
         ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.ActivityStatus, model.ActivityStatus);
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.InteractionType, model.InteractionType);
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.DialerProfileId, model.DialerProfileId);
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.QueueState, model.QueueState);
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.ActivityItemId, model.ActivityItemId?.Trim());
+        ContactCenterReportFilter.SetString(filter, ContactCenterReportFilter.DecisionReason, model.DecisionReason);
 
         return Edit(filter, context);
     }
@@ -135,6 +146,11 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.Direction = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.Direction);
         model.ActivitySource = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivitySource);
         model.ActivityStatus = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivityStatus);
+        model.InteractionType = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.InteractionType);
+        model.DialerProfileId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.DialerProfileId);
+        model.QueueState = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.QueueState);
+        model.ActivityItemId = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.ActivityItemId);
+        model.DecisionReason = ContactCenterReportFilter.GetString(filter, ContactCenterReportFilter.DecisionReason);
         model.ShowQueueGroupFilter = filterNames.Contains(ContactCenterReportFilter.QueueGroupId);
         model.ShowQueueFilter = filterNames.Contains(ContactCenterReportFilter.QueueId);
         model.ShowAgentFilter = filterNames.Contains(ContactCenterReportFilter.AgentId);
@@ -144,6 +160,11 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
         model.ShowDirectionFilter = filterNames.Contains(ContactCenterReportFilter.Direction);
         model.ShowActivitySourceFilter = filterNames.Contains(ContactCenterReportFilter.ActivitySource);
         model.ShowActivityStatusFilter = filterNames.Contains(ContactCenterReportFilter.ActivityStatus);
+        model.ShowInteractionTypeFilter = filterNames.Contains(ContactCenterReportFilter.InteractionType);
+        model.ShowDialerProfileFilter = filterNames.Contains(ContactCenterReportFilter.DialerProfileId);
+        model.ShowQueueStateFilter = filterNames.Contains(ContactCenterReportFilter.QueueState);
+        model.ShowActivityItemFilter = filterNames.Contains(ContactCenterReportFilter.ActivityItemId);
+        model.ShowDecisionReasonFilter = filterNames.Contains(ContactCenterReportFilter.DecisionReason);
 
         if (model.ShowQueueGroupFilter)
         {
@@ -259,6 +280,49 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
                 new SelectListItem(S["Cancelled"], ActivityStatus.Cancelled.ToString()),
                 new SelectListItem(S["Purged"], ActivityStatus.Purged.ToString()),
             ];
+        }
+
+        if (model.ShowInteractionTypeFilter)
+        {
+            model.InteractionTypes =
+            [
+                new SelectListItem(S["Manual"], ActivityInteractionType.Manual.ToString()),
+                new SelectListItem(S["Automated"], ActivityInteractionType.Automated.ToString()),
+            ];
+        }
+
+        if (model.ShowDialerProfileFilter)
+        {
+            // Every profile is offered, turned off or not: a turned-off profile is exactly the one whose records stop
+            // dialing. A profile that was deleted cannot be offered, so a value saved before stays listed.
+            var profiles = _dialerProfileManager is null
+                ? []
+                : (await _dialerProfileManager.GetAllAsync())
+                    .OrderBy(profile => profile.Name)
+                    .Select(profile => new SelectListItem(
+                        profile.Enabled ? profile.Name ?? profile.ItemId : S["{0} (turned off)", profile.Name ?? profile.ItemId].Value,
+                        profile.ItemId))
+                    .ToList();
+
+            ActivityFilterSelectListBuilder.KeepSelectedValue(profiles, model.DialerProfileId);
+            model.DialerProfiles = profiles;
+        }
+
+        if (model.ShowQueueStateFilter)
+        {
+            model.QueueStates =
+            [
+                new SelectListItem(S["Dialable now"], DialerQueueState.DialableNow.ToString()),
+                new SelectListItem(S["Held back"], DialerQueueState.HeldBack.ToString()),
+                new SelectListItem(S["Scheduled for later"], DialerQueueState.ScheduledForLater.ToString()),
+                new SelectListItem(S["Not in any queue"], DialerQueueState.NotInAnyQueue.ToString()),
+                new SelectListItem(S["Assigned to a user"], DialerQueueState.AssignedToUser.ToString()),
+            ];
+        }
+
+        if (model.ShowDecisionReasonFilter)
+        {
+            model.DecisionReasons = DialerDecisionLabels.Options(S);
         }
     }
 

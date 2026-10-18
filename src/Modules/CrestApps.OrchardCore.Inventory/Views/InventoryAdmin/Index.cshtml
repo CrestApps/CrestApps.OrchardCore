@@ -1,0 +1,70 @@
+@model InventoryIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="InventoryIndex" title="@T["Inventory"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="inventory-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by SKU or product"]" type="search" autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group">
+                        <a asp-action="Export" class="btn btn-secondary">@T["Export CSV"]</a>
+                        @if (Model.CanManage)
+                        {
+                            <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#inventory-import" aria-expanded="false" aria-controls="inventory-import">@T["Import CSV"]</button>
+                        }
+                    </div>
+                </div>
+                @if (Model.CanManage)
+                {
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-secondary" form="inventory-sync">@T["Find products to count"]</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @* The stock items, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="Inventory" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No stock matches the current filter. Add the Inventory part to a product type to start counting its stock."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Product"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Sku" position="40" title="@T["SKU"]" width="auto" />
+            <admin-list-column name="Stock" position="50" title="@T["Stock"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+@if (Model.CanManage)
+{
+    <form asp-action="Sync" method="post" id="inventory-sync" class="no-multisubmit"></form>
+
+    <div class="collapse mb-3" id="inventory-import">
+        <form asp-action="Import" method="post" enctype="multipart/form-data" class="card card-body no-multisubmit">
+            <label for="inventory-import-file" class="form-label">@T["CSV file"]</label>
+            <div class="input-group">
+                <input type="file" name="file" id="inventory-import-file" class="form-control" accept=".csv,text/csv" required />
+                <button type="submit" class="btn btn-primary">@T["Import"]</button>
+            </div>
+            <span class="hint">@T["Sets the units on hand from the OnHand column, as counts, finding each item by its ContentItemId and VariantId or by its SKU. Export the stock to get a file to start from. If any line has a problem, nothing is imported."]</span>
+        </form>
+    </div>
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

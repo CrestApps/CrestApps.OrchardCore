@@ -19,9 +19,7 @@ The **Contact Center** settings page holds the rules that apply to every queue a
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture">
-  <source src="/img/docs/um-cc-settings.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of the Contact Center settings tabs: recording governance, external transfer destinations and secure data capture" start={75} end={112} />
 
 The page has up to four tabs. A tab only appears when its feature is enabled.
 
@@ -73,7 +71,7 @@ Needs the **Omnichannel Channel Endpoints** feature, which adds the **Omnichanne
 
 ## External transfer destinations
 
-The outside numbers agents and IVR menus may transfer calls to.
+Needs a voice feature, such as **Contact Center Inbound Voice** or **Contact Center Outbound Dialer**, which brings **Contact Center Voice**. These are the outside numbers agents and IVR menus may transfer calls to.
 
 1. Add a row for each destination with a **Display name** (for example *After-hours answering service*) and its **E.164 address** (for example `+17025550199`).
 2. Untick **Enabled** to keep a row but stop offering it.

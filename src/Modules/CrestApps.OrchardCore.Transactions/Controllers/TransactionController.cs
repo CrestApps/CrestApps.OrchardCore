@@ -69,7 +69,7 @@ public sealed class TransactionController : Controller
     /// <param name="pagerParameters">The pager parameters.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="shapeFactory">The shape factory.</param>
-    [Admin("my-transactions", "MyTransactions")]
+    [Admin("my-transactions", TransactionsConstants.RouteNames.AdminStatement)]
     public async Task<IActionResult> Index(
         MyTransactionsOptions options,
         PagerParameters pagerParameters,
@@ -115,11 +115,21 @@ public sealed class TransactionController : Controller
 
         options.Statuses = TransactionStatusFilterExtensions.BuildFilterItems(options.Status, S);
 
+        // The status filter renders at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("MyTransactionsListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         var model = new MyTransactionsViewModel
         {
-            Transactions = result.Entries,
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            List = new AdminListContext<CustomerTransaction>
+            {
+                Source = result.Entries.Select(transaction => new CustomerTransaction(transaction)).ToArray(),
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
         };
 
         return View(model);
@@ -133,7 +143,7 @@ public sealed class TransactionController : Controller
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
-    [Admin("my-transactions", "MyTransactions")]
+    [Admin("my-transactions", TransactionsConstants.RouteNames.AdminStatement)]
     public async Task<IActionResult> IndexFilterPost(MyTransactionsOptions options, PagerParameters pagerParameters)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ViewOwnTransactions))

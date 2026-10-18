@@ -16,9 +16,7 @@ Time zone menus normally list hundreds of technical names such as *America/New_Y
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a time zone map and selecting it as the site default">
-  <source src="/img/docs/time-zones.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of creating a time zone map and selecting it as the site default" start={190} end={218} />
 
 ## How the list works
 

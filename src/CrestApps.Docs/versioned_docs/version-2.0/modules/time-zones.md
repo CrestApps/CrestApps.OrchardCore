@@ -39,9 +39,7 @@ Create one map entry for each friendly label you want to expose. Names are uniqu
 
 The screencast below walks through enabling the feature, adding a `Mexico City Time` map for `America/Mexico_City`, and confirming that the friendly name is what Orchard Core now renders in **Settings -> General -> Default Time Zone**.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of creating a time zone map and selecting it as the site default">
-  <source src="/img/docs/time-zones.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of creating a time zone map and selecting it as the site default" start={190} end={218} />
 
 ## Recipe support
 

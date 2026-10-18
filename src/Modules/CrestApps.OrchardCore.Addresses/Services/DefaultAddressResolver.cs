@@ -7,11 +7,14 @@ using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Addresses.Services;
 
+#pragma warning disable CS0618 // The resolver is kept for sites that used AddressPart in earlier 3.0 previews.
+
 /// <summary>
 /// Default <see cref="IAddressResolver"/> that reads the <c>AddressPart</c> selectors and reduces each
 /// referenced geographic area to its stable money-safe code (or display name) using the shared
 /// <see cref="GeographicAreaIndex"/>, so no full content items have to be loaded.
 /// </summary>
+[Obsolete(AddressConstants.ObsoleteGeography)]
 public sealed class DefaultAddressResolver : IAddressResolver
 {
     private readonly ISession _session;

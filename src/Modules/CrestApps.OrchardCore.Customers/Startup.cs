@@ -1,0 +1,94 @@
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Customers.BackgroundTasks;
+using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Customers.Core.Indexes;
+using CrestApps.OrchardCore.Customers.Core.Models;
+using CrestApps.OrchardCore.Customers.Core.Services;
+using CrestApps.OrchardCore.Customers.Drivers;
+using CrestApps.OrchardCore.Customers.Handlers;
+using CrestApps.OrchardCore.Customers.Migrations;
+using CrestApps.OrchardCore.Customers.Navigation;
+using CrestApps.OrchardCore.Customers.Recipes;
+using CrestApps.OrchardCore.Customers.Services;
+using CrestApps.OrchardCore.Orders.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
+using OrchardCore.Users.Events;
+using OrchardCore.Users.Handlers;
+
+namespace CrestApps.OrchardCore.Customers;
+
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Customers live in their own YesSql collection, which has to be declared for its documents to be stored.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CustomersConstants.CollectionName));
+        services.AddDataMigration<CustomerMigrations>()
+            .AddIndexProvider<CustomerIndexProvider>();
+
+        services.AddScoped<ICustomerStore, CustomerStore>();
+        services.AddScoped<ICustomerService, DefaultCustomerService>();
+
+        // A guest's history joins their account once the account's email is verified.
+        services.AddScoped<ICustomerMergeService, DefaultCustomerMergeService>();
+        services.AddScoped<ILoginFormEvent, CustomerMergeLoginFormEvent>();
+        services.AddScoped<IRegistrationFormEvents, CustomerMergeRegistrationFormEvents>();
+        services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
+
+        services.AddScoped<CustomerAddressBook>();
+
+        // Sample stores add their customers through a recipe. Customers are personal data, so there is no export step.
+        services.AddRecipeExecutionStep<CustomersStep>();
+
+        // Access and erasure requests, and the retention windows for guests' personal data.
+        services.AddScoped<ICustomerPrivacyService, DefaultCustomerPrivacyService>();
+
+        // Erasing or exporting a customer covers what the other commerce modules keep about them: checkouts,
+        // transactions, subscriptions, installment plans, coupon redemptions and payment-provider customers.
+        services.AddScoped<ICustomerPrivacyHandler, CommercePersonalDataCustomerPrivacyHandler>();
+        services.AddSingleton<IBackgroundTask, CustomerRetentionBackgroundTask>();
+        services.AddSiteDisplayDriver<CustomerPrivacySettingsDisplayDriver>();
+        services.AddNavigationProvider<CustomerSettingsAdminMenu>();
+
+        // Lets a role that holds only the manage customers permission open Settings > Commerce > Customers.
+        // The group is registered here, not with the checkout setting, because the privacy settings share it.
+        services.AddSiteSettingsPermission(CustomersConstants.SettingsGroupId, CustomerPermissions.ManageCustomers);
+
+        // Statements, receipts and reminders address a customer by their customer record once there is one.
+        services.AddScoped<DefaultCustomerContactResolver>();
+        services.Replace(ServiceDescriptor.Scoped<ICustomerContactResolver, CustomerRecordContactResolver>());
+
+        services.AddScoped<IPermissionProvider, CustomerPermissionsProvider>();
+        services.AddNavigationProvider<CustomersAdminMenu>();
+        services.AddDisplayDriver<Customer, CustomerDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// The Contact step of an order's checkout, and its setting, when Orders is enabled.
+/// </summary>
+[RequireFeatures(OrderConstants.Features.Orders)]
+public sealed class OrdersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ICheckoutHandler, CustomerContactCheckoutHandler>();
+        services.AddScoped<ICustomerMergeHandler, OrderCustomerMergeHandler>();
+        services.AddScoped<OrderAnonymizer>();
+        services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
+        services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
+    }
+}
+

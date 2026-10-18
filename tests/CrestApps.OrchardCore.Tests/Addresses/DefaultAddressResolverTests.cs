@@ -6,6 +6,8 @@ using Xunit;
 
 namespace CrestApps.OrchardCore.Tests.Addresses;
 
+#pragma warning disable CS0618 // The resolver is kept, obsolete, for sites that used AddressPart in earlier 3.0 previews.
+
 public sealed class DefaultAddressResolverTests
 {
     [Fact]

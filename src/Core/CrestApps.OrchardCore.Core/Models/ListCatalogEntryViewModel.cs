@@ -1,4 +1,7 @@
-﻿namespace CrestApps.OrchardCore.Core.Models;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
+
+namespace CrestApps.OrchardCore.Core.Models;
 
 /// <summary>
 /// Represents the view model for list catalog entry.
@@ -15,6 +18,13 @@ public class ListCatalogEntryViewModel
     /// Downstream consumers should cast to the concrete pager type.
     /// </summary>
     public object Pager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the items, pager and region shapes the <c>admin-list</c> tag renders, in the
+    /// layout (List or Grid) the site or the user picked.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }
 
 /// <summary>

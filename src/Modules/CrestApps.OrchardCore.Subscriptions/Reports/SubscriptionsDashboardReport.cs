@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
@@ -52,7 +53,7 @@ public sealed class SubscriptionsDashboardReport : SubscriptionReportBase
     {
         var range = context.Filter.GetDateRange();
         var nowUtc = _clock.UtcNow;
-        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().ListAsync(cancellationToken);
+        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(collection: SubscriptionConstants.SubscriptionCollectionName).ListAsync(cancellationToken);
         var summary = SubscriptionReportAggregator.SummarizeDashboard(
             subscriptions,
             nowUtc,

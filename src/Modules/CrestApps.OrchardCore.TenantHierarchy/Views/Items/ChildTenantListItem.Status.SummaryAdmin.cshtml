@@ -1,0 +1,39 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var item = Model.Value;
+    var entry = item.Info.Entry;
+}
+
+@switch (entry.Status)
+{
+    case ChildTenantStatus.Provisioning:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><span class="spinner-border spinner-border-sm text-info me-1" aria-hidden="true"></span>@T["Setting up"]</span>
+        break;
+    case ChildTenantStatus.Failed:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-circle-exclamation text-danger" aria-hidden="true"></i> @T["Setup failed"]</span>
+        break;
+    case ChildTenantStatus.Removing:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><span class="spinner-border spinner-border-sm text-warning me-1" aria-hidden="true"></span>@T["Removing"]</span>
+        break;
+    case ChildTenantStatus.PendingRemoval:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-clock text-warning" aria-hidden="true"></i> @T["Removal on {0}", entry.RetainUntilUtc?.ToLocalTime().ToString("d")]</span>
+        break;
+    default:
+        switch (item.Info.State)
+        {
+            case ChildTenantRuntimeState.Running:
+                <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-check text-success" aria-hidden="true"></i> @T["Running"]</span>
+                break;
+            case ChildTenantRuntimeState.Suspended:
+                <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Suspended"]</span>
+                break;
+            case ChildTenantRuntimeState.ChangedByPlatform:
+                <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The platform administrator removed this {0} or moved it to another owner.", item.Labels.ChildLower]"><i class="fa-solid fa-triangle-exclamation text-warning" aria-hidden="true"></i> @T["Changed by platform"]</span>
+                break;
+            default:
+                <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["State"]"><i class="fa-solid fa-circle-question text-muted" aria-hidden="true"></i> @item.Info.State</span>
+                break;
+        }
+        break;
+}

@@ -71,7 +71,8 @@ internal sealed class AccountPickerDisplayDriver : ContentDisplayDriver
 
             model.AccountContentItemId = contained.ListContentItemId;
             model.AccountDisplayText = account?.DisplayText;
-        }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:3");
+        }).Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:3")
+        .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Title:15");
     }
 
     public override async Task<IDisplayResult> EditAsync(ContentItem contentItem, BuildEditorContext context)

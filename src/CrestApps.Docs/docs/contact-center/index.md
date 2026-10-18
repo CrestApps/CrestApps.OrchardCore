@@ -30,12 +30,13 @@ Each Contact Center capability owns both its runtime services and the administra
 
 | Capability feature | Included administration screens |
 | --- | --- |
-| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings, the **External transfer destinations** settings tab, the **Voice Media** library, and the administration menu |
+| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings, the **Voice Media** library, and the administration menu |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | The **Agent states** reason-code screens |
 | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | The **Agent entitlements** screen |
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | The **Business hours** calendar screens |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, and skill screens |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialer profile screens |
+| `CrestApps.OrchardCore.ContactCenter.Voice`, enabled with Inbound Voice, the Outbound Dialer, Voice Media, Call Recording or Supervision | The **External transfer destinations** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.Recording` | The **Recording governance** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound entry-point screens |
 
@@ -322,6 +323,7 @@ The combined Contact Center and Omnichannel Management catalog contributes runna
 - **Queue usage** - per-queue handled volume, answered, abandoned, average handle time and speed of answer, current waiting depth, and the configured SLA threshold.
 - **Campaign summary** - per-campaign *completed vs pending* progress across the activity inventory, with in-progress, failed, cancelled, attempt, and completion-rate columns so administrators can see what is done versus what still needs to be worked.
 - **Subject inventory** - the same completed-vs-pending progress grouped by subject type.
+- **Dialer queue inventory** - what each campaign queue holds right now, one row per queue and stamped dialer profile, with dialable-now versus held-back counts and the reasons, how the queue is paced, when it last dialed, and flags for mismatched or missing profiles and pending records in no queue.
 
 Reports are derived read models built directly from the durable interaction history and the CRM activity inventory, so they are always consistent with the underlying data. Access is gated by the **View Contact Center reports** (`ViewContactCenterReports`) permission, which is granted to the built-in **Supervisor** role and to administrators by default.
 

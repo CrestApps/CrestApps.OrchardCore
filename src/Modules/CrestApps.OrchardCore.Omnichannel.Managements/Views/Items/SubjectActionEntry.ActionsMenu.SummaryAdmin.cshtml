@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SubjectActionEntry>
+
+<a class="dropdown-item text-danger"
+   asp-route-action="DeleteAction"
+   asp-route-controller="SubjectFlows"
+   asp-route-id="@Model.Value.Action.ItemId"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to delete this subject action?"]"
+   data-ok-text="@T["Delete"]"
+   data-cancel-text="@T["Cancel"]"
+   data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

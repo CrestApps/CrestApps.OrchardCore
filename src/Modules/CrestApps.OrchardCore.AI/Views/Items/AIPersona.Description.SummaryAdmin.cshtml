@@ -1,0 +1,9 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIPersona>
+
+@if (!string.IsNullOrEmpty(Model.Value.Description))
+{
+    <div class="admin-list-secondary list-item-search-text">@Model.Value.Description</div>
+}

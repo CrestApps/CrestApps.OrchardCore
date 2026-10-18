@@ -52,5 +52,9 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<PayLaterSettingsDisplayDriver>()
             .AddNavigationProvider<PayLaterAdminMenu>();
+
+        // The Pay Later settings group is guarded by the transaction settings permission, so a role that holds
+        // only that permission must be allowed to open the group's settings page.
+        services.AddSiteSettingsPermission(PayLaterConstants.SettingsGroupId, TransactionsPermissions.ManageTransactionSettings);
     }
 }

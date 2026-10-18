@@ -1,0 +1,5 @@
+@model ShapeViewModel<Customer>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last activity"]">
+    <i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: Model.Value.LastActivityUtc, Format: "g"))
+</span>

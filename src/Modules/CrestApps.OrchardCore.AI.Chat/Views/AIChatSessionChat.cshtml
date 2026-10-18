@@ -72,6 +72,9 @@
 
     var addInitialPrompt = !isReadOnly && !string.IsNullOrWhiteSpace(profileMetadata?.InitialPrompt);
 
+    // The linked persona names the assistant and gives it an avatar. Without the Personas feature it is the default look.
+    var assistantDisplay = await Context.RequestServices.ResolveChatAssistantDisplayAsync(Model.Profile);
+
     ChatModeProfileSettings chatModeSettings = null;
 
     var chatMode = Model.Profile != null && Model.Profile.TryGetSettings<ChatModeProfileSettings>(out chatModeSettings)
@@ -290,6 +293,8 @@
         placeholderElementSelector = $"#{placeholderHtmlId}",
         autoCreateSession = false,
         initialPrompt = addInitialPrompt ? profileMetadata.InitialPrompt : null,
+        assistantLabel = assistantDisplay.GetAssistantLabel(T["Assistant"].Value),
+        assistantAvatarUrl = assistantDisplay.AvatarUrl,
         sessionUrlTemplate,
         messages = prompts,
         metricsEnabled,

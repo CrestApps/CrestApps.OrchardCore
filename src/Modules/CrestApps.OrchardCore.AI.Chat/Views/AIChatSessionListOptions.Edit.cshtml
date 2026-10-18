@@ -1,3 +1,5 @@
 <form method="post" asp-action="History" asp-route-pageSize="@Context.Request.Query["pageSize"]" asp-controller="Admin" asp-route-profileId="@ViewContext.HttpContext.Request.RouteValues["profileId"]">
+    <!-- Hidden submit button do not remove -->
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
     @await DisplayAsync(Model.Content)
 </form>

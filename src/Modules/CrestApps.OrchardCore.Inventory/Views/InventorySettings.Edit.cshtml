@@ -1,0 +1,35 @@
+@model InventorySettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultLowStockThreshold">
+    <label asp-for="DefaultLowStockThreshold" class="ocat-label">@T["Low-stock threshold"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultLowStockThreshold" type="number" min="0" class="form-control" />
+        <span asp-validation-for="DefaultLowStockThreshold"></span>
+        <span class="hint">@T["Stock counts as low at this many available units or fewer, for products without their own threshold. Low stock is flagged under Commerce > Inventory."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="HoldMinutes">
+    <label asp-for="HoldMinutes" class="ocat-label">@T["Hold stock for (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="HoldMinutes" type="number" min="1" class="form-control" />
+        <span asp-validation-for="HoldMinutes"></span>
+        <span class="hint">@T["When a buyer starts checkout, the units they're buying are held for them this long. A payment that arrives later still sells them."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label">@T["Notify about low stock"]</div>
+    <div class="ocat-end">
+        @foreach (var role in Model.Roles)
+        {
+            var id = Html.IdFor(m => m.LowStockNotificationRoles) + "_" + role.Replace(' ', '_');
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@id" name="@Html.NameFor(m => m.LowStockNotificationRoles)" value="@role" checked="@Model.LowStockNotificationRoles.Contains(role, StringComparer.OrdinalIgnoreCase)" />
+                <label class="form-check-label" for="@id">@role</label>
+            </div>
+        }
+        <span class="hint">@T["Users in these roles get a notification when a product or variant runs low or sells out. Notifications need the Notifications feature. A Low Stock workflow event fires too, when Workflows is on."]</span>
+    </div>
+</div>

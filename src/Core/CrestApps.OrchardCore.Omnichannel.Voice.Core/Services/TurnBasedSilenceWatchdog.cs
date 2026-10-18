@@ -23,7 +23,7 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     /// The same wait a live session uses before it asks whether the caller is still there: long enough to be a
     /// silence rather than a pause for thought.
     /// </remarks>
-    public static readonly TimeSpan SilenceBeforeSpeakingUp = TimeSpan.FromSeconds(12);
+    public static readonly TimeSpan SilenceBeforeSpeakingUp = TimeSpan.FromSeconds(8);
 
     private readonly IShellHost _shellHost;
     private readonly ShellSettings _shellSettings;

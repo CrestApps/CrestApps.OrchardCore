@@ -1,0 +1,36 @@
+@model ShapeViewModel<StockItem>
+
+@{
+    var item = Model.Value;
+}
+
+@if (item.Available < 0)
+{
+    <span class="badge ta-badge bg-danger-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Stock"]">
+        <i class="fa-solid fa-clock-rotate-left text-danger me-1" aria-hidden="true"></i>@T["Backordered"]
+    </span>
+}
+else if (item.Available == 0)
+{
+    <span class="badge ta-badge bg-danger-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Stock"]">
+        <i class="fa-solid fa-circle-xmark text-danger me-1" aria-hidden="true"></i>@T["Out of stock"]
+    </span>
+}
+else if (item.IsLow)
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Stock"]">
+        <i class="fa-solid fa-triangle-exclamation text-warning me-1" aria-hidden="true"></i>@T["Low stock"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Stock"]">
+        <i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["In stock"]
+    </span>
+}
+@if (item.AllowBackorder)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Backorders"]">
+        <i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T["Backorders allowed"]
+    </span>
+}

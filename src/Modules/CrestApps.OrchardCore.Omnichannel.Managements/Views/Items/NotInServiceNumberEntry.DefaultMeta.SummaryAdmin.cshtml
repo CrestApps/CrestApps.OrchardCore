@@ -1,0 +1,19 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<NotInServiceNumberEntry>
+
+@{
+    var number = Model.Value.Number;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last found"]">
+    <i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>
+    <time datetime="@number.LastDetectedUtc.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.DateTime(Utc: number.LastDetectedUtc, Format: "g"))</time>
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Times found"]">
+    <i class="fa-solid fa-rotate text-secondary me-1" aria-hidden="true"></i>@T.Plural(number.DetectionCount, "Found once", "Found {0} times")
+</span>

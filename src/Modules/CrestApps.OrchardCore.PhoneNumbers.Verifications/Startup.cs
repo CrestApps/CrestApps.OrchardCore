@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Drivers;
@@ -38,6 +39,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPhoneNumberVerificationManager, DefaultPhoneNumberVerificationManager>();
 
         services.AddSiteDisplayDriver<PhoneNumberVerificationsSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications, PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings);
+        services.AddDisplayDriver<PhoneNumberVerificationRecord, PhoneNumberVerificationRecordDisplayDriver>();
         services.AddNavigationProvider<PhoneNumberVerificationsAdminMenu>();
         services.AddPermissionProvider<PhoneNumberVerificationsPermissionProvider>();
         services.AddScoped<IPhoneNumberVerificationQueueProcessor, PhoneNumberVerificationQueueProcessor>();
@@ -96,6 +99,7 @@ public sealed class AbstractApiStartup : StartupBase
             });
 
         services.AddSiteDisplayDriver<AbstractApiPhoneNumberVerificationSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications, PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings);
     }
 }
 
@@ -131,6 +135,7 @@ public sealed class VeriphoneStartup : StartupBase
             });
 
         services.AddSiteDisplayDriver<VeriphonePhoneNumberVerificationSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications, PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings);
     }
 }
 
@@ -166,6 +171,7 @@ public sealed class TwilioStartup : StartupBase
             });
 
         services.AddSiteDisplayDriver<TwilioPhoneNumberVerificationSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(PhoneNumberVerificationsConstants.SettingsGroupIds.Verifications, PhoneNumberVerificationsPermissions.ManagePhoneNumberVerificationSettings);
     }
 }
 

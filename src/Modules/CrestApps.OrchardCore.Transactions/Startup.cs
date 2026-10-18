@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Customers.Core;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Drivers;
 using CrestApps.OrchardCore.Transactions.Migrations;
+using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Navigation;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.Tasks;
@@ -14,9 +16,11 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Transactions;
 
@@ -25,6 +29,17 @@ namespace CrestApps.OrchardCore.Transactions;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IShellConfiguration _shellConfiguration;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Startup"/> class.
+    /// </summary>
+    /// <param name="shellConfiguration">The tenant configuration the customer pages options are read from.</param>
+    public Startup(IShellConfiguration shellConfiguration)
+    {
+        _shellConfiguration = shellConfiguration;
+    }
+
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
@@ -36,13 +51,31 @@ public sealed class Startup : StartupBase
             .AddDataMigration<TransactionMigrations>()
             .AddIndexProvider<TransactionIndexProvider>();
 
+        // A transaction can name the record it ultimately belongs to, such as the registration an installment plan
+        // pays for, so the module that owns the record finds every payment of it.
+        services
+            .AddDataMigration<TransactionParentReferenceMigrations>()
+            .AddIndexProvider<TransactionParentReferenceIndexProvider>();
+
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();
         services.AddScoped<TransactionDisplayText>();
+        services.AddScoped<ITransactionCommandService, DefaultTransactionCommandService>();
+
+        // The rows of the transactions report and of the customer's own statement.
+        services
+            .AddDisplayDriver<Transaction, TransactionDisplayDriver>()
+            .AddDisplayDriver<CustomerTransaction, CustomerTransactionDisplayDriver>();
         services.AddScoped<IPaymentRefundHandler, TransactionRefundHandler>();
+
+        // The customer pages in the admin and in the site theme, and the links to them sent in messages.
+        services.Configure<TransactionCustomerPagesOptions>(_shellConfiguration.GetSection(TransactionsConstants.CustomerPagesConfigurationSection));
+        services.AddScoped<ITransactionCustomerPageService, TransactionCustomerPageService>();
+        services.AddScoped<ITransactionCustomerLinkService, TransactionCustomerLinkService>();
+        services.AddScoped<ICommercePersonalDataContributor, TransactionPersonalDataContributor>();
     }
 }
 
@@ -57,6 +90,12 @@ public sealed class CheckoutStartup : StartupBase
     {
         services.AddScoped<ICheckoutHandler, TransactionSettlementCheckoutHandler>();
         services.AddNavigationProvider<PaymentLedgerAdminMenu>();
+
+        // The rows of the payments and refunds ledgers.
+        services
+            .AddDisplayDriver<PaymentAttempt, PaymentAttemptDisplayDriver>()
+            .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>();
+        services.AddScoped<ICommercePersonalDataContributor, TransactionSettlementPersonalDataContributor>();
     }
 }
 
@@ -75,6 +114,9 @@ public sealed class NotificationStartup : StartupBase
         services
             .AddSiteDisplayDriver<TransactionReminderSettingsDisplayDriver>()
             .AddNavigationProvider<TransactionReminderSettingsAdminMenu>();
+
+        // Lets a role that holds only the transaction settings permission open Settings > Commerce > Transactions.
+        services.AddSiteSettingsPermission(TransactionsConstants.SettingsGroupId, TransactionsPermissions.ManageTransactionSettings);
 
         services.AddSingleton<IBackgroundTask, TransactionReminderBackgroundTask>();
     }

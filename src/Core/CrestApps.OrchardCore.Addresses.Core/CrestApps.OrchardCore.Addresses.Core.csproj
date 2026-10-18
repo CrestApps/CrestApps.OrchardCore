@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
+    <Title>CrestApps OrchardCore Addresses Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Address formats for every country: which parts an address has, in what order, which are required, what its
+      postal codes look like and which regions it has, with the checks, printing and address editor built on them.
+      The country data comes from Google's address data (libaddressinput), licensed under CC BY 4.0.
+    </Description>
+    <PackageTags>$(PackageTags) Addresses Core</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Data\address-formats.json" LogicalName="CrestApps.OrchardCore.Addresses.Core.address-formats.json" />
+    <None Include="THIRD-PARTY-NOTICES.md" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

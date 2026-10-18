@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<SubjectActionEntry>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Action type"]">
+    <i class="fa-solid fa-bolt text-secondary me-1" aria-hidden="true"></i>@Model.Value.ActionTypeDisplayName
+</span>

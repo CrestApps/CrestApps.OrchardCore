@@ -69,3 +69,14 @@ using OrchardCore.Modules.Manifest;
         AIConstants.Feature.Area,
     ]
 )]
+
+[assembly: Feature(
+    Id = AIConstants.Feature.Personas,
+    Name = "AI Personas",
+    Description = "Reusable characters for AI profiles and chat interactions, with their own instructions, assistant name, avatar and voice. Profiles link to a persona, so an edit applies to all of them from the next message.",
+    Category = "Artificial Intelligence",
+    Dependencies =
+    [
+        AIConstants.Feature.Area,
+    ]
+)]

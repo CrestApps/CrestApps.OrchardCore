@@ -1,0 +1,11 @@
+@using CrestApps.Core.AI.A2A.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<A2AConnection>
+
+@if (!string.IsNullOrEmpty(Model.Value.Endpoint))
+{
+    <span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Endpoint"]">
+        <i class="fa-solid fa-link text-secondary me-1" aria-hidden="true"></i>@Model.Value.Endpoint
+    </span>
+}

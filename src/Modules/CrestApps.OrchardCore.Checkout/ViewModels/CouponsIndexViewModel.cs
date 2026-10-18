@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Checkout.ViewModels;
 
@@ -74,4 +76,11 @@ public class CouponsIndexViewModel
     /// Gets or sets the pager shape.
     /// </summary>
     public dynamic Pager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the coupons, pager and region shapes the <c>admin-list</c> tag renders, in the
+    /// layout (List or Grid) the site or the user picked.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }

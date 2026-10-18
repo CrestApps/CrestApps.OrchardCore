@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Transactions.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -133,13 +134,25 @@ public sealed class CouponsAdminController : Controller
             new SelectListItem(S["Disabled"], nameof(CouponStatusFilter.Disabled), options.Status == CouponStatusFilter.Disabled),
         ];
 
-        return View(new CouponsIndexViewModel
+        var viewModel = new CouponsIndexViewModel
         {
             Options = options,
             Coupons = [.. matching.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
             HasUnboundedCoupons = all.Any(coupon => coupon.IsEnabled && !coupon.MaxRedemptions.HasValue && !coupon.EndsUtc.HasValue),
             Pager = await shapeFactory.PagerAsync(pager, matching.Length, routeData),
-        });
+        };
+
+        // The admin-list tag builds a row per coupon, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<Coupon>
+        {
+            Source = viewModel.Coupons,
+            Pager = (IShape)viewModel.Pager,
+        };
+
+        // The status filter renders at the end of the list's toolbar.
+        viewModel.List.ToolbarActions = await shapeFactory.CreateAsync("CouponsAdminListFilters", Arguments.From(new { Options = options }));
+
+        return View(viewModel);
     }
 
     /// <summary>
@@ -191,6 +204,7 @@ public sealed class CouponsAdminController : Controller
         var model = new CouponEditViewModel { IsEnabled = true };
 
         await PopulateCurrenciesAsync(model);
+        PopulateSources(model);
 
         return View(model);
     }
@@ -213,6 +227,7 @@ public sealed class CouponsAdminController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateCurrenciesAsync(model);
+            PopulateSources(model);
 
             return View(model);
         }
@@ -262,9 +277,14 @@ public sealed class CouponsAdminController : Controller
             MaxRedemptions = coupon.MaxRedemptions,
             MinimumAmount = coupon.MinimumAmount,
             RedemptionCount = coupon.RedemptionCount,
+            Sources = string.Join(", ", coupon.Sources ?? []),
+            ReferenceTypes = string.Join(", ", coupon.ReferenceTypes ?? []),
+            CustomerId = coupon.CustomerId,
+            CustomerEmail = coupon.CustomerEmail,
         };
 
         await PopulateCurrenciesAsync(model);
+        PopulateSources(model);
 
         return View(model);
     }
@@ -298,6 +318,7 @@ public sealed class CouponsAdminController : Controller
             model.RedemptionCount = coupon.RedemptionCount;
 
             await PopulateCurrenciesAsync(model);
+            PopulateSources(model);
 
             return View(model);
         }
@@ -382,6 +403,11 @@ public sealed class CouponsAdminController : Controller
             ModelState.AddModelError(nameof(model.EndsUtc), S["The end date must be after the start date."]);
         }
 
+        if (!string.IsNullOrWhiteSpace(model.CustomerEmail) && !model.CustomerEmail.Contains('@', StringComparison.Ordinal))
+        {
+            ModelState.AddModelError(nameof(model.CustomerEmail), S["Enter the customer's email address, or leave it blank."]);
+        }
+
         if (model.MaxRedemptions is <= 0)
         {
             ModelState.AddModelError(nameof(model.MaxRedemptions), S["Leave the limit blank for unlimited, or enter a number greater than zero."]);
@@ -424,6 +450,36 @@ public sealed class CouponsAdminController : Controller
         model.Currencies = items;
     }
 
+    // The sources the enabled features record on their transactions, so the editor can say which values the source
+    // limit accepts. A source is a technical key, and a typo in one would quietly make a coupon unusable.
+    private void PopulateSources(CouponEditViewModel model)
+    {
+        var sources = HttpContext.RequestServices.GetService<IOptions<TransactionSourceOptions>>()?.Value?.Sources;
+
+        if (sources is not { Count: > 0 })
+        {
+            return;
+        }
+
+        model.KnownSources = sources.Values
+            .Select(source => source.DisplayName is null ? source.Name : $"{source.Name} ({source.DisplayName.Value})")
+            .OrderBy(text => text, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static List<string> SplitList(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? []
+            : value
+                .Split([',', ';', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+    private static string TrimToNull(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+
     private static void Apply(CouponEditViewModel model, Coupon coupon)
     {
         coupon.Code = model.Code?.Trim();
@@ -438,5 +494,9 @@ public sealed class CouponsAdminController : Controller
         coupon.EndsUtc = model.EndsUtc;
         coupon.MaxRedemptions = model.MaxRedemptions;
         coupon.MinimumAmount = model.MinimumAmount;
+        coupon.Sources = SplitList(model.Sources);
+        coupon.ReferenceTypes = SplitList(model.ReferenceTypes);
+        coupon.CustomerId = TrimToNull(model.CustomerId);
+        coupon.CustomerEmail = TrimToNull(model.CustomerEmail);
     }
 }

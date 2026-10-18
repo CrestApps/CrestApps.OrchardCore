@@ -83,11 +83,16 @@ public sealed class MySitesController : Controller
 
         var jobs = (await _jobStore.GetByOwnerAsync(ownerId)).OrderByDescending(job => job.CreatedUtc).ToArray();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
+        var page = jobs.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToArray();
 
         return View(new TenantProvisioningListViewModel
         {
-            Jobs = [.. jobs.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
-            Pager = await shapeFactory.PagerAsync(pager, jobs.Length, new RouteData()),
+            Jobs = page,
+            List = new AdminListContext<CustomerSite>
+            {
+                Source = page.Select(job => new CustomerSite(job)).ToArray(),
+                Pager = await shapeFactory.PagerAsync(pager, jobs.Length, new RouteData()),
+            },
         });
     }
 }
@@ -170,12 +175,23 @@ public sealed class TenantProvisioningAdminController : Controller
         var statuses = new List<SelectListItem> { new(H["Any status"].Value, string.Empty, !status.HasValue) };
         statuses.AddRange(Enum.GetValues<TenantProvisioningStatus>().Select(value => new SelectListItem(displayText.ProvisioningStatusName(value), value.ToString(), status == value)));
 
+        var page = jobs.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToArray();
+
+        // The status filter renders at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("TenantProvisioningListFilters", Arguments.From(new
+        {
+            Statuses = statuses,
+        }));
+
         return View(new TenantProvisioningListViewModel
         {
-            Jobs = [.. jobs.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
-            Status = status,
-            Statuses = statuses,
-            Pager = await shapeFactory.PagerAsync(pager, jobs.Length, routeData),
+            Jobs = page,
+            List = new AdminListContext<TenantProvisioningJob>
+            {
+                Source = page,
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, jobs.Length, routeData),
+            },
         });
     }
 

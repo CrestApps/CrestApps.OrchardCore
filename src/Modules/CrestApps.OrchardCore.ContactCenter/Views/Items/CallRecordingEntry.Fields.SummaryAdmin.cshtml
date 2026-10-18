@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CallRecordingEntry>
+
+@* A plain link to the recording's own page, like the title of a content item in the Manage Content list. *@
+<a asp-action="Display" asp-route-id="@Model.Value.Recording.ItemId">@(Model.Value.CustomerNumber ?? T["Unknown caller"].Value)</a>

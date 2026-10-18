@@ -7,7 +7,9 @@ using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -42,12 +44,45 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
     public override Task<IDisplayResult> DisplayAsync(AIDeployment deployment, BuildDisplayContext context)
     {
-        return CombineAsync(
-            View("AIDeployment_Fields_SummaryAdmin", deployment).Location("Content:1"),
-            View("AIDeployment_Buttons_SummaryAdmin", deployment).Location("Actions:5"),
-            View("AIDeployment_DefaultTags_SummaryAdmin", deployment).Location("Tags:5"),
-            View("AIDeployment_DefaultMeta_SummaryAdmin", deployment).Location("Meta:5")
-        );
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = deployment.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
+        var results = new List<IDisplayResult>();
+
+        // A deployment defined in configuration is listed apart from the editable ones and cannot be selected,
+        // edited or deleted.
+        if (!deployment.IsReadOnly)
+        {
+            results.Add(View("AIDeployment_Checkbox_SummaryAdmin", deployment)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"));
+            results.Add(View("AIDeployment_Buttons_SummaryAdmin", deployment).Location("Actions:5"));
+        }
+
+        results.Add(View("AIDeployment_Fields_SummaryAdmin", deployment)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"));
+
+        if (!string.Equals(deployment.Name, deployment.ModelName, StringComparison.OrdinalIgnoreCase))
+        {
+            results.Add(View("AIDeployment_Description_SummaryAdmin", deployment)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"));
+        }
+
+        results.Add(View("AIDeployment_DefaultTags_SummaryAdmin", deployment)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Details:5"));
+        results.Add(View("AIDeployment_DefaultMeta_SummaryAdmin", deployment)
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+            .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"));
+
+        return CombineAsync(results);
     }
 
     public override IDisplayResult Edit(AIDeployment deployment, BuildEditorContext context)

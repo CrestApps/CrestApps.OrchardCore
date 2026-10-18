@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Checkout.Models
+
+@model ShapeViewModel<Coupon>
+
+<a asp-action="Edit"
+   asp-route-itemId="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+@* Posted with the antiforgery token of the list form, after the confirmation dialog. *@
+<a asp-action="Delete"
+   asp-route-itemId="@Model.Value.ItemId"
+   class="btn btn-danger btn-sm"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to delete this coupon?"]"
+   data-ok-text="@T["Delete"]"
+   data-cancel-text="@T["Cancel"]"
+   data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</a>

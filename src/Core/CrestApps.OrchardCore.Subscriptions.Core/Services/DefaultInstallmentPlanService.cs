@@ -1,6 +1,8 @@
+using CrestApps.OrchardCore.Locking;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Payments;
@@ -16,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Notifications;
@@ -53,6 +56,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     private readonly IEnumerable<ICheckoutSavedPaymentMethodProvider> _savedPaymentMethodProviders;
     private readonly IPaymentAttemptStore _attemptStore;
     private readonly ITransactionSettlementService _settlementService;
+    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly UserManager<IUser> _userManager;
     private readonly IUserService _userService;
     private readonly IDistributedLock _distributedLock;
@@ -77,6 +81,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         IEnumerable<ICheckoutSavedPaymentMethodProvider> savedPaymentMethodProviders,
         IPaymentAttemptStore attemptStore,
         ITransactionSettlementService settlementService,
+        CheckoutInvoiceBuilder invoiceBuilder,
         UserManager<IUser> userManager,
         IUserService userService,
         IDistributedLock distributedLock,
@@ -96,6 +101,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         _savedPaymentMethodProviders = savedPaymentMethodProviders;
         _attemptStore = attemptStore;
         _settlementService = settlementService;
+        _invoiceBuilder = invoiceBuilder;
         _userManager = userManager;
         _userService = userService;
         _distributedLock = distributedLock;
@@ -109,10 +115,111 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
     }
 
     /// <inheritdoc/>
-    public async Task<InstallmentPlanResult> CreateAsync(CreateInstallmentPlanRequest request, CancellationToken cancellationToken = default)
+    public Task<InstallmentPlanResult> CreateAsync(CreateInstallmentPlanRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        return CreatePlanAsync(request, sourceTransaction: null, checkoutSession: null, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<InstallmentPlanResult> CreateFromTransactionAsync(CreateInstallmentPlanFromTransactionRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var result = new InstallmentPlanResult();
+        var option = request.Option;
+
+        if (option is null)
+        {
+            return result.Fail(nameof(request.Option), S["Choose how to pay."]);
+        }
+
+        var transaction = string.IsNullOrEmpty(request.TransactionId)
+            ? null
+            : await _transactionManager.FindByIdAsync(request.TransactionId, cancellationToken);
+
+        if (!InstallmentTransactionEligibility.CanSplit(transaction))
+        {
+            return result.Fail(nameof(request.TransactionId), S["This balance can't be paid in installments."]);
+        }
+
+        var checkoutSession = string.IsNullOrEmpty(request.CheckoutSessionId)
+            ? null
+            : await _sessionStore.GetAsync(request.CheckoutSessionId, cancellationToken);
+
+        // The checkout must still be the one paying this transaction, and nothing may have been charged through it:
+        // what it charges is about to change, and money already handed to the gateway was for the whole balance.
+        if (checkoutSession is null ||
+            checkoutSession.Status != CheckoutSessionStatus.Pending ||
+            !string.Equals(checkoutSession.ReferenceType, TransactionsConstants.ReferenceTypes.Transaction, StringComparison.OrdinalIgnoreCase) ||
+            !string.Equals(checkoutSession.ReferenceId, transaction.ItemId, StringComparison.Ordinal) ||
+            (await _attemptStore.GetBySessionAsync(checkoutSession.SessionId, cancellationToken)).Any())
+        {
+            return result.Fail(nameof(request.CheckoutSessionId), S["This checkout can no longer be changed. Start paying the balance again."]);
+        }
+
+        var existing = await _planStore.GetBySourceTransactionAsync(transaction.ItemId, cancellationToken);
+
+        if (existing.Any(plan => plan.Status is InstallmentPlanStatus.Active or InstallmentPlanStatus.PastDue or InstallmentPlanStatus.Completed))
+        {
+            return result.Fail(nameof(request.TransactionId), S["This balance is already being paid in installments."]);
+        }
+
+        // A plan still waiting for its first payment belongs to a checkout the customer left. Only one plan may replace
+        // the balance, so that one is closed before this one is made.
+        foreach (var abandoned in existing.Where(plan => plan.Status == InstallmentPlanStatus.Draft))
+        {
+            await CancelAsync(abandoned.ItemId, S["The customer chose how to pay again in a new checkout."].Value, cancellationToken);
+        }
+
+        var now = _clock.UtcNow;
+        var hasParentReference = !string.IsNullOrEmpty(transaction.ParentReferenceType) && !string.IsNullOrEmpty(transaction.ParentReferenceId);
+        var hasOwnReference = !string.IsNullOrEmpty(transaction.ReferenceType) && !string.IsNullOrEmpty(transaction.ReferenceId);
+
+        var planRequest = new CreateInstallmentPlanRequest
+        {
+            Title = string.IsNullOrWhiteSpace(transaction.Title) ? S["Outstanding payment"].Value : transaction.Title,
+            CustomerUserId = transaction.OwnerId,
+            Currency = transaction.Currency,
+            TotalAmount = transaction.OutstandingAmount,
+            DownPaymentAmount = option.DownPaymentAmount,
+            InstallmentCount = option.InstallmentCount,
+            Frequency = option.Frequency,
+
+            // With a down payment, the first scheduled payment falls due one period after it; without one, it is the
+            // payment taken now.
+            FirstDueUtc = option.DownPaymentAmount > 0m && Enum.IsDefined(option.Frequency)
+                ? InstallmentScheduleCalculator.GetDueDate(now.Date, option.Frequency, 2)
+                : default,
+            CollectionMethod = InstallmentCollectionMethod.AutoCharge,
+
+            // The plan pays for what the transaction paid for. A transaction that is itself part of a larger record
+            // names that record as its parent, and the plan follows it there.
+            ReferenceType = hasParentReference
+                ? transaction.ParentReferenceType
+                : hasOwnReference
+                    ? transaction.ReferenceType
+                    : null,
+            ReferenceId = hasParentReference
+                ? transaction.ParentReferenceId
+                : hasOwnReference
+                    ? transaction.ReferenceId
+                    : null,
+            Properties = MergeProperties(transaction.Properties, option.Properties),
+        };
+
+        return await CreatePlanAsync(planRequest, transaction, checkoutSession, cancellationToken);
+    }
+
+    // Creates a plan waiting for its first payment. A plan made from a transaction takes that payment through the
+    // customer's own checkout; any other plan gets a checkout of its own.
+    private async Task<InstallmentPlanResult> CreatePlanAsync(
+        CreateInstallmentPlanRequest request,
+        Transaction sourceTransaction,
+        CheckoutSession checkoutSession,
+        CancellationToken cancellationToken)
+    {
         var result = new InstallmentPlanResult();
         var now = _clock.UtcNow;
         var currency = request.Currency?.Trim().ToUpperInvariant();
@@ -132,9 +239,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             result.Fail(nameof(request.TotalAmount), S["The total must be greater than zero."]);
         }
 
-        if (request.DownPaymentAmount <= 0m)
+        if (request.DownPaymentAmount < 0m)
         {
-            result.Fail(nameof(request.DownPaymentAmount), S["The down payment must be greater than zero."]);
+            result.Fail(nameof(request.DownPaymentAmount), S["The down payment can't be negative. Enter zero for no down payment."]);
         }
         else if (request.DownPaymentAmount >= request.TotalAmount)
         {
@@ -156,11 +263,31 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             result.Fail(nameof(request.CollectionMethod), S["Choose how the payments are collected."]);
         }
 
+        var hasDownPayment = request.DownPaymentAmount > 0m;
         var firstDueUtc = DateTime.SpecifyKind(request.FirstDueUtc, DateTimeKind.Utc);
 
-        if (firstDueUtc.Date <= now.Date)
+        if (hasDownPayment)
         {
-            result.Fail(nameof(request.FirstDueUtc), S["The first scheduled payment must fall due after today; the down payment is what is collected today."]);
+            if (firstDueUtc.Date <= now.Date)
+            {
+                result.Fail(nameof(request.FirstDueUtc), S["The first scheduled payment must fall due after today; the down payment is what is collected today."]);
+            }
+        }
+        else
+        {
+            // Without a down payment the first scheduled payment is what is taken now, while the card is entered, so
+            // it is due now and the schedule runs from today.
+            if (request.FirstDueUtc != default && firstDueUtc.Date > now.Date)
+            {
+                result.Fail(nameof(request.FirstDueUtc), S["Without a down payment, the first payment is taken today, so it must fall due today."]);
+            }
+
+            firstDueUtc = now;
+        }
+
+        if (string.IsNullOrEmpty(request.ReferenceType) != string.IsNullOrEmpty(request.ReferenceId))
+        {
+            result.Fail(nameof(request.ReferenceType), S["Set both the reference type and the reference identifier, or neither."]);
         }
 
         if (result.Succeeded)
@@ -175,8 +302,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
         if (!GetSavedPaymentMethodProviders().Any())
         {
-            // The down payment is taken by card on this screen and kept for the schedule; with no provider that can
-            // do that, there is no way to collect anything.
+            // The first payment is taken by card and the card kept for the schedule; with no provider that can do
+            // that, there is no way to collect anything.
             result.Fail(string.Empty, S["No payment provider that can keep a card for later payments is enabled. Enable and configure one, such as Stripe, first."]);
         }
 
@@ -206,6 +333,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         {
             ItemId = IdGenerator.GenerateId(),
             Title = title,
+            ReferenceType = string.IsNullOrEmpty(request.ReferenceType) ? null : request.ReferenceType,
+            ReferenceId = string.IsNullOrEmpty(request.ReferenceId) ? null : request.ReferenceId,
+            SourceTransactionId = sourceTransaction?.ItemId,
             OwnerId = customerId,
             CustomerName = customerName,
             CustomerEmail = customerEmail,
@@ -222,55 +352,147 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             CreatedByName = CurrentUserName(),
             CreatedUtc = now,
             UpdatedUtc = now,
+            Properties = CopyProperties(request.Properties),
         };
 
-        plan.Payments.Add(new InstallmentPlanPayment
+        if (hasDownPayment)
         {
-            Number = 0,
-            DueUtc = now,
-            Amount = downPayment,
-            Status = InstallmentPaymentStatus.Due,
-        });
+            plan.Payments.Add(new InstallmentPlanPayment
+            {
+                Number = 0,
+                DueUtc = now,
+                Amount = downPayment,
+                Status = InstallmentPaymentStatus.Due,
+            });
+        }
 
         foreach (var payment in InstallmentScheduleCalculator.BuildSchedule(total, downPayment, request.InstallmentCount, request.Frequency, firstDueUtc, currency))
         {
             plan.Payments.Add(payment);
         }
 
-        // The down payment is an ordinary debt the checkout settles, so it is on the ledger, receipted, and
-        // refundable like any other payment.
-        var downPaymentTransaction = await CreateTransactionAsync(
+        var firstPayment = plan.FirstPayment;
+
+        firstPayment.Status = InstallmentPaymentStatus.Due;
+
+        // The first payment is an ordinary debt the checkout settles, so it is on the ledger, receipted, and refundable
+        // like any other payment. One taken in the customer's own checkout is pending rather than outstanding: it is
+        // being paid right now, and is not chased with reminders if the customer walks away.
+        var firstTransaction = await CreateTransactionAsync(
             plan,
-            plan.Payments[0],
-            S["{0} — down payment", title].Value,
-            TransactionStatus.Outstanding,
+            firstPayment,
+            hasDownPayment
+                ? S["{0} — down payment", title].Value
+                : S["{0} — payment {1} of {2}", title, firstPayment.Number, plan.InstallmentCount].Value,
+            checkoutSession is null ? TransactionStatus.Outstanding : TransactionStatus.Pending,
             autoCollection: null,
             now);
 
-        plan.Payments[0].TransactionId = downPaymentTransaction.ItemId;
+        firstPayment.TransactionId = firstTransaction.ItemId;
 
-        var session = await _checkoutEngine.StartAsync(
-            new StartCheckoutRequest
-            {
-                ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
-                ReferenceId = downPaymentTransaction.ItemId,
-                OwnerId = customerId,
-                Contact = new CheckoutContactInfo
+        if (checkoutSession is null)
+        {
+            var session = await _checkoutEngine.StartAsync(
+                new StartCheckoutRequest
                 {
-                    DisplayName = customerName,
-                    Email = customerEmail,
+                    ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+                    ReferenceId = firstTransaction.ItemId,
+                    OwnerId = customerId,
+                    Contact = new CheckoutContactInfo
+                    {
+                        DisplayName = customerName,
+                        Email = customerEmail,
+                    },
                 },
-            },
-            cancellationToken);
+                cancellationToken);
 
-        plan.DownPaymentSessionId = session.SessionId;
+            plan.DownPaymentSessionId = session.SessionId;
+        }
+        else
+        {
+            await MoveCheckoutOntoFirstPaymentAsync(checkoutSession, firstTransaction, customerName, customerEmail, now, cancellationToken);
 
-        AddEvent(plan, InstallmentPlanEventType.Created, S["The plan was created: {0} today, then {1} payments.", Format(downPayment, currency), request.InstallmentCount].Value, actor: plan.CreatedByName);
+            plan.DownPaymentSessionId = checkoutSession.SessionId;
+        }
+
+        var created = hasDownPayment
+            ? S["The plan was created: {0} today, then {1} payments.", Format(downPayment, currency), request.InstallmentCount].Value
+            : S["The plan was created: {0} payments, the first of {1} taken today.", request.InstallmentCount, Format(firstPayment.Amount, currency)].Value;
+
+        if (sourceTransaction is not null)
+        {
+            created = S["{0} The customer chose it at checkout to pay '{1}' in installments.", created, sourceTransaction.Title].Value;
+        }
+
+        AddEvent(plan, InstallmentPlanEventType.Created, created, actor: plan.CreatedByName);
 
         await _planStore.CreateAsync(plan, cancellationToken);
         await _session.SaveChangesAsync(cancellationToken);
 
         return InstallmentPlanResult.Success(plan);
+    }
+
+    // Points the customer's checkout at the plan's first payment: it now collects that payment rather than the whole
+    // balance, and keeps the card for the rest. The invoice is rebuilt from the changed step, so the amount the
+    // customer is shown is the amount that is charged.
+    private async Task MoveCheckoutOntoFirstPaymentAsync(
+        CheckoutSession checkoutSession,
+        Transaction firstTransaction,
+        string customerName,
+        string customerEmail,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        checkoutSession.ReferenceType = TransactionsConstants.ReferenceTypes.Transaction;
+        checkoutSession.ReferenceId = firstTransaction.ItemId;
+        checkoutSession.SettlesExistingBalance = true;
+        checkoutSession.SavePaymentMethod = true;
+        checkoutSession.ModifiedUtc = now;
+
+        // The card is kept on a customer at the gateway, which is named after the plan's customer rather than whoever
+        // opened the pay link.
+        if (!checkoutSession.TryGet<CheckoutContactInfo>(out _) && !string.IsNullOrEmpty(customerEmail))
+        {
+            checkoutSession.Put(new CheckoutContactInfo
+            {
+                DisplayName = customerName,
+                Email = customerEmail,
+            });
+        }
+
+        var step = checkoutSession.Steps.FirstOrDefault(candidate => string.Equals(candidate.Key, TransactionsConstants.SettlementStepKey, StringComparison.Ordinal));
+
+        if (step is null)
+        {
+            step = new CheckoutFlowStep
+            {
+                Key = TransactionsConstants.SettlementStepKey,
+                Title = S["Outstanding payment"],
+                Order = 0,
+                CollectData = false,
+                Conceal = true,
+            };
+
+            checkoutSession.Steps.Add(step);
+        }
+
+        step.Description = firstTransaction.Title;
+        step.BillingItems =
+        [
+            new BillingItem
+            {
+                ItemId = firstTransaction.ItemId,
+                Description = firstTransaction.Title,
+                Amount = firstTransaction.TotalAmount,
+                Plan = null,
+
+                // The plan splits a balance whose tax was decided when it was raised, so it is not taxed again.
+                ExcludeFromTax = true,
+            },
+        ];
+
+        await _invoiceBuilder.BuildAsync(new CheckoutFlow(checkoutSession));
+        await _sessionStore.SaveAsync(checkoutSession, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -340,7 +562,10 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         {
             if (plan.Status == InstallmentPlanStatus.Draft)
             {
-                await TryActivateAsync(plan, cancellationToken);
+                if (!await TryActivateAsync(plan, cancellationToken) && !string.IsNullOrEmpty(plan.SourceTransactionId))
+                {
+                    await CloseAbandonedConversionAsync(plan, cancellationToken);
+                }
 
                 return InstallmentPlanResult.Success(plan);
             }
@@ -433,6 +658,9 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
                         CreatedUtc = now,
                         Type = TransactionEventType.Canceled,
                         Message = S["Canceled because the installment plan was canceled."].Value,
+                        Reason = string.IsNullOrWhiteSpace(reason)
+                            ? S["The installment plan was canceled."].Value
+                            : reason,
                         ActorId = CurrentUserId(),
                         ActorName = CurrentUserName(),
                     });
@@ -476,7 +704,7 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
 
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
             SubscriptionConstants.InstallmentPlans.LockPrefix + planId,
-            waitForLock ? _lockTimeout : TimeSpan.Zero,
+            waitForLock ? _lockTimeout : DistributedLockExtensions.NoWaitTimeout,
             _lockExpiration);
 
         if (!locked)
@@ -510,33 +738,37 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         return result;
     }
 
-    // Starts the schedule once the down payment is in. Returns whether the plan is active afterwards.
+    // Starts the schedule once the first payment is in. Returns whether the plan is active afterwards.
     private async Task<bool> TryActivateAsync(InstallmentPlan plan, CancellationToken cancellationToken)
     {
-        var downPayment = plan.DownPayment;
+        // The down payment, or the first scheduled payment of a plan without one: whichever was taken while the card
+        // was entered.
+        var firstPayment = plan.FirstPayment;
 
-        if (downPayment is null)
+        if (firstPayment is null)
         {
             return false;
         }
 
-        var downPaymentTransaction = await FindTransactionAsync(downPayment, cancellationToken);
+        var firstTransaction = await FindTransactionAsync(firstPayment, cancellationToken);
 
-        if (downPaymentTransaction is not null && downPaymentTransaction.Status != TransactionStatus.Paid)
+        if (firstTransaction is not null && firstTransaction.Status != TransactionStatus.Paid)
         {
             // The card may have been charged while recording it was interrupted; that money counts.
-            await ApplyTakenChargesAsync(downPaymentTransaction, cancellationToken);
+            await ApplyTakenChargesAsync(firstTransaction, cancellationToken);
         }
 
-        if (downPaymentTransaction?.Status != TransactionStatus.Paid)
+        if (firstTransaction?.Status != TransactionStatus.Paid)
         {
             return false;
         }
 
         var now = _clock.UtcNow;
+        var isDownPayment = firstPayment.Number == 0;
 
-        downPayment.Status = InstallmentPaymentStatus.Paid;
-        downPayment.PaidUtc = downPaymentTransaction.SettledUtc ?? now;
+        firstPayment.Status = InstallmentPaymentStatus.Paid;
+        firstPayment.PaidUtc = firstTransaction.SettledUtc ?? now;
+        firstPayment.NextChargeAttemptUtc = null;
 
         plan.PaymentMethod = await ReadSavedPaymentMethodAsync(plan, cancellationToken);
 
@@ -546,7 +778,12 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             // plan that silently never charges anybody.
             plan.CollectionMethod = InstallmentCollectionMethod.Invoice;
 
-            AddEvent(plan, InstallmentPlanEventType.Note, S["The card used for the down payment could not be kept for later payments, so the scheduled payments will be invoiced to the customer instead."].Value);
+            AddEvent(
+                plan,
+                InstallmentPlanEventType.Note,
+                isDownPayment
+                    ? S["The card used for the down payment could not be kept for later payments, so the scheduled payments will be invoiced to the customer instead."].Value
+                    : S["The card used for the first payment could not be kept for later payments, so the remaining payments will be invoiced to the customer instead."].Value);
         }
 
         var autoCollection = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
@@ -574,15 +811,159 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         plan.Status = InstallmentPlanStatus.Active;
         plan.ActivatedUtc = now;
 
-        AddEvent(
-            plan,
-            InstallmentPlanEventType.Activated,
-            plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
-                ? S["The down payment of {0} was received. {1} will be charged on each due date.", Format(downPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
-                : S["The down payment of {0} was received. The customer will be invoiced for each payment.", Format(downPayment.Amount, plan.Currency)].Value,
-            paymentNumber: 0);
+        string activated;
+
+        if (isDownPayment)
+        {
+            activated = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
+                ? S["The down payment of {0} was received. {1} will be charged on each due date.", Format(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
+                : S["The down payment of {0} was received. The customer will be invoiced for each payment.", Format(firstPayment.Amount, plan.Currency)].Value;
+        }
+        else
+        {
+            activated = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge
+                ? S["The first payment of {0} was received. {1} will be charged for each remaining payment on its due date.", Format(firstPayment.Amount, plan.Currency), plan.PaymentMethod.Describe()].Value
+                : S["The first payment of {0} was received. The customer will be invoiced for each remaining payment.", Format(firstPayment.Amount, plan.Currency)].Value;
+        }
+
+        AddEvent(plan, InstallmentPlanEventType.Activated, activated, paymentNumber: firstPayment.Number);
+
+        if (!string.IsNullOrEmpty(plan.SourceTransactionId))
+        {
+            await ReplaceSourceTransactionAsync(plan, cancellationToken);
+        }
 
         return true;
+    }
+
+    // The balance the customer chose to pay in installments is now owed through the plan, so the original transaction
+    // is canceled rather than left for them to pay a second time.
+    private async Task ReplaceSourceTransactionAsync(InstallmentPlan plan, CancellationToken cancellationToken)
+    {
+        var source = await _transactionManager.FindByIdAsync(plan.SourceTransactionId, cancellationToken);
+
+        if (source is null)
+        {
+            return;
+        }
+
+        if (!IsReplaceable(source))
+        {
+            // Something else settled or closed it while the first payment was being taken. Nothing is undone
+            // automatically, because only a person can tell which payment the customer meant.
+            AddEvent(plan, InstallmentPlanEventType.Note, S["The transaction '{0}' this plan replaces was no longer outstanding when the plan started, so it was left as it is. Check that the customer is not paying for it twice.", source.Title].Value);
+
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        source.Status = TransactionStatus.Canceled;
+        source.AutoCollection = null;
+        source.UpdatedUtc = now;
+        source.Events.Add(new TransactionEvent
+        {
+            CreatedUtc = now,
+            Type = TransactionEventType.Canceled,
+            Message = S["Replaced by the installment plan '{0}', which the customer chose at checkout.", plan.Title].Value,
+            ActorId = CurrentUserId(),
+            ActorName = CurrentUserName(),
+        });
+
+        await _transactionManager.UpdateAsync(source, data: null, cancellationToken);
+
+        AddEvent(plan, InstallmentPlanEventType.Note, S["The transaction '{0}' was canceled because this plan replaces it.", source.Title].Value);
+    }
+
+    // A plan made at checkout that never got its first payment is closed once its checkout is gone, or once the
+    // balance it was meant to replace was settled some other way. The balance itself is left owed.
+    private async Task CloseAbandonedConversionAsync(InstallmentPlan plan, CancellationToken cancellationToken)
+    {
+        var checkout = string.IsNullOrEmpty(plan.DownPaymentSessionId)
+            ? null
+            : await _sessionStore.GetAsync(plan.DownPaymentSessionId, cancellationToken);
+
+        var checkoutClosed = checkout is null || checkout.Status is CheckoutSessionStatus.Canceled or CheckoutSessionStatus.Expired or CheckoutSessionStatus.Failed;
+
+        var source = await _transactionManager.FindByIdAsync(plan.SourceTransactionId, cancellationToken);
+        var sourceSettled = source is null || !IsReplaceable(source);
+
+        if (!checkoutClosed && !sourceSettled)
+        {
+            return;
+        }
+
+        if (!checkoutClosed)
+        {
+            if (checkout.Status != CheckoutSessionStatus.Pending)
+            {
+                // A payment is already with the gateway. It finishes first; the plan starts or closes after that.
+                return;
+            }
+
+            await _checkoutEngine.CancelAsync(checkout.SessionId, "The balance the installment plan was meant to replace was settled another way.", cancellationToken);
+        }
+
+        var now = _clock.UtcNow;
+
+        foreach (var payment in plan.Payments.Where(payment => payment.Status is not InstallmentPaymentStatus.Paid and not InstallmentPaymentStatus.Canceled))
+        {
+            payment.Status = InstallmentPaymentStatus.Canceled;
+            payment.NextChargeAttemptUtc = null;
+
+            var transaction = await FindTransactionAsync(payment, cancellationToken);
+
+            if (transaction is not null && transaction.Status is TransactionStatus.Pending or TransactionStatus.Outstanding or TransactionStatus.Failed)
+            {
+                transaction.Status = TransactionStatus.Canceled;
+                transaction.AutoCollection = null;
+                transaction.UpdatedUtc = now;
+                transaction.Events.Add(new TransactionEvent
+                {
+                    CreatedUtc = now,
+                    Type = TransactionEventType.Canceled,
+                    Message = S["Canceled because the customer did not finish setting up the installment plan."].Value,
+                });
+
+                await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
+            }
+        }
+
+        plan.Status = InstallmentPlanStatus.Canceled;
+        plan.CanceledUtc = now;
+
+        AddEvent(
+            plan,
+            InstallmentPlanEventType.Canceled,
+            sourceSettled
+                ? S["The plan was closed before it started because the balance it was meant to replace was settled another way."].Value
+                : S["The plan was closed before it started because the customer left the checkout without paying. The balance is still owed."].Value);
+    }
+
+    // Only a balance nobody has paid any of yet is replaced: a plan splits the whole of it.
+    private static bool IsReplaceable(Transaction transaction)
+        => (transaction.Status is TransactionStatus.Outstanding or TransactionStatus.Pending or TransactionStatus.Failed) &&
+            transaction.AmountPaid <= 0m;
+
+    private static Dictionary<string, object> CopyProperties(IEnumerable<KeyValuePair<string, object>> properties)
+        => MergeProperties(properties, null);
+
+    // A later value wins: what the customer chose on top of what the transaction already carried.
+    private static Dictionary<string, object> MergeProperties(IEnumerable<KeyValuePair<string, object>> first, IEnumerable<KeyValuePair<string, object>> second)
+    {
+        var merged = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        foreach (var pair in first ?? [])
+        {
+            merged[pair.Key] = pair.Value;
+        }
+
+        foreach (var pair in second ?? [])
+        {
+            merged[pair.Key] = pair.Value;
+        }
+
+        return merged;
     }
 
     private async Task<SavedPaymentMethod> ReadSavedPaymentMethodAsync(InstallmentPlan plan, CancellationToken cancellationToken)
@@ -776,6 +1157,8 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         {
             payment.NextChargeAttemptUtc = now.Add(delay);
 
+            await MarkCollectionFailedAsync(transaction, reason, cancellationToken);
+
             AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined ({1}). It will be charged again on {2:d}.", payment.Number, reason, payment.NextChargeAttemptUtc.Value].Value, payment.Number);
 
             await NotifyCustomerAsync(
@@ -804,11 +1187,37 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
             }
             else
             {
+                await MarkCollectionFailedAsync(transaction, reason, cancellationToken);
+
                 AddEvent(plan, InstallmentPlanEventType.ChargeFailed, S["Payment {0} was declined when charged by an administrator: {1}", payment.Number, reason].Value, payment.Number, CurrentUserName());
             }
         }
 
         return reason;
+    }
+
+    // A declined charge of a payment that is still collected from the card, by a retry or by an administrator charging it
+    // again: the transaction records that its collection failed. A payment handed to the customer instead becomes
+    // outstanding, and a retry that goes through settles it.
+    private async Task MarkCollectionFailedAsync(Transaction transaction, string reason, CancellationToken cancellationToken)
+    {
+        if (transaction.Status != TransactionStatus.Pending)
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        transaction.Status = TransactionStatus.Failed;
+        transaction.UpdatedUtc = now;
+        transaction.Events.Add(new TransactionEvent
+        {
+            CreatedUtc = now,
+            Type = TransactionEventType.StatusChanged,
+            Message = S["The saved card could not be charged: {0}", reason].Value,
+        });
+
+        await _transactionManager.UpdateAsync(transaction, data: null, cancellationToken);
     }
 
     // A payment the customer now pays themselves: the transaction is no longer collected automatically and is
@@ -964,6 +1373,12 @@ public sealed class DefaultInstallmentPlanService : IInstallmentPlanService
         transaction.OwnerKind = CustomerOwnerKind.Authenticated;
         transaction.ReferenceType = SubscriptionConstants.InstallmentPlans.ReferenceType;
         transaction.ReferenceId = plan.ItemId;
+
+        // Every payment names the record the plan pays for, so the module that owns it finds its record from any
+        // payment without keeping a map of its own.
+        transaction.ParentReferenceType = plan.ReferenceType;
+        transaction.ParentReferenceId = plan.ReferenceId;
+        transaction.Properties = CopyProperties(plan.Properties);
         transaction.ObligationId = payment.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
         transaction.Currency = plan.Currency;
         transaction.Amount = payment.Amount;

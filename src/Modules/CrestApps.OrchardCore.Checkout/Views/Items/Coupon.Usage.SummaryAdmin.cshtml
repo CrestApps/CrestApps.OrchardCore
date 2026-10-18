@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Checkout.Models
+
+@model ShapeViewModel<Coupon>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Used"]">
+    <i class="fa-solid fa-ticket text-secondary me-1" aria-hidden="true"></i>@(Model.Value.MaxRedemptions.HasValue ? T["{0} of {1} used", Model.Value.RedemptionCount, Model.Value.MaxRedemptions.Value] : T["{0} used", Model.Value.RedemptionCount])
+</span>

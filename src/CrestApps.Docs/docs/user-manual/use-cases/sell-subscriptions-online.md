@@ -20,10 +20,7 @@ When it is done:
 - each subscriber gets a receipt after every payment and can manage their plan under **My Plans**;
 - you see every subscriber under **Subscriptions > Agreements**, every payment under **Commerce > Payments**, and every unpaid balance under **Commerce > Transactions**.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-subscriptions.jpg" aria-label="Narrated video of a visitor signing up to a plan, and the Agreements screen">
-  <source src="/img/docs/commerce-subscriptions.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-subscriptions.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of a visitor signing up to a plan, and the Agreements screen" start={160} end={232} />
 
 ## Before you start
 

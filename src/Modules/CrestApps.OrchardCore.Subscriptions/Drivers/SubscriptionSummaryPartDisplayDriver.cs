@@ -48,14 +48,14 @@ public sealed class SubscriptionSummaryPartDisplayDriver : ContentPartDisplayDri
             // Every figure is read from the durable agreement and the payment ledger. A checkout session
             // records what somebody was asked to pay, so counting sessions as subscriptions and their totals
             // as revenue would report every abandoned checkout as a paying customer.
-            model.TotalSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().CountAsync();
-            model.PendingSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index => index.Status == SubscriptionStatus.Incomplete).CountAsync();
-            model.CompletedSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index => index.Status != SubscriptionStatus.Incomplete).CountAsync();
+            model.TotalSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(collection: SubscriptionConstants.SubscriptionCollectionName).CountAsync();
+            model.PendingSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index => index.Status == SubscriptionStatus.Incomplete, SubscriptionConstants.SubscriptionCollectionName).CountAsync();
+            model.CompletedSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index => index.Status != SubscriptionStatus.Incomplete, SubscriptionConstants.SubscriptionCollectionName).CountAsync();
 
             model.ActiveSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index =>
                 index.Status == SubscriptionStatus.Active ||
                 index.Status == SubscriptionStatus.Trialing ||
-                index.Status == SubscriptionStatus.PastDue).CountAsync();
+                index.Status == SubscriptionStatus.PastDue, SubscriptionConstants.SubscriptionCollectionName).CountAsync();
 
             var confirmed = await _session.QueryIndex<PaymentAttemptIndex>(index =>
                 index.ReferenceType == SubscriptionCheckout.ReferenceType &&

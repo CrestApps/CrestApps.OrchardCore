@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Receipts.Core;
 using CrestApps.OrchardCore.Transactions;
+using CrestApps.OrchardCore.Users.Core;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -19,6 +20,9 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         CommerceConstants.Features.Area,
+
+        // Registers the display-name provider the transaction list and the ledger commands use to name people.
+        UsersConstants.Feature.Area,
     ]
 )]
 

@@ -20,10 +20,7 @@ Refunding is kept apart from managing transactions on purpose: giving money back
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-payments-refunds.jpg" aria-label="Narrated video of the Payments list, a partial refund, and the Refunds list">
-  <source src="/img/docs/commerce-payments-refunds.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-payments-refunds.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of the Payments list, a partial refund, and the Refunds list" start={500} end={534} />
 
 ## Review payments
 

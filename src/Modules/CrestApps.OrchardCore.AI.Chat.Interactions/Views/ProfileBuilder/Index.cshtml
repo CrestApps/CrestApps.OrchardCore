@@ -1,0 +1,104 @@
+@using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@model ProfileBuilderIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="AIProfileBuilder" title="@T["Profile Builder"]" />
+</zone>
+
+@* Starting a session is a post. This form sits outside the list form, which a form cannot be nested in; the
+   New Session buttons submit it through their form attribute. *@
+<form asp-action="New" method="post" id="pb-new-empty-form" class="d-none"></form>
+
+@* The form is necessary to generate an antiforgery token for the delete and bulk actions. *@
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group">
+                        <button type="submit" form="pb-new-empty-form" class="btn btn-secondary create">@T["New Session"]</button>
+                        @if (Model.Profiles.Count > 0)
+                        {
+                            <button type="button" class="btn btn-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">@T["More ways to start a session"]</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <button type="submit" form="pb-new-empty-form" class="dropdown-item">
+                                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Empty session"]
+                                    </button>
+                                </li>
+                                <li>
+                                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#pb-from-profile-modal">
+                                        <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Improve an existing AI profile..."]
+                                    </button>
+                                </li>
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* The sessions, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="AIProfileBuilderSessions" context="Model.List"
+                bulk-actions="Model.Options.BulkActions"
+                empty-message="@T["<strong>Nothing here!</strong> Start a session to build an AI profile by role-play: play the person the AI will talk to, tell it what it got wrong, and it rewrites its own instructions."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Name" position="20" title="@T["Title"]" />
+            <admin-list-column name="Activity" position="30" title="@T["Activity"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+@if (Model.Profiles.Count > 0)
+{
+    <div class="modal fade" id="pb-from-profile-modal" tabindex="-1" aria-labelledby="pb-from-profile-title" aria-hidden="true">
+        <div class="modal-dialog">
+            <form asp-action="New" method="post" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pb-from-profile-title">@T["Improve an existing AI profile"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <label for="pb-profile-id" class="form-label">@T["AI profile"]</label>
+                    <select id="pb-profile-id" name="profileId" class="form-select" required>
+                        <option value="">@T["Choose a profile"]</option>
+                        @foreach (var profile in Model.Profiles)
+                        {
+                            <option value="@profile.Value">@profile.Text</option>
+                        }
+                    </select>
+                    <span class="hint">@T["The session starts with the profile's instructions, parameters, deployments and tools, and can update the profile when you finish."]</span>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Start session"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<script asp-name="list-management-ui" at="Foot"></script>

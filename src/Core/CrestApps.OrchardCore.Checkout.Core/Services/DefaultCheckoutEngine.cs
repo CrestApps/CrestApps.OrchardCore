@@ -95,6 +95,15 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrEmpty(request.ReferenceType);
 
+        // A return URL is rendered as a link on pages a guest can reach, so one that leads off the site would turn
+        // the checkout into an open redirect. It is refused before anything is created.
+        if (!string.IsNullOrWhiteSpace(request.ReturnUrl) && !CheckoutReturnInfo.IsLocalUrl(request.ReturnUrl.Trim()))
+        {
+            throw new ArgumentException($"The return URL '{request.ReturnUrl}' is not a local URL. Only a path on this site can be used as a checkout's return URL.", nameof(request));
+        }
+
+        var returnInfo = CreateReturnInfo(request);
+
         var session = await _sessionStore.NewAsync(
             request.ReferenceType,
             request.ReferenceId,
@@ -112,6 +121,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 if (request.Contact is not null && !string.IsNullOrEmpty(request.Contact.Email))
                 {
                     newSession.Put(request.Contact);
+                }
+
+                if (returnInfo is not null)
+                {
+                    newSession.Put(returnInfo);
                 }
 
                 // A session started for someone else belongs to them. Anything the store derived from the
@@ -182,9 +196,16 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 return new PaymentBeginOutcome { Succeeded = true };
             }
 
-            if (!TryValidateCapabilities(provider, expectedObligations, session.SettlesExistingBalance, out var capabilityError))
+            if (!TryValidateCapabilities(provider, expectedObligations, session.SettlesExistingBalance, session.SavePaymentMethod, out var capabilityError))
             {
                 return PaymentBeginOutcome.Failure(capabilityError);
+            }
+
+            if (session.SavePaymentMethod)
+            {
+                // The session, not the browser, decides that the card is kept: the remaining payments of what the
+                // customer agreed to are charged to it without them present.
+                options = WithSavedPaymentMethod(options);
             }
 
             var existingAttempts = (await _attemptStore.GetBySessionAsync(sessionId, cancellationToken)).ToList();
@@ -390,6 +411,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
+            // The cancellation is durable before the handlers hear of it, and a handler that fails can't undo it;
+            // whatever they let go is committed with it, still inside the lock.
+            await _handlers.InvokeAsync((handler, context) => handler.CanceledAsync(context), new CheckoutFlowCanceledContext(new CheckoutFlow(session), reason), _logger);
+            await CommitHandlerWorkAsync(session, cancellationToken);
+
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
     }
@@ -442,8 +468,31 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await _sessionStore.SaveAsync(session, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
+            await _handlers.InvokeAsync((handler, context) => handler.ExpiredAsync(context), new CheckoutFlowExpiredContext(new CheckoutFlow(session)), _logger);
+            await CommitHandlerWorkAsync(session, cancellationToken);
+
             return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
         }
+    }
+
+    // Captures where the customer returns to and what the confirmation is headed, or null when the caller set none.
+    private static CheckoutReturnInfo CreateReturnInfo(StartCheckoutRequest request)
+    {
+        var returnUrl = string.IsNullOrWhiteSpace(request.ReturnUrl) ? null : request.ReturnUrl.Trim();
+        var returnText = string.IsNullOrWhiteSpace(request.ReturnText) ? null : request.ReturnText.Trim();
+        var title = string.IsNullOrWhiteSpace(request.Title) ? null : request.Title.Trim();
+
+        if (returnUrl is null && returnText is null && title is null)
+        {
+            return null;
+        }
+
+        return new CheckoutReturnInfo
+        {
+            ReturnUrl = returnUrl,
+            ReturnText = returnText,
+            Title = title,
+        };
     }
 
     // Begins (or resumes) one obligation. An obligation that already has a non-failed attempt is resumed
@@ -733,6 +782,28 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         return amounts;
     }
 
+    // Adds the request to keep the payment method to what the browser sent. Nothing else changes, so the provider still
+    // sees the payment method its own script tokenized.
+    private static BeginPaymentOptions WithSavedPaymentMethod(BeginPaymentOptions options)
+    {
+        var providerData = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var pair in options.ProviderData ?? new Dictionary<string, string>())
+        {
+            providerData[pair.Key] = pair.Value;
+        }
+
+        providerData[CheckoutPaymentDataKeys.SavePaymentMethod] = "true";
+
+        return new BeginPaymentOptions
+        {
+            ProviderKey = options.ProviderKey,
+            ReturnUrl = options.ReturnUrl,
+            CancelUrl = options.CancelUrl,
+            ProviderData = providerData,
+        };
+    }
+
     // Refuses a provider that cannot express what the invoice needs, before any money moves. Discovering this
     // after a charge would mean refunding a customer for a configuration mistake.
     //
@@ -742,9 +813,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         ICheckoutPaymentProvider provider,
         IReadOnlyList<string> obligations,
         bool settlesExistingBalance,
+        bool savesPaymentMethod,
         out string error)
     {
-        if (CheckoutPaymentMethodSelector.GetEligible([provider], obligations, settlesExistingBalance).Length > 0)
+        if (CheckoutPaymentMethodSelector.GetEligible([provider], obligations, settlesExistingBalance, savesPaymentMethod).Length > 0)
         {
             error = null;
 
@@ -754,6 +826,13 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         if (settlesExistingBalance && provider.Capabilities.DefersPayment)
         {
             error = "This balance must be paid now, so the selected payment method can't be used.";
+
+            return false;
+        }
+
+        if (savesPaymentMethod && !provider.Capabilities.SupportsSavedPaymentMethods)
+        {
+            error = "The selected payment method can't keep your card for the later payments.";
 
             return false;
         }
@@ -832,6 +911,7 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         await _session.SaveChangesAsync(cancellationToken);
 
         await _handlers.InvokeAsync((handler, context) => handler.FailedAsync(context), new CheckoutFlowFailedContext(flow), _logger);
+        await _session.SaveChangesAsync(cancellationToken);
 
         return new CheckoutCompletionResult
         {
@@ -960,6 +1040,23 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
 
         return null;
+    }
+
+    // What the handlers let go of, such as an order and the stock it held, is committed on its own. When it can't be,
+    // for example because the same stock changed at the same moment, it is rolled back and left to the sweeps that
+    // close abandoned orders and expired holds; the checkout itself is already closed.
+    private async Task CommitHandlerWorkAsync(CheckoutSession session, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+        catch (global::YesSql.ConcurrencyException exception)
+        {
+            await _session.CancelAsync();
+
+            _logger.LogWarning(exception, "What checkout '{SessionId}' held couldn't be let go right away; the sweeps will finish it.", session.SessionId);
+        }
     }
 
     private static bool IsTerminal(CheckoutSessionStatus status)

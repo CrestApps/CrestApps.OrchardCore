@@ -12,10 +12,7 @@ This section explains each feature in plain words. For installation, configurati
 
 This video walks through the commerce features, from connecting Stripe to refunds:
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce.jpg" aria-label="Narrated video overview of the CrestApps Commerce modules">
-  <source src="/img/docs/commerce.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video overview of the CrestApps Commerce modules" />
 
 ## What each feature does
 

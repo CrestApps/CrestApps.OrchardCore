@@ -16,7 +16,9 @@
 
 @{
     var plan = Model.Plan;
-    var downPayment = plan.DownPayment;
+    // A plan without a down payment takes its first scheduled payment here instead.
+    var downPayment = plan.FirstPayment;
+    var hasDownPayment = plan.DownPayment is not null;
     var savesCard = plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge;
     var antiforgery = Antiforgery.GetAndStoreTokens(Context);
 }
@@ -104,11 +106,18 @@
                     <dt class="col-sm-5">@T["Total"]</dt>
                     <dd class="col-sm-7">@plan.Currency @CurrencyScale.Format(plan.TotalAmount, plan.Currency)</dd>
 
-                    <dt class="col-sm-5">@T["Down payment now"]</dt>
+                    <dt class="col-sm-5">@(hasDownPayment ? T["Down payment now"] : T["First payment now"])</dt>
                     <dd class="col-sm-7"><strong>@plan.Currency @CurrencyScale.Format(downPayment?.Amount ?? 0m, plan.Currency)</strong></dd>
 
                     <dt class="col-sm-5">@T["Then"]</dt>
-                    <dd class="col-sm-7">@T["{0} payments, the first on {1:d}", plan.InstallmentCount, plan.FirstDueUtc]</dd>
+                    @if (hasDownPayment)
+                    {
+                        <dd class="col-sm-7">@T["{0} payments, the first on {1:d}", plan.InstallmentCount, plan.FirstDueUtc]</dd>
+                    }
+                    else
+                    {
+                        <dd class="col-sm-7">@T["{0} more payments", plan.InstallmentCount - 1]</dd>
+                    }
 
                     <dt class="col-sm-5">@T["Collected by"]</dt>
                     <dd class="col-sm-7">@(savesCard ? T["Charging this card"] : T["Invoicing the customer"])</dd>

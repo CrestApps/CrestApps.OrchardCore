@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
@@ -42,7 +41,7 @@ public sealed class AdminController : Controller
     private readonly MessagingWorkspaceBuilder _workspaceBuilder;
     private readonly MessagingContactSearch _contactSearch;
     private readonly MessagingAttachmentUploads _attachmentUploads;
-    private readonly IAgentAddressResolver _agentAddressResolver;
+    private readonly MessagingSenderLines _senderLines;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
@@ -62,7 +61,7 @@ public sealed class AdminController : Controller
         MessagingWorkspaceBuilder workspaceBuilder,
         MessagingContactSearch contactSearch,
         MessagingAttachmentUploads attachmentUploads,
-        IAgentAddressResolver agentAddressResolver,
+        MessagingSenderLines senderLines,
         IAuthorizationService authorizationService,
         INotifier notifier,
         ILogger<AdminController> logger,
@@ -80,7 +79,7 @@ public sealed class AdminController : Controller
         _workspaceBuilder = workspaceBuilder;
         _contactSearch = contactSearch;
         _attachmentUploads = attachmentUploads;
-        _agentAddressResolver = agentAddressResolver;
+        _senderLines = senderLines;
         _authorizationService = authorizationService;
         _notifier = notifier;
         _logger = logger;
@@ -234,7 +233,7 @@ public sealed class AdminController : Controller
         }
 
         // A new conversation starts from the number the agent texts from: theirs, or the default SMS number.
-        await PopulateEndpointsAsync(model, await GetAgentTextingAddressIdAsync(model.Channel));
+        await PopulateEndpointsAsync(model, await _senderLines.FindAddressIdAsync(User, model.Channel, HttpContext.RequestAborted));
         model.EndpointId = model.Endpoints.FirstOrDefault(item => item.Selected)?.Value;
 
         return await ComposeViewAsync(model);
@@ -788,24 +787,6 @@ public sealed class AdminController : Controller
             Inbox = await _workspaceBuilder.BuildInboxAsync(User, agent, show: null, channel: null, page: 1, selectedCustomerKey: null, HttpContext.RequestAborted),
             Compose = model,
         });
-    }
-
-    private async Task<string> GetAgentTextingAddressIdAsync(string channel)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-        // Texts have a tenant-wide default number besides the agent's own line. Every other channel starts from the
-        // agent's line on it, the address they were made a messaging line of, when they have one.
-        if (string.IsNullOrEmpty(channel) || string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase))
-        {
-            var addresses = await _agentAddressResolver.ResolveAsync(userId, HttpContext.RequestAborted);
-
-            return addresses.SmsAddress?.ItemId;
-        }
-
-        var endpoints = await _endpointManager.GetAllAsync(HttpContext.RequestAborted);
-
-        return MessagingLines.FindAssignedLine(endpoints, userId, channel)?.ItemId;
     }
 
     private async Task PopulateEndpointsAsync(ComposeViewModel model, string selectedEndpointId = null)

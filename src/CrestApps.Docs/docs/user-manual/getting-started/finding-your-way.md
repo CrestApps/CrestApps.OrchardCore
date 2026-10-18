@@ -9,9 +9,7 @@ technical_manual:
 
 Everything you do in the application happens in the browser, on the **admin** pages of your company's site. This page shows you how to sign in, what each top-level menu holds, and where to change your own details. Read it first if you are new.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast touring the Interaction Center, Management, Messaging and Reports menus">
-  <source src="/img/docs/um-tour.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Screencast touring the Interaction Center, Management, Messaging and Reports menus" start={7} end={35} />
 
 ## Sign in
 

@@ -20,7 +20,9 @@ public sealed class AddressTests
             County = "Santa Clara",
             City = "San Jose",
             District = "SPD",
+            DependentLocality = "Downtown",
             PostalCode = "95113",
+            SortingCode = "CEDEX 1",
             Phone = "+1-408-555-0100",
         };
 
@@ -38,7 +40,9 @@ public sealed class AddressTests
         Assert.Equal(address.County, clone.County);
         Assert.Equal(address.City, clone.City);
         Assert.Equal(address.District, clone.District);
+        Assert.Equal(address.DependentLocality, clone.DependentLocality);
         Assert.Equal(address.PostalCode, clone.PostalCode);
+        Assert.Equal(address.SortingCode, clone.SortingCode);
         Assert.Equal(address.Phone, clone.Phone);
     }
 

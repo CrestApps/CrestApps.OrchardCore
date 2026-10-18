@@ -1,10 +1,12 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
@@ -65,6 +67,7 @@ public sealed class RecordingStartup : StartupBase
 
         // Recording and monitoring settings screens.
         services.AddSiteDisplayDriver<ContactCenterRecordingSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
 
         // The call recordings page: search, playback and the transcript beside it.
         services
@@ -73,7 +76,8 @@ public sealed class RecordingStartup : StartupBase
             .AddResourceConfiguration<ContactCenterCallRecordingsResourceConfiguration>()
             .AddScoped<ICallRecordingTranscriptProvider, AIConversationCallRecordingTranscriptProvider>()
             .AddScoped<CallRecordingAccessEvaluator>()
-            .AddScoped<CallRecordingAgentNameResolver>();
+            .AddScoped<CallRecordingAgentNameResolver>()
+            .AddDisplayDriver<CallRecordingEntry, CallRecordingEntryDisplayDriver>();
 
         // An activity's page lists the recordings of its calls, for whoever may hear them.
         services

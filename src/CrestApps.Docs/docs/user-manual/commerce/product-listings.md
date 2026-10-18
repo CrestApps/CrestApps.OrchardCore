@@ -80,6 +80,8 @@ The settings you change less often open with the **More settings** button at the
 
 To change the order, drag a row by its handle, or focus the handle and press the up and down arrow keys.
 
+Besides your fields, every listing can offer **Price**, **Type**, **Featured** and, when the [Inventory](inventory.md) feature counts stock, **In stock**, which shows only products that can be bought now.
+
 ### Sorting
 
 Untick **Let visitors change the sort** to always show the products in the default sort's order.
@@ -152,7 +154,7 @@ Three recipes under **Configuration > Recipes** set up a complete example you ca
 
 | Recipe | Creates |
 | --- | --- |
-| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, and a **Shop** page at */shop* |
+| **Product listing: online store sample** | 30 products sold online with categories, brands, colors and sizes, a **Shop** page at */shop*, orders, and two sample customers with addresses under **Commerce > Customers** |
 | **Product listing: real estate sample** | 20 homes that are listed but not sold online, some with the price on request and a *Schedule a viewing* button, and a **Homes for sale** page at */homes* |
 | **Product listing: vehicle dealership sample** | 28 vehicles, some sold online and the rest listed, filtered by make, model, year, mileage and more, and a **Vehicles** page at */vehicles* |
 

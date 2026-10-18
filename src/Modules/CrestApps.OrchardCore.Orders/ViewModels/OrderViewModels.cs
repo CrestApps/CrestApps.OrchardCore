@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Orders.ViewModels;
@@ -20,6 +21,13 @@ public class OrdersIndexViewModel
 
     [BindNever]
     public IShape Pager { get; set; }
+
+    /// <summary>
+    /// Gets or sets the orders, pager and region shapes the <c>admin-list</c> tag renders, in the
+    /// layout (List or Grid) the site or the user picked.
+    /// </summary>
+    [BindNever]
+    public AdminListContext List { get; set; }
 }
 
 public class OrdersIndexOptions
@@ -68,4 +76,39 @@ public class OrderConfirmationViewModel
     /// Gets or sets whether the order belongs to a signed-in customer, who can find it again under My Orders.
     /// </summary>
     public bool IsSignedIn { get; set; }
+
+    /// <summary>
+    /// Gets or sets the signed link a guest opens their order with.
+    /// </summary>
+    public string GuestOrderUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the link to create an account, for a guest on a site that lets visitors register.
+    /// </summary>
+    public string RegisterUrl { get; set; }
+}
+
+public class OrderSettingsViewModel
+{
+    public bool SendConfirmations { get; set; }
+}
+
+public class OrderViewViewModel
+{
+    public Order Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets the link to pay what is still owed on the order, or <see langword="null"/>.
+    /// </summary>
+    public string PayUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the link to create an account, for a guest on a site that lets visitors register.
+    /// </summary>
+    public string RegisterUrl { get; set; }
+}
+
+public class FindOrderViewModel
+{
+    public string Email { get; set; }
 }

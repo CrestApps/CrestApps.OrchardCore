@@ -41,6 +41,7 @@ public sealed class CartService : ICartService
     private readonly IContentManager _contentManager;
     private readonly IProductSnapshotResolver _snapshotResolver;
     private readonly IPriceResolver _priceResolver;
+    private readonly IEnumerable<IProductAvailabilityProvider> _availability;
     private readonly IClock _clock;
     private readonly CartOptions _options;
     private readonly ILogger _logger;
@@ -55,6 +56,7 @@ public sealed class CartService : ICartService
         IContentManager contentManager,
         IProductSnapshotResolver snapshotResolver,
         IPriceResolver priceResolver,
+        IEnumerable<IProductAvailabilityProvider> availability,
         IClock clock,
         IOptions<CartOptions> options,
         ILogger<CartService> logger,
@@ -67,6 +69,7 @@ public sealed class CartService : ICartService
         _contentManager = contentManager;
         _snapshotResolver = snapshotResolver;
         _priceResolver = priceResolver;
+        _availability = availability;
         _clock = clock;
         _options = options.Value;
         _logger = logger;
@@ -100,7 +103,7 @@ public sealed class CartService : ICartService
         var cart = await GetCurrentAsync(cancellationToken);
         var currency = cart?.Lines.Count > 0 ? cart.Currency : null;
 
-        var resolved = await ResolveAsync(contentItemId, priceId, variantId, quantity, currency, cancellationToken);
+        var resolved = await ResolveAsync(contentItemId, priceId, variantId, quantity, currency, cart?.ItemId, cancellationToken);
 
         if (resolved.Problem is not null)
         {
@@ -118,9 +121,11 @@ public sealed class CartService : ICartService
 
         if (total > resolved.MaxQuantity)
         {
-            return CartResult.Failure(resolved.MaxQuantity == 1
-                ? S["{0} is already in your cart, and only one can be bought.", resolved.Title]
-                : S["You can buy at most {0} of {1}.", resolved.MaxQuantity, resolved.Title], cart);
+            return CartResult.Failure(resolved.LimitedByStock
+                ? S["Only {0} of {1} left.", resolved.MaxQuantity, resolved.Title]
+                : resolved.MaxQuantity == 1
+                    ? S["{0} is already in your cart, and only one can be bought.", resolved.Title]
+                    : S["You can buy at most {0} of {1}.", resolved.MaxQuantity, resolved.Title], cart);
         }
 
         if (existing is null && cart?.Lines.Count >= _options.MaxLines)
@@ -132,7 +137,7 @@ public sealed class CartService : ICartService
         // was added.
         if (existing is not null)
         {
-            resolved = await ResolveAsync(contentItemId, priceId, variantId, total, currency, cancellationToken);
+            resolved = await ResolveAsync(contentItemId, priceId, variantId, total, currency, cart.ItemId, cancellationToken);
 
             if (resolved.Problem is not null)
             {
@@ -186,7 +191,7 @@ public sealed class CartService : ICartService
             return CartResult.Failure(S["That item is no longer in your cart."], cart);
         }
 
-        var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, quantity, cart.Currency, cancellationToken);
+        var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, quantity, cart.Currency, cart.ItemId, cancellationToken);
 
         if (resolved.Problem is not null)
         {
@@ -195,7 +200,9 @@ public sealed class CartService : ICartService
 
         if (quantity > resolved.MaxQuantity)
         {
-            return CartResult.Failure(S["You can buy at most {0} of {1}.", resolved.MaxQuantity, resolved.Title], cart);
+            return CartResult.Failure(resolved.LimitedByStock
+                ? S["Only {0} of {1} left.", resolved.MaxQuantity, resolved.Title]
+                : S["You can buy at most {0} of {1}.", resolved.MaxQuantity, resolved.Title], cart);
         }
 
         line.Quantity = quantity;
@@ -324,12 +331,14 @@ public sealed class CartService : ICartService
 
         foreach (var line in cart.Lines)
         {
-            var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, cart.Currency, cancellationToken);
+            var resolved = await ResolveAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, cart.Currency, cart.ItemId, cancellationToken);
             var problem = resolved.Problem;
 
             if (problem is null && line.Quantity > resolved.MaxQuantity)
             {
-                problem = S["You can buy at most {0} of this product.", resolved.MaxQuantity];
+                problem = resolved.LimitedByStock
+                    ? S["Only {0} left. Lower the quantity to check out.", resolved.MaxQuantity]
+                    : S["You can buy at most {0} of this product.", resolved.MaxQuantity];
             }
 
             var unitPrice = resolved.Price?.UnitPrice ?? line.AddedUnitPrice;
@@ -357,7 +366,7 @@ public sealed class CartService : ICartService
         };
     }
 
-    private async Task<ResolvedLine> ResolveAsync(string contentItemId, string priceId, string variantId, int quantity, string currency, CancellationToken cancellationToken)
+    private async Task<ResolvedLine> ResolveAsync(string contentItemId, string priceId, string variantId, int quantity, string currency, string cartId, CancellationToken cancellationToken)
     {
         var contentItem = await _contentManager.GetAsync(contentItemId, VersionOptions.Published);
 
@@ -405,6 +414,24 @@ public sealed class CartService : ICartService
             Title = title,
             MaxQuantity = GetMaxQuantity(price),
         };
+
+        // A product whose stock is counted can't be bought beyond what's available, unless it takes backorders. The
+        // units this cart's own unpaid orders hold count as available to it.
+        var availability = (await _availability.GetAvailabilityAsync([new ProductStockKey(contentItem.ContentItemId, product.VariantId)], cartId, cancellationToken))
+            .GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, product.VariantId));
+
+        if (availability is not null && !availability.AllowBackorder)
+        {
+            if (availability.Available <= 0)
+            {
+                return resolved with { MaxQuantity = 0, LimitedByStock = true, Problem = S["{0} is out of stock.", title] };
+            }
+
+            if (availability.Available < resolved.MaxQuantity)
+            {
+                resolved = resolved with { MaxQuantity = availability.Available, LimitedByStock = true };
+            }
+        }
 
         if (price.IsRecurring)
         {
@@ -510,5 +537,10 @@ public sealed class CartService : ICartService
         public string Title { get; init; }
 
         public int MaxQuantity { get; init; } = 1;
+
+        /// <summary>
+        /// Gets whether <see cref="MaxQuantity"/> is what's left in stock rather than what the price allows.
+        /// </summary>
+        public bool LimitedByStock { get; init; }
     }
 }

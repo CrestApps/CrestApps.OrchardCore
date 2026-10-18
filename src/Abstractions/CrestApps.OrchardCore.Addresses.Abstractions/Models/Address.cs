@@ -31,12 +31,25 @@ public sealed class Address
     public string AddressLine2 { get; init; }
 
     /// <summary>
+    /// Gets or sets the part of the city the address is in, for the countries whose post uses one: a suburb, a
+    /// neighbourhood (a Brazilian <em>bairro</em>), or a Chinese or Korean district.
+    /// </summary>
+    public string DependentLocality { get; init; }
+
+    /// <summary>
+    /// Gets or sets the sorting code a few countries add after the city, such as the French CEDEX.
+    /// </summary>
+    public string SortingCode { get; init; }
+
+    /// <summary>
     /// Gets or sets the ISO country code (for example <c>US</c> or <c>CA</c>).
     /// </summary>
     public string Country { get; init; }
 
     /// <summary>
-    /// Gets or sets the state, province, or region code.
+    /// Gets or sets the state, province or region. For a country with a list of regions it is the region's code: its
+    /// ISO 3166-2 code without the country (<c>CA</c> for California, <c>13</c> for Tokyo), or the key the country's
+    /// post uses when there is no ISO code.
     /// </summary>
     public string Region { get; init; }
 
@@ -82,6 +95,8 @@ public sealed class Address
             County = County,
             City = City,
             District = District,
+            DependentLocality = DependentLocality,
+            SortingCode = SortingCode,
             PostalCode = PostalCode,
             Phone = Phone,
         };

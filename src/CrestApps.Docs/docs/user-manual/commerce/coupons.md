@@ -16,10 +16,7 @@ A **coupon** is a promotion code a buyer types at checkout to get a discount, fo
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-coupons.jpg" aria-label="Narrated video of creating a coupon">
-  <source src="/img/docs/commerce-coupons.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-coupons.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of creating a coupon" start={130} end={161} />
 
 ## Find a coupon
 
@@ -72,6 +69,26 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 
 A use is counted when a purchase that used the coupon completes, not when the buyer applies the code.
 
+### Limit who and what a coupon is for
+
+Under **Who and what it is for** you can keep a code from working anywhere it was not meant for, for example financial aid for one family, or a discount that only applies to registration fees. Leave these fields blank for a code anyone can use on any checkout. A code that is limited is refused everywhere else with *That code can't be used for this payment.*
+
+| Field | What it does |
+| --- | --- |
+| **Only for transaction sources** | The code works only when the buyer pays a [transaction](transactions.md) from one of these sources, such as the source of your registration fees. Separate several with commas. The hint under the field lists the sources on your site. |
+| **Only for reference types** | The code works only on a checkout for one of these kinds of thing, such as *Transaction*, or when paying a transaction that is for one of these. Separate several with commas. |
+| **Only for the customer with ID** | The code works only for this one customer: their user ID, or the guest customer ID on their transaction. |
+| **Only for the customer with email** | The code works only for this one customer, matched against the email the checkout collected, the email on the transaction, or the email on the customer's account. Capital letters do not matter. |
+
+### Coupons on a payment for a transaction
+
+A customer can use a promotion code when paying a transaction, from **My Transactions** or a pay link. What the code takes off is recorded on the transaction as a **Discount** adjustment, so the customer owes that much less:
+
+- A 100% code pays the whole balance: the transaction becomes **Paid** without any money being collected.
+- A smaller code takes its share off, and the customer pays the rest. Once that payment arrives, the transaction is **Paid** in full.
+
+The code is counted as used only when the transaction is settled. If less was collected than the rest of the balance, the code is not used up. See [Adjust or waive what is owed](transactions.md#adjust-or-waive-what-is-owed) for how adjustments show on the transaction and its invoice.
+
 ## Change a coupon
 
 1. In the list, click the coupon's code or **Edit**.
@@ -102,3 +119,4 @@ On the **Payment** step of the checkout, the buyer types the code in **Promotion
 | *A fixed amount needs a currency.* | Enter the **Currency**. |
 | *The end date must be after the start date.* | Fix **Valid from (UTC)** or **Valid until (UTC)**. |
 | *Leave the limit blank for unlimited, or enter a number greater than zero.* | Fix the **Usage limit**. |
+| *Enter the customer's email address, or leave it blank.* | Fix **Only for the customer with email**. |

@@ -117,7 +117,18 @@ internal static partial class AgentWorkspaceEndpoints
 
         model.AgentId = profile.ItemId;
         model.HasProfile = true;
-        model.DisplayName = await GetUserDisplayNameAsync(profile.UserId, profile.DisplayName ?? model.DisplayName, userManager, displayNameProvider, httpContext.RequestAborted);
+
+        // The agent is the signed-in user, whose name was just resolved above; loading the same user again by id
+        // repeated that lookup on every poll.
+        if (!string.Equals(profile.UserId, userId, StringComparison.Ordinal))
+        {
+            model.DisplayName = await GetUserDisplayNameAsync(profile.UserId, profile.DisplayName ?? model.DisplayName, userManager, displayNameProvider, httpContext.RequestAborted);
+        }
+        else if (model.DisplayName == "Unknown user" && !string.IsNullOrWhiteSpace(profile.DisplayName))
+        {
+            model.DisplayName = profile.DisplayName;
+        }
+
         model.IsSignedIn = profile.QueueIds.Count > 0 || profile.CampaignIds.Count > 0;
         model.Presence = new WorkspacePresenceViewModel
         {

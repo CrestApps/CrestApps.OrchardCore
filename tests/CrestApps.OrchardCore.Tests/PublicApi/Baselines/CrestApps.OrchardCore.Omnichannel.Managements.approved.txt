@@ -205,7 +205,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
                     YesSql.ISession session,
                     OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor,
                     OrchardCore.ContentManagement.IContentManager contentItemManager,
-                    OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityContainer> containerDisplayManager,
                     OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> activityDisplayManager,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager omnichannelActivityManager,
                     Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService,
@@ -722,6 +721,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom4Async() { }
     }
     public sealed class OmnichannelContactsMigrations : CrestApps.OrchardCore.Omnichannel.Managements.Migrations.OmnichannelIndexMigration
     {
@@ -765,6 +765,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Models
         public LeadExportOptionsPart() { }
         public bool ExcludeConvertedLeads { get; set; }
     }
+    public sealed class NotInServiceNumberEntry
+    {
+        public NotInServiceNumberEntry() { }
+        public string CampaignName { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber Number { get; set; }
+    }
     public sealed class OmnichannelActivityExportPart
     {
         public OmnichannelActivityExportPart() { }
@@ -793,6 +799,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Models
         public string[] SelectedRegistryKeys { get; set; }
         public bool SkipNumbersOfExistingContacts { get; set; }
         public bool SkipNumbersOfOpenLeads { get; set; }
+    }
+    public sealed class SubjectActionEntry
+    {
+        public SubjectActionEntry() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction Action { get; set; }
+        public string ActionTypeDisplayName { get; set; }
+        public string DispositionDisplayText { get; set; }
+    }
+    public sealed class SubjectFlowEntry
+    {
+        public SubjectFlowEntry() { }
+        public string Channel { get; set; }
+        public string ContentTypeName { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
+        public string DisplayName { get; set; }
+        public bool HasActions { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Models.Reports
@@ -1002,7 +1025,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class AutomatedVoiceActivitySettingsResolver : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedVoiceActivitySettingsResolver
     {
-        public AutomatedVoiceActivitySettingsResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.Settings.ISiteService siteService) { }
+        public AutomatedVoiceActivitySettingsResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.Settings.ISiteService siteService, CrestApps.Core.AI.Profiles.IAIProfileManager profileManager, System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Profiles.IAIPersonaResolver> personaResolvers) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedVoiceActivitySettings> ResolveAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class BulkActivityAdminFormOptionsProvider
@@ -1153,12 +1176,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Tools
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 {
-    public sealed class AccountActivityEntry
-    {
-        public AccountActivityEntry() { }
-        public OrchardCore.ContentManagement.ContentItem Contact { get; set; }
-        public OrchardCore.DisplayManagement.IShape Shape { get; set; }
-    }
     public class AccountPickerViewModel
     {
         public AccountPickerViewModel() { }
@@ -1274,17 +1291,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public BulkManageOmnichannelActivityContainer() { }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.List<string> ActivityItemIds { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape BulkActions { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.List<OrchardCore.DisplayManagement.IShape> Containers { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public int CurrentPageSize { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape Header { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public OrchardCore.DisplayManagement.IShape Pager { get; set; }
+        public OrchardCore.Admin.AdminListContext List { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public int TotalCount { get; set; }
     }
@@ -1506,23 +1519,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public ListAccountActivitiesViewModel() { }
         public OrchardCore.ContentManagement.ContentItem Account { get; set; }
-        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountActivityEntry> Completed { get; }
-        public OrchardCore.DisplayManagement.IShape CompletedPager { get; set; }
-        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.AccountActivityEntry> Scheduled { get; }
-        public OrchardCore.DisplayManagement.IShape ScheduledPager { get; set; }
+        public OrchardCore.Admin.AdminListContext CompletedList { get; set; }
+        public OrchardCore.Admin.AdminListContext ScheduledList { get; set; }
     }
     public sealed class ListOmnichannelActivity : OrchardCore.DisplayManagement.Views.ShapeViewModel
     {
         public ListOmnichannelActivity() { }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.List<OrchardCore.DisplayManagement.IShape> CompletedContainers { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public OrchardCore.DisplayManagement.IShape CompletedPager { get; set; }
+        public OrchardCore.Admin.AdminListContext CompletedList { get; set; }
         public OrchardCore.ContentManagement.ContentItem ContactContentItem { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.List<OrchardCore.DisplayManagement.IShape> ScheduledContainers { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public OrchardCore.DisplayManagement.IShape ScheduledPager { get; set; }
+        public OrchardCore.Admin.AdminListContext ScheduledList { get; set; }
     }
     public sealed class ListOmnichannelActivityBatchViewModel : CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel<CrestApps.OrchardCore.Core.Models.CatalogEntryViewModel<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch>>
     {
@@ -1533,11 +1540,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public ListOmnichannelActivityContainer() { }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.List<OrchardCore.DisplayManagement.IShape> Containers { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public OrchardCore.DisplayManagement.IShape Header { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public OrchardCore.DisplayManagement.IShape Pager { get; set; }
+        public OrchardCore.Admin.AdminListContext List { get; set; }
     }
     public class ListOmnichannelActivityFilterViewModel
     {
@@ -1565,7 +1570,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public ManageSubjectActionsViewModel() { }
         public System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectActionTypeEntry> ActionTypes { get; set; }
-        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.SubjectActionEntryViewModel> Actions { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.Models.SubjectActionEntry> Actions { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.Admin.AdminListContext List { get; set; }
         public string SubjectContentType { get; set; }
         public string SubjectDisplayName { get; set; }
     }
@@ -1604,16 +1611,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         None = 0,
         AllowDialing = 1,
     }
-    public class NotInServiceNumberEntry
-    {
-        public NotInServiceNumberEntry() { }
-        public string CampaignName { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.NotInServiceNumber Number { get; set; }
-    }
     public class NotInServiceNumbersIndexViewModel
     {
         public NotInServiceNumbersIndexViewModel() { }
-        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberEntry> Entries { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Managements.Models.NotInServiceNumberEntry> Entries { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.Admin.AdminListContext List { get; set; }
         public CrestApps.OrchardCore.Core.Models.CatalogEntryOptions<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.NotInServiceNumberBulkAction> Options { get; set; }
         public object Pager { get; set; }
         public int TotalCount { get; set; }
@@ -1988,13 +1991,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public int Order { get; set; }
         public int Probability { get; set; }
     }
-    public class SubjectActionEntryViewModel
-    {
-        public SubjectActionEntryViewModel() { }
-        public string ActionTypeDisplayName { get; set; }
-        public string DispositionDisplayText { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction Model { get; set; }
-    }
     public class SubjectActionViewModel
     {
         public SubjectActionViewModel() { }
@@ -2009,21 +2005,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public bool? SetDoNotSms { get; set; }
         public bool ShowCommunicationPreferences { get; set; }
     }
-    public class SubjectFlowEntryViewModel
-    {
-        public SubjectFlowEntryViewModel() { }
-        public string Channel { get; set; }
-        public string ContentTypeName { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection Direction { get; set; }
-        public string DisplayName { get; set; }
-        public bool HasActions { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
-    }
     public class SubjectFlowsIndexViewModel
     {
         public SubjectFlowsIndexViewModel() { }
-        public bool CanEditContentTypes { get; set; }
-        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.SubjectFlowEntryViewModel> Subjects { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.Admin.AdminListContext List { get; set; }
+        public System.Collections.Generic.List<CrestApps.OrchardCore.Omnichannel.Managements.Models.SubjectFlowEntry> Subjects { get; set; }
     }
     public class TryAgainSubjectActionViewModel
     {

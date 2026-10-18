@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -101,6 +102,7 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddIndexProvider<SharedVoicemailIndexProvider>()
             .AddDataMigration<SharedVoicemailIndexMigrations>();
         services.AddNavigationProvider<ContactCenterSharedVoicemailAdminMenu>();
+        services.AddDisplayDriver<SharedVoicemailEntry, SharedVoicemailEntryDisplayDriver>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<CallRecordingEntry>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Agent"]">
+    <i class="fa-solid fa-headset text-secondary me-1" aria-hidden="true"></i><span class="visually-hidden">@T["Agent"]</span>
+    @(Model.Value.AgentName ?? (Model.Value.Recording.Source == CallRecordingSource.AiAgent ? T["AI voice agent"].Value : T["Nobody"].Value))
+</span>

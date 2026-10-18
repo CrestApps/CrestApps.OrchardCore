@@ -1,0 +1,32 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PhoneNumberVerificationRecord>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Attempts"]">
+    <i class="fa-solid fa-rotate text-secondary" aria-hidden="true"></i> @Model.Value.VerificationAttemptCount
+</span>
+
+@if (Model.Value.FailedAttemptCount > 0)
+{
+    <span class="badge ta-badge bg-danger-subtle text-danger fw-normal" data-bs-toggle="tooltip" title="@T["Failed attempts"]">
+        <i class="fa-solid fa-xmark" aria-hidden="true"></i> @Model.Value.FailedAttemptCount
+    </span>
+}
+
+@if (Model.Value.LastAttemptUtc.HasValue)
+{
+    var lastAttemptUtc = Model.Value.LastAttemptUtc.Value;
+
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last attempt"]">
+        <i class="fa-solid fa-clock text-secondary" aria-hidden="true"></i>
+        <time datetime="@lastAttemptUtc.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: lastAttemptUtc))</time>
+    </span>
+}
+else
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last attempt"]">
+        <i class="fa-solid fa-clock text-secondary" aria-hidden="true"></i> @T["Never"]
+    </span>
+}

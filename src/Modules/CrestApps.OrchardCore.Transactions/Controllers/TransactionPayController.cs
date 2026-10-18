@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Transactions.Controllers;
 
@@ -19,15 +20,22 @@ public sealed class TransactionPayController : Controller
     private readonly ITransactionPayLinkService _payLinks;
     private readonly ITransactionManager _transactionManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionPayController"/> class.
     /// </summary>
     /// <param name="payLinks">The service that reads the signed pay links.</param>
     /// <param name="transactionManager">The transaction manager.</param>
-    public TransactionPayController(ITransactionPayLinkService payLinks, ITransactionManager transactionManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TransactionPayController(
+        ITransactionPayLinkService payLinks,
+        ITransactionManager transactionManager,
+        IStringLocalizer<TransactionPayController> stringLocalizer)
     {
         _payLinks = payLinks;
         _transactionManager = transactionManager;
+        S = stringLocalizer;
     }
 
     /// <summary>
@@ -83,6 +91,12 @@ public sealed class TransactionPayController : Controller
         {
             ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
             ReferenceId = transaction.ItemId,
+
+            // The customer came from this page, so the checkout brings them back to it: after paying, where it
+            // shows the payment as received, or when they decide not to pay after all.
+            ReturnUrl = Url.RouteUrl(TransactionsConstants.RouteNames.Pay, new { token }),
+            ReturnText = S["Back to the payment page"],
+            Title = S["Payment received"],
         });
 
         return RedirectToRoute(CheckoutConstants.RouteNames.Step, new

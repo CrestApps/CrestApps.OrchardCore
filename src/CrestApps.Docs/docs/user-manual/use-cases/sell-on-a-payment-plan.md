@@ -22,10 +22,7 @@ When it is done:
 - the customer is reminded before each payment and gets a receipt after it;
 - every payment appears under **Commerce > Transactions** and **Commerce > Payments**, where it can be refunded.
 
-<video controls preload="metadata" width="100%" poster="/img/docs/commerce-installment-plans.jpg" aria-label="Narrated video of setting up an installment plan and taking the down payment">
-  <source src="/img/docs/commerce-installment-plans.mp4" type="video/mp4" />
-  <track kind="captions" src="/img/docs/commerce-installment-plans.vtt" srcLang="en" label="English" default />
-</video>
+<YouTube video="commerce" title="Narrated video of setting up an installment plan and taking the down payment" start={304} end={363} />
 
 ## Before you start
 
@@ -40,14 +37,15 @@ When it is done:
 
 ## Steps
 
-1. **Choose how payments are collected by default.** Under **Settings > Subscriptions**, in **Installment Plans**, pick **Charging the saved card on each due date** or **Invoicing the customer for each payment**. Then set how many days after a declined card to try again. See [Installment plans](../commerce/installment-plans.md).
+1. **Choose how payments are collected by default.** Under **Settings > Installment Plans**, pick **Charging the saved card on each due date** or **Invoicing the customer for each payment**. Then set how many days after a declined card to try again. See [Installment plans](../commerce/installment-plans.md).
 2. **Check the reminders.** Under **Settings > Commerce > Transactions**, check how many days before a due date the customer is reminded, and how often overdue payments are chased. See [Transactions](../commerce/transactions.md#payment-reminders).
 3. **Brand the paperwork.** Under **Settings > Commerce > Receipts**, enter your business name, logo and footer. They appear on every invoice and receipt. See [Invoices and receipts](../commerce/invoices-and-receipts.md).
 4. **Set up the plan.** Open **Subscriptions > Installment Plans** and click **New plan**. Pick the customer, or create one from a name and email. Enter the **Total**, the **Down payment today**, the **Number of payments after it**, how often **Payments fall due**, and the **First payment due** date. Check the schedule preview, choose how the payments are collected, and click **Continue to the down payment**. See [Installment plans](../commerce/installment-plans.md).
 5. **Take the down payment.** Enter the customer's card, or let them use Apple Pay or Google Pay on their phone, and click the **Charge** button. The plan becomes **Active**, and the customer is sent a receipt. See [Installment plans](../commerce/installment-plans.md).
 6. **Let it run.** Charged payments are taken on their due dates. Invoiced payments are sent to the customer as invoices with a link that pays them. See [Invoices and receipts](../commerce/invoices-and-receipts.md).
 7. **Follow up.** The **Installment Plans** list shows each plan's status. Filter it by **Past due** to find plans that need attention. On a plan, use **Charge now** to collect early or retry a declined card. See [Installment plans](../commerce/installment-plans.md).
-8. **Handle the exceptions.** Record a payment the customer made by cash or bank transfer from its transaction. Use **Cancel the plan** to stop collecting. Refund a payment from **Commerce > Payments**. See [Transactions](../commerce/transactions.md) and [Payments and refunds](../commerce/payments-and-refunds.md).
+8. **Let customers choose installments themselves (optional).** Under **Settings > Installment Plans**, in **Installments at checkout**, tick the kinds of balance in **Offer for balances from** and enter the **Numbers of payments offered**, for example *3, 6*. A customer paying one of those balances then sees **Choose how to pay** at checkout. See [Let customers choose installments at checkout](../commerce/installment-plans.md#let-customers-choose-installments-at-checkout).
+9. **Handle the exceptions.** Record a payment the customer made by cash or bank transfer from its transaction. Use **Cancel the plan** to stop collecting. Refund a payment from **Commerce > Payments**. See [Transactions](../commerce/transactions.md) and [Payments and refunds](../commerce/payments-and-refunds.md).
 
 ## Check that it works
 

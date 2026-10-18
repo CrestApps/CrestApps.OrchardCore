@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<TenantProvisioningJob>
+
+@* The list is rendered outside the page's filter form, so this form is not nested in another. *@
+<form asp-action="MarkCreated" asp-route-itemId="@Model.Value.ItemId" method="post" class="d-inline-flex gap-1">
+    <input type="text" name="siteUrl" class="form-control form-control-sm" placeholder="@T["Site URL (optional)"]" aria-label="@T["Site URL"]" />
+    <button type="submit" class="btn btn-secondary btn-sm text-nowrap"
+            data-url-af="RemoveUrl"
+            data-title="@T["Mark as created"]"
+            data-message="@T["Did you create the site {0} by hand? The customer will see it as ready.", Model.Value.TenantName]"
+            data-ok-text="@T["Mark as created"]"
+            data-cancel-text="@T["Cancel"]">
+        @T["Mark as created"]
+    </button>
+</form>

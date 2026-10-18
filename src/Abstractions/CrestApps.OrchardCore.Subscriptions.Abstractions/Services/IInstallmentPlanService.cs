@@ -12,9 +12,23 @@ public interface IInstallmentPlanService
     /// Validates the request and creates a plan waiting for its down payment, together with the down-payment
     /// transaction and the checkout session that takes it.
     /// </summary>
-    /// <param name="request">What the administrator entered.</param>
+    /// <param name="request">What the administrator, or the module creating the plan, entered.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<InstallmentPlanResult> CreateAsync(CreateInstallmentPlanRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Turns an outstanding transaction into an installment plan for its owner, while the customer is paying it at
+    /// checkout. The plan pays for what the transaction paid for: it takes the transaction's reference, total and
+    /// currency, and charges its first payment through the supplied checkout session, which is moved onto that payment
+    /// and asked to keep the card for the rest. The transaction stays owed until the first payment is received and is
+    /// canceled then, so an abandoned checkout changes nothing for the customer.
+    /// </summary>
+    /// <param name="request">The transaction, the installments the customer chose and the checkout session.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// The checkout session must still be waiting for the customer: nothing may have been charged through it yet.
+    /// </remarks>
+    Task<InstallmentPlanResult> CreateFromTransactionAsync(CreateInstallmentPlanFromTransactionRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Starts the schedule of a plan whose down payment was received: keeps the payment method, creates a
@@ -56,7 +70,7 @@ public interface IInstallmentPlanService
 }
 
 /// <summary>
-/// What an administrator enters to create an installment plan.
+/// What an administrator, or a module creating a plan for its own record, enters to create an installment plan.
 /// </summary>
 public sealed class CreateInstallmentPlanRequest
 {
@@ -92,7 +106,8 @@ public sealed class CreateInstallmentPlanRequest
     public decimal TotalAmount { get; set; }
 
     /// <summary>
-    /// Gets or sets the amount collected now.
+    /// Gets or sets the amount collected now. Zero means no down payment: the first scheduled payment is then due
+    /// at once and is collected in its place, and <see cref="FirstDueUtc"/> must not be after today.
     /// </summary>
     public decimal DownPaymentAmount { get; set; }
 
@@ -107,7 +122,8 @@ public sealed class CreateInstallmentPlanRequest
     public InstallmentFrequency Frequency { get; set; }
 
     /// <summary>
-    /// Gets or sets when the first of them falls due.
+    /// Gets or sets when the first of them falls due. It must be after today when there is a down payment. Without
+    /// one, the first payment is due at once, so this is left unset or set to today.
     /// </summary>
     public DateTime FirstDueUtc { get; set; }
 
@@ -120,6 +136,24 @@ public sealed class CreateInstallmentPlanRequest
     /// Gets or sets an internal note.
     /// </summary>
     public string Notes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the kind of record the plan pays for, as the module that owns the record names it, for example
+    /// <c>Registration</c>. It is copied onto the plan and, as the parent reference, onto every transaction of the plan.
+    /// Set it together with <see cref="ReferenceId"/>, or leave both empty.
+    /// </summary>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the record the plan pays for.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets values the module creating the plan attaches to it. They are copied onto the plan and onto every
+    /// transaction of the plan, and only that module interprets them.
+    /// </summary>
+    public Dictionary<string, object> Properties { get; set; }
 }
 
 /// <summary>

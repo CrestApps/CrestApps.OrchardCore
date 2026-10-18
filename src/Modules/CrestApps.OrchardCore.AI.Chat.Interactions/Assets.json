@@ -11,5 +11,11 @@
     "tags": [
       "vendor"
     ]
+  },
+  {
+    "action": "vite",
+    "name": "profile-builder.js",
+    "source": "Assets/js/profile-builder.js",
+    "dest": "wwwroot/scripts/profile-builder.js"
   }
 ]

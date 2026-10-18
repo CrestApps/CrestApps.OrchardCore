@@ -11,9 +11,11 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.DisplayManagement.Zones;
 using OrchardCore.Modules;
@@ -110,11 +112,32 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
     public override Task<IDisplayResult> DisplayAsync(OmnichannelActivityBatch batch, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = batch.DisplayText?.ToLowerInvariant() ?? string.Empty;
+        }
+
         var results = new List<IDisplayResult>()
         {
-            View("OmnichannelActivityBatch_Fields_SummaryAdmin", batch).Location("Content:1"),
+            View("OmnichannelActivityBatch_Checkbox_SummaryAdmin", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Checkbox:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Select:1"),
+            View("OmnichannelActivityBatch_Fields_SummaryAdmin", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
             View("OmnichannelActivityBatch_Buttons_SummaryAdmin", batch).Location("Actions:5"),
-            View("OmnichannelActivityBatch_DefaultMeta_SummaryAdmin", batch).Location("Meta:5"),
+            View("OmnichannelActivityBatch_Source_SummaryAdmin", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Source:1"),
+            View("OmnichannelActivityBatch_DefaultTags_SummaryAdmin", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:5"),
+            View("OmnichannelActivityBatch_DefaultMeta_SummaryAdmin", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
 
             // Every batch can be cloned, whatever its status; the view offers Load activities only to a new one.
             View("OmnichannelActivityBatch_ActionsMenuItems_SummaryAdmin", batch).Location("ActionsMenu:10"),
@@ -122,13 +145,17 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
 
         if (HasLoadReport(batch))
         {
-            results.Add(View("OmnichannelActivityBatch_LoadReport", batch).Location("Description:5"));
+            results.Add(View("OmnichannelActivityBatch_LoadReport", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"));
         }
         else if (batch.Status is OmnichannelActivityBatchStatus.Started or OmnichannelActivityBatchStatus.Loading ||
             !string.IsNullOrEmpty(batch.LoadError))
         {
             // A load in progress says how far it has got, and one that stopped says why, so neither looks stuck.
-            results.Add(View("OmnichannelActivityBatch_LoadStatus", batch).Location("Description:5"));
+            results.Add(View("OmnichannelActivityBatch_LoadStatus", batch)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5"));
         }
 
         return CombineAsync(results);

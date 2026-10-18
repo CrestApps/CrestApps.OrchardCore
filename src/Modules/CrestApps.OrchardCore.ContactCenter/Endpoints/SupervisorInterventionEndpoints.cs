@@ -27,6 +27,7 @@ internal static class SupervisorInterventionEndpoints
     public const string RecordingRouteName = "ContactCenterSupervisorDashboardRecording";
     public const string AgentStateRouteName = "ContactCenterSupervisorDashboardAgentState";
     public const string MessageRouteName = "ContactCenterSupervisorDashboardMessage";
+    public const string FreeAgentRouteName = "ContactCenterSupervisorDashboardFreeAgent";
 
     // The value of the agent-state request that signs the agent out rather than setting a state.
     private const string SignOutState = "SignOut";
@@ -41,6 +42,7 @@ internal static class SupervisorInterventionEndpoints
         builder.MapPost("Admin/contact-center/dashboard/recording", HandleRecordingAsync).WithName(RecordingRouteName);
         builder.MapPost("Admin/contact-center/dashboard/agent-state", HandleAgentStateAsync).WithName(AgentStateRouteName);
         builder.MapPost("Admin/contact-center/dashboard/message", HandleMessageAsync).WithName(MessageRouteName);
+        builder.MapPost("Admin/contact-center/dashboard/free-agent", HandleFreeAgentAsync).WithName(FreeAgentRouteName);
 
         return builder;
     }
@@ -126,6 +128,14 @@ internal static class SupervisorInterventionEndpoints
                 ? await interventions.SetAgentStateAsync(request.AgentId, supervisorId, httpContext.User, status, request.Reason, httpContext.RequestAborted)
                 : SupervisorEngagementResult.Failure("Choose a state.");
         });
+
+    private static Task<IResult> HandleFreeAgentAsync(
+        [FromForm] FreeAgentRequest request,
+        IContactCenterSupervisorInterventionService interventions,
+        CallScope scope,
+        HttpContext httpContext)
+        => scope.RunForAgentAsync(httpContext, supervisorId =>
+            interventions.FreeAgentAsync(request.AgentId, supervisorId, httpContext.User, httpContext.RequestAborted));
 
     private static Task<IResult> HandleMessageAsync(
         [FromForm] MessageRequest request,
@@ -259,6 +269,11 @@ internal static class SupervisorInterventionEndpoints
     private sealed class RecordingRequest : InteractionRequest
     {
         public bool Record { get; set; }
+    }
+
+    private sealed class FreeAgentRequest
+    {
+        public string AgentId { get; set; }
     }
 
     private sealed class AgentStateRequest

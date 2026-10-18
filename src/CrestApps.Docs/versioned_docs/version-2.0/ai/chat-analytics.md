@@ -39,9 +39,7 @@ The analytics dashboard provides a comprehensive view of your AI chat performanc
 
 The screencast below enables the feature, confirms **Enable session metrics** on the profile, then opens the dashboard and runs a report showing conversation counts and usage distribution across time of day and day of week.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling session metrics and running the AI chat analytics report">
-  <source src="/img/docs/ai-chat-analytics.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling session metrics and running the AI chat analytics report" start={659} end={690} />
 
 ### Filters
 

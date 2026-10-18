@@ -16,9 +16,7 @@ A **chat interaction** is a free-form chat where you set everything up yourself,
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of starting a new AI chat interaction and chatting with the model">
-  <source src="/img/docs/ai-chat-interactions.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of starting a new AI chat interaction and chatting with the model" start={101} end={130} />
 
 ## Start a chat interaction
 
@@ -59,9 +57,7 @@ When your site uses the GitHub Copilot or Claude engine, its model and **Effort 
 
 Ask questions about your own files or knowledge base.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file">
-  <source src="/img/docs/ai-chat-attachments-pdf.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file" start={133} end={201} />
 
 1. Open the **Knowledge** tab.
 2. Drag files onto **Drag and drop files here**, or click **Browse files**. **Supported formats** lists the file types you can use.

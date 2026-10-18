@@ -158,6 +158,7 @@ public sealed class ListingStartup : StartupBase
         services.AddScoped<ProductAttributeCatalog>();
         services.AddScoped<ProductSearchDocumentBuilder>();
         services.AddScoped<ProductSearchIndexer>();
+        services.AddScoped<IProductSearchIndexRefresher, ProductSearchIndexRefresher>();
         services.AddScoped<SqlProductSearchService>();
         services.AddScoped<ProductSearchRouter>();
         services.AddScoped<IProductSearchService, CachedProductSearchService>();

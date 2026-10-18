@@ -17,9 +17,7 @@ An **extension** is a short internal number, such as `1001`, that belongs to one
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating an extension for a user">
-  <source src="/img/docs/um-extensions.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating an extension for a user" start={168} end={191} />
 
 ## Create an extension
 

@@ -16,10 +16,10 @@ The **AI Chat** feature builds upon the **AI Services** feature by adding AI cha
 - **DeepSeek AI Chat** (`CrestApps.OrchardCore.DeepSeek`): AI-powered chat using Azure DeepSeek cloud service.
 - **Ollama AI Chat** (`CrestApps.OrchardCore.Ollama`): AI-powered chat using Azure Ollama service.
 
-### Here is a Screen cast of the Admin Chat User Interface
+### Admin Chat User Interface
 
-![Screen cast of the admin chat](../images/admin-ui-sample.gif)
+<YouTube video="ai-walkthroughs" title="Video of the admin chat" start={78} end={98} />
 
-### Here is a Screen cast of the Frontend Widget Interface
+### Frontend Widget Interface
 
-![Screen cast of the frontend widget](../images/widget-ui-sample.gif)
+<YouTube video="ai-walkthroughs" title="Video of adding the website chat widget and chatting with it" start={577} end={615} />

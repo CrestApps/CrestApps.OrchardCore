@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Drivers;
 using CrestApps.OrchardCore.Checkout.Endpoints;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -28,6 +29,7 @@ using OrchardCore.Modules;
 using OrchardCore.ResourceManagement;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Customers.PersonalData;
 
 namespace CrestApps.OrchardCore.Checkout;
 
@@ -62,6 +64,8 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CouponIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
+        services.AddScoped<CouponScopeEvaluator>();
+        services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();
@@ -85,6 +89,13 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CheckoutSessionIndexProvider>()
             .AddIndexProvider<PaymentAttemptIndexProvider>()
             .AddIndexProvider<PaymentRefundIndexProvider>();
+
+        // Finds a person's checkouts by owner and by email, for access and erasure requests.
+        services.AddDataMigration<CheckoutSessionCustomerIndexMigrations>()
+            .AddIndexProvider<CheckoutSessionCustomerIndexProvider>();
+
+        services.AddScoped<ICommercePersonalDataContributor, CheckoutPersonalDataContributor>();
+        services.AddScoped<ICommercePersonalDataContributor, CouponPersonalDataContributor>();
 
         services.Configure<PaymentSessionCacheOptions>(options =>
         {

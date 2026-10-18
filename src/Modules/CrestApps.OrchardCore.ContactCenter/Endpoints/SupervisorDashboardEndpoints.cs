@@ -34,6 +34,7 @@ internal static partial class SupervisorDashboardEndpoints
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
     public const string DispatchRouteName = "ContactCenterSupervisorDashboardDispatch";
+    public const string DialerRouteName = "ContactCenterSupervisorDashboardDialer";
 
     public static IEndpointRouteBuilder AddSupervisorDashboardEndpoints(this IEndpointRouteBuilder builder)
     {
@@ -45,6 +46,9 @@ internal static partial class SupervisorDashboardEndpoints
 
         builder.MapGet("Admin/contact-center/dashboard/dispatch", HandleDispatchAsync)
             .WithName(DispatchRouteName);
+
+        builder.MapGet("Admin/contact-center/dashboard/dialer", HandleDialerAsync)
+            .WithName(DialerRouteName);
 
         return builder;
     }
@@ -61,6 +65,7 @@ internal static partial class SupervisorDashboardEndpoints
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         SupervisorDashboardInterventionDescriber interventions,
+        IStaleAgentWorkService staleWorkService,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -191,6 +196,9 @@ internal static partial class SupervisorDashboardEndpoints
             scopedAgents.Where(agent => !activeInteractionsByAgent.ContainsKey(agent.ItemId)).Select(agent => agent.UserId),
             httpContext.RequestAborted);
 
+        // Work an agent is wrongly holding -- a call that is over but still on their line -- is looked for once for the
+        // whole scoped set; the provider's answers about calls are reused for a short time between polls.
+        var staleWork = await staleWorkService.DetectAsync(scopedAgents, httpContext.RequestAborted);
         foreach (var agent in scopedAgents)
         {
             activeInteractionsByAgent.TryGetValue(agent.ItemId, out var activeInteraction);
@@ -233,6 +241,17 @@ internal static partial class SupervisorDashboardEndpoints
                     .ToArray(),
             };
 
+            if (staleWork.TryGetValue(agent.ItemId, out var stale))
+            {
+                row.StaleWork = stale.Items
+                    .Select(item => new SupervisorStaleWorkViewModel
+                    {
+                        Kind = item.Kind.ToString(),
+                        Reason = item.Reason,
+                        StartedUtc = item.StartedUtc,
+                    })
+                    .ToArray();
+            }
             await interventions.DescribeAsync(
                 row,
                 canMonitorActiveInteraction ? activeInteraction : null,

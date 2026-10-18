@@ -16,9 +16,7 @@ Orchard Core **Workflows** let you automate work without code. The AI features a
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding an AI Completion using Profile task to a workflow">
-  <source src="/img/docs/ai-workflows.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of adding an AI Completion using Profile task to a workflow" start={618} end={656} />
 
 ## Add an AI task to a workflow
 

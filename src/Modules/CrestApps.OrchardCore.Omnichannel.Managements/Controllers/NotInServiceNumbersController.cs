@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -124,6 +125,13 @@ public sealed class NotInServiceNumbersController : Controller
                 CampaignName = number.CampaignId is not null && campaignNames.TryGetValue(number.CampaignId, out var name) ? name : null,
             });
         }
+
+        // The admin-list tag builds a row per number, in the layout (List or Grid) the site or the user picked.
+        model.List = new AdminListContext<NotInServiceNumberEntry>
+        {
+            Source = model.Entries,
+            Pager = (IShape)model.Pager,
+        };
 
         return View(model);
     }

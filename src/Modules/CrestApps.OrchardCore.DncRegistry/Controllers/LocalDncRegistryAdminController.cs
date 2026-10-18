@@ -25,7 +25,6 @@ public sealed class LocalDncRegistryAdminController : Controller
 {
     private readonly ILocalDncListManager _listManager;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IDisplayManager<LocalDncList> _entryDisplayManager;
     private readonly IDisplayManager<LocalDncListOptions> _optionsDisplayManager;
     private readonly IDisplayManager<ImportLocalDncList> _importDisplayManager;
     private readonly IShapeFactory _shapeFactory;
@@ -40,7 +39,6 @@ public sealed class LocalDncRegistryAdminController : Controller
     /// </summary>
     /// <param name="listManager">The local DNC list manager.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="entryDisplayManager">The display manager for DNC list entries.</param>
     /// <param name="optionsDisplayManager">The display manager for list options.</param>
     /// <param name="importDisplayManager">The display manager for import form.</param>
     /// <param name="shapeFactory">The shape factory.</param>
@@ -51,7 +49,6 @@ public sealed class LocalDncRegistryAdminController : Controller
     public LocalDncRegistryAdminController(
         ILocalDncListManager listManager,
         IAuthorizationService authorizationService,
-        IDisplayManager<LocalDncList> entryDisplayManager,
         IDisplayManager<LocalDncListOptions> optionsDisplayManager,
         IDisplayManager<ImportLocalDncList> importDisplayManager,
         IShapeFactory shapeFactory,
@@ -62,7 +59,6 @@ public sealed class LocalDncRegistryAdminController : Controller
     {
         _listManager = listManager;
         _authorizationService = authorizationService;
-        _entryDisplayManager = entryDisplayManager;
         _optionsDisplayManager = optionsDisplayManager;
         _importDisplayManager = importDisplayManager;
         _shapeFactory = shapeFactory;
@@ -85,23 +81,14 @@ public sealed class LocalDncRegistryAdminController : Controller
 
         var pager = new Pager(pagerParameters, _pagerOptions);
         var totalCount = await _listManager.GetCountAsync();
-        var lists = await _listManager.GetListsAsync(pager.Page, pager.PageSize);
+        var lists = (await _listManager.GetListsAsync(pager.Page, pager.PageSize)).ToList();
 
         var pagerShape = await _shapeFactory.PagerAsync(pager, totalCount);
-
-        var summaries = new List<dynamic>();
-
-        foreach (var entry in lists)
-        {
-            var shape = await _entryDisplayManager.BuildDisplayAsync(entry, _updateModelAccessor.ModelUpdater, "SummaryAdmin");
-            shape.Properties["LocalDncList"] = entry;
-            summaries.Add(shape);
-        }
 
         var options = new LocalDncListOptions
         {
             StartIndex = pager.GetStartIndex(),
-            EndIndex = pager.GetStartIndex() + summaries.Count - 1,
+            EndIndex = pager.GetStartIndex() + lists.Count - 1,
             TotalItemCount = totalCount,
         };
 
@@ -111,8 +98,16 @@ public sealed class LocalDncRegistryAdminController : Controller
         {
             viewModel.Options = options;
             viewModel.Header = header;
-            viewModel.Entries = summaries;
             viewModel.Pager = pagerShape;
+
+            // The admin-list tag builds a row per list, in the layout (List or Grid) the site or the user picked, under
+            // the summary of the header.
+            viewModel.List = new AdminListContext<LocalDncList>
+            {
+                Source = lists,
+                Header = header,
+                Pager = pagerShape,
+            };
         });
 
         return View(listShape);

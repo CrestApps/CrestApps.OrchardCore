@@ -29,9 +29,7 @@ Provides way to manage Omnichannel Contacts.
 
 The screencast below enables **Omnichannel Management**, opens the **Management** area from the **Interaction Center** menu, and adds a couple of **dispositions** (activity outcomes) to the CRM catalog.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of enabling Omnichannel Management and adding dispositions">
-  <source src="/img/docs/omnichannel-management.mp4" type="video/mp4" />
-</video>
+<YouTube video="omnichannel-2-walkthroughs" title="Video of enabling Omnichannel Management and adding dispositions" start={7} end={40} />
 
 The module ships as two features. `CrestApps.OrchardCore.Omnichannel.Activities` is the headless half: contact, subject, campaign, and activity catalogs, their stores and managers, the content parts and indexes, the migrations, the permissions, and the subject-disposition endpoint. `CrestApps.OrchardCore.Omnichannel.Managements` adds the CRM administration experience on top of it - the screens, display drivers, and admin menus described below - and enabling it brings the headless feature with it.
 

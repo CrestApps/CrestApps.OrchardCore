@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -40,19 +41,34 @@ internal sealed class ActivityQueueDisplayDriver : DisplayDriver<ActivityQueue>
             ? null
             : await _queueGroupManager.FindByIdAsync(queue.QueueGroupId);
 
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = queue.Name?.ToLowerInvariant() ?? string.Empty;
+        }
+
         return await CombineAsync(
-            Initialize<QueueSummaryViewModel>("ActivityQueue_Fields_SummaryAdmin", model =>
+            View("ActivityQueue_Fields_SummaryAdmin", queue)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("ActivityQueue_Description_SummaryAdmin", queue)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrWhiteSpace(queue.Description))),
+            Initialize<QueueSummaryViewModel>("ActivityQueue_DefaultTags_SummaryAdmin", model =>
             {
                 model.Queue = queue;
                 model.QueueGroupName = queueGroup?.Name;
             })
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1"),
-            View("ActivityQueue_Buttons_SummaryAdmin", queue)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Actions:5"),
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Routing:5"),
+            View("ActivityQueue_Buttons_SummaryAdmin", queue).Location("Actions:5"),
             View("ActivityQueue_DefaultMeta_SummaryAdmin", queue)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5"),
-            View("ActivityQueue_CloneActionsMenu_SummaryAdmin", queue)
-                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "ActionsMenu:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"),
+            View("ActivityQueue_CloneActionsMenu_SummaryAdmin", queue).Location("ActionsMenu:5")
         );
     }
 

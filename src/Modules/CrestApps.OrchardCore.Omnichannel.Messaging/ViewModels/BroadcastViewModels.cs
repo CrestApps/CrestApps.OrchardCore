@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.Admin;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
 
@@ -64,12 +64,8 @@ public class BroadcastCreateViewModel
 public class BroadcastListViewModel
 {
     /// <summary>
-    /// Gets or sets the broadcasts, most-recent first.
+    /// Gets or sets the broadcasts, most-recent first, the admin list renders.
     /// </summary>
-    public IReadOnlyList<MessagingBroadcast> Broadcasts { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the enabled channels, keyed by name, to label each broadcast's channel.
-    /// </summary>
-    public IReadOnlyDictionary<string, ChannelViewModel> Channels { get; set; } = new Dictionary<string, ChannelViewModel>();
+    [BindNever]
+    public AdminListContext List { get; set; }
 }

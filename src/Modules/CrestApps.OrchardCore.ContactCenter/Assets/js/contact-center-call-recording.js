@@ -205,7 +205,7 @@
     }
 
     function closeListPlayer(button) {
-        var row = button.closest('li');
+        var row = rowOf(button);
         var holder = row ? row.querySelector('[data-cc-list-player]') : null;
 
         if (holder) {
@@ -222,6 +222,11 @@
 
         button.classList.remove('active');
         button.setAttribute('aria-pressed', 'false');
+    }
+
+    // The row of a list item: a list group item in the List layout, a row spanning the columns in the Grid layout.
+    function rowOf(element) {
+        return element.closest('li, .admin-list-grid-row');
     }
 
     // The media address is built here from the recording's identifier, never read whole from the page: an
@@ -255,7 +260,7 @@
                 return;
             }
 
-            var row = button.closest('li');
+            var row = rowOf(button);
             var mediaUrl = mediaUrlOf(button.getAttribute('data-cc-list-play'));
 
             if (!row || !mediaUrl) {
@@ -265,6 +270,11 @@
             var holder = document.createElement('div');
             holder.className = 'mt-2';
             holder.setAttribute('data-cc-list-player', '');
+
+            // A row of the Grid layout is a subgrid of the list's columns, or a wrapping flex line when the list is
+            // narrow: either way the player takes a line of its own across the whole row.
+            holder.style.gridColumn = '1 / -1';
+            holder.style.flexBasis = '100%';
 
             var audio = document.createElement('audio');
             audio.controls = true;

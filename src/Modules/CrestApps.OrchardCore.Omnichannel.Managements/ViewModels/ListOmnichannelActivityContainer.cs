@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Views;
 
@@ -24,14 +25,8 @@ public sealed class ListOmnichannelActivityContainer : ShapeViewModel
     public IShape Header { get; set; }
 
     /// <summary>
-    /// Gets or sets the containers.
+    /// Gets or sets the activities and the pager the admin list renders.
     /// </summary>
     [BindNever]
-    public List<IShape> Containers { get; set; }
-
-    /// <summary>
-    /// Gets or sets the pager.
-    /// </summary>
-    [BindNever]
-    public IShape Pager { get; set; }
+    public AdminListContext List { get; set; }
 }

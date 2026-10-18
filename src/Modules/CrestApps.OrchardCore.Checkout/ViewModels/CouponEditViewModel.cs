@@ -82,6 +82,32 @@ public sealed class CouponEditViewModel
     public decimal? MinimumAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the transaction sources the coupon is limited to, separated by commas, or empty for any source.
+    /// </summary>
+    public string Sources { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reference types the coupon is limited to, separated by commas, or empty for any.
+    /// </summary>
+    public string ReferenceTypes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the one customer who may use the coupon, or empty for anyone.
+    /// </summary>
+    public string CustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email address of the one customer who may use the coupon, or empty for anyone.
+    /// </summary>
+    public string CustomerEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the transaction sources the enabled features register, shown as a hint for <see cref="Sources"/>.
+    /// </summary>
+    [BindNever]
+    public IList<string> KnownSources { get; set; }
+
+    /// <summary>
     /// Gets or sets how many times it has already been redeemed. It is read-only in the editor: a redemption
     /// count is a record of what happened, not a setting.
     /// </summary>

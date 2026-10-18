@@ -1,0 +1,36 @@
+@*
+    The filters of the call recordings list, passed to the admin list as its 'ToolbarActions' so they render at the
+    end of the list's toolbar, inside the page's GET filter form.
+*@
+@{
+    var model = (CallRecordingListViewModel)Model.ListModel;
+}
+
+<div class="d-flex flex-wrap align-items-center gap-2 filter">
+    @await Component.InvokeAsync("DateRangePicker", new
+    {
+        fromName = "From",
+        toName = "To",
+        from = model.Filter.From,
+        to = model.Filter.To,
+        selectedRangeName = "Range",
+        selectedRange = model.Filter.Range,
+        placeholder = T["Any date"].Value,
+        wrapperCssClass = "d-inline-block",
+        toggleCssClass = "form-select form-select-sm",
+    })
+    <select name="Direction" asp-items="model.DirectionOptions" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Direction"]" data-dropdown-align-right="auto" aria-label="@T["Direction"]">
+        <option value="">@T["Any direction"]</option>
+    </select>
+    <select name="Source" asp-items="model.SourceOptions" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Call type"]" data-dropdown-align-right="auto" aria-label="@T["Call type"]">
+        <option value="">@T["Any call"]</option>
+    </select>
+    @if (model.CanListEveryone)
+    {
+        <select name="AgentUserId" asp-items="model.AgentOptions" class="selectpicker" data-style="btn-sm" data-live-search="true" data-width="fit" title="@T["Any agent"]" data-live-search-placeholder="@T["Search agents"]" data-dropdown-align-right="auto" aria-label="@T["Agent"]">
+            <option value="">@T["Any agent"]</option>
+        </select>
+    }
+    <button type="submit" class="btn btn-sm btn-secondary">@T["Filter"]</button>
+    <a asp-action="Index" class="btn btn-sm btn-link">@T["Clear"]</a>
+</div>

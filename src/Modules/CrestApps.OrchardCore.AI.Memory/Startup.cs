@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Memory.Drivers;
 using CrestApps.OrchardCore.AI.Memory.Handlers;
 using CrestApps.OrchardCore.AI.Memory.Migrations;
@@ -49,6 +50,7 @@ public sealed class Startup : StartupBase
                 .AddDisplayDriver<IndexProfile, AIMemoryIndexProfileDisplayDriver>()
                 .AddSiteDisplayDriver<AIMemorySettingsDisplayDriver>()
                 .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageAIProfiles);
 
         services.AddIndexProfileHandler<AIMemoryIndexProfileHandler>();
     }
@@ -63,6 +65,7 @@ public sealed class ChatInteractionsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<ChatInteractionMemorySettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.ManageChatInteractionSettings);
     }
 }
 

@@ -1,24 +1,25 @@
 ---
 sidebar_label: Content Fields
 title: Content Fields
-description: Add the CrestApps phone number field to a content type and set it up for your editors.
+description: Add the CrestApps phone number and address fields to a content type and set them up for your editors.
 technical_manual:
   - modules/content-fields
 ---
 
-A **content field** is one box on a content item's form, such as a title, a date or a phone number. Orchard Core includes many fields. CrestApps adds the **Phone Field**: a phone number box with a country flag picker that stores every number in one international format. Use it whenever a content type needs a phone number that people will call or text, for example a location's front desk or a partner's main line.
+A **content field** is one box on a content item's form, such as a title, a date or a phone number. Orchard Core includes many fields. CrestApps adds two:
+
+- The **Phone Field**: a phone number box with a country flag picker that stores every number in one international format. Use it whenever a content type needs a phone number that people will call or text, for example a location's front desk or a partner's main line.
+- The **Address Field**: a postal address that lays itself out the way the chosen country writes addresses and checks it against that country's rules. Use it for a venue, an office, a home or a work address; a content type can have several.
 
 | | |
 | --- | --- |
 | **Menu** | Content > Content Definition > Content Types |
 | **Permission** | Edit content types |
-| **Feature** | CrestApps Content Fields |
+| **Feature** | CrestApps Content Fields (Phone Field), Address Field |
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling Content Fields, adding the Phone Field, and using the country-aware phone input">
-  <source src="/img/docs/content-fields.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling Content Fields, adding the Phone Field, and using the country-aware phone input" start={7} end={42} />
 
 ## Add a phone field to a content type
 
@@ -56,3 +57,28 @@ If the number is not a valid phone number, the item is not saved and the form sh
 - The number is shown grouped for easy reading, and you can click it to dial it from a device that makes calls.
 - When [phone number verification](phone-number-verification.md) has checked the number, an icon shows the result: a green check for verified, a red cross for invalid, a warning sign when the check failed, and a grey question mark when it has not been checked. Point at the icon to see the details and the date it was checked.
 - When your site's calling or texting features are on, call and text buttons can appear next to the number.
+
+## Add an address field to a content type
+
+Turn on the **Address Field** feature first. It also turns on **Addresses**.
+
+1. Open **Content > Content Definition > Content Types** and edit the content type.
+2. Click **Add Field**, enter the display name editors will see, for example *Location* or *Home address*, choose **AddressField** and save.
+3. On the field's settings page, set the options below and save.
+
+| Field | What it does |
+| --- | --- |
+| **Required** | Editors must enter an address before they can save the item. Otherwise the address can be left blank. |
+| **Hint** | Help text shown above the address. |
+| **Ask for a recipient name**, **Ask for a company**, **Ask for a phone number** | Which of these the address asks for. A venue might need only the company; a mailing address needs the recipient. |
+| **Countries offered** | The countries editors can choose. Select none to offer every country your site serves. |
+| **Default country** | The country a new address starts in. |
+
+## Enter an address
+
+1. Choose the **Country** first. The rest of the form follows it: the fields that country uses, in its order, with its names, such as **State** and **ZIP code** for the United States, **Province** and **Postal code** for Canada, or **Post town** and **Postcode** for the United Kingdom. Where a country has a list of states or provinces, you pick one from it.
+2. Fill in the address and save the item.
+
+The address is checked against its country: the fields marked * are required, a postal code has to look like that country's, and it has to belong to the state or province chosen. If something is wrong, the item is not saved and the field shows what to fix, for example *Postal code V6B 1A1 isn't in Ontario.*
+
+On the saved item, the address is shown the way its country's post writes it.

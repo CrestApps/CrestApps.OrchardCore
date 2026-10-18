@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<CustomerSubscription>
+
+@{
+    var subscription = Model.Value.Subscription;
+}
+
+@* The list is rendered outside the page's filter form, so this form is not nested in another. *@
+<form asp-action="Cancel" asp-route-itemId="@subscription.ItemId" method="post" class="d-inline">
+    <input type="hidden" name="immediately" value="false" />
+    <button type="submit" class="btn btn-outline-danger btn-sm"
+            data-url-af="RemoveUrl"
+            data-title="@T["Cancel the subscription"]"
+            data-message="@T["Cancel {0}? The next payment will not be taken, and you keep access until {1:d}.", subscription.Title, subscription.CurrentPeriodEndUtc]"
+            data-ok-text="@T["Cancel the subscription"]"
+            data-cancel-text="@T["Keep it"]">
+        @T["Cancel"]
+    </button>
+</form>

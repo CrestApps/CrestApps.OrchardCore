@@ -1,0 +1,32 @@
+@using CrestApps.OrchardCore.ContactCenter.ViewModels
+
+@model QueueSummaryViewModel
+
+@if (!string.IsNullOrWhiteSpace(Model.QueueGroupName))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Queue group"]">
+        <i class="fa-solid fa-layer-group text-secondary me-1" aria-hidden="true"></i>@Model.QueueGroupName
+    </span>
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Default priority"]">
+    <i class="fa-solid fa-arrow-up-wide-short text-secondary me-1" aria-hidden="true"></i>@Model.Queue.DefaultPriority
+</span>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Service level threshold"]">
+    <i class="fa-solid fa-stopwatch text-secondary me-1" aria-hidden="true"></i>@T["{0}s", Model.Queue.SlaThresholdSeconds]
+</span>
+
+@if (Model.Queue.RequiredSkills.Count > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Required skills"]">
+        <i class="fa-solid fa-graduation-cap text-secondary me-1" aria-hidden="true"></i>@string.Join(", ", Model.Queue.RequiredSkills)
+    </span>
+}
+
+@if (!Model.Queue.Enabled)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-warning me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}

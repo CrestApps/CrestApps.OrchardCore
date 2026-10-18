@@ -25,6 +25,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email;
 
@@ -121,6 +122,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<OmnichannelChannelEndpoint, EmailAddressSettingsDisplayDriver>();
         services.AddScoped<IChannelEndpointRule, EmailAddressSettingsRule>();
         services.AddSiteDisplayDriver<EmailInboundSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(EmailInboundSettingsDisplayDriver.EmailSettingsGroupId, OmnichannelConstants.Permissions.ManageChannelEndpoints);
 
         // Email is a channel entry points answer: an email entry point says where mail to its addresses goes, with the
         // workspace's distribution and auto-reply settings.

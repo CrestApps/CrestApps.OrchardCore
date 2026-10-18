@@ -1,0 +1,14 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIChatSessionEntry>
+
+<a asp-action="Delete"
+   asp-controller="Admin"
+   asp-route-sessionId="@Model.Value.SessionId"
+   class="dropdown-item text-danger"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to delete this chat session?"]"
+   data-ok-text="@T["Yes"]"
+   data-cancel-text="@T["Cancel"]">@T["Delete"]</a>

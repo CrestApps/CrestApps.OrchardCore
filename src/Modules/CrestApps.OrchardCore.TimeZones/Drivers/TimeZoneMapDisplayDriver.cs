@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.TimeZones.Models;
 using CrestApps.OrchardCore.TimeZones.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
@@ -30,10 +32,25 @@ internal sealed class TimeZoneMapDisplayDriver : DisplayDriver<TimeZoneMap>
 
     public override Task<IDisplayResult> DisplayAsync(TimeZoneMap model, BuildDisplayContext context)
     {
+        // The row's classes and attributes are rendered on its row element, in both admin list layouts.
+        if (context.DisplayType is OrchardCoreConstants.DisplayType.SummaryAdmin or OrchardCoreConstants.DisplayType.SummaryAdminGrid
+            && context.Shape is Shape rowShape)
+        {
+            rowShape.Classes.Add("item");
+            rowShape.Attributes["data-filter-value"] = $"{model.Name} {model.TimeZoneId}".ToLowerInvariant();
+        }
+
         return CombineAsync(
-            View("TimeZoneMap_Fields_SummaryAdmin", model).Location("Content:1"),
+            View("TimeZoneMap_Fields_SummaryAdmin", model)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Content:1")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:1"),
+            View("TimeZoneMap_DefaultTags_SummaryAdmin", model)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "TimeZone:5"),
             View("TimeZoneMap_Buttons_SummaryAdmin", model).Location("Actions:5"),
-            View("TimeZoneMap_DefaultMeta_SummaryAdmin", model).Location("Meta:5"));
+            View("TimeZoneMap_DefaultMeta_SummaryAdmin", model)
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
+                .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Modified:5"));
     }
 
     public override IDisplayResult Edit(TimeZoneMap model, BuildEditorContext context)

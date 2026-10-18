@@ -1,0 +1,42 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var item = Model.Value;
+    var entry = item.Info.Entry;
+    var entryId = entry.EntryId;
+    var labels = item.Labels;
+}
+
+@* Bare menu items: the admin list renders them in its own menu, in both actions layouts. *@
+@if (item.CanManage)
+{
+    <a class="dropdown-item" asp-action="Edit" asp-route-id="@entryId"><i class="fa-solid fa-pen fa-fw me-2" aria-hidden="true"></i>@T["Edit"]</a>
+}
+@if (item.CanManageFeatures && item.Info.State == ChildTenantRuntimeState.Running)
+{
+    <a class="dropdown-item" asp-action="Features" asp-route-id="@entryId"><i class="fa-solid fa-puzzle-piece fa-fw me-2" aria-hidden="true"></i>@T["Features"]</a>
+}
+@if (item.CanManageAccess)
+{
+    <a class="dropdown-item" asp-controller="Access" asp-action="Child" asp-route-id="@entryId"><i class="fa-solid fa-user-shield fa-fw me-2" aria-hidden="true"></i>@T["Access"]</a>
+}
+<a class="dropdown-item" asp-area="OrchardCore.AuditTrail" asp-controller="Admin" asp-action="Index" asp-route-correlationId="@entryId"><i class="fa-solid fa-clock-rotate-left fa-fw me-2" aria-hidden="true"></i>@T["Activity"]</a>
+@if (item.CanManage && entry.Status == ChildTenantStatus.Ready)
+{
+    if (item.Info.State == ChildTenantRuntimeState.Running)
+    {
+        <hr class="dropdown-divider">
+        <a class="dropdown-item" asp-action="Reload" asp-route-id="@entryId" data-url-af="UnsafeUrl"><i class="fa-solid fa-rotate fa-fw me-2" aria-hidden="true"></i>@T["Reload"]</a>
+        <a class="dropdown-item" asp-action="Suspend" asp-route-id="@entryId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Suspend {0}", labels.ChildLower]" data-message="@T["Suspend {0}? Nobody can use it, including its own staff, until you resume it.", entry.DisplayName]" data-ok="@T["Suspend"]" data-ok-class="btn-warning"><i class="fa-solid fa-pause fa-fw me-2" aria-hidden="true"></i>@T["Suspend"]</a>
+    }
+    else if (item.Info.State == ChildTenantRuntimeState.Suspended)
+    {
+        <hr class="dropdown-divider">
+        <a class="dropdown-item" asp-action="Resume" asp-route-id="@entryId" data-url-af="UnsafeUrl"><i class="fa-solid fa-play fa-fw me-2" aria-hidden="true"></i>@T["Resume"]</a>
+    }
+}
+@if (item.CanRemove && item.Info.State == ChildTenantRuntimeState.Suspended && entry.Status == ChildTenantStatus.Ready)
+{
+    <hr class="dropdown-divider">
+    <a class="dropdown-item text-danger" asp-action="Remove" asp-route-id="@entryId"><i class="fa-solid fa-trash fa-fw me-2" aria-hidden="true"></i>@T["Remove"]</a>
+}

@@ -1,0 +1,145 @@
+using CrestApps.OrchardCore.Inventory.BackgroundTasks;
+using CrestApps.OrchardCore.Inventory.Core;
+using CrestApps.OrchardCore.Inventory.Core.Indexes;
+using CrestApps.OrchardCore.Inventory.Core.Models;
+using CrestApps.OrchardCore.Inventory.Core.Services;
+using CrestApps.OrchardCore.Inventory.Deployments;
+using CrestApps.OrchardCore.Inventory.Drivers;
+using CrestApps.OrchardCore.Inventory.Handlers;
+using CrestApps.OrchardCore.Inventory.Migrations;
+using CrestApps.OrchardCore.Inventory.Navigation;
+using CrestApps.OrchardCore.Inventory.Recipes;
+using CrestApps.OrchardCore.Inventory.Services;
+using CrestApps.OrchardCore.Inventory.Workflows;
+using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Products.Core;
+using CrestApps.OrchardCore.Products.Core.Listing;
+using CrestApps.OrchardCore.Products.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
+using OrchardCore.ContentManagement.Handlers;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.Deployment;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Modules;
+using OrchardCore.Navigation;
+using OrchardCore.Recipes;
+using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
+using OrchardCore.Workflows.Helpers;
+
+namespace CrestApps.OrchardCore.Inventory;
+
+public sealed class Startup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Stock items and movements live in their own YesSql collection, which has to be declared for them to be stored.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(InventoryConstants.CollectionName));
+        services.AddDataMigration<InventoryMigrations>()
+            .AddIndexProvider<StockItemIndexProvider>()
+            .AddIndexProvider<StockMovementIndexProvider>()
+            .AddIndexProvider<StockReservationIndexProvider>();
+
+        services.AddScoped<IStockItemStore, StockItemStore>();
+        services.AddScoped<IStockMovementStore, StockMovementStore>();
+        services.AddScoped<IInventoryService, DefaultInventoryService>();
+        services.AddScoped<InventoryProductSynchronizer>();
+        services.AddScoped<InventorySyncService>();
+        services.AddScoped<StockCountImporter>();
+
+        // Running low, selling out and coming back are told to the stock level handlers once the change is committed.
+        services.AddScoped<StockLevelTracker>();
+        services.AddScoped<IStockLevelObserver>(serviceProvider => serviceProvider.GetRequiredService<StockLevelTracker>());
+        services.AddScoped<StockLevelDispatcher>();
+
+        // The cart, product pages and listings ask what can be bought.
+        services.AddScoped<IProductAvailabilityProvider, InventoryAvailabilityProvider>();
+
+        services.AddContentPart<InventoryPart>()
+            .UseDisplayDriver<InventoryPartDisplayDriver>();
+
+        // Stock items follow their products as they are saved.
+        services.AddScoped<IContentHandler, InventoryContentHandler>();
+
+        // The rows of the inventory admin list.
+        services.AddDisplayDriver<StockItem, StockItemDisplayDriver>();
+
+        services.AddSiteDisplayDriver<InventorySettingsDisplayDriver>();
+
+        // Lets a role with Manage inventory, but no site-settings permission, open Settings > Commerce > Inventory.
+        services.AddSiteSettingsPermission(InventoryConstants.SettingsGroupId, InventoryPermissions.ManageInventory);
+        services.AddScoped<IPermissionProvider, InventoryPermissionsProvider>();
+        services.AddNavigationProvider<InventoryAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Holds stock for orders while they are paid for, sells it when they are paid, and releases it otherwise.
+/// </summary>
+[RequireFeatures(OrderConstants.Features.Orders)]
+public sealed class OrdersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IOrderEventHandler, InventoryOrderEventHandler>();
+        services.AddSingleton<IBackgroundTask, ExpiredStockHoldsBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Says in product search records what is in stock, for the listings' "In stock" filter, and keeps it current.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Listing)]
+public sealed class ListingStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IProductSearchDocumentContributor, InventorySearchDocumentContributor>();
+        services.AddScoped<IStockLevelHandler, StockSearchIndexHandler>();
+    }
+}
+
+/// <summary>
+/// Notifies the chosen roles when a product runs low or sells out.
+/// </summary>
+[RequireFeatures("OrchardCore.Notifications")]
+public sealed class NotificationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IStockLevelHandler, LowStockNotificationHandler>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class WorkflowsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<LowStockEvent, LowStockEventDisplayDriver>();
+        services.AddScoped<IStockLevelHandler, LowStockWorkflowHandler>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Recipes.Core")]
+public sealed class RecipesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddRecipeExecutionStep<StockStep>();
+    }
+}
+
+[RequireFeatures("OrchardCore.Deployment")]
+public sealed class DeploymentStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDeployment<StockDeploymentSource, StockDeploymentStep, StockDeploymentStepDisplayDriver>();
+    }
+}

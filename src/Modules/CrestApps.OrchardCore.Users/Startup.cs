@@ -112,6 +112,7 @@ public sealed class DisplayNameStartup : StartupBase
         services.AddPermissionProvider<UserDisplayNamePermissionsProvider>();
 
         services.AddSiteDisplayDriver<DisplayNameSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(DisplayNameSettingsDisplayDriver.GroupId, UserPermissions.ManageDisplaySettings);
         services.AddNavigationProvider<UserDisplayNameAdminMenu>();
 
         services.AddContentField<UserPickerField>()
@@ -176,6 +177,7 @@ public sealed class AvatarStartup : StartupBase
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
         services.AddSignalOptionsChangeTokenSource<UserAvatarOptions>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
+        services.AddSiteSettingsPermission(UserAvatarOptionsDisplayDriver.GroupId, UserPermissions.ManageAvatarSettings);
     }
 }
 

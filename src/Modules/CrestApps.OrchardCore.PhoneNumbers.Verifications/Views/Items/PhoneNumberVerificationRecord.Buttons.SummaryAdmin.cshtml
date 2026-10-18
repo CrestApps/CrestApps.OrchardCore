@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PhoneNumberVerificationRecord>
+
+@* Posts the form of the list, which carries the antiforgery token and the return URL. *@
+<button type="submit" name="contentItemId" value="@Model.Value.ContentItemId" formaction="@Url.Action("Retry", "Records")" class="btn btn-sm btn-secondary">@T["Retry now"]</button>

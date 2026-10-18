@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Drivers;
 internal sealed class EmailInboundSettingsDisplayDriver : SiteDisplayDriver<EmailInboundSettings>
 {
     // Orchard Core's email settings group, so the card shows under /Admin/Settings/email.
-    private const string EmailSettingsGroupId = "email";
+    internal const string EmailSettingsGroupId = "email";
 
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;

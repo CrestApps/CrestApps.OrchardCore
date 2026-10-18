@@ -35,7 +35,7 @@ export default [
         rules: { ...js.configs.recommended.rules, ...sharedRules },
     },
     {
-        files: [".scripts/**/*.mjs", "eslint.config.mjs"],
+        files: [".scripts/**/*.mjs", "utilities/**/*.mjs", "eslint.config.mjs"],
         languageOptions: {
             ecmaVersion: "latest",
             sourceType: "module",

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
-using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Views;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
@@ -24,26 +24,14 @@ public sealed class ListOmnichannelActivity : ShapeViewModel
     public ContentItem ContactContentItem { get; set; }
 
     /// <summary>
-    /// Gets or sets the scheduled containers.
+    /// Gets or sets the scheduled activities and their pager, rendered by an admin list.
     /// </summary>
     [BindNever]
-    public List<IShape> ScheduledContainers { get; set; }
+    public AdminListContext ScheduledList { get; set; }
 
     /// <summary>
-    /// Gets or sets the scheduled pager.
+    /// Gets or sets the completed activities and their pager, rendered by an admin list.
     /// </summary>
     [BindNever]
-    public IShape ScheduledPager { get; set; }
-
-    /// <summary>
-    /// Gets or sets the completed containers.
-    /// </summary>
-    [BindNever]
-    public List<IShape> CompletedContainers { get; set; }
-
-    /// <summary>
-    /// Gets or sets the completed pager.
-    /// </summary>
-    [BindNever]
-    public IShape CompletedPager { get; set; }
+    public AdminListContext CompletedList { get; set; }
 }

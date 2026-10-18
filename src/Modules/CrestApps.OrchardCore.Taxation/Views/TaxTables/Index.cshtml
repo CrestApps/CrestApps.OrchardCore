@@ -10,11 +10,11 @@
 
     <div class="card text-bg-theme mb-3 position-sticky action-bar">
         <div class="card-body">
-            <div class="row gx-1">
+            <div class="row gx-2">
                 <div class="col">
-                    <div class="has-search">
-                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                    <div class="input-group">
                         <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -24,25 +24,16 @@
         </div>
     </div>
 
-    <ul class="list-group">
-        @if (Model.Models.Count > 0)
-        {
-            foreach (var entry in Model.Models)
-            {
-                <li class="list-group-item item" data-filter-value="@entry.Model.Name?.ToLowerInvariant()">
-                    <div class="flex-grow-1">
-                        @await DisplayAsync(entry.Shape)
-                    </div>
-                </li>
-            }
-        }
-        else
-        {
-            <li class="list-group-item list-group-item-info text-center">
-                @T["<strong>Nothing here!</strong> There are no tax tables at the moment."]
-            </li>
-        }
-    </ul>
+    @* The tax tables, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="TaxTables" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no tax tables at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
 </form>
-
-@await DisplayAsync(Model.Pager)

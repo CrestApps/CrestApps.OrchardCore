@@ -49,6 +49,12 @@ public class DefaultAIDeploymentSettingsViewModel
     public string DefaultTextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets the default realtime deployment name: the model that carries a spoken conversation when the
+    /// profile names none, in the chat's conversation mode and on phone calls.
+    /// </summary>
+    public string DefaultRealtimeDeploymentName { get; set; }
+
+    /// <summary>
     /// Gets or sets the chat deployments.
     /// </summary>
     [BindNever]
@@ -89,4 +95,10 @@ public class DefaultAIDeploymentSettingsViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> TextToSpeechDeployments { get; set; }
+
+    /// <summary>
+    /// Gets or sets the realtime deployments.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> RealtimeDeployments { get; set; }
 }

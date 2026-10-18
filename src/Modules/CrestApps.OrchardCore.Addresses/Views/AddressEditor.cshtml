@@ -1,0 +1,171 @@
+@model AddressEditorViewModel
+@*
+    The address editor, laid out for the chosen country. The page gives the shape a prefix, so every field posts as
+    Prefix.Field and binds back to an AddressEditorViewModel. Choosing another country re-lays the fields in the browser
+    (address-editor.js); without the script the server lays them out again when the form comes back.
+*@
+@{
+    var rows = EditorLayout.Lines
+        .Select(line => line.Where(Offered.Contains).ToArray())
+        .Where(line => line.Length > 0)
+        .ToArray();
+    var placed = rows.SelectMany(line => line).ToHashSet();
+    var countryId = IdOf(nameof(AddressEditorViewModel.Country));
+}
+
+@functions {
+    private AddressEditorLayout EditorLayout => Model.Layout ?? new AddressEditorLayout();
+
+    private AddressEditorOptions EditorOptions => Model.Options ?? AddressEditorOptions.Default;
+
+    // The components this page asks for, in the order a country without data would write them.
+    private IReadOnlyList<string> Offered
+    {
+        get
+        {
+            var offered = new List<string>();
+
+            if (EditorOptions.ShowName)
+            {
+                offered.Add("Name");
+            }
+
+            if (EditorOptions.ShowCompany)
+            {
+                offered.Add("Company");
+            }
+
+            offered.AddRange(new[] { "StreetAddress", "DependentLocality", "City", "Region", "PostalCode", "SortingCode" });
+
+            return offered;
+        }
+    }
+
+    private string NameOf(string field)
+        => ViewData.TemplateInfo.GetFullHtmlFieldName(field);
+
+    private string IdOf(string field)
+        => Html.GenerateIdFromName(NameOf(field));
+
+    private static string ColumnOf(string component, int count)
+        => component == "StreetAddress" ? "col-12" : count == 1 ? "col-md-6" : "col-md";
+
+    private bool IsRequired(string component)
+        => EditorLayout.IsRequired(component) || (component == "Name" && EditorOptions.RequireName);
+
+    private string ValueOf(string component)
+        => component switch
+        {
+            "Name" => Model.Name,
+            "Company" => Model.Company,
+            "DependentLocality" => Model.DependentLocality,
+            "City" => Model.City,
+            "PostalCode" => Model.PostalCode,
+            "SortingCode" => Model.SortingCode,
+            _ => null,
+        };
+
+    private static string AutocompleteOf(string component)
+        => component switch
+        {
+            "Name" => "name",
+            "Company" => "organization",
+            "DependentLocality" => "address-level3",
+            "City" => "address-level2",
+            "PostalCode" => "postal-code",
+            _ => "off",
+        };
+
+    // A component's field: in a row when the country uses it, or set aside and disabled, so it posts nothing, when not.
+    private async Task RenderFieldAsync(string component, string column, bool used)
+    {
+        var required = IsRequired(component);
+        var disabled = used ? null : "disabled";
+
+        <div class="@column" data-address-component="@component" data-address-page-required="@(component == "Name" && EditorOptions.RequireName ? "true" : "false")">
+            @if (component == "StreetAddress")
+            {
+                <label class="form-label" for="@IdOf("AddressLine1")" data-address-label>@EditorLayout.LabelOf(component)</label>
+                <span class="text-danger" data-address-required aria-hidden="true" hidden="@(!required)">*</span>
+                <input type="text" class="form-control" id="@IdOf("AddressLine1")" name="@NameOf("AddressLine1")" value="@Model.AddressLine1" autocomplete="address-line1" aria-required="@(required ? "true" : "false")" disabled="@disabled" />
+                @Html.ValidationMessage("AddressLine1", new { @class = "text-danger" })
+                <input type="text" class="form-control mt-2" id="@IdOf("AddressLine2")" name="@NameOf("AddressLine2")" value="@Model.AddressLine2" autocomplete="address-line2" placeholder="@T["Apartment, suite, floor (optional)"]" aria-label="@T["Address line 2"]" disabled="@disabled" />
+            }
+            else if (component == "Region")
+            {
+                var hasList = EditorLayout.Regions.Count > 0;
+
+                <label class="form-label" for="@IdOf("Region")" data-address-label>@EditorLayout.LabelOf(component)</label>
+                <span class="text-danger" data-address-required aria-hidden="true" hidden="@(!required)">*</span>
+                <select class="form-select" id="@IdOf("Region")" name="@NameOf("Region")" data-address-region-list autocomplete="address-level1" aria-required="@(required ? "true" : "false")" disabled="@(used && hasList ? null : "disabled")" hidden="@(!hasList)">
+                    <option value="">@T["Choose…"]</option>
+                    @foreach (var region in EditorLayout.Regions)
+                    {
+                        <option value="@region.Code" selected="@(string.Equals(region.Code, Model.Region, StringComparison.OrdinalIgnoreCase))">@region.Name</option>
+                    }
+                </select>
+                <input type="text" class="form-control" id="@(IdOf("Region"))_Text" name="@NameOf("Region")" value="@(hasList ? null : Model.Region)" data-address-region-text autocomplete="address-level1" aria-label="@EditorLayout.LabelOf(component)" aria-required="@(required ? "true" : "false")" disabled="@(used && !hasList ? null : "disabled")" hidden="@hasList" />
+                @Html.ValidationMessage("Region", new { @class = "text-danger" })
+            }
+            else
+            {
+                <label class="form-label" for="@IdOf(component)" data-address-label>@EditorLayout.LabelOf(component)</label>
+                <span class="text-danger" data-address-required aria-hidden="true" hidden="@(!required)">*</span>
+                <input type="text" class="form-control" id="@IdOf(component)" name="@NameOf(component)" value="@ValueOf(component)" autocomplete="@AutocompleteOf(component)" aria-required="@(required ? "true" : "false")" disabled="@disabled"
+                       placeholder="@(component == "PostalCode" ? EditorLayout.PostalCodeExample : null)" />
+                @Html.ValidationMessage(component, new { @class = "text-danger" })
+            }
+        </div>
+
+        await Task.CompletedTask;
+    }
+}
+
+<div class="address-editor" data-address-editor data-formats-url="@Url.Content("~/addresses/formats/")">
+    <div class="row g-3 mb-3">
+        <div class="col-md-6">
+            <label class="form-label" for="@countryId">@EditorLayout.LabelOf("Country")</label>
+            <span class="text-danger" aria-hidden="true">*</span>
+            <select class="form-select" id="@countryId" name="@NameOf(nameof(AddressEditorViewModel.Country))" data-address-country autocomplete="country" aria-required="true">
+                <option value="">@T["Choose a country"]</option>
+                @foreach (var country in Model.Countries)
+                {
+                    <option value="@country.Value" selected="@country.Selected">@country.Text</option>
+                }
+            </select>
+            @Html.ValidationMessage(nameof(AddressEditorViewModel.Country), new { @class = "text-danger" })
+        </div>
+    </div>
+
+    <div data-address-lines>
+        @foreach (var row in rows)
+        {
+            <div class="row g-3 mb-3" data-address-line>
+                @foreach (var component in row)
+                {
+                    await RenderFieldAsync(component, ColumnOf(component, row.Length), used: true);
+                }
+            </div>
+        }
+    </div>
+
+    <div data-address-unused hidden>
+        @foreach (var component in Offered.Where(component => !placed.Contains(component)))
+        {
+            await RenderFieldAsync(component, ColumnOf(component, 1), used: false);
+        }
+    </div>
+
+    @if (EditorOptions.ShowPhone)
+    {
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label class="form-label" for="@IdOf("Phone")">@T["Phone"]</label>
+                <input type="tel" class="form-control" id="@IdOf("Phone")" name="@NameOf("Phone")" value="@Model.Phone" autocomplete="tel" />
+                @Html.ValidationMessage("Phone", new { @class = "text-danger" })
+            </div>
+        </div>
+    }
+</div>
+
+<script asp-src="~/CrestApps.OrchardCore.Addresses/scripts/address-editor.min.js" debug-src="~/CrestApps.OrchardCore.Addresses/scripts/address-editor.js" at="Foot"></script>

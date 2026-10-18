@@ -1,0 +1,21 @@
+@model ShapeViewModel<ChildTenantListItem>
+
+@{
+    var item = Model.Value;
+    var entry = item.Info.Entry;
+    var initials = new TenantSwitchItem { Info = item.Info }.Initials;
+    var canEdit = item.CanManage && !item.IsBusy && item.Info.State != ChildTenantRuntimeState.ChangedByPlatform && entry.Status != ChildTenantStatus.Failed;
+}
+
+<div class="d-flex align-items-center gap-2">
+    <span class="th-avatar rounded-circle d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">@initials</span>
+    @* A plain link to the edit page, or plain text when the user cannot edit the child tenant. *@
+    @if (canEdit)
+    {
+        <a asp-action="Edit" asp-route-id="@entry.EntryId" class="text-break">@entry.DisplayName</a>
+    }
+    else
+    {
+        <span class="text-break">@entry.DisplayName</span>
+    }
+</div>

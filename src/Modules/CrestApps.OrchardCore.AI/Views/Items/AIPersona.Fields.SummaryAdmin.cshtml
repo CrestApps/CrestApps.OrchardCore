@@ -1,0 +1,13 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIPersona>
+
+@* A plain link to the edit page, after the persona's avatar when it has one. *@
+<span class="d-inline-flex align-items-center">
+    @if (!string.IsNullOrEmpty(Model.Value.AvatarUrl))
+    {
+        <img src="@Model.Value.AvatarUrl" alt="" class="rounded-circle me-2" width="32" height="32" />
+    }
+    <a asp-controller="AIPersonas" asp-action="Edit" asp-route-id="@Model.Value.ItemId">@(Model.Value.DisplayText ?? Model.Value.Name)</a>
+</span>

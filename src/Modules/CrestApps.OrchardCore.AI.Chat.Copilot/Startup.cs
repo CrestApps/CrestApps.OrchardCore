@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Orchestration;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Endpoints;
 using CrestApps.OrchardCore.AI.Chat.Copilot.Services;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -59,6 +60,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<CopilotSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, CopilotPermissionProvider.ManageCopilotSettings);
 
         services.AddPermissionProvider<CopilotPermissionProvider>();
     }

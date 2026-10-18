@@ -1,15 +1,14 @@
 @model ListLocalDncListsViewModel
 
+@{
+    var emptyMessage = T["No local DNC lists have been uploaded yet. Click \"Upload new list\" to add phone numbers."];
+}
+
+@* The action bar holds the Create zone of the options editor; its Summary zone is rendered by the AdminList shape
+   above the rows. *@
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">
-        <div class="row gx-3">
-            @if (Model.Header?.Summary != null)
-            {
-                <div class="col">
-                    @await DisplayAsync(Model.Header.Summary)
-                </div>
-            }
-
+        <div class="row gx-2 justify-content-end">
             @if (Model.Header?.Create != null)
             {
                 <div class="col-auto">
@@ -20,24 +19,14 @@
     </div>
 </div>
 
-<ul class="list-group">
-    @if (Model.Entries.Count > 0)
-    {
-        foreach (var entry in Model.Entries)
-        {
-            <li class="list-group-item">
-                @await DisplayAsync(entry)
-            </li>
-        }
-    }
-    else
-    {
-        <li class="list-group-item">
-            <div class="alert alert-info mb-0">
-                @T["No local DNC lists have been uploaded yet. Click \"Upload new list\" to add phone numbers."]
-            </div>
-        </li>
-    }
-</ul>
-
-@await DisplayAsync(Model.Pager)
+@* The lists, the header summary and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+<admin-list name="LocalDncLists" context="Model.List"
+            show-select-all="false"
+            empty-message="@emptyMessage">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Name"]" />
+        <admin-list-column name="Status" position="30" title="@T["Status"]" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

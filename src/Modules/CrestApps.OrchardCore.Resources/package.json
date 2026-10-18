@@ -9,10 +9,10 @@
     "marked": "^18.0.14"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.215",
+    "@crestapps/ai-chat-ui": "2.0.0-preview.226",
     "@crestapps/bootstrap-select": "^1.2.4",
     "@sapphi-red/web-noise-suppressor": "0.4.1",
-    "@telnyx/webrtc": "2.27.9",
+    "@telnyx/webrtc": "2.27.10",
     "chart.js": "^4.5.1",
     "intl-tel-input": "^29.5.3",
     "medium-zoom": "1.1.0",

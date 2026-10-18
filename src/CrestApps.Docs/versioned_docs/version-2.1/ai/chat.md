@@ -158,7 +158,7 @@ This linked citation rendering now applies consistently across the admin chat UI
 
 ### Admin Chat User Interface
 
-![Screen cast of the admin chat](/img/docs/admin-ui-sample.gif)
+<YouTube video="ai-walkthroughs" title="Video of the admin chat" start={78} end={98} />
 
 ### Invoking Utility and Agent Profiles
 
@@ -231,9 +231,9 @@ Frontend widgets now also work with the shared anonymous-visitor protection flow
 3. Add a new **AI Chat Widget** to the desired zone (e.g., Footer, Content).
 4. Configure the widget by selecting the AI chat profile and optionally choosing a prompt template.
 
-#### Frontend Widget Screen Cast
+#### Frontend Widget Video
 
-![Screen cast of the frontend widget](/img/docs/widget-ui-sample.gif)
+<YouTube video="ai-walkthroughs" title="Video of adding the website chat widget and chatting with it" start={577} end={615} />
 
 ---
 

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 using static CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports.AuditEvents;
@@ -98,6 +99,7 @@ public sealed class TimecardTimeZoneTests
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<IClock>(),
             Mock.Of<ILocalClock>(),
+            Options.Create(new ContactCenterReportingOptions()),
             new FormattingLocalizer<ReconciledPayrollTimecardReportProvider>());
 
         // Act
@@ -132,7 +134,9 @@ public sealed class TimecardTimeZoneTests
             Mock.Of<IContactCenterReportCapabilityGuard>(),
             new FormattingLocalizer<AgentWorkforceReportProvider>(),
             Mock.Of<IClock>(),
-            Mock.Of<ILocalClock>());
+            Mock.Of<ILocalClock>(),
+            new ContactCenterReportingOptions(),
+            summaryReader: null);
 
         // Act
         var document = provider.BuildDailyTimecard(intervals, new Dictionary<string, AgentProfile>(StringComparer.Ordinal), zone);

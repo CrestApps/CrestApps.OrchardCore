@@ -31,6 +31,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IClock _clock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly IQueuedDialerWorkGate _dialerWorkGate;
+    private readonly IDialerDecisionLog _decisionLog;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -52,6 +53,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// The gate that holds back a campaign record that may not be dialed yet before an agent is reserved for it, when
     /// queues are enabled; without it every waiting record is offered.
     /// </param>
+    /// <param name="decisionLog">
+    /// The dialer decision log, which folds a failed decision that repeats the queue's last one into the event that
+    /// recorded it instead of publishing another.
+    /// </param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
         IAgentAvailabilityService availabilityService,
@@ -66,7 +71,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityAssignmentService> logger,
-        IQueuedDialerWorkGate dialerWorkGate)
+        IQueuedDialerWorkGate dialerWorkGate,
+        IDialerDecisionLog decisionLog)
     {
         _queueItemManager = queueItemManager;
         _availabilityService = availabilityService;
@@ -81,6 +87,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _clock = clock;
         _coordinationOptions = coordinationOptions.Value;
         _dialerWorkGate = dialerWorkGate;
+        _decisionLog = decisionLog;
         _logger = logger;
     }
 
@@ -107,6 +114,11 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         }
 
         await using var acquiredLock = locker;
+
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Assigning the next Contact Center item of queue '{QueueId}'.", queueId.SanitizeLogValue());
+        }
 
         return await AssignNextCoreAsync(queueId, cancellationToken);
     }
@@ -292,6 +304,11 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug("Reading the next routable item of queue '{QueueId}'.", queueId.SanitizeLogValue());
+        }
+
         var topItem = await NextRoutableItemAsync(queue, now, cancellationToken);
 
         if (topItem is null)
@@ -345,12 +362,21 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             ? queue.ReservationTimeoutSeconds
             : 30;
 
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Reserving agent '{AgentId}' for queue item '{QueueItemId}' of queue '{QueueId}'.",
+                decision.Agent.ItemId.SanitizeLogValue(),
+                topItem.ItemId.SanitizeLogValue(),
+                queueId.SanitizeLogValue());
+        }
+
         var reservation = await _reservationService.ReserveAsync(topItem, decision.Agent, timeout, cancellationToken);
 
         if (reservation is null)
         {
             decision.Succeeded = false;
-            decision.Reason = "The selected agent or queue item was no longer available when the reservation was created.";
+            decision.Reason = ActivityRoutingReasons.ReservationLost;
 
             if (_logger.IsEnabled(LogLevel.Warning))
             {
@@ -395,7 +421,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             new HashSet<string>(StringComparer.Ordinal),
             cancellationToken);
 
-    private Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)
+    private async Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)
     {
         var data = new ActivityRoutingDecisionEventData
         {
@@ -417,6 +443,20 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
                 .ToArray(),
         };
 
+        // While a queue has due work and nobody can take it, routing makes the same failed decision on every pass. A
+        // repeat is counted on the event that recorded it first rather than written, with an outbox message, again.
+        if (await _decisionLog.TryCoalesceRoutingDecisionAsync(data, _clock.UtcNow, cancellationToken))
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Counted a repeated Contact Center routing decision for queue '{QueueId}' on the event that first recorded it.",
+                    data.QueueId.SanitizeLogValue());
+            }
+
+            return;
+        }
+
         var interactionEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.RoutingDecisionMade,
@@ -431,7 +471,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         interactionEvent.SetData(data);
 
-        return _publisher.PublishAsync(interactionEvent, cancellationToken);
+        await _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
     internal static string GetQueueLockKey(string queueId)

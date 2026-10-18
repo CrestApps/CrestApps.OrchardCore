@@ -23,9 +23,7 @@ Out of the box an assistant can only talk. **Tools** let it act: look up an orde
 
 ## Built-in tools
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling AI Agents and creating an agent profile with Orchard-aware tools">
-  <source src="/img/docs/ai-agent.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling AI Agents and creating an agent profile with Orchard-aware tools" start={388} end={422} />
 
 With the **Orchard Core AI Agent** feature on, the **Tools** section of the **Capabilities** tab lists actions the AI can take on this site, grouped by category. Some only appear when the matching site feature is on.
 
@@ -60,9 +58,7 @@ When an assistant works for an administrator but not for someone else, check tha
 
 A tool instance is a tool that you set up yourself, from a ready-made kind, without code. For example, an *Order lookup* that calls your order system's web service, or a *Product docs search* that searches your public documentation site. Each instance becomes its own tool, with its own permission.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling AI Tool Instances and creating an HTTP API Request instance">
-  <source src="/img/docs/ai-tool-instances.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of enabling AI Tool Instances and creating an HTTP API Request instance" start={354} end={385} />
 
 ### Create a tool instance
 
@@ -136,9 +132,7 @@ Your site can also offer its own **Agent** profiles to other systems over A2A. T
 
 With the **Model Context Protocol (MCP) Server** feature on, AI apps outside the site, such as a desktop AI assistant, can use selected tools of this site.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the admin chat working with content and tools through the MCP server integration">
-  <source src="/img/docs/mcp-integration.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of the admin chat working with content and tools through the MCP server integration" start={425} end={500} />
 
 1. Open **Settings > Artificial Intelligence** and find the **MCP Server** section.
 2. Choose the **Authentication type** your technical team asks for: **OpenID Connect**, **API key** or **None (Anonymous access)**. Use **None** only for testing.

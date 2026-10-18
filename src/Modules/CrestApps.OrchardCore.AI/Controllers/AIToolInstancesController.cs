@@ -109,20 +109,17 @@ public sealed class AIToolInstancesController : Controller
 
         var viewModel = new ListSourceCatalogEntryViewModel<AIToolInstance>
         {
-            Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
             Sources = _aiOptions.ToolInstanceSources.Select(x => x.Key).Order(),
         };
 
-        foreach (var model in result.Entries)
+        // The admin-list tag builds a row per tool instance, in the layout (List or Grid) the site or the user picked.
+        viewModel.List = new AdminListContext<AIToolInstance>
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<AIToolInstance>
-            {
-                Model = model,
-                Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
+            Source = result.Entries,
+            Pager = (IShape)viewModel.Pager,
+        };
 
         viewModel.Options.BulkActions =
         [

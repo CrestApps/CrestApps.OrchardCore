@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
@@ -106,9 +107,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         // same agent is either in flight or has just finished and its answer is still current.
         if (agent is not null)
         {
-            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+            var (locker, locked) = await _distributedLock.TryAcquireLockWithoutWaitingAsync(
                 $"ContactCenterQueuedWorkSync:{agent.ItemId}",
-                TimeSpan.Zero,
                 _coordinationOptions.QueuedWorkSyncLease);
 
             if (!locked)

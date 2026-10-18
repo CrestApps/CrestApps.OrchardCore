@@ -1,0 +1,42 @@
+name: Cache NuGet packages
+description: Restores the NuGet global packages folder from the Actions cache, and saves it when the job ends.
+
+# Every CI job restores the same pinned OrchardCore and CrestApps.Core previews from Cloudsmith. Without a cache each
+# job on each OS downloads all of them again, and that traffic counts against the bandwidth of the feeds we pull from.
+# With it, Cloudsmith is only hit when the package versions change.
+#
+# The key has two parts. The first changes when a package version, a feed or the SDK changes; a job whose first part
+# matches restores the closest cache and only downloads what is missing, so a project that gains a reference does not
+# download everything again. The second changes when a project's references change. Starting from an empty folder
+# whenever a version changes keeps old preview versions from piling up in the cache.
+#
+# setup-dotnet's own `cache` input is not used because it requires packages.lock.json files, which this repository
+# does not have.
+
+runs:
+  using: composite
+  steps:
+    # NuGet's default folder is ~/.nuget/packages on every OS. Setting it explicitly guarantees that dotnet restores
+    # into the same folder the cache step restores and saves, even if a runner image sets NUGET_PACKAGES elsewhere.
+    - name: Point NuGet at the cached folder
+      shell: pwsh
+      run: |
+        "NUGET_PACKAGES=$(Join-Path $HOME '.nuget' 'packages')" >> $Env:GITHUB_ENV
+    - name: Restore the NuGet cache
+      id: cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.nuget/packages
+        key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'NuGet.config', 'global.json', 'dotnet-tools.json') }}-${{ hashFiles('**/*.csproj', '**/Directory.Build.props', '**/Directory.Build.targets') }}
+        restore-keys: |
+          nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', 'NuGet.config', 'global.json', 'dotnet-tools.json') }}-
+    # The cache is saved when the job ends, under the key above, and a later exact hit is never saved again. Some jobs
+    # restore only one project, so without this step the first job to miss could save a partial folder and every later
+    # job would download the rest on every run. Restoring the whole solution and the local tools on a miss makes every
+    # saved cache complete.
+    - name: Fill the NuGet cache
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        dotnet restore CrestApps.OrchardCore.slnx
+        dotnet tool restore

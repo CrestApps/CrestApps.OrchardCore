@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Inventory.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<LowStockEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-boxes-stacked" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Low Stock"])
+    </h4>
+</header>

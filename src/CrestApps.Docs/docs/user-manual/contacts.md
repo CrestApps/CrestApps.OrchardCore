@@ -19,9 +19,7 @@ A **contact** is the person you call or text. Contacts are ordinary content item
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a contact, finding it by phone number, and opening its activities">
-  <source src="/img/docs/um-contacts.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of creating a contact, finding it by phone number, and opening its activities" start={325} end={370} />
 
 ## Set up the contact type (once)
 
@@ -41,9 +39,7 @@ The part adds a fixed **Contact methods** list to the contact, where phone numbe
 
 The screencast below creates a *Lead* type with the **Omnichannel Contact** and **Title** parts, then adds a lead with a time zone and a cell phone number:
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a contact content type and a contact item">
-  <source src="/img/docs/omni-contact-type.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a contact content type and a contact item" start={612} end={656} />
 
 ## Create a contact
 
@@ -83,9 +79,7 @@ See [Activities](activities.md).
 
 ## Import and export contacts
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of exporting contacts to CSV, then importing a file of leads that skips a number on the Local Do Not Call Registry">
-  <source src="/img/docs/omni-contact-import-export.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of exporting contacts to CSV, then importing a file of leads that skips a number on the Local Do Not Call Registry" start={373} end={421} />
 
 Use **Content > Export** to download contacts as CSV or Excel, and **Content > Import** to load a file of leads. See [Import and export](administration/import-and-export.md) for the general steps.
 

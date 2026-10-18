@@ -1,0 +1,7 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ContentTransferEntry>
+
+<div class="admin-list-secondary text-danger">
+    <i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@Model.Value.Error
+</div>

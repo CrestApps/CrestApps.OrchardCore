@@ -16,9 +16,7 @@ Everyone who signs in has a **user account**. Orchard Core gives you the user li
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of enabling User Display Name, choosing a format, and editing a user">
-  <source src="/img/docs/users.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of enabling User Display Name, choosing a format, and editing a user" start={105} end={135} />
 
 ## Add a user and give them access
 
@@ -48,9 +46,7 @@ Click **Save**. When a person has no name filled in, the site shows their user n
 
 Use this when you want full names everywhere: pick **First Middle Last name** and set **First name** and **Last name** to **Required**, so every account you add or edit must carry a full name.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of configuring the display name, setting a profile, and the content item author badge showing the full name">
-  <source src="/img/docs/users-display-name.mp4" type="video/mp4" />
-</video>
+<YouTube video="site-administration-walkthroughs" title="Video of configuring the display name, setting a profile, and the content item author badge showing the full name" start={138} end={187} />
 
 The screencast sets the format to *First Middle Last name*, fills in the names on a user, and then shows the author badge in the content list changing from the user name to the full name.
 

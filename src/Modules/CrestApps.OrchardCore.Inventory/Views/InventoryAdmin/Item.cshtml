@@ -1,0 +1,168 @@
+@model StockItemViewModel
+
+@{
+    var item = Model.Item;
+}
+
+<zone Name="Title">
+    <breadcrumb name="InventoryItem" title="@T["Stock: {0}", item.Title]">
+        <breadcrumb-item id="InventoryIndex" action="Index" controller="InventoryAdmin" area="CrestApps.OrchardCore.Inventory" permission="@InventoryPermissions.ViewInventory.Name">@T["Inventory"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@if (item.Archived)
+{
+    <div class="alert alert-secondary">@T["This product or variant is no longer counted. Its history is kept."]</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-6">@T["On hand"]</dt>
+                    <dd class="col-6 text-end fs-5">@item.OnHand</dd>
+                    <dt class="col-6">@T["Reserved"]</dt>
+                    <dd class="col-6 text-end">@item.Reserved</dd>
+                    <dt class="col-6">@T["Available"]</dt>
+                    <dd class="col-6 text-end fw-semibold">@item.Available</dd>
+                    <dt class="col-6">@T["Low at"]</dt>
+                    <dd class="col-6 text-end">@item.LowStockThreshold</dd>
+                    @if (!string.IsNullOrEmpty(item.Sku))
+                    {
+                        <dt class="col-6">@T["SKU"]</dt>
+                        <dd class="col-6 text-end">@item.Sku</dd>
+                    }
+                </dl>
+            </div>
+            <div class="card-footer">
+                <a class="btn btn-sm btn-secondary" href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = item.ContentItemId })">@T["Open the product"]</a>
+            </div>
+        </div>
+
+        @if (Model.CanManage && !item.Archived)
+        {
+            <div class="card mt-4">
+                <div class="card-header">@T["Receive or adjust"]</div>
+                <div class="card-body">
+                    <form asp-action="Adjust" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                        <div class="mb-2">
+                            <select asp-for="Adjust.Kind" class="form-select">
+                                <option value="@StockMovementKind.Received">@T["Received: stock arrived"]</option>
+                                <option value="@StockMovementKind.Adjusted">@T["Adjusted: a correction, up or down"]</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input asp-for="Adjust.Quantity" type="number" class="form-control" aria-label="@T["Quantity"]" placeholder="@T["Quantity"]" />
+                            <span class="hint">@T["Use a negative number to take stock away, such as damaged units."]</span>
+                        </div>
+                        <div class="mb-2">
+                            <input asp-for="Adjust.Reason" class="form-control" maxlength="200" aria-label="@T["Reason"]" placeholder="@T["Reason (optional)"]" />
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">@T["Record"]</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">@T["Count"]</div>
+                <div class="card-body">
+                    <form asp-action="Count" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                        <div class="mb-2">
+                            <input asp-for="Count.Count" type="number" min="0" class="form-control" aria-label="@T["Counted"]" placeholder="@T["How many did you count?"]" />
+                            <span class="hint">@T["The count replaces what's on hand, and the history records the difference."]</span>
+                        </div>
+                        <div class="mb-2">
+                            <input asp-for="Count.Reason" class="form-control" maxlength="200" aria-label="@T["Reason"]" placeholder="@T["Note (optional)"]" />
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">@T["Record count"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-8">
+        @if (Model.Holds.Count > 0)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T.Plural(Model.Holds.Count, "Held for 1 order being paid for", "Held for {0} orders being paid for")</div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var hold in Model.Holds)
+                    {
+                        <li class="list-group-item d-flex justify-content-between">
+                            <a asp-route="OrdersDetail" asp-route-orderId="@hold.OrderId">@T["Order"]</a>
+                            <span>@T.Plural(hold.Quantity, "1 unit", "{0} units") · @T["until {0:g}", hold.ExpiresUtc]</span>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T.Plural(Model.MovementCount, "1 change", "{0} changes")</span>
+                @if (Model.CanManage)
+                {
+                    <form asp-action="Rebuild" asp-route-stockItemId="@item.ItemId" method="post" class="no-multisubmit">
+                        <button type="submit" class="btn btn-sm btn-link" title="@T["Recompute the units on hand from this history."]">@T["Recount from history"]</button>
+                    </form>
+                }
+            </div>
+            @if (Model.Movements.Count == 0)
+            {
+                <div class="card-body text-muted">@T["No changes yet. Record stock received or a count to start."]</div>
+            }
+            else
+            {
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["When"]</th>
+                            <th scope="col">@T["What"]</th>
+                            <th scope="col" class="text-end">@T["Change"]</th>
+                            <th scope="col" class="text-end">@T["On hand"]</th>
+                            <th scope="col">@T["By"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var movement in Model.Movements)
+                        {
+                            <tr>
+                                <td class="text-nowrap">@movement.Utc.ToString("g")</td>
+                                <td>
+                                    @switch (movement.Kind)
+                                    {
+                                        case StockMovementKind.Received:
+                                            @T["Received"]
+                                            break;
+                                        case StockMovementKind.Adjusted:
+                                            @T["Adjusted"]
+                                            break;
+                                        case StockMovementKind.Counted:
+                                            @T["Counted"]
+                                            break;
+                                        case StockMovementKind.Sold:
+                                            @T["Sold"]
+                                            break;
+                                        default:
+                                            @T["Returned"]
+                                            break;
+                                    }
+                                    @if (!string.IsNullOrEmpty(movement.Reason))
+                                    {
+                                        <div class="small text-muted">@movement.Reason</div>
+                                    }
+                                </td>
+                                <td class="text-end">@(movement.Quantity > 0 ? "+" + movement.Quantity : movement.Quantity.ToString())</td>
+                                <td class="text-end">@movement.OnHandAfter</td>
+                                <td>@(movement.ActorName ?? T["The store"].Value)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        @await DisplayAsync(Model.Pager)
+    </div>
+</div>

@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -22,7 +24,14 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 /// Each run is bounded by a wall-clock budget enforced both by a between-queue deadline check and a hard
 /// <see cref="System.Threading.CancellationTokenSource.CancelAfter(int)"/> that cancels in-flight work, and that
 /// budget is kept safely below the distributed-lock expiration so a slow run can never outlive its lock. Queues that do
-/// not fit in the budget are simply requested on the following tick.
+/// not fit in the budget are requested on the following tick; the run logs a warning and records each of them as a
+/// pacing cycle that ran out of its time budget, so a backstop that keeps running out of time shows on the dialer
+/// activity report rather than only in the log.
+/// </para>
+/// <para>
+/// A queue whose head item is stamped with a dialer profile that is turned off or no longer exists is never paced, and
+/// nothing else dials it. That is logged as a warning, at most once per <see cref="HoldBackWarningInterval"/> for each
+/// queue and reason, so the hold-back is visible without flooding the log every minute.
 /// </para>
 /// </summary>
 [BackgroundTask(
@@ -46,6 +55,13 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
     /// </summary>
     private const int MaxRunDurationMilliseconds = 90_000;
 
+    /// <summary>
+    /// How long a held-back queue's warning stays quiet before it is written again while the queue stays held back.
+    /// </summary>
+    internal static readonly TimeSpan HoldBackWarningInterval = TimeSpan.FromMinutes(15);
+
+    private readonly ConcurrentDictionary<string, DateTime> _lastHoldBackWarningUtc = new(StringComparer.Ordinal);
+
     /// <inheritdoc/>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
@@ -68,7 +84,8 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         runCts.CancelAfter(MaxRunDurationMilliseconds);
         var runToken = runCts.Token;
 
-        var runDeadlineUtc = clock.UtcNow.AddMilliseconds(MaxRunDurationMilliseconds);
+        var runStartedUtc = clock.UtcNow;
+        var runDeadlineUtc = runStartedUtc.AddMilliseconds(MaxRunDurationMilliseconds);
 
         // Pacing is work-driven: a dialer profile is now reusable settings chosen when inventory is loaded, and
         // each loaded activity carries its profile on the queue item. So instead of iterating profiles, find the
@@ -86,12 +103,10 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         }
         catch (OperationCanceledException) when (runToken.IsCancellationRequested)
         {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug(
-                    "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while listing queues; deferring to the next scheduled tick.",
-                    MaxRunDurationMilliseconds);
-            }
+            // No queue is known yet, so there is nothing to record against; the warning is what says the run was cut short.
+            logger.LogWarning(
+                "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while listing queues; deferring to the next scheduled tick.",
+                MaxRunDurationMilliseconds);
 
             return;
         }
@@ -130,16 +145,20 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             }
         }
 
-        foreach (var queueId in campaignQueueIds)
+        var recorder = serviceProvider.GetService<IDialerPacingCycleRecorder>();
+
+        for (var index = 0; index < campaignQueueIds.Length; index++)
         {
+            var queueId = campaignQueueIds[index];
+
             if (clock.UtcNow >= runDeadlineUtc)
             {
-                if (logger.IsEnabled(LogLevel.Debug))
-                {
-                    logger.LogDebug(
-                        "The dialer pacing run reached its {BudgetMilliseconds} ms time budget; deferring the remaining queues to the next scheduled tick.",
-                        MaxRunDurationMilliseconds);
-                }
+                logger.LogWarning(
+                    "The dialer pacing run reached its {BudgetMilliseconds} ms time budget; {RemainingQueueCount} queue(s) are deferred to the next scheduled tick.",
+                    MaxRunDurationMilliseconds,
+                    campaignQueueIds.Length - index);
+
+                await RecordDeferredAsync(recorder, campaignQueueIds.Skip(index), runStartedUtc);
 
                 break;
             }
@@ -151,7 +170,9 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                 // profile governs this cycle's pacing.
                 var headItem = await queueItemStore.FindNextWaitingAsync(queueId, runToken);
 
-                if (headItem is null || string.IsNullOrEmpty(headItem.DialerProfileId))
+                if (headItem is null ||
+                    string.IsNullOrEmpty(headItem.DialerProfileId) ||
+                    QueueCallbackDialerProfile.IsCallbackProfile(headItem.DialerProfileId))
                 {
                     continue;
                 }
@@ -160,7 +181,23 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
                 if (profile is null)
                 {
+                    if (ShouldWarn(queueId, "missing", clock.UtcNow))
+                    {
+                        logger.LogWarning(
+                            "Campaign queue '{QueueId}' is not being dialed: its next waiting item is stamped with dialer profile '{DialerProfileId}', which no longer exists, so the dialer has no profile to pace it with. Load the records again under a dialer profile that exists; the Dialer queue inventory report shows what the queue holds.",
+                            queueId.SanitizeLogValue(),
+                            headItem.DialerProfileId.SanitizeLogValue());
+                    }
+
                     continue;
+                }
+
+                if (!profile.Enabled && ShouldWarn(queueId, "disabled", clock.UtcNow))
+                {
+                    logger.LogWarning(
+                        "Campaign queue '{QueueId}' is not being dialed: its next waiting item is stamped with dialer profile '{Profile}', which is turned off, so its records are held back. Turn the profile on, or load the records again under a profile that is on; the Dialer queue inventory report shows what the queue holds.",
+                        queueId.SanitizeLogValue(),
+                        profile.Name.SanitizeLogValue());
                 }
 
                 // Every queue is paced by its own requests, each on a scope of its own under the queue's pacing lock, so a
@@ -188,13 +225,13 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             }
             catch (OperationCanceledException) when (runToken.IsCancellationRequested)
             {
-                if (logger.IsEnabled(LogLevel.Debug))
-                {
-                    logger.LogDebug(
-                        "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while pacing queue '{QueueId}'; deferring the remaining queues to the next scheduled tick.",
-                        MaxRunDurationMilliseconds,
-                        queueId);
-                }
+                logger.LogWarning(
+                    "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while pacing queue '{QueueId}'; {RemainingQueueCount} queue(s) are deferred to the next scheduled tick.",
+                    MaxRunDurationMilliseconds,
+                    queueId,
+                    campaignQueueIds.Length - index);
+
+                await RecordDeferredAsync(recorder, campaignQueueIds.Skip(index), runStartedUtc);
 
                 break;
             }
@@ -203,5 +240,47 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                 logger.LogError(ex, "An error occurred while pacing dialer queue '{QueueId}'.", queueId);
             }
         }
+    }
+
+    /// <summary>
+    /// Records that the queues this run did not reach were not paced by it, so a run cut short by its time budget is on
+    /// record rather than only in a log line.
+    /// </summary>
+    /// <param name="recorder">The pacing cycle recorder, or <see langword="null"/> when none is registered.</param>
+    /// <param name="queueIds">The queues the run did not reach.</param>
+    /// <param name="runStartedUtc">When the run started.</param>
+    private static async Task RecordDeferredAsync(IDialerPacingCycleRecorder recorder, IEnumerable<string> queueIds, DateTime runStartedUtc)
+    {
+        if (recorder is null)
+        {
+            return;
+        }
+
+        foreach (var queueId in queueIds)
+        {
+            await recorder.RecordAsync(new DialerPacingCycle
+            {
+                QueueId = queueId,
+                Outcome = DialerPacingCycleOutcome.TimeBudgetExceeded,
+                Detail = $"The minute dialer pacing task ran out of its {MaxRunDurationMilliseconds} ms time budget before it reached this queue.",
+                StartedUtc = runStartedUtc,
+            });
+        }
+    }
+
+    // Allows one warning per queue and reason per interval. The task is a singleton, so the last warning times outlive a
+    // run; they are per node, which at worst writes the warning once on each node.
+    private bool ShouldWarn(string queueId, string reason, DateTime utcNow)
+    {
+        var key = $"{reason}:{queueId}";
+
+        if (_lastHoldBackWarningUtc.TryGetValue(key, out var lastUtc) && utcNow - lastUtc < HoldBackWarningInterval)
+        {
+            return false;
+        }
+
+        _lastHoldBackWarningUtc[key] = utcNow;
+
+        return true;
     }
 }

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Payments;
+using System.Text.Encodings.Web;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -37,6 +36,7 @@ public sealed class AdminController : Controller
     private const string _optionsSource = "Options.Source";
 
     private readonly ITransactionManager _transactionManager;
+    private readonly ITransactionCommandService _commandService;
     private readonly ITransactionReminderService _reminderService;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
@@ -44,8 +44,6 @@ public sealed class AdminController : Controller
     private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly TransactionSourceOptions _sourceOptions;
-    private readonly IEnumerable<ITransactionPaymentHandler> _paymentHandlers;
-    private readonly ILogger _logger;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -54,10 +52,11 @@ public sealed class AdminController : Controller
     /// Initializes a new instance of the <see cref="AdminController"/> class.
     /// </summary>
     /// <param name="transactionManager">The transaction manager.</param>
+    /// <param name="commandService">The service that runs the payment, cancel, adjust and invoice actions.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="userService">The user service used to resolve transaction owners.</param>
     /// <param name="displayNameProvider">The display name provider used to describe owners.</param>
-    /// <param name="clock">The clock used to timestamp management events.</param>
+    /// <param name="clock">The clock used to timestamp notes.</param>
     /// <param name="notifier">The notifier used to surface confirmation messages.</param>
     /// <param name="sourceOptions">The registered transaction sources used to build the source filter.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
@@ -65,19 +64,19 @@ public sealed class AdminController : Controller
     /// <param name="reminderService">The optional reminder service, available only when the Transaction Reminders feature is enabled.</param>
     public AdminController(
         ITransactionManager transactionManager,
+        ITransactionCommandService commandService,
         IAuthorizationService authorizationService,
         IUserService userService,
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         INotifier notifier,
         IOptions<TransactionSourceOptions> sourceOptions,
-        IEnumerable<ITransactionPaymentHandler> paymentHandlers,
-        ILogger<AdminController> logger,
         IHtmlLocalizer<AdminController> htmlLocalizer,
         IStringLocalizer<AdminController> stringLocalizer,
         ITransactionReminderService reminderService = null)
     {
         _transactionManager = transactionManager;
+        _commandService = commandService;
         _reminderService = reminderService;
         _authorizationService = authorizationService;
         _userService = userService;
@@ -85,8 +84,6 @@ public sealed class AdminController : Controller
         _clock = clock;
         _notifier = notifier;
         _sourceOptions = sourceOptions.Value;
-        _paymentHandlers = paymentHandlers;
-        _logger = logger;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -136,20 +133,22 @@ public sealed class AdminController : Controller
         options.Statuses = BuildStatusFilterItems(options.Status);
         options.Sources = BuildSourceFilterItems(options.Source);
 
+        // The status and source filters render at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("TransactionsAdminListFilters", Arguments.From(new
+        {
+            Options = options,
+        }));
+
         var model = new TransactionsAdminIndexViewModel
         {
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
-        };
-
-        foreach (var transaction in result.Entries)
-        {
-            model.Transactions.Add(new TransactionListItemViewModel
+            List = new AdminListContext<Transaction>
             {
-                Transaction = transaction,
-                OwnerName = await ResolveOwnerNameAsync(transaction.OwnerId),
-            });
-        }
+                Source = result.Entries,
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            },
+        };
 
         return View(model);
     }
@@ -292,143 +291,27 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var transaction = await _transactionManager.FindByIdAsync(model.TransactionId);
+        var result = await _commandService.RecordOfflinePaymentAsync(model.TransactionId, model.Amount, model.Reference, model.Note);
 
-        if (transaction is null)
-        {
-            return NotFound();
-        }
-
-        if (model.Amount <= 0m)
-        {
-            await _notifier.WarningAsync(H["Enter a payment amount greater than zero."]);
-
-            return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
-        }
-
-        if (!TransactionStateMachine.CanRecordPayment(transaction))
-        {
-            await _notifier.WarningAsync(H["This transaction is no longer collectable, so no payment was recorded."]);
-
-            return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
-        }
-
-        var now = _clock.UtcNow;
-
-        // Round at the currency's own scale so a zero-decimal currency (for example JPY) is never recorded with
-        // fractions it cannot be paid in, and an over-payment never leaves a negative balance.
-        var applied = CurrencyScale.Round(Math.Min(model.Amount, transaction.OutstandingAmount), transaction.Currency);
-
-        if (applied <= 0m)
-        {
-            await _notifier.WarningAsync(H["The payment amount is too small to record against this transaction."]);
-
-            return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
-        }
-
-        transaction.AmountPaid = CurrencyScale.Round(transaction.AmountPaid + applied, transaction.Currency);
-        transaction.UpdatedUtc = now;
-        transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
-
-        var noteSuffix = string.IsNullOrWhiteSpace(model.Note)
-            ? string.Empty
-            : S[" Note: {0}", model.Note].Value;
-
-        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
-            now,
-            applied,
-            TransactionsConstants.SettlementMethods.Offline,
-            S["An offline payment of {0} {1} was recorded.{2}", CurrencyScale.Format(applied, transaction.Currency), transaction.Currency, noteSuffix].Value);
-
-        payment.ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        payment.ActorName = await GetCurrentUserNameAsync();
-
-        transaction.Events.Add(payment);
-
-        if (transaction.OutstandingAmount <= 0m)
-        {
-            transaction.Status = TransactionStatus.Paid;
-            transaction.SettledUtc = now;
-            transaction.Events.Add(new TransactionEvent
-            {
-                CreatedUtc = now,
-                Type = TransactionEventType.StatusChanged,
-                Message = S["The transaction was fully paid and settled."].Value,
-            });
-        }
-        else if (transaction.AmountPaid > 0m)
-        {
-            transaction.Status = TransactionStatus.PartiallyPaid;
-        }
-
-        if (await TrySaveAsync(transaction))
-        {
-            await _paymentHandlers.PaymentRecordedAsync(transaction, [payment], _logger);
-            await _notifier.SuccessAsync(H["The payment was recorded."]);
-        }
-
-        return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
+        return await CompleteAsync(result, model.TransactionId, H["The payment was recorded."]);
     }
 
     /// <summary>
     /// Marks a transaction as fully paid and settled.
     /// </summary>
     /// <param name="itemId">The transaction identifier.</param>
+    /// <param name="note">An optional note recorded with the payment.</param>
     [HttpPost]
-    public async Task<IActionResult> MarkPaid(string itemId)
+    public async Task<IActionResult> MarkPaid(string itemId, string note)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
         {
             return Forbid();
         }
 
-        var transaction = await _transactionManager.FindByIdAsync(itemId);
+        var result = await _commandService.MarkPaidAsync(itemId, note);
 
-        if (transaction is null)
-        {
-            return NotFound();
-        }
-
-        if (!TransactionStateMachine.CanMarkPaid(transaction))
-        {
-            await _notifier.WarningAsync(H["This transaction is no longer collectable, so it was not marked as paid."]);
-
-            return RedirectToAction(nameof(Detail), new { itemId });
-        }
-
-        var now = _clock.UtcNow;
-
-        // Marking paid settles whatever was still owed, so that remainder is the payment it records.
-        var settled = transaction.OutstandingAmount;
-
-        transaction.AmountPaid = transaction.TotalAmount;
-        transaction.Status = TransactionStatus.Paid;
-        transaction.SettledUtc = now;
-        transaction.UpdatedUtc = now;
-        transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
-
-        var payment = TransactionPaymentHandlerExtensions.CreatePaymentEvent(
-            now,
-            settled,
-            TransactionsConstants.SettlementMethods.Offline,
-            S["The transaction was marked as paid."].Value);
-
-        payment.ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        payment.ActorName = await GetCurrentUserNameAsync();
-
-        transaction.Events.Add(payment);
-
-        if (await TrySaveAsync(transaction))
-        {
-            if (settled > 0m)
-            {
-                await _paymentHandlers.PaymentRecordedAsync(transaction, [payment], _logger);
-            }
-
-            await _notifier.SuccessAsync(H["The transaction was marked as paid."]);
-        }
-
-        return RedirectToAction(nameof(Detail), new { itemId });
+        return await CompleteAsync(result, itemId, H["The transaction was marked as paid."]);
     }
 
     /// <summary>
@@ -444,44 +327,44 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var transaction = await _transactionManager.FindByIdAsync(itemId);
+        var result = await _commandService.CancelAsync(itemId, note);
 
-        if (transaction is null)
+        return await CompleteAsync(result, itemId, H["The transaction was canceled."]);
+    }
+
+    /// <summary>
+    /// Lowers what is owed on a transaction without money being received: a discount, a waiver, a credit or a
+    /// write-off.
+    /// </summary>
+    /// <param name="model">The adjustment.</param>
+    [HttpPost]
+    public async Task<IActionResult> Adjust(AdjustTransactionViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
         {
-            return NotFound();
+            return Forbid();
         }
 
-        if (!TransactionStateMachine.CanCancel(transaction))
-        {
-            await _notifier.WarningAsync(H["This transaction has already reached a final state and cannot be canceled. Refund it instead if money was collected."]);
+        var result = await _commandService.AdjustAsync(model.TransactionId, model.Amount, model.Kind, model.Reason);
 
-            return RedirectToAction(nameof(Detail), new { itemId });
+        return await CompleteAsync(result, model.TransactionId, H["The adjustment was recorded."]);
+    }
+
+    /// <summary>
+    /// Sends the owner the transaction's invoice now, with the link that pays it.
+    /// </summary>
+    /// <param name="itemId">The transaction identifier.</param>
+    [HttpPost]
+    public async Task<IActionResult> SendInvoice(string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TransactionsPermissions.ManageTransactions))
+        {
+            return Forbid();
         }
 
-        var now = _clock.UtcNow;
+        var result = await _commandService.SendInvoiceAsync(itemId);
 
-        transaction.Status = TransactionStatus.Canceled;
-        transaction.UpdatedUtc = now;
-
-        var reason = string.IsNullOrWhiteSpace(note)
-            ? S["The transaction was canceled."].Value
-            : S["The transaction was canceled. Reason: {0}", note].Value;
-
-        transaction.Events.Add(new TransactionEvent
-        {
-            CreatedUtc = now,
-            Type = TransactionEventType.Canceled,
-            Message = reason,
-            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorName = await GetCurrentUserNameAsync(),
-        });
-
-        if (await TrySaveAsync(transaction))
-        {
-            await _notifier.SuccessAsync(H["The transaction was canceled."]);
-        }
-
-        return RedirectToAction(nameof(Detail), new { itemId });
+        return await CompleteAsync(result, itemId, H["The invoice was sent to the transaction owner."]);
     }
 
     /// <summary>
@@ -524,6 +407,29 @@ public sealed class AdminController : Controller
         if (await TrySaveAsync(transaction))
         {
             await _notifier.SuccessAsync(H["The note was added."]);
+        }
+
+        return RedirectToAction(nameof(Detail), new { itemId });
+    }
+
+    // Shows what came of a command: not found, each reason it was refused, or the success message.
+    private async Task<IActionResult> CompleteAsync(TransactionCommandResult result, string itemId, LocalizedHtmlString success)
+    {
+        if (result.Transaction is null)
+        {
+            return NotFound();
+        }
+
+        if (result.Succeeded)
+        {
+            await _notifier.SuccessAsync(success);
+        }
+        else
+        {
+            foreach (var error in result.Errors)
+            {
+                await _notifier.WarningAsync(new LocalizedHtmlString(error, HtmlEncoder.Default.Encode(error)));
+            }
         }
 
         return RedirectToAction(nameof(Detail), new { itemId });

@@ -113,13 +113,24 @@ public sealed class MySubscriptionsController : Controller
         var statuses = new List<SelectListItem> { new(S["Any status"], string.Empty, !status.HasValue) };
         statuses.AddRange(Enum.GetValues<SubscriptionStatus>().Select(value => new SelectListItem(displayText.StatusName(value), value.ToString(), status == value)));
 
+        var utcNow = _clock.UtcNow;
+        var page = subscriptions.Skip(pager.GetStartIndex()).Take(pager.PageSize).ToArray();
+
+        // The status filter renders at the end of the list's toolbar.
+        var filters = await shapeFactory.CreateAsync("MySubscriptionsListFilters", Arguments.From(new
+        {
+            Statuses = statuses,
+        }));
+
         return View(new MySubscriptionsViewModel
         {
-            Subscriptions = [.. subscriptions.Skip(pager.GetStartIndex()).Take(pager.PageSize)],
-            Status = status,
-            Statuses = statuses,
-            Pager = await shapeFactory.PagerAsync(pager, subscriptions.Length, routeData),
-            UtcNow = _clock.UtcNow,
+            Subscriptions = page,
+            List =new AdminListContext<CustomerSubscription>
+            {
+                Source = page.Select(subscription => new CustomerSubscription(subscription, subscription.IsCurrent(utcNow))).ToArray(),
+                ToolbarActions = filters,
+                Pager = await shapeFactory.PagerAsync(pager, subscriptions.Length, routeData),
+            },
         });
     }
 

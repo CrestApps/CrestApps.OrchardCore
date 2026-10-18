@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.AI.Deployments.Steps
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIPersonaDeploymentStep>
+
+<h5>@T["AI Personas"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All personas"]</span>
+}
+else if (Model.Value.PersonaIds?.Length > 0)
+{
+    <span class="badge text-bg-warning">@T.Plural(Model.Value.PersonaIds.Length, "1 selected persona.", "{0} selected personas.", Model.Value.PersonaIds.Length)</span>
+}
+else
+{
+    <span class="badge text-bg-warning">@T["No selected persona."]</span>
+}

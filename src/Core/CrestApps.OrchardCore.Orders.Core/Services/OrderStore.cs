@@ -50,6 +50,31 @@ public sealed class OrderQuery
     public string UserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the customer whose orders to find.
+    /// </summary>
+    public string CustomerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email the orders were placed with, matched exactly, ignoring case.
+    /// </summary>
+    public string CustomerEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to find only orders placed without an account.
+    /// </summary>
+    public bool GuestsOnly { get; set; }
+
+    /// <summary>
+    /// Gets or sets the date before which the orders were placed.
+    /// </summary>
+    public DateTime? CreatedBefore { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to leave out orders whose personal details were already removed.
+    /// </summary>
+    public bool NotAnonymized { get; set; }
+
+    /// <summary>
     /// Gets or sets an order number, or the start of one, or a customer's email address.
     /// </summary>
     public string Search { get; set; }
@@ -103,6 +128,33 @@ public sealed class OrderStore : DocumentCatalog<Order, OrderIndex>, IOrderStore
         if (!string.IsNullOrEmpty(query.UserId))
         {
             orders = orders.Where(index => index.UserId == query.UserId);
+        }
+
+        if (!string.IsNullOrEmpty(query.CustomerId))
+        {
+            orders = orders.Where(index => index.CustomerId == query.CustomerId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.CustomerEmail))
+        {
+            var email = query.CustomerEmail.Trim().ToUpperInvariant();
+
+            orders = orders.Where(index => index.CustomerEmail == email);
+        }
+
+        if (query.GuestsOnly)
+        {
+            orders = orders.Where(index => index.UserId == null);
+        }
+
+        if (query.CreatedBefore is { } createdBefore)
+        {
+            orders = orders.Where(index => index.CreatedUtc < createdBefore);
+        }
+
+        if (query.NotAnonymized)
+        {
+            orders = orders.Where(index => index.AnonymizedUtc == null);
         }
 
         if (query.Statuses is { Count: > 0 })

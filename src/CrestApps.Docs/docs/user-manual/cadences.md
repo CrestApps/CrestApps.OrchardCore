@@ -17,9 +17,7 @@ A **cadence** is a reusable series of follow-up messages for automated SMS conve
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a cadence with a defined message step and an AI-generated step">
-  <source src="/img/docs/um-cadences.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a cadence with a defined message step and an AI-generated step" start={1070} end={1107} />
 
 ## Create a cadence
 

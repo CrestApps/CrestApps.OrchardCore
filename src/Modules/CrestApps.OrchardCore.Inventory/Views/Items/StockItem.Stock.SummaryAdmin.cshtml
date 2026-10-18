@@ -1,0 +1,18 @@
+@model ShapeViewModel<StockItem>
+
+@{
+    var item = Model.Value;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["On hand"]">
+    <i class="fa-solid fa-boxes-stacked text-secondary me-1" aria-hidden="true"></i>@T["{0} on hand", item.OnHand]
+</span>
+@if (item.Reserved != 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Held for unpaid orders"]">
+        <i class="fa-solid fa-lock text-secondary me-1" aria-hidden="true"></i>@T["{0} reserved", item.Reserved]
+    </span>
+}
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Available to sell"]">
+    <i class="fa-solid fa-cart-shopping text-secondary me-1" aria-hidden="true"></i>@T["{0} available", item.Available]
+</span>

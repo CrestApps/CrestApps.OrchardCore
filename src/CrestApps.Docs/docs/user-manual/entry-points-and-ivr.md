@@ -25,9 +25,7 @@ A text entry point decides where the conversations go, how a queue hands them ou
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding a voice calls entry point that picks a number from the address list and routes its calls to a queue, with business hours and voicemail settings">
-  <source src="/img/docs/um-entry-point.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of adding a voice calls entry point that picks a number from the address list and routes its calls to a queue, with business hours and voicemail settings" start={420} end={473} />
 
 ## Create an entry point
 
@@ -108,13 +106,11 @@ A call entry point can hand its calls to an AI voice agent: an AI chat profile, 
 
 While the entry point is open, the AI answers each call itself, greets the caller with its initial prompt and holds the conversation. The welcome message and phone menu are not used. The call becomes an automated activity with the AI's transcript, and it reaches an agent's queue only if the AI hands the caller over. While the entry point is closed, callers go to voicemail, or are refused when the closed action is **Reject**.
 
-The AI voice agent needs the **Telnyx AI Voice Agent** feature. A realtime-capable chat deployment holds a live conversation; others take turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
+The AI voice agent needs the **Telnyx AI Voice Agent** feature. The profile's **Conversation deployment** holds a live conversation, or the site's default realtime deployment when the profile names none; without a realtime deployment the agent takes turns, speaking and then listening. If the feature is turned off after an entry point is set up, its calls are refused until you pick another target.
 
 ## Text entry points
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of adding a text messages entry point that routes a number's texts to a queue, with an auto-reply and a closed auto-reply">
-  <source src="/img/docs/um-entry-point-texts.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of adding a text messages entry point that routes a number's texts to a queue, with an auto-reply and a closed auto-reply" start={476} end={522} />
 
 A text entry point has the **General**, **Routing** and **Hours** cards, with these settings added for texts:
 
@@ -131,9 +127,7 @@ Before text entry points, where a number's texts went was set on the number itse
 
 ## Build an IVR menu
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of building a two-level IVR menu with queue, agent, voicemail and submenu key actions">
-  <source src="/img/docs/um-ivr-menu.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of building a two-level IVR menu with queue, agent, voicemail and submenu key actions" start={525} end={564} />
 
 An IVR menu is a set of **menus**. Each menu has a prompt and a list of **keys**; each key has an **action**. Callers answer with the telephone keypad; speech input is not supported.
 

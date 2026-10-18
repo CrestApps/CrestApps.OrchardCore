@@ -30,9 +30,7 @@ The **Load Activities** list shows the newest loads first. A load does nothing w
 
 ## Manual loads
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a manual activity load for two agents, loading it, and finding the new activities on Manage Activities">
-  <source src="/img/docs/um-load-manual.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a manual activity load for two agents, loading it, and finding the new activities on Manage Activities" start={1110} end={1178} />
 
 1. Open **Interaction Center > Management > Load Activities**, click **Add Activity Load** and choose **Manual**.
 2. Fill in the load (fields below). A manual load needs a **Channel** and at least one user in **User(s) to assign activities to**; the activities are shared between the users you pick. Click **Save**.
@@ -58,9 +56,7 @@ A message tells you how many loads were deleted and how many were skipped.
 
 ## Dialer loads
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of creating a dialer activity load with a dialer profile, a campaign and the number its calls are dialed from">
-  <source src="/img/docs/um-load-dialer.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-setup-walkthroughs" title="Video of creating a dialer activity load with a dialer profile, a campaign and the number its calls are dialed from" start={1181} end={1228} />
 
 1. Click **Add Activity Load** and choose **Dialer**.
 2. Pick the **Dialer profile** (it decides preview, power or progressive) and the **Campaign**. Agents sign in to this campaign to get the calls, so a dialer load will not save without one unless the subject has a default campaign.

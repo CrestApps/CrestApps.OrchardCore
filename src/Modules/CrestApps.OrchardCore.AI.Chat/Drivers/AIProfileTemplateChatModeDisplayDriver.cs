@@ -146,10 +146,11 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         settings.ConversationDeploymentName = conversationDeploymentName;
 
         // One voice question, whichever path answers it: a realtime deployment's own voices, or the
-        // text-to-speech voices when the conversation runs as the speech-to-text plus text-to-speech cascade.
-        settings.VoiceName = model.ChatMode == ChatMode.Conversation
-            ? model.VoiceName?.Trim()
-            : null;
+        // text-to-speech voices when the conversation runs as the speech-to-text plus text-to-speech cascade. Kept
+        // whatever the chat mode, because phone calls answered or placed with the profiles it creates speak with it.
+        settings.VoiceName = string.IsNullOrWhiteSpace(model.VoiceName)
+            ? null
+            : model.VoiceName.Trim();
         template.Put(settings);
 
         // The metadata carries the same answer for the templates that are authored as recipes or markdown

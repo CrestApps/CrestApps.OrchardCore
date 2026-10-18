@@ -4,10 +4,13 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Core;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Indexes;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
@@ -17,6 +20,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
@@ -55,6 +59,7 @@ public sealed class Startup : StartupBase
         services
             .AddSiteDisplayDriver<ChatInteractionChatModeSettingsDisplayDriver>()
             .AddNavigationProvider<AISiteSettingsAdminMenu>();
+        services.AddSiteSettingsPermission(AIConstants.AISettingsGroupId, AIPermissions.EditChatInteractions);
 
         // Configure RowLevelTabularBatchSettings from configuration.
         services.AddTransient<IConfigureOptions<RowLevelTabularBatchOptions>, RowLevelTabularBatchOptionsConfiguration>();
@@ -93,6 +98,25 @@ public sealed class DataSourceStartup : StartupBase
 }
 
 /// <summary>
+/// Registers services and configuration for the AI Profile Builder feature.
+/// </summary>
+[Feature(ChatInteractionsConstants.Feature.ProfileBuilder)]
+public sealed class ProfileBuilderStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IProfileBuilderSessionStore, ProfileBuilderSessionStore>()
+            .AddIndexProvider<ProfileBuilderSessionIndexProvider>()
+            .AddDataMigration<ProfileBuilderSessionIndexMigrations>()
+            .AddScoped<ProfileBuilderCoach>()
+            .AddScoped<ProfileBuilderService>()
+            .AddDisplayDriver<ProfileBuilderSessionEntry, ProfileBuilderSessionEntryDisplayDriver>()
+            .AddNavigationProvider<ProfileBuilderAdminMenu>();
+    }
+}
+
+/// <summary>
 /// Registers services and configuration for the ToolInstances feature.
 /// </summary>
 [RequireFeatures(AIConstants.Feature.ToolInstances)]
@@ -102,5 +126,18 @@ public sealed class ToolInstancesStartup : StartupBase
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionToolInstancesDisplayDriver>();
         services.AddScoped<IChatInteractionSettingsHandler, ChatInteractionToolInstancesSettingsHandler>();
+    }
+}
+
+/// <summary>
+/// Adds the persona picker to chat interactions when the Personas feature is enabled. Core saves the choice from the
+/// <c>personaId</c> hub setting.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.Personas)]
+public sealed class PersonasStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDisplayDriver<ChatInteraction, ChatInteractionPersonaDisplayDriver>();
     }
 }

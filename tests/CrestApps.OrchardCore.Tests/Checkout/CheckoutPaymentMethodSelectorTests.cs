@@ -127,13 +127,30 @@ public sealed class CheckoutPaymentMethodSelectorTests
         Assert.Equal("pay-later", Assert.Single(eligible).Key);
     }
 
+    /// <summary>
+    /// A checkout that keeps the card for later payments, such as the first payment of an installment plan chosen at
+    /// checkout, can only be paid with a provider that can keep one.
+    /// </summary>
+    [Fact]
+    public void GetEligible_WhenTheCardIsKept_ExcludesAProviderThatCannotKeepOne()
+    {
+        var plain = CreateProvider("plain", supportsOneTime: true, supportsRecurring: false, supportsEmbedded: true);
+        var keeps = CreateProvider("keeps", supportsOneTime: true, supportsRecurring: false, supportsEmbedded: true, supportsSaved: true);
+
+        var eligible = CheckoutPaymentMethodSelector.GetEligible([plain, keeps], _oneTimeOnly, settlesExistingBalance: true, savesPaymentMethod: true);
+
+        Assert.Equal("keeps", Assert.Single(eligible).Key);
+        Assert.Equal(2, CheckoutPaymentMethodSelector.GetEligible([plain, keeps], _oneTimeOnly, settlesExistingBalance: true).Length);
+    }
+
     private static ICheckoutPaymentProvider CreateProvider(
         string key,
         bool supportsOneTime,
         bool supportsRecurring,
         bool supportsCombined = true,
         bool supportsEmbedded = false,
-        bool defersPayment = false)
+        bool defersPayment = false,
+        bool supportsSaved = false)
     {
         var provider = new Mock<ICheckoutPaymentProvider>();
         provider.SetupGet(p => p.Key).Returns(key);
@@ -145,6 +162,7 @@ public sealed class CheckoutPaymentMethodSelectorTests
             SupportsCombinedOneTimeAndRecurring = supportsCombined,
             SupportsEmbeddedElements = supportsEmbedded,
             DefersPayment = defersPayment,
+            SupportsSavedPaymentMethods = supportsSaved,
         });
 
         return provider.Object;

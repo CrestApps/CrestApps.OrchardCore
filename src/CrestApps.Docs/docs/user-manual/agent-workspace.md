@@ -22,9 +22,7 @@ An agent works with three things on screen:
 
 <AskYourAdmin />
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of an agent signing in to a queue and a campaign from the soft phone Work tab and setting presence to Available">
-  <source src="/img/docs/um-agent-signin.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of an agent signing in to a queue and a campaign from the soft phone Work tab and setting presence to Available" start={36} end={62} />
 
 ## Your shift at a glance
 
@@ -59,9 +57,7 @@ A break that is waiting for your current work to end shows as **Break pending** 
 
 ## My workspace
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the agent workspace showing presence, queue chips, the active interaction panel and recent activity">
-  <source src="/img/docs/um-agent-workspace.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the agent workspace showing presence, queue chips, the active interaction panel and recent activity" start={7} end={33} />
 
 Open **Interaction Center > My workspace**. Keep it open, with the soft phone, for your whole shift. From top to bottom:
 
@@ -133,9 +129,7 @@ These need the *Pause recording on own live interactions* and *Initiate secure c
 
 ## The docked agent bar
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of the docked agent bar collapsed on an admin page and expanded to show the agent's status">
-  <source src="/img/docs/um-agent-bar.mp4" type="video/mp4" />
-</video>
+<YouTube video="contact-center-agent-walkthroughs" title="Video of the docked agent bar collapsed on an admin page and expanded to show the agent's status" start={65} end={78} />
 
 The bar sits as a small tab at the bottom of every admin page while you are signed in. Click it to expand; it also opens by itself when an offer arrives, and collapses when you click elsewhere (except while an offer is ringing). It keeps working when the soft phone runs in its own window, so an offer reaches you on any page of the CRM.
 

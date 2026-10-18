@@ -84,6 +84,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <label asp-for="DefaultRealtimeDeploymentName" class="ocat-label">@T["Default realtime deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultRealtimeDeploymentName" asp-items="Model.RealtimeDeployments" class="form-select">
+            <option value="">@T["The first realtime-capable deployment"]</option>
+        </select>
+        <span class="hint">@T["The model that carries a spoken conversation when a profile names no conversation deployment: in the chat's conversation mode and on phone calls."]</span>
+    </div>
+</div>
+
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', function () {
         const ttsDeploymentSelect = document.getElementById('@Html.IdFor(x => x.DefaultTextToSpeechDeploymentName)');

@@ -34,9 +34,27 @@ Guests do not need an account to use a cart. If a guest signs in, what they put 
 | Status | Meaning |
 | --- | --- |
 | Paid | The checkout completed. |
-| Awaiting payment | The buyer started the checkout and did not finish it. |
-| Canceled | The buyer checked out again with a changed cart before paying, so the newer order replaced this one. |
+| Awaiting payment | The buyer started the checkout and has not finished it yet. |
+| Canceled | The order was never paid. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, nobody finished it in time, or an item was out of stock when the buyer checked out. |
 
-Open an order to see what was bought, the quantities and prices, the tax and the total paid, when it was placed and paid, and who placed it. Refunds are made from the [payment screens](payments-and-refunds.md).
+Unpaid orders don't stay open for ever. When a checkout is canceled, declined or left unfinished past the checkout's session lifetime (24 hours by default), its order is canceled, and a check every 15 minutes catches any that were missed. An order canceled because the cart was checked out again can still be paid by the checkout that was open for it.
+
+Open an order to see what was bought, the quantities and prices, the tax and the total paid, when it was placed and paid, who placed it, and the address it was billed to. Refunds are made from the [payment screens](payments-and-refunds.md).
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
+
+## Guests and their orders
+
+A guest has no account to sign in to, so they reach their order through a **link**:
+
+- The confirmation page and the confirmation email give a guest a link that opens their order: what they bought, the total, the billing address, and a **Pay now** button when something is still owed. A link works for 60 days. A changed or expired link shows *This order link no longer works* and nothing about any order.
+- **Find my order** (`/orders/find` on your site) asks for an email and emails a link to each order placed with it in the last year. It always answers the same way, whether or not there are orders, so it never tells anyone who has bought from you. It is limited to a few requests per visitor and per email.
+- When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
+
+Link to **Find my order** from your site's footer or help page so guests can find it.
+
+## Order confirmations
+
+When an order is paid, the customer is emailed a confirmation with the order number, what they bought, the total and the billing address. It goes to the email given at checkout, once per order.
+
+Under **Settings > Commerce > Orders**, **Send order confirmations** is on by default. Confirmations are sent only when your site's email is set up in Orchard Core's email settings; without it nothing is sent, and the order is placed as usual.

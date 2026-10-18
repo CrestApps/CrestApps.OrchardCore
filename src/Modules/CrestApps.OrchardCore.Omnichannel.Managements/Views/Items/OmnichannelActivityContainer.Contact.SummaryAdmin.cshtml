@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Omnichannel.Core
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<OmnichannelActivityContainer>
+
+@* The contact of the activity, on the rows of a list that holds the activities of several contacts (an account). It
+   opens the activities of that contact. *@
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Contact"]">
+    <i class="fa-solid fa-user text-secondary me-1" aria-hidden="true"></i>
+    <a asp-action="List" asp-controller="Activities" asp-area="@OmnichannelConstants.Features.Managements" asp-route-contentItemId="@Model.Value.Contact.ContentItemId">@Model.Value.Contact.DisplayText</a>
+</span>

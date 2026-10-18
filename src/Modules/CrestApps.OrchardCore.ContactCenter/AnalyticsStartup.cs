@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Drivers;
@@ -6,6 +7,8 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
@@ -32,6 +35,12 @@ public sealed class AnalyticsStartup : StartupBase
     {
         services.AddScoped<IContactCenterReportingService, ContactCenterReportingService>();
         services.AddScoped<IContactCenterReportCapabilityGuard, ContactCenterReportCapabilityGuard>();
+
+        // What the dialer holds right now, read by the dialer queue inventory and the campaign summary alike, through the
+        // same classification the live dashboard's dispatch card uses.
+        services.AddScoped<DialerRecordClassifier>();
+        services.AddScoped<IDialerQueueInventoryService, DialerQueueInventoryService>();
+
         services.AddDisplayDriver<ReportFilter, ContactCenterReportFilterDisplayDriver>();
 
         services
@@ -40,18 +49,39 @@ public sealed class AnalyticsStartup : StartupBase
             .Validate(
                 options => options.MaximumReportRange > TimeSpan.Zero,
                 "'CrestApps:ContactCenter:Reporting:MaximumReportRange' must be greater than zero.")
+            .Validate(
+                options => options.MaximumWorkforceReportRange > TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:MaximumWorkforceReportRange' must be greater than zero.")
+            .Validate(
+                options => options.MaximumWorkforceExportRange > TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:MaximumWorkforceExportRange' must be greater than zero.")
+            .Validate(
+                options => options.AgentTimeSummaryBackfill >= TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:AgentTimeSummaryBackfill' cannot be negative. Use zero to turn the daily agent time summaries off.")
+            .Validate(
+                options => options.DecisionLogQuietThreshold > TimeSpan.Zero,
+                "'CrestApps:ContactCenter:Reporting:DecisionLogQuietThreshold' must be greater than zero.")
             .ValidateOnStart();
+
+        // The daily agent time summaries the time-based workforce reports read whole days from, and the roller that
+        // keeps them up to date.
+        services.AddScoped<IAgentTimeSummaryReader, AgentTimeSummaryReader>();
+        services.AddScoped<AgentTimeSummaryRoller>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentTimeSummaryBackgroundTask>());
 
         services
             .AddScoped<IReport, CallInsightsReportProvider>()
             .AddScoped<IReport, CallQualityReportProvider>()
             .AddScoped<IReport, CallHandlingReportProvider>()
             .AddScoped<IReport, AgentActivityTimelineReportProvider>()
+            .AddScoped<IReport, AgentAvailabilityReportProvider>()
             .AddScoped<IReport, ReconciledPayrollTimecardReportProvider>()
             .AddScoped<IReport, AgentProductivityReportProvider>()
             .AddScoped<IReport, QueueUsageReportProvider>()
             .AddScoped<IReport, CampaignSummaryReportProvider>()
-            .AddScoped<IReport, SubjectInventoryReportProvider>();
+            .AddScoped<IReport, DialerQueueInventoryReportProvider>()
+            .AddScoped<IReport, SubjectInventoryReportProvider>()
+            .AddScoped<IReport, DialerDecisionLogReportProvider>();
 
         services.ConfigureOptions<ConfigureContactCenterReportCatalog>();
         services.AddScoped<IReportProvider, ContactCenterReportProvider>();

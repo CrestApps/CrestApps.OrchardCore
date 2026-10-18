@@ -1,0 +1,20 @@
+@model AddressDisplayViewModel
+@inject CrestApps.OrchardCore.Addresses.Services.IAddressFormatter AddressFormatter
+@{
+    var lines = Model.Address is null
+        ? []
+        : await AddressFormatter.GetLinesAsync(Model.Address, new CrestApps.OrchardCore.Addresses.Services.AddressFormatOptions { IncludeCountry = Model.IncludeCountry });
+}
+@if (lines.Count > 0)
+{
+    <address class="address-display mb-0">
+        @for (var i = 0; i < lines.Count; i++)
+        {
+            @lines[i]
+            if (i < lines.Count - 1)
+            {
+                <br />
+            }
+        }
+    </address>
+}

@@ -27,6 +27,13 @@ public class CheckoutPaymentMethodsViewModel
     /// customer to pick one.
     /// </summary>
     public bool RequiresPayment { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the payment method is kept for later charges without the customer
+    /// present (<see cref="CheckoutSession.SavePaymentMethod"/>). The page tells the customer, and asks each provider
+    /// panel to prepare a payment method that can be reused.
+    /// </summary>
+    public bool SavePaymentMethod { get; set; }
 }
 
 /// <summary>

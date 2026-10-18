@@ -112,6 +112,21 @@ public sealed class QueueItemManager : CatalogManager<QueueItem>, IQueueItemMana
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<QueueItem>> GetOpenByAgentIdsAsync(
+        IReadOnlyCollection<string> agentIds,
+        CancellationToken cancellationToken = default)
+    {
+        var items = await _store.GetOpenByAgentIdsAsync(agentIds, cancellationToken);
+
+        foreach (var item in items)
+        {
+            await LoadAsync(item, cancellationToken);
+        }
+
+        return items;
+    }
+
+    /// <inheritdoc/>
     public async Task<QueueItem> FindLongestWaitingAsync(string queueId, CancellationToken cancellationToken = default)
     {
         var item = await _store.FindLongestWaitingAsync(queueId, cancellationToken);

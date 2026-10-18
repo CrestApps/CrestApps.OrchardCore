@@ -232,6 +232,8 @@ public sealed partial class VoiceAgentConversationLoop
         var localClock = services.GetService<ILocalClock>();
         var localNow = localClock is null ? new DateTimeOffset(clock.UtcNow) : await localClock.GetLocalNowAsync();
 
+        // The system prompt tells the review to leave DispositionId out when nothing records what happened, so the
+        // list does not ask for one regardless: told both, a model obeys the line nearest the data.
         var userPrompt = $"""
             Call transcript:
             {transcriptText}
@@ -240,7 +242,7 @@ public sealed partial class VoiceAgentConversationLoop
 
             Subject goal: {flowSettings?.SubjectGoal}
 
-            Available dispositions (choose one DispositionId): {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
+            Available dispositions (choose one DispositionId, or omit it when none records what happened): {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
             """;
 
         if (allowUpdateSubject && subject is not null && subjectTextFields.Count > 0)
@@ -303,11 +305,20 @@ public sealed partial class VoiceAgentConversationLoop
         // one whose assistant lost its session partway through: the conversation was cut short by us.
         var sessionLost = activity.TryGet<AIVoiceSessionLost>(out _);
 
+        // A call with no outcome of its own -- nobody spoke, or the review found no decision -- may find one outside the
+        // subject's own list, as the dialer does, so it is offered the whole catalog too: the subject's list is what
+        // callers ask for, and it may have no "No answer" or "hung up" at all.
+        var reviewChoseAnOffer = !string.IsNullOrWhiteSpace(result?.DispositionId) &&
+            dispositions.Any(offered => offered?.ItemId == result.DispositionId);
+        var catalog = subjectDispositionIds.Count > 0 && (!hasConversation || !reviewChoseAnOffer)
+            ? (await dispositionCatalog.GetAllAsync()).ToList()
+            : dispositions;
+
         var disposition = !hasConversation
-            ? VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType, reachedVoicemail, lineBusy)
+            ? VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType, reachedVoicemail, lineBusy, catalog)
             : sessionLost
                 ? VoiceCallConclusionPolicy.ChooseSessionLostDisposition(dispositions, allActions, activity.SubjectContentType, result?.DispositionId)
-                : VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId);
+                : VoiceCallConclusionPolicy.ChooseReviewedDisposition(dispositions, allActions, activity.SubjectContentType, result?.DispositionId, catalog);
         var dispositionId = disposition?.ItemId;
 
         // When the customer asked to be called back at a particular time, the follow-up the disposition creates is

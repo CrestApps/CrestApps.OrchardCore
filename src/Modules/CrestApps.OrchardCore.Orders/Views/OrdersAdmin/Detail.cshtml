@@ -28,6 +28,32 @@
                 <span>@T.Plural(order.ItemCount, "1 item", "{0} items")</span>
                 @await Html.PartialAsync("_OrderStatus", order.Status)
             </div>
+            @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
+            {
+                <div class="card-body py-2 small text-muted border-bottom">
+                    @switch (cancelReason)
+                    {
+                        case OrderCancelReason.Replaced:
+                            @T["Canceled {0:g}: the cart was checked out again, which made a newer order.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.PaymentFailed:
+                            @T["Canceled {0:g}: the payment was declined.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.CheckoutCanceled:
+                            @T["Canceled {0:g}: the checkout was canceled.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.CheckoutExpired:
+                            @T["Canceled {0:g}: nobody finished the checkout in time.", order.CanceledUtc]
+                            break;
+                        case OrderCancelReason.Unavailable:
+                            @T["Canceled {0:g}: an item wasn't available when the order was made, such as one out of stock.", order.CanceledUtc]
+                            break;
+                        default:
+                            @T["Canceled {0:g}: no checkout was left that could pay for it.", order.CanceledUtc]
+                            break;
+                    }
+                </div>
+            }
             <ul class="list-group list-group-flush">
                 @foreach (var line in order.Lines)
                 {
@@ -86,6 +112,16 @@
                         <dt>@T["Paid"]</dt>
                         <dd>@order.PaidUtc.Value.ToString("f")</dd>
                     }
+                    @if (order.BillingAddress is not null)
+                    {
+                        <dt>@T["Billed to"]</dt>
+                        <dd>
+                            @foreach (var line in await BillingLinesAsync(order.BillingAddress))
+                            {
+                                <div>@line</div>
+                            }
+                        </dd>
+                    }
                     @if (Model.CanManage)
                     {
                         <dt>@T["Customer"]</dt>
@@ -96,7 +132,11 @@
                             }
                             @if (!string.IsNullOrEmpty(order.CustomerEmail))
                             {
-                                <a href="mailto:@order.CustomerEmail">@order.CustomerEmail</a>
+                                <div><a href="mailto:@order.CustomerEmail">@order.CustomerEmail</a></div>
+                            }
+                            @if (!string.IsNullOrEmpty(order.CustomerPhone))
+                            {
+                                <div><a href="tel:@order.CustomerPhone">@order.CustomerPhone</a></div>
                             }
                             @if (string.IsNullOrEmpty(order.CustomerName) && string.IsNullOrEmpty(order.CustomerEmail))
                             {
@@ -114,3 +154,20 @@
         </div>
     </div>
 </div>
+
+@functions {
+    // Printed the way the address's country writes it when the Addresses feature is on, plainly otherwise.
+    private async Task<IReadOnlyList<string>> BillingLinesAsync(CrestApps.OrchardCore.Addresses.Models.Address address)
+    {
+        var formatter = Context.RequestServices.GetService(typeof(CrestApps.OrchardCore.Addresses.Services.IAddressFormatter)) as CrestApps.OrchardCore.Addresses.Services.IAddressFormatter;
+
+        if (formatter is not null)
+        {
+            return await formatter.GetLinesAsync(address);
+        }
+
+        return new[] { address.Name, address.Company, address.AddressLine1, address.AddressLine2, string.Join(" ", new[] { address.City, address.Region, address.PostalCode }.Where(part => !string.IsNullOrWhiteSpace(part))), address.Country }
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .ToArray();
+    }
+}

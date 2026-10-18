@@ -1,0 +1,9 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<PaymentAttempt>
+@inject TransactionDisplayText DisplayText
+
+<span class="badge ta-badge bg-primary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Method"]">
+    <i class="fa-solid fa-credit-card text-secondary" aria-hidden="true"></i><span class="visually-hidden">@T["Method"]</span>
+    @DisplayText.PaymentMethodName(Model.Value.ProviderKey)
+</span>

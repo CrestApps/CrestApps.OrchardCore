@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Reports;
@@ -36,6 +37,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
 
 namespace CrestApps.OrchardCore.Subscriptions;
@@ -80,9 +82,15 @@ public sealed class Startup : StartupBase
         services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
 
         services.AddSiteDisplayDriver<SubscriptionSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
         services.AddScoped<SubscriptionDisplayText>();
+
+        // The rows of the agreements report and of the customer's own plans.
+        services
+            .AddDisplayDriver<SubscriptionAgreement, SubscriptionAgreementDisplayDriver>()
+            .AddDisplayDriver<CustomerSubscription, CustomerSubscriptionDisplayDriver>();
 
         // The agreement lives in its own YesSql collection, which has to be declared here. Declaring only
         // the index leaves the collection's document table uncreated, and every read or write against it
@@ -108,6 +116,7 @@ public sealed class Startup : StartupBase
         // The gateway is authoritative for a recurring agreement, so its notifications are what keep the
         // local record honest about renewals, failures, and cancellations made outside this application.
         services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, SubscriptionPersonalDataContributor>();
 
         services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
     }
@@ -123,6 +132,7 @@ public sealed class RolesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
 
         // Roles already gate content, features, and permissions across Orchard Core, so granting one for as
         // long as a subscription is current is what makes member-only access enforceable without any of
@@ -170,6 +180,7 @@ public sealed class StripeStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
     }
 }
 
@@ -252,6 +263,11 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddSingleton<IBackgroundTask, TenantProvisioningBackgroundTask>();
         services.AddNavigationProvider<TenantProvisioningAdminMenu>();
 
+        // The rows of the site provisioning list and of the customer's own sites.
+        services
+            .AddDisplayDriver<TenantProvisioningJob, TenantProvisioningJobDisplayDriver>()
+            .AddDisplayDriver<CustomerSite, CustomerSiteDisplayDriver>();
+
         services.AddActivity<SubscribedTenantSetupSucceededEvent, SubscribedTenantSetupSucceededEventDisplayDriver>();
         services.AddActivity<SubscribedTenantFailedSetupEvent, SubscribedTenantFailedSetupEventDisplayDriver>();
     }
@@ -307,10 +323,23 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddScoped<IInstallmentPlanStore, InstallmentPlanStore>();
         services.AddScoped<IInstallmentPlanService, DefaultInstallmentPlanService>();
         services.AddScoped<ITransactionPaymentHandler, InstallmentPlanTransactionPaymentHandler>();
+        services.AddScoped<ICommercePersonalDataContributor, InstallmentPlanPersonalDataContributor>();
+
+        // The "Choose how to pay" step of a checkout that pays an outstanding transaction. The options come from the
+        // providers; the one built in offers what the settings page configures.
+        services.AddScoped<InstallmentOptionResolver>();
+        services.AddScoped<IInstallmentOptionProvider, SiteSettingsInstallmentOptionProvider>();
+        services.AddScoped<ICheckoutHandler, InstallmentOptionsCheckoutHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, InstallmentOptionsCheckoutFlowDisplayDriver>();
 
         services.AddSiteDisplayDriver<InstallmentPlanSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(SubscriptionSettingsDisplayDriver.GroupId, SubscriptionPermissions.ManageSubscriptionSettings);
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
+        services.AddDisplayDriver<InstallmentPlan, InstallmentPlanDisplayDriver>();
+
+        // Lets a role that holds only the installment plans permission open Settings > Installment Plans.
+        services.AddSiteSettingsPermission(SubscriptionConstants.InstallmentPlans.SettingsGroupId, SubscriptionPermissions.ManageInstallmentPlans);
 
         services.AddSingleton<IBackgroundTask, InstallmentPlanBackgroundTask>();
     }

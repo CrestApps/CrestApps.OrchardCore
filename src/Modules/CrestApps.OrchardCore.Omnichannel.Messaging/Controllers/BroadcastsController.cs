@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
@@ -69,10 +70,13 @@ public sealed class BroadcastsController : Controller
             .OrderByDescending(b => b.CreatedUtc)
             .ToArray();
 
+        // The admin-list tag builds a row per broadcast, in the layout (List or Grid) the site or the user picked.
         return View(new BroadcastListViewModel
         {
-            Broadcasts = broadcasts,
-            Channels = _workspaceBuilder.GetChannels().ToDictionary(channel => channel.Name, StringComparer.OrdinalIgnoreCase),
+            List = new AdminListContext<MessagingBroadcast>
+            {
+                Source = broadcasts,
+            },
         });
     }
 

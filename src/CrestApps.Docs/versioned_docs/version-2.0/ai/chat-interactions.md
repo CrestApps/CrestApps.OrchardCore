@@ -14,9 +14,7 @@ Provides ad-hoc AI chat interactions with configurable parameters without predef
 
 The screencast below enables the feature, starts a new ad-hoc chat, picks the `gpt-4.1-mini` chat deployment, and gets a real answer from the model.
 
-<video controls preload="metadata" width="100%" aria-label="Screen cast of starting a new AI chat interaction and chatting with the model">
-  <source src="/img/docs/ai-chat-interactions.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of starting a new AI chat interaction and chatting with the model" start={101} end={130} />
 
 ## Overview
 
@@ -69,9 +67,7 @@ To enable this experience:
 
 The screencast below uploads a short story PDF, waits for it to be indexed, then asks a question that can only be answered from the file. The assistant replies strictly from the document and renders the source file as a numbered citation.
 
-<video controls preload="metadata" width="100%" aria-label="Screencast of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file">
-  <source src="/img/docs/ai-chat-attachments-pdf.mp4" type="video/mp4" />
-</video>
+<YouTube video="ai-walkthroughs" title="Video of uploading a PDF to a chat interaction and receiving a grounded answer that cites the file" start={133} end={201} />
 
 ## Orchestration
 
