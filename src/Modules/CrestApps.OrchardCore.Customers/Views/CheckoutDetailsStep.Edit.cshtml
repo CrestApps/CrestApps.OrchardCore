@@ -1,0 +1,24 @@
+@using OrchardCore.DisplayManagement.Zones
+@model CheckoutDetailsViewModel
+
+@*
+    The store's own checkout fields, under the buyer's contact details. The fields come from the Checkout details
+    content type, and each renders its own editor. Only the item's field zones show: its title and Publish actions
+    belong to the admin's content editor.
+*@
+
+@{
+    var zones = ((IZoneHolding)Model.Content).Zones;
+}
+
+<style at="Head">
+    .checkout-details-step .field-wrapper { margin-bottom: 1rem; }
+    .checkout-details-step .field-wrapper > label { display: inline-block; margin-bottom: .5rem; }
+    .checkout-details-step .ocat-label-required::after { content: " *"; }
+</style>
+
+<div class="checkout-details-step mt-4">
+    <h5>@T["Order details"]</h5>
+    @await DisplayAsync(zones["Content"])
+    @await DisplayAsync(zones["Parts"])
+</div>

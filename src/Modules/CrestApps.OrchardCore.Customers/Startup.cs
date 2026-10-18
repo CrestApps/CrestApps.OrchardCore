@@ -13,6 +13,7 @@ using CrestApps.OrchardCore.Customers.Navigation;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Orders.Core;
+using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -95,6 +96,23 @@ public sealed class OrdersStartup : StartupBase
         services.AddScoped<ICustomerPrivacyHandler, OrderCustomerPrivacyHandler>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CustomerContactCheckoutFlowDisplayDriver>();
         services.AddSiteDisplayDriver<CustomerCheckoutSettingsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// The store's own checkout fields: the Checkout details content type, its editor on the Contact step, and what was
+/// entered on the order's pages.
+/// </summary>
+[Feature(CustomersConstants.Features.CheckoutDetails)]
+public sealed class CheckoutDetailsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<CheckoutDetailsMigrations>();
+        services.AddScoped<CheckoutDetailsForm>();
+        services.AddScoped<ICheckoutHandler, CheckoutDetailsCheckoutHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, CheckoutDetailsCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<Order, OrderCheckoutDetailsDisplayDriver>();
     }
 }
 
