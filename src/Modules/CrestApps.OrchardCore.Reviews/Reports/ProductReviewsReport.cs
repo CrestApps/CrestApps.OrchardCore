@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Reviews.Indexes;
 using CrestApps.OrchardCore.Reviews.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -32,15 +33,15 @@ public sealed class ProductReviewsReport : IReport
         S = stringLocalizer;
     }
 
-    public string Name => "product-reviews";
+    public static string Name => "product-reviews";
 
-    public LocalizedString DisplayName => S["Product reviews"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ProductReviewsReport>("Product reviews");
 
-    public LocalizedString Description => S["The reviews written in the period: how many wait for approval, the stars given, and each product's average rating from its approved reviews."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ProductReviewsReport>("The reviews written in the period: how many wait for approval, the stars given, and each product's average rating from its approved reviews.");
 
-    public string Category => ReportsConstants.Categories.Commerce;
+    public static string Category => ReportsConstants.Categories.Commerce;
 
-    public Permission Permission => ReviewsPermissions.ManageReviews;
+    public static Permission Permission => ReviewsPermissions.ManageReviews;
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {

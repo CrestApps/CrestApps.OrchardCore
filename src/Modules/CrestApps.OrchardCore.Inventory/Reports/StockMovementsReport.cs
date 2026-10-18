@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -37,15 +38,15 @@ public sealed class StockMovementsReport : IReport
         S = stringLocalizer;
     }
 
-    public string Name => "stock-movements";
+    public static string Name => "stock-movements";
 
-    public LocalizedString DisplayName => S["Stock movements"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<StockMovementsReport>("Stock movements");
 
-    public LocalizedString Description => S["What each item received, sold, got back and was corrected by in the period, with what is on hand now and how many days it lasts at the period's rate of sale."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<StockMovementsReport>("What each item received, sold, got back and was corrected by in the period, with what is on hand now and how many days it lasts at the period's rate of sale.");
 
-    public string Category => ReportsConstants.Categories.Commerce;
+    public static string Category => ReportsConstants.Categories.Commerce;
 
-    public Permission Permission => InventoryPermissions.ViewInventory;
+    public static Permission Permission => InventoryPermissions.ViewInventory;
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {

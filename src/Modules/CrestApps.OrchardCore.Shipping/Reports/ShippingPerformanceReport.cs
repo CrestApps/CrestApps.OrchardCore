@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Shipping.Indexes;
 using CrestApps.OrchardCore.Shipping.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -41,15 +42,15 @@ public sealed class ShippingPerformanceReport : IReport
         S = stringLocalizer;
     }
 
-    public string Name => "shipping-performance";
+    public static string Name => "shipping-performance";
 
-    public LocalizedString DisplayName => S["Shipping times"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<ShippingPerformanceReport>("Shipping times");
 
-    public LocalizedString Description => S["The shipments sent in the period: how long orders waited from payment to shipping, how long carriers took to deliver, by carrier, and the slowest shipments."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<ShippingPerformanceReport>("The shipments sent in the period: how long orders waited from payment to shipping, how long carriers took to deliver, by carrier, and the slowest shipments.");
 
-    public string Category => ReportsConstants.Categories.Commerce;
+    public static string Category => ReportsConstants.Categories.Commerce;
 
-    public Permission Permission => ShippingPermissions.FulfillOrders;
+    public static Permission Permission => ShippingPermissions.FulfillOrders;
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {

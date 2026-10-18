@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Downloads.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using YesSql;
@@ -32,15 +33,15 @@ public sealed class DownloadsReport : IReport
         S = stringLocalizer;
     }
 
-    public string Name => "digital-downloads";
+    public static string Name => "digital-downloads";
 
-    public LocalizedString DisplayName => S["Downloads"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<DownloadsReport>("Downloads");
 
-    public LocalizedString Description => S["The download links given in the period, by product: how many were used, never used, used up, expired or taken back, and the downloads made with them."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<DownloadsReport>("The download links given in the period, by product: how many were used, never used, used up, expired or taken back, and the downloads made with them.");
 
-    public string Category => ReportsConstants.Categories.Commerce;
+    public static string Category => ReportsConstants.Categories.Commerce;
 
-    public Permission Permission => DownloadsPermissions.ManageDownloads;
+    public static Permission Permission => DownloadsPermissions.ManageDownloads;
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {

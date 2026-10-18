@@ -100,16 +100,16 @@ public sealed class ReportsStartup : StartupBase
         services.AddScoped<OrderReportReader>();
         services.AddScoped<ProductCategoryNames>();
         services
-            .AddScoped<IReport, OrderSalesReport>()
-            .AddScoped<IReport, OrderCategorySalesReport>()
-            .AddScoped<IReport, OrderCustomersReport>()
-            .AddScoped<IReport, CheckoutConversionReport>()
-            .AddScoped<IReport, OrderProductSalesReport>()
-            .AddScoped<IReport, OrderCountrySalesReport>()
-            .AddScoped<IReport, OrderTaxReport>()
-            .AddScoped<IReport, OrderDiscountsReport>()
-            .AddScoped<IReport, OrderRefundsReport>()
-            .AddScoped<IReport, UnfulfilledOrdersReport>();
+            .AddReport<OrderSalesReport>()
+            .AddReport<OrderCategorySalesReport>()
+            .AddReport<OrderCustomersReport>()
+            .AddReport<CheckoutConversionReport>()
+            .AddReport<OrderProductSalesReport>()
+            .AddReport<OrderCountrySalesReport>()
+            .AddReport<OrderTaxReport>()
+            .AddReport<OrderDiscountsReport>()
+            .AddReport<OrderRefundsReport>()
+            .AddReport<UnfulfilledOrdersReport>();
     }
 }
 

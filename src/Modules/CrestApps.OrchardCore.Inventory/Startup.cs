@@ -154,7 +154,7 @@ public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IReport, StockOnHandReport>();
-        services.AddScoped<IReport, StockMovementsReport>();
+        services.AddReport<StockOnHandReport>();
+        services.AddReport<StockMovementsReport>();
     }
 }

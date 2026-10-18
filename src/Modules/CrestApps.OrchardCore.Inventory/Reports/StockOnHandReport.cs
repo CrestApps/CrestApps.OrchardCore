@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Inventory.Reports;
@@ -25,15 +26,15 @@ public sealed class StockOnHandReport : IReport
         S = stringLocalizer;
     }
 
-    public string Name => "stock-on-hand";
+    public static string Name => "stock-on-hand";
 
-    public LocalizedString DisplayName => S["Stock on hand"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<StockOnHandReport>("Stock on hand");
 
-    public LocalizedString Description => S["Every counted item with its units on hand, held for orders and available, out of stock and low first. It shows stock as it is now, whatever the period."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<StockOnHandReport>("Every counted item with its units on hand, held for orders and available, out of stock and low first. It shows stock as it is now, whatever the period.");
 
-    public string Category => ReportsConstants.Categories.Commerce;
+    public static string Category => ReportsConstants.Categories.Commerce;
 
-    public Permission Permission => InventoryPermissions.ViewInventory;
+    public static Permission Permission => InventoryPermissions.ViewInventory;
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
