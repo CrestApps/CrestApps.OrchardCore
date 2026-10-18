@@ -59,6 +59,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();
         services.AddNavigationProvider<OrdersAdminMenu>();
+        services.AddNavigationProvider<OrdersAccountMenu>();
         services.AddDisplayDriver<Order, OrderDisplayDriver>();
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();

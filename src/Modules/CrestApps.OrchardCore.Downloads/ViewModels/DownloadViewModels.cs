@@ -52,6 +52,22 @@ public class OrderDownloadViewModel
     public string Url { get; set; }
 }
 
+public class AccountDownloadsViewModel
+{
+    public List<AccountDownloadViewModel> Downloads { get; set; } = [];
+}
+
+public class AccountDownloadViewModel
+{
+    public Order Order { get; set; }
+
+    public DownloadEntitlement Entitlement { get; set; }
+
+    public DownloadProblem Problem { get; set; }
+
+    public string Url { get; set; }
+}
+
 public class DownloadSettingsViewModel
 {
     public int DownloadLimit { get; set; }

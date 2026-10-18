@@ -48,6 +48,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IUserEventHandler, CustomerMergeUserEventHandler>();
 
         services.AddScoped<CustomerAddressBook>();
+        services.AddScoped<CustomerAccountPages>();
 
         // Sample stores add their customers through a recipe. Customers are personal data, so there is no export step.
         services.AddRecipeExecutionStep<CustomersStep>();
@@ -72,6 +73,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IPermissionProvider, CustomerPermissionsProvider>();
         services.AddNavigationProvider<CustomersAdminMenu>();
+        services.AddNavigationProvider<CustomersAccountMenu>();
         services.AddDisplayDriver<Customer, CustomerDisplayDriver>();
     }
 }

@@ -140,10 +140,19 @@ public class OrderViewViewModel
     /// </summary>
     public string PayUrl { get; set; }
 
-    /// <summary>
-    /// Gets or sets the link to create an account, for a guest on a site that lets visitors register.
-    /// </summary>
     public string RegisterUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the order is shown in the signed-in customer's account, beside its menu.
+    /// </summary>
+    public bool InAccount { get; set; }
+}
+
+public class AccountOrdersViewModel
+{
+    public IReadOnlyList<Order> Orders { get; set; } = [];
+
+    public IShape Pager { get; set; }
 }
 
 public class FindOrderViewModel
