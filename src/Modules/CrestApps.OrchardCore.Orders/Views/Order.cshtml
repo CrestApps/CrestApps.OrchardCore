@@ -1,0 +1,6 @@
+@* The sections other modules add to an order's page for its buyer: the order built in Orchard Core's default
+   Detail display type, which adds no alternate, so this is the shape's own template. *@
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}

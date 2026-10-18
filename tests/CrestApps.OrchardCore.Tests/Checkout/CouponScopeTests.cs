@@ -155,7 +155,7 @@ public sealed class CouponScopeTests
             .Callback(() => redeemed++)
             .Returns(Task.CompletedTask);
 
-        var handler = new CouponRedemptionCheckoutHandler([provider.Object], NullLogger<CouponRedemptionCheckoutHandler>.Instance);
+        var handler = new CouponRedemptionCheckoutHandler([provider.Object], Mock.Of<ICouponRedemptionService>(), NullLogger<CouponRedemptionCheckoutHandler>.Instance);
 
         var settlement = CreateSettlementSession("FREE100", source: "registrations");
         settlement.Put(CreateInvoiceWithDiscount("FREE100"));
@@ -192,9 +192,8 @@ public sealed class CouponScopeTests
         return new CouponDiscountProvider(
             store.Object,
             new CouponScopeEvaluator(new ServiceCollection().BuildServiceProvider()),
-            new LocalLock(NullLogger<LocalLock>.Instance),
-            new TestClock(_now),
-            NullLogger<CouponDiscountProvider>.Instance);
+            Mock.Of<ICouponRedemptionService>(),
+            new TestClock(_now));
     }
 
     private static CheckoutDiscountContext CreateContext(CheckoutSession session)

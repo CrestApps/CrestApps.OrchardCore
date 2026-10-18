@@ -42,11 +42,11 @@ Signing in merges the guest cart into the user's cart: lines of the same product
 | --- | --- | --- |
 | `AddToCart` | The quantity, the price choice when a product has several one-time prices, and **Add to cart** | The **Actions** zone of the product's `ProductAction` display, so on listing cards and product pages |
 | `Cart` | The cart page at `/cart`, with each line, its price, a quantity box, a remove button and the subtotal | `CartController` |
-| `CartLink` | A cart link with the item count | The site's navigation bar, beside the user menu |
+| `CartLink` | A cart link with the item count | The `Navbar` shape, beside the user menu, in themes that render it (TheTheme does; TheAgencyTheme and TheBlogTheme don't) |
 
 Each shape can be overridden in Razor or Liquid. A theme hides the cart link with an empty `CartLink` template.
 
-The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
+The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. When adding redirects back to the page the buyer was on, the notification links to the cart, so a theme without a cart link still leads there. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
 
 ### Options
 
@@ -71,7 +71,7 @@ The cart page shows **Checkout** when the Orders feature is enabled. Checking ou
 3. cancels earlier unpaid orders made from the same cart, so the customer pays for what the cart holds now;
 4. starts a checkout session whose reference is the order (`CheckoutReferenceTypes.Order`) and sends the customer to it.
 
-`OrderCheckoutHandler` bills one line per order line, with its quantity, SKU, tax category, tax classification and product type, so each line is taxed as what it is. It refuses to complete a checkout that bills nothing. When the checkout completes, the order is marked **Paid** with the total and tax that were charged, and what was bought is taken out of the cart, matching each line's product, price and variant; anything added to the cart after checking out stays in it. An order replaced by a newer one is still marked paid if its own checkout completes, because that payment bought it.
+`OrderCheckoutHandler` bills one line per order line, with its quantity, SKU, tax category, tax classification and product type, so each line is taxed as what it is, and with its product and the categories it was in when ordered (`OrderLine.CategoryIds`, every taxonomy term on the product), so a coupon limited to some products or categories finds it. A canceled order gives back the coupon uses of its checkout (`ICouponRedemptionService.ReturnAsync`). It refuses to complete a checkout that bills nothing. When the checkout completes, the order is marked **Paid** with the total and tax that were charged and the discounts it was given (`Order.Discounts`, each with its code, description, amount and provider, and `Order.DiscountTotal`), so its lines, discounts, shipping and tax add up to what was paid. What was bought is taken out of the cart, matching each line's product, price and variant; anything added to the cart after checking out stays in it. An order replaced by a newer one is still marked paid if its own checkout completes, because that payment bought it.
 
 The checkout's confirmation page shows the order number.
 
@@ -79,7 +79,7 @@ The checkout's confirmation page shows the order number.
 
 **Find my order.** `GET/POST orders/find` takes an email and emails a link to each paid or awaiting-payment order placed with it in the last year (up to 10), finding them through the indexed `OrderIndex.CustomerEmail` (`OrderQuery.CustomerEmail`). The answer is the same whether or not orders exist. Posts are limited per IP and per email through `IPaymentAttemptLimiter`, and carry the `find-order` rate-limit group for the Rate Limits feature.
 
-**Order confirmations.** Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, tax, total, billing address; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings > Commerce > Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
+**Order confirmations.** Other modules add sections to the confirmation email through `IOrderEmailSectionProvider`, such as the download links of [Digital Downloads](downloads). Once a checkout completes and is committed, `OrderConfirmationCheckoutHandler` emails the paid order's confirmation to `Order.CustomerEmail` through `IEmailService`, built by `OrderConfirmationEmailBuilder` (order number, lines, discounts, shipping, tax, total, addresses; every value HTML-encoded). It sends once (`Order.ConfirmationSentUtc`), only when `OrderSettings.SendConfirmations` is on (the default, under **Settings > Commerce > Orders**, with **Manage orders**) and an email service is registered. A failed send is logged and leaves the order unconfirmed; it never undoes the paid order.
 
 Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
 
@@ -90,19 +90,66 @@ Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, 
 | Draft | Made from a cart, not yet sent to the checkout. |
 | Awaiting payment | Its checkout started and has not completed. |
 | Paid | Its checkout completed. |
-| Canceled | Ended unpaid, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired`, `Abandoned` (no checkout was left that could pay it) or `Unavailable` (an order event handler refused it, such as for want of stock). |
+| Canceled | Ended, with `CanceledUtc` and a `CancelReason`: `Replaced` (a newer order from the same cart), `PaymentFailed`, `CheckoutCanceled`, `CheckoutExpired`, `Abandoned` (no checkout was left that could pay it), `Unavailable` (an order event handler refused it, such as for want of stock) or `CanceledByStore` (from the order's page, with the store's `CancelNote`). |
+
+Money given back is tracked beside the status, so everything that checks for a paid order keeps working: `Order.Refunds` (one `OrderRefund` per refund that went through), `RefundedAmount`, and `RefundStatus`, which is `PartiallyRefunded` or `Refunded` once refunds reach the total. The order list and page show it as a badge.
 
 **Order events.** `IOrderEventHandler` (or `OrderEventHandlerBase`) hears about each order:
 
 - `CreatedAsync` runs right after `IOrderService.CreateFromCartAsync` makes the order; a handler that can't provide what it needs calls `context.Refuse(message)`. The order is then canceled as `Unavailable`, and `OrderCreationResult.Problems` carries the messages, which the cart shows.
 - `PaidAsync` runs in `OrderCheckoutHandler.CompletingAsync`, in the unit of work that marks the order paid, so a handler that throws rolls the completion back for the checkout to retry.
-- `CanceledAsync` runs when an order is canceled.
+- `CanceledAsync` runs when an order is canceled. `context.Restock` says whether what it sold goes back into stock.
+- `RefundedAsync` (a default interface method) runs after a refund is recorded on the order; `context.Restock` is true only when the store asked for it and everything is now refunded.
 
 Inventory uses them to hold, sell and release stock. The cart's checkout commits the new order before the checkout starts, and shows *Someone else is buying the same items right now* when that commit hits a concurrency conflict.
 
-**Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order, records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
+**Canceling.** Every cancellation goes through `IOrderService.CancelAsync(order, reason)`, which only cancels a draft or awaiting-payment order (a paid one only with `CanceledByStore`), records the reason and time, and calls every `IOrderEventHandler.CanceledAsync` in the same unit of work, so a module can let go of what the order held. `OrderCheckoutHandler` cancels the order when its checkout fails, is canceled or expires (the checkout's `Failed`, `Canceled` and `Expired` handler stages), unless the order has since moved to another checkout. `AbandonedOrdersBackgroundTask` runs every 15 minutes: `AbandonedOrderSweeper` looks at draft and awaiting-payment orders older than an hour and cancels those whose checkout ended, is gone or never started, up to 500 per run. A completed checkout whose order isn't paid yet is left to the checkout reconciliation sweep.
 
-An order holds lines, not money. The payment, its tax, the payment attempts and any refund belong to the checkout session the order names, and refunds are made from the payment screens.
+An order holds lines, not money. The payment, its tax, the payment attempts and any refund belong to the checkout session the order names; the order keeps a record of each refund for its page.
+
+### Managing an order
+
+A user with `ManageOrders` manages an order from its page, through `OrderOperationsService`:
+
+- **Refund** gives back an amount, or everything still refundable. Money paid online at checkout is refunded through `ICheckoutRefundService`, newest payment first; money paid later is refunded through `ITransactionCommandService.RefundAsync` on the order's Pay Later transaction. A refund waiting to be settled by hand blocks another one.
+- **Cancel** refunds everything when asked, cancels what Pay Later still has to collect (`ITransactionCommandService.CancelAsync`), cancels the order as `CanceledByStore`, lets go of an unpaid order's checkout (so its coupon use and stock go back), and with **Put the items back in stock** returns what a paid order sold (`IInventoryService.RestockAsync`).
+- **Send the confirmation again** re-sends the order confirmation (`OrderConfirmationSender`).
+- **Notes** (`Order.Notes`) are what the store writes and what happened: each refund, cancellation and resend adds an event note with who did it.
+
+Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
+
+### Reports
+
+With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports > Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
+
+| Report | Shows |
+| --- | --- |
+| Sales | Orders, items, average order value (total charged over orders), items per order, gross sales (the lines), discounts, shipping, tax, total charged, refunded and net, per currency, by day in the site's time zone (by month for periods over 62 days), with a chart. |
+| Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units, and the same by kind of product (goods, digital, services). |
+| Sales by category | Orders, units and sales per category: the taxonomy terms in `OrderLine.CategoryIds`, named from the site's published taxonomies (`ProductCategoryNames`). A line in two categories counts in both; one in none counts under *No category*. |
+| Customers | Buyers in the period, per currency: first-time (no paid order before the period) and returning, the share who have paid for more than one order, the average lifetime spend (net of refunds, up to the period's end), and the top 25 buyers. A buyer is known by their customer record, else their account, else their email. |
+| Checkouts | Order checkouts (`CheckoutSessionIndex`, reference type `Order`) started in the period by how they ended: paid, payment failed, left or expired, or still open, with the paid rate, by day or month. |
+| Sales by country | Orders, tax and total per country the orders ship to, or are billed to. |
+| Tax on orders | Tax charged and what it was charged on, by day or month. |
+| Discounts on orders | Orders that used each promotion code and what it took off. |
+| Refunds | Each refund given in the period, for orders paid up to 180 days before it. |
+| Orders to ship | Paid orders with a shipping method not shipped in full, oldest first, whatever the period. |
+
+Refunded in **Sales** is what was given back for the period's orders, whenever it was; **Refunds** lists refunds by the day they were given.
+
+Other commerce features add their own reports under **Reports > Commerce** when Reports is on:
+
+| Report | Feature | Permission | Shows |
+| --- | --- | --- | --- |
+| Shipping times | Shipping | `FulfillOrders` | Shipments sent in the period: average and median time from the order's payment to shipping, the share shipped within 2 days, delivery time for shipments marked delivered, returns, the same by carrier, and the 15 slowest. |
+| Stock on hand | Inventory | `ViewInventory` | Every counted item now, out of stock and low first. |
+| Stock movements | Inventory | `ViewInventory` | Per item, the units received, sold, returned and corrected (adjustments and counts) in the period, what is on hand now, and the days it lasts at the period's rate of sale. |
+| Downloads | Digital Downloads | `ManageDigitalDownloads` | Download links given in the period, per product and file: used, never used, downloads made, used up, expired and taken back. |
+| Product reviews | Product Reviews | `ManageProductReviews` | Reviews written in the period: waiting, approved and rejected, the stars given, verified purchases, and each product's average from its approved reviews. |
+
+### Workflow events
+
+With Workflows on, **Order Paid**, **Order Canceled** and **Order Refunded** events start workflows. Their input has `Order`, `OrderId`, `OrderNumber`, `Total`, `Currency` and `CustomerEmail`; a cancel adds `Reason` and `Note`, and a refund adds `Amount`, `Reason`, `RefundedAmount` and `FullyRefunded`. An order replaced by a newer one from the same cart doesn't start Order Canceled.
 
 ### Screens and permissions
 
@@ -125,7 +172,7 @@ Carts are the first checkout source with several products, so a `BillingItem` ca
 
 ## Not included
 
-Shipping and fulfillment, inventory, saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature.
+Saved carts, carts with recurring prices, and order editing. Customer records and address books come with the [Customers](customers) feature, stock with [Inventory](inventory), and shipping charges with [Shipping](shipping), which fills in `Order.ShippingAddress`, `Order.Shipping` and `Order.FulfillmentStatus`. Other modules add sections to the order pages through `IDisplayManager<Order>`, in the display types `OrderConstants.DisplayTypes.DetailAdmin` and `Detail`.
 
 ## Getting started
 

@@ -62,6 +62,8 @@ Click a customer to open them, change their details, and click **Save**.
 | **Display name** | How your store addresses the customer. Leave it empty to use their name, or a business's company. |
 | **Company** | Required for a business. |
 | **Tax id** | Such as a VAT number. |
+| **Exempt from tax** | For a business that pays no tax, such as a reseller or a charity you hold a certificate for. When they check out signed in, no tax is charged. Guests are always taxed. |
+| **Why they are exempt** | Such as the resale certificate number, for your records. |
 | **Email** | For a guest, the email you write to. For a customer with an account, it's the account's email and is changed on the account. |
 | **Phone** | A number to reach them. |
 | **Accepts marketing** | Tick it when the customer agreed to news and offers. Order and payment messages are always sent. |
@@ -111,7 +113,7 @@ Under **Settings > Commerce > Customers**, **Privacy** sets how long you keep gu
 | Setting | What happens | Default |
 | --- | --- | --- |
 | **Erase inactive guests after (months)** | A guest customer who hasn't bought or paid in this many months is erased, as above. | 24 |
-| **Anonymize guest orders after (months)** | A paid or canceled guest order this old loses its name, email, phone and billing address but the country and region. Orders still awaiting payment keep them until they're settled. | 12 |
+| **Anonymize guest orders after (months)** | A paid or canceled guest order this old loses its name, email, phone and billing address but the country and region, and its checkouts lose the same details, the IP address and browser details, and what was typed into the checkout steps. Orders still awaiting payment keep them until they're settled. | 12 |
 
 Enter **0** to keep the data. Customers with an account are kept while the account exists; erase them on request instead.
 

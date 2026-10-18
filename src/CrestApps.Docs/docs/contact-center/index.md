@@ -30,7 +30,7 @@ Each Contact Center capability owns both its runtime services and the administra
 
 | Capability feature | Included administration screens |
 | --- | --- |
-| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings, the **Voice Media** library, and the administration menu |
+| `CrestApps.OrchardCore.ContactCenter` | The **Voice Media** library and the administration menu. **Settings > Contact Center** appears with its first tab, from the features below |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | The **Agent states** reason-code screens |
 | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | The **Agent entitlements** screen |
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | The **Business hours** calendar screens |

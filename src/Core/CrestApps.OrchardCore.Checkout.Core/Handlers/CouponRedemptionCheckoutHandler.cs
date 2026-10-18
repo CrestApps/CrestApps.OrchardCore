@@ -16,20 +16,36 @@ namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 public sealed class CouponRedemptionCheckoutHandler : CheckoutHandlerBase
 {
     private readonly IEnumerable<ICheckoutDiscountProvider> _providers;
+    private readonly ICouponRedemptionService _redemptions;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CouponRedemptionCheckoutHandler"/> class.
     /// </summary>
     /// <param name="providers">The registered discount providers.</param>
+    /// <param name="redemptions">The coupon uses, released when a checkout ends unpaid.</param>
     /// <param name="logger">The logger.</param>
     public CouponRedemptionCheckoutHandler(
         IEnumerable<ICheckoutDiscountProvider> providers,
+        ICouponRedemptionService redemptions,
         ILogger<CouponRedemptionCheckoutHandler> logger)
     {
         _providers = providers;
+        _redemptions = redemptions;
         _logger = logger;
     }
+
+    /// <inheritdoc/>
+    public override Task CanceledAsync(CheckoutFlowCanceledContext context)
+        => _redemptions.ReleaseAsync(context.Flow.Session.SessionId);
+
+    /// <inheritdoc/>
+    public override Task FailedAsync(CheckoutFlowFailedContext context)
+        => _redemptions.ReleaseAsync(context.Flow.Session.SessionId);
+
+    /// <inheritdoc/>
+    public override Task ExpiredAsync(CheckoutFlowExpiredContext context)
+        => _redemptions.ReleaseAsync(context.Flow.Session.SessionId);
 
     /// <inheritdoc/>
     public override async Task CompletedAsync(CheckoutFlowCompletedContext context)

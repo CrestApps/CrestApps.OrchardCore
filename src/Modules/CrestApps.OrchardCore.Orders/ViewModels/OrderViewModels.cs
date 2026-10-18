@@ -64,6 +64,39 @@ public class OrderDetailViewModel
     /// Gets or sets whether the viewer manages orders, rather than looking at one of their own.
     /// </summary>
     public bool CanManage { get; set; }
+
+    /// <summary>
+    /// Gets or sets what other modules add to the order's page, such as its shipments.
+    /// </summary>
+    public IShape Sections { get; set; }
+
+    /// <summary>
+    /// Gets or sets what can still be refunded and what is still owed, for a viewer who manages orders.
+    /// </summary>
+    public CrestApps.OrchardCore.Orders.Services.OrderMoney Money { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the site can email the confirmation again.
+    /// </summary>
+    public bool CanResendConfirmation { get; set; }
+}
+
+public class OrderRefundInputModel
+{
+    public decimal? Amount { get; set; }
+
+    public string Reason { get; set; }
+
+    public bool Restock { get; set; }
+}
+
+public class OrderCancelInputModel
+{
+    public string Note { get; set; }
+
+    public bool Refund { get; set; }
+
+    public bool Restock { get; set; }
 }
 
 public class OrderConfirmationViewModel
@@ -96,6 +129,11 @@ public class OrderSettingsViewModel
 public class OrderViewViewModel
 {
     public Order Order { get; set; }
+
+    /// <summary>
+    /// Gets or sets what other modules add to the order's page, such as its shipments and their tracking links.
+    /// </summary>
+    public IShape Sections { get; set; }
 
     /// <summary>
     /// Gets or sets the link to pay what is still owed on the order, or <see langword="null"/>.

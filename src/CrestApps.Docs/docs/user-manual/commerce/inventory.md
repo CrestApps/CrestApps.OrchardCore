@@ -104,6 +104,8 @@ With **Orders** enabled, stock follows each order:
 3. **Paid:** the held units are sold. They leave **On hand**, and the history shows **Sold** with the order.
 4. **Not paid:** when the checkout is canceled, declined or abandoned, or the hold runs out, the units are released and can be bought again. A payment that arrives after the hold ran out still sells the units, even if that takes the count below zero.
 
+5. **Refunded or canceled by the store:** when you tick **Put the items back in stock** on the order, what it sold goes back **On hand**, and the history shows **Returned** with the order.
+
 Two buyers can't both get the last unit: the second is told to try again.
 
 ## Settings
@@ -121,6 +123,10 @@ Under **Settings > Commerce > Inventory**:
 A recipe can set counts with a **Stock** step, finding each item by its ids or its SKU; see the [Inventory technical manual](../../modules/inventory.md) for its format.
 
 To copy counts to another site, add the **Stock** step to a deployment plan (**Commerce** category). It exports every item with its ids and SKU. The products themselves need a content step, before the **Stock** step.
+
+## Try a sample
+
+The **Product listing: online store sample** recipe (**Configuration > Recipes**) counts every product it adds: most have 25, a few are running low, and the *Adventure Works Everyday Backpack* is sold out, so the shop shows each label.
 
 ## Related pages
 

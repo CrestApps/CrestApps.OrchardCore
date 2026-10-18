@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
-using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Transactions.Services;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Checkout.Services;
 
@@ -26,6 +26,7 @@ public sealed class CheckoutPersonalDataContributor : ICommercePersonalDataContr
     private readonly ICheckoutSessionStore _sessionStore;
     private readonly IPaymentAttemptStore _paymentAttemptStore;
     private readonly IPaymentRefundStore _paymentRefundStore;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CheckoutPersonalDataContributor"/> class.
@@ -33,14 +34,17 @@ public sealed class CheckoutPersonalDataContributor : ICommercePersonalDataContr
     /// <param name="sessionStore">The checkout session store.</param>
     /// <param name="paymentAttemptStore">The durable payment ledger.</param>
     /// <param name="paymentRefundStore">The durable refund ledger.</param>
+    /// <param name="clock">The clock the anonymization is stamped with.</param>
     public CheckoutPersonalDataContributor(
         ICheckoutSessionStore sessionStore,
         IPaymentAttemptStore paymentAttemptStore,
-        IPaymentRefundStore paymentRefundStore)
+        IPaymentRefundStore paymentRefundStore,
+        IClock clock)
     {
         _sessionStore = sessionStore;
         _paymentAttemptStore = paymentAttemptStore;
         _paymentRefundStore = paymentRefundStore;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -134,7 +138,7 @@ public sealed class CheckoutPersonalDataContributor : ICommercePersonalDataContr
 
         foreach (var session in await LoadAsync(context.Subject, cancellationToken))
         {
-            Anonymize(session, context);
+            Anonymize(session, context, _clock.UtcNow);
 
             await _sessionStore.SaveAsync(session, cancellationToken);
 
@@ -172,30 +176,13 @@ public sealed class CheckoutPersonalDataContributor : ICommercePersonalDataContr
     }
 
     /// <summary>
-    /// Removes the buyer's contact, IP address, user agent and saved steps from a session, and the person's emails and
-    /// names from anything else its property bag holds. The amounts, invoice, status and dates stay. The modification
-    /// time is left alone, so a pending session is not kept from the abandoned-checkout sweep.
+    /// Removes the owner, the buyer's contact, IP address, user agent and saved steps from a session (see
+    /// <see cref="CheckoutSession.Anonymize"/>), and the person's emails and names from anything else its property bag
+    /// holds. The amounts, invoice, status and dates stay.
     /// </summary>
-    internal static void Anonymize(CheckoutSession session, CommercePersonalDataAnonymizeContext context)
+    internal static void Anonymize(CheckoutSession session, CommercePersonalDataAnonymizeContext context, DateTime now)
     {
-        if (session.TryGet<CheckoutContactInfo>(out var contact) && contact is not null)
-        {
-            session.Put(new CheckoutContactInfo
-            {
-                DisplayName = context.ReplaceName(contact.DisplayName),
-                BillingAddress = contact.BillingAddress is null
-                    ? null
-                    : new Address
-                    {
-                        Country = contact.BillingAddress.Country,
-                        Region = contact.BillingAddress.Region,
-                    },
-            });
-        }
-
-        session.IPAddress = null;
-        session.AgentInfo = null;
-        session.SavedSteps?.Clear();
+        session.Anonymize(now, context.ReplacementText);
 
         context.Subject.ScrubJson(session.Properties, context.ReplacementText);
     }

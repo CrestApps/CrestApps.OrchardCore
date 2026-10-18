@@ -118,6 +118,9 @@ public static class CheckoutTaxContextFactory
             Kind = lineItem.TaxableKind ?? (lineItem.Plan is null ? TaxableItemKind.Physical : TaxableItemKind.Service),
             Quantity = lineItem.Quantity,
             UnitPrice = (decimal)lineItem.UnitPrice,
+
+            // A line is taxed on what the customer pays for it, after its share of the discounts.
+            DiscountAmount = lineItem.DiscountAmount,
             Currency = currency,
             TaxCategoryCode = string.IsNullOrEmpty(lineItem.TaxCategoryCode) ? profile.DefaultTaxCategoryCode : lineItem.TaxCategoryCode,
             TaxClassificationCode = string.IsNullOrEmpty(lineItem.TaxClassificationCode) ? profile.DefaultTaxClassificationCode : lineItem.TaxClassificationCode,

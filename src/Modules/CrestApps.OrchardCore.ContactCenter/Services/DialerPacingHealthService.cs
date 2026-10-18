@@ -16,6 +16,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// </remarks>
 public sealed class DialerPacingHealthService : IDialerPacingHealthService
 {
+    // Every outcome but a missed lock: the latest of these is the last time a cycle of the queue got past its pacing lock,
+    // or had no need to take it.
+    private static readonly DialerPacingCycleOutcome[] _notLockMissOutcomes = Enum.GetValues<DialerPacingCycleOutcome>()
+        .Where(outcome => outcome != DialerPacingCycleOutcome.LockNotAcquired)
+        .ToArray();
+
     private readonly IQueueItemStore _queueItemStore;
     private readonly IDialerProfileReader _profileReader;
     private readonly IDialerPacingCycleStore _cycleStore;
@@ -67,6 +73,7 @@ public sealed class DialerPacingHealthService : IDialerPacingHealthService
         var heads = await _queueItemStore.GetHeadWaitingByQueueAsync(campaignQueueIds, cancellationToken);
         var waitingCounts = await _queueItemStore.CountWaitingByQueueIdsAsync(campaignQueueIds, cancellationToken);
         var profiles = new Dictionary<string, DialerProfile>(StringComparer.Ordinal);
+        var lockStarvationThreshold = DialerPacingScheduler.GetLockStarvationThreshold(_options);
 
         foreach (var head in heads)
         {
@@ -95,6 +102,22 @@ public sealed class DialerPacingHealthService : IDialerPacingHealthService
             var waitingSinceUtc = longestWaiting?.EnqueuedUtc ?? head.EnqueuedUtc;
             var (state, silence) = DialerPacingHealthEvaluator.Evaluate(now, _options.StalledAfter, waitingSinceUtc, lastCompleted);
 
+            // A queue whose cycles all skip themselves for want of its pacing lock is named for that, whatever the last
+            // cycle that did run decided: that decision is as old as the lock trouble.
+            DateTime? lockNotAcquiredSinceUtc = null;
+
+            if (lastCycle?.Outcome == DialerPacingCycleOutcome.LockNotAcquired)
+            {
+                var lastNotLockMiss = await _cycleStore.FindLatestByQueueAsync(head.QueueId, _notLockMissOutcomes, cancellationToken);
+
+                lockNotAcquiredSinceUtc = DialerPacingHealthEvaluator.FindLockNotAcquiredSince(now, lockStarvationThreshold, lastCycle, lastNotLockMiss);
+
+                if (lockNotAcquiredSinceUtc is not null)
+                {
+                    state = DialerPacingHealthState.LockNotAcquired;
+                }
+            }
+
             snapshot.Queues.Add(new DialerPacingQueueHealth
             {
                 QueueId = head.QueueId,
@@ -106,6 +129,7 @@ public sealed class DialerPacingHealthService : IDialerPacingHealthService
                 LastCycle = lastCycle,
                 LastCompletedCycle = lastCompleted,
                 TimeWithoutCompletedCycle = silence,
+                LockNotAcquiredSinceUtc = lockNotAcquiredSinceUtc,
             });
         }
 

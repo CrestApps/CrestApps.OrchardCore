@@ -196,7 +196,7 @@ public sealed class DialerActivityReportProvider : ContactCenterReportBase, IRep
 
         var document = new ReportDocument();
 
-        document.Add(BuildStatusSection(snapshot, names));
+        document.Add(BuildStatusSection(snapshot, timeZone, names));
         document.Add(await BuildQueueSectionAsync(snapshot, cycles, routingDecisions, claims, timeZone, names, cancellationToken));
         document.Add(await BuildProfileSectionAsync(snapshot, cycles, callEvents, suppressions, timeZone, names, cancellationToken));
 
@@ -209,12 +209,13 @@ public sealed class DialerActivityReportProvider : ContactCenterReportBase, IRep
         return document;
     }
 
-    private ReportSection BuildStatusSection(DialerPacingHealthSnapshot snapshot, ReportNames names)
+    private ReportSection BuildStatusSection(DialerPacingHealthSnapshot snapshot, ReportTimeZone timeZone, ReportNames names)
     {
         var section = ReportSection.ForMetrics(S["Dialer right now"].Value,
         [
             new ReportMetric(S["State"].Value, DescribeState(snapshot.State)),
             new ReportMetric(S["Paced campaigns with work waiting"].Value, ReportFormat.Number(snapshot.Queues.Count)),
+            new ReportMetric(S["Pacing lock not acquired"].Value, ReportFormat.Number(Count(snapshot, DialerPacingHealthState.LockNotAcquired))),
             new ReportMetric(S["Stalled"].Value, ReportFormat.Number(Count(snapshot, DialerPacingHealthState.Stalled))),
             new ReportMetric(S["Idle: no agent available"].Value, ReportFormat.Number(Count(snapshot, DialerPacingHealthState.Idle))),
             new ReportMetric(S["Holding back"].Value, ReportFormat.Number(Count(snapshot, DialerPacingHealthState.HeldBack))),
@@ -223,9 +224,17 @@ public sealed class DialerActivityReportProvider : ContactCenterReportBase, IRep
             new ReportMetric(S["Stalled after"].Value, S["{0} minutes", (int)snapshot.StalledAfter.TotalMinutes].Value),
         ]);
 
+        var lockNotAcquired = snapshot.Queues.Where(queue => queue.State == DialerPacingHealthState.LockNotAcquired).ToArray();
         var stalled = snapshot.Queues.Where(queue => queue.State == DialerPacingHealthState.Stalled).ToArray();
 
-        if (stalled.Length > 0)
+        if (lockNotAcquired.Length > 0)
+        {
+            // Named before a stall: the cycles still run, and the reason they place nothing is known.
+            section.Description = S["Not being paced: the pacing lock has not been acquired since {0} ({1}), so every pacing cycle skips itself.",
+                FormatTime(lockNotAcquired.Min(queue => queue.LockNotAcquiredSinceUtc) ?? snapshot.EvaluatedUtc, timeZone),
+                string.Join(", ", lockNotAcquired.Select(queue => names.Campaign(queue.CampaignId, queue.QueueId)))].Value;
+        }
+        else if (stalled.Length > 0)
         {
             // The heartbeat warning: the one condition in this report that means pacing has stopped.
             section.Description = S["Due work is waiting but no pacing cycle has completed for {0} minutes: {1}.",
@@ -510,6 +519,7 @@ public sealed class DialerActivityReportProvider : ContactCenterReportBase, IRep
     internal string DescribeState(DialerPacingHealthState state)
         => state switch
         {
+            DialerPacingHealthState.LockNotAcquired => S["Not pacing: pacing lock not acquired"].Value,
             DialerPacingHealthState.Stalled => S["Stalled"].Value,
             DialerPacingHealthState.Idle => S["Idle: no agent available"].Value,
             DialerPacingHealthState.HeldBack => S["Holding back"].Value,

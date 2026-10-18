@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.Checkout.Core;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.ViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -25,6 +27,9 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 {
     private readonly ICouponStore _couponStore;
     private readonly CouponScopeEvaluator _scopeEvaluator;
+    private readonly ICouponRedemptionService _redemptions;
+    private readonly IPaymentAttemptLimiter _limiter;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IClock _clock;
 
@@ -35,18 +40,27 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// </summary>
     /// <param name="couponStore">The coupon catalog.</param>
     /// <param name="scopeEvaluator">The rule that limits a coupon to some sources, reference types or one customer.</param>
+    /// <param name="redemptions">The coupon uses, to refuse a code that is used up or that this customer has used enough.</param>
+    /// <param name="limiter">The limiter that throttles how fast codes can be tried.</param>
+    /// <param name="httpContextAccessor">The accessor of the current request, for the address codes are tried from.</param>
     /// <param name="invoiceBuilder">The builder that rebuilds the invoice once a code is applied or removed.</param>
     /// <param name="clock">The clock used to check the validity window.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CouponCheckoutFlowDisplayDriver(
         ICouponStore couponStore,
         CouponScopeEvaluator scopeEvaluator,
+        ICouponRedemptionService redemptions,
+        IPaymentAttemptLimiter limiter,
+        IHttpContextAccessor httpContextAccessor,
         CheckoutInvoiceBuilder invoiceBuilder,
         IClock clock,
         IStringLocalizer<CouponCheckoutFlowDisplayDriver> stringLocalizer)
     {
         _couponStore = couponStore;
         _scopeEvaluator = scopeEvaluator;
+        _redemptions = redemptions;
+        _limiter = limiter;
+        _httpContextAccessor = httpContextAccessor;
         _invoiceBuilder = invoiceBuilder;
         _clock = clock;
         S = stringLocalizer;
@@ -109,21 +123,40 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
             return await EditStepAsync(flow, context);
         }
 
+        // Codes are short enough to guess, so how fast they can be tried from one address is limited.
+        var address = _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
+
+        if (!await _limiter.AcquireAsync("coupon-code", address))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["Too many codes were tried. Wait a few minutes, then try again."]);
+
+            return await EditStepAsync(flow, context);
+        }
+
         var coupon = await _couponStore.GetByCodeAsync(code);
+        var availability = coupon is null || !coupon.IsRedeemable(_clock.UtcNow)
+            ? CouponAvailability.Unavailable
+            : await _redemptions.GetAvailabilityAsync(coupon, flow);
 
         if (coupon is null)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code is not recognized."]);
-        }
-        else if (!coupon.IsRedeemable(_clock.UtcNow))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code is no longer available."]);
         }
         else if (!await _scopeEvaluator.IsInScopeAsync(coupon, flow))
         {
             // A coupon limited to some sources, kinds of charge or one customer is refused everywhere else, here
             // where the customer can still do something about it, and again by the discount provider.
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code can't be used for this payment."]);
+        }
+        else if (availability == CouponAvailability.CustomerLimitReached)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["You have already used that code as many times as it allows."]);
+        }
+        else if (availability != CouponAvailability.Available)
+        {
+            // Used up counts the uses held by checkouts that are paying right now: if one of them is let go, the code
+            // works again.
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Code), S["That code is no longer available."]);
         }
         else
         {

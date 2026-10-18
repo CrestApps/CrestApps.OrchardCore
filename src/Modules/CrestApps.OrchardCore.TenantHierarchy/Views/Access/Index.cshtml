@@ -77,9 +77,13 @@
                                 {
                                     @T["Every {0}", labels.ChildLower]
                                 }
+                                else if (Model.Child?.Entry.DisplayName is { } childDisplayName)
+                                {
+                                    @childDisplayName
+                                }
                                 else
                                 {
-                                    @(Model.Child?.Entry.DisplayName ?? T["This {0}", labels.ChildLower].Value)
+                                    @T["This {0}", labels.ChildLower]
                                 }
                             </td>
                             <td>

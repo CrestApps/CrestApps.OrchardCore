@@ -52,8 +52,23 @@ public sealed class InventoryOrderEventHandler : OrderEventHandlerBase
     public override Task PaidAsync(OrderPaidContext context, CancellationToken cancellationToken = default)
         => _inventory.CommitAsync(context.Order.ItemId, ToRequests(context.Order), cancellationToken);
 
-    public override Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
-        => _inventory.ReleaseAsync(context.Order.ItemId, $"The order was canceled: {context.Reason}.", cancellationToken);
+    public override async Task CanceledAsync(OrderCanceledContext context, CancellationToken cancellationToken = default)
+    {
+        await _inventory.ReleaseAsync(context.Order.ItemId, $"The order was canceled: {context.Reason}.", cancellationToken);
+
+        if (context.Restock)
+        {
+            await _inventory.RestockAsync(context.Order.ItemId, S["Order {0} was canceled.", context.Order.OrderNumber], actor: null, cancellationToken);
+        }
+    }
+
+    public override async Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
+    {
+        if (context.Restock)
+        {
+            await _inventory.RestockAsync(context.Order.ItemId, S["Order {0} was refunded.", context.Order.OrderNumber], actor: null, cancellationToken);
+        }
+    }
 
     private static IEnumerable<StockRequest> ToRequests(Order order)
         => order.Lines.Select(line => new StockRequest(line.ContentItemId, line.VariantId, line.Quantity));

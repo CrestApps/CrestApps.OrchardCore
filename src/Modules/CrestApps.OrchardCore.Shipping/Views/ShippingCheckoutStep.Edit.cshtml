@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model ShippingCheckoutStepViewModel
+
+<div class="shipping-step">
+    <h5>@T["Ship to"]</h5>
+
+    @if (Model.SavedAddresses.Count > 0)
+    {
+        <div class="mb-3">
+            @foreach (var address in Model.SavedAddresses)
+            {
+                <div class="form-check">
+                    <input type="radio" class="form-check-input" asp-for="AddressId" value="@address.AddressId" id="@Html.IdFor(m => m.AddressId)_@address.AddressId" />
+                    <label class="form-check-label" for="@Html.IdFor(m => m.AddressId)_@address.AddressId">
+                        @if (!string.IsNullOrEmpty(address.Label))
+                        {
+                            <strong>@address.Label</strong>
+                            <span>—</span>
+                        }
+                        @string.Join(", ", address.Lines)
+                        @if (address.IsDefault)
+                        {
+                            <span class="badge text-bg-light border ms-1">@T["Default"]</span>
+                        }
+                    </label>
+                </div>
+            }
+            <div class="form-check">
+                <input type="radio" class="form-check-input" asp-for="AddressId" value="" id="@Html.IdFor(m => m.AddressId)_New" />
+                <label class="form-check-label" for="@Html.IdFor(m => m.AddressId)_New">@T["A new address, entered below"]</label>
+            </div>
+        </div>
+    }
+
+    @await DisplayAsync(Model.AddressEditor)
+
+    @if (Model.CanSaveAddress)
+    {
+        <div class="form-check mb-3">
+            <input asp-for="SaveAddress" type="checkbox" class="form-check-input" />
+            <label asp-for="SaveAddress" class="form-check-label">@T["Save a new address to my address book"]</label>
+        </div>
+    }
+
+    <h5 class="mt-4">@T["Shipping method"]</h5>
+    <span asp-validation-for="RateId" class="text-danger d-block mb-2"></span>
+    @if (Model.IsChoosing)
+    {
+        <p class="text-body-secondary mb-2">@T["Here are the ways to ship to this address. Choose one, then continue."]</p>
+    }
+
+    @if (Model.Rates.Count > 0)
+    {
+        <div class="list-group mb-2">
+            @foreach (var rate in Model.Rates)
+            {
+                var id = Html.IdFor(m => m.RateId) + "_" + rate.RateId.Replace(':', '_');
+
+                <label class="list-group-item d-flex gap-3 align-items-center" for="@id">
+                    <input type="radio" class="form-check-input flex-shrink-0 mt-0" asp-for="RateId" value="@rate.RateId" id="@id" />
+                    <span class="flex-grow-1">
+                        <span class="d-block">@rate.Name</span>
+                        @if (!string.IsNullOrEmpty(rate.Description))
+                        {
+                            <small class="text-muted">@rate.Description</small>
+                        }
+                    </span>
+                    <strong class="text-nowrap">@(rate.Amount == 0 ? T["Free"].Value : ProductPriceFormatter.Format(rate.Amount, Model.Currency))</strong>
+                </label>
+            }
+        </div>
+        <div class="form-text">@T["Changed the address? Continue, and the ways to ship there are shown before you go on."]</div>
+    }
+    else
+    {
+        <p class="text-muted">@T["Enter where the order goes, then continue to see the ways to ship it there."]</p>
+    }
+</div>

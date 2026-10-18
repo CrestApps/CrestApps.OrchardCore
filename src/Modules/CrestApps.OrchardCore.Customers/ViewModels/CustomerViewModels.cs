@@ -96,6 +96,10 @@ public class CustomerEditViewModel
 
     public string TaxId { get; set; }
 
+    public bool IsTaxExempt { get; set; }
+
+    public string TaxExemptionReason { get; set; }
+
     public string Email { get; set; }
 
     public string Phone { get; set; }

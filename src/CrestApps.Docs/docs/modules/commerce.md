@@ -25,6 +25,7 @@ This video walks through the commerce modules, their screens, configuration and 
 | Stripe | Stripe | The Stripe payment provider: cards, saved cards, Apple Pay and Google Pay, Connect, webhooks. | [Payments](payments) |
 | Pay Later | Pay Later | An offline "pay later" payment option that records the balance as a transaction. | [Pay Later](pay-later) |
 | Inventory | Inventory | How many units of each product and variant are on hand, with a ledger of every change and a Commerce > Inventory screen. | [Inventory](inventory) |
+| Shipping | Shipping | Shipping zones by country and region, their methods with flat, table and free rates, and product weights and shipping classes. | [Shipping](shipping) |
 | Customers | Customers | A record for everyone who buys, a person or a business, with an account or as a guest, linked to their Orchard Core user. | [Customers](customers) |
 | Transactions | Transactions, Transaction Reminders, Send Payment Receipts | The ledger of what customers owe and paid, reminders, receipts, invoices and pay links, and the **Payments** and **Refunds** consoles. | [Transactions](transactions) |
 | Receipts | Receipts | The reusable printable receipt and its branding settings. | [Receipts](receipts) |
@@ -184,7 +185,7 @@ Identification comes first because a guest checkout is owned by an id derived fr
 
 | Feature | Contributor | What it adds |
 | --- | --- | --- |
-| Checkout | `CheckoutPersonalDataContributor` | Finds checkout sessions by owner and email (`ICheckoutSessionStore.GetByCustomerAsync`), adds a guest owner per guest session, exports the sessions and the payments and refunds taken in them, and anonymizes the sessions: contact, IP address, user agent, saved steps, and the person's details anywhere else in the session's property bag. The modification time is left alone, so the abandoned-checkout sweep is unaffected. |
+| Checkout | `CheckoutPersonalDataContributor` | Finds checkout sessions by owner and email (`ICheckoutSessionStore.GetByCustomerAsync`), adds a guest owner per guest session, exports the sessions and the payments and refunds taken in them, and anonymizes the sessions with `CheckoutSession.Anonymize`: owner, contact, IP address, user agent and saved steps, then the person's details anywhere else in the session's property bag. The modification time is left alone, so the abandoned-checkout sweep is unaffected. |
 | Checkout | `CouponPersonalDataContributor` | A coupon keeps only a count, so a redemption is a coupon discount line of a completed checkout's invoice. Exports those and scrubs them. |
 | Transactions | `TransactionPersonalDataContributor` | Transactions of every owner of the person: the guest contact, the auto-collection card description, and the person's details in the title and history. Adds the creating and online-settling checkouts. |
 | Transactions (with Checkout) | `TransactionSettlementPersonalDataContributor` | Adds every checkout that paid toward the person's transactions, so a balance paid over several pay links is covered. |

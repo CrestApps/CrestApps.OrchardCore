@@ -1,0 +1,106 @@
+@model ProductReviewsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+<section id="reviews" class="product-reviews mt-5">
+    <h2 class="h4 mb-3">@T["Customer reviews"]</h2>
+
+    @if (Model.Rating.Count > 0)
+    {
+        <p>
+            <partial name="_Stars" model="Model.Rating.Average" />
+            <span class="ms-1 fw-semibold">@T["{0} out of 5", Model.Rating.Average.ToString("0.0")]</span>
+            <span class="text-muted">· @T.Plural(Model.Rating.Count, "1 review", "{0} reviews")</span>
+        </p>
+    }
+    else
+    {
+        <p class="text-muted">@T["No reviews yet."]</p>
+    }
+
+    @foreach (var review in Model.Reviews)
+    {
+        <article class="border-top py-3">
+            <div>
+                <partial name="_Stars" model="(decimal)review.Rating" />
+                @if (!string.IsNullOrEmpty(review.Title))
+                {
+                    <strong class="ms-2">@review.Title</strong>
+                }
+            </div>
+            <div class="small text-muted">
+                @review.AuthorName · @((await LocalAsync(review.CreatedUtc)).ToString("d"))
+                @if (review.VerifiedPurchase)
+                {
+                    <span class="badge text-bg-success ms-1">@T["Verified purchase"]</span>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(review.Body))
+            {
+                <p class="mt-2 mb-0" style="white-space: pre-line">@review.Body</p>
+            }
+        </article>
+    }
+
+    <div class="border-top pt-3 mt-2">
+        @if (!Model.IsSignedIn)
+        {
+            <p class="text-muted mb-0">@T["Sign in to review a product you bought."]</p>
+        }
+        else if (!Model.CanReview)
+        {
+            <p class="text-muted mb-0">@T["Only customers who bought this product can review it."]</p>
+        }
+        else
+        {
+            @if (Model.Existing is not null)
+            {
+                <p class="small text-muted">
+                    @switch (Model.Existing.Status)
+                    {
+                        case ReviewStatus.Pending:
+                            @T["Your review is waiting for approval. You can change it below."]
+                            break;
+                        case ReviewStatus.Rejected:
+                            @T["Your review wasn't approved. You can change it and send it again."]
+                            break;
+                        default:
+                            @T["You reviewed this product. Changing your review sends it for approval again."]
+                            break;
+                    }
+                </p>
+            }
+            <form asp-route-area="@ReviewsConstants.Feature" asp-controller="Reviews" asp-action="Submit" asp-route-productId="@Model.ProductId" method="post">
+                <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+                <h3 class="h6">@(Model.Existing is null ? T["Write a review"] : T["Change your review"])</h3>
+                <div class="mb-2">
+                    <label class="form-label" for="review-rating">@T["Your rating"]</label>
+                    <select id="review-rating" name="Rating" class="form-select w-auto" required>
+                        <option value="">@T["Choose"]</option>
+                        @for (var stars = 5; stars >= 1; stars--)
+                        {
+                            <option value="@stars" selected="@(Model.Existing?.Rating == stars)">@T.Plural(stars, "1 star", "{0} stars")</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" for="review-title">@T["Title"]</label>
+                    <input id="review-title" name="Title" class="form-control" maxlength="@ReviewsConstants.MaxTitleLength" value="@Model.Existing?.Title" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" for="review-body">@T["Your review"]</label>
+                    <textarea id="review-body" name="Body" class="form-control" rows="4" maxlength="@ReviewsConstants.MaxBodyLength">@Model.Existing?.Body</textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="review-author">@T["Name shown with your review"]</label>
+                    <input id="review-author" name="AuthorName" class="form-control" maxlength="80" value="@(Model.Existing?.AuthorName ?? Model.DefaultAuthorName)" />
+                </div>
+                <button type="submit" class="btn btn-primary">@T["Send review"]</button>
+            </form>
+        }
+    </div>
+</section>

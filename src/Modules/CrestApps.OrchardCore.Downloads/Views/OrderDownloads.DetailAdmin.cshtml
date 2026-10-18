@@ -1,0 +1,74 @@
+@model OrderDownloadsViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@{
+    // With the tenant's prefix: a redirect to the path alone would land on another tenant.
+    var returnUrl = Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="card mt-4">
+    <div class="card-header">@T["Downloads"]</div>
+    <ul class="list-group list-group-flush">
+        @foreach (var download in Model.Downloads)
+        {
+            var entitlement = download.Entitlement;
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between gap-3">
+                    <div>
+                        <div class="fw-semibold">@entitlement.FileName</div>
+                        <div class="small text-muted">
+                            @entitlement.ProductTitle ·
+                            @if (entitlement.DownloadLimit.HasValue)
+                            {
+                                @T["{0} of {1} downloads", entitlement.DownloadCount, entitlement.DownloadLimit.Value]
+                            }
+                            else
+                            {
+                                @T.Plural(entitlement.DownloadCount, "Downloaded once", "Downloaded {0} times")
+                            }
+                            @if (entitlement.ExpiresUtc.HasValue)
+                            {
+                                <span> · @T["works until {0:d}", await LocalAsync(entitlement.ExpiresUtc.Value)]</span>
+                            }
+                        </div>
+                        @switch (download.Problem)
+                        {
+                            case DownloadProblem.Revoked:
+                                <span class="badge text-bg-secondary">@T["Taken back"]</span> <span class="small text-muted">@entitlement.RevokeReason</span>
+                                break;
+                            case DownloadProblem.Expired:
+                                <span class="badge text-bg-warning">@T["Expired"]</span>
+                                break;
+                            case DownloadProblem.LimitReached:
+                                <span class="badge text-bg-warning">@T["All downloads used"]</span>
+                                break;
+                            default:
+                                <span class="badge text-bg-success">@T["Works"]</span>
+                                break;
+                        }
+                    </div>
+                    <div class="text-nowrap d-flex gap-2 align-items-start">
+                        @if (download.Problem == DownloadProblem.None)
+                        {
+                            <form asp-action="Revoke" asp-controller="DigitalFilesAdmin" asp-area="@DownloadsConstants.Feature" asp-route-itemId="@entitlement.ItemId" asp-route-returnUrl="@returnUrl" method="post">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take back"]</button>
+                            </form>
+                        }
+                        <form asp-action="Reset" asp-controller="DigitalFilesAdmin" asp-area="@DownloadsConstants.Feature" asp-route-itemId="@entitlement.ItemId" asp-route-returnUrl="@returnUrl" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Give downloads back"]</button>
+                        </form>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(download.Url))
+                {
+                    <div class="small mt-1"><span class="text-muted">@T["Buyer's link:"]</span> <span class="font-monospace text-break">@download.Url</span></div>
+                }
+            </li>
+        }
+    </ul>
+</div>

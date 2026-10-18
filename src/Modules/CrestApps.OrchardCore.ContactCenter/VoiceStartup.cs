@@ -29,6 +29,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
+using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -223,6 +224,7 @@ public sealed class VoiceStartup : StartupBase
             .AddResourceConfiguration<ContactCenterExternalTransferResourceConfiguration>()
             .AddSiteDisplayDriver<ContactCenterExternalTransferSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(ContactCenterConstants.Settings.GroupId, ContactCenterPermissions.ManageContactCenter);
+        services.AddNavigationProvider<ContactCenterSettingsAdminMenu>();
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

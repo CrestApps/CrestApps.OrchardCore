@@ -22,5 +22,8 @@ using OrchardCore.Modules.Manifest;
         CommerceConstants.Features.Area,
         CartConstants.Features.Carts,
         CheckoutConstants.Features.Area,
+
+        // The item selector the coupon editor picks products and categories with.
+        "CrestApps.OrchardCore.Resources",
     ]
 )]

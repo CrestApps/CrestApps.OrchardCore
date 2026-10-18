@@ -20,14 +20,18 @@ public sealed class CartController : Controller
     private readonly IShapeFactory _shapeFactory;
     private readonly INotifier _notifier;
 
+    internal readonly IHtmlLocalizer H;
+
     public CartController(
         ICartService cartService,
         IShapeFactory shapeFactory,
-        INotifier notifier)
+        INotifier notifier,
+        IHtmlLocalizer<CartController> htmlLocalizer)
     {
         _cartService = cartService;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
+        H = htmlLocalizer;
     }
 
     [HttpGet("cart", Name = CartConstants.RouteNames.Cart)]
@@ -49,7 +53,7 @@ public sealed class CartController : Controller
     [ValidateAntiForgeryToken]
     [RateLimitGroup(CartConstants.RateLimitGroup)]
     public async Task<IActionResult> Add(string contentItemId, string priceId, string variantId = null, int quantity = 1, string returnUrl = null)
-        => await RespondAsync(await _cartService.AddAsync(contentItemId, priceId, variantId, quantity, HttpContext.RequestAborted), returnUrl);
+        => await RespondAsync(await _cartService.AddAsync(contentItemId, priceId, variantId, quantity, HttpContext.RequestAborted), returnUrl, linkToCart: true);
 
     [HttpPost("cart/update", Name = CartConstants.RouteNames.Update)]
     [ValidateAntiForgeryToken]
@@ -63,7 +67,7 @@ public sealed class CartController : Controller
     public async Task<IActionResult> Remove(string lineId)
         => await RespondAsync(await _cartService.RemoveAsync(lineId, HttpContext.RequestAborted), returnUrl: null);
 
-    private async Task<IActionResult> RespondAsync(CartResult result, string returnUrl)
+    private async Task<IActionResult> RespondAsync(CartResult result, string returnUrl, bool linkToCart = false)
     {
         if (Request.Headers.Accept.Any(value => value?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true))
         {
@@ -75,7 +79,13 @@ public sealed class CartController : Controller
             });
         }
 
-        var message = new LocalizedHtmlString(result.Message?.Name ?? string.Empty, result.Message?.Value ?? string.Empty);
+        var redirectsToCart = string.IsNullOrEmpty(returnUrl) || !Url.IsLocalUrl(returnUrl);
+
+        // The message names a product, so it is encoded. Themes without a cart link in their header still let the
+        // shopper reach the cart from the notice.
+        var message = result.Succeeded && linkToCart && !redirectsToCart
+            ? H["{0} <a href=\"{1}\" class=\"alert-link text-reset text-decoration-underline\">View cart</a>", result.Message?.Value ?? string.Empty, Url.RouteUrl(CartConstants.RouteNames.Cart)]
+            : new LocalizedHtmlString(result.Message?.Name ?? string.Empty, "{0}", false, result.Message?.Value ?? string.Empty);
 
         if (result.Succeeded)
         {
@@ -86,8 +96,8 @@ public sealed class CartController : Controller
             await _notifier.ErrorAsync(message);
         }
 
-        return !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)
-            ? LocalRedirect(returnUrl)
-            : RedirectToRoute(CartConstants.RouteNames.Cart);
+        return redirectsToCart
+            ? RedirectToRoute(CartConstants.RouteNames.Cart)
+            : LocalRedirect(returnUrl);
     }
 }

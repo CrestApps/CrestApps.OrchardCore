@@ -6,6 +6,22 @@ namespace CrestApps.OrchardCore.Orders.Core;
 public static class OrderConstants
 {
     /// <summary>
+    /// The display types an order is built in for the sections other modules add to its pages.
+    /// </summary>
+    public static class DisplayTypes
+    {
+        /// <summary>
+        /// The order's admin page, also a customer's own order under My Orders.
+        /// </summary>
+        public const string DetailAdmin = "DetailAdmin";
+
+        /// <summary>
+        /// The page a guest opens from the order's link.
+        /// </summary>
+        public const string Detail = "Detail";
+    }
+
+    /// <summary>
     /// The YesSql collection orders are stored in.
     /// </summary>
     public const string CollectionName = "Orders";

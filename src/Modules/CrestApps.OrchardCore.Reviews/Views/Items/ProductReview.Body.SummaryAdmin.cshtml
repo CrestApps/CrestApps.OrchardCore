@@ -1,0 +1,10 @@
+@model ShapeViewModel<ProductReview>
+
+@if (!string.IsNullOrEmpty(Model.Value.Title))
+{
+    <strong>@Model.Value.Title</strong>
+}
+@if (!string.IsNullOrEmpty(Model.Value.Body))
+{
+    <span class="text-muted">@(Model.Value.Body.Length > 240 ? Model.Value.Body[..240] + "…" : Model.Value.Body)</span>
+}
