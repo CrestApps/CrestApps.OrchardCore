@@ -129,6 +129,17 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.Total = invoice.GrandTotal;
         order.TaxAmount = invoice.TaxAmount;
 
+        // What the discounts took off, so the order's lines, shipping, discounts and tax add up to what was paid.
+        order.Discounts = [.. (invoice.Discounts ?? [])
+            .Where(discount => discount.Amount > 0m)
+            .Select(discount => new OrderDiscount
+            {
+                Code = discount.Code,
+                Description = discount.Description,
+                Amount = discount.Amount,
+                ProviderKey = discount.ProviderKey,
+            })];
+
         // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's
         // name or email for it.
         if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutContactInfo>(session, out var contact))

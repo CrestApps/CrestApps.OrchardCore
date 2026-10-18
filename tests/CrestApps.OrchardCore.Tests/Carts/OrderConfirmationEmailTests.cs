@@ -89,6 +89,18 @@ public sealed class OrderConfirmationEmailTests
     }
 
     [Fact]
+    public async Task TheEmail_ShowsTheDiscounts()
+    {
+        var order = PaidOrder();
+        order.Discounts = [new OrderDiscount { Code = "SAVE10", Description = "10% off", Amount = 5m }];
+
+        var email = await CreateBuilder().BuildAsync(order);
+
+        Assert.Contains("Discount (SAVE10)", email.Text);
+        Assert.Matches(@"Discount \(SAVE10\)\s+-\D*5", email.Text);
+    }
+
+    [Fact]
     public async Task TheEmail_SaysHowAndWhereTheOrderShips()
     {
         var order = PaidOrder();

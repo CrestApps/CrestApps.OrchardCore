@@ -82,8 +82,10 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, CheckoutReconciliationBackgroundTask>();
 
         // The default tax service is a no-op. The Taxation integration feature replaces it with a
-        // taxation-aware implementation when the Taxation feature is enabled.
-        services.AddScoped<ICheckoutTaxService, NullCheckoutTaxService>();
+        // taxation-aware implementation when the Taxation feature is enabled. It is only a fallback: the order the
+        // two startups run in depends on which other features are on, and adding it unconditionally after the
+        // taxation-aware one would silently stop every checkout charging tax.
+        services.TryAddScoped<ICheckoutTaxService, NullCheckoutTaxService>();
 
         services.AddDataMigration<CheckoutMigrations>()
             .AddIndexProvider<CheckoutSessionIndexProvider>()

@@ -87,6 +87,13 @@
                     <span>@T["Subtotal"]</span>
                     <span>@Format(order.Subtotal)</span>
                 </div>
+                @foreach (var discount in order.Discounts ?? [])
+                {
+                    <div class="d-flex justify-content-between text-success">
+                        <span>@(string.IsNullOrEmpty(discount.Code) ? T["Discount: {0}", discount.Description] : T["Discount ({0})", discount.Code])</span>
+                        <span>&minus;@Format(discount.Amount)</span>
+                    </div>
+                }
                 @if (order.Shipping is not null)
                 {
                     <div class="d-flex justify-content-between">

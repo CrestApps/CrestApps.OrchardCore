@@ -52,6 +52,13 @@
                     }
                 </tbody>
                 <tfoot>
+                    @foreach (var discount in order.Discounts ?? [])
+                    {
+                        <tr>
+                            <th scope="row" colspan="2" class="text-end fw-normal">@(string.IsNullOrEmpty(discount.Code) ? T["Discount: {0}", discount.Description] : T["Discount ({0})", discount.Code])</th>
+                            <td class="text-end">&minus;@Format(discount.Amount)</td>
+                        </tr>
+                    }
                     @if (order.Shipping is not null)
                     {
                         <tr>

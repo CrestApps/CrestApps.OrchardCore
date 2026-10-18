@@ -65,6 +65,16 @@ public sealed class OrderConfirmationEmailBuilder
                 .Append("</tr>");
         }
 
+        foreach (var discount in order.Discounts ?? [])
+        {
+            var label = string.IsNullOrEmpty(discount.Code) ? S["Discount: {0}", discount.Description].Value : S["Discount ({0})", discount.Code].Value;
+            var amount = "-" + Money(discount.Amount);
+
+            text.AppendLine($"{label}  {amount}");
+            html.Append("<tr><td style=\"padding:4px 0\">").Append(_encoder.Encode(label)).Append("</td>")
+                .Append("<td style=\"padding:4px 0;text-align:right\">").Append(_encoder.Encode(amount)).Append("</td></tr>");
+        }
+
         if (order.Shipping is not null)
         {
             var label = S["Shipping ({0})", order.Shipping.Name].Value;

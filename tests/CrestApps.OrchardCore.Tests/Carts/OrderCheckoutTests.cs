@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Addresses.Models;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -221,6 +222,30 @@ public sealed class OrderCheckoutTests
         Assert.Equal("555-0100", order.CustomerPhone);
         Assert.Equal("Springfield", order.BillingAddress.City);
         Assert.NotSame(billing, order.BillingAddress);
+    }
+
+    [Fact]
+    public async Task CompletingTheCheckout_KeepsTheDiscounts_SoTheOrderAddsUp()
+    {
+        var cart = CreateCart(("mug", 2, 25m));
+        _carts.Carts.Add(cart);
+
+        var order = (await CreateService().CreateFromCartAsync(CreatePricing(cart), TestContext.Current.CancellationToken)).Order;
+        var session = await StartCheckoutAsync(order);
+
+        session.Put(new CheckoutInvoice
+        {
+            Currency = "USD",
+            GrandTotal = 45m,
+            LineItems = [new CheckoutLineItem { ItemId = "mug", Quantity = 2, UnitPrice = 25m }],
+            Discounts = [new DiscountLine { ProviderKey = "Coupons", Code = "SAVE10", Description = "10% off", Amount = 5m, Target = DiscountTarget.OneTime }],
+        });
+
+        await CreateHandler().CompletingAsync(new CheckoutFlowCompletingContext(new CheckoutFlow(session)));
+
+        var discount = Assert.Single(order.Discounts);
+        Assert.Equal(("SAVE10", "10% off", 5m, "Coupons"), (discount.Code, discount.Description, discount.Amount, discount.ProviderKey));
+        Assert.Equal(order.Subtotal - order.DiscountTotal, order.Total);
     }
 
     [Fact]

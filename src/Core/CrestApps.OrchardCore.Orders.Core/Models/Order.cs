@@ -52,6 +52,17 @@ public sealed class Order : CatalogItem
     /// </summary>
     public decimal? TaxAmount { get; set; }
 
+    /// <summary>
+    /// Gets or sets what the discounts took off, such as a coupon, as the checkout applied them.
+    /// </summary>
+    public List<OrderDiscount> Discounts { get; set; } = [];
+
+    /// <summary>
+    /// Gets the total of the discounts.
+    /// </summary>
+    public decimal DiscountTotal
+        => Discounts?.Sum(discount => discount.Amount) ?? 0m;
+
     public OrderStatus Status { get; set; }
 
     /// <summary>
@@ -194,6 +205,26 @@ public sealed class OrderLine
 /// <summary>
 /// Where an order is in its life.
 /// </summary>
+/// <summary>
+/// A discount an order was given, such as a coupon.
+/// </summary>
+public sealed class OrderDiscount
+{
+    /// <summary>
+    /// Gets or sets the code the buyer entered, or <see langword="null"/> for a discount without one.
+    /// </summary>
+    public string Code { get; set; }
+
+    public string Description { get; set; }
+
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the key of the discount provider that gave it, such as <c>Coupons</c>.
+    /// </summary>
+    public string ProviderKey { get; set; }
+}
+
 /// <summary>
 /// The shipping method an order was shipped by, and what it cost before tax.
 /// </summary>

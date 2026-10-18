@@ -58,16 +58,18 @@ When at least one enabled coupon has neither a usage limit nor an end date, a wa
 | **Code** | What the buyer types. Capital letters do not matter: *spring10* and *SPRING10* are the same code. Required, and two coupons cannot share a code. |
 | **Description** | Shown on the buyer's invoice, for example *Spring sale*. |
 | **Discount type** | **Percentage** takes a share off. **Fixed amount** takes a set amount off. |
-| **Percentage** | For **Percentage**: a number from 1 to 100. |
+| **Percentage** | For **Percentage**: a number from 1 to 100. It is taken off the items bought, not off shipping. |
 | **Amount** | For **Fixed amount**: how much to take off. Never more than the amount it applies to. |
 | **Currency** | For **Fixed amount**: the three-letter currency code, such as *USD*. Required for a fixed amount. The coupon takes nothing off a purchase in another currency. |
 | **Applies to** | **The one-time amount** discounts the part of the purchase that is paid once. **The first billing cycle** discounts the first payment of a subscription only; later cycles are charged in full. |
-| **Minimum amount** | Optional. Below this amount the coupon does nothing. |
+| **Minimum amount** | Optional. Below this amount the coupon does nothing. Only the items count toward it, not shipping. |
 | **Usage limit** | Optional. How many purchases can use the coupon in total. Leave blank for unlimited. |
 | **Valid from (UTC)** / **Valid until (UTC)** | Optional dates and times, in UTC, between which the coupon works. The end must come after the start. |
 | **Enabled** | Clear it to stop the coupon working without deleting it. |
 
 A use is counted when a purchase that used the coupon completes, not when the buyer applies the code.
+
+A coupon never takes anything off shipping. Its discount is shared among the items in proportion to their prices, and tax is charged on what is left of each one, so a buyer is never taxed on money the coupon took off. The order, its page and its confirmation email show the discount next to the code.
 
 ### Limit who and what a coupon is for
 

@@ -105,9 +105,14 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
         var firstCycleDiscount = Sum(invoice, DiscountTarget.FirstCycle);
 
         // Clamping each bucket separately, rather than the grand total, is what keeps a large one-time
-        // coupon from eating into a recurring charge the customer did agree to pay every month.
-        var oneTimeApplied = ClampAndApply(invoice.InitialPaymentAmount, oneTimeDiscount, currency, out var newInitial);
-        var firstCycleApplied = ClampAndApply(invoice.FirstRecurringPaymentAmount, firstCycleDiscount, currency, out var newFirstCycle);
+        // coupon from eating into a recurring charge the customer did agree to pay every month. Within a bucket a
+        // discount takes off only what it can discount: shipping, for one, stays whole.
+        var oneTimeApplied = ClampAndApply(invoice.InitialPaymentAmount, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.OneTime), oneTimeDiscount, currency, out var newInitial);
+        var firstCycleApplied = ClampAndApply(invoice.FirstRecurringPaymentAmount, CheckoutDiscountBase.GetAmount(invoice, DiscountTarget.FirstCycle), firstCycleDiscount, currency, out var newFirstCycle);
+
+        // Each line knows its share, so it is taxed on what the customer actually pays for it.
+        Allocate(invoice, DiscountTarget.OneTime, oneTimeApplied, currency);
+        Allocate(invoice, DiscountTarget.FirstCycle, firstCycleApplied, currency);
 
         invoice.InitialPaymentAmount = newInitial;
         invoice.FirstRecurringPaymentAmount = newFirstCycle;
@@ -130,7 +135,7 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
     private static decimal Sum(CheckoutInvoice invoice, DiscountTarget target)
         => invoice.Discounts.Where(discount => discount.Target == target).Sum(discount => discount.Amount);
 
-    private static decimal ClampAndApply(decimal? amount, decimal discount, string currency, out decimal? result)
+    private static decimal ClampAndApply(decimal? amount, decimal cap, decimal discount, string currency, out decimal? result)
     {
         if (amount is null || discount <= 0m)
         {
@@ -139,11 +144,44 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
             return 0m;
         }
 
-        var applied = Money.Round(Math.Min(amount.Value, discount), currency);
+        var applied = Money.Round(Math.Max(0m, Math.Min(Math.Min(amount.Value, cap), discount)), currency);
 
         result = Money.Round(amount.Value - applied, currency);
 
         return applied;
+    }
+
+    // Spreads what a bucket's discounts took off across the lines they can discount, in proportion to each line's
+    // total; the last line takes what rounding leaves, so the shares add up to the discount exactly.
+    private static void Allocate(CheckoutInvoice invoice, DiscountTarget target, decimal applied, string currency)
+    {
+        if (applied <= 0m || invoice.LineItems is not { Length: > 0 } lines)
+        {
+            return;
+        }
+
+        var eligible = lines.Where(line => CheckoutDiscountBase.IsDiscountable(line, target) && line.GetLineTotal(currency) > 0m).ToArray();
+        var total = eligible.Sum(line => line.GetLineTotal(currency));
+
+        if (total <= 0m)
+        {
+            return;
+        }
+
+        var remaining = applied;
+
+        for (var i = 0; i < eligible.Length; i++)
+        {
+            var lineTotal = eligible[i].GetLineTotal(currency);
+            var share = i == eligible.Length - 1
+                ? remaining
+                : Money.Round(applied * (lineTotal / total), currency);
+
+            share = Math.Max(0m, Math.Min(Math.Min(share, remaining), lineTotal));
+
+            eligible[i].DiscountAmount += share;
+            remaining -= share;
+        }
     }
 
     // Scales the recorded lines down proportionally when the bucket could not absorb the whole discount, so

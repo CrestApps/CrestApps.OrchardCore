@@ -71,10 +71,9 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
         var invoice = context.Invoice;
 
         // The coupon reduces whichever part of the invoice it targets, so a first-cycle offer never touches
-        // a setup fee and a one-time coupon never halves a recurring charge.
-        var baseAmount = coupon.Target == DiscountTarget.FirstCycle
-            ? invoice.FirstRecurringPaymentAmount ?? 0m
-            : invoice.InitialPaymentAmount ?? 0m;
+        // a setup fee and a one-time coupon never halves a recurring charge. Shipping is not part of it, so a
+        // percentage is taken off the items and a minimum counts only what is bought.
+        var baseAmount = CheckoutDiscountBase.GetAmount(invoice, coupon.Target);
 
         var amount = coupon.GetDiscount(baseAmount, invoice.Currency);
 
