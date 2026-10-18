@@ -1,0 +1,31 @@
+@model OrderShipmentsViewModel
+
+<div class="card mt-4 mb-3">
+    <div class="card-header">@T["Shipments"]</div>
+    <ul class="list-group list-group-flush">
+        @foreach (var shipment in Model.Shipments)
+        {
+            <li class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center gap-2">
+                    <span class="fw-semibold">@T["Shipment {0}", shipment.Number]</span>
+                    @await Html.PartialAsync("_ShipmentStatus", shipment.Status)
+                </div>
+                <div class="small">@string.Join(", ", shipment.Lines.Select(line => $"{line.Quantity} × {line.Title}"))</div>
+                @if (!string.IsNullOrEmpty(shipment.TrackingUrl))
+                {
+                    <a href="@shipment.TrackingUrl" target="_blank" rel="noopener noreferrer" class="small">
+                        @T["Track with {0}: {1}", shipment.Carrier ?? T["the carrier"].Value, shipment.TrackingNumber]
+                    </a>
+                }
+                else if (!string.IsNullOrEmpty(shipment.TrackingNumber))
+                {
+                    <div class="small text-muted">@T["{0} tracking number: {1}", shipment.Carrier ?? T["Carrier"].Value, shipment.TrackingNumber]</div>
+                }
+                @if (shipment.ShippedUtc is { } shipped)
+                {
+                    <div class="small text-muted">@T["Shipped {0:D}", shipped]</div>
+                }
+            </li>
+        }
+    </ul>
+</div>

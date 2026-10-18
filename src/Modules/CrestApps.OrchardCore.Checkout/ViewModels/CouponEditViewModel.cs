@@ -82,6 +82,34 @@ public sealed class CouponEditViewModel
     public decimal? MinimumAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the most the items may come to for the coupon to apply.
+    /// </summary>
+    public decimal? MaximumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many times one customer may use the coupon.
+    /// </summary>
+    public int? MaxRedemptionsPerCustomer { get; set; }
+
+    /// <summary>
+    /// Gets or sets what other modules add to the editor, such as the products a coupon is limited to.
+    /// </summary>
+    [BindNever]
+    public object Editor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the latest uses of the coupon.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<CouponRedemption> Redemptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how many uses checkouts hold right now.
+    /// </summary>
+    [BindNever]
+    public int HeldCount { get; set; }
+
+    /// <summary>
     /// Gets or sets the transaction sources the coupon is limited to, separated by commas, or empty for any source.
     /// </summary>
     public string Sources { get; set; }

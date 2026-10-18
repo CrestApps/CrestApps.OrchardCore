@@ -52,4 +52,10 @@ public sealed class DialerPacingQueueHealth
     /// completed cycle and the moment the longest-waiting record was queued.
     /// </summary>
     public TimeSpan TimeWithoutCompletedCycle { get; set; }
+
+    /// <summary>
+    /// Gets or sets, when every pacing cycle of the queue since then could not take its pacing lock, the last time a cycle
+    /// did or, when no record says, when the first cycle that could not did; otherwise <see langword="null"/>.
+    /// </summary>
+    public DateTime? LockNotAcquiredSinceUtc { get; set; }
 }

@@ -89,6 +89,41 @@ public sealed class Coupon : CatalogItem
     public decimal? MinimumAmount { get; set; }
 
     /// <summary>
+    /// Gets or sets the most the invoice may come to for the coupon to apply, such as a code meant for small orders,
+    /// or <see langword="null"/> for no maximum. Like the minimum, it counts the items the coupon applies to.
+    /// </summary>
+    public decimal? MaximumAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many times one customer may use the coupon, or <see langword="null"/> for no limit. A
+    /// customer is their account, or the email a guest checks out with.
+    /// </summary>
+    public int? MaxRedemptionsPerCustomer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the products the coupon is limited to (their content item ids). With
+    /// <see cref="CategoryIds"/>, a line qualifies when it is one of these products or in one of those categories.
+    /// </summary>
+    public IList<string> ProductIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the categories the coupon is limited to (taxonomy term content item ids).
+    /// </summary>
+    public IList<string> CategoryIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether the coupon is limited to some products or categories.
+    /// </summary>
+    public bool HasItemLimits
+        => ProductIds?.Count > 0 || CategoryIds?.Count > 0;
+
+    /// <summary>
+    /// Gets what the coupon takes something off: shipping for a free-shipping coupon, otherwise its <see cref="Target"/>.
+    /// </summary>
+    public DiscountTarget EffectiveTarget
+        => Kind == CouponKind.FreeShipping ? DiscountTarget.Shipping : Target;
+
+    /// <summary>
     /// Gets or sets the sources the coupon is limited to, such as the source of a transaction (for example a registration fee
     /// source). When it is empty the coupon is not limited by source; otherwise it applies only to a checkout whose
     /// <see cref="CheckoutDiscountScope.Source"/> is one of them, matched without case sensitivity.
@@ -161,18 +196,57 @@ public sealed class Coupon : CatalogItem
     }
 
     /// <summary>
-    /// Returns the amount this coupon takes off a given base, before rounding.
+    /// Returns whether an invoice line is one the coupon is for: any line, unless it is limited to some products
+    /// or categories.
+    /// </summary>
+    /// <param name="line">The invoice line.</param>
+    public bool AppliesTo(CheckoutLineItem line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+
+        if (!HasItemLimits)
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(line.ProductId) && ProductIds?.Contains(line.ProductId, StringComparer.Ordinal) == true)
+        {
+            return true;
+        }
+
+        return line.CategoryIds is { Length: > 0 } categories &&
+            CategoryIds is { Count: > 0 } &&
+            categories.Any(category => CategoryIds.Contains(category, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Returns whether the amount the coupon counts reaches its minimum and stays within its maximum.
+    /// </summary>
+    /// <param name="baseAmount">The amount the coupon counts: the items it applies to.</param>
+    public bool IsWithinSpend(decimal baseAmount)
+    {
+        if (baseAmount <= 0m)
+        {
+            return false;
+        }
+
+        if (MinimumAmount.HasValue && baseAmount < MinimumAmount.Value)
+        {
+            return false;
+        }
+
+        return !MaximumAmount.HasValue || baseAmount <= MaximumAmount.Value;
+    }
+
+    /// <summary>
+    /// Returns the amount this coupon takes off a given base, before rounding. A free-shipping coupon takes nothing
+    /// off the items; what it takes off shipping is worked out from the shipping lines.
     /// </summary>
     /// <param name="baseAmount">The amount the coupon applies to.</param>
     /// <param name="currency">The invoice currency.</param>
     public decimal GetDiscount(decimal baseAmount, string currency)
     {
-        if (baseAmount <= 0m)
-        {
-            return 0m;
-        }
-
-        if (MinimumAmount.HasValue && baseAmount < MinimumAmount.Value)
+        if (Kind == CouponKind.FreeShipping || !IsWithinSpend(baseAmount))
         {
             return 0m;
         }
@@ -209,4 +283,9 @@ public enum CouponKind
     /// A fixed amount in a specific currency.
     /// </summary>
     FixedAmount = 1,
+
+    /// <summary>
+    /// The shipping charged now, whatever it is.
+    /// </summary>
+    FreeShipping = 2,
 }

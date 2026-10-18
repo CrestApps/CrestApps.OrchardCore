@@ -1,0 +1,97 @@
+@model ShippingRatesTestViewModel
+
+@{
+    var unit = Model.WeightUnit == WeightUnit.Pound ? T["lb"] : T["kg"];
+}
+
+<zone Name="Title">
+    <breadcrumb name="ShippingRates" title="@T["Try rates"]">
+        <breadcrumb-item id="ShippingZones" action="Index" controller="ShippingZones" area="@ShippingConstants.Features.Shipping" permission="@ShippingPermissions.ManageShipping.Name">@T["Shipping"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<p class="text-muted">@T["See which zone an address falls in and what each of its methods would charge for an order, without placing one."]</p>
+
+<form asp-action="Rates" method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-4">
+            <label asp-for="Country" class="form-label">@T["Country"]</label>
+            <select asp-for="Country" asp-items="Model.Countries" class="form-select" required>
+                <option value="">@T["Choose a country"]</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Region" class="form-label">@T["Region code"]</label>
+            <input asp-for="Region" class="form-control" placeholder="@T["Such as WA"]" />
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select"></select>
+        </div>
+    </div>
+    <div class="row g-3 mt-0">
+        <div class="col-md-2">
+            <label asp-for="Subtotal" class="form-label">@T["Subtotal"]</label>
+            <input asp-for="Subtotal" type="number" min="0" step="any" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Weight" class="form-label">@T["Weight ({0})", unit]</label>
+            <input asp-for="Weight" type="number" min="0" step="any" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Items" class="form-label">@T["Items"]</label>
+            <input asp-for="Items" type="number" min="1" class="form-control" />
+        </div>
+        @if (Model.ShippingClasses.Count > 0)
+        {
+            <div class="col-md-2">
+                <label asp-for="ShippingClass" class="form-label">@T["Shipping class"]</label>
+                <select asp-for="ShippingClass" class="form-select">
+                    <option value="">@T["None"]</option>
+                    @foreach (var shippingClass in Model.ShippingClasses)
+                    {
+                        <option value="@shippingClass" selected="@(shippingClass == Model.ShippingClass)">@shippingClass</option>
+                    }
+                </select>
+            </div>
+        }
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">@T["Show rates"]</button>
+        </div>
+    </div>
+</form>
+
+@if (Model.Submitted)
+{
+    @if (Model.Zone is null)
+    {
+        <div class="alert alert-warning">@T["No zone covers this address, so it can't be shipped to. Add the country to a zone, or add a zone for the rest of the world."]</div>
+    }
+    else
+    {
+        <h5>@T["Zone: {0}", Model.Zone.Name]</h5>
+
+        @if (Model.Rates.Count == 0)
+        {
+            <div class="alert alert-warning">@T["None of the zone's methods applies to this order. Check that a method is on, in this currency, and that its table or minimum covers the order."]</div>
+        }
+        else
+        {
+            <ul class="list-group">
+                @foreach (var rate in Model.Rates)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-3">
+                        <span>
+                            @rate.Name
+                            @if (!string.IsNullOrEmpty(rate.Description))
+                            {
+                                <span class="text-muted small">@rate.Description</span>
+                            }
+                        </span>
+                        <strong>@(rate.Amount == 0 ? T["Free"].Value : $"{rate.Amount:0.00} {rate.Currency}")</strong>
+                    </li>
+                }
+            </ul>
+        }
+    }
+}

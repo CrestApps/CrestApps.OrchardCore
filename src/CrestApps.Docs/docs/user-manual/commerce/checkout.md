@@ -36,6 +36,7 @@ Which steps appear depends on what is being bought. **Payment** is always last.
 | Step | When it appears |
 | --- | --- |
 | **Contact** | Buying from the cart, when the [Customers](customers.md) feature is on. Asks who the order is for and, as your settings say, where it is billed. A signed-in buyer skips it when no billing address is asked for. See [Who the order is for](#who-the-order-is-for). |
+| **Shipping** | Buying goods from the cart, when the [Shipping](shipping.md) feature is on. Asks where the order goes and how, from the methods of the zone the address is in, with what each costs. Orders of downloads and services skip it. |
 | **Plan** | Signing up to a subscription plan. |
 | **Registration** | Signing up to a subscription while not signed in. See [Buy without an account](#buy-without-an-account). |
 | One step per content type | When a plan asks the buyer to fill in content, such as details about their organization. The step is named after the content type. |
@@ -78,7 +79,11 @@ The **Promotion code** box sits under the order summary on the **Payment** step.
 2. Click **Apply**. The page refreshes the order summary; no payment is taken.
 3. When the code takes money off, the box shows the amount, for example *USD 10.00 off applied.*, and the summary shows the new total.
 
-To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.*
+The summary lists the discount as *Discount (CODE)*. It comes off the items, never shipping, and tax is worked out on the discounted prices.
+
+To remove a code, clear the box and click **Apply**. A code that is wrong shows *That code is not recognized.*; a code that is disabled, expired, not started yet or used up shows *That code is no longer available.* A code can be accepted and still take nothing off, for example when the order is below the coupon's minimum amount; the box then shows no amount. A code limited to other payments or another customer shows *That code can't be used for this payment.* A buyer who has used a code as often as it allows one customer sees *You have already used that code as many times as it allows.* Trying many codes in a row shows *Too many codes were tried. Wait a few minutes, then try again.*
+
+If a code runs out or stops working while the buyer is paying, for example someone else took its last use, the payment does not go through. The page shows the order again without the code, with the new total, and says why, for example *The code LAST1 ran out before you paid, so it was taken off. Check your new total, then pay again.*
 
 When the buyer is paying an existing balance (a transaction, from **My Transactions** or a pay link), what the code takes off is taken off the balance: a 100% code pays it without a card, and a smaller code leaves the rest to pay. See [Coupons](coupons.md#coupons-on-a-payment-for-a-transaction).
 

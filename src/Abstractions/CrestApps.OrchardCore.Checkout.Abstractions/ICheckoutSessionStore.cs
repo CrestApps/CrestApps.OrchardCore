@@ -47,6 +47,20 @@ public interface ICheckoutSessionStore
     Task<CheckoutSession> GetByReferenceAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns every session started for the supplied reference, oldest first, whatever their status or owner. Unlike
+    /// <see cref="GetByReferenceAsync"/>, which returns only the newest, this reaches the earlier attempts too, so a
+    /// privacy handler can remove a person from all of them. This does not enforce ownership and does not run the
+    /// checkout handlers, so the sessions must not be used to resume a customer-facing flow.
+    /// </summary>
+    /// <param name="referenceType">The reference type, for example <see cref="CheckoutReferenceTypes.Order"/>.</param>
+    /// <param name="referenceId">The identifier of the referenced thing (for an order, its item id).</param>
+    /// <param name="skip">The number of matching sessions to skip.</param>
+    /// <param name="take">The maximum number of sessions to return.</param>
+    /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <returns>The matching sessions.</returns>
+    Task<IReadOnlyList<CheckoutSession>> ListByReferenceAsync(string referenceType, string referenceId, int skip, int take, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the sessions that belong to a user or whose buyer gave an email, oldest first, whatever their status.
     /// It is how a person's checkouts are found for an access or erasure request, including the guest checkouts only
     /// their email ties to them. The email is matched without case sensitivity. When both are given, a session that

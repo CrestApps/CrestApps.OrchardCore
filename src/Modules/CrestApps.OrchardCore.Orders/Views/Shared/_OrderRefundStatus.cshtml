@@ -1,0 +1,11 @@
+@model OrderRefundStatus
+
+@switch (Model)
+{
+    case OrderRefundStatus.Refunded:
+        <span class="badge text-bg-info">@T["Refunded"]</span>
+        break;
+    case OrderRefundStatus.PartiallyRefunded:
+        <span class="badge text-bg-info">@T["Partially refunded"]</span>
+        break;
+}

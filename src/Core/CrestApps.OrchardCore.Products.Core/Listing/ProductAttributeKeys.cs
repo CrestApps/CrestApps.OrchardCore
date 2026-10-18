@@ -51,6 +51,17 @@ public static class ProductAttributeKeys
     public const string InStock = "Product.InStock";
 
     /// <summary>
+    /// The product's average customer rating, from 1 to 5. Written by a module that keeps reviews, such as Product
+    /// Reviews; without one, products have no value.
+    /// </summary>
+    public const string Rating = "Product.Rating";
+
+    /// <summary>
+    /// How many customer reviews count toward <see cref="Rating"/>.
+    /// </summary>
+    public const string ReviewCount = "Product.ReviewCount";
+
+    /// <summary>
     /// Whether the key names a built-in attribute rather than a field.
     /// </summary>
     /// <param name="key">The attribute key.</param>

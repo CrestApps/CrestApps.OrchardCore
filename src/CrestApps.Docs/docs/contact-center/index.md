@@ -30,12 +30,13 @@ Each Contact Center capability owns both its runtime services and the administra
 
 | Capability feature | Included administration screens |
 | --- | --- |
-| `CrestApps.OrchardCore.ContactCenter` | Contact Center settings, the **External transfer destinations** settings tab, the **Voice Media** library, and the administration menu |
+| `CrestApps.OrchardCore.ContactCenter` | The **Voice Media** library and the administration menu. **Settings > Contact Center** appears with its first tab, from the features below |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | The **Agent states** reason-code screens |
 | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | The **Agent entitlements** screen |
 | `CrestApps.OrchardCore.ContactCenter.BusinessHours` | The **Business hours** calendar screens |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Queue, queue group, and skill screens |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Outbound dialer profile screens |
+| `CrestApps.OrchardCore.ContactCenter.Voice`, enabled with Inbound Voice, the Outbound Dialer, Voice Media, Call Recording or Supervision | The **External transfer destinations** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.Recording` | The **Recording governance** settings tab |
 | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Inbound entry-point screens |
 

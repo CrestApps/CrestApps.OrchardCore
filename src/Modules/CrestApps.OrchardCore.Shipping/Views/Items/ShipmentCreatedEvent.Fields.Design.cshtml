@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Shipping.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ShipmentCreatedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-box" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Shipment Created"])
+    </h4>
+</header>

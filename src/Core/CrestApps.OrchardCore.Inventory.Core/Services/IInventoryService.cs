@@ -44,6 +44,13 @@ public interface IInventoryService
     Task<StockReservationResult> ReleaseAsync(string orderId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Puts what an order sold back into stock, such as when it was refunded or canceled, recording a Returned movement
+    /// for each item. Putting an order back again changes nothing.
+    /// </summary>
+    /// <returns>How many units went back.</returns>
+    Task<int> RestockAsync(string orderId, string reason, StockActor actor, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lets go of holds past their expiry, and returns how many.
     /// </summary>
     Task<int> ReleaseExpiredAsync(int take, CancellationToken cancellationToken = default);

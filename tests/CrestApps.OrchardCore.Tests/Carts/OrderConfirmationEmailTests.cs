@@ -70,7 +70,9 @@ public sealed class OrderConfirmationEmailTests
         var links = new Mock<IOrderLinkService>();
         links.Setup(l => l.CreateUrlAsync(It.IsAny<Order>())).ReturnsAsync("https://store.test/orders/view/token");
 
-        return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationCheckoutHandler>.Instance);
+        var sender = new OrderConfirmationSender(_orders.Object, CreateBuilder(), links.Object, services.BuildServiceProvider(), clock.Object, NullLogger<OrderConfirmationSender>.Instance);
+
+        return new OrderConfirmationCheckoutHandler(_orders.Object, siteService.Object, sender);
     }
 
     private static CheckoutFlowCompletedContext Completed(Order order)
@@ -86,6 +88,37 @@ public sealed class OrderConfirmationEmailTests
         Assert.Contains("2 × Contoso Cap (S / Matte)", email.Text);
         Assert.Contains("1 Infinite Loop", email.Text);
         Assert.Contains("Cupertino CA 95014", email.Html);
+    }
+
+    [Fact]
+    public async Task TheEmail_ShowsTheDiscounts()
+    {
+        var order = PaidOrder();
+        order.Discounts = [new OrderDiscount { Code = "SAVE10", Description = "10% off", Amount = 5m }];
+
+        var email = await CreateBuilder().BuildAsync(order);
+
+        Assert.Contains("Discount (SAVE10)", email.Text);
+        Assert.Matches(@"Discount \(SAVE10\)\s+-\D*5", email.Text);
+    }
+
+    [Fact]
+    public async Task TheEmail_SaysHowAndWhereTheOrderShips()
+    {
+        var order = PaidOrder();
+        order.Shipping = new OrderShipping { Name = "Express", Amount = 15m };
+        order.ShippingAddress = new Address { Name = "Sam Lee", AddressLine1 = "400 Pine St", City = "Seattle", Region = "WA", PostalCode = "98101", Country = "US" };
+
+        var email = await CreateBuilder().BuildAsync(order);
+
+        Assert.Contains("Shipping (Express)", email.Text);
+        Assert.Contains("Ships to:", email.Text);
+        Assert.Contains("400 Pine St", email.Text);
+        Assert.Contains("Seattle WA 98101", email.Html);
+
+        order.Shipping.Amount = 0;
+
+        Assert.Contains("Free", (await CreateBuilder().BuildAsync(order)).Text);
     }
 
     [Fact]

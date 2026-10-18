@@ -59,6 +59,18 @@
                 <input asp-for="TaxId" class="form-control" autocomplete="off" />
                 <span class="hint">@T["Such as a VAT number. It is shown on invoices."]</span>
             </div>
+            <div class="col-md-6" data-customer-business>
+                <div class="form-check mt-md-4">
+                    <input asp-for="IsTaxExempt" type="checkbox" class="form-check-input" />
+                    <label asp-for="IsTaxExempt" class="form-check-label">@T["Exempt from tax"]</label>
+                    <span class="hint dashed">@T["The customer pays no tax when they check out signed in, such as a reseller or a charity you hold a certificate for."]</span>
+                </div>
+            </div>
+            <div class="col-md-6" data-customer-business>
+                <label asp-for="TaxExemptionReason" class="form-label">@T["Why they are exempt"]</label>
+                <input asp-for="TaxExemptionReason" class="form-control" autocomplete="off" />
+                <span class="hint">@T["Such as the resale certificate number, for your records."]</span>
+            </div>
 
             <div class="col-md-6" asp-validation-class-for="Email">
                 <label asp-for="Email" class="form-label">@T["Email"]</label>

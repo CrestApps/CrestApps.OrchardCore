@@ -1,0 +1,8 @@
+@model ShapeViewModel<ProductReview>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Rating"]">
+    <partial name="_Stars" model="(decimal)Model.Value.Rating" />
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Written"]">
+    <i class="fa-regular fa-clock text-secondary me-1" aria-hidden="true"></i>@Model.Value.CreatedUtc.ToString("g")
+</span>

@@ -32,5 +32,8 @@ jobs:
           dotnet-version: |
             10.0.x
 
+      - name: Cache NuGet packages
+        uses: ./.github/actions/cache-nuget-packages
+
       - name: Restore NuGet packages
         run: dotnet restore

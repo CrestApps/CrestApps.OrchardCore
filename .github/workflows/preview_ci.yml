@@ -36,6 +36,9 @@ jobs:
       with:
         dotnet-version: |
           10.0.x
+    - name: Cache NuGet packages
+      if: steps.check-publish.outputs.should-publish == 'true'
+      uses: ./.github/actions/cache-nuget-packages
     - name: Set build number
       if: steps.check-publish.outputs.should-publish == 'true'
       run: echo "BuildNumber=$GITHUB_RUN_NUMBER" >> $GITHUB_ENV

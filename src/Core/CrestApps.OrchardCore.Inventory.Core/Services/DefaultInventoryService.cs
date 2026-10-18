@@ -233,6 +233,48 @@ public sealed class DefaultInventoryService : IInventoryService
         return new StockReservationResult();
     }
 
+    public async Task<int> RestockAsync(string orderId, string reason, StockActor actor, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(orderId);
+
+        var now = _clock.UtcNow;
+        var returned = 0;
+
+        foreach (var reservation in (await ListReservationsAsync(orderId, cancellationToken)).Where(reservation => reservation.Status == StockReservationStatus.Committed))
+        {
+            if (await _items.FindByIdAsync(reservation.StockItemId, cancellationToken) is { } item)
+            {
+                var previous = item.Available;
+
+                item.OnHand += reservation.Quantity;
+                item.ModifiedUtc = now;
+                await UpdateAsync(item, previous, cancellationToken);
+
+                await _movements.CreateAsync(new StockMovement
+                {
+                    ItemId = UniqueId.GenerateId(),
+                    StockItemId = item.ItemId,
+                    Kind = StockMovementKind.Returned,
+                    Quantity = reservation.Quantity,
+                    OnHandAfter = item.OnHand,
+                    OrderId = orderId,
+                    Reason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim(),
+                    ActorId = actor?.Id,
+                    ActorName = actor?.Name,
+                    Utc = now,
+                }, cancellationToken);
+
+                returned += reservation.Quantity;
+            }
+
+            reservation.Status = StockReservationStatus.Returned;
+            reservation.ModifiedUtc = now;
+            await SaveReservationAsync(reservation, cancellationToken);
+        }
+
+        return returned;
+    }
+
     public async Task<int> ReleaseExpiredAsync(int take, CancellationToken cancellationToken = default)
     {
         var now = _clock.UtcNow;

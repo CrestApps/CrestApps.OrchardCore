@@ -121,6 +121,8 @@
             ["dispatchCandidate"] = T["{0} agents: {1}"].Value,
             ["dispatchWaiting"] = T["Work and available agents are both here; it is waiting for the next dispatch pass."].Value,
             ["dispatchNoAvailable"] = T["Dialable work is waiting for an available agent."].Value,
+            ["dispatchLockNotAcquired"] = T["Not being paced: its pacing lock has not been acquired since {0} ({1} ago), so every pacing cycle skips itself. Check the distributed lock."].Value,
+            ["dispatchPacingStalled"] = T["Pacing stalled: no pacing cycle has completed for {0} minutes."].Value,
             ["loadedItems"] = T["Queue items: {0} waiting, {1} reserved, {2} assigned"].Value,
             ["pacing.Paced"] = T["Paced by the system"].Value,
             ["pacing.ProfileDisabled"] = T["Not paced: the dialer profile at the head of the queue is turned off"].Value,

@@ -54,7 +54,12 @@ public sealed class TransactionDisplayDriver : DisplayDriver<Transaction>
             View("Transaction_Status_SummaryAdmin", transaction)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:5"),
-            Dynamic("Transaction_Owner_SummaryAdmin", (shape, name) => shape.OwnerName = name, ownerName)
+            Dynamic("Transaction_Owner_SummaryAdmin", (shape, name) =>
+            {
+                shape.OwnerName = name;
+
+                return ValueTask.CompletedTask;
+            }, ownerName)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Meta:5")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Owner:5"),
             View("Transaction_Source_SummaryAdmin", transaction)

@@ -22,5 +22,8 @@ public sealed class TaxationStartup : StartupBase
         services.RemoveAll<ICheckoutTaxService>();
         services.AddScoped<ICheckoutTaxService, CheckoutTaxService>();
         services.TryAddScoped<ICheckoutTaxProfileProvider, DefaultCheckoutTaxProfileProvider>();
+
+        // Where the store sells from reaches checkout tax, for taxes sourced at the origin.
+        services.AddScoped<ICheckoutTaxProfileHandler, TaxOriginCheckoutTaxProfileHandler>();
     }
 }
