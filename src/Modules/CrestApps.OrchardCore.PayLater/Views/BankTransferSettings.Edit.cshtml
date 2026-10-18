@@ -1,0 +1,32 @@
+@model BankTransferSettingsViewModel
+
+@* The Bank transfer section of Settings › Commerce › Offline payments. *@
+
+<h2 class="h5 mt-4">@T["Bank transfer"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Offer Bank transfer at checkout"]</label>
+            <span class="hint dashed">@T["The order is placed, the buyer transfers the money with the order number as the reference, and you record the payment on the order's balance when it arrives."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Instructions">
+    <label asp-for="Instructions" class="ocat-label">@T["Bank details"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Instructions" rows="5" class="form-control" maxlength="2000"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+        <span class="hint">@T["Shown at checkout, on the confirmation and on the order's page: the account name, bank, account number or IBAN, and anything else the buyer needs."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="NetTermDays">
+    <label asp-for="NetTermDays" class="ocat-label">@T["Due within (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="NetTermDays" type="number" min="0" max="365" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["When the transfer is due, which drives the reminders. Use 0 for no due date."]</span>
+    </div>
+</div>

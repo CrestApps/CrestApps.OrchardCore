@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
@@ -121,6 +122,7 @@ public sealed class PayLaterCheckoutPaymentProviderTests
         hostEnvironment.SetupGet(e => e.EnvironmentName).Returns(isProduction ? Environments.Production : Environments.Development);
 
         return new PayLaterCheckoutPaymentProvider(
+            SiteServiceFactory.Create(new CrestApps.OrchardCore.PayLater.Models.PayLaterSettings()),
             hostEnvironment.Object,
             Mock.Of<IStringLocalizer<PayLaterCheckoutPaymentProvider>>());
     }
