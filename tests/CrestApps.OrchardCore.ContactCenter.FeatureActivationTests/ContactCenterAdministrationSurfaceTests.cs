@@ -93,6 +93,12 @@ public sealed class ContactCenterAdministrationSurfaceTests
     [InlineData(
         ContactCenterConstants.Feature.InboundVoice,
         "CrestApps.OrchardCore.ContactCenter.Controllers.EntryPointsController")]
+    [InlineData(
+        ContactCenterConstants.Feature.InboundVoice,
+        "CrestApps.OrchardCore.ContactCenter.Drivers.ContactCenterExternalTransferSettingsDisplayDriver")]
+    [InlineData(
+        ContactCenterConstants.Feature.Dialer,
+        "CrestApps.OrchardCore.ContactCenter.Drivers.ContactCenterExternalTransferSettingsDisplayDriver")]
     public async Task ConfigurableCapability_RegistersItsAdministrationSurface(
         string featureId,
         string expectedSurfaceType)
