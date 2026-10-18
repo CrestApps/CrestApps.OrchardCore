@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
 using Microsoft.AspNetCore.Mvc;
@@ -8,6 +9,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.RateLimits;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Checkout.Controllers;
 
@@ -27,6 +29,7 @@ public sealed class CheckoutController : Controller
     private readonly IDisplayManager<CheckoutFlow> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
+    private readonly ISiteService _siteService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -40,6 +43,7 @@ public sealed class CheckoutController : Controller
     /// <param name="displayManager">The display manager that renders the flow's steps.</param>
     /// <param name="updateModelAccessor">The accessor supplying the current model updater.</param>
     /// <param name="notifier">The notifier used to surface checkout messages.</param>
+    /// <param name="siteService">The site service, which holds how the checkout is laid out.</param>
     /// <param name="clock">The clock used to stamp session changes.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
@@ -49,6 +53,7 @@ public sealed class CheckoutController : Controller
         IDisplayManager<CheckoutFlow> displayManager,
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
+        ISiteService siteService,
         IClock clock,
         ILogger<CheckoutController> logger,
         IHtmlLocalizer<CheckoutController> htmlLocalizer)
@@ -58,6 +63,7 @@ public sealed class CheckoutController : Controller
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
+        _siteService = siteService;
         _clock = clock;
         _logger = logger;
         H = htmlLocalizer;
@@ -82,6 +88,11 @@ public sealed class CheckoutController : Controller
         }
 
         var flow = new CheckoutFlow(session);
+
+        if (await IsOnePageAsync())
+        {
+            return View("OnePage", await BuildOnePageAsync(flow, update: false, paymentShown: false));
+        }
 
         // A customer may only jump back to a step they already completed. Letting them jump forward would
         // reach payment with earlier steps unfilled.
@@ -118,6 +129,11 @@ public sealed class CheckoutController : Controller
         }
 
         var flow = new CheckoutFlow(session);
+
+        if (await IsOnePageAsync())
+        {
+            return await OnePagePostAsync(flow, model);
+        }
 
         if (!string.IsNullOrEmpty(model.Step) && session.SavedSteps.ContainsKey(model.Step))
         {
@@ -202,6 +218,113 @@ public sealed class CheckoutController : Controller
             Title = returnInfo?.Title,
         });
     }
+
+    private async Task<bool> IsOnePageAsync()
+        => (await _siteService.GetSettingsAsync<CheckoutSettings>()).Layout == CheckoutLayout.OnePage;
+
+    // A one-page checkout saves every section it showed at once. Payment itself is taken by the payment script, so a
+    // post here either saves the details and shows the page again, or, with payment already showing and nothing to
+    // pay with a gateway, completes the checkout as the last step of the stepped layout does.
+    private async Task<IActionResult> OnePagePostAsync(CheckoutFlow flow, CheckoutViewModel model)
+    {
+        var session = (CheckoutSession)flow.Session;
+        var paymentShown = string.Equals(model.Step, CheckoutConstants.PaymentStepKey, StringComparison.Ordinal);
+        var page = await BuildOnePageAsync(flow, update: true, paymentShown);
+
+        if (!_updateModelAccessor.ModelUpdater.ModelState.IsValid)
+        {
+            page.NeedsUpdate = page.ShowsPayment;
+
+            return View("OnePage", page);
+        }
+
+        session.ModifiedUtc = _clock.UtcNow;
+
+        var action = Request.Form[CheckoutConstants.FormActions.FieldName].ToString();
+        var completes = paymentShown && string.IsNullOrEmpty(action) && IsReadyToPay(flow);
+
+        if (completes)
+        {
+            flow.SetCurrentStep(CheckoutConstants.PaymentStepKey);
+        }
+
+        await _sessionStore.SaveAsync(session);
+
+        if (completes)
+        {
+            return await CompleteAsync(session.SessionId);
+        }
+
+        // The page is shown again from a fresh request, so a reload doesn't post the form a second time.
+        return RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });
+    }
+
+    // Builds a section per step, in order. The details are always on the page; payment joins them once every step
+    // before it is complete, so the total it takes is the one the buyer sees.
+    private async Task<CheckoutOnePageViewModel> BuildOnePageAsync(CheckoutFlow flow, bool update, bool paymentShown)
+    {
+        var session = flow.Session;
+        var updater = _updateModelAccessor.ModelUpdater;
+        var page = new CheckoutOnePageViewModel
+        {
+            SessionId = session.SessionId,
+            Flow = flow,
+        };
+
+        foreach (var step in flow.GetSortedSteps())
+        {
+            if (IsPayment(step))
+            {
+                continue;
+            }
+
+            flow.SetCurrentStep(step.Key);
+
+            page.Sections.Add(new CheckoutOnePageSection
+            {
+                Step = step,
+                Shape = update
+                    ? await _displayManager.UpdateEditorAsync(flow, updater, isNew: false)
+                    : await _displayManager.BuildEditorAsync(flow, updater, isNew: false),
+            });
+        }
+
+        var payment = flow.GetSortedSteps().FirstOrDefault(IsPayment);
+
+        // A promotion code is applied from the payment section, so a post from a page that showed it saves it too.
+        if (payment is not null && (paymentShown || (!update && IsReadyToPay(flow))))
+        {
+            flow.SetCurrentStep(payment.Key);
+
+            page.Sections.Add(new CheckoutOnePageSection
+            {
+                Step = payment,
+                IsPayment = true,
+                Shape = update
+                    ? await _displayManager.UpdateEditorAsync(flow, updater, isNew: false)
+                    : await _displayManager.BuildEditorAsync(flow, updater, isNew: false),
+            });
+
+            page.ShowsPayment = true;
+        }
+        else if (FirstUnsavedStep(flow) is { } unsaved)
+        {
+            flow.SetCurrentStep(unsaved.Key);
+        }
+
+        page.Aside = page.Sections.LastOrDefault()?.Shape;
+
+        return page;
+    }
+
+    private static bool IsReadyToPay(CheckoutFlow flow)
+        => FirstUnsavedStep(flow) is null;
+
+    private static CheckoutFlowStep FirstUnsavedStep(CheckoutFlow flow)
+        => flow.GetSortedSteps().FirstOrDefault(step => !IsPayment(step) && step.CollectData && !flow.Session.SavedSteps.ContainsKey(step.Key));
+
+    private static bool IsPayment(CheckoutFlowStep step)
+        => string.Equals(step.Key, CheckoutConstants.PaymentStepKey, StringComparison.Ordinal);
 
     // A checkout that is no longer live is either finished, which has its own page, or over without being paid. The
     // second still gets a page rather than a 404: the customer followed a link to it, and the page is where they find
