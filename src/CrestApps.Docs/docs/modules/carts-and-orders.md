@@ -46,6 +46,8 @@ Signing in merges the guest cart into the user's cart: lines of the same product
 
 Each shape can be overridden in Razor or Liquid. A theme hides the cart link with an empty `CartLink` template.
 
+`CartLink` also renders the **mini cart**, a Bootstrap offcanvas loaded from `GET cart/mini` (the `MiniCart` partial, route name `CartMini`). With Bootstrap's offcanvas and `fetch` available, it posts the `form.product-add-to-cart` forms on the page and its own remove forms with `Accept: application/json`, updates the count and opens the panel; without them the link and the forms work as plain links and posts.
+
 The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. When adding redirects back to the page the buyer was on, the notification links to the cart, so a theme without a cart link still leads there. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
 
 ### Options
@@ -83,6 +85,12 @@ The checkout's confirmation page shows the order number.
 
 Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
 
+### Accounts, recovery and the storefront account
+
+- **Account from the confirmation.** `OrderConfirmationDisplayDriver` gives a guest's confirmation an `OrderAccountClaims` token (data protection, two hours, one order) when registration is open and the order has an email. `POST orders/create-account` (`OrderCreateAccount`) makes the user from the order's email, honouring `RegistrationOptions.UsersMustValidateEmail` and `UsersAreModerated`, sets `Order.UserId`, signs in and redirects to the account's order page. It is rate limited and refuses an email that already has an account.
+- **Recovery emails.** `CheckoutRecoveryBackgroundTask` (every 15 minutes) runs `CheckoutRecoveryService.SendDueAsync` when `OrderSettings.SendRecoveryEmails` is on. An order is due when it awaits payment untouched, or was canceled because the buyer left (`CheckoutCanceled`, `CheckoutExpired`, `Abandoned` or `PaymentFailed`), longer ago than `RecoveryDelayHours` and within a week, has lines, has no `RecoveryEmailSentUtc`, and no paid order with the same email came after it. The email comes from the order, or from the checkout's `CheckoutContactInfo` for an order not yet paid. `CheckoutRecoveryLinks` signs the link (`orders/resume/{token}`, route `OrderResume`, fourteen days) from the site's base URL; the link resumes a pending checkout or rebuilds the cart.
+- **Account pages.** `account/orders` (`AccountOrders`) and `account/orders/{orderId}` (`AccountOrder`) list and show the signed-in user's orders through the same order shapes as the guest view (`OrderConstants.DisplayTypes.Detail`). An order of another user is not found.
+
 ### Order statuses
 
 | Status | Meaning |
@@ -118,6 +126,12 @@ A user with `ManageOrders` manages an order from its page, through `OrderOperati
 
 Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
 
+### Disputes and fraud rating
+
+`OrderDisputeRecorder`, an `IPaymentEvent`, finds the order a gateway's dispute is about (the attempt with that `ProviderReference`, through `PaymentAttemptQuery.ProviderReference`, then its checkout) and keeps each dispute on `Order.Disputes` (`OrderDispute`: reference, gateway, amount, reason, status, `IsClosed`), with an event note for each change; a repeated webhook changes nothing. `Order.HasOpenDispute` drives the **Disputed** badge in the orders list, and `OrderDisputesDisplayDriver` shows each dispute on the store's order page.
+
+`OrderPaymentRiskCheckoutHandler` keeps the riskiest rating of a paid order's payments on `Order.PaymentRisk` (`OrderPaymentRisk`: level, score, gateway); `IsElevated` drives a warning on the order's page and a **Risky** badge in the list (`OrderPaymentRiskDisplayDriver`).
+
 ### Reports
 
 With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports > Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
@@ -133,6 +147,7 @@ With the [Reports](reports) feature on, the Orders feature adds these reports un
 | Tax on orders | Tax charged and what it was charged on, by day or month. |
 | Discounts on orders | Orders that used each promotion code and what it took off. |
 | Refunds | Each refund given in the period, for orders paid up to 180 days before it. |
+| Disputes | The disputes opened in the period, open ones first, with why, their status and the amount, for orders paid up to 180 days before it (`OrderDisputesReport`). |
 | Orders to ship | Paid orders with a shipping method not shipped in full, oldest first, whatever the period. |
 
 Refunded in **Sales** is what was given back for the period's orders, whenever it was; **Refunds** lists refunds by the day they were given.

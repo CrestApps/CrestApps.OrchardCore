@@ -42,6 +42,7 @@ Gateways translate their webhooks into a normalized event stream through **`IPay
 | `PaymentCanceledAsync` | A payment is canceled at the gateway. Carries the cancellation reason. |
 | `PaymentRefundedAsync` | A refund is observed at the gateway — including one issued out-of-band from the provider dashboard — so the durable refund ledger can be reconciled. |
 | `PaymentDisputeCreatedAsync` | A dispute or chargeback is opened against a settled payment. |
+| `PaymentDisputeUpdatedAsync` | A dispute changes: its evidence goes under review, or it is won or lost (`IsClosed`). A default interface method, so existing implementers are unaffected. |
 | `SubscriptionPaymentFailedAsync` | A **renewal** of an existing subscription fails, so the subscription can be moved to past due and dunning can start. This is deliberately separate from `PaymentFailedAsync`: a one-time payment failing means a purchase did not happen, while a renewal failing puts an already-paid subscription at risk, which is a different decision made by a different consumer. |
 | `SubscriptionStatusChangedAsync` | The gateway reports a new lifecycle state for a hosted subscription, including a cancellation made outside the application. Carries the provider-neutral `RemoteSubscriptionStatus`, the paid-through date, and whether the cancellation takes effect at the end of the period. |
 
@@ -262,6 +263,19 @@ for through the provider-neutral `CheckoutPaymentDataKeys` on an ordinary checko
   cardholder declines with `authentication_required`, and that payment has to be made by the customer. A network
   failure is not a decline, so it is retried without counting against the card. Only server code sets these keys:
   the down payment page strips them from anything the browser sends.
+
+### Saved cards for the buyer's own purchases
+
+A signed-in buyer paying for a one-time purchase can keep the card and pay with it later. **`IStripeWalletService`** keeps one Stripe customer per user (stored on the user, created with `wallet_user_id` in its metadata) and lists that customer's cards live from Stripe. The payment panel lists them and offers **Save this card for next time**; the begin call then carries one of two Stripe provider data keys:
+
+- **`savedCardId`** (`StripeCheckoutPaymentProvider.SavedCardDataKey`) — the PaymentIntent is created on the buyer's customer with that card, after checking it is one of theirs; a guest's request, or a card that isn't theirs, is refused.
+- **`rememberCard`** with **`paymentMethodId`** — the card the browser tokenized is attached to the buyer's customer with `setup_future_usage = on_session` (`CreateCheckoutPaymentIntentRequest.SaveForOnSessionUse`). A guest's request pays without keeping the card.
+
+Either way the buyer confirms with Stripe.js as usual. `account/payment-methods` (`AccountPaymentMethods`) lists the cards in the storefront account and detaches one, again only after checking it is the buyer's. The personal data contributor redacts wallet customers like the ones the checkout creates.
+
+### Disputes and fraud rating
+
+The webhook translates `charge.dispute.created`, `charge.dispute.updated` and `charge.dispute.closed` into `PaymentDisputeCreatedAsync` and `PaymentDisputeUpdatedAsync`; the Orders feature records them on the order (see [Carts and Orders](carts-and-orders#disputes-and-fraud-rating)). Verifying a PaymentIntent expands its latest charge and reports Radar's `outcome.risk_level` and `risk_score` as `PaymentVerificationResult.RiskLevel` and `RiskScore`, which the reconciliation keeps on the attempt.
 
 ### Apple Pay and Google Pay
 

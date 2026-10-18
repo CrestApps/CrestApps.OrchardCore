@@ -1,3 +1,4 @@
+using Moq;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -336,11 +337,16 @@ public sealed class PayLaterTransactionCheckoutHandlerTests
         var attemptStore = new InMemoryPaymentAttemptStore(attempts);
         var manager = TransactionManagerFactory.Create(store);
         var siteService = SiteServiceFactory.Create(new PayLaterSettings { NetTermDays = netTermDays });
+        var provider = new PayLaterCheckoutPaymentProvider(
+            siteService,
+            Mock.Of<Microsoft.Extensions.Hosting.IHostEnvironment>(environment => environment.EnvironmentName == "Development"),
+            new PassThroughStringLocalizer<PayLaterCheckoutPaymentProvider>());
 
         return new PayLaterTransactionCheckoutHandler(
             attemptStore,
             manager,
-            siteService,
+            [provider],
+            [],
             new TestClock(_now),
             NullLogger<PayLaterTransactionCheckoutHandler>.Instance,
             new PassThroughStringLocalizer<PayLaterTransactionCheckoutHandler>());

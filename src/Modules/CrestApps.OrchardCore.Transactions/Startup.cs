@@ -59,6 +59,7 @@ public sealed class Startup : StartupBase
 
         services
             .AddNavigationProvider<TransactionsAdminMenu>()
+            .AddNavigationProvider<TransactionsAccountMenu>()
             .AddPermissionProvider<TransactionsPermissionProvider>();
 
         services.AddScoped<ITransactionPayLinkService, TransactionPayLinkService>();

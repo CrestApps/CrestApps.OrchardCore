@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Stripe.Core;
+using CrestApps.OrchardCore.Stripe.Services;
 using CrestApps.OrchardCore.Stripe.ViewModels;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
@@ -20,17 +21,22 @@ namespace CrestApps.OrchardCore.Stripe.Drivers;
 public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<CheckoutFlowPaymentMethod>
 {
     private readonly StripeOptions _stripeOptions;
+    private readonly IStripeWalletService _walletService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StripeCheckoutPaymentMethodDisplayDriver"/> class.
     /// </summary>
     /// <param name="stripeOptions">The resolved Stripe options for the tenant.</param>
-    public StripeCheckoutPaymentMethodDisplayDriver(IOptions<StripeOptions> stripeOptions)
-        => _stripeOptions = stripeOptions.Value;
+    /// <param name="walletService">The signed-in buyer's saved cards.</param>
+    public StripeCheckoutPaymentMethodDisplayDriver(IOptions<StripeOptions> stripeOptions, IStripeWalletService walletService)
+    {
+        _stripeOptions = stripeOptions.Value;
+        _walletService = walletService;
+    }
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(CheckoutFlowPaymentMethod method, BuildEditorContext context)
-        => Initialize<StripeCheckoutPaymentMethodViewModel>("StripeCheckoutPaymentMethod", model =>
+        => Initialize<StripeCheckoutPaymentMethodViewModel>("StripeCheckoutPaymentMethod", async model =>
         {
             model.SessionId = method.Flow.Session.SessionId;
             model.PublishableKey = _stripeOptions.PublishableKey;
@@ -50,6 +56,17 @@ public sealed class StripeCheckoutPaymentMethodDisplayDriver : DisplayDriver<Che
                     model.WalletAmount = StripeCurrency.ToMinorUnits(invoice.GrandTotal, currency);
                     model.WalletCurrency = currency.ToLowerInvariant();
                 }
+            }
+
+            // A signed-in buyer paying for a one-time purchase can keep the card, or pay with one they kept. A
+            // subscription or installments keep their card for later charges on their own terms.
+            var ownerId = method.Flow?.Session?.OwnerId;
+
+            model.CanUseSavedCards = !string.IsNullOrEmpty(ownerId) && !model.HasRecurringItems && !model.SavePaymentMethod;
+
+            if (model.CanUseSavedCards && !string.IsNullOrEmpty(_stripeOptions.PublishableKey))
+            {
+                model.SavedCards = await _walletService.ListCardsAsync(ownerId);
             }
         })
         .Location("Content")

@@ -35,6 +35,29 @@
     </div>
 }
 
+@if (Model.SavedCards.Count > 0)
+{
+    @* A saved card is the quickest way to pay; a new card is a choice like the others. *@
+    <fieldset class="mb-3" data-stripe-saved-cards>
+        <legend class="form-label fs-6 mb-2">@T["Pay with"]</legend>
+        @foreach (var card in Model.SavedCards)
+        {
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="stripe-saved-card" id="stripe-saved-card-@card.Id" value="@card.Id" checked="@(card == Model.SavedCards[0])" />
+                <label class="form-check-label" for="stripe-saved-card-@card.Id">
+                    @T["{0} ending in {1}", card.Brand?.ToUpperInvariant(), card.Last4]
+                    <span class="text-body-secondary small">@T["expires {0:00}/{1}", card.ExpMonth, card.ExpYear]</span>
+                </label>
+            </div>
+        }
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="stripe-saved-card" id="stripe-saved-card-new" value="" />
+            <label class="form-check-label" for="stripe-saved-card-new">@T["A new card"]</label>
+        </div>
+    </fieldset>
+}
+
+<div data-stripe-new-card>
 <div class="mb-3">
     <label for="stripe-checkout-name" class="form-label">@T["Name on card"]</label>
     <input id="stripe-checkout-name" type="text" class="form-control" autocomplete="cc-name" placeholder="@T["Name as it appears on the card"]" />
@@ -46,6 +69,16 @@
 </div>
 
 <div id="stripe-checkout-card-errors" class="text-danger small d-none" role="alert"></div>
+
+@if (Model.CanUseSavedCards)
+{
+    <div class="form-check mt-3">
+        <input class="form-check-input" type="checkbox" id="stripe-remember-card" />
+        <label class="form-check-label" for="stripe-remember-card">@T["Save this card for next time"]</label>
+        <span class="hint dashed">@T["Kept securely by Stripe, not on this site. You can remove it under Payment methods in your account."]</span>
+    </div>
+}
+</div>
 
 <script asp-name="stripe-checkout-payment" at="Foot" depends-on="checkout-payment"></script>
 <script at="Foot" depends-on="stripe-checkout-payment">
@@ -60,6 +93,9 @@
         walletAmount: @Model.WalletAmount,
         walletCurrency: '@Model.WalletCurrency',
         walletSelector: '#stripe-checkout-wallets',
-        walletButtonsSelector: '#stripe-checkout-wallet-buttons'
+        walletButtonsSelector: '#stripe-checkout-wallet-buttons',
+        savedCardsSelector: '[data-stripe-saved-cards]',
+        newCardSelector: '[data-stripe-new-card]',
+        rememberCardSelector: '#stripe-remember-card'
     });
 </script>

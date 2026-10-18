@@ -1,9 +1,23 @@
 @model PayLaterSettingsViewModel
 
+@* The Pay Later section of Settings › Commerce › Offline payments. *@
+
+<h2 class="h5">@T["Pay Later"]</h2>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Offer Pay Later at checkout"]</label>
+            <span class="hint dashed">@T["The buyer confirms now and pays the invoice by its due date, from their account. Works for subscriptions too."]</span>
+        </div>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="NetTermDays">
     <label asp-for="NetTermDays" class="ocat-label">@T["Net term (days)"]</label>
     <div class="ocat-end">
-        <input asp-for="NetTermDays" type="number" min="0" class="form-control" />
+        <input asp-for="NetTermDays" type="number" min="0" class="form-control" style="max-width: 10rem" />
         <span asp-validation-for="NetTermDays"></span>
         <span class="hint">@T["The number of days a Pay Later balance is allowed before it is due. The due date drives the reminder cadence. Use 0 to record the balance without a due date."]</span>
     </div>

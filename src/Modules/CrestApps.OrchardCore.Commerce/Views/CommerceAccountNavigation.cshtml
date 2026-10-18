@@ -1,0 +1,52 @@
+@using OrchardCore.Navigation
+@inject INavigationManager NavigationManager
+
+@*
+    The account menu beside each account page. Modules add their pages to it; the page whose link the current path
+    starts with, the longest match, is marked as current. Below the large breakpoint it is pills that wrap onto as
+    many rows as they need, so every page stays in view.
+*@
+
+@{
+    var items = (await NavigationManager.BuildMenuAsync(CommerceConstants.Account.MenuName, ViewContext))
+        .Where(item => !string.IsNullOrEmpty(item.Href))
+        .ToList();
+
+    var path = Context.Request.PathBase.Add(Context.Request.Path).Value ?? string.Empty;
+    var current = items
+        .Select(item => Url.Content(item.Href))
+        .Where(href => path.Equals(href, StringComparison.OrdinalIgnoreCase) || path.StartsWith(href.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase))
+        .OrderByDescending(href => href.Length)
+        .FirstOrDefault();
+}
+
+<nav class="commerce-account-nav" aria-label="@T["Your account"]">
+    <h2 class="h6 text-body-secondary text-uppercase small d-none d-lg-block mb-2">@T["Your account"]</h2>
+    <ul class="nav nav-pills flex-wrap flex-lg-column gap-1 pb-2 pb-lg-0">
+        @foreach (var item in items)
+        {
+            var href = Url.Content(item.Href);
+            var isCurrent = string.Equals(href, current, StringComparison.OrdinalIgnoreCase);
+
+            <li class="nav-item">
+                <a class="nav-link text-nowrap px-2 py-1 px-lg-3 py-lg-2@(isCurrent ? " active" : null)" href="@href" aria-current="@(isCurrent ? "page" : null)">
+                    @if (item.Classes.Count > 0)
+                    {
+                        <span class="@string.Join(' ', item.Classes) fa-fw me-2" aria-hidden="true"></span>
+                    }
+                    @item.Text
+                </a>
+            </li>
+        }
+    </ul>
+</nav>
+
+@* Shared form partials use the admin theme's hint class; on account pages it reads like Bootstrap's form text. *@
+<style at="Head">
+    .commerce-account .hint {
+        display: block;
+        margin-top: .25rem;
+        font-size: .875em;
+        color: var(--bs-secondary-color);
+    }
+</style>

@@ -13,6 +13,12 @@ public static class CustomersConstants
     public const string ContactStepKey = "Contact";
 
     /// <summary>
+    /// The content type whose fields the checkout asks for on its Contact step, when the Checkout details feature is on.
+    /// The store adds the fields it needs with the content type editor.
+    /// </summary>
+    public const string CheckoutDetailsContentType = "CheckoutDetails";
+
+    /// <summary>
     /// The site settings group of the Customers settings.
     /// </summary>
     public const string SettingsGroupId = "customers";
@@ -28,5 +34,7 @@ public static class CustomersConstants
     public static class Features
     {
         public const string Customers = "CrestApps.OrchardCore.Customers";
+
+        public const string CheckoutDetails = "CrestApps.OrchardCore.Customers.CheckoutDetails";
     }
 }

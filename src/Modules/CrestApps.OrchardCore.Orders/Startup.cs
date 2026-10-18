@@ -59,6 +59,11 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IPermissionProvider, OrderPermissionsProvider>();
         services.AddNavigationProvider<OrdersAdminMenu>();
+        services.AddNavigationProvider<OrdersAccountMenu>();
+        services.AddSingleton<OrderAccountClaims>();
+        services.AddScoped<CheckoutRecoveryLinks>();
+        services.AddScoped<CheckoutRecoveryService>();
+        services.AddSingleton<IBackgroundTask, CheckoutRecoveryBackgroundTask>();
         services.AddDisplayDriver<Order, OrderDisplayDriver>();
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
@@ -74,6 +79,14 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
         services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
+
+        // A dispute reported by a gateway is recorded on its order, and shown on its page and in the orders list.
+        services.AddScoped<CrestApps.OrchardCore.Payments.IPaymentEvent, OrderDisputeRecorder>();
+        services.AddDisplayDriver<Order, OrderDisputesDisplayDriver>();
+
+        // The fraud rating of an order's payment, kept on the order, shown on its page and in the orders list.
+        services.AddScoped<ICheckoutHandler, OrderPaymentRiskCheckoutHandler>();
+        services.AddDisplayDriver<Order, OrderPaymentRiskDisplayDriver>();
         services.AddScoped<ICheckoutReferenceDescriber, OrderCheckoutReferenceDescriber>();
         services.AddScoped<CouponItemLookup>();
         services.AddDisplayDriver<Coupon, CouponItemLimitsDisplayDriver>();
@@ -109,6 +122,7 @@ public sealed class ReportsStartup : StartupBase
             .AddReport<OrderTaxReport>()
             .AddReport<OrderDiscountsReport>()
             .AddReport<OrderRefundsReport>()
+            .AddReport<OrderDisputesReport>()
             .AddReport<UnfulfilledOrdersReport>();
     }
 }
