@@ -24,7 +24,7 @@ public sealed class OmnichannelHelperTests
         var contact = CreateContact(true, false, false, CreatePhoneNumber("+15550001111", "Cell"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Phone);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
 
         // Assert - a suppressed contact is never dialed even though a reachable number exists.
         Assert.Null(destination);
@@ -37,7 +37,7 @@ public sealed class OmnichannelHelperTests
         var contact = CreateContact(false, true, false, CreatePhoneNumber("+15550001111", "Cell"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Sms);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Sms);
 
         // Assert
         Assert.Null(destination);
@@ -50,7 +50,7 @@ public sealed class OmnichannelHelperTests
         var contact = CreateContact(false, false, true, CreateEmail("lead@example.com"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Email);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Email);
 
         // Assert
         Assert.Null(destination);
@@ -66,7 +66,7 @@ public sealed class OmnichannelHelperTests
             CreatePhoneNumber("+15550000001", "Cell"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Phone);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
 
         // Assert
         Assert.Equal("+15550000001", destination);
@@ -81,7 +81,7 @@ public sealed class OmnichannelHelperTests
             CreatePhoneNumber("+15550000002", "Home"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Phone);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
 
         // Assert
         Assert.Equal("+15550000002", destination);
@@ -94,7 +94,7 @@ public sealed class OmnichannelHelperTests
         var contact = CreateContact(CreatePhoneNumber("+15550000009", "Fax"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Phone);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
 
         // Assert
         Assert.Null(destination);
@@ -109,7 +109,7 @@ public sealed class OmnichannelHelperTests
             CreatePhoneNumber("+15550000001", "Cell"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Sms);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Sms);
 
         // Assert
         Assert.Equal("+15550000001", destination);
@@ -122,7 +122,7 @@ public sealed class OmnichannelHelperTests
         var contact = CreateContact(CreatePhoneNumber("+15550000002", "Home"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Sms);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Sms);
 
         // Assert
         Assert.Null(destination);
@@ -137,7 +137,7 @@ public sealed class OmnichannelHelperTests
             CreateEmail("second@example.com"));
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Email);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Email);
 
         // Assert
         Assert.Equal("first@example.com", destination);
@@ -150,7 +150,7 @@ public sealed class OmnichannelHelperTests
         var contact = CreateContact(false, false, false);
 
         // Act
-        var destination = OmnichannelHelper.GetPreferredDestenation(contact, OmnichannelConstants.Channels.Phone);
+        var destination = OmnichannelHelper.GetPreferredDestenation(contact, TestContactMethods.Get(contact), OmnichannelConstants.Channels.Phone);
 
         // Assert
         Assert.Null(destination);

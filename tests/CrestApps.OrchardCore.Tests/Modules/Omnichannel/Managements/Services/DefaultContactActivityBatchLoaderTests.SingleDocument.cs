@@ -142,8 +142,10 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             new SqliteDbConnectionAccessor(connectionString),
             [new CommittingDialerContributor(session)],
             Options.Create(sourceOptions),
-            new ContactOptOutResolver(session),
+            new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session)),
+            ContactPhoneTestStore.CreateLookup(session),
             new NoNotInServiceNumbers(),
+            TestContactMethods.Accessor,
             NullLogger<DefaultContactActivityBatchLoader>.Instance);
     }
 

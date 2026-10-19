@@ -704,6 +704,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
                         var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
+                        var contactMethods = scope.ServiceProvider.GetRequiredService<IContactMethodsAccessor>();
+                        var contactMethodsWriter = scope.ServiceProvider.GetRequiredService<IContactMethodsWriter>();
 
                         ContentItem subject = null;
                         ContentItem contact = null;
@@ -766,7 +768,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             userPrompt +=
                                 $"""
 
-                            Current contact email: {OmnichannelSubjectWriter.GetContactEmail(contact) ?? "(none)"}
+                            Current contact email: {contactMethods.Get(contact).GetPrimaryEmailAddress() ?? "(none)"}
                             """;
                         }
 
@@ -795,10 +797,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                                 await store.UpdateAsync(omnichannelActivity);
                             }
 
-                            // Gated contact write-back: upsert only a captured email into the ContactMethods bag
-                            // instead of deep-merging a model-authored content item.
+                            // Gated contact write-back: upsert only a captured email through the contact type's
+                            // contact-methods writer instead of deep-merging a model-authored content item.
                             if (activity.AllowAIToUpdateContact && contact is not null &&
-                                await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result.Result.ContactEmail))
+                                await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contactMethodsWriter, contact, result.Result.ContactEmail))
                             {
                                 await contentManager.UpdateAsync(contact);
                             }

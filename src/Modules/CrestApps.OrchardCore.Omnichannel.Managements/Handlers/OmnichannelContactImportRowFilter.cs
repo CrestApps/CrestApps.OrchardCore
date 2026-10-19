@@ -37,7 +37,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     private string[] _selectedRegistryKeys = [];
     private Dictionary<string, SeenPhoneOwnerState> _seenPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string[]> _existingPhoneOwners = new(StringComparer.OrdinalIgnoreCase);
-    private Func<Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>? _duplicateScope;
+    private Func<Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>? _duplicateScope;
     private Dictionary<int, List<PhoneEntry>> _batchPhoneEntries = [];
     private Dictionary<int, string> _batchSkipReasons = [];
 
@@ -184,6 +184,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (HasConflictingExistingOwner(entry, contentItemId))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already exists in the database.";
+                    context.SkipCategory = "Already in the database";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -199,6 +200,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (HasConflictingSeenOwner(entry.NormalizedNumber, contentItemId))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' already appeared earlier in the import file.";
+                    context.SkipCategory = "Repeated in the import file";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -226,6 +228,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             catch (DoNotCallScreeningException ex)
             {
                 context.SkipReason = ex.Message;
+                context.SkipCategory = "Do-not-call check failed";
 
                 _logger.LogError(
                     ex,
@@ -244,6 +247,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (!entry.Canonical.HasValue)
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' could not be read as a phone number, so it could not be checked against a national do-not-call registry.";
+                    context.SkipCategory = "Not a readable phone number";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -277,6 +281,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
                 if (doNotCallNumbers.Contains(entry.Canonical))
                 {
                     context.SkipReason = $"{entry.Label} '{entry.RawValue}' is registered on a national do-not-call registry.";
+                    context.SkipCategory = "On a national do-not-call registry";
 
                     if (_logger.IsEnabled(LogLevel.Debug))
                     {
@@ -308,7 +313,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
     /// import compares against contacts and open leads, as its options say. Without the CRM feature there are no
     /// lead types and a contact import compares against every record, as it always did.
     /// </summary>
-    private async Task<Func<Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>?> GetDuplicateScopeAsync(
+    private async Task<Func<Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>?> GetDuplicateScopeAsync(
         string contentType,
         OmnichannelContactImportOptionsPart options)
     {
@@ -316,7 +321,7 @@ public sealed class OmnichannelContactImportRowFilter : IContentImportRowFilter
             ? []
             : (await _contactTypeProvider.GetLeadContentTypesAsync()).ToHashSet(StringComparer.Ordinal);
 
-        bool IsLead(Omnichannel.Core.Indexes.OmnichannelContactIndex index)
+        bool IsLead(Omnichannel.Core.Indexes.IOmnichannelContactMatch index)
             => !string.IsNullOrEmpty(index.ContentType) && leadTypes.Contains(index.ContentType);
 
         if (leadTypes.Contains(contentType))

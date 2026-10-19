@@ -232,8 +232,14 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IAuthorizationHandler, OmnichannelActivityAuthorizationHandler>();
 
         services
+            .AddContactMethods()
             .AddIndexProvider<OmnichannelContactIndexProvider>()
+            .AddIndexProvider<OmnichannelContactPhoneNumberIndexProvider>()
             .AddDataMigration<OmnichannelContactsMigrations>();
+
+        // Every lookup by phone number goes through this, so it finds a record by any of its numbers.
+        services.AddScoped<IOmnichannelContactPhoneLookup, OmnichannelContactPhoneLookup>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactPhoneNumberIndexBackfillBackgroundTask>());
 
         services.AddDataMigration<ContactMethodMigrations>();
 

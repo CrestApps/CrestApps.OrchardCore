@@ -138,6 +138,7 @@ public sealed class DialerMaxAttemptsFallbackTests
             session.Object,
             Clock(),
             Mock.Of<ILocalClock>(),
+            global::CrestApps.OrchardCore.Tests.Modules.Omnichannel.TestContactMethods.Accessor,
             NullLogger<global::CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultSubjectActionExecutor>.Instance,
             followUpHandlers: [new FollowUpHarness().Handler]);
 

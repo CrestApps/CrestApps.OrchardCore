@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Builders;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -14,10 +15,14 @@ internal sealed class OmnichannelContactDefinitionService
     internal const string ContactMethodsPosition = "100";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContactMethodsAccessor _contactMethods;
 
-    public OmnichannelContactDefinitionService(IContentDefinitionManager contentDefinitionManager)
+    public OmnichannelContactDefinitionService(
+        IContentDefinitionManager contentDefinitionManager,
+        IContactMethodsAccessor contactMethods)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _contactMethods = contactMethods;
     }
 
     public async Task EnsureContactMethodsBagAsync(string contentTypeName)
@@ -26,7 +31,12 @@ internal sealed class OmnichannelContactDefinitionService
 
         var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(contentTypeName);
 
-        if (contentTypeDefinition is null || !HasOmnichannelContactPart(contentTypeDefinition) || !NeedsContactMethodsBagUpdate(contentTypeDefinition))
+        // A type with a contact-methods provider of its own is not given the bag, and a bag it already has is left
+        // as it is.
+        if (contentTypeDefinition is null ||
+            !_contactMethods.UsesContactMethodsBag(contentTypeName) ||
+            !HasOmnichannelContactPart(contentTypeDefinition) ||
+            !NeedsContactMethodsBagUpdate(contentTypeDefinition))
         {
             return;
         }
@@ -40,7 +50,9 @@ internal sealed class OmnichannelContactDefinitionService
 
         foreach (var contentTypeDefinition in contentTypeDefinitions)
         {
-            if (!HasOmnichannelContactPart(contentTypeDefinition) || !NeedsContactMethodsBagUpdate(contentTypeDefinition))
+            if (!_contactMethods.UsesContactMethodsBag(contentTypeDefinition.Name) ||
+                !HasOmnichannelContactPart(contentTypeDefinition) ||
+                !NeedsContactMethodsBagUpdate(contentTypeDefinition))
             {
                 continue;
             }

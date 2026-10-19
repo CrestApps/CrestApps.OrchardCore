@@ -64,6 +64,7 @@ public sealed class ActivitiesController : Controller
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -106,6 +107,7 @@ public sealed class ActivitiesController : Controller
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IEnumerable<IActivityDialerContributor> dialerContributors,
+        IContactMethodsAccessor contactMethods,
         IStringLocalizer<ActivitiesController> stringLocalizer,
         IHtmlLocalizer<ActivitiesController> htmlLocalizer)
     {
@@ -125,6 +127,7 @@ public sealed class ActivitiesController : Controller
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _dialerContributors = dialerContributors;
+        _contactMethods = contactMethods;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -831,7 +834,7 @@ public sealed class ActivitiesController : Controller
 
                 if (!string.IsNullOrEmpty(flowSettings.Channel))
                 {
-                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
+                    activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, _contactMethods.Get(contact), flowSettings.Channel);
                 }
             }
         }
@@ -1685,7 +1688,7 @@ public sealed class ActivitiesController : Controller
 
             if (contact is not null)
             {
-                activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, flowSettings.Channel);
+                activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, _contactMethods.Get(contact), flowSettings.Channel);
             }
 
             ApplyInitialStatus(activity, hasAssignedUser: !string.IsNullOrEmpty(activity.AssignedToId));

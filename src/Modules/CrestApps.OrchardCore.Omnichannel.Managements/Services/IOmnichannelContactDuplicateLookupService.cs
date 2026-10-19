@@ -25,12 +25,12 @@ public interface IOmnichannelContactDuplicateLookupService
     /// an import checks a batch of rows without reading every stored record into memory.
     /// </summary>
     /// <param name="phoneNumberKeys">The comparison keys of the numbers to look for.</param>
-    /// <param name="include">Decides, from the record's contact index row, whether its numbers count, or
+    /// <param name="include">Decides, from the index row that matched the record, whether its numbers count, or
     /// <see langword="null"/> to count every record.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A mapping of the matching keys to owning content item identifiers.</returns>
     Task<Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(
         IReadOnlyCollection<string> phoneNumberKeys,
-        Func<OmnichannelContactIndex, bool> include,
+        Func<IOmnichannelContactMatch, bool> include,
         CancellationToken cancellationToken);
 }

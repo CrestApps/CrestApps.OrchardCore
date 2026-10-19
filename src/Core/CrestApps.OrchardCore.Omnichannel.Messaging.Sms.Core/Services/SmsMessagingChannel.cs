@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
-using OrchardCore.Flows.Models;
 using OrchardCore.Sms;
 using YesSql;
 using YesSql.Services;
@@ -47,7 +46,9 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     // eagerly closes a dependency cycle the container cannot report, and the scope deadlocks.
     private readonly Lazy<ISmsDispatcher> _dispatcher;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
+    private readonly IOmnichannelContactPhoneLookup _phoneLookup;
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IContactMethodsAccessor _contactMethods;
     private readonly ISession _session;
     private readonly IStringLocalizer S;
 
@@ -59,18 +60,24 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="contactTypeProvider">The provider of the content types that are contacts.</param>
     /// <param name="phoneNumberService">The phone number service a typed number is validated with.</param>
+    /// <param name="contactMethods">Reads a contact's phone numbers.</param>
+    /// <param name="phoneLookup">The lookup that finds a sender by any of a contact's numbers.</param>
     public SmsMessagingChannel(
         Lazy<ISmsDispatcher> dispatcher,
         ISession session,
         IStringLocalizer<SmsMessagingChannel> stringLocalizer,
         IOmnichannelContactTypeProvider contactTypeProvider,
-        IPhoneNumberService phoneNumberService)
+        IPhoneNumberService phoneNumberService,
+        IContactMethodsAccessor contactMethods,
+        IOmnichannelContactPhoneLookup phoneLookup)
     {
         _dispatcher = dispatcher;
         _session = session;
         S = stringLocalizer;
         _contactTypeProvider = contactTypeProvider;
         _phoneNumberService = phoneNumberService;
+        _contactMethods = contactMethods;
+        _phoneLookup = phoneLookup;
     }
 
     /// <inheritdoc/>
@@ -156,9 +163,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     /// <inheritdoc/>
     public IReadOnlyList<string> GetContactAddresses(ContentItem contact)
     {
-        if (contact is null ||
-            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bag) ||
-            bag.ContentItems is null)
+        if (contact is null)
         {
             return [];
         }
@@ -166,15 +171,9 @@ public sealed class SmsMessagingChannel : IMessagingChannel
         var cells = new List<string>();
         var others = new List<string>();
 
-        foreach (var method in bag.ContentItems)
+        foreach (var phoneNumber in _contactMethods.Get(contact).PhoneNumbers)
         {
-            if (!string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) ||
-                !method.TryGet<PhoneNumberInfoPart>(out var phonePart))
-            {
-                continue;
-            }
-
-            var number = NormalizeAddress(phonePart.Number?.PhoneNumber);
+            var number = NormalizeAddress(phoneNumber.PhoneNumber);
 
             if (string.IsNullOrEmpty(number))
             {
@@ -183,7 +182,7 @@ public sealed class SmsMessagingChannel : IMessagingChannel
 
             // A cell number is the one that can actually receive a text, so it leads whatever order the contact's
             // methods were entered in.
-            if (string.Equals(phonePart.Type?.Text, "Cell", StringComparison.OrdinalIgnoreCase))
+            if (ContactPhoneTypes.IsMobile(phoneNumber.Type))
             {
                 cells.Add(number);
             }
@@ -208,10 +207,9 @@ public sealed class SmsMessagingChannel : IMessagingChannel
             return [];
         }
 
-        var matches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.Published &&
-                    (index.NormalizedPrimaryCellPhoneNumber == normalized || index.NormalizedPrimaryHomePhoneNumber == normalized))
-            .ListAsync(cancellationToken);
+        // Every number of every record, whatever type it is saved as: a contact texted at its work number is
+        // matched when it texts back from it.
+        var matches = await _phoneLookup.FindByNumbersAsync([normalized], OmnichannelContactVersion.Published, cancellationToken: cancellationToken);
 
         // Contacts come before leads and converted leads are left out, so a sender who is both a contact and a lead
         // is linked to the contact, and callers that take the first match always take the same one.

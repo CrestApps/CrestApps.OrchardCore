@@ -253,6 +253,92 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
     }
 
     [Fact]
+    public async Task ReconcileEndedOfferAsync_WhenTheAgentAskedForABreakWhileTheDialerCallRang_GrantsTheBreak()
+    {
+        // Arrange
+        // A power-dialer call the customer never answered, placed for an agent who asked for a break while it rang.
+        // Sent back to Available, the dialer reserved them for the next call at once and the break was lost.
+        var requestedUtc = new DateTime(2026, 7, 10, 11, 59, 40, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            Channel = InteractionChannel.Voice,
+            Direction = InteractionDirection.Outbound,
+            EndedUtc = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc),
+        }.RestorePersistedStatus(InteractionStatus.Ended);
+        var queueItem = new QueueItem
+        {
+            ItemId = "queue-item-1",
+            QueueId = "queue-1",
+            ActivityItemId = "act1",
+            ReservationId = "res-1",
+        }.RestorePersistedStatus(QueueItemStatus.Reserved);
+        var reservation = new ActivityReservation
+        {
+            ItemId = "res-1",
+            AgentId = "agent-1",
+            ActivityItemId = "act1",
+        }.RestorePersistedStatus(ReservationStatus.Accepted);
+        var agent = new AgentProfile
+        {
+            ItemId = "agent-1",
+            ActiveReservationId = "res-1",
+            PresenceStatus = AgentPresenceStatus.Reserved,
+            RequestedPresenceStatus = AgentPresenceStatus.Break,
+            PresenceRequestedUtc = requestedUtc,
+            PresenceReason = "Short break",
+            PresenceReasonCodeId = "reason-short-break",
+            QueueIds = ["queue-1"],
+        };
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("agent-1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 1, DateTimeKind.Utc));
+
+        var recorder = new RecordingAuditRecorder();
+        var service = new ProviderVoiceOfferSynchronizationService(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>().Object,
+            queueItemManager.Object,
+            reservationManager.Object,
+            agentManager.Object,
+            new Mock<IOmnichannelActivityManager>().Object,
+            new FakeContactCenterWorkStateService(),
+            CreateServiceProvider(stateTransitions: AgentStateAuditTestDoubles.CreateTransitions(recorder, clock.Object)),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
+            clock.Object,
+            new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
+
+        // Act
+        await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var recorded = Assert.Single(recorder.StateChanges);
+        Assert.Equal(AgentPresenceStatus.Reserved, recorded.Change.PreviousState);
+        Assert.Equal(AgentPresenceStatus.Break, recorded.Change.CurrentState);
+        Assert.Equal("Short break", recorded.Change.ReasonName);
+        Assert.Equal("reason-short-break", recorded.Change.ReasonCodeId);
+        agentManager.Verify(
+            m => m.UpdateAsync(
+                It.Is<AgentProfile>(value =>
+                    value.PresenceStatus == AgentPresenceStatus.Break &&
+                    value.RequestedPresenceStatus == null &&
+                    value.ActiveReservationId == null),
+                null,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ReconcileEndedOfferAsync_WhenTerminalInteractionIsStillWaiting_RemovesQueueItem()
     {
         // Arrange

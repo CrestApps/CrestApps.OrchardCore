@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -38,6 +39,13 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         ("IDX_OCIndex_PrimaryHome", ["PrimaryHomePhoneNumber", "Published", "Latest"]),
         ("IDX_OCIndex_TimeZoneVersion", ["TimeZoneId", "Published", "Latest"]),
         ("IDX_OCIndex_ContentType", ["ContentType", "Published", "Latest"]),
+    ];
+
+    private static readonly (string Name, string[] Columns)[] _phoneNumberIndexIndexes =
+    [
+        ("IDX_OCPhone_DocumentId", ["DocumentId"]),
+        ("IDX_OCPhone_Number", ["NormalizedPhoneNumber", "Published", "Latest"]),
+        ("IDX_OCPhone_ContentItem", ["ContentItemId", "Published", "Latest"]),
     ];
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
@@ -78,9 +86,17 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
 
         await CreateContactIndexTableAsync(SchemaBuilder);
         await CreateContactIndexIndexesAsync(SchemaBuilder);
+        await CreatePhoneNumberIndexTableAsync(SchemaBuilder);
+
+        foreach (var (name, columns) in _phoneNumberIndexIndexes)
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactPhoneNumberIndex>(table =>
+                table.CreateIndex(name, columns));
+        }
+
         ScheduleContactDefinitionRepair();
 
-        return 12;
+        return 13;
     }
 
     /// <summary>
@@ -250,6 +266,39 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
         return 12;
     }
 
+    /// <summary>
+    /// Adds the phone number index, which holds one row for every number of a contact or lead, so a record can be
+    /// found by any of its numbers. The table starts empty: the records already saved are indexed again by
+    /// <see cref="BackgroundTasks.ContactPhoneNumberIndexBackfillBackgroundTask"/>, outside activation, and lookups
+    /// keep reading the contact index's cell and home columns until it has finished.
+    /// </summary>
+    public async Task<int> UpdateFrom12Async()
+    {
+        // Another instance activating the tenant at the same time may have created the table and its indexes
+        // already, so each change checks for, or tolerates, what is there.
+        await ApplyIsolatedSchemaChangeAsync(
+            CreatePhoneNumberIndexTableAsync,
+            "create the phone number index table");
+
+        foreach (var (name, columns) in _phoneNumberIndexIndexes)
+        {
+            await IndexTableIndexCreation.CreateIfMissingAsync<OmnichannelContactPhoneNumberIndex>(SchemaBuilder, name, collection: null, columns);
+        }
+
+        return 13;
+    }
+
+    internal static Task CreatePhoneNumberIndexTableAsync(ISchemaBuilder schemaBuilder)
+        => schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactPhoneNumberIndex>(table => table
+            .Column<string>("ContentItemId", column => column.WithLength(26))
+            .Column<string>("ContentType", column => column.WithLength(255))
+            .Column<bool>("IsConverted", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Published", column => column.NotNull().WithDefault(false))
+            .Column<bool>("Latest", column => column.NotNull().WithDefault(false))
+            .Column<string>("PhoneType", column => column.WithLength(50))
+            .Column<string>("NormalizedPhoneNumber", column => column.WithLength(50))
+        );
+
     private async Task BackfillContactIndexContentTypesAsync(ISchemaBuilder builder)
     {
         var dialect = Store.Configuration.SqlDialect;
@@ -301,7 +350,7 @@ public sealed class OmnichannelContactsMigrations : OmnichannelIndexMigration
                 .RepairOmnichannelContactContentTypesAsync());
     }
 
-    private static async Task CreateContactIndexTableAsync(ISchemaBuilder schemaBuilder)
+    internal static async Task CreateContactIndexTableAsync(ISchemaBuilder schemaBuilder)
     {
         await schemaBuilder.CreateMapIndexTableAsync<OmnichannelContactIndex>(table => table
             .Column<string>("ContentItemId", column => column.WithLength(26))

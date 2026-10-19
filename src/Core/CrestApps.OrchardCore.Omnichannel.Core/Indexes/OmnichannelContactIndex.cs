@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 /// <summary>
 /// Represents the omnichannel contact index.
 /// </summary>
-public sealed class OmnichannelContactIndex : MapIndex
+public sealed class OmnichannelContactIndex : MapIndex, IOmnichannelContactMatch
 {
     /// <summary>
     /// Gets or sets the content item id.

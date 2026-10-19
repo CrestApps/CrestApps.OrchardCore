@@ -188,6 +188,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks
         public AutomatedActivitiesProcessorBackgroundTask() { }
         public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Indexes every phone number of the contacts and leads saved before each number was" +
+        " indexed.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Omnichannel Contact Phone Number Backfill")]
+    public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public ContactPhoneNumberIndexBackfillBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
     [OrchardCore.BackgroundTasks.BackgroundTask(Description="Records past file imports on the leads they wrote, so activity loads can filter b" +
         "y imported file.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Omnichannel Lead Import Backfill")]
     public sealed class LeadImportBackfillBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
@@ -218,6 +225,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
                     Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager,
                     CrestApps.OrchardCore.Users.IDisplayNameProvider displayNameProvider,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods,
                     Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivitiesController> stringLocalizer,
                     Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ActivitiesController> htmlLocalizer) { }
         [OrchardCore.Admin.Admin("omnichannel/accounts/{contentItemId}/activities", "OmnichannelAccountActivities")]
@@ -687,7 +695,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     }
     public sealed class OmnichannelContactPartContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentPartImportHandler
     {
-        public OmnichannelContactPartContentImportHandler(OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.OmnichannelContactPartContentImportHandler> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Managements.Services.ImportRowDoNotCallFlags doNotCallFlags = null) { }
+        public OmnichannelContactPartContentImportHandler(OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.OmnichannelContactPartContentImportHandler> stringLocalizer, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods, CrestApps.OrchardCore.Omnichannel.Managements.Services.ImportRowDoNotCallFlags doNotCallFlags = null) { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartExportMapContext context) { }
         public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentPartContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartImportMapContext context) { }
@@ -729,6 +737,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         public System.Threading.Tasks.Task<int> CreateAsync() { }
         public System.Threading.Tasks.Task<int> UpdateFrom10Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom11Async() { }
+        public System.Threading.Tasks.Task<int> UpdateFrom12Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom1Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom2Async() { }
         public System.Threading.Tasks.Task<int> UpdateFrom3Async() { }
@@ -1045,7 +1054,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public class DefaultContactActivityBatchLoader : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityBatchLoader
     {
-        public DefaultContactActivityBatchLoader(CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog, YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, OrchardCore.Modules.IClock clock, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> sourceOptions, CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver, CrestApps.OrchardCore.Omnichannel.Core.Services.INotInServiceNumberService notInServiceNumbers, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider> contactTypeProviders = null) { }
+        public DefaultContactActivityBatchLoader(
+                    CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> catalog,
+                    YesSql.ISession session,
+                    OrchardCore.Modules.ILocalClock localClock,
+                    OrchardCore.Modules.IClock clock,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager,
+                    YesSql.IStore store,
+                    OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor> dialerContributors,
+                    Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchSourceOptions> sourceOptions,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IContactOptOutResolver optOutResolver,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.INotInServiceNumberService notInServiceNumbers,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IContactMethodsAccessor contactMethods,
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactTypeProvider> contactTypeProviders = null) { }
         public virtual string Source { get; }
         public virtual System.Threading.Tasks.Task LoadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
         protected System.Threading.Tasks.Task StopAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityBatchLoadContext context, string reason, System.Threading.CancellationToken cancellationToken) { }
@@ -1059,7 +1084,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     public interface IOmnichannelContactDuplicateLookupService
     {
         System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken);
-        System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool> include, System.Threading.CancellationToken cancellationToken);
     }
     public sealed class ImportRowDoNotCallFlags
     {
@@ -1086,7 +1111,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class LeadMatchFinder
     {
-        public LeadMatchFinder(YesSql.ISession session, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider) { }
+        public LeadMatchFinder(YesSql.ISession session, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.ContentItem>> FindAccountsAsync(string company) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.ContentItem>> FindContactsAsync(OrchardCore.ContentManagement.ContentItem lead) { }
     }
@@ -1117,9 +1142,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class OmnichannelContactDuplicateLookupService : CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService
     {
-        public OmnichannelContactDuplicateLookupService(YesSql.ISession session, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService) { }
+        public OmnichannelContactDuplicateLookupService(YesSql.ISession session, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelContactPhoneLookup phoneLookup) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> include, System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetPhoneNumberOwnersAsync(System.Collections.Generic.IReadOnlyCollection<string> phoneNumberKeys, System.Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool> include, System.Threading.CancellationToken cancellationToken) { }
     }
     public sealed class OmnichannelContentTypeProvider : OrchardCore.ContentTypes.Events.IContentDefinitionEventHandler
     {

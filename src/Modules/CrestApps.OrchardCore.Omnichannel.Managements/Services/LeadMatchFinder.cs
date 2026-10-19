@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using YesSql;
@@ -18,6 +20,7 @@ public sealed class LeadMatchFinder
     private readonly ISession _session;
     private readonly IContentManager _contentManager;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
+    private readonly IOmnichannelContactPhoneLookup _phoneLookup;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadMatchFinder"/> class.
@@ -25,18 +28,21 @@ public sealed class LeadMatchFinder
     /// <param name="session">The YesSql session.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="contentTypeProvider">The CRM content type provider.</param>
+    /// <param name="phoneLookup">The lookup that finds records by any of their phone numbers.</param>
     public LeadMatchFinder(
         ISession session,
         IContentManager contentManager,
-        OmnichannelContentTypeProvider contentTypeProvider)
+        OmnichannelContentTypeProvider contentTypeProvider,
+        IOmnichannelContactPhoneLookup phoneLookup)
     {
         _session = session;
         _contentManager = contentManager;
         _contentTypeProvider = contentTypeProvider;
+        _phoneLookup = phoneLookup;
     }
 
     /// <summary>
-    /// Returns the contacts that share the lead's primary cell or home number or its primary email.
+    /// Returns the contacts that share any of the lead's phone numbers or its primary email.
     /// </summary>
     /// <param name="lead">The lead.</param>
     public async Task<IReadOnlyList<ContentItem>> FindContactsAsync(ContentItem lead)
@@ -57,8 +63,8 @@ public sealed class LeadMatchFinder
             return [];
         }
 
-        var numbers = new[] { leadIndex.NormalizedPrimaryCellPhoneNumber, leadIndex.NormalizedPrimaryHomePhoneNumber }
-            .Where(number => !string.IsNullOrEmpty(number))
+        var numbers = (await _phoneLookup.GetNumbersAsync([lead.ContentItemId], OmnichannelContactVersion.Latest))
+            .Select(row => row.NormalizedPhoneNumber)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
@@ -67,22 +73,13 @@ public sealed class LeadMatchFinder
 
         if (numbers.Length > 0)
         {
-            // One query per phone column rather than one OR across both, so each seeks its own phone index.
-            var byCell = await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Latest &&
-                    index.ContentType.IsIn(contactTypes) &&
-                    index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers))
-                .Take(MaxMatches)
-                .ListAsync();
+            var byPhone = await _phoneLookup.FindByNumbersAsync(numbers, OmnichannelContactVersion.Latest, contactTypes);
 
-            var byHome = await _session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Latest &&
-                    index.ContentType.IsIn(contactTypes) &&
-                    index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers))
-                .Take(MaxMatches)
-                .ListAsync();
-
-            matchIds.AddRange(byCell.Concat(byHome).Select(index => index.ContentItemId));
+            matchIds.AddRange(byPhone
+                .Select(index => index.ContentItemId)
+                .Where(id => id != lead.ContentItemId)
+                .Distinct(StringComparer.Ordinal)
+                .Take(MaxMatches));
         }
 
         if (!string.IsNullOrEmpty(email))
