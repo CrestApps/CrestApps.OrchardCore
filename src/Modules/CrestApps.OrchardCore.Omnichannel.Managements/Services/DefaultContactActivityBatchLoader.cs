@@ -932,10 +932,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         var numbers = leadsByNumber.Keys.ToArray();
 
         // One query per phone column rather than one OR across both: each can seek on its own phone index, where the
-        // OR made SQL Server scan the contact index for every page of leads.
+        // OR made SQL Server scan the contact index for every page of leads. See LookupBatchSize for the batch size.
         var matches = new Dictionary<string, OmnichannelContactIndex>(StringComparer.Ordinal);
 
-        foreach (var chunk in numbers.Chunk(OmnichannelContactDuplicateLookupService.MaxParametersPerCommand))
+        foreach (var chunk in OmnichannelContactDuplicateLookupService.ToLookupBatches(numbers))
         {
             var byCell = await session.QueryIndex<OmnichannelContactIndex>(index =>
                     index.Published &&
