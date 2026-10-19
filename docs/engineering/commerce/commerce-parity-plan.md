@@ -335,7 +335,7 @@ One branch, a commit per slice:
 - **PC2 bundles.** A **Product Bundles** feature: kits at their own price; stock from the parts, held, sold and restocked per part.
 - **PC3 quantity rules, tier and group pricing.** Minimum, maximum and pack sizes; volume discounts; role discounts.
 - **PC3 comparison.** A **Product Comparison** feature: up to four products side by side.
-- **PC4 CSV import and export, migration importers.** A **Product Import and Export** feature reading Shopify and WooCommerce exports and writing Shopify's format; an orders CSV export from the Orders list.
+- **PC4 CSV import and export, migration importers.** Products import and export with Content Transfer (product, variant and stock columns; taxonomy terms by name), and Shopify's and WooCommerce's product exports are read as those columns; an orders CSV export from the Orders list. (A separate Product Import and Export page was built first, then folded into Content Transfer in phase 4.)
 - **Storefront theming.** The account pages, guest order and pay pages, the mini cart, the comparison page and the confirmation's thanks were plain views; each is now a named shape a theme overrides in Razor or Liquid, and a test keeps new pages that way.
 - **Found in testing.** Orders paid offline read *Paid*; they now read *Payment due* until paid, and the owed note no longer names Pay Later for every method.
 

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
@@ -95,13 +97,16 @@ public sealed class OrdersStartup : StartupBase
 }
 
 /// <summary>
-/// Counts the stock a product import says.
+/// Imports and exports how a product's stock is kept, and how many are available, with Content Transfer.
 /// </summary>
-[RequireFeatures(ProductConstants.Feature.Transfer)]
-public sealed class ProductTransferStartup : StartupBase
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class ContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IProductImportHandler, InventoryProductImportHandler>();
+    {
+        services.AddScoped<InventoryCountApplier>();
+        services.AddContentPartImportHandler<InventoryPart, InventoryPartContentImportHandler>();
+    }
 }
 
 /// <summary>

@@ -175,18 +175,16 @@ Its stock is what its parts in stock can make: with 4 caps left and 2 in each ki
 
 ## Import and export products
 
-With the **Product Import and Export** feature, **Commerce > Import and export** brings products in from another store and takes them out.
+Products import and export like any other content, with the **Content Transfer** feature (**Content > Bulk Import** and **Bulk Export**), in a CSV file or, with its OpenXml feature, an Excel workbook.
 
-To import, export your products from Shopify (**Products > Export**) or WooCommerce (**Products > Export**), choose the file, and choose the product type to import them as. The format is told from the file's columns.
+Each product is a row, and its product details are columns: the price, compare-at and sale prices with the sale's dates, SKU, currency, the address of a product sold elsewhere, quantity rules, the options and variants, the category and brand by name, and the stock. Download a template from the import page to see them all. An export has the same columns, so you can change prices in a spreadsheet and import the file back.
 
-- **Titles, descriptions, prices, SKUs and stock** come in. A WooCommerce sale price becomes the price, and its regular price the compare-at price.
-- **Variants** come in when the type has the **Product variants** part with options of the same names, such as *Size*. Otherwise the product comes in as one product, from its lowest price, with the stock of all its variants, and the result says so.
-- **Categories and brands** go to the type's taxonomy fields named like *Category* and *Brand*, matched to their terms by name. A name the taxonomy doesn't have is listed so you can add it and import again.
-- **A product already in your store**, matched by its SKU, a variant's SKU or its address, is updated. Untick **Update products already in the store** to leave them as they are.
-- **New products** are drafts to review, unless you tick **Publish new products**.
+To move from another store, export your products from Shopify (**Products > Export**) or WooCommerce (**Products > Export**) and import the file as your product type. It's read as it is:
+
+- **Variants** come in when the type has the **Product variants** part with options of the same names, such as *Size*. Otherwise the product comes in as one product, from its lowest price, with the stock of all its variants.
+- **Categories and brands** go to the type's taxonomy fields named like *Category* and *Brand*, matched to their terms by name.
+- **A product already in your store**, matched by its SKU, a variant's SKU or its address, is updated.
 - **Images** aren't downloaded. Add product photos in the media library.
-
-To export, choose the product type and click **Export CSV**. The file is in Shopify's product format, with variants, prices, categories, brands and available stock: it opens in a spreadsheet, imports back here, and imports into Shopify.
 
 :::tip[Taxes on products]
 To charge tax on a product, add the **Taxation** part to the same content type. See [Taxes](taxes.md).

@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Products.ContentTransfer;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Builder;
 using CrestApps.OrchardCore.Products.Endpoints;
@@ -82,6 +84,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPriceResolver, DefaultPriceResolver>();
 
         services.AddDataMigration<ProductPartMigrations>();
+
+        // Every product SKU, its own and its variants', so a product can be found by any of them.
+        services.AddIndexProvider<ProductSkuIndexProvider>();
+        services.AddDataMigration<ProductSkuMigrations>();
         services.AddDataMigration<CurrencyMigrations>();
     }
 }
@@ -139,15 +145,18 @@ public sealed class RecommendationsStartup : StartupBase
 }
 
 /// <summary>
-/// Imports products from Shopify and WooCommerce exports, and exports them in Shopify's format.
+/// Imports and exports products with Content Transfer: their prices, SKUs, variants and the rest as columns, and
+/// Shopify's and WooCommerce's product exports read as those columns.
 /// </summary>
-[Feature(ProductConstants.Feature.Transfer)]
-public sealed class TransferStartup : StartupBase
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class ContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<ProductCatalogTransfer>();
-        services.AddNavigationProvider<ProductTransferAdminMenu>();
+        services.AddContentPartImportHandler<ProductPart, ProductPartContentImportHandler>();
+        services.AddContentPartImportHandler<ProductVariantsPart, ProductVariantsPartContentImportHandler>();
+        services.AddScoped<IContentTransferFileReaderTransformer, StoreExportReaderTransformer>();
+        services.AddScoped<IContentImportRowFilter, ProductImportRowFilter>();
     }
 }
 

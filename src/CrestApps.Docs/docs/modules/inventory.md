@@ -83,7 +83,7 @@ With Product Listing on, `InventorySearchDocumentContributor` writes the built-i
   ```
 
 - **Deployment step `Stock`** (`StockDeploymentStep`, *Commerce*) exports every item that isn't archived with its ids, SKU and `OnHand`.
-- **Product imports.** With **Product Import and Export** on, `InventoryProductImportHandler` syncs the stock items of the products an import saved and sets the count the file gives as available, keeping the units unpaid orders hold on hand besides it.
+- **Content Transfer.** `InventoryPartContentImportHandler` adds the `InventoryPart_*` columns: `TrackInventory`, `AllowBackorder`, `LowStockThreshold`, `ShipsFrom`, `Stock` (available, for a product without variants) and `VariantStock` (each variant's, by SKU or options, such as `TEE-S=4; M / Red=2`). Counts are set once the import has saved the product (`InventoryCountApplier`, in a deferred task after the stock items are synced), keeping the units unpaid orders hold on hand besides them.
 
 ## Orders
 

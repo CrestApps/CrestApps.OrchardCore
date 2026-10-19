@@ -2072,7 +2072,48 @@ public class TaxonomyFieldImportHandlerTests
 
     public TaxonomyFieldImportHandlerTests()
     {
-        _handler = new TaxonomyFieldImportHandler(Mock.Of<IStringLocalizer<TaxonomyFieldImportHandler>>());
+        var taxonomy = new ContentItem { ContentItemId = "taxonomy-id" };
+        ((System.Text.Json.Nodes.JsonObject)taxonomy.Content)["TaxonomyPart"] = System.Text.Json.Nodes.JsonNode.Parse(
+            """{"Terms":[{"ContentItemId":"term1","DisplayText":"Shirts","Terms":[{"ContentItemId":"term2","DisplayText":"Tees"}]},{"ContentItemId":"term3","DisplayText":"Hats"}]}""");
+
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.GetAsync("taxonomy-id", It.IsAny<VersionOptions>())).ReturnsAsync(taxonomy);
+
+        _handler = new TaxonomyFieldImportHandler(contentManager.Object, Mock.Of<IStringLocalizer<TaxonomyFieldImportHandler>>());
+    }
+
+    private static ContentPartFieldDefinition Field(bool unique = false)
+        => new(new ContentFieldDefinition(nameof(TaxonomyField)), "Categories", System.Text.Json.Nodes.JsonNode.Parse(
+            "{\"TaxonomyFieldSettings\":{\"TaxonomyContentItemId\":\"taxonomy-id\",\"Unique\":" + (unique ? "true" : "false") + "}}").AsObject());
+
+    [Fact]
+    public async Task ImportAsync_FindsTermsByName_NestedOnesToo_AndLeavesOutUnknownNames()
+    {
+        var part = new ContentPart();
+        var table = new DataTable();
+        table.Columns.Add("MyPart_Categories_Terms");
+        var row = table.NewRow();
+        row[0] = "Clothing > Tees, hats, Socks";
+
+        await _handler.ImportAsync(new ContentFieldImportMapContext { PartName = "MyPart", ContentPartFieldDefinition = Field(), ContentPart = part, ContentItem = new ContentItem(), Columns = table.Columns, Row = row });
+
+        var field = part.Get<TaxonomyField>("Categories");
+        Assert.Equal("taxonomy-id", field.TaxonomyContentItemId);
+        Assert.Equal(["term2", "term3"], field.TermContentItemIds);
+    }
+
+    [Fact]
+    public async Task ImportAsync_TakesIds_AndOnlyOneForAUniqueField()
+    {
+        var part = new ContentPart();
+        var table = new DataTable();
+        table.Columns.Add("MyPart_Categories_TermContentItemIds");
+        var row = table.NewRow();
+        row[0] = "term3,term1,missing";
+
+        await _handler.ImportAsync(new ContentFieldImportMapContext { PartName = "MyPart", ContentPartFieldDefinition = Field(unique: true), ContentPart = part, ContentItem = new ContentItem(), Columns = table.Columns, Row = row });
+
+        Assert.Equal(["term3"], part.Get<TaxonomyField>("Categories").TermContentItemIds);
     }
 
     [Fact]
@@ -2086,6 +2127,7 @@ public class TaxonomyFieldImportHandlerTests
         });
 
         var dataTable = new DataTable();
+        dataTable.Columns.Add("MyPart_Categories_Terms");
         dataTable.Columns.Add("MyPart_Categories_TaxonomyContentItemId");
         dataTable.Columns.Add("MyPart_Categories_TermContentItemIds");
         var row = dataTable.NewRow();
@@ -2102,6 +2144,7 @@ public class TaxonomyFieldImportHandlerTests
 
         Assert.Equal("taxonomy-id", row["MyPart_Categories_TaxonomyContentItemId"]?.ToString());
         Assert.Equal("term1,term2", row["MyPart_Categories_TermContentItemIds"]?.ToString());
+        Assert.Equal("Shirts, Tees", row["MyPart_Categories_Terms"]?.ToString());
     }
 }
 
