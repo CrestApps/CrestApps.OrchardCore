@@ -2,6 +2,7 @@ using System.Text;
 using CrestApps.OrchardCore.ContactCenter.Reports;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Reports.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 
@@ -52,8 +53,8 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         var undeclared = await host.ExecuteInTenantScopeAsync(tenant, serviceProvider =>
         {
             var violations = GetContactCenterReports(serviceProvider)
-                .Where(report => report is not IContactCenterCapabilityDependentReport)
-                .Select(report => $"{report.GetType().FullName} ({report.Name})")
+                .Where(entry => entry.Report is not IContactCenterCapabilityDependentReport)
+                .Select(entry => $"{entry.Report.GetType().FullName} ({entry.Name})")
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToArray();
@@ -101,7 +102,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
             var guarded = new List<string>();
             var leaked = new List<string>();
 
-            foreach (var report in GetContactCenterReports(serviceProvider))
+            foreach (var (name, report) in GetContactCenterReports(serviceProvider))
             {
                 if (report is not IContactCenterCapabilityDependentReport dependent)
                 {
@@ -117,7 +118,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
                     continue;
                 }
 
-                guarded.Add(report.Name);
+                guarded.Add(name);
 
                 var document = await report.RunAsync(context);
                 var section = document.Sections.Count == 1
@@ -131,7 +132,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
                     section.Chart is not null ||
                     missing.Any(featureId => !(section.Description ?? string.Empty).Contains(featureId, StringComparison.Ordinal)))
                 {
-                    leaked.Add($"{report.Name} (missing: {string.Join(", ", missing)})");
+                    leaked.Add($"{name} (missing: {string.Join(", ", missing)})");
                 }
             }
 
@@ -193,7 +194,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
             var executed = 0;
             var leaked = new List<string>();
 
-            foreach (var report in GetContactCenterReports(serviceProvider))
+            foreach (var (name, report) in GetContactCenterReports(serviceProvider))
             {
                 executed++;
 
@@ -214,7 +215,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
 
                         if (offending.Length > 0)
                         {
-                            leaked.Add($"{report.Name} renders '{heading}'");
+                            leaked.Add($"{name} renders '{heading}'");
                         }
                     }
                 }
@@ -278,12 +279,15 @@ public sealed class ContactCenterReportCapabilityDegradationTests
                 dragged));
     }
 
-    private static IEnumerable<IReport> GetContactCenterReports(IServiceProvider serviceProvider)
+    private static IEnumerable<(string Name, IReportRunner Report)> GetContactCenterReports(IServiceProvider serviceProvider)
     {
-        return serviceProvider
-            .GetServices<IReport>()
-            .Where(report => report.GetType().Assembly.GetName().Name?
-                .StartsWith(ReportAssemblyPrefix, StringComparison.Ordinal) == true);
+        var reportManager = serviceProvider.GetRequiredService<IReportManager>();
+
+        return reportManager
+            .GetReports()
+            .Where(report => report.Type.Assembly.GetName().Name?
+                .StartsWith(ReportAssemblyPrefix, StringComparison.Ordinal) == true)
+            .Select(report => (report.Name, reportManager.GetReport(report.Name)));
     }
 
     private static string Describe(string problem, string remedy, IReadOnlyCollection<string> offenders)

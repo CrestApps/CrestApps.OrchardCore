@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -14,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Reports;
 /// The subscriptions dashboard report: active, new, and expiring subscriptions plus the distinct
 /// subscriber count for the reporting period.
 /// </summary>
-public sealed class SubscriptionsDashboardReport : SubscriptionReportBase
+public sealed class SubscriptionsDashboardReport : SubscriptionReportBase, IReport
 {
     private const int ExpiringHorizonDays = 30;
 
@@ -40,13 +42,19 @@ public sealed class SubscriptionsDashboardReport : SubscriptionReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "subscriptions-dashboard";
+    public static string Name => "subscriptions-dashboard";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Subscriptions dashboard"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<SubscriptionsDashboardReport>("Subscriptions dashboard");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Active, new, and expiring subscriptions plus the total number of distinct subscribers."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<SubscriptionsDashboardReport>("Active, new, and expiring subscriptions plus the total number of distinct subscribers.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

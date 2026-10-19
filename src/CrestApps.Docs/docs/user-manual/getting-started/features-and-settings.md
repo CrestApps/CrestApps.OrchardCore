@@ -102,6 +102,7 @@ Find the feature by the name shown in **Tools > Features**. The [feature referen
 | --- | --- | --- |
 | **Reports** | The Reports menu and CSV export. | [Reports](../reports.md) |
 | **Reports (OpenXml)** | Excel export of reports. | [Reports](../reports.md) |
+| **Report Builder** | Build your own reports with drag and drop, and share them. | [Report Builder](../report-builder/index.md) |
 | **DNC Registry**, **Local Do Not Call Registry**, **USA FTC Do Not Call Registry**, **Canada LNNTE-DNCL Registry** | Do-not-call checks on imports and calls. | [Do-not-call lists](../administration/do-not-call-lists.md) |
 | **AbstractAPI Phone Number Verification**, **Veriphone Phone Number Verification**, **Twilio Phone Number Verification** | Phone number lookups that catch dead numbers before you dial. | [Phone number verification](../administration/phone-number-verification.md) |
 | **Content Transfer**, **Content Transfer (OpenXml)** | Importing and exporting contacts and other records as CSV or Excel. | [Import and export](../administration/import-and-export.md) |

@@ -321,7 +321,7 @@ public sealed class ContactCenterReportFilterDisplayDriver : DisplayDriver<Repor
 
     private HashSet<string> GetFilterNames(string reportName)
     {
-        if (_reportManager.FindByName(reportName) is not IReportFilterMetadata metadata)
+        if (_reportManager.GetReport(reportName) is not IReportFilterMetadata metadata)
         {
             return null;
         }

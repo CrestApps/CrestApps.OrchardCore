@@ -1,0 +1,30 @@
+@model DesignedReportViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.Name">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>@Model.Design.DisplayText</title>
+    <style asp-name="bootstrap"></style>
+    <style asp-name="font-awesome"></style>
+    <script asp-name="bootstrap" at="Foot"></script>
+    <resources type="Meta" />
+    <resources type="HeadLink" />
+    <resources type="Stylesheet" />
+    <resources type="HeadScript" />
+</head>
+<body class="bg-body-tertiary">
+    <main class="container-fluid py-4">
+        <h1 class="h3 mb-3">@Model.Design.DisplayText</h1>
+        <partial name="_DesignedReport" model="Model" />
+    </main>
+    <resources type="FootScript" />
+</body>
+</html>

@@ -157,7 +157,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
             "CrestApps.OrchardCore.Reports"})]
     public sealed class ReportsStartup : OrchardCore.Modules.StartupBase
     {
-        public ReportsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.ReportsStartup> stringLocalizer) { }
+        public ReportsStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     public sealed class Startup : OrchardCore.Modules.StartupBase
@@ -881,42 +881,48 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Models.Reports
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
 {
-    public sealed class ActivitySummaryReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
+    public sealed class ActivitySummaryReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public ActivitySummaryReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.ActivitySummaryReportProvider> stringLocalizer) { }
-        public override string Category { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class CampaignPerformanceReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
+    public sealed class CampaignPerformanceReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public CampaignPerformanceReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.CampaignPerformanceReportProvider> stringLocalizer) { }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class DialerCallDetailReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Omnichannel.Managements.Reports.IOmnichannelReportFilterDefaults, CrestApps.OrchardCore.Reports.IReportFilterMetadata
+    public sealed class DialerCallDetailReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Omnichannel.Managements.Reports.IOmnichannelReportFilterDefaults, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public const int PageSize = 100;
         public const string ReportName = "omnichannel-dialer-call-detail";
         public DialerCallDetailReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DialerCallDetailReportProvider> stringLocalizer) { }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public void ApplyDefaults(CrestApps.OrchardCore.Reports.Models.ReportFilter filter) { }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class DispositionBreakdownReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
+    public sealed class DispositionBreakdownReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public DispositionBreakdownReportProvider(YesSql.ISession session, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivitySourceOptions> activitySourceOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DispositionBreakdownReportProvider> stringLocalizer) { }
-        public override string Category { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class HandoffContainmentAggregator
@@ -924,12 +930,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
         public const string RoutedVoiceReason = "handed_off_routed_voice";
         public static CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentSummary Compute(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> activities) { }
     }
-    public sealed class HandoffContainmentReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
+    public sealed class HandoffContainmentReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public HandoffContainmentReportProvider(YesSql.ISession session, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentReportProvider> stringLocalizer) { }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class HandoffContainmentSummary
@@ -947,43 +955,64 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     {
         void ApplyDefaults(CrestApps.OrchardCore.Reports.Models.ReportFilter filter);
     }
-    public sealed class LeadConversionReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReportFilterMetadata
+    public sealed class LeadConversionReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public LeadConversionReportProvider(YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadSourceProvider sources, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadConversionReportProvider> stringLocalizer) { }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class LeadFunnelReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReportFilterMetadata
+    public sealed class LeadFunnelReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public LeadFunnelReportProvider(YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.LeadStatus> statuses, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.LeadFunnelReportProvider> stringLocalizer) { }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public abstract class OmnichannelReportBase : CrestApps.OrchardCore.Reports.IReport
+    public abstract class OmnichannelReportBase : CrestApps.OrchardCore.Reports.IReportRunner
     {
         protected OmnichannelReportBase(Microsoft.Extensions.Localization.IStringLocalizer stringLocalizer) { }
-        public virtual string Category { get; }
-        public abstract Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public abstract Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
-        public abstract string Name { get; }
-        public OrchardCore.Security.Permissions.Permission Permission { get; }
         protected Microsoft.Extensions.Localization.IStringLocalizer S { get; }
         public abstract System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default);
     }
-    public sealed class OpportunityPipelineReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReportFilterMetadata
+    public sealed class OpportunityPipelineReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase, CrestApps.OrchardCore.Reports.IReport, CrestApps.OrchardCore.Reports.IReportFilterMetadata, CrestApps.OrchardCore.Reports.IReportRunner
     {
         public OpportunityPipelineReportProvider(YesSql.ISession session, CrestApps.Core.Services.INamedCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OpportunityStage> stages, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.OpportunityPipelineReportProvider> stringLocalizer) { }
-        public override Microsoft.Extensions.Localization.LocalizedString Description { get; }
-        public override Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         public System.Collections.Generic.IReadOnlyCollection<string> FilterNames { get; }
-        public override string Name { get; }
+        public static string Category { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+        public static OrchardCore.Security.Permissions.Permission Permission { get; }
         public override System.Threading.Tasks.Task<CrestApps.OrchardCore.Reports.Models.ReportDocument> RunAsync(CrestApps.OrchardCore.Reports.ReportContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources
+{
+    public sealed class OmnichannelReportDataSource : OrchardCore.DataSources.RecordDataSource, OrchardCore.DataSources.IDataSource
+    {
+        public const string SourceName = "Omnichannel";
+        public OmnichannelReportDataSource(YesSql.ISession session, CrestApps.Core.Services.INamedCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositions, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaigns, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroups, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Reports.DataSources.OmnichannelReportDataSource> stringLocalizer) { }
+        protected override System.Collections.Generic.IEnumerable<OrchardCore.DataSources.IRecordDataSet> DataSets { get; }
+        public static OrchardCore.Localization.LocalizationSource Description { get; }
+        public static OrchardCore.Localization.LocalizationSource DisplayName { get; }
+        public static string Name { get; }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "OrchardCore.DataPipelines.Core"})]
+    public sealed class OmnichannelReportDataSourceStartup : OrchardCore.Modules.StartupBase
+    {
+        public OmnichannelReportDataSourceStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Schemas

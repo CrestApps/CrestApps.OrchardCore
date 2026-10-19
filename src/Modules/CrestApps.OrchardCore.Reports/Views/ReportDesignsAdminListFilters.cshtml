@@ -1,0 +1,25 @@
+@*
+    The status filter of the Report Builder list, passed to the admin list as its 'ToolbarActions' so it renders at the
+    end of the list's toolbar. Each status is a link that keeps the search.
+*@
+@{
+    string status = Model.Status;
+    string search = Model.Search;
+    var statusText = status switch
+    {
+        ReportDesignListStatus.Published => T["Published"],
+        ReportDesignListStatus.Unpublished => T["Not published"],
+        _ => T["All"],
+    };
+}
+
+<div class="btn-group filter">
+    <button class="btn btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        @T["Status: {0}", statusText]
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item@(status == ReportDesignListStatus.All ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search">@T["All"]</a></li>
+        <li><a class="dropdown-item@(status == ReportDesignListStatus.Published ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search" asp-route-status="@ReportDesignListStatus.Published">@T["Published"]</a></li>
+        <li><a class="dropdown-item@(status == ReportDesignListStatus.Unpublished ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search" asp-route-status="@ReportDesignListStatus.Unpublished">@T["Not published"]</a></li>
+    </ul>
+</div>

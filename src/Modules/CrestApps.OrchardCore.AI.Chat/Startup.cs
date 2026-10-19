@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.AI.Chat.Handlers;
 using CrestApps.OrchardCore.AI.Chat.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Models;
+using CrestApps.OrchardCore.AI.Chat.Reports;
 using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
@@ -20,6 +21,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
@@ -29,6 +31,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data.Migration;
+using OrchardCore.DataSources;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -164,6 +167,33 @@ public sealed class ChatAnalyticsUIStartup : StartupBase
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsPerformanceDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsConversionDisplayDriver>()
             .AddDisplayDriver<AIChatAnalyticsReport, AIChatAnalyticsFeedbackDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Exposes AI chat sessions as a data source of Orchard Core, for reports and data pipelines.
+/// </summary>
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class DataSourcesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services
+            .AddScoped<IAIChatReportDataSet, AIChatSessionsReportDataSet>()
+            .AddDataSource<AIChatReportDataSource>();
+    }
+}
+
+/// <summary>
+/// Adds the chat session metrics data set to the AI chat data source.
+/// </summary>
+[Feature(AIConstants.Feature.ChatAnalytics)]
+[RequireFeatures("OrchardCore.DataPipelines.Core")]
+public sealed class ChatAnalyticsDataSourcesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<IAIChatReportDataSet, AIChatSessionMetricsReportDataSet>();
     }
 }
 

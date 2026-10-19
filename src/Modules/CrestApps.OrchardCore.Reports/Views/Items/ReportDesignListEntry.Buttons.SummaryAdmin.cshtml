@@ -1,0 +1,17 @@
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignListEntry>
+
+@{
+    var entry = Model.Value;
+}
+
+@if (!entry.IsDraft)
+{
+    <a asp-route="ReportDesignsRun" asp-route-id="@entry.Design.ItemId" class="btn btn-success btn-sm">@T["Run"]</a>
+}
+
+@if (entry.CanEdit)
+{
+    <a asp-route="ReportDesignerEdit" asp-route-id="@entry.Design.ItemId" class="btn btn-primary btn-sm">@T["Edit"]</a>
+}

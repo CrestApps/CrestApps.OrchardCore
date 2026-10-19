@@ -114,7 +114,7 @@ public sealed class DialerQueueInventoryTests
         var provider = CreateProvider(fixture.CreateService(session));
 
         // Act
-        var document = await provider.RunAsync(new ReportContext(new ReportFilter { ReportName = provider.Name }), TestContext.Current.CancellationToken);
+        var document = await provider.RunAsync(new ReportContext(new ReportFilter { ReportName = DialerQueueInventoryReportProvider.Name }), TestContext.Current.CancellationToken);
 
         // Assert
         var summary = document.Sections[0];

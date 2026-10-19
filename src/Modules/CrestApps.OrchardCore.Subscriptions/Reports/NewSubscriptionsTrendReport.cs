@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -14,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Reports;
 /// The new subscriptions trend report: a monthly chart of the number of subscriptions started over the
 /// reporting period.
 /// </summary>
-public sealed class NewSubscriptionsTrendReport : SubscriptionReportBase
+public sealed class NewSubscriptionsTrendReport : SubscriptionReportBase, IReport
 {
     private readonly ISession _session;
 
@@ -34,13 +36,19 @@ public sealed class NewSubscriptionsTrendReport : SubscriptionReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "new-subscriptions-trend";
+    public static string Name => "new-subscriptions-trend";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["New subscriptions trend"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<NewSubscriptionsTrendReport>("New subscriptions trend");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["The number of new subscriptions started each month over the reporting period."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<NewSubscriptionsTrendReport>("The number of new subscriptions started each month over the reporting period.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

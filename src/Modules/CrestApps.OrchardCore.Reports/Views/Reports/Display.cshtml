@@ -1,16 +1,21 @@
+@using Microsoft.Extensions.Localization
 @using OrchardCore.DisplayManagement.Html
-
+@inject IStringLocalizerFactory LocalizerFactory
 @model ReportDisplayViewModel
+@{
+    var displayName = LocalizerFactory.Localize(Model.Report.DisplayName);
+    var description = Model.Report.Description is null ? null : LocalizerFactory.Localize(Model.Report.Description);
+}
 
 <zone Name="Title">
-    <breadcrumb name="ReportsDisplay" title="@(new HtmlContentString(Model.Report.DisplayName.Value ?? string.Empty))">
+    <breadcrumb name="ReportsDisplay" title="@(new HtmlContentString(displayName.Value))">
         <breadcrumb-item id="Reports" action="Index" controller="Reports" area="CrestApps.OrchardCore.Reports">@T["Reports"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
-@if (!string.IsNullOrEmpty(Model.Report.Description?.Value))
+@if (!string.IsNullOrEmpty(description?.Value))
 {
-    <p class="text-muted">@Model.Report.Description</p>
+    <p class="text-muted">@description</p>
 }
 
 <form method="get" asp-action="Display" asp-route-id="@Model.Report.Name">
@@ -32,14 +37,14 @@
                 var reportHeading = Model.Document.Sections.FirstOrDefault()?.Title;
 
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                    <h2 class="h5 mb-0">@(string.IsNullOrEmpty(reportHeading) ? Model.Report.DisplayName : reportHeading)</h2>
+                    <h2 class="h5 mb-0">@(string.IsNullOrEmpty(reportHeading) ? displayName.Value : reportHeading)</h2>
 
                     @if (Model.ExportFormats.Count == 1)
                     {
                         var exportFormat = Model.ExportFormats[0];
 
                         <button type="submit" class="btn btn-sm btn-outline-secondary" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
-                            <i class="fa-solid fa-download"></i> @T["Export {0}", exportFormat.DisplayName]
+                            <i class="fa-solid fa-download"></i> @T["Export {0}", LocalizerFactory.Localize(exportFormat.DisplayName)]
                         </button>
                     }
                     else if (Model.ExportFormats.Count > 1)
@@ -53,7 +58,7 @@
                                 {
                                     <li>
                                         <button type="submit" class="dropdown-item" formaction="@Url.Action("Export", new { id = Model.Report.Name, format = exportFormat.Name })" formmethod="get">
-                                            @T["Export {0}", exportFormat.DisplayName]
+                                            @T["Export {0}", LocalizerFactory.Localize(exportFormat.DisplayName)]
                                         </button>
                                     </li>
                                 }

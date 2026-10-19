@@ -270,4 +270,25 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
                 "The Contact Center interaction event index contains multiple events with the same idempotency key. Resolve the duplicate legacy events before enabling the idempotency uniqueness constraint.");
         }
     }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>OccurredUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom7Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 8;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<InteractionEventIndex>(
+            SchemaBuilder,
+            "IDX_InteractionEventIndex_Report",
+            ContactCenterStorage.CollectionName,
+            "OccurredUtc", "Id");
+    }
 }

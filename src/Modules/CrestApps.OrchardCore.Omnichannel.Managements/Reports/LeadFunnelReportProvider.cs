@@ -1,9 +1,12 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using YesSql;
 using ISession = YesSql.ISession;
 
@@ -13,7 +16,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 /// The lead funnel: the leads created in the period, by the status they are in now, and how many of them were
 /// converted.
 /// </summary>
-public sealed class LeadFunnelReportProvider : OmnichannelReportBase, IReportFilterMetadata
+public sealed class LeadFunnelReportProvider : OmnichannelReportBase, IReportFilterMetadata, IReport
 {
     private readonly ISession _session;
     private readonly INamedCatalog<LeadStatus> _statuses;
@@ -39,13 +42,19 @@ public sealed class LeadFunnelReportProvider : OmnichannelReportBase, IReportFil
     public IReadOnlyCollection<string> FilterNames => [];
 
     /// <inheritdoc/>
-    public override string Name => "omnichannel-lead-funnel";
+    public static string Name => "omnichannel-lead-funnel";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Lead funnel"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<LeadFunnelReportProvider>("Lead funnel");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["The leads created in the period, by the status they are in now, with the share that was converted."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<LeadFunnelReportProvider>("The leads created in the period, by the status they are in now, with the share that was converted.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.CrmCampaigns;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OmnichannelConstants.Permissions.ViewReports;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

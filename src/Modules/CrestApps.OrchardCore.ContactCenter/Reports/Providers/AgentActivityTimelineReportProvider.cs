@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
@@ -5,7 +6,9 @@ using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -18,7 +21,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 /// the reconciled timecard flags: a missing change and a change superseded by a late sign-off are marked where they
 /// happened.
 /// </remarks>
-public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBase
+public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBase, IReport
 {
     /// <summary>
     /// The most entries listed, so an unfiltered period over every agent stays readable.
@@ -63,16 +66,19 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
     }
 
     /// <inheritdoc/>
-    public override string Name => "contact-center-agent-activity-timeline";
+    public static string Name => "contact-center-agent-activity-timeline";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Agent activity timeline"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<AgentActivityTimelineReportProvider>("Agent activity timeline");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Every agent state, offer, connection and call change in order, with start, end, duration and who made each change."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<AgentActivityTimelineReportProvider>("Every agent state, offer, connection and call change in order, with start, end, duration and who made each change.");
 
     /// <inheritdoc/>
-    public override string Category => ReportsConstants.Categories.ComplianceAudit;
+    public static string Category => ReportsConstants.Categories.ComplianceAudit;
+
+    /// <inheritdoc/>
+    public static Permission Permission => ContactCenterPermissions.ViewReports;
 
     /// <inheritdoc/>
     public override IReadOnlyCollection<string> FilterNames { get; } =

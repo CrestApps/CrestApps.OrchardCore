@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.Orders.Reports;
 /// What the order reports share: the orders paid in the chosen period, the site's time zone for days, and money in each
 /// order's own currency.
 /// </summary>
-public abstract class OrderReportBase : IReport
+public abstract class OrderReportBase : IReportRunner
 {
     // Without a start, a report reads from a date older than any order rather than from the beginning of time.
     private static readonly DateTime _earliest = new(2000, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -34,18 +35,6 @@ public abstract class OrderReportBase : IReport
         _clock = clock;
         S = stringLocalizer;
     }
-
-    public abstract string Name { get; }
-
-    public abstract LocalizedString DisplayName { get; }
-
-    public abstract LocalizedString Description { get; }
-
-    public virtual string Category
-        => ReportsConstants.Categories.Commerce;
-
-    public virtual Permission Permission
-        => OrderPermissions.ManageOrders;
 
     public abstract Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default);
 
@@ -108,18 +97,24 @@ public abstract class OrderReportBase : IReport
 /// <summary>
 /// Orders paid in the period: what they came to, discounts, shipping, tax and refunds, by day or month.
 /// </summary>
-public sealed class OrderSalesReport : OrderReportBase
+public sealed class OrderSalesReport : OrderReportBase, IReport
 {
     public OrderSalesReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderSalesReport> stringLocalizer)
         : base(reader, siteService, clock, stringLocalizer)
     {
     }
 
-    public override string Name => "order-sales";
+    public static string Name => "order-sales";
 
-    public override LocalizedString DisplayName => S["Sales"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderSalesReport>("Sales");
 
-    public override LocalizedString Description => S["What the orders paid in the period came to, with discounts, shipping, tax and refunds, day by day."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderSalesReport>("What the orders paid in the period came to, with discounts, shipping, tax and refunds, day by day.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -213,14 +208,14 @@ public sealed class OrderSalesReport : OrderReportBase
 /// <summary>
 /// What each product sold in the period.
 /// </summary>
-public sealed class OrderProductSalesReport : OrderReportBase
+public sealed class OrderProductSalesReport : OrderReportBase, IReport
 {
     public OrderProductSalesReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderProductSalesReport> stringLocalizer)
         : base(reader, siteService, clock, stringLocalizer)
     {
     }
 
-    public override string Name => "order-product-sales";
+    public static string Name => "order-product-sales";
 
     private string KindName(ProductType productType)
         => productType switch
@@ -231,9 +226,15 @@ public sealed class OrderProductSalesReport : OrderReportBase
             _ => S["Other"].Value,
         };
 
-    public override LocalizedString DisplayName => S["Sales by product"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderProductSalesReport>("Sales by product");
 
-    public override LocalizedString Description => S["The units each product and variant sold in the period, and what they sold for before discounts."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderProductSalesReport>("The units each product and variant sold in the period, and what they sold for before discounts.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -292,18 +293,24 @@ public sealed class OrderProductSalesReport : OrderReportBase
 /// <summary>
 /// What the orders paid in the period came to in each country they ship to.
 /// </summary>
-public sealed class OrderCountrySalesReport : OrderReportBase
+public sealed class OrderCountrySalesReport : OrderReportBase, IReport
 {
     public OrderCountrySalesReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderCountrySalesReport> stringLocalizer)
         : base(reader, siteService, clock, stringLocalizer)
     {
     }
 
-    public override string Name => "order-country-sales";
+    public static string Name => "order-country-sales";
 
-    public override LocalizedString DisplayName => S["Sales by country"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderCountrySalesReport>("Sales by country");
 
-    public override LocalizedString Description => S["Orders paid in the period and what they came to, by the country they ship to, or are billed to when nothing ships."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderCountrySalesReport>("Orders paid in the period and what they came to, by the country they ship to, or are billed to when nothing ships.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -339,18 +346,24 @@ public sealed class OrderCountrySalesReport : OrderReportBase
 /// <summary>
 /// The tax charged on the orders paid in the period, by day or month.
 /// </summary>
-public sealed class OrderTaxReport : OrderReportBase
+public sealed class OrderTaxReport : OrderReportBase, IReport
 {
     public OrderTaxReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderTaxReport> stringLocalizer)
         : base(reader, siteService, clock, stringLocalizer)
     {
     }
 
-    public override string Name => "order-tax";
+    public static string Name => "order-tax";
 
-    public override LocalizedString DisplayName => S["Tax on orders"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderTaxReport>("Tax on orders");
 
-    public override LocalizedString Description => S["The tax charged on the orders paid in the period, and what it was charged on, day by day."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderTaxReport>("The tax charged on the orders paid in the period, and what it was charged on, day by day.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -406,18 +419,24 @@ public sealed class OrderTaxReport : OrderReportBase
 /// <summary>
 /// What each promotion code took off the orders paid in the period.
 /// </summary>
-public sealed class OrderDiscountsReport : OrderReportBase
+public sealed class OrderDiscountsReport : OrderReportBase, IReport
 {
     public OrderDiscountsReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<OrderDiscountsReport> stringLocalizer)
         : base(reader, siteService, clock, stringLocalizer)
     {
     }
 
-    public override string Name => "order-discounts";
+    public static string Name => "order-discounts";
 
-    public override LocalizedString DisplayName => S["Discounts on orders"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderDiscountsReport>("Discounts on orders");
 
-    public override LocalizedString Description => S["How many orders paid in the period used each promotion code, and what it took off."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderDiscountsReport>("How many orders paid in the period used each promotion code, and what it took off.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -452,7 +471,7 @@ public sealed class OrderDiscountsReport : OrderReportBase
 /// <summary>
 /// The refunds given in the period.
 /// </summary>
-public sealed class OrderRefundsReport : OrderReportBase
+public sealed class OrderRefundsReport : OrderReportBase, IReport
 {
     // A refund comes after the order: refunds of orders paid up to this long before the period are found.
     private static readonly TimeSpan _refundWindow = TimeSpan.FromDays(180);
@@ -462,11 +481,17 @@ public sealed class OrderRefundsReport : OrderReportBase
     {
     }
 
-    public override string Name => "order-refunds";
+    public static string Name => "order-refunds";
 
-    public override LocalizedString DisplayName => S["Refunds"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderRefundsReport>("Refunds");
 
-    public override LocalizedString Description => S["The money given back in the period, refund by refund, for orders paid up to 180 days before it."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderRefundsReport>("The money given back in the period, refund by refund, for orders paid up to 180 days before it.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -506,7 +531,7 @@ public sealed class OrderRefundsReport : OrderReportBase
 /// <summary>
 /// The disputes, or chargebacks, payers opened in the period, with the ones still needing a response first.
 /// </summary>
-public sealed class OrderDisputesReport : OrderReportBase
+public sealed class OrderDisputesReport : OrderReportBase, IReport
 {
     // A dispute comes after the payment: disputes of orders paid up to this long before the period are found.
     private static readonly TimeSpan _disputeWindow = TimeSpan.FromDays(180);
@@ -516,11 +541,17 @@ public sealed class OrderDisputesReport : OrderReportBase
     {
     }
 
-    public override string Name => "order-disputes";
+    public static string Name => "order-disputes";
 
-    public override LocalizedString DisplayName => S["Disputes"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderDisputesReport>("Disputes");
 
-    public override LocalizedString Description => S["The payments disputed with the payer's bank in the period, open ones first, for orders paid up to 180 days before it."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderDisputesReport>("The payments disputed with the payer's bank in the period, open ones first, for orders paid up to 180 days before it.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -573,18 +604,24 @@ public sealed class OrderDisputesReport : OrderReportBase
 /// <summary>
 /// Paid orders not shipped in full yet, oldest first.
 /// </summary>
-public sealed class UnfulfilledOrdersReport : OrderReportBase
+public sealed class UnfulfilledOrdersReport : OrderReportBase, IReport
 {
     public UnfulfilledOrdersReport(OrderReportReader reader, ISiteService siteService, IClock clock, IStringLocalizer<UnfulfilledOrdersReport> stringLocalizer)
         : base(reader, siteService, clock, stringLocalizer)
     {
     }
 
-    public override string Name => "unfulfilled-orders";
+    public static string Name => "unfulfilled-orders";
 
-    public override LocalizedString DisplayName => S["Orders to ship"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<UnfulfilledOrdersReport>("Orders to ship");
 
-    public override LocalizedString Description => S["Paid orders that haven't shipped in full, oldest first, whatever the period."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<UnfulfilledOrdersReport>("Paid orders that haven't shipped in full, oldest first, whatever the period.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {

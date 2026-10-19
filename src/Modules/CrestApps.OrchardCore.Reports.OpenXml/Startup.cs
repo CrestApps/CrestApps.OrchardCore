@@ -12,6 +12,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IReportExportFormat, ExcelReportExportFormat>();
+        services.AddReportExportFormat<ExcelReportExportFormat>();
     }
 }

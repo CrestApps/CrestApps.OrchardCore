@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Data.Migration;
@@ -33,7 +34,9 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
     {
         await SchemaBuilder.CreateAIChatSessionIndexSchemaAsync(_option);
 
-        return 4;
+        await CreateReportIndexAsync();
+
+        return 5;
     }
 
     /// <summary>
@@ -80,5 +83,26 @@ internal sealed class AIChatSessionIndexMigrations : DataMigration
         {
             _logger.LogError(ex, "Failed to add the Status and LastActivityUtc columns to the AI chat session index table. It's probably that the columns exists. You can ignore it.");
         }
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>LastActivityUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom4Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 5;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<AIChatSessionIndex>(
+            SchemaBuilder,
+            "IDX_AIChatSessionIndex_Report",
+            _option.AICollectionName,
+            "LastActivityUtc", "Id");
     }
 }

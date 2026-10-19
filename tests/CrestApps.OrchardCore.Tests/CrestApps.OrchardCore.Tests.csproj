@@ -77,6 +77,7 @@
     <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Receipts.Core/CrestApps.OrchardCore.Receipts.Core.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Receipts/CrestApps.OrchardCore.Receipts.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports.OpenXml/CrestApps.OrchardCore.Reports.OpenXml.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Reports/CrestApps.OrchardCore.Reports.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.ContentFields/CrestApps.OrchardCore.ContentFields.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.OpenAI.Azure/CrestApps.OrchardCore.OpenAI.Azure.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Roles/CrestApps.OrchardCore.Roles.csproj" />

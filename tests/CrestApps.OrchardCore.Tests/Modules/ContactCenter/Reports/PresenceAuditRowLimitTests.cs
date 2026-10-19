@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 using static CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports.AuditEvents;
@@ -98,18 +99,12 @@ public sealed class PresenceAuditRowLimitTests
             Mock.Of<IInteractionEventStore>(),
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<ICatalogManager<OmnichannelCampaign>>(),
-            new AgentWorkforceReportDefinition(
-                "contact-center-presence-audit",
-                () => new LocalizedString("name", "Agent presence audit"),
-                () => new LocalizedString("description", "Agent presence audit"),
-                AgentWorkforceReportKind.PresenceAudit,
-                "Workforce",
-                []),
+            AgentWorkforceReportKind.PresenceAudit,
             Mock.Of<IContactCenterReportCapabilityGuard>(),
             new FormattingLocalizer<AgentWorkforceReportProvider>(),
             Mock.Of<IClock>(),
             Mock.Of<ILocalClock>(),
-            new ContactCenterReportingOptions(),
+            Options.Create(new ContactCenterReportingOptions()),
             summaryReader: null);
 
     private sealed class FormattingLocalizer<T> : IStringLocalizer<T>

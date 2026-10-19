@@ -202,9 +202,9 @@ public sealed class CrmReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadFunnelReportProvider>()
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.LeadConversionReportProvider>()
-            .AddScoped<CrestApps.OrchardCore.Reports.IReport, Reports.OpportunityPipelineReportProvider>();
+            .AddReport<Reports.LeadFunnelReportProvider>()
+            .AddReport<Reports.LeadConversionReportProvider>()
+            .AddReport<Reports.OpportunityPipelineReportProvider>();
     }
 }
 

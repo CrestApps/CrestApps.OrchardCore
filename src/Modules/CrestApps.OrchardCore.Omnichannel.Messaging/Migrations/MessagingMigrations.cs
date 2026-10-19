@@ -156,7 +156,9 @@ internal sealed class MessagingMigrations : DataMigration
                 "DocumentId"),
             collection: MessagingStorage.CollectionName);
 
-        return 2;
+        await CreateReportIndexAsync();
+
+        return 3;
     }
 
     private async Task CreateAddressesUniqueIndexAsync()
@@ -209,5 +211,26 @@ internal sealed class MessagingMigrations : DataMigration
             "ItemId", "DocumentId");
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the index reports read the records through, newest first by <c>LastMessageUtc</c> a page at a time, so
+    /// each page and each date range is found by seeking.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await CreateReportIndexAsync();
+
+        return 3;
+    }
+
+    private Task<bool> CreateReportIndexAsync()
+    {
+        return IndexTableIndexCreation.CreateIfMissingAsync<MessagingConversationIndex>(
+            SchemaBuilder,
+            "IDX_MessagingConversationIndex_Report",
+            MessagingStorage.CollectionName,
+            "LastMessageUtc", "Id");
     }
 }

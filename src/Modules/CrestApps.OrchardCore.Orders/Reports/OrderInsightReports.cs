@@ -9,7 +9,9 @@ using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
+using OrchardCore.Localization;
 using OrchardCore.Modules;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -19,7 +21,7 @@ namespace CrestApps.OrchardCore.Orders.Reports;
 /// <summary>
 /// What each category sold in the period. A product in two categories counts in both.
 /// </summary>
-public sealed class OrderCategorySalesReport : OrderReportBase
+public sealed class OrderCategorySalesReport : OrderReportBase, IReport
 {
     private readonly ProductCategoryNames _categoryNames;
 
@@ -29,11 +31,17 @@ public sealed class OrderCategorySalesReport : OrderReportBase
         _categoryNames = categoryNames;
     }
 
-    public override string Name => "order-category-sales";
+    public static string Name => "order-category-sales";
 
-    public override LocalizedString DisplayName => S["Sales by category"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderCategorySalesReport>("Sales by category");
 
-    public override LocalizedString Description => S["The orders, units and sales of each category in the period, with a table for each taxonomy products are sorted by, such as categories and brands. A product in two categories counts in both."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderCategorySalesReport>("The orders, units and sales of each category in the period, with a table for each taxonomy products are sorted by, such as categories and brands. A product in two categories counts in both.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -94,7 +102,7 @@ public sealed class OrderCategorySalesReport : OrderReportBase
 /// Who bought in the period: first-time and returning buyers, buyers who came back for more, and what each has spent in
 /// all.
 /// </summary>
-public sealed class OrderCustomersReport : OrderReportBase
+public sealed class OrderCustomersReport : OrderReportBase, IReport
 {
     private const int TopBuyers = 25;
 
@@ -106,11 +114,17 @@ public sealed class OrderCustomersReport : OrderReportBase
     {
     }
 
-    public override string Name => "order-customers";
+    public static string Name => "order-customers";
 
-    public override LocalizedString DisplayName => S["Customers"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<OrderCustomersReport>("Customers");
 
-    public override LocalizedString Description => S["Who bought in the period: first-time and returning buyers, how many have bought more than once, and what the top buyers have spent in all."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<OrderCustomersReport>("Who bought in the period: first-time and returning buyers, how many have bought more than once, and what the top buyers have spent in all.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
@@ -178,7 +192,7 @@ public sealed class OrderCustomersReport : OrderReportBase
 /// <summary>
 /// The order checkouts started in the period and how they ended: paid, failed, left or still open.
 /// </summary>
-public sealed class CheckoutConversionReport : OrderReportBase
+public sealed class CheckoutConversionReport : OrderReportBase, IReport
 {
     private const int PageSize = 1000;
 
@@ -190,11 +204,17 @@ public sealed class CheckoutConversionReport : OrderReportBase
         _session = session;
     }
 
-    public override string Name => "checkout-conversion";
+    public static string Name => "checkout-conversion";
 
-    public override LocalizedString DisplayName => S["Checkouts"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<CheckoutConversionReport>("Checkouts");
 
-    public override LocalizedString Description => S["The order checkouts started in the period and how they ended: paid, failed, left or expired, or still open, day by day."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<CheckoutConversionReport>("The order checkouts started in the period and how they ended: paid, failed, left or expired, or still open, day by day.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => OrderPermissions.ManageOrders;
 
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {

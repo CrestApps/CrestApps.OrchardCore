@@ -1,8 +1,11 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Localization;
+using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using YesSql;
 using ISession = YesSql.ISession;
@@ -13,7 +16,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Reports;
 /// The subscription revenue report: gross revenue, transaction volume, average value, and tax collected
 /// for the reporting period, with a monthly revenue trend.
 /// </summary>
-public sealed class SubscriptionRevenueReport : SubscriptionReportBase
+public sealed class SubscriptionRevenueReport : SubscriptionReportBase, IReport
 {
     private readonly ISession _session;
 
@@ -33,13 +36,19 @@ public sealed class SubscriptionRevenueReport : SubscriptionReportBase
     }
 
     /// <inheritdoc/>
-    public override string Name => "subscription-revenue";
+    public static string Name => "subscription-revenue";
 
     /// <inheritdoc/>
-    public override LocalizedString DisplayName => S["Subscription revenue"];
+    public static LocalizationSource DisplayName { get; } = LocalizationSource.Create<SubscriptionRevenueReport>("Subscription revenue");
 
     /// <inheritdoc/>
-    public override LocalizedString Description => S["Gross revenue, transaction volume, average transaction value, and tax collected, with a monthly revenue trend."];
+    public static LocalizationSource Description { get; } = LocalizationSource.Create<SubscriptionRevenueReport>("Gross revenue, transaction volume, average transaction value, and tax collected, with a monthly revenue trend.");
+
+    /// <inheritdoc/>
+    public static string Category => ReportsConstants.Categories.Commerce;
+
+    /// <inheritdoc/>
+    public static Permission Permission => SubscriptionPermissions.ManageSubscriptions;
 
     /// <inheritdoc/>
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)

@@ -195,12 +195,12 @@ public sealed class ReportsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services
-            .AddScoped<IReport, SubscriptionRevenueReport>()
-            .AddScoped<IReport, SubscriptionsDashboardReport>()
-            .AddScoped<IReport, ExpiringSubscriptionsReport>()
-            .AddScoped<IReport, NewSubscriptionsTrendReport>()
-            .AddScoped<IReport, TaxCollectedReport>()
-            .AddScoped<IReport, ProductPerformanceReport>();
+            .AddReport<SubscriptionRevenueReport>()
+            .AddReport<SubscriptionsDashboardReport>()
+            .AddReport<ExpiringSubscriptionsReport>()
+            .AddReport<NewSubscriptionsTrendReport>()
+            .AddReport<TaxCollectedReport>()
+            .AddReport<ProductPerformanceReport>();
     }
 }
 

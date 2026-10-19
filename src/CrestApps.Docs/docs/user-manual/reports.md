@@ -6,6 +6,7 @@ description: Find a report, set its date range and filters, and export it to CSV
 technical_manual:
   - contact-center/report-catalog
   - contact-center/agents-queues-dialer
+  - modules/report-builder/index
   - modules/reports
   - omnichannel/crm
 ---
@@ -23,6 +24,8 @@ Reports show what happened in your contact center over a period you choose: call
 <YouTube video="contact-center-agent-walkthroughs" title="Video of opening a report, changing the date range and filters, and exporting it" start={802} end={833} />
 
 You only see the reports your permissions allow. If the **Reports** page says *No reports are available*, ask your administrator to turn on a feature that adds reports, or to give you the permission.
+
+To build your own reports with drag and drop, see [Report Builder](report-builder/index.md).
 
 ## Run a report
 

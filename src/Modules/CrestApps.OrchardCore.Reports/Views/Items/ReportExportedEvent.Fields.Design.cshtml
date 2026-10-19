@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Reports.Designer.Workflows.Activities
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ReportExportedEvent>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Report Exported"])
+    </h4>
+</header>

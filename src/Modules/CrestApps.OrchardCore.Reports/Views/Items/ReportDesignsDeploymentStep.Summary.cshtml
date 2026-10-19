@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Reports.Designer.Deployments
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<ReportDesignsDeploymentStep>
+
+<h5>@T["Designed Reports and Views"]</h5>
+
+@if (Model.Value.IncludeAll)
+{
+    <span class="badge text-bg-success">@T["All designed reports and views"]</span>
+}
+else
+{
+    <span class="badge text-bg-secondary">@T.Plural(Model.Value.ReportIds?.Length ?? 0, "1 report", "{0} reports")</span>
+    <span class="badge text-bg-secondary">@T.Plural(Model.Value.ViewIds?.Length ?? 0, "1 view", "{0} views")</span>
+}
