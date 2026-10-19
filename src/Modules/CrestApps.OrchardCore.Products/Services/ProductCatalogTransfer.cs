@@ -184,7 +184,7 @@ public sealed class ProductCatalogTransfer
                     ? variants.Variants.Select(variant => new ProductStockKey(item.ContentItemId, variant.VariantId))
                     : [new ProductStockKey(item.ContentItemId, null)])
                 .ToArray();
-            var stock = await _availability.GetAvailabilityAsync(keys);
+            var stock = await _availability.GetAvailabilityAsync(keys, cancellationToken: cancellationToken);
 
             foreach (var item in items)
             {

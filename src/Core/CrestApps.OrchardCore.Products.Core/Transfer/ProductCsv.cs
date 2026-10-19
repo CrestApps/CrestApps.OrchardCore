@@ -365,7 +365,7 @@ public static class ProductCsv
     private static string LastSegment(string path)
         => Blank(path?.Split('>').LastOrDefault());
 
-    private static IEnumerable<string> Split(string values)
+    private static string[] Split(string values)
         => (values ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
     private static void AddImage(ImportedProduct product, string url)
