@@ -136,3 +136,27 @@ public sealed class StoreCreditStartup : StartupBase
         services.AddNavigationProvider<StoreCreditAccountMenu>();
     }
 }
+
+/// <summary>
+/// Loyalty points: earned on orders, taken back on cancels and refunds, and spent toward checkouts after tax.
+/// </summary>
+[Feature(CustomersConstants.Features.Loyalty)]
+public sealed class LoyaltyStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<LoyaltyMigrations>()
+            .AddIndexProvider<Indexes.LoyaltyAccountIndexProvider>();
+        services.AddScoped<ILoyaltyStore, LoyaltyStore>();
+        services.AddScoped<LoyaltyService>();
+        services.AddScoped<LoyaltyTenderProvider>();
+        services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<LoyaltyTenderProvider>());
+        services.AddScoped<Orders.Core.Services.IOrderEventHandler, LoyaltyOrderEventHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, LoyaltyCheckoutFlowDisplayDriver>();
+        services.AddDisplayDriver<Customer, CustomerLoyaltyDisplayDriver>();
+        services.AddSiteDisplayDriver<LoyaltySettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(CustomersConstants.LoyaltySettingsGroupId, CustomerPermissions.ManageCustomers);
+        services.AddNavigationProvider<LoyaltyAccountMenu>();
+        services.AddNavigationProvider<LoyaltySettingsAdminMenu>();
+    }
+}

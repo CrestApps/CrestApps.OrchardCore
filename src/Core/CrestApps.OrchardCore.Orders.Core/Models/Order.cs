@@ -418,6 +418,11 @@ public sealed class OrderDiscount
     /// Gets or sets the key of the discount provider that gave it, such as <c>Coupons</c>.
     /// </summary>
     public string ProviderKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the discount took something off: the goods bought now, the first billing cycle, or shipping.
+    /// </summary>
+    public Checkout.Models.DiscountTarget Target { get; set; }
 }
 
 /// <summary>

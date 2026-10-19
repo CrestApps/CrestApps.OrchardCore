@@ -175,6 +175,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
                 Description = discount.Description,
                 Amount = discount.Amount,
                 ProviderKey = discount.ProviderKey,
+                Target = discount.Target,
             })];
 
         // What a gift card or store credit paid toward the total, so the order shows how it was paid.

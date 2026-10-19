@@ -1,0 +1,60 @@
+@using CrestApps.OrchardCore.Customers.Services
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CustomerLoyaltyViewModel
+@inject OrchardCore.Modules.ILocalClock LocalClock
+
+@functions {
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+
+@* The signed-in customer's loyalty points on the storefront account: what they have, how they earn and spend them,
+   and each time they changed. *@
+
+@{
+    var points = Model.Account?.Points ?? 0;
+    var pointsPerUnit = Model.Settings.PointsPerUnit;
+}
+
+<h1 class="h3 mb-3">@Model.Settings.ProgramName</h1>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="fs-3">@T["{0:N0} points", points]</div>
+        <div class="text-muted">@T["Worth {0} at checkout", ProductPriceFormatter.Format(LoyaltyService.GetValue(points, Model.Settings, Model.Currency), Model.Currency)]</div>
+    </div>
+</div>
+
+<ul class="small text-muted">
+    @if (pointsPerUnit > 0m)
+    {
+        <li>@(pointsPerUnit == 1m ? T["Earn 1 point for every {0} you spend, when you're signed in.", ProductPriceFormatter.Format(1m, Model.Currency)] : T["Earn {0:0.##} points for every {1} you spend, when you're signed in.", pointsPerUnit, ProductPriceFormatter.Format(1m, Model.Currency)])</li>
+    }
+    <li>@T["Spend them at checkout once you have {0:N0}: click Use my points.", Model.Settings.MinimumPointsToRedeem]</li>
+    <li>@T["Points from an order that's canceled or refunded are taken back."]</li>
+</ul>
+
+@if (Model.Account?.Activity?.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["When"]</th>
+                    <th scope="col">@T["What"]</th>
+                    <th scope="col" class="text-end">@T["Points"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var activity in Model.Account.Activity.OrderByDescending(activity => activity.CreatedUtc).Take(50))
+                {
+                    <tr>
+                        <td class="text-nowrap">@((await LocalAsync(activity.CreatedUtc)).ToString("d"))</td>
+                        <td>@activity.Reason</td>
+                        <td class="text-end text-nowrap @(activity.Points < 0 ? "text-danger" : "text-success")">@(activity.Points < 0 ? "−" : "+")@Math.Abs(activity.Points).ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

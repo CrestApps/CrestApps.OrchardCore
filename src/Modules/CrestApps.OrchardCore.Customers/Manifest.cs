@@ -38,6 +38,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = CustomersConstants.Features.Loyalty,
+    Name = "Loyalty Points",
+    Description = "Gives signed-in customers points for what they buy, which they spend toward later orders, set up under Settings > Commerce > Rewards.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        CustomersConstants.Features.Customers,
+        OrderConstants.Features.Orders,
+    ]
+)]
+
+[assembly: Feature(
     Id = CustomersConstants.Features.CheckoutDetails,
     Name = "Checkout details",
     Description = "Asks buyers for the store's own details at checkout, such as a gift message or a delivery note. Add the fields to the Checkout details content type; what the buyer enters is kept on the order.",
