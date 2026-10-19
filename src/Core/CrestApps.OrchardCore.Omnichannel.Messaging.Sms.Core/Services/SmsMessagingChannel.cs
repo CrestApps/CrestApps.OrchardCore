@@ -208,10 +208,17 @@ public sealed class SmsMessagingChannel : IMessagingChannel
             return [];
         }
 
-        var matches = await _session.QueryIndex<OmnichannelContactIndex>(
-                index => index.Published &&
-                    (index.NormalizedPrimaryCellPhoneNumber == normalized || index.NormalizedPrimaryHomePhoneNumber == normalized))
+        // One query per phone column rather than one OR across both, so each seeks its own phone index instead of
+        // scanning the contact index for every text that arrives.
+        var byCell = await _session.QueryIndex<OmnichannelContactIndex>(
+                index => index.Published && index.NormalizedPrimaryCellPhoneNumber == normalized)
             .ListAsync(cancellationToken);
+
+        var byHome = await _session.QueryIndex<OmnichannelContactIndex>(
+                index => index.Published && index.NormalizedPrimaryHomePhoneNumber == normalized)
+            .ListAsync(cancellationToken);
+
+        var matches = byCell.Concat(byHome);
 
         // Contacts come before leads and converted leads are left out, so a sender who is both a contact and a lead
         // is linked to the contact, and callers that take the first match always take the same one.
