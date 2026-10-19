@@ -50,6 +50,14 @@
             {
                 <span class="d-block small">@T["Adds to order"] <a asp-action="Detail" asp-route-orderId="@order.Invoice.AddsToOrderId">@order.Invoice.AddsToOrderNumber</a></span>
             }
+            @if (!string.IsNullOrEmpty(Model.PayUrl))
+            {
+                <span class="input-group input-group-sm mt-2">
+                    <label class="input-group-text" for="order-pay-link">@T["Pay link"]</label>
+                    <input id="order-pay-link" class="form-control" value="@Model.PayUrl" readonly onfocus="this.select()" />
+                </span>
+                <span class="d-block small text-body-secondary">@T["Send it to the buyer yourself, such as in a chat, if you don't email the invoice."]</span>
+            }
         </span>
         @if (Model.CanManage)
         {
@@ -190,7 +198,7 @@
                 @if (order.Shipping is not null)
                 {
                     <div class="d-flex justify-content-between">
-                        <span>@(order.Shipping.IsPickup ? order.Shipping.Name : T["Shipping ({0})", order.Shipping.Name].Value)</span>
+                        <span>@(order.Shipping.IsPickup ? order.Shipping.Name : T.GetString("Shipping ({0})", order.Shipping.Name).Value)</span>
                         <span>@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</span>
                     </div>
                 }

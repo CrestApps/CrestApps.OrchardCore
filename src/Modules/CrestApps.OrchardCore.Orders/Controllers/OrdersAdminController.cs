@@ -261,6 +261,13 @@ public sealed class OrdersAdminController : Controller
             model.CanResendConfirmation = order.Status == OrderStatus.Paid &&
                 !string.IsNullOrWhiteSpace(order.CustomerEmail) &&
                 HttpContext.RequestServices.GetRequiredService<OrderConfirmationSender>().CanSend;
+
+            // An order the store made for a buyer can be paid from this link, emailed or not, such as sent by hand.
+            if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment &&
+                await HttpContext.RequestServices.GetRequiredService<IOrderLinkService>().CreateUrlAsync(order) is { } viewUrl)
+            {
+                model.PayUrl = viewUrl + "/pay";
+            }
         }
 
         return View(model);

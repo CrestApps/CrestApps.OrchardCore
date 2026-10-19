@@ -136,5 +136,6 @@ public sealed class EasyPostStartup : StartupBase
         services.AddScoped<ICarrierService>(serviceProvider => serviceProvider.GetRequiredService<EasyPostCarrierService>());
         services.AddScoped<EasyPostTrackingUpdater>();
         services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
+        services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);
     }
 }

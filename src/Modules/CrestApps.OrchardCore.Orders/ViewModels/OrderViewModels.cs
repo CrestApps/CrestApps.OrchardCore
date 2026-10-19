@@ -84,6 +84,11 @@ public class OrderDetailViewModel
     /// Gets or sets a value indicating whether the site can email the confirmation again.
     /// </summary>
     public bool CanResendConfirmation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the link the buyer pays an order the store made for them from, or <see langword="null"/>.
+    /// </summary>
+    public string PayUrl { get; set; }
 }
 
 public class OrderRefundInputModel

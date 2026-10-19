@@ -165,6 +165,9 @@ public sealed class ReturnsStartup : StartupBase
         services.AddDisplayDriver<Order, OrderReturnsDisplayDriver>();
         services.AddDisplayDriver<OrderReturn, OrderReturnDisplayDriver>();
         services.AddSiteDisplayDriver<ReturnSettingsDisplayDriver>();
+
+        // Lets a role with Manage orders, but no site-settings permission, open Settings > Commerce > Returns.
+        services.AddSiteSettingsPermission(OrderConstants.ReturnsSettingsGroupId, OrderPermissions.ManageOrders);
         services.AddNavigationProvider<ReturnsAdminMenu>();
     }
 }

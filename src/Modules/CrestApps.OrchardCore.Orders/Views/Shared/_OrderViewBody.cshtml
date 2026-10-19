@@ -103,7 +103,7 @@
                 @if (order.Shipping is not null)
                 {
                     <tr>
-                        <th scope="row" colspan="2" class="text-end fw-normal">@(order.Shipping.IsPickup ? order.Shipping.Name : T["Shipping ({0})", order.Shipping.Name].Value)</th>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@(order.Shipping.IsPickup ? order.Shipping.Name : T.GetString("Shipping ({0})", order.Shipping.Name).Value)</th>
                         <td class="text-end">@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</td>
                     </tr>
                 }
