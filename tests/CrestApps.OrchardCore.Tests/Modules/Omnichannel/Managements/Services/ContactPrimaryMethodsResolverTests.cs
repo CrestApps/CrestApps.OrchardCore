@@ -28,15 +28,15 @@ public sealed class ContactPrimaryMethodsResolverTests
             CreatePhoneNumber("+13105550100", "Work"));
 
         // Act
-        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+        var methods = ContactPrimaryMethodsResolver.Resolve(TestContactMethods.Get(contact));
 
         // Assert
         Assert.Collection(
             methods,
             method => AssertMethod(method, ContactPrimaryMethodKind.Phone, "Cell", "+17785550100"),
-            method => AssertMethod(method, ContactPrimaryMethodKind.Email, null, "first@example.com"),
             method => AssertMethod(method, ContactPrimaryMethodKind.Phone, "Home", "+17025550100"),
-            method => AssertMethod(method, ContactPrimaryMethodKind.Phone, "Work", "+13105550100"));
+            method => AssertMethod(method, ContactPrimaryMethodKind.Phone, "Work", "+13105550100"),
+            method => AssertMethod(method, ContactPrimaryMethodKind.Email, null, "first@example.com"));
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public sealed class ContactPrimaryMethodsResolverTests
             CreateEmailAddress("lead@example.com"));
 
         // Act
-        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+        var methods = ContactPrimaryMethodsResolver.Resolve(TestContactMethods.Get(contact));
 
         // Assert
         Assert.Equal([true, false, false, false], methods.Select(method => method.CanText));
@@ -85,13 +85,13 @@ public sealed class ContactPrimaryMethodsResolverTests
             CreatePhoneNumber(" +17785550100 ", "Cell"));
 
         // Act
-        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+        var methods = ContactPrimaryMethodsResolver.Resolve(TestContactMethods.Get(contact));
 
         // Assert
         Assert.Collection(
             methods,
-            method => AssertMethod(method, ContactPrimaryMethodKind.Email, null, "lead@example.com"),
-            method => AssertMethod(method, ContactPrimaryMethodKind.Phone, "Cell", "+17785550100"));
+            method => AssertMethod(method, ContactPrimaryMethodKind.Phone, "Cell", "+17785550100"),
+            method => AssertMethod(method, ContactPrimaryMethodKind.Email, null, "lead@example.com"));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class ContactPrimaryMethodsResolverTests
             CreatePhoneNumber("+17785550199", " "));
 
         // Act
-        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+        var methods = ContactPrimaryMethodsResolver.Resolve(TestContactMethods.Get(contact));
 
         // Assert
         var method = Assert.Single(methods);
@@ -117,7 +117,7 @@ public sealed class ContactPrimaryMethodsResolverTests
         var contact = CreateContact(new ContentItem { ContentType = "Note" });
 
         // Act
-        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+        var methods = ContactPrimaryMethodsResolver.Resolve(TestContactMethods.Get(contact));
 
         // Assert
         Assert.Empty(methods);
@@ -130,7 +130,7 @@ public sealed class ContactPrimaryMethodsResolverTests
         var contact = CreateContact();
 
         // Act
-        var methods = ContactPrimaryMethodsResolver.Resolve(contact);
+        var methods = ContactPrimaryMethodsResolver.Resolve(TestContactMethods.Get(contact));
 
         // Assert
         Assert.Empty(methods);
