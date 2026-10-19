@@ -160,6 +160,8 @@ column refers to the delivery plan below.
 | Feature | WooCommerce | Shopify | Us | Slice |
 | --- | --- | --- | --- | --- |
 | Point of sale (in-person sales sharing stock and customers) | Ext | Core | No | PI2 |
+| Sales by location and channel: every order records where and how it was sold, and reports split by them | Ext | Core | No: only a pickup order records its shop | PI2 |
+| Registers, shifts and cash counts per location, staff limited to their locations | Ext | Core | No | PI2 |
 | Selling on Amazon, eBay, TikTok and social shops | Ext | Core (channels) | No | PI1 |
 | Bookings and appointments: time slots with staff or resources | Ext | App | No | PL1 |
 | Travel packages and tours: fixed departures with seats per departure, a base package with package options | Ext | App | Partial: a "Departure" variant option with stock per variant | PL1 |
@@ -214,7 +216,7 @@ overdue) become a schedule on the order when it's placed. Checkout offers Pay in
 only what's due now. The rest is an outstanding balance on the transactions ledger with pay links, reminders and,
 with the buyer's consent, charges to their saved card, through the installment engine generalized from ledger
 balances to orders. The order reads Payment due until it's paid. The same schedules are B2B's deposits and net
-terms, so F3 is built in phase 7 (PH1) and reused here.
+terms, so F3 is built in phase 8 (PH1) and reused here.
 
 **The Bookings module (PL1)** then adds:
 
@@ -266,7 +268,7 @@ How each vertical lands on them, and what stays an integration:
 | Healthcare and wellness | Contact center; appointments with F2 | F2, F3 packages, intake forms (Orchard Forms) | Clinical records. Commerce records keep no medical data, and no compliance (such as HIPAA) is claimed |
 | Restaurants and food | Products, add-ons, local pickup (PF3) | F1, F2 order-ahead slots, F7 kitchen status, delivery zones, tips | Delivery networks, kitchen printers |
 | Marketplaces, freelance, gig, creative | None multi-party | F4, F5 vendor storefronts, F7 service delivery | |
-| B2B procurement, supplier catalogs | Business customers, exemption certificates, Pay Later | Phase 7, approval workflows and budgets (PH3) | Punchout (cXML, OCI) to buyers' procurement systems (PH3) |
+| B2B procurement, supplier catalogs | Business customers, exemption certificates, Pay Later | Phase 8, approval workflows and budgets (PH3) | Punchout (cXML, OCI) to buyers' procurement systems (PH3) |
 | Travel and hospitality | Departures as variants | F1, F2, F3, PL1 | Flights and supplier hotels (PL3, P-D8) |
 | Community and activity platforms | Users, content, notifications, omnichannel messaging | Commerce joins through memberships, events and payouts | Groups, feeds and member messaging aren't commerce |
 
@@ -282,13 +284,14 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | **3. Merchandising** (built) | PC1 scheduled sales, upsells, cross-sells, related, recently viewed, order bumps and post-purchase offers; PC2 grouped, external, bundles, product options; PC3 quantity rules, tier and group pricing, comparison; PC4 CSV import and export, migration importers | A bundle with a personalized part sells at a tier price to a wholesale group, and a WooCommerce product export imports with its variants. |
 | **4. Fulfillment** (built, but return labels) | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
 | **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
-| **6. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
-| **7. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
-| **8. Marketing and analytics** | PJ1 editable emails, review requests with photos; PJ2 campaigns, segments; PJ3 wishlists, automation templates; PK1 cohorts, dashboards, scheduled reports, alerts | A segment of lapsed buyers gets a win-back campaign, and the owner gets a weekly sales report by email. |
-| **9. Channels and POS** | PI1 Google and Meta feeds, marketplace channels; PI2 point of sale | A product sold in person updates stock online, and the product feed passes Google Merchant Center validation. |
-| **10. Other models** | PL0 F1 line details and handlers, F2 dated capacity (add-ons move onto F1); PL1 bookings: departures, nightly stays, time slots, occupancy pricing, date search, traveler forms, cancellation policies, request to book, payment-method fees, services, rentals; PL2 memberships; PL3 supplier inventory (flights, hotel rooms) | A tour departure sells its last two seats as a double room with insurance on a 15% deposit, the balance is charged to the saved card 45 days before departure, and a cancellation refunds by the policy; a booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
-| **11. Marketplace and listings** | PM1 F4 vendors, commissions, payouts, escrow and milestones; PO1 F5 listings people post, moderation, expiry, paid upgrades, map search; PO2 fundraising campaigns, tax receipts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect; a visitor posts a listing, pays to feature it, and it expires after its term. |
-| **12. Setup and ecosystem** | PN1 setup guide, commerce theme, staff presets; PN2 extension guide | A new owner goes from a blank site to a first test sale through the guide without reading the docs. |
+| **6. Headless API and point of sale** (pulled forward) | PA2 storefront and admin JSON APIs on Orchard Core's OpenAPI module, outgoing webhooks; PI2 sales channel and location on orders, reports by location, registers and shifts, split and cash tender, card readers, receipts | A phone app signed in as a cashier at one of several shops sells an item in person, taking part in cash and the rest on a card reader; the stock comes off that shop, the order shows the shop, register and cashier, and the day's sales report splits by shop. |
+| **7. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
+| **8. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
+| **9. Marketing and analytics** | PJ1 editable emails, review requests with photos; PJ2 campaigns, segments; PJ3 wishlists, automation templates; PK1 cohorts, dashboards, scheduled reports, alerts | A segment of lapsed buyers gets a win-back campaign, and the owner gets a weekly sales report by email. |
+| **10. Channels and POS** | PI1 Google and Meta feeds, marketplace channels; PI2 point of sale | A product sold in person updates stock online, and the product feed passes Google Merchant Center validation. |
+| **11. Other models** | PL0 F1 line details and handlers, F2 dated capacity (add-ons move onto F1); PL1 bookings: departures, nightly stays, time slots, occupancy pricing, date search, traveler forms, cancellation policies, request to book, payment-method fees, services, rentals; PL2 memberships; PL3 supplier inventory (flights, hotel rooms) | A tour departure sells its last two seats as a double room with insurance on a 15% deposit, the balance is charged to the saved card 45 days before departure, and a cancellation refunds by the policy; a booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
+| **12. Marketplace and listings** | PM1 F4 vendors, commissions, payouts, escrow and milestones; PO1 F5 listings people post, moderation, expiry, paid upgrades, map search; PO2 fundraising campaigns, tax receipts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect; a visitor posts a listing, pays to feature it, and it expires after its term. |
+| **13. Setup and ecosystem** | PN1 setup guide, commerce theme, staff presets; PN2 extension guide | A new owner goes from a blank site to a first test sale through the guide without reading the docs. |
 
 ## Phase 1 as built
 
@@ -306,7 +309,7 @@ Moved out of phase 1, as the gap table now says:
 
 - **Saved cards for one-time purchases** to phase 2 (PB1): they need the gateway work there, and the account's payment methods page comes with them.
 - **Order bumps and post-purchase offers** to phase 3 (PC1), with upsells and cross-sells, which they share their product picking with.
-- **Address autocomplete** to phase 6 (PG1): it needs a third-party places provider, chosen with the market work. Address forms already carry the browser autofill attributes.
+- **Address autocomplete** to phase 7 (PG1): it needs a third-party places provider, chosen with the market work. Address forms already carry the browser autofill attributes.
 
 ## Phase 2 as built
 
@@ -368,18 +371,41 @@ Not built yet, and why:
 - **Return labels** (PF2, PF4). A label for the buyer to send items back needs the return's parcel and the buyer's address as the sender; it fits on `ICarrierProvider`, now that a test account has verified outbound labels.
 - **Several parcels per shipment, and package presets.** A label is one parcel in the default box with the weight staff enter; carts are quoted the same way.
 
+## Headless API and point of sale (phase 6, planned)
+
+A store may run the site headless, with its own storefront or a phone app as a point of sale at several shops. Phase 6 builds what that needs, after phase 5 adds the split payments, gift cards and store credit a till needs.
+
+**The API is built on Orchard Core's OpenAPI module** (`OrchardCore.OpenApi`, in the app targets we use), not beside it. The module documents every `[ApiController]` routed under `api/...` in Swagger, ReDoc and Scalar, and generates TypeScript and C# clients with NSwag. Calls authenticate with the `Api` scheme: bearer tokens from the tenant's OpenID server (authorization code with PKCE for apps and the docs explorers, client credentials for servers). So each commerce module adds controllers following its convention:
+
+- `[ApiController]`, `[Route("api/commerce/...")]`, `[Authorize(AuthenticationSchemes = "Api")]`, typed request and response records, `[ProducesResponseType]`, and `ProblemDetails` for errors, so the explorers and the generated clients are complete.
+- Permission checks are the same as the admin and storefront pages (`IAuthorizationService` with the existing permissions), plus new ones only where a till needs them (for example **Sell at a register**).
+- The endpoints call the same services as the pages (`ICartService`, `ICheckoutEngine`, `ICustomerService`, `IOrderStore`, `IInventoryService`), so rules such as stock holds, coupon holds and tax stay in one place.
+
+The slices:
+
+- **PA2a storefront API.** Catalog (products, variants, prices for a customer, availability per location), carts, discounts and codes, checkout (contact, shipping rates, payment with a client-side token, or a pay link), customers and their addresses, orders and returns for the signed-in buyer.
+- **PA2b admin API.** Orders (list, detail, fulfill, refund, cancel), customers, products and stock (receive, adjust, transfer), coupons, with paging and filters.
+- **PA2c outgoing webhooks.** Subscriptions to order, customer, product and stock events, signed with a per-subscription secret, retried with backoff, and a delivery log, reusing the workflow events that exist.
+- **PI2a sales channel and location.** `Order.Channel` (online, point of sale, draft, marketplace later), `Order.LocationId`, `RegisterId` and `StaffUserId`, indexed; the stock comes off the order's location; reports gain location and channel filters and groupings.
+- **PI2b registers and shifts.** Registers per location; opening and closing a shift with its float and counted cash; cash in and out; staff limited to their locations by role.
+- **PI2c tender at the till.** Several payments on one order (cash with change given, card, gift card, store credit) on the phase 5 tender seam; Stripe Terminal readers for in-person cards; tax from the shop's address.
+- **PI2d receipts.** Printed and emailed receipts from the Receipts settings, and returns at the till against the original order.
+
+Offline selling (P-D10) comes after: the API would accept orders made earlier with idempotency keys, and stock would reconcile when they arrive.
+
 ## Decisions needed
 
 Until they are answered, the work goes ahead on the default in the last column.
 
 | # | Question | Options | Default taken |
 | --- | --- | --- | --- |
-| P-D1 | CC-D5 put account pages, JSON APIs and service fulfillment out of scope. Are they in scope now? | In (phases 1, 10 and PA2) / keep deferred | In |
-| P-D2 | The original plan left marketplaces out. Is phase 11 in scope? | In / out / later | Later: phase 11 last |
+| P-D1 | CC-D5 put account pages, JSON APIs and service fulfillment out of scope. Are they in scope now? | In (phases 1, 6 and 11) / keep deferred | In |
+| P-D2 | The original plan left marketplaces out. Is phase 12 in scope? | In / out / later | Later: phase 12 last |
 | P-D3 | Carrier rates and labels: one aggregator (EasyPost or Shippo) or carriers one by one? | Aggregator first (fewer contracts, faster) / per carrier | Aggregator first |
 | P-D4 | Email campaigns: build them, or integrate with Mailchimp or Klaviyo? | Integrate first / build on the omnichannel email channel | Integrate first |
-| P-D5 | Point of sale: a web POS page, or a native app? | Web POS first / native | Web POS first |
+| P-D5 | Point of sale: a web POS page, or a native app? | Web POS first / native | Answered: a native or mobile app over the API first; a web POS, if built, is one more client of the same API |
+| P-D10 | Can the POS sell while offline? | Online only first / offline with sync | Online only first: offline sales need the API to accept orders made earlier without overselling, which comes after |
 | P-D6 | Second card gateway after PayPal | Square / Adyen / Authorize.net | Square |
 | P-D7 | Shopper currency conversion: live exchange rates from a provider, or rates the store sets? | Store-set rates first / provider | Store-set rates first |
 | P-D8 | Flights and supplier hotel rooms (PL3): which supplier API, or out of scope? | Duffel (flights) / Amadeus (flights and hotels) / out of scope | Later: after PL1, supplier chosen then |
-| P-D9 | When should the bookings foundations (F1, F2) be built: in phase 10, or pulled forward because a store needs travel packages sooner? | Phase 10 / right after phase 3 | Phase 10, with F3 in phase 7 |
+| P-D9 | When should the bookings foundations (F1, F2) be built: in phase 11, or pulled forward because a store needs travel packages sooner? | Phase 11 / right after phase 3 | Phase 11, with F3 in phase 8 |
