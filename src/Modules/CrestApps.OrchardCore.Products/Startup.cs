@@ -139,6 +139,21 @@ public sealed class RecommendationsStartup : StartupBase
 }
 
 /// <summary>
+/// Sells bundles made of other products.
+/// </summary>
+[Feature(ProductConstants.Feature.Bundles)]
+public sealed class BundlesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductBundleDisplayDriver>();
+        services.AddIndexProvider<ProductBundleIndexProvider>();
+        services.AddDataMigration<ProductBundleMigrations>();
+    }
+}
+
+/// <summary>
 /// Shows several products on one page for shoppers to buy together.
 /// </summary>
 [Feature(ProductConstants.Feature.Grouped)]

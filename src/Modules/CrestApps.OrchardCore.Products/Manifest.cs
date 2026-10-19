@@ -33,6 +33,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Bundles,
+    Name = "Product Bundles",
+    Description = "Sells bundles and kits made of other products at their own price, with their stock worked out from their parts and taken from each part when sold.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Grouped,
     Name = "Grouped Products",
     Description = "Shows several products on one page, such as the pieces of a set, for shoppers to buy in the quantities they choose.",

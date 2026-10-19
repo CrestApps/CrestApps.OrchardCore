@@ -60,3 +60,44 @@ public class ProductGroupEditViewModel
     [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
     public string InitialProductsJson { get; set; }
 }
+
+/// <summary>
+/// The rows of a bundle's editor: a product and how many of it each bundle holds.
+/// </summary>
+public class ProductBundleEditViewModel
+{
+    public List<ProductBundleItemViewModel> Items { get; set; } = [];
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string SearchEndpoint { get; set; }
+}
+
+public class ProductBundleItemViewModel
+{
+    public string ContentItemId { get; set; }
+
+    public int? Quantity { get; set; }
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string InitialJson { get; set; }
+}
+
+/// <summary>
+/// What's in a bundle, on its page.
+/// </summary>
+public class ProductBundleContentsViewModel
+{
+    public IList<ProductBundleContentViewModel> Items { get; set; } = [];
+}
+
+public class ProductBundleContentViewModel
+{
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product, or <see langword="null"/> when it's no longer published.
+    /// </summary>
+    public global::OrchardCore.ContentManagement.ContentItem ContentItem { get; set; }
+
+    public int Quantity { get; set; }
+}

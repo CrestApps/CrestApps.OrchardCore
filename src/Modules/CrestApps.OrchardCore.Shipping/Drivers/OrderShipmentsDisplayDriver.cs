@@ -81,7 +81,7 @@ internal sealed class OrderShipmentsDisplayDriver : DisplayDriver<Order>
                 .Select(line => new ShipmentLineChoice
                 {
                     LineId = line.LineId,
-                    Title = OrderLineText.Describe(line),
+                    Title = OrderLineText.DescribeForPacking(line),
                     Sku = line.Sku,
                     Remaining = remaining[line.LineId],
                 })

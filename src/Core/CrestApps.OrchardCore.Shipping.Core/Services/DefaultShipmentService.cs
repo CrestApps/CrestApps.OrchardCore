@@ -318,7 +318,7 @@ public sealed class DefaultShipmentService : IShipmentService
         {
             LineId = lineId,
             // The add-ons ride along, so whoever packs it sees the engraving to do.
-            Title = OrderLineText.Describe(line),
+            Title = OrderLineText.DescribeForPacking(line),
             Sku = line.Sku,
             Quantity = quantity,
         };

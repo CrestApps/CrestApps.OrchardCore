@@ -47,6 +47,10 @@
                             {
                                 <span class="text-muted">(@line.PriceName)</span>
                             }
+                            @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
+                            {
+                                <div class="small text-muted text-break">@T["Includes {0}", contents]</div>
+                            }
                             @foreach (var addOn in line.AddOns ?? [])
                             {
                                 <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)</div>

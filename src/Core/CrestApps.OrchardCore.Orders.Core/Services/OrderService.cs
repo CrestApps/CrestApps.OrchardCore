@@ -2,7 +2,9 @@ using System.Security.Cryptography;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Carts.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Products.Core.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Orders.Core.Services;
@@ -110,6 +112,9 @@ public sealed class OrderService : IOrderService
                 TaxClassificationCode = line.Product?.TaxClassificationCode,
                 CategoryIds = ProductCategories.GetIds(line.ContentItem),
                 AddOns = [.. (line.AddOns ?? []).Select(addOn => new OrderLineAddOn { AddOnId = addOn.AddOnId, Label = addOn.Label, Value = addOn.Value, Price = addOn.Price })],
+                BundleItems = line.ContentItem?.TryGet<ProductBundlePart>(out var bundle) == true && bundle.Items is { Count: > 0 }
+                    ? [.. bundle.Items.Where(item => !string.IsNullOrEmpty(item.ContentItemId)).Select(item => new OrderLineBundleItem { ContentItemId = item.ContentItemId, Title = item.Title, Quantity = Math.Max(1, item.Quantity) })]
+                    : [],
             }).ToList(),
         };
 

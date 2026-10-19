@@ -273,6 +273,12 @@ public sealed class OrderLine
     /// includes.
     /// </summary>
     public List<OrderLineAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the products a bundle line is made of, per bundle, as the bundle was when the order was placed.
+    /// Stock is held and sold from them, not from the bundle.
+    /// </summary>
+    public List<OrderLineBundleItem> BundleItems { get; set; } = [];
 }
 
 /// <summary>
@@ -440,4 +446,16 @@ public sealed class OrderLineAddOn
     /// Gets or sets the extra price per unit it cost.
     /// </summary>
     public decimal Price { get; set; }
+}
+
+/// <summary>
+/// A product in a bundle line, and how many of it each bundle holds.
+/// </summary>
+public sealed class OrderLineBundleItem
+{
+    public string ContentItemId { get; set; }
+
+    public string Title { get; set; }
+
+    public int Quantity { get; set; }
 }
