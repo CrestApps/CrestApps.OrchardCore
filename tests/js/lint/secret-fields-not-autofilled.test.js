@@ -32,8 +32,11 @@ describe('secret fields', () => {
         expect(filled).toEqual([]);
     });
 
+    // A new account's own password, marked data-account-password, is the one field a password manager should offer
+    // to save; every other secret is the site's, such as an API key, and is kept away from them.
     it('are skipped by password managers', () => {
         const offered = fields
+            .filter(({ tag }) => !tag.includes('data-account-password'))
             .filter(({ tag }) => !tag.includes('data-1p-ignore') || !tag.includes('data-lpignore') || !tag.includes('data-bwignore'))
             .map(({ path }) => path);
 

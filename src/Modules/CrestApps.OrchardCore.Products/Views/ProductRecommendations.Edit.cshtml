@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductRecommendationsEditViewModel
+
+<h5 class="mt-4">@T["Recommendations"]</h5>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label" for="@Html.IdFor(model => model.UpsellIds)">@T["Upsells"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.UpsellIds),
+            inputName = Html.NameFor(model => model.UpsellIds),
+            endpoint = Model.SearchEndpoint,
+            initialItemsJson = Model.InitialUpsellsJson,
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Choose products"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products match."].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Better or bigger choices, shown on this product's page as \"You may also like\"."]</span>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label" for="@Html.IdFor(model => model.CrossSellIds)">@T["Cross-sells"]</label>
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = Html.IdFor(model => model.CrossSellIds),
+            inputName = Html.NameFor(model => model.CrossSellIds),
+            endpoint = Model.SearchEndpoint,
+            initialItemsJson = Model.InitialCrossSellsJson,
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Choose products"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products match."].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["Things that go with this product, offered in the cart as \"Frequently bought together\"."]</span>
+    </div>
+</div>

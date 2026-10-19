@@ -32,6 +32,15 @@ public sealed class ProductSearchIndexProvider : IndexProvider<ProductSearchDocu
                 PublishedUtc = document.PublishedUtc,
             });
 
+        context.For<ProductSaleIndex>()
+            .When(document => document.SaleStartsUtc.HasValue || document.SaleEndsUtc.HasValue)
+            .Map(document => new ProductSaleIndex
+            {
+                ContentItemId = document.ContentItemId,
+                StartsUtc = document.SaleStartsUtc,
+                EndsUtc = document.SaleEndsUtc,
+            });
+
         context.For<ProductAttributeIndex>()
             .Map(document => (document.Attributes ?? [])
                 .Where(value => !string.IsNullOrEmpty(value.Key))

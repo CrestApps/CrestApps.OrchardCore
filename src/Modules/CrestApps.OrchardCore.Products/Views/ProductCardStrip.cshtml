@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductCardStripViewModel
+
+@* The cards of a strip, in a grid that holds two on a phone and four on a wide screen. It is the ProductCardStrip
+   shape: the recently viewed products fetched from products/cards, upsells, related products and the cart's
+   cross-sells all render it, so a theme overrides it once for all of them. *@
+
+<style asp-name="font-awesome"></style>
+<style asp-name="product-listing"></style>
+
+@* The listing's card styles apply inside a product listing, with square images. *@
+<div class="product-listing" style="--product-image-aspect-ratio: 1 / 1">
+    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2 g-sm-3">
+        @foreach (var card in Model.Cards)
+        {
+            <div class="col">
+                @await DisplayAsync(card)
+            </div>
+        }
+    </div>
+</div>

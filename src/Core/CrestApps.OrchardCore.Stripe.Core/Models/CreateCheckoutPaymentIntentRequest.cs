@@ -35,6 +35,12 @@ public sealed class CreateCheckoutPaymentIntentRequest : StripeWriteRequest
     public bool SaveForOffSessionUse { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the card is kept on the customer for purchases they make later themselves, from their
+    /// saved cards at checkout. Ignored when <see cref="SaveForOffSessionUse"/> is set.
+    /// </summary>
+    public bool SaveForOnSessionUse { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional description shown on the Stripe dashboard and receipts.
     /// </summary>
     public string Description { get; set; }

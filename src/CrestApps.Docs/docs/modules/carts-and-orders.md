@@ -46,6 +46,8 @@ Signing in merges the guest cart into the user's cart: lines of the same product
 
 Each shape can be overridden in Razor or Liquid. A theme hides the cart link with an empty `CartLink` template.
 
+`CartLink` also renders the **mini cart**, a Bootstrap offcanvas loaded from `GET cart/mini` (the `MiniCart` shape, route name `CartMini`). With Bootstrap's offcanvas and `fetch` available, it posts the `form.product-add-to-cart` forms on the page and its own remove forms with `Accept: application/json`, updates the count and opens the panel; without them the link and the forms work as plain links and posts.
+
 The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. When adding redirects back to the page the buyer was on, the notification links to the cart, so a theme without a cart link still leads there. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
 
 ### Options
@@ -83,6 +85,12 @@ The checkout's confirmation page shows the order number.
 
 Who the order is for comes from the checkout's `CheckoutContactInfo`: its name, email and phone replace the signed-in account's when the buyer entered them, and its `BillingAddress` is copied onto `Order.BillingAddress` (an immutable `Address`) when the order is paid. With the [Customers](customers) feature on, the checkout's **Contact** step fills it in, for guests and signed-in buyers alike, and the order is linked to its customer (`Order.CustomerId`).
 
+### Accounts, recovery and the storefront account
+
+- **Account from the confirmation.** `OrderConfirmationDisplayDriver` gives a guest's confirmation an `OrderAccountClaims` token (data protection, two hours, one order) when registration is open and the order has an email. `POST orders/create-account` (`OrderCreateAccount`) makes the user from the order's email, honouring `RegistrationOptions.UsersMustValidateEmail` and `UsersAreModerated`, sets `Order.UserId`, signs in and redirects to the account's order page. It is rate limited and refuses an email that already has an account.
+- **Recovery emails.** `CheckoutRecoveryBackgroundTask` (every 15 minutes) runs `CheckoutRecoveryService.SendDueAsync` when `OrderSettings.SendRecoveryEmails` is on. An order is due when it awaits payment untouched, or was canceled because the buyer left (`CheckoutCanceled`, `CheckoutExpired`, `Abandoned` or `PaymentFailed`), longer ago than `RecoveryDelayHours` and within a week, has lines, has no `RecoveryEmailSentUtc`, and no paid order with the same email came after it. The email comes from the order, or from the checkout's `CheckoutContactInfo` for an order not yet paid. `CheckoutRecoveryLinks` signs the link (`orders/resume/{token}`, route `OrderResume`, fourteen days) from the site's base URL; the link resumes a pending checkout or rebuilds the cart.
+- **Account pages.** `account/orders` (`AccountOrders`) and `account/orders/{orderId}` (`AccountOrder`) list and show the signed-in user's orders through the same order shapes as the guest view (`OrderConstants.DisplayTypes.Detail`). An order of another user is not found.
+
 ### Order statuses
 
 | Status | Meaning |
@@ -118,21 +126,49 @@ A user with `ManageOrders` manages an order from its page, through `OrderOperati
 
 Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHandler`, wherever they were started: the order's page, the payments page or the Pay Later transaction. It finds the order from the refund's checkout (an order's, or a pay link's for the order's transaction) and records each refund once. `OrderOperationScope` carries who is acting and whether stock goes back to it.
 
+### Disputes and fraud rating
+
+`OrderDisputeRecorder`, an `IPaymentEvent`, finds the order a gateway's dispute is about (the attempt with that `ProviderReference`, through `PaymentAttemptQuery.ProviderReference`, then its checkout) and keeps each dispute on `Order.Disputes` (`OrderDispute`: reference, gateway, amount, reason, status, `IsClosed`), with an event note for each change; a repeated webhook changes nothing. `Order.HasOpenDispute` drives the **Disputed** badge in the orders list, and `OrderDisputesDisplayDriver` shows each dispute on the store's order page.
+
+`OrderPaymentRiskCheckoutHandler` keeps the riskiest rating of a paid order's payments on `Order.PaymentRisk` (`OrderPaymentRisk`: level, score, gateway); `IsElevated` drives a warning on the order's page and a **Risky** badge in the list (`OrderPaymentRiskDisplayDriver`).
+
+### Order bumps and offers after the purchase
+
+`OrderSettings.OrderBumpProductId`, `OrderBumpPercentOff` and `OrderBumpHeadline` set the order bump. `OrderBumpCheckoutFlowDisplayDriver` renders a `CheckoutOrderBump` shape in the payment step's aside for an order that doesn't have the product, in the order's currency, while it's in stock. Ticking it posts the checkout's `update` form action (`CheckoutConstants.FormActions.Update`), which the steps layout now saves and shows again like applying a code. The bump goes on the session (`CheckoutOrderBump`) and as a billing line on the order's step, and `OrderCheckoutHandler` adds it to the order as a line when the checkout completes. The confirmation renders an `OrderConfirmationOffers` shape with the cross-sells of what was bought.
+
+### Exporting orders
+
+`OrdersAdminController.Export` (`Admin/orders/export`) writes the orders the list's search and status find with `OrderCsv`: a row per line, the order's totals on its first line only, times in the site's time zone. `OrderOperationsService.IsOwedAsync` tells an order paid offline and still owed, which the export, the lists and the order page show as *Payment due*.
+
 ### Reports
 
 With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports > Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
 
 | Report | Shows |
 | --- | --- |
-| Sales | Orders, items, gross sales (the lines), discounts, shipping, tax, total charged, refunded and net, per currency, by day in the site's time zone (by month for periods over 62 days), with a chart. |
-| Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units. |
+| Sales | Orders, items, average order value (total charged over orders), items per order, gross sales (the lines), discounts, shipping, tax, total charged, refunded and net, per currency, by day in the site's time zone (by month for periods over 62 days), with a chart. |
+| Sales by product | Orders, units and sales (line totals before discounts) per product and variant, with the top ten by units, and the same by kind of product (goods, digital, services). |
+| Sales by category | Orders, units and sales per category: the taxonomy terms in `OrderLine.CategoryIds`, named from the site's published taxonomies (`ProductCategoryNames`). A line in two categories counts in both; one in none counts under *No category*. |
+| Customers | Buyers in the period, per currency: first-time (no paid order before the period) and returning, the share who have paid for more than one order, the average lifetime spend (net of refunds, up to the period's end), and the top 25 buyers. A buyer is known by their customer record, else their account, else their email. |
+| Checkouts | Order checkouts (`CheckoutSessionIndex`, reference type `Order`) started in the period by how they ended: paid, payment failed, left or expired, or still open, with the paid rate, by day or month. |
 | Sales by country | Orders, tax and total per country the orders ship to, or are billed to. |
 | Tax on orders | Tax charged and what it was charged on, by day or month. |
 | Discounts on orders | Orders that used each promotion code and what it took off. |
 | Refunds | Each refund given in the period, for orders paid up to 180 days before it. |
+| Disputes | The disputes opened in the period, open ones first, with why, their status and the amount, for orders paid up to 180 days before it (`OrderDisputesReport`). |
 | Orders to ship | Paid orders with a shipping method not shipped in full, oldest first, whatever the period. |
 
 Refunded in **Sales** is what was given back for the period's orders, whenever it was; **Refunds** lists refunds by the day they were given.
+
+Other commerce features add their own reports under **Reports > Commerce** when Reports is on:
+
+| Report | Feature | Permission | Shows |
+| --- | --- | --- | --- |
+| Shipping times | Shipping | `FulfillOrders` | Shipments sent in the period: average and median time from the order's payment to shipping, the share shipped within 2 days, delivery time for shipments marked delivered, returns, the same by carrier, and the 15 slowest. |
+| Stock on hand | Inventory | `ViewInventory` | Every counted item now, out of stock and low first. |
+| Stock movements | Inventory | `ViewInventory` | Per item, the units received, sold, returned and corrected (adjustments and counts) in the period, what is on hand now, and the days it lasts at the period's rate of sale. |
+| Downloads | Digital Downloads | `ManageDigitalDownloads` | Download links given in the period, per product and file: used, never used, downloads made, used up, expired and taken back. |
+| Product reviews | Product Reviews | `ManageProductReviews` | Reviews written in the period: waiting, approved and rejected, the stars given, verified purchases, and each product's average from its approved reviews. |
 
 ### Workflow events
 

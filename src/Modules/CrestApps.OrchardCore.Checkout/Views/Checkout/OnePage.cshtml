@@ -1,0 +1,184 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Checkout.Services
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@using OrchardCore.DisplayManagement
+@using OrchardCore.DisplayManagement.Zones
+
+@model CheckoutOnePageViewModel
+
+@*
+    The checkout on one page: a section per step, payment last. Each section shows its step's own editor, so a step
+    added by any feature appears here as it does on its own page. Payment joins the page once the details are
+    complete; changing a detail after that saves it again before paying, so the total paid is the one shown.
+*@
+
+@{
+    var returnLink = CheckoutReturnLinks.GetBackLink(Model.Flow);
+    var hasErrors = ViewContext.ModelState.Values.SelectMany(entry => entry.Errors).Any(error => !string.IsNullOrEmpty(error.ErrorMessage));
+    var number = 0;
+}
+
+<zone Name="Title">
+    <breadcrumb name="CheckoutDisplay" title="@T["Checkout"]" />
+</zone>
+
+<h1 class="h3 my-4">@T["Checkout"]</h1>
+
+<form asp-route="@CheckoutConstants.RouteNames.Step"
+      asp-route-sessionId="@Model.SessionId"
+      method="post"
+      id="checkout-form"
+      class="checkout-one-page"
+      data-needs-update="@(Model.NeedsUpdate ? "true" : "false")">
+
+    <input type="hidden" name="SessionId" value="@Model.SessionId" />
+    <input type="hidden" name="Step" value="@(Model.ShowsPayment ? CheckoutConstants.PaymentStepKey : string.Empty)" />
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            @if (hasErrors)
+            {
+                <div class="alert alert-danger" role="alert">
+                    @Html.ValidationSummary()
+                </div>
+            }
+
+            @foreach (var entry in Model.Sections)
+            {
+                var zones = ((IZoneHolding)entry.Shape).Zones;
+                number++;
+
+                <section class="card mb-4" aria-labelledby="checkout-section-@entry.Step.Key" @(entry.IsPayment ? "data-checkout-payment-section" : "data-checkout-details")>
+                    <div class="card-header">
+                        <h2 class="h6 mb-0" id="checkout-section-@entry.Step.Key">
+                            <span class="badge rounded-pill text-bg-primary me-2">@number</span>@entry.Step.Title
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        @await DisplayAsync(zones["Header"])
+                        @await DisplayAsync(zones["Content"])
+                    </div>
+                    @if (zones["Footer"] is IShape footer && footer.Items.Count > 0)
+                    {
+                        <div class="card-footer">
+                            @await DisplayAsync(footer)
+                        </div>
+                    }
+                </section>
+            }
+
+            @if (Model.ShowsPayment)
+            {
+                <div class="alert alert-info d-none" role="status" data-checkout-update-notice>
+                    @T["You changed your details. Update your order to see the total before you pay."]
+                </div>
+            }
+
+            @* On a phone the main button spans the width, with the way back under it. *@
+            <div class="d-flex flex-column-reverse flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-2 mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-sm-start gap-2">
+                    @if (returnLink is not null)
+                    {
+                        <a class="btn btn-link" href="@Url.Content(returnLink.ReturnUrl)" data-checkout-return>
+                            @(string.IsNullOrEmpty(returnLink.ReturnText) ? T["Leave checkout"].Value : returnLink.ReturnText)
+                        </a>
+                    }
+                </div>
+
+                <div class="d-flex flex-column flex-sm-row gap-2">
+                    @if (Model.ShowsPayment)
+                    {
+                        <button type="submit" class="btn btn-primary px-4 d-none" name="@CheckoutConstants.FormActions.FieldName" value="@CheckoutConstants.FormActions.Update" data-checkout-update>
+                            @T["Update order"]
+                        </button>
+                    }
+
+                    <button type="submit" class="btn btn-primary px-4" id="checkout-submit">
+                        <span class="checkout-submit-label">@(Model.ShowsPayment ? T["Pay now"] : T["Continue"])</span>
+                        <span class="checkout-submit-busy d-none">
+                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                            @T["Processing…"]
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @* On a phone the summary comes first, so the total is in view before the buyer starts. *@
+        <div class="col-lg-5 order-first order-lg-last">
+            @if (Model.Aside is not null)
+            {
+                <div class="checkout-one-page-aside">
+                    @await DisplayAsync(((IZoneHolding)Model.Aside).Zones["Aside"])
+                </div>
+            }
+        </div>
+    </div>
+</form>
+
+<style at="Foot">
+    .checkout-one-page .alert > .validation-summary-errors > ul {
+        margin-bottom: 0 !important;
+    }
+
+    /* On a wide screen the summary stays in view down the page. */
+    @@media (min-width: 992px) {
+        .checkout-one-page-aside {
+            position: sticky;
+            top: 1rem;
+        }
+    }
+</style>
+
+@if (Model.ShowsPayment)
+{
+    <script at="Foot">
+        (function () {
+            var form = document.getElementById('checkout-form');
+            var update = form.querySelector('[data-checkout-update]');
+            var submit = document.getElementById('checkout-submit');
+            var notice = form.querySelector('[data-checkout-update-notice]');
+            var payment = form.querySelector('[data-checkout-payment-section]');
+            var changed = false;
+
+            // A change to the details above payment is saved before paying: the payment button gives way to Update
+            // order until it is.
+            function markChanged() {
+                if (changed) {
+                    return;
+                }
+
+                changed = true;
+                update.classList.remove('d-none');
+                submit.classList.add('d-none');
+                notice.classList.remove('d-none');
+                payment.classList.add('opacity-50');
+            }
+
+            form.querySelectorAll('[data-checkout-details]').forEach(function (section) {
+                section.addEventListener('input', markChanged);
+                section.addEventListener('change', markChanged);
+            });
+
+            if (form.getAttribute('data-needs-update') === 'true') {
+                markChanged();
+            }
+
+            // Registered as a capturing listener, so it runs before the payment script takes the submit: with changed
+            // details, pressing Enter or the payment button updates the order instead of paying.
+            form.addEventListener('submit', function (event) {
+                var submitter = event.submitter;
+
+                if (!changed || (submitter && submitter.name === '@CheckoutConstants.FormActions.FieldName')) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                // A form ignores a submit started while its submit event is still being handled.
+                window.setTimeout(function () { update.click(); });
+            }, true);
+        })();
+    </script>
+}

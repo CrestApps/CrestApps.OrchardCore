@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
+using Microsoft.Extensions.Localization;
 using CrestApps.OrchardCore.Users;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
@@ -16,17 +18,22 @@ public sealed class TransactionDisplayDriver : DisplayDriver<Transaction>
     private readonly IUserService _userService;
     private readonly IDisplayNameProvider _displayNameProvider;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="TransactionDisplayDriver"/> class.
     /// </summary>
     /// <param name="userService">The user service used to resolve transaction owners.</param>
     /// <param name="displayNameProvider">The display name provider used to describe owners.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public TransactionDisplayDriver(
         IUserService userService,
-        IDisplayNameProvider displayNameProvider)
+        IDisplayNameProvider displayNameProvider,
+        IStringLocalizer<TransactionDisplayDriver> stringLocalizer)
     {
         _userService = userService;
         _displayNameProvider = displayNameProvider;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -45,7 +52,7 @@ public sealed class TransactionDisplayDriver : DisplayDriver<Transaction>
             rowShape.Attributes["data-filter-value"] = transaction.Title?.ToLowerInvariant() ?? string.Empty;
         }
 
-        var ownerName = await ResolveOwnerNameAsync(transaction.OwnerId);
+        var ownerName = await ResolveOwnerNameAsync(transaction.OwnerId) ?? TransactionOwnerNames.GuestName(transaction, S["{0} (guest)"].Value);
 
         return Combine(
             View("Transaction_Fields_SummaryAdmin", transaction)

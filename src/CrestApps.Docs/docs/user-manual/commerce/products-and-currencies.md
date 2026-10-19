@@ -137,6 +137,57 @@ When you change the values later, a variant keeps its SKU and prices while its c
 
 In listings, a product whose variants are priced differently shows **From** its lowest price, a filter on an option finds the product when any variant on sale has that value, and keyword search matches the variants' SKUs. On the product's card and page, **Add to cart** offers one list per option, such as **Size** and **Finish**. A value that makes no variant on sale with the others picked can't be chosen. On the product's page, the price, the SKU and the photo change to the chosen variant's. Without JavaScript, a single **Choose** list of the variants on sale, with their prices, is offered instead.
 
+## Put a product on sale
+
+On the product's editor, enter a **Sale price** and, optionally, when the sale runs under **Sale runs**, in your site's time zone. During the sale the product sells at the sale price, with its regular price struck through, on its card, its page and in the cart. Listings switch to and from the sale price within a minute of the times you set. Leave the dates empty for a sale that runs until you clear the sale price. A variant can have its own sale price in the variants table.
+
+## Quantities, volume discounts and role prices
+
+Under **Quantities and volume pricing** on the product's editor:
+
+| Field | What it does |
+| --- | --- |
+| **Quantity** | **At least**, **At most** and **In packs of**: how many a buyer can put in their cart, such as at least 2, or in packs of 6 for a six-pack. The quantity box on the product starts at the least and steps by the pack. |
+| **Volume discounts** | Up to four rows of **From quantity** and **% off each**, such as 10% off each from 5. A buyer gets the best one they reach, and the product's page lists them. |
+| **Role discounts** | A role and a percentage, such as 20% off for *Wholesale*. Signed-in buyers in the role see their price note on the product and pay it in the cart. |
+
+A buyer gets the best of their role and volume discounts, not both. The cart says so when a quantity breaks the product's rules and asks for one that doesn't.
+
+## Let buyers personalize a product
+
+Under **Personalization**, **Add-ons** lists the personal touches a buyer can add, such as an engraving or gift wrap. For each, enter a **Label**, choose whether the **Buyer** *types a text* or *ticks a box*, an optional **Extra price** added to every unit, and whether it's **Required**. Clear a label to remove an add-on.
+
+Buyers choose add-ons on the product's page. A card of a product with a required add-on shows **Choose options**, which opens that page. The same product with other add-ons is another line in the cart, and the add-ons show on the cart, the checkout, the order and its emails, and the packing form.
+
+## Sell a product somewhere else
+
+To list a product sold elsewhere, such as on a partner's store, enter its address under **Sold elsewhere** and, optionally, the button's label. It isn't sold on your site: its card and page show your button, which opens that address in a new tab, in place of **Add to cart**.
+
+## Group products on one page
+
+With the **Grouped Products** feature, a product can show several products on one page, such as the pieces of a set, each with a quantity, and one **Add to cart** adds the ones the buyer chose. On the product's editor, pick them under **Products in this group**, and leave the product itself without a price: the products in it are what's bought. A product in the group that has a variant, a price or a required add-on to choose links to its own page; one sold elsewhere links there. The group's card shows **Choose products**.
+
+## Sell a bundle or kit
+
+With the **Product Bundles** feature, a product can be a bundle of other products, such as a starter kit of two caps and a tee, sold at its own price. Under **Bundle** on the product's editor, choose each product in it under **Made of** and how many each bundle holds. The bundle's page lists what's in it.
+
+Its stock is what its parts in stock can make: with 4 caps left and 2 in each kit, it shows *Only 2 left*. Selling a bundle takes each part from stock, and canceling or refunding the order puts them back. Don't count the bundle's own stock. A part can't be sold in variants or be a bundle itself.
+
+## Import and export products
+
+With the **Product Import and Export** feature, **Commerce > Import and export** brings products in from another store and takes them out.
+
+To import, export your products from Shopify (**Products > Export**) or WooCommerce (**Products > Export**), choose the file, and choose the product type to import them as. The format is told from the file's columns.
+
+- **Titles, descriptions, prices, SKUs and stock** come in. A WooCommerce sale price becomes the price, and its regular price the compare-at price.
+- **Variants** come in when the type has the **Product variants** part with options of the same names, such as *Size*. Otherwise the product comes in as one product, from its lowest price, with the stock of all its variants, and the result says so.
+- **Categories and brands** go to the type's taxonomy fields named like *Category* and *Brand*, matched to their terms by name. A name the taxonomy doesn't have is listed so you can add it and import again.
+- **A product already in your store**, matched by its SKU, a variant's SKU or its address, is updated. Untick **Update products already in the store** to leave them as they are.
+- **New products** are drafts to review, unless you tick **Publish new products**.
+- **Images** aren't downloaded. Add product photos in the media library.
+
+To export, choose the product type and click **Export CSV**. The file is in Shopify's product format, with variants, prices, categories, brands and available stock: it opens in a spreadsheet, imports back here, and imports into Shopify.
+
 :::tip[Taxes on products]
 To charge tax on a product, add the **Taxation** part to the same content type. See [Taxes](taxes.md).
 :::

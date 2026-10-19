@@ -61,6 +61,6 @@ internal sealed class ProductReviewsDisplayDriver : ContentPartDisplayDriver<Pro
                     model.CanReview = eligibility.CanReview;
                     model.Existing = eligibility.Existing;
                 }
-            }).Location("Detail", "Content:after:20"));
+            }).Location("Detail", "Content:60"));
     }
 }

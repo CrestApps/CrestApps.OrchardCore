@@ -5,12 +5,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.StaticFiles;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Downloads.Controllers;
 
 /// <summary>
 /// Where a buyer's download link leads. Opening it shows the file with a Download button; the download itself is a
-/// post, so the link checkers some mail services run on every link never use up a download.
+/// post, so the link checkers some mail services run on every link never use up a download. The page is the
+/// <c>DownloadPage</c> shape, so a theme can override it.
 /// </summary>
 [AllowAnonymous]
 public sealed class DownloadsController : Controller
@@ -19,11 +21,13 @@ public sealed class DownloadsController : Controller
 
     private readonly DownloadService _downloads;
     private readonly IDigitalFileStore _fileStore;
+    private readonly IShapeFactory _shapeFactory;
 
-    public DownloadsController(DownloadService downloads, IDigitalFileStore fileStore)
+    public DownloadsController(DownloadService downloads, IDigitalFileStore fileStore, IShapeFactory shapeFactory)
     {
         _downloads = downloads;
         _fileStore = fileStore;
+        _shapeFactory = shapeFactory;
     }
 
     [HttpGet("downloads/{token}", Name = DownloadsConstants.RouteNames.Download)]
@@ -31,7 +35,7 @@ public sealed class DownloadsController : Controller
     {
         var (entitlement, problem) = await _downloads.ResolveAsync(token, HttpContext.RequestAborted);
 
-        return Page(token, entitlement, problem);
+        return await PageAsync(token, entitlement, problem);
     }
 
     [HttpPost("downloads/{token}")]
@@ -42,14 +46,14 @@ public sealed class DownloadsController : Controller
 
         if (problem != DownloadProblem.None)
         {
-            return Page(token, entitlement, problem);
+            return await PageAsync(token, entitlement, problem);
         }
 
         var stream = await _fileStore.OpenAsync(entitlement.FileId, HttpContext.RequestAborted);
 
         if (stream is null)
         {
-            return Page(token, entitlement, DownloadProblem.NotFound);
+            return await PageAsync(token, entitlement, DownloadProblem.NotFound);
         }
 
         if (!await _downloads.RecordDownloadAsync(entitlement, HttpContext.RequestAborted))
@@ -58,7 +62,7 @@ public sealed class DownloadsController : Controller
 
             var (current, now) = await _downloads.ResolveAsync(token, HttpContext.RequestAborted);
 
-            return Page(token, current, now == DownloadProblem.None ? DownloadProblem.LimitReached : now);
+            return await PageAsync(token, current, now == DownloadProblem.None ? DownloadProblem.LimitReached : now);
         }
 
         if (!_contentTypes.TryGetContentType(entitlement.FileName ?? string.Empty, out var contentType))
@@ -69,18 +73,18 @@ public sealed class DownloadsController : Controller
         return File(stream, contentType, entitlement.FileName);
     }
 
-    private ViewResult Page(string token, DownloadEntitlement entitlement, DownloadProblem problem)
+    private async Task<IActionResult> PageAsync(string token, DownloadEntitlement entitlement, DownloadProblem problem)
     {
         if (problem != DownloadProblem.None)
         {
             Response.StatusCode = problem == DownloadProblem.NotFound ? StatusCodes.Status404NotFound : StatusCodes.Status410Gone;
         }
 
-        return View("Index", new DownloadPageViewModel
+        return View("Index", await _shapeFactory.CreateAsync<DownloadPageViewModel>("DownloadPage", model =>
         {
-            Token = token,
-            Entitlement = problem == DownloadProblem.NotFound ? null : entitlement,
-            Problem = problem,
-        });
+            model.Token = token;
+            model.Entitlement = problem == DownloadProblem.NotFound ? null : entitlement;
+            model.Problem = problem;
+        }));
     }
 }

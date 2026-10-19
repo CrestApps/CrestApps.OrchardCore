@@ -144,7 +144,17 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
 
         if (rate is null)
         {
-            modelState.AddModelError(Prefix, nameof(model.RateId), S["Choose how to ship your order."]);
+            if (string.IsNullOrEmpty(model.RateId))
+            {
+                // The ways to ship to this address are shown for the first time. The buyer stays on the step to look
+                // at them and their prices, which isn't a mistake, so the error that keeps the step has no message.
+                modelState.AddModelError(Prefix + ".Rates", string.Empty);
+                model.IsChoosing = true;
+            }
+            else
+            {
+                modelState.AddModelError(Prefix, nameof(model.RateId), S["That way to ship isn't offered for this address. Choose another."]);
+            }
 
             return BuildEditor(flow, model, quote);
         }
@@ -206,6 +216,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             {
                 model.AddressId = posted.AddressId;
                 model.RateId = posted.RateId;
+                model.IsChoosing = posted.IsChoosing;
                 model.SaveAddress = posted.SaveAddress;
                 model.Address = posted.Address ?? new AddressEditorViewModel();
 

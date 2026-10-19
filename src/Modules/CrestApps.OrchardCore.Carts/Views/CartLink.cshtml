@@ -1,17 +1,144 @@
 @model CartLinkViewModel
 
 @*
-    The cart link in the Navigation zone of front-end pages. Override this shape to restyle it, or with an empty
-    template to hide it.
+    The cart link in the Navigation zone of front-end pages. It opens a slide-out mini cart; Add to cart forms on the
+    page then add in place and open it. Without script, or without Bootstrap's offcanvas, the link goes to the cart page
+    and the forms post as usual. Override this shape to restyle it, or with an empty template to hide it.
 *@
 
 <li class="nav-item">
-    <a class="nav-link product-cart-link" href="@Model.Url">
+    <a class="nav-link product-cart-link" href="@Model.Url" data-mini-cart-open aria-controls="mini-cart">
         <span class="fa-solid fa-cart-shopping" aria-hidden="true"></span>
         <span>@T["Cart"]</span>
-        @if (Model.ItemCount > 0)
-        {
-            <span class="badge rounded-pill bg-primary">@Model.ItemCount<span class="visually-hidden"> @T.Plural(Model.ItemCount, "item", "items")</span></span>
-        }
+        <span class="badge rounded-pill bg-primary" data-mini-cart-count hidden="@(Model.ItemCount == 0)">@Model.ItemCount</span>
+        <span class="visually-hidden" data-mini-cart-count-label>@T.Plural(Model.ItemCount, "1 item", "{0} items")</span>
     </a>
 </li>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="mini-cart" aria-labelledby="mini-cart-title" data-mini-cart data-url="@Url.RouteUrl("CartMini")">
+    <div class="offcanvas-header border-bottom">
+        <h2 class="offcanvas-title h5" id="mini-cart-title">@T["Your cart"]</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="@T["Close"]"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="alert alert-success d-none" role="status" data-mini-cart-message></div>
+        <div data-mini-cart-body aria-live="polite"></div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var panel = document.querySelector('[data-mini-cart]');
+        var opener = document.querySelector('[data-mini-cart-open]');
+
+        if (!panel || !opener || !window.bootstrap || !window.bootstrap.Offcanvas || !window.fetch) {
+            return;
+        }
+
+        // The panel is rendered beside the link, inside the navigation; it belongs at the end of the page so the
+        // navigation's own styles don't hold it.
+        document.body.appendChild(panel);
+
+        var body = panel.querySelector('[data-mini-cart-body]');
+        var message = panel.querySelector('[data-mini-cart-message]');
+        var offcanvas = window.bootstrap.Offcanvas.getOrCreateInstance(panel);
+        var loadingText = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Loading your cart…"].Value));
+        var errorText = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(T["Something went wrong. Please try again."].Value));
+
+        function setCount(count) {
+            var badge = opener.querySelector('[data-mini-cart-count]');
+            badge.textContent = count;
+            badge.hidden = !count;
+        }
+
+        function load() {
+            body.innerHTML = '<p class="text-muted py-4 text-center">' + loadingText + '</p>';
+
+            return fetch(panel.getAttribute('data-url'), { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (response) { return response.text(); })
+                .then(function (html) { body.innerHTML = html; });
+        }
+
+        function show(text, success) {
+            message.textContent = text || '';
+            message.classList.toggle('d-none', !text);
+            message.classList.toggle('alert-success', success !== false);
+            message.classList.toggle('alert-danger', success === false);
+        }
+
+        function post(form) {
+            return fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }).then(function (response) {
+                if (!response.ok) {
+                    throw new Error(response.status);
+                }
+
+                return response.json();
+            });
+        }
+
+        opener.addEventListener('click', function (event) {
+            event.preventDefault();
+            show('');
+            load();
+            offcanvas.show();
+        });
+
+        // Add to cart in place: the page stays, the count updates and the cart slides out.
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+
+            if (!form.matches('form.product-add-to-cart')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            var button = form.querySelector('button[type=submit]');
+
+            if (button) {
+                button.disabled = true;
+            }
+
+            post(form)
+                .then(function (result) {
+                    setCount(result.itemCount);
+                    show(result.message, result.succeeded);
+
+                    return load();
+                })
+                .catch(function () { show(errorText, false); })
+                .finally(function () {
+                    if (button) {
+                        button.disabled = false;
+                    }
+
+                    offcanvas.show();
+                });
+        });
+
+        // Removing a line from the mini cart.
+        panel.addEventListener('submit', function (event) {
+            var form = event.target;
+
+            if (!form.matches('[data-mini-cart-remove]')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            post(form)
+                .then(function (result) {
+                    setCount(result.itemCount);
+                    show('');
+
+                    return load();
+                })
+                .catch(function () { show(errorText, false); });
+        });
+    })();
+</script>

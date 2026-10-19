@@ -1,0 +1,5 @@
+@model ShapeViewModel<Order>
+
+<span class="badge ta-badge @(Model.Value.PaymentRisk.Level == "highest" ? "bg-danger-subtle" : "bg-warning-subtle") fw-normal" data-bs-toggle="tooltip" title="@T["The payment's fraud checks rated it {0} risk", Model.Value.PaymentRisk.Level]">
+    <i class="fa-solid fa-shield-halved text-secondary me-1" aria-hidden="true"></i>@T["Risky"]
+</span>

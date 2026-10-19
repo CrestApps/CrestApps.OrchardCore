@@ -16,4 +16,27 @@ public static class CommerceConstants
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Commerce";
     }
+
+    /// <summary>
+    /// The storefront account: the pages a signed-in customer opens for their own orders, downloads, addresses and
+    /// more. Each module adds its pages to the account menu with an <c>INavigationProvider</c> that builds only when
+    /// the menu name is <see cref="MenuName"/>.
+    /// </summary>
+    public static class Account
+    {
+        /// <summary>
+        /// The name of the navigation menu that lists the account's pages.
+        /// </summary>
+        public const string MenuName = "commerce-account";
+
+        /// <summary>
+        /// The route name of the account's home page, at <c>/account</c>.
+        /// </summary>
+        public const string HomeRouteName = "CommerceAccount";
+
+        /// <summary>
+        /// The shape that renders the account menu beside an account page.
+        /// </summary>
+        public const string NavigationShape = "CommerceAccountNavigation";
+    }
 }

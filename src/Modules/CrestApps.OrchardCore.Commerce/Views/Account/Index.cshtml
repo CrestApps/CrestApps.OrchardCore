@@ -1,0 +1,19 @@
+@using OrchardCore.DisplayManagement
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="CommerceAccount" title="@T["Your account"]" />
+</zone>
+
+<div class="container my-4">
+    <div class="row g-4">
+        <div class="col-lg-3">
+            @await DisplayAsync(await New.CommerceAccountNavigation())
+        </div>
+        <div class="col-lg-9">
+            <h1 class="h3 mb-3">@T["Your account"]</h1>
+
+            @await DisplayAsync(Model)
+        </div>
+    </div>
+</div>

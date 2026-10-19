@@ -39,4 +39,10 @@ public sealed class CheckoutViewModel
     /// Gets or sets the heading of the confirmation page, or <see langword="null"/> for "Order confirmation".
     /// </summary>
     public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the checkout was completed with a method that takes the money later, such as a bank
+    /// transfer, so the confirmation says the order is placed rather than paid.
+    /// </summary>
+    public bool PaymentDeferred { get; set; }
 }

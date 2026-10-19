@@ -54,7 +54,7 @@
                        value="@method.Key"
                        autocomplete="off"
                        checked="@method.IsDefault" />
-                <label class="btn btn-outline-secondary w-100 text-start p-3" for="@inputId">
+                <label class="btn checkout-payment-method w-100 text-start p-3" for="@inputId">
                     <span class="d-block fw-semibold">@method.Title</span>
                     <small class="d-block text-body-secondary">@method.Description</small>
                 </label>
@@ -77,11 +77,44 @@
 
         var hidden = method.Key != Model.SelectedProviderKey ? " d-none" : string.Empty;
 
-        <div class="checkout-payment-panel border rounded p-3 mb-3@(hidden)" data-checkout-payment-panel="@method.Key">
+        <div class="checkout-payment-panel p-0 p-sm-3 mb-3@(hidden)" data-checkout-payment-panel="@method.Key">
             @await DisplayAsync(panel)
         </div>
     }
 </div>
+
+@* The chosen method reads as chosen in light and dark themes, with both lines still legible. On a phone the
+   provider's panel drops its own frame, so card fields get the width. *@
+<style at="Foot">
+    .checkout-payment-method {
+        border: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+    }
+
+    .checkout-payment-method:hover {
+        border-color: var(--bs-primary-border-subtle);
+        color: var(--bs-body-color);
+    }
+
+    .btn-check:checked + .checkout-payment-method {
+        border-color: var(--bs-primary);
+        box-shadow: inset 0 0 0 1px var(--bs-primary);
+        background-color: var(--bs-primary-bg-subtle);
+        color: var(--bs-body-color);
+    }
+
+    .btn-check:focus-visible + .checkout-payment-method {
+        box-shadow: inset 0 0 0 1px var(--bs-primary), 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+    }
+
+    @@media (min-width: 576px) {
+        .checkout-payment-panel {
+            border: 1px solid var(--bs-border-color);
+            border-radius: var(--bs-border-radius);
+        }
+    }
+</style>
 
 <script asp-name="checkout-payment" at="Foot"></script>
 <script at="Foot" depends-on="checkout-payment">
