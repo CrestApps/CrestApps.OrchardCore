@@ -10,7 +10,7 @@ The same few steps build very different reports. This page walks through common 
 
 Watch the short video, then follow the examples below.
 
-<YouTube video="report-builder" title="Narrated video of building a list, a chart report, a report with subtotals and a pivot table" start={388} end={432} />
+<YouTube video="report-builder" title="Narrated video of building a list, a chart report, a report with subtotals and a pivot table" start={461} end={505} />
 
 | | |
 | --- | --- |

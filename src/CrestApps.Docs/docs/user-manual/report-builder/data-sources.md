@@ -13,7 +13,7 @@ The data sources are shared with Orchard Core: **Content items**, **Users** and 
 
 Watch the short video, then read about each data source below.
 
-<YouTube video="report-builder" title="Narrated tour of the data sources and data sets the Report Builder offers" start={431} end={488} />
+<YouTube video="report-builder" title="Narrated tour of the data sources and data sets the Report Builder offers" start={504} end={562} />
 
 | | |
 | --- | --- |
