@@ -21,4 +21,19 @@ public sealed class OrderSettings
     /// Gets or sets how many hours after the checkout was left the recovery email goes out.
     /// </summary>
     public int RecoveryDelayHours { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the product offered at checkout as an order bump: one tick adds it to the order before paying.
+    /// </summary>
+    public string OrderBumpProductId { get; set; }
+
+    /// <summary>
+    /// Gets or sets how much less the order bump costs than the product's price, in percent, or <see langword="null"/>.
+    /// </summary>
+    public decimal? OrderBumpPercentOff { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the offer says above the product, such as "Add a matching cap?".
+    /// </summary>
+    public string OrderBumpHeadline { get; set; }
 }

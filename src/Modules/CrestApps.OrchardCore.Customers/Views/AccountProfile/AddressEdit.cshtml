@@ -1,7 +1,11 @@
-@model CustomerAddressViewModel
+@model IShape
+
+@{
+    var address = (CustomerAddressViewModel)Model;
+}
 
 <zone Name="Title">
-    <breadcrumb name="@(Model.IsNew ? "AccountAddressCreate" : "AccountAddressEdit")" title="@(Model.IsNew ? T["Add address"] : T["Edit address"])">
+    <breadcrumb name="@(address.IsNew ? "AccountAddressCreate" : "AccountAddressEdit")" title="@(address.IsNew ? T["Add address"] : T["Edit address"])">
         <breadcrumb-item id="CommerceAccount" title="@T["Your account"]" href="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)" />
         <breadcrumb-item id="AccountAddresses" title="@T["Addresses"]" href="@Url.RouteUrl("AccountAddresses")" />
     </breadcrumb>
@@ -13,18 +17,9 @@
             @await DisplayAsync(await New.CommerceAccountNavigation())
         </div>
         <div class="col-lg-9 commerce-account">
-            <h1 class="h3 mb-3">@(Model.IsNew ? T["Add address"] : T["Edit address"])</h1>
+            <h1 class="h3 mb-3">@(address.IsNew ? T["Add address"] : T["Edit address"])</h1>
 
-            <form action="@(Model.IsNew ? Url.RouteUrl("AccountAddressCreate") : Url.RouteUrl("AccountAddressEdit", new { addressId = Model.AddressId }))" method="post" class="card">
-                @Html.AntiForgeryToken()
-                <div class="card-body">
-                    <partial name="_CustomerAddressFields" model="Model" />
-                </div>
-                <div class="card-footer d-flex flex-wrap gap-2">
-                    <button type="submit" class="btn btn-primary px-4">@T["Save"]</button>
-                    <a class="btn btn-link" href="@Url.RouteUrl("AccountAddresses")">@T["Cancel"]</a>
-                </div>
-            </form>
+            @await DisplayAsync(Model)
         </div>
     </div>
 </div>

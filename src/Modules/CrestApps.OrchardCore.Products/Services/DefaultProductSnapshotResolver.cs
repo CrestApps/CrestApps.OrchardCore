@@ -1,3 +1,4 @@
+using OrchardCore.Modules;
 using System.Linq;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -22,6 +23,7 @@ namespace CrestApps.OrchardCore.Products.Services;
 public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultProductSnapshotResolver"/> class.
@@ -30,6 +32,12 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
     public DefaultProductSnapshotResolver(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
+    }
+
+    public DefaultProductSnapshotResolver(IContentDefinitionManager contentDefinitionManager, IClock clock)
+        : this(contentDefinitionManager)
+    {
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -77,7 +85,8 @@ public sealed class DefaultProductSnapshotResolver : IProductSnapshotResolver
             variantTitle = variant.GetTitle(variants.Options?.Select(option => option.Name));
         }
 
-        var unitPrice = variant?.Price ?? productPart.Price;
+        // During a sale the product sells at its sale price.
+        var unitPrice = ProductSale.GetPrice(productPart, variant, _clock?.UtcNow ?? DateTime.UtcNow);
 
         // A product with no price of its own can still be sold at the prices it lists; with neither, there is
         // nothing to charge.

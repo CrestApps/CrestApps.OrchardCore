@@ -83,6 +83,7 @@ With Product Listing on, `InventorySearchDocumentContributor` writes the built-i
   ```
 
 - **Deployment step `Stock`** (`StockDeploymentStep`, *Commerce*) exports every item that isn't archived with its ids, SKU and `OnHand`.
+- **Product imports.** With **Product Import and Export** on, `InventoryProductImportHandler` syncs the stock items of the products an import saved and sets the count the file gives as available, keeping the units unpaid orders hold on hand besides it.
 
 ## Orders
 
@@ -104,6 +105,8 @@ With the [Reports](reports) feature on, **Stock on hand** (under **Reports > Com
 ## Availability
 
 `InventoryAvailabilityProvider` implements Products' `IProductAvailabilityProvider`. It answers from the stock items at the default location: `Available`, `AllowBackorder` and `LowStockThreshold` for each product or variant. A product asked about as a whole gets each of its variants. When the request names a cart (`ProductAvailabilityRequest.CartId`), the units held by that cart's unpaid orders (`IOrderStore.ListUnpaidByCartAsync`) are added back, so a buyer's own hold counts as theirs. Products that aren't counted are left out of the answer and can always be bought.
+
+With **Product Bundles** on, `BundleAvailabilityProvider` answers for bundles before the stock items: the most bundles the counted parts can make, from `ProductBundleIndex`, taking backorders when every counted part does. `InventoryOrderEventHandler` holds, sells and restocks a bundle line's parts (`OrderLine.BundleItems`) rather than the bundle, and `BundleSearchIndexHandler` refreshes the search records of the bundles a product is in when it sells out or comes back.
 
 ## Admin
 

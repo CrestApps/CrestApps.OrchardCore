@@ -59,6 +59,16 @@ public sealed class ProductSearchDocument
     public decimal? CompareAtPrice { get; set; }
 
     /// <summary>
+    /// Gets or sets when the product's sale starts, when it has a sale price, so the record is built again then.
+    /// </summary>
+    public DateTime? SaleStartsUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the product's sale ends, when it has a sale price, so the record is built again then.
+    /// </summary>
+    public DateTime? SaleEndsUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the highest price of a product whose variants are priced differently, so a card can show
     /// "From" the lowest. <see langword="null"/> when every price is the same.
     /// </summary>

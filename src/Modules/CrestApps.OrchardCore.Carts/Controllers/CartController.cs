@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Carts.Core.Services;
 using CrestApps.OrchardCore.Carts.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.RateLimits;
@@ -21,13 +22,16 @@ public sealed class CartController : Controller
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
+    internal readonly IStringLocalizer S;
 
     public CartController(
         ICartService cartService,
         IShapeFactory shapeFactory,
         INotifier notifier,
-        IHtmlLocalizer<CartController> htmlLocalizer)
+        IHtmlLocalizer<CartController> htmlLocalizer,
+        IStringLocalizer<CartController> stringLocalizer)
     {
+        S = stringLocalizer;
         _cartService = cartService;
         _shapeFactory = shapeFactory;
         _notifier = notifier;
@@ -58,18 +62,64 @@ public sealed class CartController : Controller
         var cart = await _cartService.GetCurrentAsync(HttpContext.RequestAborted);
         var pricing = await _cartService.PriceAsync(cart, HttpContext.RequestAborted);
 
-        return PartialView("MiniCart", new CartViewModel
+        // The fragment is the MiniCart shape, so a theme changes it by overriding that shape.
+        var shape = await _shapeFactory.CreateAsync<CartViewModel>("MiniCart", model =>
         {
-            Pricing = pricing,
-            CheckoutUrl = Url.RouteUrl(CartConstants.RouteNames.Checkout),
+            model.Pricing = pricing;
+            model.CheckoutUrl = Url.RouteUrl(CartConstants.RouteNames.Checkout);
         });
+
+        return PartialView(shape);
     }
 
     [HttpPost("cart/add", Name = CartConstants.RouteNames.Add)]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(CartConstants.RateLimitGroup)]
-    public async Task<IActionResult> Add(string contentItemId, string priceId, string variantId = null, int quantity = 1, string returnUrl = null)
-        => await RespondAsync(await _cartService.AddAsync(contentItemId, priceId, variantId, quantity, HttpContext.RequestAborted), returnUrl, linkToCart: true);
+    public async Task<IActionResult> Add(string contentItemId, string priceId, string variantId = null, int quantity = 1, string returnUrl = null, Dictionary<string, string> addOns = null)
+        => await RespondAsync(await _cartService.AddAsync(contentItemId, priceId, variantId, quantity, addOns, HttpContext.RequestAborted), returnUrl, linkToCart: true);
+
+    [HttpPost("cart/add-many", Name = CartConstants.RouteNames.AddMany)]
+    [ValidateAntiForgeryToken]
+    [RateLimitGroup(CartConstants.RateLimitGroup)]
+    public async Task<IActionResult> AddMany(List<CartAddManyItem> items, string returnUrl = null)
+    {
+        var chosen = (items ?? [])
+            .Where(item => item is not null && item.Quantity > 0 && !string.IsNullOrEmpty(item.ContentItemId))
+            .Take(Products.Core.Models.ProductGroupPart.MaxProducts)
+            .ToList();
+
+        if (chosen.Count == 0)
+        {
+            return await RespondAsync(CartResult.Failure(S["Enter how many of each product you want."], await _cartService.GetCurrentAsync(HttpContext.RequestAborted)), returnUrl);
+        }
+
+        // Each product is added on its own, so one that can't be bought doesn't stop the others.
+        CartResult last = null;
+        var added = 0;
+        var problems = new List<string>();
+
+        foreach (var item in chosen)
+        {
+            last = await _cartService.AddAsync(item.ContentItemId, null, null, item.Quantity, HttpContext.RequestAborted);
+
+            if (last.Succeeded)
+            {
+                added++;
+            }
+            else if (last.Message is { } problem)
+            {
+                problems.Add(problem.Value);
+            }
+        }
+
+        var message = problems.Count == 0
+            ? added == 1 ? last.Message : S["{0} products were added to your cart.", added]
+            : added == 0
+                ? new LocalizedString("problems", string.Join(" ", problems))
+                : S["Added {0} to your cart. {1}", S.Plural(added, "1 product", "{0} products"), string.Join(" ", problems)];
+
+        return await RespondAsync(added > 0 ? CartResult.Success(last.Cart, message) : CartResult.Failure(message, last?.Cart), returnUrl, linkToCart: added > 0);
+    }
 
     [HttpPost("cart/update", Name = CartConstants.RouteNames.Update)]
     [ValidateAntiForgeryToken]
@@ -116,4 +166,14 @@ public sealed class CartController : Controller
             ? RedirectToRoute(CartConstants.RouteNames.Cart)
             : LocalRedirect(returnUrl);
     }
+}
+
+/// <summary>
+/// A product and how many of it to add, in a form that adds several at once.
+/// </summary>
+public sealed class CartAddManyItem
+{
+    public string ContentItemId { get; set; }
+
+    public int Quantity { get; set; }
 }

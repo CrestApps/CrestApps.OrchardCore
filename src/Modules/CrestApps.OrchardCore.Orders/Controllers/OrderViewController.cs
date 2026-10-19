@@ -20,7 +20,8 @@ namespace CrestApps.OrchardCore.Orders.Controllers;
 
 /// <summary>
 /// The pages a guest reaches without signing in: an order opened from its signed link, and Find my order, which emails
-/// those links to the address an order was placed with.
+/// those links to the address an order was placed with. Each page's content is a shape (<c>GuestOrder</c>,
+/// <c>GuestOrderInvalid</c>, <c>OrderLookup</c>, <c>OrderLookupSent</c>) that a theme can override.
 /// </summary>
 public sealed class OrderViewController : Controller
 {
@@ -34,6 +35,7 @@ public sealed class OrderViewController : Controller
     private readonly OrderLinksEmailBuilder _linksEmailBuilder;
     private readonly IPaymentAttemptLimiter _limiter;
     private readonly IClock _clock;
+    private readonly IShapeFactory _shapeFactory;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -44,6 +46,7 @@ public sealed class OrderViewController : Controller
         OrderLinksEmailBuilder linksEmailBuilder,
         IPaymentAttemptLimiter limiter,
         IClock clock,
+        IShapeFactory shapeFactory,
         ILogger<OrderViewController> logger,
         IStringLocalizer<OrderViewController> stringLocalizer)
     {
@@ -52,6 +55,7 @@ public sealed class OrderViewController : Controller
         _linksEmailBuilder = linksEmailBuilder;
         _limiter = limiter;
         _clock = clock;
+        _shapeFactory = shapeFactory;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -68,23 +72,27 @@ public sealed class OrderViewController : Controller
         // A link that was altered, expired or names an order that was never placed shows nothing about any order.
         if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
         {
-            return View("Invalid");
+            return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
         }
 
-        return View(new OrderViewViewModel
+        var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
+        var payUrl = await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
+            ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
+            : null;
+
+        return View(await _shapeFactory.CreateAsync<OrderViewViewModel>("GuestOrder", model =>
         {
-            Order = order,
-            Sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail),
-            PayUrl = await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order),
-            RegisterUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
-                ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
-                : null,
-        });
+            model.Order = order;
+            model.Sections = sections;
+            model.PayUrl = payUrl;
+            model.RegisterUrl = registerUrl;
+        }));
     }
 
     [HttpGet("orders/find", Name = OrderConstants.RouteNames.Find)]
-    public IActionResult Find()
-        => View(new FindOrderViewModel());
+    public async Task<IActionResult> Find()
+        => View(await LookupShapeAsync("OrderLookup", email: null));
 
     [HttpPost("orders/find")]
     [ValidateAntiForgeryToken]
@@ -97,7 +105,7 @@ public sealed class OrderViewController : Controller
         {
             ModelState.AddModelError(nameof(model.Email), S["Enter the email you placed the order with."]);
 
-            return View(model);
+            return View(await LookupShapeAsync("OrderLookup", model.Email));
         }
 
         // The answer is the same whether or not there are orders, so the page never tells who has bought here. The
@@ -108,8 +116,12 @@ public sealed class OrderViewController : Controller
             await SendLinksAsync(email);
         }
 
-        return View("FindSent", new FindOrderViewModel { Email = email });
+        return View("FindSent", await LookupShapeAsync("OrderLookupSent", email));
     }
+
+    // Find my order and its answer are the OrderLookup and OrderLookupSent shapes, so a theme can override them.
+    private ValueTask<IShape> LookupShapeAsync(string shapeType, string email)
+        => _shapeFactory.CreateAsync<FindOrderViewModel>(shapeType, model => model.Email = email);
 
     private async Task SendLinksAsync(string email)
     {

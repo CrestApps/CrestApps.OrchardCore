@@ -39,6 +39,12 @@ public sealed class CartPricing
 /// </summary>
 public sealed class CartLinePricing
 {
+    /// <summary>
+    /// Gets or sets the add-ons chosen for the line, as they read: label, the text typed (or nothing for a ticked
+    /// box) and the extra price per unit, which <see cref="UnitPrice"/> includes.
+    /// </summary>
+    public IReadOnlyList<ProductAddOnChoice> AddOns { get; set; } = [];
+
     public CartLine Line { get; init; }
 
     /// <summary>

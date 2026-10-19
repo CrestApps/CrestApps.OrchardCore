@@ -1,0 +1,57 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductRecentlyViewedViewModel
+
+@*
+    The products this shopper viewed lately, kept in their browser. The page records its own product, then loads the
+    cards of the others; with nothing viewed before, or without script, it shows nothing.
+*@
+
+<section class="product-card-strip mt-5 d-none" data-recently-viewed data-current="@Model.ContentItemId" data-url="@Url.RouteUrl("ProductCards")" aria-label="@T["Recently viewed"]">
+    <h2 class="h4 mb-3">@T["Recently viewed"]</h2>
+    <div data-recently-viewed-cards></div>
+</section>
+
+<script at="Foot">
+    (function () {
+        var section = document.querySelector('[data-recently-viewed]');
+
+        if (!section || !window.fetch) {
+            return;
+        }
+
+        var key = 'crestapps.recentlyViewed';
+        var current = section.getAttribute('data-current');
+        var viewed = [];
+
+        try {
+            viewed = JSON.parse(window.localStorage.getItem(key) || '[]');
+        } catch (e) {
+            viewed = [];
+        }
+
+        if (!Array.isArray(viewed)) {
+            viewed = [];
+        }
+
+        var others = viewed.filter(function (id) { return id !== current; }).slice(0, 8);
+
+        try {
+            window.localStorage.setItem(key, JSON.stringify([current].concat(others).slice(0, 12)));
+        } catch (e) {
+            // Without storage the list just isn't kept.
+        }
+
+        if (others.length === 0) {
+            return;
+        }
+
+        fetch(section.getAttribute('data-url') + '?ids=' + encodeURIComponent(others.join(',')), { credentials: 'same-origin' })
+            .then(function (response) { return response.ok ? response.text() : ''; })
+            .then(function (html) {
+                if (html && html.indexOf('product-card') >= 0) {
+                    section.querySelector('[data-recently-viewed-cards]').innerHTML = html;
+                    section.classList.remove('d-none');
+                }
+            });
+    })();
+</script>

@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Products.Core.Models
+@model ShapeViewModel<ProductPart>
+
+@*
+    The link to where an external product is sold. It opens in a new tab, and tells search engines not to follow it,
+    as affiliate links ask.
+*@
+
+<a class="btn btn-primary w-100 position-relative" style="z-index: 2" href="@Model.Value.ExternalUrl" target="_blank" rel="nofollow noopener sponsored">
+    @(string.IsNullOrEmpty(Model.Value.ExternalButtonText) ? T["Buy now"].Value : Model.Value.ExternalButtonText)
+    <span class="fa-solid fa-arrow-up-right-from-square ms-1 small" aria-hidden="true"></span>
+    <span class="visually-hidden">@T["(opens in a new tab)"]</span>
+</a>

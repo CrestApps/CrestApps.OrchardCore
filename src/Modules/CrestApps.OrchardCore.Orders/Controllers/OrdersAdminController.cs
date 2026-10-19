@@ -68,6 +68,53 @@ public sealed class OrdersAdminController : Controller
         return View(await BuildListAsync(options, pagerParameters, userId: null));
     }
 
+    /// <summary>
+    /// The orders the list shows, with its search and status, as a CSV file: a row per line.
+    /// </summary>
+    [Admin("orders/export", "OrdersExport")]
+    public async Task<IActionResult> Export(OrdersIndexOptions options, [FromServices] global::OrchardCore.Modules.ILocalClock localClock, [FromServices] OrderOperationsService operations)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, OrderPermissions.ManageOrders))
+        {
+            return Forbid();
+        }
+
+        const int batch = 500;
+        var query = BuildQuery(options ?? new OrdersIndexOptions(), userId: null);
+        var orders = new List<Order>();
+
+        for (var skip = 0; ; skip += batch)
+        {
+            var (count, page) = await _orderStore.PageAsync(query, skip, batch, HttpContext.RequestAborted);
+
+            orders.AddRange(page);
+
+            if (page.Count < batch || orders.Count >= count)
+            {
+                break;
+            }
+        }
+
+        // Times in the site's time zone, as the list shows them.
+        var zone = TimeZoneInfo.FindSystemTimeZoneById((await localClock.GetLocalTimeZoneAsync()).TimeZoneId);
+        var owed = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var order in orders)
+        {
+            if (await operations.IsOwedAsync(order, HttpContext.RequestAborted))
+            {
+                owed.Add(order.ItemId);
+            }
+        }
+
+        var csv = OrderCsv.Write(orders, utc => TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone), owed);
+
+        // A byte order mark, so a spreadsheet reads the names and currencies as UTF-8.
+        var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray();
+
+        return File(bytes, "text/csv", $"orders-{TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone):yyyy-MM-dd}.csv");
+    }
+
     [HttpPost]
     [ActionName(nameof(Index))]
     [FormValueRequired("submit.Filter")]
@@ -254,21 +301,7 @@ public sealed class OrdersAdminController : Controller
         options ??= new OrdersIndexOptions();
 
         var pager = new Pager(pagerParameters, _pagerOptions);
-        var query = new OrderQuery
-        {
-            UserId = userId,
-            Search = userId is null ? options.Search : null,
-            Statuses = userId is not null
-                ? [OrderStatus.Paid, OrderStatus.AwaitingPayment]
-                : options.Status switch
-                {
-                    OrderStatusFilter.Paid => [OrderStatus.Paid],
-                    OrderStatusFilter.AwaitingPayment => [OrderStatus.AwaitingPayment],
-                    OrderStatusFilter.Canceled => [OrderStatus.Canceled],
-                    OrderStatusFilter.All => [],
-                    _ => [OrderStatus.Paid, OrderStatus.AwaitingPayment],
-                },
-        };
+        var query = BuildQuery(options, userId);
 
         var (count, orders) = await _orderStore.PageAsync(query, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
 
@@ -316,6 +349,24 @@ public sealed class OrdersAdminController : Controller
 
         return viewModel;
     }
+
+    // The list's search and status as a query, shared by the list and its export.
+    private static OrderQuery BuildQuery(OrdersIndexOptions options, string userId)
+        => new()
+        {
+            UserId = userId,
+            Search = userId is null ? options.Search : null,
+            Statuses = userId is not null
+                ? [OrderStatus.Paid, OrderStatus.AwaitingPayment]
+                : options.Status switch
+                {
+                    OrderStatusFilter.Paid => [OrderStatus.Paid],
+                    OrderStatusFilter.AwaitingPayment => [OrderStatus.AwaitingPayment],
+                    OrderStatusFilter.Canceled => [OrderStatus.Canceled],
+                    OrderStatusFilter.All => [],
+                    _ => [OrderStatus.Paid, OrderStatus.AwaitingPayment],
+                },
+        };
 
     private static RouteValueDictionary FilterRouteValues(OrdersIndexOptions options, PagerParameters pagerParameters)
     {

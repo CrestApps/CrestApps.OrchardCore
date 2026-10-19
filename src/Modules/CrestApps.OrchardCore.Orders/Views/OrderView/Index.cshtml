@@ -1,9 +1,13 @@
-@model OrderViewViewModel
+@model IShape
+
+@{
+    var order = (OrderViewViewModel)Model;
+}
 
 <zone Name="Title">
-    <breadcrumb name="OrdersView" title="@T["Order {0}", Model.Order.OrderNumber]" />
+    <breadcrumb name="OrdersView" title="@T["Order {0}", order.Order.OrderNumber]" />
 </zone>
 
 <div class="container my-4" style="max-width: 860px;">
-    <partial name="_OrderViewBody" model="Model" />
+    @await DisplayAsync(Model)
 </div>

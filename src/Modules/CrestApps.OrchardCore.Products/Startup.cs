@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Builder;
+using CrestApps.OrchardCore.Products.Endpoints;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core;
@@ -111,6 +114,69 @@ public sealed class TaxationStartup : StartupBase
     }
 }
 
+/// <summary>
+/// Lets shoppers compare up to four products side by side.
+/// </summary>
+[Feature(ProductConstants.Feature.Comparison)]
+public sealed class ComparisonStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductCompareActionDisplayDriver>();
+}
+
+/// <summary>
+/// Recommends products: upsells and cross-sells chosen per product, related products and recently viewed ones.
+/// </summary>
+[Feature(ProductConstants.Feature.Recommendations)]
+public sealed class RecommendationsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductRecommendationsDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Imports products from Shopify and WooCommerce exports, and exports them in Shopify's format.
+/// </summary>
+[Feature(ProductConstants.Feature.Transfer)]
+public sealed class TransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ProductCatalogTransfer>();
+        services.AddNavigationProvider<ProductTransferAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Sells bundles made of other products.
+/// </summary>
+[Feature(ProductConstants.Feature.Bundles)]
+public sealed class BundlesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductBundleDisplayDriver>();
+        services.AddIndexProvider<ProductBundleIndexProvider>();
+        services.AddDataMigration<ProductBundleMigrations>();
+    }
+}
+
+/// <summary>
+/// Shows several products on one page for shoppers to buy together.
+/// </summary>
+[Feature(ProductConstants.Feature.Grouped)]
+public sealed class GroupedStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductGroupDisplayDriver>();
+}
+
 [Feature(ProductConstants.Feature.Listing)]
 public sealed class ListingStartup : StartupBase
 {
@@ -124,6 +190,9 @@ public sealed class ListingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<TaxonomyTermLookup>();
+
+        // The product search behind the merchant's product pickers: recommendations, groups and bundles.
+        services.AddScoped<ProductRecommendationService>();
 
         // The styles a filter can be drawn in. Another module adds its own the same way, with a
         // ProductFacet-{Style} template.
@@ -168,12 +237,17 @@ public sealed class ListingStartup : StartupBase
         services.AddIndexProvider<ProductSearchIndexProvider>();
         services.AddScoped<IContentHandler, ProductSearchContentHandler>();
         services.AddSingleton<IBackgroundTask, ProductSearchIndexBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, ProductSaleScheduleBackgroundTask>();
 
         services.AddContentPart<ProductListingPart>()
             .UseDisplayDriver<ProductListingPartDisplayDriver>();
 
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<ProductDetailsDisplayDriver>();
+
+        // An external product links to where it's sold instead of offering Add to cart.
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ExternalProductActionDisplayDriver>();
 
         services.AddScoped<IContentPartFieldDefinitionDisplayDriver, ProductAttributeSettingsDisplayDriver>();
         services.AddScoped<IShapePlacementProvider, ProductDetailsPlacementProvider>();
@@ -208,6 +282,9 @@ public sealed class ListingStartup : StartupBase
             options.MemberAccessStrategy.Register<ProductListingPart>();
         });
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddProductSearchEndpoints();
 }
 
 /// <summary>

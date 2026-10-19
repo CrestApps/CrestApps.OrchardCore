@@ -1,0 +1,8 @@
+@model CrestApps.OrchardCore.Orders.ViewModels.OrderConfirmationOffersViewModel
+
+@*
+    The post-purchase offer: the cross-sells of what was just bought, from Product Recommendations when it's enabled
+    (the shape renders nothing otherwise). Adding one starts a new cart.
+*@
+
+@await DisplayAsync(await New.CartRecommendations(ContentItems: Model.Products.ToArray(), Heading: T["Goes well with your order"].Value))
