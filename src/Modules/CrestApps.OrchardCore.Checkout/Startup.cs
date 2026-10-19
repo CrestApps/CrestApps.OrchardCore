@@ -69,6 +69,7 @@ public sealed class Startup : StartupBase
 
         services.AddDataMigration<CouponMigrations>()
             .AddIndexProvider<CouponIndexProvider>()
+            .AddIndexProvider<CouponCodeIndexProvider>()
             .AddIndexProvider<CouponRedemptionIndexProvider>();
 
         services.AddScoped<ICouponStore, CouponStore>();
@@ -76,6 +77,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Coupon, CouponDisplayDriver>();
         services.AddScoped<ICheckoutDiscountProvider, CouponDiscountProvider>();
         services.AddScoped<ICheckoutHandler, CouponRedemptionCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, DiscountLinkCheckoutHandler>();
         services.AddScoped<ICouponRedemptionService, CouponRedemptionService>();
         services.AddScoped<ICheckoutPaymentGate, CouponHoldPaymentGate>();
         services.AddScoped<IDisplayDriver<CheckoutFlow>, CouponCheckoutFlowDisplayDriver>();

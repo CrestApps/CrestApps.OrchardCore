@@ -38,6 +38,26 @@ public sealed class Coupon : CatalogItem
         => Method == CouponMethod.Automatic;
 
     /// <summary>
+    /// Gets or sets whether only the unique codes generated for the coupon work, and not its own <see cref="Code"/>.
+    /// </summary>
+    public bool OnlyGeneratedCodes { get; set; }
+
+    /// <summary>
+    /// Gets, when this coupon was looked up by one of its generated codes, the identifier of that code. Its
+    /// <see cref="Code"/>, uses and limit are then the generated code's.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string GeneratedCodeId { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether a buyer can enter the coupon's code: not for an automatic discount, nor for a
+    /// coupon whose own code is turned off in favor of the codes generated for it.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool CanBeTyped
+        => !IsAutomatic && (!OnlyGeneratedCodes || GeneratedCodeId is not null);
+
+    /// <summary>
     /// Gets or sets the description the customer sees on their invoice.
     /// </summary>
     public string Description { get; set; }

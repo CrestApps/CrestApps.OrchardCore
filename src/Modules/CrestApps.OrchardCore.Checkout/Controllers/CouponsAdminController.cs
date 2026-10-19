@@ -284,6 +284,7 @@ public sealed class CouponsAdminController : Controller
             ItemId = coupon.ItemId,
             Code = coupon.Code,
             Method = coupon.Method,
+            OnlyGeneratedCodes = coupon.OnlyGeneratedCodes,
             Description = coupon.Description,
             Kind = coupon.Kind,
             Percentage = coupon.Percentage,
@@ -385,11 +386,94 @@ public sealed class CouponsAdminController : Controller
             return NotFound();
         }
 
+        await _couponStore.DeleteGeneratedCodesAsync(coupon.ItemId);
         await _couponStore.DeleteAsync(coupon);
 
         await _notifier.SuccessAsync(H["The coupon was deleted."]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Generates unique codes that share the coupon's discount and rules, each with its own uses.
+    /// </summary>
+    /// <param name="itemId">The coupon identifier.</param>
+    /// <param name="count">How many codes to generate.</param>
+    /// <param name="prefix">What every code starts with.</param>
+    /// <param name="usesPerCode">How many times each code may be used; blank for no limit.</param>
+    [HttpPost]
+    public async Task<IActionResult> GenerateCodes(string itemId, int count, string prefix, int? usesPerCode)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
+        {
+            return Forbid();
+        }
+
+        var coupon = string.IsNullOrEmpty(itemId) ? null : await _couponStore.FindByIdAsync(itemId);
+
+        if (coupon is null)
+        {
+            return NotFound();
+        }
+
+        prefix = prefix?.Trim().ToUpperInvariant();
+
+        if (coupon.IsAutomatic)
+        {
+            await _notifier.ErrorAsync(H["An automatic discount has no codes to generate."]);
+        }
+        else if (count is < 1 or > CheckoutConstants.MaxGeneratedCodes)
+        {
+            await _notifier.ErrorAsync(H["Generate between 1 and {0} codes at a time.", CheckoutConstants.MaxGeneratedCodes]);
+        }
+        else if (!string.IsNullOrEmpty(prefix) && (prefix.Length > 12 || !prefix.All(character => char.IsAsciiLetterOrDigit(character) || character == '-')))
+        {
+            await _notifier.ErrorAsync(H["A prefix is up to 12 letters, digits or dashes."]);
+        }
+        else if (usesPerCode is <= 0)
+        {
+            await _notifier.ErrorAsync(H["Leave the uses per code blank for no limit, or enter a number greater than zero."]);
+        }
+        else
+        {
+            var codes = await _couponStore.GenerateCodesAsync(coupon, count, prefix, usesPerCode, HttpContext.RequestAborted);
+
+            await _notifier.SuccessAsync(H.Plural(codes.Count, "Generated 1 code.", "Generated {0} codes."));
+        }
+
+        return RedirectToAction(nameof(Edit), new { itemId });
+    }
+
+    /// <summary>
+    /// Downloads the coupon's generated codes as a CSV file, with how often each was used.
+    /// </summary>
+    /// <param name="itemId">The coupon identifier.</param>
+    public async Task<IActionResult> ExportCodes(string itemId)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, CheckoutPermissions.ManageCoupons))
+        {
+            return Forbid();
+        }
+
+        var coupon = string.IsNullOrEmpty(itemId) ? null : await _couponStore.FindByIdAsync(itemId);
+
+        if (coupon is null)
+        {
+            return NotFound();
+        }
+
+        var csv = new System.Text.StringBuilder("Code,Uses,Limit,Created (UTC)\r\n");
+
+        foreach (var code in await _couponStore.ListGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted))
+        {
+            csv.Append(code.Code).Append(',')
+                .Append(code.RedemptionCount.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(code.MaxRedemptions?.ToString(System.Globalization.CultureInfo.InvariantCulture)).Append(',')
+                .Append(code.CreatedUtc.ToString("yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture))
+                .Append("\r\n");
+        }
+
+        return File(System.Text.Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"{coupon.Code}-codes.csv");
     }
 
     private async Task ValidateAsync(CouponEditViewModel model, string existingItemId)
@@ -500,6 +584,12 @@ public sealed class CouponsAdminController : Controller
     private async Task PopulateUsesAsync(CouponEditViewModel model, Coupon coupon)
     {
         model.Redemptions = await _redemptions.ListAsync(coupon.Code, RecentUses, HttpContext.RequestAborted);
+        (model.GeneratedCodes, model.UsedGeneratedCodes) = await _couponStore.CountGeneratedCodesAsync(coupon.ItemId, HttpContext.RequestAborted);
+
+        if (coupon.CanBeTyped)
+        {
+            model.DiscountLinkUrl = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/discount/{Uri.EscapeDataString(coupon.Code)}";
+        }
         model.HeldCount = await _redemptions.CountHeldAsync(coupon.Code, HttpContext.RequestAborted);
 
         // What each use paid for, such as an order, reads by its number rather than its id when a module knows it.
@@ -599,6 +689,7 @@ public sealed class CouponsAdminController : Controller
     {
         coupon.Code = model.Code?.Trim();
         coupon.Method = model.Method;
+        coupon.OnlyGeneratedCodes = model.Method == CouponMethod.Code && model.OnlyGeneratedCodes;
         coupon.Description = model.Description?.Trim();
         coupon.Kind = model.Kind;
         coupon.Percentage = model.Kind is CouponKind.Percentage or CouponKind.BuyXGetY ? model.Percentage : 0m;

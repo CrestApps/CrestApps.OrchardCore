@@ -93,6 +93,17 @@ public sealed class CouponEditViewModel
 
     public CouponMethod Method { get; set; }
 
+    public bool OnlyGeneratedCodes { get; set; }
+
+    [BindNever]
+    public int GeneratedCodes { get; set; }
+
+    [BindNever]
+    public int UsedGeneratedCodes { get; set; }
+
+    [BindNever]
+    public string DiscountLinkUrl { get; set; }
+
     public int? MinimumQuantity { get; set; }
 
     public int? BuyQuantity { get; set; }

@@ -25,6 +25,11 @@
         <span asp-validation-for="Code"></span>
         <span class="hint" data-coupon-methods="@CouponMethod.Code">@T["What the customer types. Matched without case sensitivity."]</span>
         <span class="hint" data-coupon-methods="@CouponMethod.Automatic">@T["Optional. Nobody types it; it names the discount's uses. Leave it blank to have one made up."]</span>
+        <div class="form-check mt-2" data-coupon-methods="@CouponMethod.Code">
+            <input asp-for="OnlyGeneratedCodes" class="form-check-input" />
+            <label asp-for="OnlyGeneratedCodes" class="form-check-label">@T["Only the generated codes work"]</label>
+            <span class="hint dashed">@T["This code is then refused; use it to name the campaign, and generate unique codes for it below."]</span>
+        </div>
     </div>
     <div class="col-md-8 mb-3">
         <label asp-for="Description" class="form-label">@T["Description"]</label>

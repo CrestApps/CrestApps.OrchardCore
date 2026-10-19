@@ -114,6 +114,7 @@ internal sealed class CouponsStep : NamedRecipeStepHandler
     {
         target.Code = source.Code.Trim();
         target.Method = source.Method;
+        target.OnlyGeneratedCodes = source.OnlyGeneratedCodes;
         target.Description = source.Description;
         target.Kind = source.Kind;
         target.Percentage = source.Kind is CouponKind.Percentage or CouponKind.BuyXGetY ? source.Percentage : 0m;

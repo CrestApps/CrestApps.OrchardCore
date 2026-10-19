@@ -184,8 +184,9 @@ public sealed class CouponDiscountProvider : ICheckoutDiscountProvider
         {
             var coupon = await _couponStore.GetByCodeAsync(code, cancellationToken);
 
-            // An automatic discount applies by itself, below, whatever the buyer typed.
-            if (coupon?.IsAutomatic == true)
+            // An automatic discount applies by itself, below, whatever the buyer typed; a coupon that only takes its
+            // generated codes doesn't take its own.
+            if (coupon is { CanBeTyped: false })
             {
                 continue;
             }

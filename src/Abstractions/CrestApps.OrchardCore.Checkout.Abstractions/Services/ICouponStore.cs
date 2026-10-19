@@ -20,6 +20,39 @@ public interface ICouponStore : ICatalog<Coupon>
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IReadOnlyList<Coupon>> ListAutomaticAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates unique codes for a coupon, each with its own uses, that share everything else with it. A code found
+    /// by <see cref="GetByCodeAsync"/> then comes back as the coupon, with the code's own code, uses and limit.
+    /// </summary>
+    /// <param name="coupon">The coupon the codes are for.</param>
+    /// <param name="count">How many codes to generate.</param>
+    /// <param name="prefix">What every code starts with, or <see langword="null"/>.</param>
+    /// <param name="usesPerCode">How many times each code may be used, or <see langword="null"/> for no limit.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The codes generated.</returns>
+    Task<IReadOnlyList<CouponCode>> GenerateCodesAsync(Coupon coupon, int count, string prefix, int? usesPerCode, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the codes generated for a coupon, oldest first.
+    /// </summary>
+    /// <param name="couponId">The coupon identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<CouponCode>> ListGeneratedCodesAsync(string couponId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns how many codes were generated for a coupon, and how many of them have been used.
+    /// </summary>
+    /// <param name="couponId">The coupon identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<(int Total, int Used)> CountGeneratedCodesAsync(string couponId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes the codes generated for a coupon.
+    /// </summary>
+    /// <param name="couponId">The coupon identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task DeleteGeneratedCodesAsync(string couponId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
