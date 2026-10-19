@@ -91,6 +91,16 @@
                                 }
                                 <span>@T["{0} × {1}", line.Quantity, Format(line.UnitPrice)]</span>
                             </div>
+                            @foreach (var addOn in line.AddOns ?? [])
+                            {
+                                <div class="small text-break">
+                                    <span class="fa-solid fa-pen-to-square text-body-secondary me-1" aria-hidden="true"></span>@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)
+                                    @if (addOn.Price > 0)
+                                    {
+                                        <span class="text-muted">(+@Format(addOn.Price))</span>
+                                    }
+                                </div>
+                            }
                         </div>
                         <div class="text-nowrap fw-semibold">@Format(line.LineTotal)</div>
                     </li>

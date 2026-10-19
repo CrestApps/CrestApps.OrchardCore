@@ -54,6 +54,27 @@ public class AddToCartViewModel
     public CrestApps.OrchardCore.Products.Core.Models.ProductRoleDiscount RoleDiscount { get; set; }
 
     /// <summary>
+    /// Gets or sets the personal touches the buyer can choose, such as an engraving. They are chosen on the product's
+    /// page; a card offers them only through it.
+    /// </summary>
+    public IList<CrestApps.OrchardCore.Products.Core.Models.ProductAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the currency the add-on prices are shown in.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether this is the product's own page, where add-ons are chosen.
+    /// </summary>
+    public bool IsProductPage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's page, which a card with a required add-on links to.
+    /// </summary>
+    public string ProductUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets where the visitor returns to after adding: the page they added from.
     /// </summary>
     public string ReturnUrl { get; set; }

@@ -267,6 +267,12 @@ public sealed class OrderLine
     /// to some categories.
     /// </summary>
     public string[] CategoryIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the add-ons the buyer chose for the line, such as an engraving, which <see cref="UnitPrice"/>
+    /// includes.
+    /// </summary>
+    public List<OrderLineAddOn> AddOns { get; set; } = [];
 }
 
 /// <summary>
@@ -411,4 +417,27 @@ public enum OrderStatus
     /// Replaced by a newer order from the same cart before it was paid.
     /// </summary>
     Canceled = 3,
+}
+
+/// <summary>
+/// An add-on chosen for an order line, as it read when the order was placed.
+/// </summary>
+public sealed class OrderLineAddOn
+{
+    public string AddOnId { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the add-on was called, such as "Engraving".
+    /// </summary>
+    public string Label { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer typed, or <see langword="null"/> for a ticked box.
+    /// </summary>
+    public string Value { get; set; }
+
+    /// <summary>
+    /// Gets or sets the extra price per unit it cost.
+    /// </summary>
+    public decimal Price { get; set; }
 }

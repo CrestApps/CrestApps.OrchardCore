@@ -10,6 +10,18 @@
 
 @{
     var formId = "add-to-cart-" + Model.ContentItemId;
+    var mustChoose = !Model.IsProductPage && !string.IsNullOrEmpty(Model.ProductUrl) && Model.AddOns.Any(addOn => addOn.Required);
+}
+
+@if (mustChoose)
+{
+    @* A card can't take the personal touch the product needs, so it sends the buyer to the product's page. *@
+    <a href="@Model.ProductUrl" class="btn btn-outline-primary w-100 position-relative" style="z-index: 2">
+        <span class="fa-solid fa-pen-to-square" aria-hidden="true"></span>
+        @T["Choose options"]
+    </a>
+
+    return;
 }
 
 @if (Model.Variants.Count > 0 && Model.Options.Count > 0)
@@ -113,6 +125,49 @@
                 @T["Buy at least {0}.", Model.MinQuantity]
             }
         </p>
+    }
+
+    @if (Model.IsProductPage && Model.AddOns.Count > 0)
+    {
+        <fieldset class="product-add-ons mb-3">
+            <legend class="form-label small text-muted mb-1">@T["Personalize"]</legend>
+            @foreach (var addOn in Model.AddOns)
+            {
+                var inputId = formId + "-addon-" + addOn.AddOnId;
+                var extra = addOn.Price > 0 && !string.IsNullOrEmpty(Model.Currency) ? "+" + ProductPriceFormatter.Format(addOn.Price, Model.Currency) : null;
+
+                if (addOn.Kind == CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind.Checkbox)
+                {
+                    <div class="form-check mb-2">
+                        <input type="checkbox" class="form-check-input" id="@inputId" name="addOns[@addOn.AddOnId]" value="true" required="@addOn.Required" />
+                        <label class="form-check-label" for="@inputId">
+                            @addOn.Label
+                            @if (extra is not null)
+                            {
+                                <span class="text-body-secondary small">(@extra)</span>
+                            }
+                        </label>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="@inputId">
+                            @addOn.Label
+                            @if (extra is not null)
+                            {
+                                <span class="text-body-secondary">(@extra)</span>
+                            }
+                            @if (!addOn.Required)
+                            {
+                                <span class="text-body-secondary">· @T["optional"]</span>
+                            }
+                        </label>
+                        <input type="text" class="form-control form-control-sm" id="@inputId" name="addOns[@addOn.AddOnId]" maxlength="@CrestApps.OrchardCore.Products.Core.Models.ProductAddOn.MaxTextLength" required="@addOn.Required" autocomplete="off" />
+                    </div>
+                }
+            }
+        </fieldset>
     }
 
     @* On a narrow card the button wraps under the quantity rather than breaking its label. *@

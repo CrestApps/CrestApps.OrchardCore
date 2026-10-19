@@ -91,7 +91,10 @@ public sealed class CartService : ICartService
     public Task<CartResult> AddAsync(string contentItemId, string priceId, int quantity, CancellationToken cancellationToken = default)
         => AddAsync(contentItemId, priceId, variantId: null, quantity, cancellationToken);
 
-    public async Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, CancellationToken cancellationToken = default)
+    public Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, CancellationToken cancellationToken = default)
+        => AddAsync(contentItemId, priceId, variantId, quantity, addOns: null, cancellationToken);
+
+    public async Task<CartResult> AddAsync(string contentItemId, string priceId, string variantId, int quantity, IReadOnlyDictionary<string, string> addOns, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(contentItemId))
         {
@@ -112,10 +115,21 @@ public sealed class CartService : ICartService
 
         variantId = resolved.Product.VariantId;
 
+        // Only the product's own add-ons are kept, and the required ones have to be there.
+        var chosen = ProductAddOns.Normalize(resolved.ProductPart, addOns);
+
+        if (ProductAddOns.FindMissing(resolved.ProductPart, chosen) is { } missing)
+        {
+            return CartResult.Failure(S["Fill in {0} to add {1} to your cart.", missing.Label, resolved.Title], cart);
+        }
+
+        var surcharge = ProductAddOns.GetSurcharge(resolved.ProductPart, chosen);
+
         var existing = cart?.Lines.FirstOrDefault(line =>
             line.ContentItemId == contentItemId &&
             string.Equals(line.PriceId, resolved.Price.PriceId, StringComparison.Ordinal) &&
-            string.Equals(line.VariantId, variantId, StringComparison.Ordinal));
+            string.Equals(line.VariantId, variantId, StringComparison.Ordinal) &&
+            ProductAddOns.AreSame(line.AddOns, chosen));
 
         var total = (existing?.Quantity ?? 0) + quantity;
 
@@ -162,15 +176,16 @@ public sealed class CartService : ICartService
                 PriceId = resolved.Price.PriceId,
                 VariantId = variantId,
                 Quantity = quantity,
-                AddedUnitPrice = resolved.Price.UnitPrice,
+                AddedUnitPrice = resolved.Price.UnitPrice + surcharge,
                 AddedUtc = _clock.UtcNow,
+                AddOns = chosen,
             });
         }
         else
         {
             // The buyer just saw and accepted the price for the new quantity, such as a volume discount reached.
             existing.Quantity = total;
-            existing.AddedUnitPrice = resolved.Price.UnitPrice;
+            existing.AddedUnitPrice = resolved.Price.UnitPrice + surcharge;
         }
 
         cart.Currency = resolved.Price.Currency;
@@ -220,7 +235,9 @@ public sealed class CartService : ICartService
         line.Quantity = quantity;
 
         // A new quantity can reach or leave a volume discount: the price it gives is the one the buyer now expects.
-        line.AddedUnitPrice = resolved.Price?.UnitPrice ?? line.AddedUnitPrice;
+        line.AddedUnitPrice = resolved.Price is null
+            ? line.AddedUnitPrice
+            : resolved.Price.UnitPrice + ProductAddOns.GetSurcharge(resolved.ProductPart, line.AddOns);
 
         if (!await SaveAsync(cart, isNew: false, cancellationToken))
         {
@@ -311,7 +328,8 @@ public sealed class CartService : ICartService
                 var line = userCart.Lines.FirstOrDefault(candidate =>
                     candidate.ContentItemId == guestLine.ContentItemId &&
                     string.Equals(candidate.PriceId, guestLine.PriceId, StringComparison.Ordinal) &&
-                    string.Equals(candidate.VariantId, guestLine.VariantId, StringComparison.Ordinal));
+                    string.Equals(candidate.VariantId, guestLine.VariantId, StringComparison.Ordinal) &&
+                    ProductAddOns.AreSame(candidate.AddOns, guestLine.AddOns));
 
                 if (line is not null)
                 {
@@ -358,7 +376,10 @@ public sealed class CartService : ICartService
 
             problem ??= QuantityProblem(resolved, line.Quantity);
 
-            var unitPrice = resolved.Price?.UnitPrice ?? line.AddedUnitPrice;
+            // What the line's add-ons add to each unit, at today's add-on prices.
+            var unitPrice = resolved.Price is null
+                ? line.AddedUnitPrice
+                : resolved.Price.UnitPrice + ProductAddOns.GetSurcharge(resolved.ProductPart, line.AddOns);
 
             lines.Add(new CartLinePricing
             {
@@ -370,7 +391,8 @@ public sealed class CartService : ICartService
                 UnitPrice = unitPrice,
                 LineTotal = unitPrice * line.Quantity,
                 MaxQuantity = resolved.MaxQuantity,
-                PriceChanged = resolved.Price is not null && resolved.Price.UnitPrice != line.AddedUnitPrice,
+                PriceChanged = resolved.Price is not null && unitPrice != line.AddedUnitPrice,
+                AddOns = ProductAddOns.Describe(resolved.ProductPart, line.AddOns),
                 Problem = problem,
             });
         }

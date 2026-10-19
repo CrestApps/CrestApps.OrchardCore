@@ -45,6 +45,11 @@ public class ProductPartViewModel
     [BindNever]
     public IList<SelectListItem> Roles { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the add-on rows: the existing ones and empty ones to fill in.
+    /// </summary>
+    public List<ProductAddOnViewModel> AddOns { get; set; } = [];
+
     public string Currency { get; set; }
 
     public string Sku { get; set; }
@@ -85,4 +90,17 @@ public class ProductRoleDiscountViewModel
     public string Role { get; set; }
 
     public decimal? PercentOff { get; set; }
+}
+
+public class ProductAddOnViewModel
+{
+    public string AddOnId { get; set; }
+
+    public string Label { get; set; }
+
+    public CrestApps.OrchardCore.Products.Core.Models.ProductAddOnKind Kind { get; set; }
+
+    public decimal? Price { get; set; }
+
+    public bool Required { get; set; }
 }

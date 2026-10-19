@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Models;
+using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Shipping.Models;
 using CrestApps.OrchardCore.Shipping.Services;
 using CrestApps.OrchardCore.Shipping.ViewModels;
@@ -80,7 +81,7 @@ internal sealed class OrderShipmentsDisplayDriver : DisplayDriver<Order>
                 .Select(line => new ShipmentLineChoice
                 {
                     LineId = line.LineId,
-                    Title = line.Title,
+                    Title = OrderLineText.Describe(line),
                     Sku = line.Sku,
                     Remaining = remaining[line.LineId],
                 })

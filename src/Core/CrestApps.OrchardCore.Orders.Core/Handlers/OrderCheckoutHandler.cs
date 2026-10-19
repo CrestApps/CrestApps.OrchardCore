@@ -262,7 +262,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         => new()
         {
             ItemId = line.LineId,
-            Description = string.IsNullOrEmpty(line.PriceName) ? line.Title : $"{line.Title} ({line.PriceName})",
+            Description = OrderLineText.Describe(line),
             Amount = line.UnitPrice,
             Quantity = line.Quantity,
             PriceId = line.PriceId,

@@ -47,6 +47,10 @@
                             {
                                 <span class="text-muted">(@line.PriceName)</span>
                             }
+                            @foreach (var addOn in line.AddOns ?? [])
+                            {
+                                <div class="small text-muted text-break">@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)</div>
+                            }
                         </td>
                         <td class="text-end">@line.Quantity</td>
                         <td class="text-end">@Format(line.LineTotal)</td>

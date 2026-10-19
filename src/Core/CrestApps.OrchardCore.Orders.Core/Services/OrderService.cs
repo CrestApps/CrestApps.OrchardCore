@@ -109,6 +109,7 @@ public sealed class OrderService : IOrderService
                 TaxCategoryCode = line.Product?.TaxCategoryCode,
                 TaxClassificationCode = line.Product?.TaxClassificationCode,
                 CategoryIds = ProductCategories.GetIds(line.ContentItem),
+                AddOns = [.. (line.AddOns ?? []).Select(addOn => new OrderLineAddOn { AddOnId = addOn.AddOnId, Label = addOn.Label, Value = addOn.Value, Price = addOn.Price })],
             }).ToList(),
         };
 

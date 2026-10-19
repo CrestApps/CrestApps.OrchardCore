@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using OrchardCore;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
@@ -15,6 +16,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 {
     private const int TierRows = 4;
     private const int RoleRows = 3;
+    private const int AddOnRows = 4;
 
     private readonly IProductCurrencyProvider _currencyProvider;
     private readonly ILocalClock _localClock;
@@ -65,6 +67,19 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             }
 
             model.Roles = await GetRolesAsync();
+            model.AddOns = [.. (part.AddOns ?? []).Select(addOn => new ProductAddOnViewModel
+            {
+                AddOnId = addOn.AddOnId,
+                Label = addOn.Label,
+                Kind = addOn.Kind,
+                Price = addOn.Price == 0 ? null : addOn.Price,
+                Required = addOn.Required,
+            })];
+
+            while (model.AddOns.Count < AddOnRows)
+            {
+                model.AddOns.Add(new ProductAddOnViewModel());
+            }
             model.Currency = string.IsNullOrEmpty(part.Currency)
                 ? settings.DefaultCurrency
                 : part.Currency;
@@ -209,6 +224,23 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             .Where(entry => !string.IsNullOrEmpty(entry.Role) && entry.PercentOff is > 0 and <= 100)
             .GroupBy(entry => entry.Role, StringComparer.OrdinalIgnoreCase)
             .Select(group => new ProductRoleDiscount { Role = group.Key, PercentOff = group.Max(entry => entry.PercentOff.Value) })];
+
+        // A row without a label is an empty one. An add-on keeps its id, so carts holding it still match.
+        var addOns = (model.AddOns ?? []).Where(addOn => !string.IsNullOrWhiteSpace(addOn.Label)).ToList();
+
+        if (addOns.Any(addOn => addOn.Price < 0))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AddOns), S["An add-on's price can't be less than zero."]);
+        }
+
+        part.AddOns = [.. addOns.Select(addOn => new ProductAddOn
+        {
+            AddOnId = string.IsNullOrEmpty(addOn.AddOnId) ? IdGenerator.GenerateId() : addOn.AddOnId,
+            Label = addOn.Label.Trim(),
+            Kind = Enum.IsDefined(addOn.Kind) ? addOn.Kind : ProductAddOnKind.Text,
+            Price = Math.Max(0m, addOn.Price ?? 0m),
+            Required = addOn.Required,
+        })];
 
         var normalizedCurrency = NormalizeCurrencyCode(model.Currency);
 

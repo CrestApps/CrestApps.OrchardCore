@@ -88,6 +88,11 @@ public sealed class ProductPart : ContentPart
     public List<ProductRoleDiscount> RoleDiscounts { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the personal touches a buyer can add, such as an engraving or gift wrap, each at an extra price.
+    /// </summary>
+    public List<ProductAddOn> AddOns { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether this product can be bought online. It is honored only when the content type's
     /// <see cref="ProductPartSettings.SalesMode"/> is <see cref="ProductSalesMode.PerItem"/>.
     /// </summary>

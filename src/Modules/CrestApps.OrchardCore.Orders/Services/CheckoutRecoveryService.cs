@@ -206,6 +206,11 @@ public sealed class CheckoutRecoveryService
         {
             var title = string.IsNullOrEmpty(line.VariantTitle) ? line.Title : $"{line.Title} ({line.VariantTitle})";
 
+            if (line.AddOns is { Count: > 0 })
+            {
+                title += " · " + string.Join(" · ", line.AddOns.Select(OrderLineText.DescribeAddOn));
+            }
+
             text.AppendLine($"{line.Quantity} × {title}  {Money(line.LineTotal)}");
             html.Append("<tr><td style=\"padding:6px 0;border-bottom:1px solid #f1f3f5\">").Append(line.Quantity).Append(" × ").Append(_encoder.Encode(title ?? string.Empty)).Append("</td>")
                 .Append("<td style=\"padding:6px 0;border-bottom:1px solid #f1f3f5;text-align:right\">").Append(_encoder.Encode(Money(line.LineTotal))).Append("</td></tr>");
