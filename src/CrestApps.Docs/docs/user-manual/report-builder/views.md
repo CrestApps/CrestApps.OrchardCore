@@ -10,7 +10,7 @@ A view saves a prepared data set (joined, filtered and calculated) so other repo
 
 Watch the short video, then follow the steps below.
 
-<YouTube video="report-builder" title="Narrated video of creating a reusable view, scheduling its refresh, and using it in a report" start={520} end={562} />
+<YouTube video="report-builder" title="Narrated video of building a reusable view, scheduling its refresh, and building a report on it" start={595} end={692} />
 
 | | |
 | --- | --- |

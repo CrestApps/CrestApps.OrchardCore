@@ -12,7 +12,7 @@ This page covers what matters to reports. The contract itself is described in Or
 
 This video shows a data source added by a module and how its data sets appear in the builder.
 
-<YouTube video="report-builder" title="Narrated video of a module's own data source and its data sets in the Report Builder" start={594} end={622} />
+<YouTube video="report-builder" title="Narrated video of a module's own data source and its data sets in the Report Builder" start={739} end={772} />
 
 ## Choose an approach
 

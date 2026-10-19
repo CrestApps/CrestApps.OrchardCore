@@ -10,7 +10,7 @@ A report you build is yours until you share it. You can put it in the admin menu
 
 Watch the short video, then follow the steps below.
 
-<YouTube video="report-builder" title="Narrated video of sharing a report with people and roles, creating a share link, and running and exporting a report" start={561} end={595} />
+<YouTube video="report-builder" title="Narrated video of sharing a report with people and roles, creating a share link for recipients, and running and exporting a report" start={691} end={740} />
 
 | | |
 | --- | --- |
