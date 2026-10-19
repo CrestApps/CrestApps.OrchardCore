@@ -1,0 +1,86 @@
+@using CrestApps.OrchardCore.Carts.Core
+@model GroupedProductsViewModel
+
+@*
+    A grouped product's products. On its page: one form with a quantity for each, added to the cart at once (the mini
+    cart takes it in place, as it does Add to cart). On its card: a link to that page.
+*@
+
+@if (!Model.IsProductPage)
+{
+    <a href="@Model.ProductUrl" class="btn btn-outline-primary w-100 position-relative" style="z-index: 2">
+        <span class="fa-solid fa-layer-group" aria-hidden="true"></span>
+        @T["Choose products"]
+    </a>
+
+    return;
+}
+
+<form method="post" asp-route="@CartConstants.RouteNames.AddMany" class="product-add-to-cart product-group w-100">
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+
+    <ul class="list-group list-group-flush mb-3">
+        @for (var i = 0; i < Model.Rows.Count; i++)
+        {
+            var row = Model.Rows[i];
+            var canBuy = row.Availability?.CanBuy ?? true;
+            var inputId = "group-" + Model.ContentItemId + "-" + i;
+
+            <li class="list-group-item px-0 d-flex align-items-center gap-3">
+                <div class="flex-grow-1 min-w-0">
+                    <label class="fw-semibold d-block text-break mb-0" for="@(row.ChooseOnItsPage || !canBuy || row.ExternalUrl is not null ? null : inputId)">
+                        @if (string.IsNullOrEmpty(row.Url))
+                        {
+                            @row.Title
+                        }
+                        else
+                        {
+                            <a href="@row.Url" class="text-reset">@row.Title</a>
+                        }
+                    </label>
+                    <div class="small">
+                        @if (!string.IsNullOrEmpty(row.Price))
+                        {
+                            <span class="fw-semibold">@row.Price</span>
+                        }
+                        @if (row.Availability is not null)
+                        {
+                            <span class="text-@row.Availability.Tone ms-1">@row.Availability.Label</span>
+                        }
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(row.ExternalUrl))
+                {
+                    <a href="@row.ExternalUrl" class="btn btn-sm btn-outline-primary text-nowrap" target="_blank" rel="nofollow noopener sponsored">
+                        @row.ExternalButtonText
+                        <span class="fa-solid fa-arrow-up-right-from-square ms-1 small" aria-hidden="true"></span>
+                        <span class="visually-hidden">@T["(opens in a new tab)"]</span>
+                    </a>
+                }
+                else if (row.ChooseOnItsPage)
+                {
+                    <a href="@row.Url" class="btn btn-sm btn-outline-primary text-nowrap">@T["Choose"]</a>
+                }
+                else
+                {
+                    <input type="hidden" name="items[@i].ContentItemId" value="@row.ContentItemId" />
+                    <input type="number"
+                           id="@inputId"
+                           name="items[@i].Quantity"
+                           min="0"
+                           max="@row.MaxQuantity"
+                           value="0"
+                           class="form-control form-control-sm"
+                           style="width: 4.5rem"
+                           disabled="@(!canBuy)"
+                           aria-label="@T["Quantity of {0}", row.Title]" />
+                }
+            </li>
+        }
+    </ul>
+
+    <button type="submit" class="btn btn-primary w-100">
+        <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
+        @T["Add to cart"]
+    </button>
+</form>

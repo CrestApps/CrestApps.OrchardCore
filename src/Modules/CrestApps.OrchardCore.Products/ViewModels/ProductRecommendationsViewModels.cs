@@ -46,3 +46,17 @@ public class ProductRecentlyViewedViewModel
 {
     public string ContentItemId { get; set; }
 }
+
+/// <summary>
+/// The picker for the products a grouped product shows.
+/// </summary>
+public class ProductGroupEditViewModel
+{
+    public List<string> ProductIds { get; set; } = [];
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string SearchEndpoint { get; set; }
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string InitialProductsJson { get; set; }
+}

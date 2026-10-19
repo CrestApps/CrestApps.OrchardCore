@@ -33,6 +33,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Grouped,
+    Name = "Grouped Products",
+    Description = "Shows several products on one page, such as the pieces of a set, for shoppers to buy in the quantities they choose.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Recommendations,
     Name = "Product Recommendations",
     Description = "Recommends products to shoppers: the upsells and cross-sells you choose for each product, related products from the same categories, and the products a shopper viewed recently.",

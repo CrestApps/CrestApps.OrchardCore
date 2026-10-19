@@ -133,13 +133,20 @@ public sealed class RecommendationsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<ProductRecommendationService>();
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<ProductRecommendationsDisplayDriver>();
     }
+}
 
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-        => routes.AddProductSearchEndpoints();
+/// <summary>
+/// Shows several products on one page for shoppers to buy together.
+/// </summary>
+[Feature(ProductConstants.Feature.Grouped)]
+public sealed class GroupedStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<ProductGroupDisplayDriver>();
 }
 
 [Feature(ProductConstants.Feature.Listing)]
@@ -155,6 +162,9 @@ public sealed class ListingStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<TaxonomyTermLookup>();
+
+        // The product search behind the merchant's product pickers: recommendations, groups and bundles.
+        services.AddScoped<ProductRecommendationService>();
 
         // The styles a filter can be drawn in. Another module adds its own the same way, with a
         // ProductFacet-{Style} template.
@@ -244,6 +254,9 @@ public sealed class ListingStartup : StartupBase
             options.MemberAccessStrategy.Register<ProductListingPart>();
         });
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddProductSearchEndpoints();
 }
 
 /// <summary>

@@ -143,7 +143,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
         // A price is needed only when the product can be bought or its price is shown. A house listed by
         // inquiry has none, and inventing a zero would show "$0" the moment the type's display changes.
-        if (!model.Price.HasValue && part.RequiresPrice(settings))
+        if (!model.Price.HasValue && part.RequiresPrice(settings) && model.ProductIds?.Exists(id => !string.IsNullOrWhiteSpace(id)) != true)
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price is required"]);
         }

@@ -24,6 +24,12 @@ public class ProductPartViewModel
 
     public string ExternalUrl { get; set; }
 
+    /// <summary>
+    /// Gets or sets the products a grouped product shows, posted by the Grouped Products picker. A group is bought
+    /// through them, so it needs no price of its own.
+    /// </summary>
+    public List<string> ProductIds { get; set; }
+
     public string ExternalButtonText { get; set; }
 
     public int? MinQuantity { get; set; }

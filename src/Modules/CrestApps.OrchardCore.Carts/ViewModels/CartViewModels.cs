@@ -87,6 +87,56 @@ public class AddToCartViewModel
 }
 
 /// <summary>
+/// The products a grouped product shows on its page, each with a quantity to buy, or on a card a link to that page.
+/// </summary>
+public class GroupedProductsViewModel
+{
+    public string ContentItemId { get; set; }
+
+    public IList<GroupedProductRowViewModel> Rows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether this is the grouped product's own page. A card links to it instead.
+    /// </summary>
+    public bool IsProductPage { get; set; }
+
+    public string ProductUrl { get; set; }
+
+    public string ReturnUrl { get; set; }
+}
+
+/// <summary>
+/// A product in a group: its price, stock, and whether it's bought here or on its own page (one with variants or
+/// options to choose).
+/// </summary>
+public class GroupedProductRowViewModel
+{
+    public string ContentItemId { get; set; }
+
+    public string Title { get; set; }
+
+    public string Url { get; set; }
+
+    public string Price { get; set; }
+
+    public AddToCartAvailabilityViewModel Availability { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the product has a variant, price or add-on to choose, which its own page offers.
+    /// </summary>
+    public bool ChooseOnItsPage { get; set; }
+
+    public int MaxQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets where an external product is sold, which the row links to instead of offering a quantity.
+    /// </summary>
+    public string ExternalUrl { get; set; }
+
+    public string ExternalButtonText { get; set; }
+}
+
+/// <summary>
 /// What a buyer is told about a product's stock, and whether it can be added.
 /// </summary>
 public class AddToCartAvailabilityViewModel
