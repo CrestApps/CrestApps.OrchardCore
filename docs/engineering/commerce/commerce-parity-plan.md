@@ -161,7 +161,18 @@ column refers to the delivery plan below.
 | --- | --- | --- | --- | --- |
 | Point of sale (in-person sales sharing stock and customers) | Ext | Core | No | PI2 |
 | Selling on Amazon, eBay, TikTok and social shops | Ext | Core (channels) | No | PI1 |
-| Bookings and appointments | Ext | App | No | PL1 |
+| Bookings and appointments: time slots with staff or resources | Ext | App | No | PL1 |
+| Travel packages and tours: fixed departures with seats per departure, a base package with package options | Ext | App | Partial: a "Departure" variant option with stock per variant | PL1 |
+| Occupancy pricing: per person, a double room counting two seats, single supplements, child prices | Ext | App | No | PL1 |
+| Nightly stays: check-in and check-out ranges, rooms per night, seasonal and weekend rates, minimum stays | Ext | App | No | PL1 |
+| Search by date: products with availability for the dates a shopper picks | Ext | App | No | PL1 |
+| Details per traveler or attendee (names, birth dates, passports), asked once per unit bought | Ext | App | Partial: checkout details once per order | PL1 |
+| Deposits and payment schedules on orders: pay a deposit or in full, the rest due on dates counted from the event, reminders, saved-card charges, late fees, cancel when overdue | Ext (Deposits) | App | Partial: installment plans settle ledger balances, not cart orders | PH1, PL1 |
+| Cancellation policies: tiered fees by how long before the event, feeding refunds | Ext | App | No | PL1 |
+| Add-on services priced per traveler, per booking or as a percent of the booking (insurance, transfers, a car) | Ext | App | Partial: add-ons priced per unit | PL1 |
+| Request to book: a booking the store confirms before the buyer pays | Ext | App | Partial: inquiry sales mode, Pay Later | PL1 |
+| A fee for a payment method (a card surcharge), where the law allows it | Ext | No | No | PL1 |
+| Flights and hotel rooms sold from a supplier's inventory (GDS or travel APIs) | Ext | App | No | PL3 |
 | Service fulfillment with its own status (CC-D5) | Ext | App | No | PL1 |
 | Memberships and gated content | Ext | App | Partial: Content Access Control, not tied to purchases | PL2 |
 | Rentals | Ext | App | No | PL1 |
@@ -176,6 +187,52 @@ column refers to the delivery plan below.
 | Staff permission presets (warehouse, support, marketing) | Ext | Core | Partial: permissions, no presets | PN1 |
 | A documented way for third parties to extend checkout and the storefront | Core | Core (extensibility) | Partial: drivers and seams, not documented as an extension guide | PN2 |
 
+## Bookings and travel: what it takes
+
+A travel package page, such as a tour with fixed departures, shows what the catalog can't do yet: the buyer picks a
+departure and a room, pays per person with a single supplement, adds insurance, and pays a deposit now and the rest
+on dates counted back from the departure, under a cancellation policy that grows with the date. Bolting each of
+these onto products would leave hotels, appointments and rentals to start again. Three foundations make them one
+model, and the Bookings module sits on them.
+
+**F1. Line details and line handlers.** A cart line carries a typed bag of details beside the product: the dates,
+the travelers and their occupancy, the add-ons chosen. Modules register handlers that check the details when the
+line is added, price them through the price resolver chain (the snapshot context gets the details), describe them on
+the cart, order, invoice and emails, and copy them onto the order line. Two lines of the same product with other
+details stay apart. Product add-ons (phase 3) move onto this as its first handler, so the path is proved before
+bookings use it.
+
+**F2. Dated capacity with holds.** Availability keyed by product and *slot*, where a slot is a departure, a night or
+a time: seats per departure, rooms per night, a staff member's hour. It uses the inventory's hold, sell, release and
+restock pattern, so an unpaid checkout holds the seats and an expired one gives them back, and the stock questions
+the cart, product pages and listings already ask get slot answers. Search by date asks it for the dates a shopper
+picks.
+
+**F3. Order payment schedules.** A product's payment terms (a deposit as a percent or an amount; the rest due on
+dates counted from a date on the line, such as 150 and 45 days before departure; a late fee; cancel when this
+overdue) become a schedule on the order when it's placed. Checkout offers Pay in full or Pay a deposit and charges
+only what's due now. The rest is an outstanding balance on the transactions ledger with pay links, reminders and,
+with the buyer's consent, charges to their saved card, through the installment engine generalized from ledger
+balances to orders. The order reads Payment due until it's paid. The same schedules are B2B's deposits and net
+terms, so F3 is built in phase 7 (PH1) and reused here.
+
+**The Bookings module (PL1)** then adds:
+
+- Booking products of three kinds: fixed departures (tours, events, classes), nightly stays (rooms, rentals) and
+  time slots (appointments), each with its capacity in F2 slots.
+- Occupancy pricing: per person, units that take several seats, supplements and child prices, as price resolvers.
+- A date picker on the product page and a date search on listings.
+- Per-traveler forms, repeated for each unit bought, from a content type the store edits like checkout details.
+- Add-ons priced per traveler, per booking or as a percent of the booking.
+- Cancellation policies whose tiers suggest the refund when a booking is canceled.
+- Request to book: the store confirms, then the buyer gets a pay link.
+- A payment-method fee, where the law allows it, as a line the invoice adds for that method.
+- Booking emails and a calendar view of what's booked.
+
+**Supplier inventory (PL3).** Flights and most hotel rooms aren't the store's stock; they're sold from a supplier's
+(Amadeus, Duffel, hotel channel managers). That's an integration that searches, holds and tickets through the
+supplier's API, built on F1 and F3 once a supplier is chosen (P-D8).
+
 ## Delivery plan
 
 Ordered by how much a store owner notices the gap. Each slice is a commit on one branch per phase and one PR per
@@ -189,10 +246,10 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | **4. Fulfillment** | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
 | **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
 | **6. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
-| **7. B2B** | PH1 companies, buyers, payment terms; PH2 quotes, PO numbers, company price lists | A company buyer requests a quote, the store converts it, and the company pays on net-30 terms with its PO number on the invoice. |
+| **7. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
 | **8. Marketing and analytics** | PJ1 editable emails, review requests with photos; PJ2 campaigns, segments; PJ3 wishlists, automation templates; PK1 cohorts, dashboards, scheduled reports, alerts | A segment of lapsed buyers gets a win-back campaign, and the owner gets a weekly sales report by email. |
 | **9. Channels and POS** | PI1 Google and Meta feeds, marketplace channels; PI2 point of sale | A product sold in person updates stock online, and the product feed passes Google Merchant Center validation. |
-| **10. Other models** | PL1 bookings, services, rentals; PL2 memberships | A booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
+| **10. Other models** | PL0 F1 line details and handlers, F2 dated capacity (add-ons move onto F1); PL1 bookings: departures, nightly stays, time slots, occupancy pricing, date search, traveler forms, cancellation policies, request to book, payment-method fees, services, rentals; PL2 memberships; PL3 supplier inventory (flights, hotel rooms) | A tour departure sells its last two seats as a double room with insurance on a 15% deposit, the balance is charged to the saved card 45 days before departure, and a cancellation refunds by the policy; a booked appointment is paid, confirmed and completed; a membership purchase unlocks gated content. |
 | **11. Marketplace** | PM1 vendors, commissions, payouts | A vendor's product sells; the store keeps its commission and the vendor is paid out through Stripe Connect. |
 | **12. Setup and ecosystem** | PN1 setup guide, commerce theme, staff presets; PN2 extension guide | A new owner goes from a blank site to a first test sale through the guide without reading the docs. |
 
@@ -241,3 +298,5 @@ Until they are answered, the work goes ahead on the default in the last column.
 | P-D5 | Point of sale: a web POS page, or a native app? | Web POS first / native | Web POS first |
 | P-D6 | Second card gateway after PayPal | Square / Adyen / Authorize.net | Square |
 | P-D7 | Shopper currency conversion: live exchange rates from a provider, or rates the store sets? | Store-set rates first / provider | Store-set rates first |
+| P-D8 | Flights and supplier hotel rooms (PL3): which supplier API, or out of scope? | Duffel (flights) / Amadeus (flights and hotels) / out of scope | Later: after PL1, supplier chosen then |
+| P-D9 | When should the bookings foundations (F1, F2) be built: in phase 10, or pulled forward because a store needs travel packages sooner? | Phase 10 / right after phase 3 | Phase 10, with F3 in phase 7 |
