@@ -322,6 +322,28 @@ Not built yet, and why:
 - **PayPal and Square** (PB1, P-D6). They need sandbox accounts to build against and verify; ready to start once the store has them.
 - **Express buttons on product and cart pages, and buy now pay later** (PB2). Apple Pay and Google Pay need a verified domain and a real device to test, and buy now pay later moves Stripe to its Payment Element with redirects. The checkout already offers Apple Pay and Google Pay on its payment step.
 
+## Phase 3 as built
+
+One branch, a commit per slice:
+
+- **PC1 scheduled sales.** A sale price per product and variant with optional start and end, in the site's time zone; listings switch within a minute.
+- **PC1 upsells, cross-sells, related, recently viewed.** A **Product Recommendations** feature: pickers on the product editor, strips on the product page, *Frequently bought together* in the cart.
+- **PC1 order bumps and post-purchase offers.** An order bump on the payment step, set under **Settings > Commerce > Orders**, added to the order as a line; the confirmation offers the cross-sells of what was bought, added to a new cart.
+- **PC2 external products.** A link to where the product is sold in place of *Add to cart*.
+- **PC2 product options.** Add-ons a buyer types or ticks, each at an extra price per unit, through the cart, order, emails, packing and recovery.
+- **PC2 grouped products.** A **Grouped Products** feature: one page, a quantity per product, one *Add to cart*.
+- **PC2 bundles.** A **Product Bundles** feature: kits at their own price; stock from the parts, held, sold and restocked per part.
+- **PC3 quantity rules, tier and group pricing.** Minimum, maximum and pack sizes; volume discounts; role discounts.
+- **PC3 comparison.** A **Product Comparison** feature: up to four products side by side.
+- **PC4 CSV import and export, migration importers.** A **Product Import and Export** feature reading Shopify and WooCommerce exports and writing Shopify's format; an orders CSV export from the Orders list.
+- **Found in testing.** Orders paid offline read *Paid*; they now read *Payment due* until paid, and the owed note no longer names Pay Later for every method.
+
+Not built yet, and why:
+
+- **File uploads as add-ons** (PC2). An uploaded file needs storage outside the media library, virus scanning and a retention rule before buyers can send one; it fits the F1 line details foundation (PL0).
+- **Image import** (PC4). Downloading images from the addresses in an export means fetching from servers a file names, which needs an allow-list and size limits to be safe; product photos are added in the media library.
+- **Storefront shapes everywhere.** The account pages, the mini cart and the comparison page were plain views; they become shapes in this phase's last slice so a theme can override every storefront page in Liquid.
+
 ## Decisions needed
 
 Until they are answered, the work goes ahead on the default in the last column.

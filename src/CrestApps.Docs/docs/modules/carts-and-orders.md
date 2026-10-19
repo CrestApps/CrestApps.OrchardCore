@@ -132,6 +132,14 @@ Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHa
 
 `OrderPaymentRiskCheckoutHandler` keeps the riskiest rating of a paid order's payments on `Order.PaymentRisk` (`OrderPaymentRisk`: level, score, gateway); `IsElevated` drives a warning on the order's page and a **Risky** badge in the list (`OrderPaymentRiskDisplayDriver`).
 
+### Order bumps and offers after the purchase
+
+`OrderSettings.OrderBumpProductId`, `OrderBumpPercentOff` and `OrderBumpHeadline` set the order bump. `OrderBumpCheckoutFlowDisplayDriver` renders a `CheckoutOrderBump` shape in the payment step's aside for an order that doesn't have the product, in the order's currency, while it's in stock. Ticking it posts the checkout's `update` form action (`CheckoutConstants.FormActions.Update`), which the steps layout now saves and shows again like applying a code. The bump goes on the session (`CheckoutOrderBump`) and as a billing line on the order's step, and `OrderCheckoutHandler` adds it to the order as a line when the checkout completes. The confirmation renders an `OrderConfirmationOffers` shape with the cross-sells of what was bought.
+
+### Exporting orders
+
+`OrdersAdminController.Export` (`Admin/orders/export`) writes the orders the list's search and status find with `OrderCsv`: a row per line, the order's totals on its first line only, times in the site's time zone. `OrderOperationsService.IsOwedAsync` tells an order paid offline and still owed, which the export, the lists and the order page show as *Payment due*.
+
 ### Reports
 
 With the [Reports](reports) feature on, the Orders feature adds these reports under **Reports > Commerce** (permission `ManageOrders`). They read the orders paid in the chosen period (`OrderReportReader`, by `PaidUtc`, page by page), including orders canceled since, and keep every amount in its own currency. The arithmetic is in `OrderReportAggregator`.
