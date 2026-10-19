@@ -30,7 +30,8 @@ public sealed class CartService : ICartService
         "cart_owner",
         "CrestApps.OrchardCore.Carts.GuestOwnership.v1",
         TimeSpan.FromDays(90),
-        MaxSessions: 1);
+        MaxSessions: 1,
+        HeaderName: "X-Cart-Token");
 
     internal const string GuestTokenKey = "cart";
 

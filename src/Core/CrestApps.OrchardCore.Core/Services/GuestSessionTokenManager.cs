@@ -164,9 +164,19 @@ public sealed class GuestSessionTokenManager
         return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token)));
     }
 
+    // An API endpoint has no cookies to rely on: an app or a headless storefront sends the same protected value in a
+    // header, and gets it back in the same header. Browser pages keep using the cookie.
+    private static bool UsesHeader(GuestSessionTokenScope scope, HttpContext httpContext)
+        => !string.IsNullOrEmpty(scope.HeaderName) &&
+            httpContext.GetEndpoint()?.Metadata.GetMetadata<GuestSessionTokenHeaderTransport>() is not null;
+
     private Dictionary<string, string> ReadTokens(GuestSessionTokenScope scope, HttpContext httpContext)
     {
-        if (!httpContext.Request.Cookies.TryGetValue(scope.CookieName, out var value) || string.IsNullOrEmpty(value))
+        var value = UsesHeader(scope, httpContext)
+            ? httpContext.Request.Headers[scope.HeaderName].ToString()
+            : httpContext.Request.Cookies.TryGetValue(scope.CookieName, out var cookie) ? cookie : null;
+
+        if (string.IsNullOrEmpty(value))
         {
             return new Dictionary<string, string>(StringComparer.Ordinal);
         }
@@ -199,6 +209,13 @@ public sealed class GuestSessionTokenManager
 
         var protectedValue = _dataProtectionProvider.CreateProtector(scope.ProtectorPurpose).Protect(JsonSerializer.Serialize(tokens));
 
+        if (UsesHeader(scope, httpContext))
+        {
+            httpContext.Response.Headers[scope.HeaderName] = protectedValue;
+
+            return;
+        }
+
         httpContext.Response.Cookies.Append(scope.CookieName, protectedValue, new CookieOptions
         {
             HttpOnly = true,
@@ -222,4 +239,19 @@ public sealed record GuestSessionTokenScope(
     string CookieName,
     string ProtectorPurpose,
     TimeSpan Lifetime,
-    int MaxSessions = 10);
+    int MaxSessions = 10,
+    string HeaderName = null);
+
+/// <summary>
+/// Marks an endpoint whose callers prove they own a guest session with a header rather than a cookie, such as a
+/// headless storefront or an app. The token travels in the scope's <see cref="GuestSessionTokenScope.HeaderName"/>,
+/// in the request and in the response that issues or changes it, and no cookie is read or written.
+/// </summary>
+public sealed class GuestSessionTokenHeaderTransport
+{
+    public static readonly GuestSessionTokenHeaderTransport Instance = new();
+
+    private GuestSessionTokenHeaderTransport()
+    {
+    }
+}
