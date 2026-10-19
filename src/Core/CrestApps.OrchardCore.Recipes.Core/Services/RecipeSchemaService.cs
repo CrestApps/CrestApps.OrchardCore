@@ -1,10 +1,7 @@
-using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Steps;
 using Json.Schema;
-using Microsoft.Extensions.Caching.Memory;
-using OrchardCore.Recipes.Services;
 
 namespace CrestApps.OrchardCore.Recipes.Core.Services;
 
@@ -13,31 +10,15 @@ namespace CrestApps.OrchardCore.Recipes.Core.Services;
 /// </summary>
 public sealed class RecipeSchemaService
 {
-    private readonly IEnumerable<IRecipeStepHandler> _handlers;
     private readonly IEnumerable<IRecipeStep> _recipeSteps;
-    private readonly IMemoryCache _memoryCache;
-
-    private const string _stepNamesCacheKey = "RecipeStepNames";
-
-    private string[] _names = null;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecipeSchemaService"/> class.
     /// </summary>
-    /// <param name="handlers">The registered recipe step handlers.</param>
-    /// <param name="recipeSteps">The registered recipe step schema providers.</param>
-    /// <param name="memoryCache">The memory cache used to store discovered step names.</param>
-    public RecipeSchemaService(
-        IEnumerable<IRecipeStepHandler> handlers,
-        IEnumerable<IRecipeStep> recipeSteps,
-        IMemoryCache memoryCache)
+    /// <param name="recipeSteps">The recipe steps registered by the tenant's enabled features.</param>
+    public RecipeSchemaService(IEnumerable<IRecipeStep> recipeSteps)
     {
-        _handlers = handlers;
         _recipeSteps = recipeSteps;
-        _memoryCache = memoryCache;
-        _names = _memoryCache.TryGetValue(_stepNamesCacheKey, out string[] cachedNames)
-        ? cachedNames
-        : null;
     }
 
     /// <summary>
@@ -229,26 +210,17 @@ public sealed class RecipeSchemaService
             .Build();
 
     /// <summary>
-    /// Gets the names of all known recipe steps by inspecting registered handlers and step providers.
+    /// Gets the names of the recipe steps registered by the tenant's enabled features.
     /// </summary>
+    /// <remarks>
+    /// A step is listed once a feature registers an <see cref="IRecipeStep"/> for it. Orchard Core does not
+    /// expose the name a recipe step handler answers to, so a handler with no registered step is not listed.
+    /// </remarks>
     public IEnumerable<string> GetStepNames()
-    {
-        _names ??= _handlers
-            .Where(h =>
-        h.GetType() == typeof(NamedRecipeStepHandler) ||
-            h.GetType().IsSubclassOf(typeof(NamedRecipeStepHandler)))
-            .Select(h =>
-        (string)h.GetType()
-            .GetField("StepName", BindingFlags.Instance | BindingFlags.NonPublic)
-        ?.GetValue(h))
-            .Where(name => name != null)
-            .Union(_recipeSteps.Select(s => s.Name).Where(name => !string.IsNullOrEmpty(name)))
+        => _recipeSteps
+            .Select(step => step.Name)
+            .Where(name => !string.IsNullOrEmpty(name))
             .Distinct()
             .Order()
-            .ToArray() ?? [];
-
-        _memoryCache.Set(_stepNamesCacheKey, _names, TimeSpan.FromHours(1));
-
-        return _names;
-    }
+            .ToArray();
 }

@@ -73,6 +73,10 @@ public sealed class DialerProfilesController : ContactCenterCatalogController<Di
         => H["The dialer profile has been deleted successfully."];
 
     /// <inheritdoc/>
+    protected override void SetName(DialerProfile entry, string name)
+        => entry.Name = name;
+
+    /// <inheritdoc/>
     protected override LocalizedHtmlString ClonedNotification
         => H["A copy of the dialer profile has been created. Review its settings before using it in a campaign."];
 

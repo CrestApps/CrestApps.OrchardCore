@@ -205,6 +205,13 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
     }
 
     /// <summary>
+    /// Sets the name of an entry. The name contract is read-only, so each catalog renames a copy through its own model.
+    /// </summary>
+    /// <param name="entry">The entry to rename.</param>
+    /// <param name="name">The new name.</param>
+    protected abstract void SetName(TModel entry, string name);
+
+    /// <summary>
     /// Gets the name proposed for a copy of an entry.
     /// </summary>
     /// <param name="sourceName">The name of the entry being cloned.</param>
@@ -471,19 +478,6 @@ public abstract class ContactCenterCatalogController<TModel> : Controller
         InitializeClone(clone, source);
 
         return clone;
-    }
-
-    // The name contract is read-only, so a copy is renamed through the entry's own writable Name property.
-    private static void SetName(TModel entry, string name)
-    {
-        var property = typeof(TModel).GetProperty(nameof(INameAwareModel.Name));
-
-        if (property?.CanWrite != true)
-        {
-            throw new InvalidOperationException($"The catalog entry type '{typeof(TModel).FullName}' must expose a writable '{nameof(INameAwareModel.Name)}' property.");
-        }
-
-        property.SetValue(entry, name);
     }
 
     // Names are compared without regard to case, the way an operator reads the list.

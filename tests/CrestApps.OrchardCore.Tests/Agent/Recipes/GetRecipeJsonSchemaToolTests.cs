@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Services;
 using Json.Schema;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -145,10 +144,7 @@ public sealed class GetRecipeJsonSchemaToolTests
 
     private static ServiceProvider CreateServices(IEnumerable<IRecipeStep> recipeSteps)
     {
-        var recipeSchemaService = new RecipeSchemaService(
-            [],
-            recipeSteps,
-            new MemoryCache(new MemoryCacheOptions()));
+        var recipeSchemaService = new RecipeSchemaService(recipeSteps);
 
         return new ServiceCollection()
             .AddSingleton<RecipeSchemaService>(recipeSchemaService)

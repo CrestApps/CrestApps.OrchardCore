@@ -72,6 +72,10 @@ public sealed class QueuesController : ContactCenterCatalogController<ActivityQu
         => H["The queue has been deleted successfully."];
 
     /// <inheritdoc/>
+    protected override void SetName(ActivityQueue entry, string name)
+        => entry.Name = name;
+
+    /// <inheritdoc/>
     protected override void InitializeClone(ActivityQueue clone, ActivityQueue source)
         => clone.Name = S["Copy of {0}", source.Name];
 

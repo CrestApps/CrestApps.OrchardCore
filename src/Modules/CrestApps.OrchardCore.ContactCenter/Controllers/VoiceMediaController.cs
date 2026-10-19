@@ -78,6 +78,10 @@ public sealed class VoiceMediaController : ContactCenterCatalogController<VoiceM
     protected override LocalizedHtmlString DeletedNotification
         => H["The voice media clip has been deleted successfully."];
 
+    /// <inheritdoc/>
+    protected override void SetName(VoiceMediaItem entry, string name)
+        => entry.Name = name;
+
     /// <summary>
     /// Lists the voice media clips.
     /// </summary>
