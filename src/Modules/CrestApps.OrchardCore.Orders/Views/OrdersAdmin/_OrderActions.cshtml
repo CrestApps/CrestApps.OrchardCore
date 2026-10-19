@@ -16,7 +16,7 @@
         <div class="card-body">
             @if (money is not null && money.Outstanding > 0)
             {
-                <p class="small text-muted">@T["{0} is still owed for this order through Pay Later.", Format(money.Outstanding)]</p>
+                <p class="small text-muted">@T["{0} is still owed for this order.", Format(money.Outstanding)]</p>
             }
 
             @if (canRefund)

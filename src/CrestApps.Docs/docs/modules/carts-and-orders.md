@@ -46,7 +46,7 @@ Signing in merges the guest cart into the user's cart: lines of the same product
 
 Each shape can be overridden in Razor or Liquid. A theme hides the cart link with an empty `CartLink` template.
 
-`CartLink` also renders the **mini cart**, a Bootstrap offcanvas loaded from `GET cart/mini` (the `MiniCart` partial, route name `CartMini`). With Bootstrap's offcanvas and `fetch` available, it posts the `form.product-add-to-cart` forms on the page and its own remove forms with `Accept: application/json`, updates the count and opens the panel; without them the link and the forms work as plain links and posts.
+`CartLink` also renders the **mini cart**, a Bootstrap offcanvas loaded from `GET cart/mini` (the `MiniCart` shape, route name `CartMini`). With Bootstrap's offcanvas and `fetch` available, it posts the `form.product-add-to-cart` forms on the page and its own remove forms with `Accept: application/json`, updates the count and opens the panel; without them the link and the forms work as plain links and posts.
 
 The forms are ordinary POST forms with antiforgery tokens, so they work without JavaScript and redirect back with a notification. When adding redirects back to the page the buyer was on, the notification links to the cart, so a theme without a cart link still leads there. A request whose `Accept` header asks for `application/json` gets `{ succeeded, message, itemCount }` instead. The endpoints are `POST cart/add`, `POST cart/update` and `POST cart/remove`, in the `Cart` rate limit group of the Orchard Core Rate Limits module.
 
@@ -131,6 +131,14 @@ Refunds are recorded on the order by `OrderRefundRecorder`, an `IPaymentRefundHa
 `OrderDisputeRecorder`, an `IPaymentEvent`, finds the order a gateway's dispute is about (the attempt with that `ProviderReference`, through `PaymentAttemptQuery.ProviderReference`, then its checkout) and keeps each dispute on `Order.Disputes` (`OrderDispute`: reference, gateway, amount, reason, status, `IsClosed`), with an event note for each change; a repeated webhook changes nothing. `Order.HasOpenDispute` drives the **Disputed** badge in the orders list, and `OrderDisputesDisplayDriver` shows each dispute on the store's order page.
 
 `OrderPaymentRiskCheckoutHandler` keeps the riskiest rating of a paid order's payments on `Order.PaymentRisk` (`OrderPaymentRisk`: level, score, gateway); `IsElevated` drives a warning on the order's page and a **Risky** badge in the list (`OrderPaymentRiskDisplayDriver`).
+
+### Order bumps and offers after the purchase
+
+`OrderSettings.OrderBumpProductId`, `OrderBumpPercentOff` and `OrderBumpHeadline` set the order bump. `OrderBumpCheckoutFlowDisplayDriver` renders a `CheckoutOrderBump` shape in the payment step's aside for an order that doesn't have the product, in the order's currency, while it's in stock. Ticking it posts the checkout's `update` form action (`CheckoutConstants.FormActions.Update`), which the steps layout now saves and shows again like applying a code. The bump goes on the session (`CheckoutOrderBump`) and as a billing line on the order's step, and `OrderCheckoutHandler` adds it to the order as a line when the checkout completes. The confirmation renders an `OrderConfirmationOffers` shape with the cross-sells of what was bought.
+
+### Exporting orders
+
+`OrdersAdminController.Export` (`Admin/orders/export`) writes the orders the list's search and status find with `OrderCsv`: a row per line, the order's totals on its first line only, times in the site's time zone. `OrderOperationsService.IsOwedAsync` tells an order paid offline and still owed, which the export, the lists and the order page show as *Payment due*.
 
 ### Reports
 

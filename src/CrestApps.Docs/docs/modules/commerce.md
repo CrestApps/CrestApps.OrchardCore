@@ -227,6 +227,21 @@ Commerce is a composition shell, not a domain:
 - It owns none of the order, payment, tax, receipt or report data models. Those belong to their domain modules.
 - Reusable domain commands live in their owning module; Commerce only composes them.
 
+## Theming the storefront
+
+Every storefront page renders through a named shape, so a theme changes any of them with a Razor (`.cshtml`) or Liquid (`.liquid`) template of that name in its `Views` folder, or from the admin with Orchard Core's **Templates** feature, without replacing a controller view. The controller views are thin frames: the breadcrumb, the page heading and, on account pages, the account menu, around the page's shape. A test fails the build when a storefront controller renders a page outside a shape.
+
+| Page | Shapes |
+| --- | --- |
+| Listings and product pages | The listing and card shapes in [Products](products#theming); on a product's actions, `AddToCart`, `GroupedProducts`, `ExternalProductAction` and `ProductCompareToggle`; on its page, `ProductBundleContents`, `ProductUpsells`, `ProductRelated` and `ProductRecentlyViewed`; card strips, `ProductCardStrip` |
+| Comparison | `ProductCompare` |
+| Cart | `Cart`, `MiniCart`, `CartRecommendations` |
+| Checkout | `CheckoutFlow` and each step's editor, such as `CheckoutCoupon` and `CheckoutOrderBump`; `CheckoutThankYou` and `OrderConfirmation` on the confirmation, with `OrderConfirmationOffers`; `CheckoutEnded` |
+| Account | `AccountOverview`, `AccountDetails`, `AccountAddresses`, `AccountAddressEdit`, `AccountOrders`, `AccountOrder`, `AccountDownloads`, `AccountPaymentMethods`, `AccountSubscriptions`, `AccountTransactions` |
+| Guests and links | `OrderLookup`, `OrderLookupSent`, `GuestOrder`, `GuestOrderInvalid`, `DownloadPage`, `TransactionPay`, `TransactionPayInvalid`, `SubscriptionUnavailable` |
+
+The emails (order confirmations, abandoned checkout and shipment emails) are written by the modules and aren't templates yet.
+
 ## Related
 
 - [Checkout](checkout), [Payments](payments) and [Pay Later](pay-later): taking money.

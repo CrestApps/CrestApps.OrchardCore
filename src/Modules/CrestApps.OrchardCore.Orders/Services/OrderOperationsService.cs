@@ -51,7 +51,20 @@ public sealed class OrderOperationsService
     }
 
     /// <summary>
-    /// Returns what can still be refunded for the order, and what is still owed for it through Pay Later.
+    /// Returns whether money is still owed on a placed order, such as one paid by bank transfer before the money
+    /// arrives.
+    /// </summary>
+    public async Task<bool> IsOwedAsync(Order order, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        // Only a placed order can be owed: one paid offline, such as by bank transfer, before the money arrives.
+        return order.Status == OrderStatus.Paid && (await GetTransactionsAsync(order, cancellationToken)).Any(IsOutstanding);
+    }
+
+    /// <summary>
+    /// Returns what can still be refunded for the order, and what is still owed for it, such as through Pay Later
+    /// or a bank transfer.
     /// </summary>
     public async Task<OrderMoney> GetMoneyAsync(Order order, CancellationToken cancellationToken = default)
     {

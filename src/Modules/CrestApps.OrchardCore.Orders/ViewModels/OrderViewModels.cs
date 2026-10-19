@@ -99,6 +99,14 @@ public class OrderCancelInputModel
     public bool Restock { get; set; }
 }
 
+/// <summary>
+/// The products a confirmation page offers next: what goes with what was just bought.
+/// </summary>
+public class OrderConfirmationOffersViewModel
+{
+    public IList<global::OrchardCore.ContentManagement.ContentItem> Products { get; set; } = [];
+}
+
 public class OrderConfirmationViewModel
 {
     public string OrderId { get; set; }
@@ -146,6 +154,29 @@ public class OrderCreateAccountViewModel
     public string ConfirmPassword { get; set; }
 }
 
+/// <summary>
+/// The order bump on the payment step.
+/// </summary>
+public class OrderBumpViewModel
+{
+    public bool Accept { get; set; }
+
+    [BindNever]
+    public string Headline { get; set; }
+
+    [BindNever]
+    public string Title { get; set; }
+
+    [BindNever]
+    public string Price { get; set; }
+
+    /// <summary>
+    /// Gets or sets the product's own price, shown struck through when the offer is cheaper.
+    /// </summary>
+    [BindNever]
+    public string ListPrice { get; set; }
+}
+
 public class OrderSettingsViewModel
 {
     public bool SendConfirmations { get; set; }
@@ -153,6 +184,18 @@ public class OrderSettingsViewModel
     public bool SendRecoveryEmails { get; set; }
 
     public int RecoveryDelayHours { get; set; } = 1;
+
+    public string OrderBumpProductId { get; set; }
+
+    public decimal? OrderBumpPercentOff { get; set; }
+
+    public string OrderBumpHeadline { get; set; }
+
+    [BindNever]
+    public string ProductSearchEndpoint { get; set; }
+
+    [BindNever]
+    public string InitialOrderBumpJson { get; set; }
 
     /// <summary>
     /// Gets or sets whether the site has the base URL recovery emails link back through.
@@ -186,6 +229,11 @@ public class OrderViewViewModel
 public class AccountOrdersViewModel
 {
     public IReadOnlyList<Order> Orders { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the orders still owed, such as ones paid by bank transfer before the money arrives.
+    /// </summary>
+    public ISet<string> OwedOrderIds { get; set; } = new HashSet<string>();
 
     public IShape Pager { get; set; }
 }

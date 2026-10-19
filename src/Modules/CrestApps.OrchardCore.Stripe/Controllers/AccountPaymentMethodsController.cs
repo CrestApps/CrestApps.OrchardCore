@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Stripe.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Stripe.Controllers;
@@ -17,22 +18,33 @@ public sealed class AccountPaymentMethodsController : Controller
 {
     private readonly IStripeWalletService _walletService;
     private readonly INotifier _notifier;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IHtmlLocalizer H;
 
-    public AccountPaymentMethodsController(IStripeWalletService walletService, INotifier notifier, IHtmlLocalizer<AccountPaymentMethodsController> htmlLocalizer)
+    public AccountPaymentMethodsController(
+        IStripeWalletService walletService,
+        INotifier notifier,
+        IShapeFactory shapeFactory,
+        IHtmlLocalizer<AccountPaymentMethodsController> htmlLocalizer)
     {
         _walletService = walletService;
         _notifier = notifier;
+        _shapeFactory = shapeFactory;
         H = htmlLocalizer;
     }
 
     [HttpGet("account/payment-methods", Name = "AccountPaymentMethods")]
     public async Task<IActionResult> Index()
-        => View(new AccountPaymentMethodsViewModel
+    {
+        var cards = await _walletService.ListCardsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted);
+
+        // The list is the AccountPaymentMethods shape, so a theme can override it.
+        return View(await _shapeFactory.CreateAsync<AccountPaymentMethodsViewModel>("AccountPaymentMethods", model =>
         {
-            Cards = await _walletService.ListCardsAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), HttpContext.RequestAborted),
-        });
+            model.Cards = cards;
+        }));
+    }
 
     [HttpPost("account/payment-methods/{paymentMethodId}/remove", Name = "AccountPaymentMethodRemove")]
     [ValidateAntiForgeryToken]

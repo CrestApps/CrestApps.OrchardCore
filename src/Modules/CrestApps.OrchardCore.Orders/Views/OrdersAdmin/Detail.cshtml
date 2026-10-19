@@ -11,6 +11,9 @@
 
 @{
     var order = Model.Order;
+
+    // An order paid offline, such as by bank transfer, is placed before the money arrives.
+    var owed = order.Status == OrderStatus.Paid && Model.Money?.Outstanding > 0;
     string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
 }
 
@@ -38,7 +41,14 @@
                         @await Html.PartialAsync("_OrderFulfillment", order.FulfillmentStatus)
                     }
                     @await Html.PartialAsync("_OrderRefundStatus", order.RefundStatus)
-                    @await Html.PartialAsync("_OrderStatus", order.Status)
+                    @if (owed)
+                    {
+                        <span class="badge text-bg-warning">@T["Payment due"]</span>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_OrderStatus", order.Status)
+                    }
                 </span>
             </div>
             @if (order.Status == OrderStatus.Canceled && order.CancelReason is { } cancelReason)
@@ -91,6 +101,20 @@
                                 }
                                 <span>@T["{0} × {1}", line.Quantity, Format(line.UnitPrice)]</span>
                             </div>
+                            @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
+                            {
+                                <div class="small text-break"><span class="fa-solid fa-box-open text-body-secondary me-1" aria-hidden="true"></span>@T["Includes {0}", contents]</div>
+                            }
+                            @foreach (var addOn in line.AddOns ?? [])
+                            {
+                                <div class="small text-break">
+                                    <span class="fa-solid fa-pen-to-square text-body-secondary me-1" aria-hidden="true"></span>@CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeAddOn(addOn)
+                                    @if (addOn.Price > 0)
+                                    {
+                                        <span class="text-muted">(+@Format(addOn.Price))</span>
+                                    }
+                                </div>
+                            }
                         </div>
                         <div class="text-nowrap fw-semibold">@Format(line.LineTotal)</div>
                     </li>
@@ -125,7 +149,7 @@
                 @if (order.Total.HasValue)
                 {
                     <div class="d-flex justify-content-between fw-semibold border-top mt-2 pt-2">
-                        <span>@T["Total paid"]</span>
+                        <span>@(owed ? T["Total"] : T["Total paid"])</span>
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
@@ -170,7 +194,7 @@
                     <dd>@order.OrderNumber</dd>
                     <dt>@T["Placed"]</dt>
                     <dd>@((await LocalAsync(order.CreatedUtc)).ToString("f"))</dd>
-                    @if (order.PaidUtc.HasValue)
+                    @if (order.PaidUtc.HasValue && !owed)
                     {
                         <dt>@T["Paid"]</dt>
                         <dd>@((await LocalAsync(order.PaidUtc.Value)).ToString("f"))</dd>

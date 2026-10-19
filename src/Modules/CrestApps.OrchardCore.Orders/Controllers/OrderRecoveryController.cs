@@ -73,7 +73,12 @@ public sealed class OrderRecoveryController : Controller
 
         foreach (var line in order.Lines ?? [])
         {
-            var result = await _cartService.AddAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, HttpContext.RequestAborted);
+            // The add-ons come back too, so an engraving isn't lost on the way back to the cart.
+            var addOns = line.AddOns is { Count: > 0 }
+                ? line.AddOns.Where(addOn => !string.IsNullOrEmpty(addOn.AddOnId)).ToDictionary(addOn => addOn.AddOnId, addOn => addOn.Value ?? "true", StringComparer.Ordinal)
+                : null;
+
+            var result = await _cartService.AddAsync(line.ContentItemId, line.PriceId, line.VariantId, line.Quantity, addOns, HttpContext.RequestAborted);
 
             if (result.Succeeded)
             {

@@ -50,6 +50,16 @@ Open an order to see what was bought, the quantities and prices, any discount su
 
 Signed-in customers see their own orders under **Commerce > My Orders**, and can open each one from the link on their order confirmation.
 
+An order paid offline, by bank transfer, cash on delivery or Pay Later, reads **Payment due** in the list, on its page and in the buyer's account until you record the payment.
+
+### Export orders
+
+**Export CSV** in the list's search bar downloads the orders the list shows, with its search and status: a row per line, with its add-ons, and the order's subtotal, discounts, shipping, tax, total and refunds on its first line, so adding up a column counts each order once.
+
+## Offer one more thing at checkout
+
+Under **Settings > Commerce > Orders**, **Order bump** offers a product on the payment step, such as a small item that goes with most orders. Choose the **Product offered**, an optional **Discount** and a **Headline**. Buyers tick one box to add it, and the total changes before they pay. It isn't offered on orders that already have it, or while it's out of stock. Clear the product to stop the offer.
+
 ## Manage an order
 
 Open an order from **Commerce > Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.

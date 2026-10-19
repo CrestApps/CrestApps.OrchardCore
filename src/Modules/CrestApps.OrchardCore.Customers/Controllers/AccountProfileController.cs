@@ -4,12 +4,14 @@ using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Customers.Controllers;
 
 /// <summary>
-/// The signed-in customer's details and address book on the storefront account.
+/// The signed-in customer's details and address book on the storefront account. Each page's content is a shape
+/// (<c>AccountDetails</c>, <c>AccountAddresses</c>, <c>AccountAddressEdit</c>) that a theme can override.
 /// </summary>
 [Authorize]
 public sealed class AccountProfileController : Controller
@@ -17,6 +19,7 @@ public sealed class AccountProfileController : Controller
     private readonly CustomerAccountPages _pages;
     private readonly CustomerAddressBook _addressBook;
     private readonly INotifier _notifier;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IHtmlLocalizer H;
 
@@ -24,11 +27,13 @@ public sealed class AccountProfileController : Controller
         CustomerAccountPages pages,
         CustomerAddressBook addressBook,
         INotifier notifier,
+        IShapeFactory shapeFactory,
         IHtmlLocalizer<AccountProfileController> htmlLocalizer)
     {
         _pages = pages;
         _addressBook = addressBook;
         _notifier = notifier;
+        _shapeFactory = shapeFactory;
         H = htmlLocalizer;
     }
 
@@ -40,7 +45,7 @@ public sealed class AccountProfileController : Controller
             return Forbid();
         }
 
-        return View(await _pages.BuildAccountAsync(customer, input: null));
+        return View(await DetailsShapeAsync(await _pages.BuildAccountAsync(customer, input: null)));
     }
 
     [HttpPost("account/details")]
@@ -56,7 +61,7 @@ public sealed class AccountProfileController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View(await _pages.BuildAccountAsync(customer, model));
+            return View(await DetailsShapeAsync(await _pages.BuildAccountAsync(customer, model)));
         }
 
         CustomerAccountPages.Apply(customer, model);
@@ -77,7 +82,13 @@ public sealed class AccountProfileController : Controller
             return Forbid();
         }
 
-        return View(await _addressBook.SummarizeAsync(customer));
+        var addresses = await _addressBook.SummarizeAsync(customer);
+
+        return View(await _shapeFactory.CreateAsync<CustomerAddressListViewModel>("AccountAddresses", model =>
+        {
+            model.Addresses = addresses;
+            model.IsOwn = true;
+        }));
     }
 
     [HttpGet("account/addresses/add", Name = "AccountAddressCreate")]
@@ -91,7 +102,7 @@ public sealed class AccountProfileController : Controller
         var model = await _addressBook.BuildEditorAsync(customer, null);
         model.IsOwn = true;
 
-        return View("AddressEdit", model);
+        return View("AddressEdit", await AddressShapeAsync(model));
     }
 
     [HttpPost("account/addresses/add")]
@@ -115,7 +126,7 @@ public sealed class AccountProfileController : Controller
         var model = await _addressBook.BuildEditorAsync(customer, address);
         model.IsOwn = true;
 
-        return View(model);
+        return View(await AddressShapeAsync(model));
     }
 
     [HttpPost("account/addresses/{addressId}")]
@@ -166,7 +177,7 @@ public sealed class AccountProfileController : Controller
             var invalid = await _addressBook.BuildEditorAsync(customer, address, model);
             invalid.IsOwn = true;
 
-            return View("AddressEdit", invalid);
+            return View("AddressEdit", await AddressShapeAsync(invalid));
         }
 
         CustomerAddressBook.Apply(customer, address, model, value);
@@ -190,4 +201,36 @@ public sealed class AccountProfileController : Controller
 
         return false;
     }
+
+    // The shape's model is a proxy Orchard Core derives from the view model, so the built page is copied onto it.
+    private ValueTask<IShape> DetailsShapeAsync(MyAccountViewModel source)
+        => _shapeFactory.CreateAsync<MyAccountViewModel>("AccountDetails", model =>
+        {
+            model.Email = source.Email;
+            model.Kinds = source.Kinds;
+            model.Addresses = source.Addresses;
+            model.Kind = source.Kind;
+            model.DisplayName = source.DisplayName;
+            model.FirstName = source.FirstName;
+            model.LastName = source.LastName;
+            model.CompanyName = source.CompanyName;
+            model.TaxId = source.TaxId;
+            model.Phone = source.Phone;
+            model.AcceptsMarketing = source.AcceptsMarketing;
+        });
+
+    private ValueTask<IShape> AddressShapeAsync(CustomerAddressViewModel source)
+        => _shapeFactory.CreateAsync<CustomerAddressViewModel>("AccountAddressEdit", model =>
+        {
+            model.CustomerId = source.CustomerId;
+            model.CustomerName = source.CustomerName;
+            model.AddressId = source.AddressId;
+            model.IsNew = source.IsNew;
+            model.IsOwn = source.IsOwn;
+            model.AddressEditor = source.AddressEditor;
+            model.Label = source.Label;
+            model.Address = source.Address;
+            model.IsDefaultBilling = source.IsDefaultBilling;
+            model.IsDefaultShipping = source.IsDefaultShipping;
+        });
 }

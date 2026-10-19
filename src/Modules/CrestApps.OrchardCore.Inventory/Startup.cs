@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Products.Core.Transfer;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -90,6 +91,33 @@ public sealed class OrdersStartup : StartupBase
     {
         services.AddScoped<IOrderEventHandler, InventoryOrderEventHandler>();
         services.AddSingleton<IBackgroundTask, ExpiredStockHoldsBackgroundTask>();
+    }
+}
+
+/// <summary>
+/// Counts the stock a product import says.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Transfer)]
+public sealed class ProductTransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+        => services.AddScoped<IProductImportHandler, InventoryProductImportHandler>();
+}
+
+/// <summary>
+/// Works out a bundle's stock from its parts, and refreshes the bundles a product is in when its stock changes.
+/// </summary>
+[RequireFeatures(ProductConstants.Feature.Bundles)]
+public sealed class BundlesStartup : StartupBase
+{
+    // Before the main startup, so bundles are answered for before the stock items.
+    public override int Order => -10;
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<InventoryAvailabilityProvider>();
+        services.AddScoped<IProductAvailabilityProvider, BundleAvailabilityProvider>();
+        services.AddScoped<IStockLevelHandler, BundleSearchIndexHandler>();
     }
 }
 

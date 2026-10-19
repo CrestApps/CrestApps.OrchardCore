@@ -2,10 +2,12 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -13,6 +15,7 @@ namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
 /// <summary>
 /// The signed-in customer's subscriptions on the storefront account, where they can stop one from renewing.
+/// The list is the <c>AccountSubscriptions</c> shape, so a theme can override it.
 /// </summary>
 [Authorize]
 public sealed class AccountSubscriptionsController : Controller
@@ -22,6 +25,7 @@ public sealed class AccountSubscriptionsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IShapeFactory _shapeFactory;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -32,6 +36,7 @@ public sealed class AccountSubscriptionsController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IShapeFactory shapeFactory,
         IStringLocalizer<AccountSubscriptionsController> stringLocalizer,
         IHtmlLocalizer<AccountSubscriptionsController> htmlLocalizer)
     {
@@ -40,6 +45,7 @@ public sealed class AccountSubscriptionsController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _shapeFactory = shapeFactory;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -61,7 +67,10 @@ public sealed class AccountSubscriptionsController : Controller
             .Select(subscription => new CustomerSubscription(subscription, subscription.IsCurrent(now)))
             .ToArray();
 
-        return View(subscriptions);
+        return View(await _shapeFactory.CreateAsync<AccountSubscriptionsViewModel>("AccountSubscriptions", model =>
+        {
+            model.Subscriptions = subscriptions;
+        }));
     }
 
     [HttpPost("account/subscriptions/{itemId}/cancel", Name = "AccountSubscriptionCancel")]

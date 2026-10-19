@@ -1,5 +1,5 @@
-@using OrchardCore.Navigation
-@model IReadOnlyList<MenuItem>
+@using OrchardCore.DisplayManagement
+@model IShape
 
 <zone Name="Title">
     <breadcrumb name="CommerceAccount" title="@T["Your account"]" />
@@ -13,29 +13,7 @@
         <div class="col-lg-9">
             <h1 class="h3 mb-3">@T["Your account"]</h1>
 
-            @if (Model.Count == 0)
-            {
-                <p class="text-muted">@T["There is nothing here for your account yet."]</p>
-            }
-            else
-            {
-                <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-3 g-3">
-                    @foreach (var item in Model)
-                    {
-                        <div class="col">
-                            <a class="card h-100 text-decoration-none text-reset commerce-account-tile" href="@Url.Content(item.Href)">
-                                <div class="card-body d-flex align-items-center gap-3">
-                                    @if (item.Classes.Count > 0)
-                                    {
-                                        <span class="@string.Join(' ', item.Classes) fa-lg text-primary" aria-hidden="true"></span>
-                                    }
-                                    <span class="fw-semibold">@item.Text</span>
-                                </div>
-                            </a>
-                        </div>
-                    }
-                </div>
-            }
+            @await DisplayAsync(Model)
         </div>
     </div>
 </div>

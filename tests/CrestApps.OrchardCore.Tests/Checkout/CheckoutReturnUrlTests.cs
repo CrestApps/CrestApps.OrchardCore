@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
 using CrestApps.OrchardCore.Tests.Checkout.Fakes;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -262,7 +263,7 @@ public sealed class CheckoutReturnUrlTests
 
         // Assert
         var view = Assert.IsType<ViewResult>(result);
-        var model = Assert.IsType<CheckoutEndedViewModel>(view.Model);
+        var model = Assert.IsAssignableFrom<CheckoutEndedViewModel>(view.Model);
 
         Assert.Equal("Ended", view.ViewName);
         Assert.Equal(status, model.Status);
@@ -303,7 +304,7 @@ public sealed class CheckoutReturnUrlTests
     [Theory]
     [InlineData("Checkout/Confirmation.cshtml", "Model.ReturnUrl")]
     [InlineData("Checkout/Confirmation.cshtml", "Model.Title")]
-    [InlineData("Checkout/Ended.cshtml", "Model.ReturnUrl")]
+    [InlineData("CheckoutEnded.cshtml", "Model.ReturnUrl")]
     [InlineData("CheckoutFlowButtons.cshtml", "CheckoutReturnLinks.GetBackLink(Model.Value)")]
     public void Views_RenderTheReturnLink(string view, string expected)
     {
@@ -380,6 +381,7 @@ public sealed class CheckoutReturnUrlTests
             Mock.Of<ICheckoutEngine>(),
             Mock.Of<IDisplayManager<CheckoutFlow>>(),
             updateModelAccessor.Object,
+            new ModelShapeFactory(),
             Mock.Of<INotifier>(),
             StepsLayoutSiteService(),
             new TestClock(_now),

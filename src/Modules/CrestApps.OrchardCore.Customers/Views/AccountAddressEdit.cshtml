@@ -1,0 +1,14 @@
+@model CustomerAddressViewModel
+
+@* The form that adds or changes an address in the signed-in customer's address book. *@
+
+<form action="@(Model.IsNew ? Url.RouteUrl("AccountAddressCreate") : Url.RouteUrl("AccountAddressEdit", new { addressId = Model.AddressId }))" method="post" class="card">
+    @Html.AntiForgeryToken()
+    <div class="card-body">
+        <partial name="_CustomerAddressFields" model="Model" />
+    </div>
+    <div class="card-footer d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary px-4">@T["Save"]</button>
+        <a class="btn btn-link" href="@Url.RouteUrl("AccountAddresses")">@T["Cancel"]</a>
+    </div>
+</form>
