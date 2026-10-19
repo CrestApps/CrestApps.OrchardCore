@@ -32,6 +32,12 @@ public interface IOrderEventHandler
     /// </summary>
     Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Runs when items the buyer sent back arrived, in the same unit of work, such as to put them back into stock.
+    /// </summary>
+    Task ReturnedAsync(OrderReturnedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 public abstract class OrderEventHandlerBase : IOrderEventHandler
@@ -47,7 +53,47 @@ public abstract class OrderEventHandlerBase : IOrderEventHandler
 
     public virtual Task RefundedAsync(OrderRefundedContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    public virtual Task ReturnedAsync(OrderReturnedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
+
+/// <summary>
+/// Items of an order that came back.
+/// </summary>
+public sealed class OrderReturnedContext
+{
+    public OrderReturnedContext(Order order, OrderReturn orderReturn, IReadOnlyList<OrderReturnedLine> lines)
+    {
+        Order = order;
+        Return = orderReturn;
+        Lines = lines;
+    }
+
+    public Order Order { get; }
+
+    public OrderReturn Return { get; }
+
+    /// <summary>
+    /// Gets the units of each line that came back.
+    /// </summary>
+    public IReadOnlyList<OrderReturnedLine> Lines { get; }
+
+    /// <summary>
+    /// Gets or sets the location the units go back into stock at, or <see langword="null"/> for where they were sold
+    /// from.
+    /// </summary>
+    public string LocationId { get; set; }
+
+    public string ActorId { get; set; }
+
+    public string ActorName { get; set; }
+}
+
+/// <summary>
+/// Units of an order line that came back, and whether they can be sold again.
+/// </summary>
+public sealed record OrderReturnedLine(OrderLine Line, int Quantity, bool Restock);
 
 public sealed class OrderCreatedContext
 {

@@ -147,3 +147,23 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddScoped<IOrderEventHandler, OrderWorkflowHandler>();
     }
 }
+
+/// <summary>
+/// Returns: buyers ask, the store approves, receives, restocks and refunds or exchanges.
+/// </summary>
+[Feature(OrderConstants.Features.Returns)]
+public sealed class ReturnsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<OrderReturnMigrations>()
+            .AddIndexProvider<OrderReturnIndexProvider>();
+        services.AddScoped<IOrderReturnStore, OrderReturnStore>();
+        services.AddScoped<OrderReturnService>();
+        services.AddScoped<OrderReturnEmailSender>();
+        services.AddDisplayDriver<Order, OrderReturnsDisplayDriver>();
+        services.AddDisplayDriver<OrderReturn, OrderReturnDisplayDriver>();
+        services.AddSiteDisplayDriver<ReturnSettingsDisplayDriver>();
+        services.AddNavigationProvider<ReturnsAdminMenu>();
+    }
+}

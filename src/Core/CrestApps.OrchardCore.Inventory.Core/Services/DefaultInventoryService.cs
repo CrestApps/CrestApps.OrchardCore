@@ -342,33 +342,87 @@ public sealed class DefaultInventoryService : IInventoryService
         var now = _clock.UtcNow;
         var returned = 0;
 
-        // Units go back to the location they were sold from.
+        // Units go back to the location they were sold from, less any that came back with a return already.
         foreach (var reservation in (await ListReservationsAsync(orderId, cancellationToken)).Where(reservation => reservation.Status == StockReservationStatus.Committed))
         {
-            if (await _items.FindByIdAsync(reservation.StockItemId, cancellationToken) is { } item)
+            var quantity = reservation.Quantity - reservation.ReturnedQuantity;
+
+            if (quantity > 0 && await _items.FindByIdAsync(reservation.StockItemId, cancellationToken) is { } item)
             {
-                var previous = item.Available;
-                var level = item.GetLevel(reservation.LocationId);
+                await ReturnUnitsAsync(item, reservation.LocationId, quantity, orderId, reason, actor, now, cancellationToken);
 
-                level.OnHand += reservation.Quantity;
-                item.SumLevels();
-                item.ModifiedUtc = now;
-                await UpdateAsync(item, previous, cancellationToken);
-
-                var movement = Movement(item, level.LocationId, StockMovementKind.Returned, reservation.Quantity, reason, actor, now);
-                movement.OrderId = orderId;
-
-                await _movements.CreateAsync(movement, cancellationToken);
-
-                returned += reservation.Quantity;
+                returned += quantity;
             }
 
+            reservation.ReturnedQuantity = reservation.Quantity;
             reservation.Status = StockReservationStatus.Returned;
             reservation.ModifiedUtc = now;
             await SaveReservationAsync(reservation, cancellationToken);
         }
 
         return returned;
+    }
+
+    public async Task<int> RestockAsync(string orderId, IEnumerable<StockRequest> lines, string locationId, string reason, StockActor actor, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(orderId);
+
+        var now = _clock.UtcNow;
+        var returned = 0;
+        var reservations = (await ListReservationsAsync(orderId, cancellationToken)).Where(reservation => reservation.Status == StockReservationStatus.Committed).ToArray();
+
+        foreach (var need in await ResolveAsync(lines, cancellationToken))
+        {
+            var left = need.Quantity;
+
+            foreach (var reservation in reservations.Where(reservation => reservation.StockItemId == need.Item.ItemId))
+            {
+                var quantity = Math.Min(left, reservation.Quantity - reservation.ReturnedQuantity);
+
+                if (quantity <= 0)
+                {
+                    continue;
+                }
+
+                await ReturnUnitsAsync(need.Item, string.IsNullOrEmpty(locationId) ? reservation.LocationId : locationId, quantity, orderId, reason, actor, now, cancellationToken);
+
+                reservation.ReturnedQuantity += quantity;
+
+                if (reservation.ReturnedQuantity >= reservation.Quantity)
+                {
+                    reservation.Status = StockReservationStatus.Returned;
+                }
+
+                reservation.ModifiedUtc = now;
+                await SaveReservationAsync(reservation, cancellationToken);
+
+                returned += quantity;
+                left -= quantity;
+
+                if (left == 0)
+                {
+                    break;
+                }
+            }
+        }
+
+        return returned;
+    }
+
+    private async Task ReturnUnitsAsync(StockItem item, string locationId, int quantity, string orderId, string reason, StockActor actor, DateTime now, CancellationToken cancellationToken)
+    {
+        var previous = item.Available;
+        var level = item.GetLevel(locationId);
+
+        level.OnHand += quantity;
+        item.SumLevels();
+        item.ModifiedUtc = now;
+        await UpdateAsync(item, previous, cancellationToken);
+
+        var movement = Movement(item, level.LocationId, StockMovementKind.Returned, quantity, reason, actor, now);
+        movement.OrderId = orderId;
+
+        await _movements.CreateAsync(movement, cancellationToken);
     }
 
     public async Task<int> ReleaseExpiredAsync(int take, CancellationToken cancellationToken = default)

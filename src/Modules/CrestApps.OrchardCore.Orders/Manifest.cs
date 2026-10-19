@@ -27,3 +27,14 @@ using OrchardCore.Modules.Manifest;
         "CrestApps.OrchardCore.Resources",
     ]
 )]
+
+[assembly: Feature(
+    Id = OrderConstants.Features.Returns,
+    Name = "Returns",
+    Description = "Lets buyers ask to return items of their orders, for a refund or an exchange, and the store approve, receive, restock and refund them under Commerce > Returns.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        OrderConstants.Features.Orders,
+    ]
+)]

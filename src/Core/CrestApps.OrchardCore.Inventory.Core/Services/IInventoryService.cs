@@ -35,6 +35,13 @@ public interface IInventoryService
     /// Moves units from one location to another. Only units available at the first location can be moved; the total
     /// on hand doesn't change.
     /// </summary>
+    /// <summary>
+    /// Puts units of an order that came back into stock: no more of each item than the order bought and hasn't returned
+    /// yet, at <paramref name="locationId"/> or, when it's <see langword="null"/>, where they were sold from. Returns
+    /// how many went back.
+    /// </summary>
+    Task<int> RestockAsync(string orderId, IEnumerable<StockRequest> lines, string locationId, string reason, StockActor actor, CancellationToken cancellationToken = default);
+
     Task<StockChangeResult> TransferAsync(string stockItemId, string fromLocationId, string toLocationId, int quantity, string reason, StockActor actor, CancellationToken cancellationToken = default);
 
     /// <summary>

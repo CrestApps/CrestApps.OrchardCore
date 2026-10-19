@@ -36,6 +36,8 @@ public static class OrderConstants
     /// </summary>
     public const string SettingsGroupId = "orders";
 
+    public const string ReturnsSettingsGroupId = "returns";
+
     /// <summary>
     /// The rate-limit group of Find my order, which anyone can post to.
     /// </summary>
@@ -44,6 +46,8 @@ public static class OrderConstants
     public static class Features
     {
         public const string Orders = "CrestApps.OrchardCore.Orders";
+
+        public const string Returns = "CrestApps.OrchardCore.Orders.Returns";
     }
 
     public static class RouteNames

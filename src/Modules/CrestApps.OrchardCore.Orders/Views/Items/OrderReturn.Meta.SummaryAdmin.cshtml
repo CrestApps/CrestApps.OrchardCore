@@ -1,0 +1,15 @@
+@model OrderReturnRowViewModel
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Items"]">
+    <i class="fa-solid fa-boxes-stacked text-secondary me-1" aria-hidden="true"></i>@T.Plural(Model.Return.Quantity, "1 item", "{0} items")
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["The buyer wants"]">
+    @if (Model.Return.Resolution == OrderReturnResolution.Exchange)
+    {
+        <i class="fa-solid fa-right-left text-secondary me-1" aria-hidden="true"></i>@T["Exchange"]
+    }
+    else
+    {
+        <i class="fa-solid fa-money-bill-transfer text-secondary me-1" aria-hidden="true"></i>@T["Refund"]
+    }
+</span>

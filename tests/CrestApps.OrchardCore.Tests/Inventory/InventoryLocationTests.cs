@@ -149,6 +149,25 @@ public sealed class InventoryLocationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task AReturnOfSomeUnits_GoesBackWhereAsked_AndARestockLaterReturnsOnlyTheRest()
+    {
+        var itemId = await StockAsync(warehouse: 10, shop: 0);
+
+        await InSessionAsync(service => service.CommitAsync("order-1", [new StockRequest("mug", null, 4)], TestContext.Current.CancellationToken));
+
+        // Two come back to the shop; asking for more than was sold returns only what's left.
+        Assert.Equal(2, await InSessionAsync(service => service.RestockAsync("order-1", [new StockRequest("mug", null, 2)], Shop, "Return R-1", _admin, TestContext.Current.CancellationToken)));
+        Assert.Equal(2, await InSessionAsync(service => service.RestockAsync("order-1", [new StockRequest("mug", null, 9)], null, "Return R-2", _admin, TestContext.Current.CancellationToken)));
+        Assert.Equal(0, await InSessionAsync(service => service.RestockAsync("order-1", "Refunded", _admin, TestContext.Current.CancellationToken)));
+
+        var item = await FindAsync(itemId);
+
+        Assert.Equal(10, item.OnHand);
+        Assert.Equal(8, item.FindLevel(Warehouse).OnHand);
+        Assert.Equal(2, item.FindLevel(Shop).OnHand);
+    }
+
+    [Fact]
     public void ABackorder_IsOwedByThePreferredLocation()
     {
         var item = new StockItem { AllowBackorder = true, Levels = [new() { LocationId = Warehouse, OnHand = 1 }, new() { LocationId = Shop, OnHand = 1 }], OnHand = 2 };

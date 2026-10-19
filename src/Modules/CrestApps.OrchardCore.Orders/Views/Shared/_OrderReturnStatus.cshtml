@@ -1,0 +1,23 @@
+@model OrderReturnStatus
+
+@switch (Model)
+{
+    case OrderReturnStatus.Approved:
+        <span class="badge ta-badge bg-info-subtle text-info-emphasis fw-normal"><i class="fa-solid fa-thumbs-up me-1" aria-hidden="true"></i>@T["Approved"]</span>
+        break;
+    case OrderReturnStatus.Received:
+        <span class="badge ta-badge bg-primary-subtle text-primary-emphasis fw-normal"><i class="fa-solid fa-box-open me-1" aria-hidden="true"></i>@T["Received"]</span>
+        break;
+    case OrderReturnStatus.Completed:
+        <span class="badge ta-badge bg-success-subtle text-success-emphasis fw-normal"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["Completed"]</span>
+        break;
+    case OrderReturnStatus.Rejected:
+        <span class="badge ta-badge bg-danger-subtle text-danger-emphasis fw-normal"><i class="fa-solid fa-circle-xmark me-1" aria-hidden="true"></i>@T["Declined"]</span>
+        break;
+    case OrderReturnStatus.Canceled:
+        <span class="badge ta-badge bg-secondary-subtle text-secondary-emphasis fw-normal"><i class="fa-solid fa-ban me-1" aria-hidden="true"></i>@T["Withdrawn"]</span>
+        break;
+    default:
+        <span class="badge ta-badge bg-warning-subtle text-warning-emphasis fw-normal"><i class="fa-solid fa-hourglass-half me-1" aria-hidden="true"></i>@T["Requested"]</span>
+        break;
+}

@@ -17,6 +17,11 @@ public sealed class StockReservation : CatalogItem
     public int Quantity { get; set; }
 
     /// <summary>
+    /// Gets or sets how many of the units sold came back into stock, from returns of some of them.
+    /// </summary>
+    public int ReturnedQuantity { get; set; }
+
+    /// <summary>
     /// Gets or sets the location the units are held at, or <see langword="null"/> for the default location.
     /// </summary>
     public string LocationId { get; set; }
