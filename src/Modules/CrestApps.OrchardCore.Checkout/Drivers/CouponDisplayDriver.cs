@@ -33,7 +33,7 @@ internal sealed class CouponDisplayDriver : DisplayDriver<Coupon>
             View("Coupon_Description_SummaryAdmin", coupon)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Description:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Name:5")
-                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(coupon.Description))),
+                .RenderWhen(() => Task.FromResult(!string.IsNullOrEmpty(coupon.Description) && !coupon.IsAutomatic)),
             View("Coupon_Status_SummaryAdmin", coupon)
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdmin, "Tags:1")
                 .Location(OrchardCoreConstants.DisplayType.SummaryAdminGrid, "Status:1"),

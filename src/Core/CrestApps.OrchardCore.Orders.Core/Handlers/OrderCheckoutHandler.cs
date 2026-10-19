@@ -171,7 +171,7 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
             .Where(discount => discount.Amount > 0m)
             .Select(discount => new OrderDiscount
             {
-                Code = discount.Code,
+                Code = discount.IsAutomatic ? null : discount.Code,
                 Description = discount.Description,
                 Amount = discount.Amount,
                 ProviderKey = discount.ProviderKey,

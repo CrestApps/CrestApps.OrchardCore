@@ -159,6 +159,12 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
         }
 
         var coupon = await _couponStore.GetByCodeAsync(code);
+
+        // An automatic discount's code is never typed; it applies by itself when the order qualifies.
+        if (coupon?.IsAutomatic == true)
+        {
+            coupon = null;
+        }
         var availability = coupon is null || !coupon.IsRedeemable(_clock.UtcNow)
             ? CouponAvailability.Unavailable
             : await _redemptions.GetAvailabilityAsync(coupon, flow);

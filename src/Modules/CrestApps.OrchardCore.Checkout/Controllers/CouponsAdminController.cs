@@ -283,6 +283,7 @@ public sealed class CouponsAdminController : Controller
         {
             ItemId = coupon.ItemId,
             Code = coupon.Code,
+            Method = coupon.Method,
             Description = coupon.Description,
             Kind = coupon.Kind,
             Percentage = coupon.Percentage,
@@ -296,6 +297,10 @@ public sealed class CouponsAdminController : Controller
             MinimumAmount = coupon.MinimumAmount,
             MaximumAmount = coupon.MaximumAmount,
             MaxRedemptionsPerCustomer = coupon.MaxRedemptionsPerCustomer,
+            MinimumQuantity = coupon.MinimumQuantity,
+            BuyQuantity = coupon.BuyQuantity > 0 ? coupon.BuyQuantity : null,
+            GetQuantity = coupon.GetQuantity > 0 ? coupon.GetQuantity : null,
+            MaxApplicationsPerOrder = coupon.MaxApplicationsPerOrder,
             CombinesWithProductDiscounts = coupon.CombinesWithProductDiscounts,
             CombinesWithOrderDiscounts = coupon.CombinesWithOrderDiscounts,
             CombinesWithShippingDiscounts = coupon.CombinesWithShippingDiscounts,
@@ -389,6 +394,18 @@ public sealed class CouponsAdminController : Controller
 
     private async Task ValidateAsync(CouponEditViewModel model, string existingItemId)
     {
+        // Nobody types an automatic discount's code, so one is made up when it's left blank; it only names the
+        // discount's uses.
+        if (model.Method == CouponMethod.Automatic && string.IsNullOrWhiteSpace(model.Code))
+        {
+            model.Code = "AUTO-" + IdGenerator.GenerateId()[..8].ToUpperInvariant();
+        }
+
+        if (model.Method == CouponMethod.Automatic && string.IsNullOrWhiteSpace(model.Description))
+        {
+            ModelState.AddModelError(nameof(model.Description), S["An automatic discount needs a description. It's what the buyer sees."]);
+        }
+
         var code = model.Code?.Trim();
 
         if (string.IsNullOrEmpty(code))
@@ -407,7 +424,30 @@ public sealed class CouponsAdminController : Controller
             }
         }
 
-        if (model.Kind == CouponKind.Percentage && model.Percentage is <= 0m or > 100m)
+        if (model.Kind == CouponKind.BuyXGetY)
+        {
+            if (model.BuyQuantity is not >= 1)
+            {
+                ModelState.AddModelError(nameof(model.BuyQuantity), S["Enter how many items the customer buys, 1 or more."]);
+            }
+
+            if (model.GetQuantity is not >= 1)
+            {
+                ModelState.AddModelError(nameof(model.GetQuantity), S["Enter how many items the customer gets, 1 or more."]);
+            }
+
+            if (model.MaxApplicationsPerOrder is <= 0)
+            {
+                ModelState.AddModelError(nameof(model.MaxApplicationsPerOrder), S["Leave it blank for no limit, or enter a number greater than zero."]);
+            }
+        }
+
+        if (model.MinimumQuantity is <= 0)
+        {
+            ModelState.AddModelError(nameof(model.MinimumQuantity), S["Leave the minimum blank, or enter a number greater than zero."]);
+        }
+
+        if (model.Kind is CouponKind.Percentage or CouponKind.BuyXGetY && model.Percentage is <= 0m or > 100m)
         {
             ModelState.AddModelError(nameof(model.Percentage), S["Enter a percentage between 1 and 100."]);
         }
@@ -558,13 +598,25 @@ public sealed class CouponsAdminController : Controller
     private static void Apply(CouponEditViewModel model, Coupon coupon)
     {
         coupon.Code = model.Code?.Trim();
+        coupon.Method = model.Method;
         coupon.Description = model.Description?.Trim();
         coupon.Kind = model.Kind;
-        coupon.Percentage = model.Kind == CouponKind.Percentage ? model.Percentage : 0m;
+        coupon.Percentage = model.Kind is CouponKind.Percentage or CouponKind.BuyXGetY ? model.Percentage : 0m;
         coupon.Amount = model.Kind == CouponKind.FixedAmount ? model.Amount : 0m;
         coupon.Currency = model.Kind == CouponKind.FixedAmount ? model.Currency?.Trim().ToUpperInvariant() : null;
-        // Free shipping takes off shipping, whatever it was set to apply to before.
-        coupon.Target = model.Kind == CouponKind.FreeShipping ? DiscountTarget.OneTime : model.Target;
+        // Free shipping takes off shipping, whatever it was set to apply to before, and a buy X get Y offer takes
+        // something off items bought now.
+        coupon.Target = model.Kind is CouponKind.FreeShipping or CouponKind.BuyXGetY ? DiscountTarget.OneTime : model.Target;
+        coupon.BuyQuantity = model.Kind == CouponKind.BuyXGetY ? model.BuyQuantity ?? 0 : 0;
+        coupon.GetQuantity = model.Kind == CouponKind.BuyXGetY ? model.GetQuantity ?? 0 : 0;
+        coupon.MaxApplicationsPerOrder = model.Kind == CouponKind.BuyXGetY ? model.MaxApplicationsPerOrder : null;
+        coupon.MinimumQuantity = model.MinimumQuantity;
+
+        if (model.Kind != CouponKind.BuyXGetY)
+        {
+            coupon.BuyProductIds = [];
+            coupon.BuyCategoryIds = [];
+        }
         coupon.IsEnabled = model.IsEnabled;
         coupon.StartsUtc = model.StartsUtc;
         coupon.EndsUtc = model.EndsUtc;

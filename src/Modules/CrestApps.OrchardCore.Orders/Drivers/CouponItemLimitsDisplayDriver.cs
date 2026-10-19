@@ -36,6 +36,10 @@ internal sealed class CouponItemLimitsDisplayDriver : DisplayDriver<Coupon>
             model.CategorySearchEndpoint = $"{pathBase}/{CouponItemSearchEndpoints.CategoriesPath}";
             model.InitialProductsJson = ToJson(await _lookup.GetProductsAsync(model.ProductIds));
             model.InitialCategoriesJson = ToJson(await _lookup.GetCategoriesAsync(model.CategoryIds));
+            model.BuyProductIds = [.. coupon.BuyProductIds ?? []];
+            model.BuyCategoryIds = [.. coupon.BuyCategoryIds ?? []];
+            model.InitialBuyProductsJson = ToJson(await _lookup.GetProductsAsync(model.BuyProductIds));
+            model.InitialBuyCategoriesJson = ToJson(await _lookup.GetCategoriesAsync(model.BuyCategoryIds));
         }).Location("Content:10");
 
     public override async Task<IDisplayResult> UpdateAsync(Coupon coupon, UpdateEditorContext context)
@@ -46,6 +50,8 @@ internal sealed class CouponItemLimitsDisplayDriver : DisplayDriver<Coupon>
 
         coupon.ProductIds = Clean(model.ProductIds);
         coupon.CategoryIds = Clean(model.CategoryIds);
+        coupon.BuyProductIds = Clean(model.BuyProductIds);
+        coupon.BuyCategoryIds = Clean(model.BuyCategoryIds);
 
         return Edit(coupon, context);
     }

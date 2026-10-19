@@ -68,4 +68,20 @@ public sealed class CouponMigrations : DataMigration
 
         return 2;
     }
+
+    /// <summary>
+    /// Marks the discounts that apply by themselves, without a code, so every checkout can find them.
+    /// </summary>
+    /// <returns>The schema version this migration upgrades to.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<CouponIndex>(table => table
+            .AddColumn<bool>("IsAutomatic", column => column.WithDefault(false)),
+            collection: CheckoutConstants.CouponCollectionName
+        );
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<CouponIndex>(SchemaBuilder, "IDX_CouponIndex_Automatic", CheckoutConstants.CouponCollectionName, "IsAutomatic", "IsEnabled");
+
+        return 3;
+    }
 }

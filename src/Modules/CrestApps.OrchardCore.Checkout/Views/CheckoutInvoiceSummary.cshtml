@@ -43,7 +43,7 @@
         @foreach (var discount in invoice.Discounts ?? [])
         {
             <div class="d-flex justify-content-between text-success">
-                <span>@if (string.IsNullOrEmpty(discount.Code)) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
+                <span>@if (string.IsNullOrEmpty(discount.Code) || discount.IsAutomatic) { @discount.Description } else { @T["Discount ({0})", discount.Code] }</span>
                 <span>&minus;@Format(discount.Amount)</span>
             </div>
         }

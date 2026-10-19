@@ -61,6 +61,20 @@ public sealed class DiscountLine
     public string GaveWayTo { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the discount applied by itself, without the buyer entering a code. Its
+    /// <see cref="Code"/> then only identifies where it came from, and the buyer is shown its
+    /// <see cref="Description"/>.
+    /// </summary>
+    public bool IsAutomatic { get; set; }
+
+    /// <summary>
+    /// Gets or sets, for a discount that takes more off some lines than others (such as the free item of a buy X get
+    /// Y offer), how much it takes off each, by line item id. When it's empty, what the discount takes off is spread
+    /// across its lines in proportion to their totals.
+    /// </summary>
+    public IDictionary<string, decimal> LineShares { get; set; }
+
+    /// <summary>
     /// Gets the kind of discount it is.
     /// </summary>
     public DiscountClass GetClass()

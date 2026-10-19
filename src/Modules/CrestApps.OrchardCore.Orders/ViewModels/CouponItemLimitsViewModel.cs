@@ -9,6 +9,16 @@ public class CouponItemLimitsViewModel
 
     public string[] CategoryIds { get; set; } = [];
 
+    public string[] BuyProductIds { get; set; } = [];
+
+    public string[] BuyCategoryIds { get; set; } = [];
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string InitialBuyProductsJson { get; set; } = "[]";
+
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public string InitialBuyCategoriesJson { get; set; } = "[]";
+
     [BindNever]
     public string ProductSearchEndpoint { get; set; }
 

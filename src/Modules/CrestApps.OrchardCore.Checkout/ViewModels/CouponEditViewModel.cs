@@ -91,6 +91,16 @@ public sealed class CouponEditViewModel
     /// </summary>
     public int? MaxRedemptionsPerCustomer { get; set; }
 
+    public CouponMethod Method { get; set; }
+
+    public int? MinimumQuantity { get; set; }
+
+    public int? BuyQuantity { get; set; }
+
+    public int? GetQuantity { get; set; }
+
+    public int? MaxApplicationsPerOrder { get; set; }
+
     public bool CombinesWithProductDiscounts { get; set; }
 
     public bool CombinesWithOrderDiscounts { get; set; }

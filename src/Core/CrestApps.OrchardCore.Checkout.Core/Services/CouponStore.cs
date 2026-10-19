@@ -51,6 +51,12 @@ public sealed class CouponStore : DocumentCatalog<Coupon, CouponIndex>, ICouponS
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Coupon>> ListAutomaticAsync(CancellationToken cancellationToken = default)
+        => [.. await Session
+            .Query<Coupon, CouponIndex>(x => x.IsAutomatic && x.IsEnabled, collection: CollectionName)
+            .ListAsync(cancellationToken)];
+
+    /// <inheritdoc/>
     protected override ValueTask SavingAsync(Coupon record)
     {
         var now = _clock.UtcNow;

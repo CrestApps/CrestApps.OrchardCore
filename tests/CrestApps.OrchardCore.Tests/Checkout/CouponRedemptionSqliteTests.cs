@@ -42,6 +42,7 @@ public sealed class CouponRedemptionSqliteTests : IAsyncLifetime
 
         await migration.CreateAsync();
         await migration.UpdateFrom1Async();
+        await migration.UpdateFrom2Async();
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
     }
 

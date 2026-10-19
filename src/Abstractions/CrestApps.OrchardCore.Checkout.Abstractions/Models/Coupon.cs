@@ -25,6 +25,19 @@ public sealed class Coupon : CatalogItem
     public string Code { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the buyer enters the code, or the discount applies by itself to every checkout that meets
+    /// its conditions. An automatic discount's code is never typed: it only identifies the discount's uses.
+    /// </summary>
+    public CouponMethod Method { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the discount applies by itself, without a code.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool IsAutomatic
+        => Method == CouponMethod.Automatic;
+
+    /// <summary>
     /// Gets or sets the description the customer sees on their invoice.
     /// </summary>
     public string Description { get; set; }
@@ -101,6 +114,42 @@ public sealed class Coupon : CatalogItem
     public int? MaxRedemptionsPerCustomer { get; set; }
 
     /// <summary>
+    /// Gets or sets how many of the items it counts the order must have for the coupon to apply, such as "buy 3 or
+    /// more", or <see langword="null"/> for no minimum. For a buy X get Y offer, it counts the items bought.
+    /// </summary>
+    public int? MinimumQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets, for a buy X get Y offer, how many qualifying items the customer buys for each time the offer
+    /// applies.
+    /// </summary>
+    public int BuyQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets, for a buy X get Y offer, the products that count toward what the customer buys. With
+    /// <see cref="BuyCategoryIds"/> empty too, every item counts.
+    /// </summary>
+    public IList<string> BuyProductIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets, for a buy X get Y offer, the categories whose products count toward what the customer buys.
+    /// </summary>
+    public IList<string> BuyCategoryIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets, for a buy X get Y offer, how many items the customer gets at <see cref="Percentage"/> off (100
+    /// for free) each time the offer applies. The items they get are the ones <see cref="ProductIds"/> and
+    /// <see cref="CategoryIds"/> allow, or any item when both are empty, the cheapest first.
+    /// </summary>
+    public int GetQuantity { get; set; }
+
+    /// <summary>
+    /// Gets or sets, for a buy X get Y offer, the most times it applies to one order, or <see langword="null"/> for
+    /// as many times as the order allows.
+    /// </summary>
+    public int? MaxApplicationsPerOrder { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the coupon can be used with discounts off some products.
     /// </summary>
     public bool CombinesWithProductDiscounts { get; set; }
@@ -122,7 +171,7 @@ public sealed class Coupon : CatalogItem
     public DiscountClass DiscountClass
         => Kind == CouponKind.FreeShipping || Target == DiscountTarget.Shipping
             ? DiscountClass.Shipping
-            : HasItemLimits ? DiscountClass.Product : DiscountClass.Order;
+            : HasItemLimits || Kind == CouponKind.BuyXGetY ? DiscountClass.Product : DiscountClass.Order;
 
     /// <summary>
     /// Gets the kinds of discount the coupon can be used with.
@@ -237,19 +286,124 @@ public sealed class Coupon : CatalogItem
     {
         ArgumentNullException.ThrowIfNull(line);
 
-        if (!HasItemLimits)
+        return !HasItemLimits || Matches(line, ProductIds, CategoryIds);
+    }
+
+    /// <summary>
+    /// Returns whether an invoice line counts toward what the customer buys for a buy X get Y offer: any line, unless
+    /// the offer names products or categories to buy.
+    /// </summary>
+    /// <param name="line">The invoice line.</param>
+    public bool CountsTowardBuy(CheckoutLineItem line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+
+        return (BuyProductIds is not { Count: > 0 } && BuyCategoryIds is not { Count: > 0 }) || Matches(line, BuyProductIds, BuyCategoryIds);
+    }
+
+    /// <summary>
+    /// Returns what a buy X get Y offer takes off the lines, before rounding, and how much of it comes off each line.
+    /// </summary>
+    /// <remarks>
+    /// Each time the offer applies, the cheapest items the customer can get are discounted, and the dearest of the
+    /// items left that count toward what they buy pay for them. So "buy 2 get 1 free" on three shirts makes the
+    /// cheapest free, and on six makes the two cheapest free. An item is only ever counted once, either bought or
+    /// got.
+    /// </remarks>
+    /// <param name="lines">The lines the offer can take something off.</param>
+    /// <param name="shares">What it takes off each line, by line item id.</param>
+    public decimal GetBuyXGetYDiscount(IEnumerable<CheckoutLineItem> lines, out Dictionary<string, decimal> shares)
+    {
+        shares = [];
+
+        if (Kind != CouponKind.BuyXGetY || BuyQuantity < 1 || GetQuantity < 1 || lines is null)
         {
-            return true;
+            return 0m;
         }
 
-        if (!string.IsNullOrEmpty(line.ProductId) && ProductIds?.Contains(line.ProductId, StringComparer.Ordinal) == true)
+        var percentage = Math.Clamp(Percentage, 0m, 100m);
+
+        if (percentage <= 0m)
+        {
+            return 0m;
+        }
+
+        var units = new List<(CheckoutLineItem Line, decimal Price, bool CanBuy, bool CanGet)>();
+
+        foreach (var line in lines.Where(line => line.Quantity > 0 && line.UnitPrice > 0m))
+        {
+            var canBuy = CountsTowardBuy(line);
+            var canGet = AppliesTo(line);
+
+            if (!canBuy && !canGet)
+            {
+                continue;
+            }
+
+            for (var i = 0; i < line.Quantity; i++)
+            {
+                units.Add((line, line.UnitPrice, canBuy, canGet));
+            }
+        }
+
+        var used = new bool[units.Count];
+        var total = 0m;
+        var applications = 0;
+
+        while (!MaxApplicationsPerOrder.HasValue || applications < MaxApplicationsPerOrder.Value)
+        {
+            var got = Enumerable.Range(0, units.Count)
+                .Where(index => !used[index] && units[index].CanGet)
+                .OrderBy(index => units[index].Price)
+                .Take(GetQuantity)
+                .ToList();
+
+            if (got.Count < GetQuantity)
+            {
+                break;
+            }
+
+            var bought = Enumerable.Range(0, units.Count)
+                .Where(index => !used[index] && units[index].CanBuy && !got.Contains(index))
+                .OrderByDescending(index => units[index].Price)
+                .Take(BuyQuantity)
+                .ToList();
+
+            if (bought.Count < BuyQuantity)
+            {
+                break;
+            }
+
+            foreach (var index in got.Concat(bought))
+            {
+                used[index] = true;
+            }
+
+            foreach (var index in got)
+            {
+                var off = units[index].Price * percentage / 100m;
+                var itemId = units[index].Line.ItemId ?? string.Empty;
+
+                shares[itemId] = shares.GetValueOrDefault(itemId) + off;
+                total += off;
+            }
+
+            applications++;
+        }
+
+        return total;
+    }
+
+    private static bool Matches(CheckoutLineItem line, IList<string> productIds, IList<string> categoryIds)
+    {
+        if (!string.IsNullOrEmpty(line.ProductId) && productIds?.Contains(line.ProductId, StringComparer.Ordinal) == true)
         {
             return true;
         }
 
         return line.CategoryIds is { Length: > 0 } categories &&
-            CategoryIds is { Count: > 0 } &&
-            categories.Any(category => CategoryIds.Contains(category, StringComparer.Ordinal));
+            categoryIds is { Count: > 0 } &&
+            categories.Any(category => categoryIds.Contains(category, StringComparer.Ordinal));
     }
 
     /// <summary>
@@ -279,7 +433,7 @@ public sealed class Coupon : CatalogItem
     /// <param name="currency">The invoice currency.</param>
     public decimal GetDiscount(decimal baseAmount, string currency)
     {
-        if (Kind == CouponKind.FreeShipping || !IsWithinSpend(baseAmount))
+        if (Kind is CouponKind.FreeShipping or CouponKind.BuyXGetY || !IsWithinSpend(baseAmount))
         {
             return 0m;
         }
@@ -321,4 +475,25 @@ public enum CouponKind
     /// The shipping charged now, whatever it is.
     /// </summary>
     FreeShipping = 2,
+
+    /// <summary>
+    /// A percentage off some items (100 for free) for every so many items bought.
+    /// </summary>
+    BuyXGetY = 3,
+}
+
+/// <summary>
+/// How a <see cref="Coupon"/> reaches a checkout.
+/// </summary>
+public enum CouponMethod
+{
+    /// <summary>
+    /// The buyer enters its code.
+    /// </summary>
+    Code = 0,
+
+    /// <summary>
+    /// It applies by itself to every checkout that meets its conditions.
+    /// </summary>
+    Automatic = 1,
 }

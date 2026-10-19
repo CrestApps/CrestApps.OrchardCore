@@ -250,10 +250,16 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
             return;
         }
 
+        // A discount that says how much it takes off each line, such as a free item, is spread by that instead.
+        decimal Weight(CheckoutLineItem line)
+            => discount.LineShares is { Count: > 0 } shares
+                ? (shares.TryGetValue(line.ItemId ?? string.Empty, out var share) ? share : 0m)
+                : line.GetLineTotal(currency);
+
         var eligible = lines
-            .Where(line => CheckoutDiscountBase.IsDiscountable(line, discount.Target) && discount.IsLimitedTo(line) && line.GetLineTotal(currency) > 0m)
+            .Where(line => CheckoutDiscountBase.IsDiscountable(line, discount.Target) && discount.IsLimitedTo(line) && line.GetLineTotal(currency) > 0m && Weight(line) > 0m)
             .ToArray();
-        var total = eligible.Sum(line => line.GetLineTotal(currency));
+        var total = eligible.Sum(Weight);
 
         if (total <= 0m)
         {
@@ -264,10 +270,9 @@ public sealed class DefaultCheckoutDiscountService : ICheckoutDiscountService
 
         for (var i = 0; i < eligible.Length; i++)
         {
-            var lineTotal = eligible[i].GetLineTotal(currency);
             var share = i == eligible.Length - 1
                 ? remaining
-                : Money.Round(discount.Amount * (lineTotal / total), currency);
+                : Money.Round(discount.Amount * (Weight(eligible[i]) / total), currency);
 
             share = Math.Max(0m, Math.Min(Math.Min(share, remaining), Room(eligible[i], currency)));
 

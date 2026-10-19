@@ -13,6 +13,12 @@
     {
         @T["Free shipping"]
     }
+    else if (Model.Value.Kind == CouponKind.BuyXGetY)
+    {
+        @(Model.Value.Percentage >= 100m
+            ? T["Buy {0}, get {1} free", Model.Value.BuyQuantity, Model.Value.GetQuantity]
+            : T["Buy {0}, get {1} at {2}% off", Model.Value.BuyQuantity, Model.Value.GetQuantity, Model.Value.Percentage.ToString("0.##")])
+    }
     else
     {
         @($"{Model.Value.Currency} {CurrencyScale.Format(Model.Value.Amount, Model.Value.Currency)}")
