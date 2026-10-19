@@ -68,9 +68,9 @@ public sealed class CarrierShippingTests
     [Fact]
     public async Task ACarrierMethod_OffersTheCheapestServicesWithItsMarkup_AndFallsBackWhenTheCarriersFail()
     {
-        var carrier = new Mock<ICarrierService>();
+        var carrier = new Mock<ICarrierProvider>();
         carrier.SetupGet(value => value.Name).Returns("Test");
-        carrier.Setup(value => value.IsConfiguredAsync()).ReturnsAsync(true);
+        carrier.Setup(value => value.IsEnabledAsync()).ReturnsAsync(true);
         carrier.SetupSequence(value => value.QuoteAsync(It.IsAny<CarrierShipmentRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CarrierQuote
             {
@@ -84,7 +84,10 @@ public sealed class CarrierShippingTests
             })
             .ReturnsAsync(new CarrierQuote { Error = "Down" });
 
-        var provider = new CarrierShippingRateProvider([carrier.Object], SiteService(new ShippingSettings { ShipFrom = _seattle }), new MemoryCache(new MemoryCacheOptions()), NullLogger<CarrierShippingRateProvider>.Instance, new PassThroughStringLocalizer<CarrierShippingRateProvider>());
+        var resolver = new Mock<ICarrierProviderResolver>();
+        resolver.Setup(value => value.GetDefaultAsync()).ReturnsAsync(carrier.Object);
+
+        var provider = new CarrierShippingRateProvider(resolver.Object, SiteService(new ShippingSettings { ShipFrom = _seattle }), new MemoryCache(new MemoryCacheOptions()), NullLogger<CarrierShippingRateProvider>.Instance, new PassThroughStringLocalizer<CarrierShippingRateProvider>());
         var method = new ShippingMethod { MethodId = "carrier", Name = "Carrier", ProviderName = ShippingConstants.Providers.Carrier };
         method.Put(new CarrierRateSettings { Carriers = ["UPS", "USPS"], MaxRates = 2, MarkupPercent = 10, MarkupAmount = 1, FallbackAmount = 9 });
         var zone = new ShippingZone { ItemId = "zone", Name = "US", Countries = ["US"], Methods = [method] };
@@ -130,13 +133,75 @@ public sealed class CarrierShippingTests
         shipments.Verify(value => value.DeliverAsync(shipment, It.IsAny<CancellationToken>()));
     }
 
-    private static EasyPostCarrierService EasyPost(Func<HttpRequestMessage, HttpResponseMessage> respond)
+    [Fact]
+    public async Task TheDefaultCarrierProvider_IsTheOneChosen_WhileItsEnabled()
+    {
+        var easyPost = Provider("EasyPost", enabled: true);
+        var other = Provider("Other", enabled: false);
+
+        DefaultCarrierProviderResolver Resolver(string chosen)
+        {
+            var site = new Mock<ISite>();
+            site.Setup(value => value.GetOrCreate<CarrierProviderSettings>()).Returns(new CarrierProviderSettings { DefaultProviderName = chosen });
+            var siteService = new Mock<ISiteService>();
+            siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
+
+            return new DefaultCarrierProviderResolver([easyPost, other], siteService.Object);
+        }
+
+        Assert.Same(easyPost, await Resolver("easypost").GetDefaultAsync());
+        Assert.Null(await Resolver("Other").GetDefaultAsync());
+        Assert.Null(await Resolver(null).GetDefaultAsync());
+        Assert.Equal([easyPost], await Resolver(null).GetEnabledAsync());
+
+        static ICarrierProvider Provider(string name, bool enabled)
+        {
+            var provider = new Mock<ICarrierProvider>();
+            provider.SetupGet(value => value.Name).Returns(name);
+            provider.Setup(value => value.IsEnabledAsync()).ReturnsAsync(enabled);
+
+            return provider.Object;
+        }
+    }
+
+    [Theory]
+    [InlineData("USPS", "GroundAdvantage", "Ground Advantage")]
+    [InlineData("UPS", "2ndDayAir", "2nd Day Air")]
+    [InlineData("FedEx", "FEDEX_2_DAY_AM", "2 Day AM")]
+    [InlineData("FedEx", "SMART_POST", "Smart Post")]
+    [InlineData("FedEx", "FIRST_OVERNIGHT", "First Overnight")]
+    public void ACarriersServiceCode_ReadsAsItsName(string carrier, string service, string expected)
+        => Assert.Equal(expected, CarrierShippingRateProvider.DescribeService(carrier, service));
+
+    [Theory]
+    [InlineData("FedExDefault", "FedEx")]
+    [InlineData("UPSDAP", "UPS")]
+    [InlineData("USPS", "USPS")]
+    public void EasyPostsOwnCarrierAccounts_ReadAsTheCarrier(string carrier, string expected)
+        => Assert.Equal(expected, EasyPostCarrierProvider.CarrierName(carrier));
+
+    [Fact]
+    public void EasyPostsErrors_NameTheFieldsThatAreWrong()
+        => Assert.Equal(
+            "Missing required parameter. (shipment.to_address.zip: cannot be blank)",
+            EasyPostCarrierProvider.DescribeError(JsonNode.Parse("""{"code":"PARAMETER.REQUIRED","message":"Missing required parameter.","errors":[{"field":"shipment.to_address.zip","message":"cannot be blank"}]}""") as JsonObject));
+
+    [Theory]
+    [InlineData("https://shop.example.com/store", "https://shop.example.com/store/shipping/easypost/webhook")]
+    [InlineData("https://localhost:5390/shop", null)]
+    [InlineData("http://shop.example.com", null)]
+    [InlineData("https://shop.test", null)]
+    [InlineData(null, null)]
+    public void TrackingUpdates_AreRegisteredOnlyForAPublicHttpsAddress(string baseUrl, string expected)
+        => Assert.Equal(expected, CrestApps.OrchardCore.Shipping.Drivers.EasyPostSettingsDisplayDriver.WebhookUrlFor(baseUrl));
+
+    private static EasyPostCarrierProvider EasyPost(Func<HttpRequestMessage, HttpResponseMessage> respond)
     {
         var protection = new EphemeralDataProtectionProvider();
-        var settings = new EasyPostSettings { ApiKey = protection.CreateProtector(EasyPostCarrierService.ProtectionPurpose).Protect("EZTK_test") };
+        var settings = new EasyPostSettings { IsEnabled = true, ApiKey = protection.CreateProtector(EasyPostCarrierProvider.ProtectionPurpose).Protect("EZTK_test") };
 
         var factory = new Mock<IHttpClientFactory>();
-        factory.Setup(value => value.CreateClient(EasyPostCarrierService.HttpClientName))
+        factory.Setup(value => value.CreateClient(EasyPostCarrierProvider.HttpClientName))
             .Returns(() => new HttpClient(new ReplyingHandler(respond)) { BaseAddress = new Uri("https://api.easypost.test/v2/") });
 
         var site = new Mock<ISite>();
@@ -144,7 +209,7 @@ public sealed class CarrierShippingTests
         var siteService = new Mock<ISiteService>();
         siteService.Setup(value => value.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
-        return new EasyPostCarrierService(factory.Object, siteService.Object, protection, NullLogger<EasyPostCarrierService>.Instance, new PassThroughStringLocalizer<EasyPostCarrierService>());
+        return new EasyPostCarrierProvider(factory.Object, siteService.Object, protection, NullLogger<EasyPostCarrierProvider>.Instance, new PassThroughStringLocalizer<EasyPostCarrierProvider>());
     }
 
     private static ISiteService SiteService(ShippingSettings settings)

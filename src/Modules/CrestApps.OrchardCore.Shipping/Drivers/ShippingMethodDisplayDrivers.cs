@@ -374,11 +374,11 @@ internal sealed class CarrierRateMethodDisplayDriver : DisplayDriver<ShippingMet
 {
     private const int MaxCarriers = 20;
 
-    private readonly IEnumerable<ICarrierService> _carriers;
+    private readonly ICarrierProviderResolver _carriers;
 
     internal readonly IStringLocalizer S;
 
-    public CarrierRateMethodDisplayDriver(IEnumerable<ICarrierService> carriers, IStringLocalizer<CarrierRateMethodDisplayDriver> stringLocalizer)
+    public CarrierRateMethodDisplayDriver(ICarrierProviderResolver carriers, IStringLocalizer<CarrierRateMethodDisplayDriver> stringLocalizer)
     {
         _carriers = carriers;
         S = stringLocalizer;
@@ -401,10 +401,7 @@ internal sealed class CarrierRateMethodDisplayDriver : DisplayDriver<ShippingMet
             model.MarkupAmount = settings.MarkupAmount;
             model.FallbackAmount = settings.FallbackAmount;
 
-            foreach (var carrier in _carriers)
-            {
-                model.HasCarrierAccount |= await carrier.IsConfiguredAsync();
-            }
+            model.HasCarrierAccount = await _carriers.GetDefaultAsync() is not null;
         }).Location("Content:5");
     }
 

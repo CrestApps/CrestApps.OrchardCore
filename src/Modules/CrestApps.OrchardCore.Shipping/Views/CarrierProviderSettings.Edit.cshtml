@@ -1,0 +1,20 @@
+@model CarrierProviderSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultProvider">
+    <label asp-for="DefaultProvider" class="ocat-label">@T["Default carrier provider"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultProvider" class="form-select" asp-items="Model.Providers">
+            <option value="">@T["None"]</option>
+        </select>
+        <span asp-validation-for="DefaultProvider"></span>
+        <span class="hint">@T["The shipping account that quotes the carriers' rates for Carrier rates shipping methods and buys the labels of shipments. Only enabled providers are listed."]</span>
+        @if (!Model.HasProviders)
+        {
+            <div class="alert alert-info mt-2 mb-0">@T["No carrier provider is turned on. Turn one on under Tools › Features, such as EasyPost, then enable it on its own tab here."]</div>
+        }
+        else if (Model.Providers.Count == 0)
+        {
+            <div class="alert alert-info mt-2 mb-0">@T["No carrier provider is enabled yet. Enable one on its own tab, then choose it here."]</div>
+        }
+    </div>
+</div>

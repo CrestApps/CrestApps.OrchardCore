@@ -20,14 +20,14 @@ public sealed class EasyPostWebhookController : Controller
     private const long MaxBodyBytes = 512 * 1024;
 
     private readonly ISiteService _siteService;
-    private readonly EasyPostCarrierService _carrier;
+    private readonly EasyPostCarrierProvider _carrier;
     private readonly EasyPostTrackingUpdater _updater;
     private readonly ISession _session;
     private readonly ILogger _logger;
 
     public EasyPostWebhookController(
         ISiteService siteService,
-        EasyPostCarrierService carrier,
+        EasyPostCarrierProvider carrier,
         EasyPostTrackingUpdater updater,
         ISession session,
         ILogger<EasyPostWebhookController> logger)

@@ -43,54 +43,64 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
     protected override string SettingsGroupId
         => ShippingConstants.SettingsGroupId;
 
+    // The settings in three tabs, after the carrier providers': General, Store pickup and Sending parcels. One model
+    // binds them all, so each tab's shape is filled the same way.
     public override IDisplayResult Edit(ISite site, ShippingSettings settings, BuildEditorContext context)
-        => Initialize<ShippingSettingsViewModel>("ShippingSettings_Edit", async model =>
-        {
-            model.WeightUnit = settings.WeightUnit;
-            model.ShippingClasses = string.Join(Environment.NewLine, settings.ShippingClasses ?? []);
-            model.Carriers = string.Join(Environment.NewLine, (settings.Carriers ?? []).Select(carrier => string.IsNullOrEmpty(carrier.TrackingUrlTemplate) ? carrier.Name : $"{carrier.Name} | {carrier.TrackingUrlTemplate}"));
-            model.SendShippedEmails = settings.SendShippedEmails;
-            model.PickupLocations = (settings.PickupLocations ?? [])
-                .Select(location => new PickupLocationViewModel
-                {
-                    LocationId = location.LocationId,
-                    Name = location.Name,
-                    AddressLine1 = location.AddressLine1,
-                    City = location.City,
-                    Region = location.Region,
-                    PostalCode = location.PostalCode,
-                    Country = location.Country,
-                    Instructions = location.Instructions,
-                    Fee = location.Fee,
-                    StockLocationId = location.StockLocationId,
-                })
-                .ToList();
-            model.StockLocations = await GetStockLocationsAsync();
+        => Combine(
+            Tab("ShippingSettings_Edit", "Content:10#General", settings),
+            Tab("ShippingPickupSettings_Edit", "Content:20#Store pickup", settings),
+            Tab("ShippingSenderSettings_Edit", "Content:30#Sending parcels", settings));
 
-            var from = settings.ShipFrom;
+    private ShapeResult Tab(string shapeType, string location, ShippingSettings settings)
+        => Initialize<ShippingSettingsViewModel>(shapeType, model => PopulateAsync(model, settings)).Location(location)
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ShippingPermissions.ManageShipping))
+            .OnGroup(SettingsGroupId);
 
-            model.ShipFromName = from?.Name;
-            model.ShipFromCompany = from?.Company;
-            model.ShipFromAddressLine1 = from?.AddressLine1;
-            model.ShipFromAddressLine2 = from?.AddressLine2;
-            model.ShipFromCity = from?.City;
-            model.ShipFromRegion = from?.Region;
-            model.ShipFromPostalCode = from?.PostalCode;
-            model.ShipFromCountry = from?.Country;
-            model.ShipFromPhone = from?.Phone;
-            model.DefaultParcelLength = settings.DefaultParcelLength;
-            model.DefaultParcelWidth = settings.DefaultParcelWidth;
-            model.DefaultParcelHeight = settings.DefaultParcelHeight;
-            model.PackagingWeight = settings.PackagingWeight;
-
-            // A blank row to add a location with, while there is room for one.
-            if (model.PickupLocations.Count < MaxPickupLocations)
+    private async ValueTask PopulateAsync(ShippingSettingsViewModel model, ShippingSettings settings)
+    {
+        model.WeightUnit = settings.WeightUnit;
+        model.ShippingClasses = string.Join(Environment.NewLine, settings.ShippingClasses ?? []);
+        model.Carriers = string.Join(Environment.NewLine, (settings.Carriers ?? []).Select(carrier => string.IsNullOrEmpty(carrier.TrackingUrlTemplate) ? carrier.Name : $"{carrier.Name} | {carrier.TrackingUrlTemplate}"));
+        model.SendShippedEmails = settings.SendShippedEmails;
+        model.PickupLocations = (settings.PickupLocations ?? [])
+            .Select(location => new PickupLocationViewModel
             {
-                model.PickupLocations.Add(new PickupLocationViewModel());
-            }
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ShippingPermissions.ManageShipping))
-        .OnGroup(SettingsGroupId);
+                LocationId = location.LocationId,
+                Name = location.Name,
+                AddressLine1 = location.AddressLine1,
+                City = location.City,
+                Region = location.Region,
+                PostalCode = location.PostalCode,
+                Country = location.Country,
+                Instructions = location.Instructions,
+                Fee = location.Fee,
+                StockLocationId = location.StockLocationId,
+            })
+            .ToList();
+        model.StockLocations = await GetStockLocationsAsync();
+
+        var from = settings.ShipFrom;
+
+        model.ShipFromName = from?.Name;
+        model.ShipFromCompany = from?.Company;
+        model.ShipFromAddressLine1 = from?.AddressLine1;
+        model.ShipFromAddressLine2 = from?.AddressLine2;
+        model.ShipFromCity = from?.City;
+        model.ShipFromRegion = from?.Region;
+        model.ShipFromPostalCode = from?.PostalCode;
+        model.ShipFromCountry = from?.Country;
+        model.ShipFromPhone = from?.Phone;
+        model.DefaultParcelLength = settings.DefaultParcelLength;
+        model.DefaultParcelWidth = settings.DefaultParcelWidth;
+        model.DefaultParcelHeight = settings.DefaultParcelHeight;
+        model.PackagingWeight = settings.PackagingWeight;
+
+        // A blank row to add a location with, while there is room for one.
+        if (model.PickupLocations.Count < MaxPickupLocations)
+        {
+            model.PickupLocations.Add(new PickupLocationViewModel());
+        }
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, ShippingSettings settings, UpdateEditorContext context)
     {

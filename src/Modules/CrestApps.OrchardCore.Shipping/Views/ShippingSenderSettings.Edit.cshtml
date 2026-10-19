@@ -1,0 +1,66 @@
+@model ShippingSettingsViewModel
+
+<p class="text-body-secondary">@T["Where parcels leave from and the box most orders go in, which carriers quote rates and print labels for."]</p>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-6" asp-validation-class-for="ShipFromAddressLine1">
+        <label asp-for="ShipFromName" class="form-label">@T["Sender's name"]</label>
+        <input asp-for="ShipFromName" class="form-control" autocomplete="off" />
+    </div>
+    <div class="col-md-6">
+        <label asp-for="ShipFromCompany" class="form-label">@T["Company"]</label>
+        <input asp-for="ShipFromCompany" class="form-control" autocomplete="off" />
+    </div>
+    <div class="col-md-8">
+        <label asp-for="ShipFromAddressLine1" class="form-label">@T["Street address"]</label>
+        <input asp-for="ShipFromAddressLine1" class="form-control" autocomplete="off" />
+        <span asp-validation-for="ShipFromAddressLine1"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="ShipFromAddressLine2" class="form-label">@T["Apartment, suite"]</label>
+        <input asp-for="ShipFromAddressLine2" class="form-control" autocomplete="off" />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="ShipFromCity" class="form-label">@T["City"]</label>
+        <input asp-for="ShipFromCity" class="form-control" autocomplete="off" />
+    </div>
+    <div class="col-md-3">
+        <label asp-for="ShipFromRegion" class="form-label">@T["State or region"]</label>
+        <input asp-for="ShipFromRegion" class="form-control" autocomplete="off" />
+    </div>
+    <div class="col-md-3">
+        <label asp-for="ShipFromPostalCode" class="form-label">@T["Postal code"]</label>
+        <input asp-for="ShipFromPostalCode" class="form-control" autocomplete="off" />
+    </div>
+    <div class="col-md-2">
+        <label asp-for="ShipFromCountry" class="form-label">@T["Country"]</label>
+        <input asp-for="ShipFromCountry" class="form-control text-uppercase" maxlength="2" placeholder="US" autocomplete="off" />
+    </div>
+    <div class="col-md-4">
+        <label asp-for="ShipFromPhone" class="form-label">@T["Phone"]</label>
+        <input asp-for="ShipFromPhone" type="tel" class="form-control" autocomplete="off" />
+        <span class="hint">@T["Some carriers need one for labels."]</span>
+    </div>
+</div>
+
+<div class="row g-2 mb-3">
+    <div class="col-sm-6 col-md-3">
+        <label asp-for="DefaultParcelLength" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box length (in)"] : T["Box length (cm)"])</label>
+        <input asp-for="DefaultParcelLength" type="number" min="0" step="any" class="form-control" />
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <label asp-for="DefaultParcelWidth" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Width (in)"] : T["Width (cm)"])</label>
+        <input asp-for="DefaultParcelWidth" type="number" min="0" step="any" class="form-control" />
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <label asp-for="DefaultParcelHeight" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Height (in)"] : T["Height (cm)"])</label>
+        <input asp-for="DefaultParcelHeight" type="number" min="0" step="any" class="form-control" />
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <label asp-for="PackagingWeight" class="form-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box weight (lb)"] : T["Box weight (kg)"])</label>
+        <input asp-for="PackagingWeight" type="number" min="0" step="any" class="form-control" />
+    </div>
+    <div class="col-12">
+        <span class="hint">@T["The box size is optional: carriers price by weight without it. The box weight is added to the items' weight."]</span>
+    </div>
+</div>

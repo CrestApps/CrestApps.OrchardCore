@@ -1,0 +1,72 @@
+@model ShippingSettingsViewModel
+
+<p class="text-body-secondary">@T["Places buyers can pick their order up from instead of having it shipped. They're offered on the checkout's Shipping step. Leave the blank location empty to add none."]</p>
+
+@for (var i = 0; i < Model.PickupLocations.Count; i++)
+{
+    var isNew = string.IsNullOrEmpty(Model.PickupLocations[i].LocationId);
+
+    <fieldset class="border rounded p-3 mb-3">
+        <legend class="float-none w-auto fs-6 px-1 mb-0">@(isNew ? T["Add a pickup location"] : T["Pickup location"])</legend>
+        <input type="hidden" asp-for="PickupLocations[i].LocationId" />
+        <div class="row g-2">
+            <div class="col-md-6" asp-validation-class-for="PickupLocations[i].Name">
+                <label asp-for="PickupLocations[i].Name" class="form-label">@T["Name"]</label>
+                <input asp-for="PickupLocations[i].Name" class="form-control" placeholder="@T["Downtown store"]" />
+                <span asp-validation-for="PickupLocations[i].Name"></span>
+            </div>
+            <div class="col-md-6" asp-validation-class-for="PickupLocations[i].Fee">
+                <label asp-for="PickupLocations[i].Fee" class="form-label">@T["Fee"]</label>
+                <input asp-for="PickupLocations[i].Fee" type="number" min="0" step="any" class="form-control w-auto" />
+                <span asp-validation-for="PickupLocations[i].Fee"></span>
+            </div>
+            <div class="col-12" asp-validation-class-for="PickupLocations[i].AddressLine1">
+                <label asp-for="PickupLocations[i].AddressLine1" class="form-label">@T["Street address"]</label>
+                <input asp-for="PickupLocations[i].AddressLine1" class="form-control" autocomplete="off" />
+                <span asp-validation-for="PickupLocations[i].AddressLine1"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="PickupLocations[i].City" class="form-label">@T["City"]</label>
+                <input asp-for="PickupLocations[i].City" class="form-control" autocomplete="off" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="PickupLocations[i].Region" class="form-label">@T["State or region"]</label>
+                <input asp-for="PickupLocations[i].Region" class="form-control" autocomplete="off" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="PickupLocations[i].PostalCode" class="form-label">@T["Postal code"]</label>
+                <input asp-for="PickupLocations[i].PostalCode" class="form-control" autocomplete="off" />
+            </div>
+            <div class="col-md-2">
+                <label asp-for="PickupLocations[i].Country" class="form-label">@T["Country"]</label>
+                <input asp-for="PickupLocations[i].Country" class="form-control text-uppercase" maxlength="2" placeholder="US" autocomplete="off" />
+            </div>
+            @if (Model.StockLocations.Count > 1)
+            {
+                <div class="col-md-6">
+                    <label asp-for="PickupLocations[i].StockLocationId" class="form-label">@T["Stock comes from"]</label>
+                    <select asp-for="PickupLocations[i].StockLocationId" class="form-select">
+                        <option value="">@T["Any location"]</option>
+                        @foreach (var stock in Model.StockLocations)
+                        {
+                            <option value="@stock.Value" selected="@(stock.Value == Model.PickupLocations[i].StockLocationId)">@stock.Text</option>
+                        }
+                    </select>
+                    <span class="hint">@T["The inventory location orders picked up here take their units from, when it has them."]</span>
+                </div>
+            }
+            <div class="col-12">
+                <label asp-for="PickupLocations[i].Instructions" class="form-label">@T["What buyers are told"]</label>
+                <input asp-for="PickupLocations[i].Instructions" class="form-control" placeholder="@T["Open 9-5, Monday to Saturday. Ready within 2 hours."]" />
+                <span class="hint">@T["Shown when they choose it, and on their order."]</span>
+            </div>
+        </div>
+        @if (!isNew)
+        {
+            <div class="form-check mt-2">
+                <input asp-for="PickupLocations[i].Remove" type="checkbox" class="form-check-input" />
+                <label asp-for="PickupLocations[i].Remove" class="form-check-label">@T["Remove this location"]</label>
+            </div>
+        }
+    </fieldset>
+}

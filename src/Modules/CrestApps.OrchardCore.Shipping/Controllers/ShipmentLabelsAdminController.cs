@@ -21,7 +21,7 @@ public sealed class ShipmentLabelsAdminController : Controller
     private readonly IShipmentStore _shipments;
     private readonly IShipmentService _shipmentService;
     private readonly IOrderStore _orders;
-    private readonly IEnumerable<ICarrierService> _carriers;
+    private readonly ICarrierProviderResolver _carriers;
     private readonly ShippingOrderRateService _orderRates;
     private readonly ISiteService _siteService;
     private readonly IAuthorizationService _authorizationService;
@@ -34,7 +34,7 @@ public sealed class ShipmentLabelsAdminController : Controller
         IShipmentStore shipments,
         IShipmentService shipmentService,
         IOrderStore orders,
-        IEnumerable<ICarrierService> carriers,
+        ICarrierProviderResolver carriers,
         ShippingOrderRateService orderRates,
         ISiteService siteService,
         IAuthorizationService authorizationService,
@@ -169,7 +169,7 @@ public sealed class ShipmentLabelsAdminController : Controller
         return RedirectToRoute("OrdersDetail", new { orderId = order.ItemId });
     }
 
-    private async Task<(Shipment Shipment, Orders.Core.Models.Order Order, ICarrierService Carrier, IActionResult Result)> LoadAsync(string shipmentId)
+    private async Task<(Shipment Shipment, Orders.Core.Models.Order Order, ICarrierProvider Carrier, IActionResult Result)> LoadAsync(string shipmentId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, ShippingPermissions.FulfillOrders))
         {
@@ -191,21 +191,11 @@ public sealed class ShipmentLabelsAdminController : Controller
             return (null, null, null, RedirectToRoute("OrdersDetail", new { orderId = order.ItemId }));
         }
 
-        ICarrierService carrier = null;
-
-        foreach (var candidate in _carriers)
-        {
-            if (await candidate.IsConfiguredAsync())
-            {
-                carrier = candidate;
-
-                break;
-            }
-        }
+        var carrier = await _carriers.GetDefaultAsync();
 
         if (carrier is null)
         {
-            await _notifier.WarningAsync(H["Set up a shipping account, such as EasyPost, to buy labels."]);
+            await _notifier.WarningAsync(H["Choose a default carrier provider, such as EasyPost, in Settings › Commerce › Shipping to buy labels."]);
 
             return (null, null, null, RedirectToRoute("OrdersDetail", new { orderId = order.ItemId }));
         }
@@ -213,7 +203,7 @@ public sealed class ShipmentLabelsAdminController : Controller
         return (shipment, order, carrier, null);
     }
 
-    private static ShipmentLabelViewModel Populate(ShipmentLabelViewModel model, Shipment shipment, Orders.Core.Models.Order order, ICarrierService carrier, ShippingSettings settings)
+    private static ShipmentLabelViewModel Populate(ShipmentLabelViewModel model, Shipment shipment, Orders.Core.Models.Order order, ICarrierProvider carrier, ShippingSettings settings)
     {
         model.Shipment = shipment;
         model.Order = order;

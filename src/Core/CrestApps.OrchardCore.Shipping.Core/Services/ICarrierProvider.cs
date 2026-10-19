@@ -4,19 +4,24 @@ using Microsoft.Extensions.Localization;
 namespace CrestApps.OrchardCore.Shipping.Services;
 
 /// <summary>
-/// A shipping account that quotes the carriers' rates for a parcel and buys their labels, such as EasyPost. Shipping
-/// methods priced by the carriers and the shipment's Buy label use the first one that's set up.
+/// A carrier provider: a shipping account that quotes the carriers' rates for a parcel and buys their labels, such as
+/// EasyPost. Each provider is a feature with its own tab on Settings › Commerce › Shipping, and the store chooses the
+/// default one there; shipping methods priced by the carriers and a shipment's Buy label use it, through
+/// <see cref="ICarrierProviderResolver"/>.
 /// </summary>
-public interface ICarrierService
+public interface ICarrierProvider
 {
+    /// <summary>
+    /// Gets the provider's technical name, which the default provider setting holds.
+    /// </summary>
     string Name { get; }
 
     LocalizedString DisplayName { get; }
 
     /// <summary>
-    /// Returns whether the account is set up, such as with its API key.
+    /// Returns whether the store enabled the provider and gave it what it needs, such as its API key.
     /// </summary>
-    Task<bool> IsConfiguredAsync();
+    Task<bool> IsEnabledAsync();
 
     /// <summary>
     /// Gets the carriers' rates for sending the parcel. A failed quote has an error and no rates.

@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -16,8 +15,9 @@ namespace CrestApps.OrchardCore.Shipping.Services;
 /// <summary>
 /// Quotes the carriers' rates and buys their labels through an EasyPost account.
 /// </summary>
-public sealed class EasyPostCarrierService : ICarrierService
+public sealed class EasyPostCarrierProvider : ICarrierProvider
 {
+    public const string TechnicalName = "EasyPost";
     public const string HttpClientName = "EasyPost";
     public const string ProtectionPurpose = "EasyPostSettings";
 
@@ -28,12 +28,12 @@ public sealed class EasyPostCarrierService : ICarrierService
 
     internal readonly IStringLocalizer S;
 
-    public EasyPostCarrierService(
+    public EasyPostCarrierProvider(
         IHttpClientFactory httpClientFactory,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
-        ILogger<EasyPostCarrierService> logger,
-        IStringLocalizer<EasyPostCarrierService> stringLocalizer)
+        ILogger<EasyPostCarrierProvider> logger,
+        IStringLocalizer<EasyPostCarrierProvider> stringLocalizer)
     {
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
@@ -42,12 +42,36 @@ public sealed class EasyPostCarrierService : ICarrierService
         S = stringLocalizer;
     }
 
-    public string Name => "EasyPost";
+    public string Name => TechnicalName;
 
     public LocalizedString DisplayName => S["EasyPost"];
 
-    public async Task<bool> IsConfiguredAsync()
-        => !string.IsNullOrEmpty(await GetApiKeyAsync());
+    public async Task<bool> IsEnabledAsync()
+        => (await _siteService.GetSettingsAsync<EasyPostSettings>()).IsEnabled && !string.IsNullOrEmpty(await GetApiKeyAsync());
+
+    /// <summary>
+    /// Registers a webhook for the tracking updates at <paramref name="url"/>, signed with a secret made here. Returns
+    /// EasyPost's id for it and the secret, or the error.
+    /// </summary>
+    public async Task<(string WebhookId, string Secret, string Error)> RegisterWebhookAsync(string apiKey, string url, CancellationToken cancellationToken = default)
+    {
+        var secret = Convert.ToHexStringLower(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32));
+        var body = new JsonObject { ["webhook"] = new JsonObject { ["url"] = url, ["webhook_secret"] = secret } };
+        var (response, error) = await SendAsync(HttpMethod.Post, "webhooks", body, cancellationToken, apiKey);
+
+        return response?["id"]?.GetValue<string>() is { Length: > 0 } id ? (id, secret, null) : (null, null, error ?? S["EasyPost didn't register the webhook."].Value);
+    }
+
+    /// <summary>
+    /// Removes a webhook registered earlier. A webhook EasyPost no longer has counts as removed.
+    /// </summary>
+    public async Task DeleteWebhookAsync(string apiKey, string webhookId, CancellationToken cancellationToken = default)
+    {
+        if (!string.IsNullOrEmpty(webhookId))
+        {
+            await SendAsync(HttpMethod.Delete, $"webhooks/{Uri.EscapeDataString(webhookId)}", body: null, cancellationToken, apiKey);
+        }
+    }
 
     public async Task<CarrierQuote> QuoteAsync(CarrierShipmentRequest request, CancellationToken cancellationToken = default)
     {
@@ -69,9 +93,13 @@ public sealed class EasyPostCarrierService : ICarrierService
                 ["to_address"] = ToEasyPost(request.To),
                 ["from_address"] = ToEasyPost(request.From),
                 ["parcel"] = parcel,
-                ["reference"] = request.Reference,
             },
         };
+
+        if (!string.IsNullOrWhiteSpace(request.Reference))
+        {
+            body["shipment"]["reference"] = request.Reference;
+        }
 
         var (response, error) = await SendAsync(HttpMethod.Post, "shipments", body, cancellationToken);
 
@@ -85,7 +113,7 @@ public sealed class EasyPostCarrierService : ICarrierService
             .Select(rate => new CarrierRate
             {
                 RateId = rate["id"]?.GetValue<string>(),
-                Carrier = rate["carrier"]?.GetValue<string>(),
+                Carrier = CarrierName(rate["carrier"]?.GetValue<string>()),
                 Service = rate["service"]?.GetValue<string>(),
                 Amount = ParseAmount(rate["rate"]),
                 Currency = rate["currency"]?.GetValue<string>(),
@@ -124,7 +152,7 @@ public sealed class EasyPostCarrierService : ICarrierService
 
         return new CarrierLabel
         {
-            Carrier = selected?["carrier"]?.GetValue<string>(),
+            Carrier = CarrierName(selected?["carrier"]?.GetValue<string>()),
             Service = selected?["service"]?.GetValue<string>(),
             Amount = ParseAmount(selected?["rate"]),
             Currency = selected?["currency"]?.GetValue<string>(),
@@ -134,20 +162,21 @@ public sealed class EasyPostCarrierService : ICarrierService
         };
     }
 
-    private async Task<(JsonObject Response, string Error)> SendAsync(HttpMethod method, string path, JsonObject body, CancellationToken cancellationToken)
+    private async Task<(JsonObject Response, string Error)> SendAsync(HttpMethod method, string path, JsonObject body, CancellationToken cancellationToken, string apiKey = null)
     {
-        var apiKey = await GetApiKeyAsync();
+        apiKey ??= await GetApiKeyAsync();
 
         if (string.IsNullOrEmpty(apiKey))
         {
-            return (null, S["EasyPost isn't set up. Enter its API key in Settings › Commerce › Shipping."].Value);
+            return (null, S["EasyPost isn't set up. Enter its API key on the EasyPost tab of Settings › Commerce › Shipping."].Value);
         }
 
         var client = _httpClientFactory.CreateClient(HttpClientName);
 
         using var message = new HttpRequestMessage(method, path)
         {
-            Content = JsonContent.Create(body),
+            // A buffered body, with its length: EasyPost reads a chunked one as empty.
+            Content = body is null ? null : new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
         };
 
         message.Headers.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes(apiKey + ":")));
@@ -160,7 +189,7 @@ public sealed class EasyPostCarrierService : ICarrierService
 
             if (!response.IsSuccessStatusCode)
             {
-                var error = node?["error"]?["message"]?.GetValue<string>() ?? S["EasyPost answered {0}.", (int)response.StatusCode].Value;
+                var error = DescribeError(node?["error"] as JsonObject) ?? S["EasyPost answered {0}.", (int)response.StatusCode].Value;
 
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
@@ -206,21 +235,66 @@ public sealed class EasyPostCarrierService : ICarrierService
         }
     }
 
+    // EasyPost names the carrier accounts it provides itself after the carrier, such as "FedExDefault" or "UPSDAP".
+    internal static string CarrierName(string carrier)
+        => carrier switch
+        {
+            null or "" => carrier,
+            "UPSDAP" => "UPS",
+            _ when carrier.Length > "Default".Length && carrier.EndsWith("Default", StringComparison.Ordinal) => carrier[..^"Default".Length],
+            _ => carrier,
+        };
+
+    // EasyPost's error says what's wrong, and its field errors say where, such as "shipment.to_address.zip".
+    internal static string DescribeError(JsonObject error)
+    {
+        var message = error?["message"]?.GetValue<string>();
+
+        if (string.IsNullOrEmpty(message))
+        {
+            return null;
+        }
+
+        var fields = (error["errors"] as JsonArray ?? [])
+            .OfType<JsonObject>()
+            .Select(entry => (Field: entry["field"]?.GetValue<string>(), Message: entry["message"]?.GetValue<string>()))
+            .Where(entry => !string.IsNullOrEmpty(entry.Field))
+            .Select(entry => string.IsNullOrEmpty(entry.Message) ? entry.Field : $"{entry.Field}: {entry.Message}")
+            .ToArray();
+
+        return fields.Length == 0 ? message : $"{message} ({string.Join("; ", fields)})";
+    }
+
+    // Only the parts of the address that are there: EasyPost reads an empty value as one given.
     private static JsonObject ToEasyPost(Address address)
-        => address is null
-            ? null
-            : new JsonObject
+    {
+        if (address is null)
+        {
+            return null;
+        }
+
+        var json = new JsonObject();
+
+        void Add(string name, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
             {
-                ["name"] = address.Name,
-                ["company"] = address.Company,
-                ["street1"] = address.AddressLine1,
-                ["street2"] = address.AddressLine2,
-                ["city"] = address.City,
-                ["state"] = address.Region,
-                ["zip"] = address.PostalCode,
-                ["country"] = address.Country,
-                ["phone"] = address.Phone,
-            };
+                json[name] = value.Trim();
+            }
+        }
+
+        Add("name", address.Name);
+        Add("company", address.Company);
+        Add("street1", address.AddressLine1);
+        Add("street2", address.AddressLine2);
+        Add("city", address.City);
+        Add("state", address.Region);
+        Add("zip", address.PostalCode);
+        Add("country", address.Country);
+        Add("phone", address.Phone);
+
+        return json;
+    }
 
     // EasyPost sends amounts as strings, such as "5.93".
     private static decimal ParseAmount(JsonNode node)

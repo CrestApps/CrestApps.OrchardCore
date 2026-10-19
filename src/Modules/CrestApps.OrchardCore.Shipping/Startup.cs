@@ -58,6 +58,9 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ShippingMethod, LocalDeliveryMethodDisplayDriver>()
             .AddDisplayDriver<ShippingMethod, CarrierRateMethodDisplayDriver>();
 
+        // Settings > Commerce > Shipping: the default carrier provider first, then each provider's tab (from its own
+        // feature), then the store's general shipping settings.
+        services.AddSiteDisplayDriver<CarrierProviderSettingsDisplayDriver>();
         services.AddSiteDisplayDriver<ShippingSettingsDisplayDriver>();
 
         // The Shipping step of an order's checkout, after Contact.
@@ -126,14 +129,14 @@ public sealed class EasyPostStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddHttpClient(EasyPostCarrierService.HttpClientName, client =>
+        services.AddHttpClient(EasyPostCarrierProvider.HttpClientName, client =>
         {
             client.BaseAddress = new Uri("https://api.easypost.com/v2/");
             client.Timeout = TimeSpan.FromSeconds(20);
         });
 
-        services.AddScoped<EasyPostCarrierService>();
-        services.AddScoped<ICarrierService>(serviceProvider => serviceProvider.GetRequiredService<EasyPostCarrierService>());
+        services.AddScoped<EasyPostCarrierProvider>();
+        services.AddScoped<ICarrierProvider>(serviceProvider => serviceProvider.GetRequiredService<EasyPostCarrierProvider>());
         services.AddScoped<EasyPostTrackingUpdater>();
         services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(ShippingConstants.SettingsGroupId, ShippingPermissions.ManageShipping);

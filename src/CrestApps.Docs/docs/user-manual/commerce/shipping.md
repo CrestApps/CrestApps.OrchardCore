@@ -139,16 +139,23 @@ With **Workflows** on, the **Shipment Created**, **Shipment Shipped**, **Shipmen
 
 ## Carrier rates and labels
 
-With the **EasyPost** feature and an EasyPost account, buyers see the carriers' own rates at checkout, such as UPS, USPS, FedEx or DHL, and you buy and print the carrier's label from the order.
+With a carrier provider, buyers see the carriers' own rates at checkout, such as UPS, USPS, FedEx or DHL, and you buy and print the carrier's label from the order. A carrier provider is a shipping account, such as EasyPost, turned on as its own feature.
+
+**Settings > Commerce > Shipping** has a tab for this, before the store's own shipping settings:
+
+- **Providers** chooses the **Default carrier provider** among the enabled ones. Carrier rates methods and **Buy label** use it.
+- Each carrier provider, such as **EasyPost**, has its own tab, where it's enabled and set up.
+- **General**, **Store pickup** and **Sending parcels** are the store's shipping settings, whichever provider it uses.
 
 ### Set it up
 
-Under **Settings > Commerce > Shipping**:
+1. Turn on the **EasyPost** feature under **Tools > Features**. An EasyPost account is free, and comes with a test API key: test labels aren't charged.
+2. On **Settings > Commerce > Shipping**, open the **EasyPost** tab, tick **Enable EasyPost provider**, and paste your **API key**, from your EasyPost dashboard under API Keys. It's kept encrypted and never shown again.
+3. On the **Sending parcels** tab, enter where parcels leave from: the **Sender's name**, **Company**, **Street address**, **City**, **State or region**, **Postal code**, **Country** and a **Phone** (some carriers need one for labels).
+4. Enter the box most orders go in: its length, width and height (optional, as carriers price by weight without it) and its weight, which is added to the items' weight. Lengths are in inches for a store weighing in pounds, and centimeters for one in kilograms.
+5. Click **Save**.
 
-1. Under **EasyPost**, paste your **API key**, from your EasyPost dashboard under API keys. It's kept encrypted; **Remove the saved key** takes it away. Use a test key to try it: test labels aren't charged.
-2. Under **Sending parcels**, enter where parcels leave from: the **Sender's name**, **Company**, **Street address**, **City**, **State or region**, **Postal code**, **Country** and a **Phone** (some carriers need one for labels).
-3. Enter the box most orders go in: its length, width and height (optional, as carriers price by weight without it) and its weight, which is added to the items' weight. Lengths are in inches for a store weighing in pounds, and centimeters for one in kilograms.
-4. Click **Save**.
+Enabling the only provider makes it the default one, on the **Providers** tab. Disabling the default provider clears it, and carrier rates and labels are off until you choose another.
 
 Carriers price by weight, so give your products a **Weight** (see [Product weights and shipping classes](#product-weights-and-shipping-classes)).
 
@@ -163,7 +170,7 @@ On a zone's page, add a **Carrier rates** method, and set:
 | **Markup (%)** and **Plus an amount** | Added to each carrier's rate, such as for packing. A negative percentage gives a discount. | None |
 | **When the carriers can't be reached, charge** | A fallback amount. Leave it empty to offer nothing then, so the buyer chooses another method. | Empty |
 
-Buyers choose among the services quoted for their address and order, such as *USPS Ground Advantage*, with how many business days it takes when the carrier says. Without an API key, the method offers only its fallback amount, and its editor says so.
+Buyers choose among the services quoted for their address and order, such as *USPS Ground Advantage*, with how many business days it takes when the carrier says. Without a default carrier provider, the method offers only its fallback amount, and its editor says so.
 
 ### Buy a label
 
@@ -175,7 +182,9 @@ Your EasyPost account is charged, the shipment is marked shipped with the carrie
 
 ### Follow the parcels
 
-To see where parcels are, add a webhook in your EasyPost dashboard to the address shown under **Webhook secret**, and enter the webhook's secret there. Only updates signed with it are taken. The carrier's latest word, such as *In transit*, then shows on the shipment, and the buyer's order page lists where the parcel has been. A parcel the carrier delivers is marked **Delivered** for you.
+Tracking updates set themselves up. When your site's **Base URL**, under **Settings > General**, is its public https address, saving the **EasyPost** tab registers a webhook with EasyPost for you, signed with a secret made for it; the tab then says *Registered with EasyPost at ...*. EasyPost can't reach a site on your own computer, so the tab says so until the Base URL is public. Rates and labels work either way.
+
+Once registered, the carrier's latest word, such as *In transit*, shows on the shipment, and the buyer's order page lists where the parcel has been. A parcel the carrier delivers is marked **Delivered** for you.
 
 ## Try your rates
 
