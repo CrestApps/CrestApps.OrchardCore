@@ -29,6 +29,26 @@ public sealed class ShippingSettings
     /// Gets or sets the store's locations buyers can pick their order up from, instead of having it shipped.
     /// </summary>
     public List<PickupLocation> PickupLocations { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets where parcels are sent from, which carriers quote and print labels for.
+    /// </summary>
+    public CrestApps.OrchardCore.Addresses.Models.Address ShipFrom { get; set; }
+
+    /// <summary>
+    /// Gets or sets the size of the box most orders go in, in centimeters for a store weighing in kilograms and inches
+    /// otherwise, which carriers quote with.
+    /// </summary>
+    public decimal? DefaultParcelLength { get; set; }
+
+    public decimal? DefaultParcelWidth { get; set; }
+
+    public decimal? DefaultParcelHeight { get; set; }
+
+    /// <summary>
+    /// Gets or sets the weight of the box and packing, added to the items' weight, in the store's weight unit.
+    /// </summary>
+    public decimal PackagingWeight { get; set; }
 }
 
 /// <summary>

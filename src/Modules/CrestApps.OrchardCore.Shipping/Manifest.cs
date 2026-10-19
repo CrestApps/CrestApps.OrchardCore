@@ -27,3 +27,14 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Contents",
     ]
 )]
+
+[assembly: Feature(
+    Id = ShippingConstants.Features.EasyPost,
+    Name = "EasyPost",
+    Description = "Quotes UPS, USPS, FedEx, DHL and other carriers' rates at checkout, buys and prints their labels from an order's shipments, and follows the parcels, through an EasyPost account.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        ShippingConstants.Features.Shipping,
+    ]
+)]

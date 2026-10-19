@@ -1,0 +1,27 @@
+@model EasyPostSettingsViewModel
+
+<h4 class="mt-4">@T["EasyPost"]</h4>
+<p class="text-body-secondary">@T["Quotes the carriers' rates for shipping methods set to Carrier rates, and buys labels from an order's shipments. Use a test key to try it: test labels aren't charged."]</p>
+
+<div class="ocat-wrapper">
+    <label asp-for="ApiKey" class="ocat-label">@T["API key"]</label>
+    <div class="ocat-end">
+        <input asp-for="ApiKey" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasApiKey ? T["Saved. Enter a new key to replace it."] : T["Such as EZTK..."])" value="" />
+        <span class="hint">@T["From your EasyPost dashboard, under API keys. It's kept encrypted."]</span>
+        @if (Model.HasApiKey)
+        {
+            <div class="form-check mt-1">
+                <input asp-for="RemoveApiKey" type="checkbox" class="form-check-input" />
+                <label asp-for="RemoveApiKey" class="form-check-label">@T["Remove the saved key"]</label>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="WebhookSecret" class="ocat-label">@T["Webhook secret"]</label>
+    <div class="ocat-end">
+        <input asp-for="WebhookSecret" type="password" class="form-control" autocomplete="off" placeholder="@(Model.HasWebhookSecret ? T["Saved. Enter a new secret to replace it."] : string.Empty)" value="" />
+        <span class="hint">@T["For tracking updates: add a webhook in EasyPost to {0} with this secret. Parcels then show where they are on the buyer's order, and are marked delivered when they arrive.", Model.WebhookUrl]</span>
+    </div>
+</div>

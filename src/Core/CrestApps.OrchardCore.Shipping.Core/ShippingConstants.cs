@@ -24,6 +24,8 @@ public static class ShippingConstants
 
     public static class Features
     {
+        public const string EasyPost = "CrestApps.OrchardCore.Shipping.EasyPost";
+
         public const string Shipping = "CrestApps.OrchardCore.Shipping";
     }
 
@@ -53,6 +55,11 @@ public static class ShippingConstants
         public const string Free = "Free";
 
         public const string LocalDelivery = "LocalDelivery";
+
+        /// <summary>
+        /// Rates the carriers quote for each order, through a shipping account such as EasyPost.
+        /// </summary>
+        public const string Carrier = "Carrier";
 
         /// <summary>
         /// The provider name an order picked up from one of the store's locations carries.

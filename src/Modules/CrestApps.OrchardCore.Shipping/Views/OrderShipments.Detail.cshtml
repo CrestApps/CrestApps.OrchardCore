@@ -32,6 +32,25 @@
                 {
                     <div class="small text-muted">@T["{0} tracking number: {1}", shipment.Carrier ?? T["Carrier"].Value, shipment.TrackingNumber]</div>
                 }
+                @if (!string.IsNullOrEmpty(shipment.TrackingStatus))
+                {
+                    <div class="small fw-semibold mt-1">@shipment.TrackingStatus</div>
+                }
+                @if (shipment.TrackingEvents is { Count: > 0 })
+                {
+                    <ul class="list-unstyled small text-muted mb-1 mt-1 border-start ps-2">
+                        @foreach (var tracked in shipment.TrackingEvents.Take(5))
+                        {
+                            <li>
+                                @((await LocalAsync(tracked.Utc)).ToString("g")) · @(tracked.Message ?? tracked.Status)
+                                @if (!string.IsNullOrEmpty(tracked.Location))
+                                {
+                                    <span>· @tracked.Location</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
                 @if (isPickup && shipment.DeliveredUtc is { } pickedUp)
                 {
                     <div class="small text-muted">@T["Picked up {0:D}", await LocalAsync(pickedUp)]</div>

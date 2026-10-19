@@ -34,6 +34,28 @@ public sealed class Shipment : CatalogItem
     /// </summary>
     public string Note { get; set; }
 
+    /// <summary>
+    /// Gets or sets where the label bought for the shipment is printed from, or <see langword="null"/>.
+    /// </summary>
+    public string LabelUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the label cost.
+    /// </summary>
+    public decimal? LabelCost { get; set; }
+
+    public string LabelCurrency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the carrier's latest word on the parcel, such as "In transit", or <see langword="null"/>.
+    /// </summary>
+    public string TrackingStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the parcel has been, newest first, as the carrier reported it.
+    /// </summary>
+    public List<ShipmentTrackingEvent> TrackingEvents { get; set; } = [];
+
     public DateTime CreatedUtc { get; set; }
 
     public DateTime ModifiedUtc { get; set; }
@@ -56,6 +78,20 @@ public sealed class Shipment : CatalogItem
 /// <summary>
 /// Units of one line of the order in a shipment.
 /// </summary>
+/// <summary>
+/// Something the carrier reported about the parcel.
+/// </summary>
+public sealed class ShipmentTrackingEvent
+{
+    public DateTime Utc { get; set; }
+
+    public string Status { get; set; }
+
+    public string Message { get; set; }
+
+    public string Location { get; set; }
+}
+
 public sealed class ShipmentLine
 {
     /// <summary>

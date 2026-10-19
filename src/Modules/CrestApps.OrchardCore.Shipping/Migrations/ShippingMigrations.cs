@@ -25,7 +25,7 @@ public sealed class ShippingMigrations : DataMigration
 
         await CreateShipmentIndexAsync();
 
-        return 2;
+        return 3;
     }
 
     /// <summary>
@@ -35,7 +35,21 @@ public sealed class ShippingMigrations : DataMigration
     {
         await CreateShipmentIndexAsync();
 
-        return 2;
+        return 3;
+    }
+
+    /// <summary>
+    /// Finds shipments by tracking number, for the carriers' tracking updates.
+    /// </summary>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<ShipmentIndex>(table => table
+            .AddColumn<string>("TrackingNumber", column => column.Nullable().WithLength(64)),
+            collection: ShippingConstants.CollectionName);
+
+        await IndexTableIndexCreation.CreateIfMissingAsync<ShipmentIndex>(SchemaBuilder, "IDX_ShipmentIndex_TrackingNumber", ShippingConstants.CollectionName, "TrackingNumber");
+
+        return 3;
     }
 
     private async Task CreateShipmentIndexAsync()
@@ -45,7 +59,8 @@ public sealed class ShippingMigrations : DataMigration
             .Column<string>("OrderId", column => column.WithLength(26))
             .Column<int>("Status")
             .Column<DateTime>("CreatedUtc")
-            .Column<DateTime>("ShippedUtc", column => column.Nullable()),
+            .Column<DateTime>("ShippedUtc", column => column.Nullable())
+            .Column<string>("TrackingNumber", column => column.Nullable().WithLength(64)),
             collection: ShippingConstants.CollectionName
         );
 
@@ -53,5 +68,6 @@ public sealed class ShippingMigrations : DataMigration
         await IndexTableIndexCreation.CreateIfMissingAsync<ShipmentIndex>(SchemaBuilder, "IDX_ShipmentIndex_ItemId", ShippingConstants.CollectionName, "ItemId");
         await IndexTableIndexCreation.CreateIfMissingAsync<ShipmentIndex>(SchemaBuilder, "IDX_ShipmentIndex_OrderId", ShippingConstants.CollectionName, "OrderId", "CreatedUtc");
         await IndexTableIndexCreation.CreateIfMissingAsync<ShipmentIndex>(SchemaBuilder, "IDX_ShipmentIndex_Status_ShippedUtc", ShippingConstants.CollectionName, "Status", "ShippedUtc");
+        await IndexTableIndexCreation.CreateIfMissingAsync<ShipmentIndex>(SchemaBuilder, "IDX_ShipmentIndex_TrackingNumber", ShippingConstants.CollectionName, "TrackingNumber");
     }
 }

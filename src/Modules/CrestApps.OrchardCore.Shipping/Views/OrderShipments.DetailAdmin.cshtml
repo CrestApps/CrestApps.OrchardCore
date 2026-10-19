@@ -69,6 +69,10 @@
                             {
                                 <span>· @shipment.Note</span>
                             }
+                            @if (!string.IsNullOrEmpty(shipment.TrackingStatus))
+                            {
+                                <span>· @shipment.TrackingStatus</span>
+                            }
                         </div>
                     </div>
                     <div class="text-nowrap d-flex gap-1">
@@ -78,6 +82,16 @@
                            title="@T["Packing slip"]">
                             <i class="fa-solid fa-box" aria-hidden="true"></i><span class="visually-hidden">@T["Packing slip for shipment {0}", shipment.Number]</span>
                         </a>
+                        @if (!string.IsNullOrEmpty(shipment.LabelUrl))
+                        {
+                            <a class="btn btn-sm btn-outline-secondary" href="@shipment.LabelUrl" target="_blank" rel="noopener noreferrer" title="@T["Print label"]">
+                                <i class="fa-solid fa-print" aria-hidden="true"></i><span class="visually-hidden">@T["Print the label of shipment {0}", shipment.Number]</span>
+                            </a>
+                        }
+                        @if (shipment.Status == ShipmentStatus.Pending && Model.CanBuyLabels && !isPickup)
+                        {
+                            <a class="btn btn-sm btn-primary" asp-controller="ShipmentLabelsAdmin" asp-action="Label" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId">@T["Buy label"]</a>
+                        }
                         @if (shipment.Status == ShipmentStatus.Shipped)
                         {
                             <form asp-controller="ShipmentsAdmin" asp-action="Deliver" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">

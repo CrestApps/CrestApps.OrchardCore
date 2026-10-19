@@ -254,6 +254,20 @@ public class FindOrderViewModel
 }
 
 /// <summary>
+/// Track your order: an order's number and the email it was placed with open its page. The model of the
+/// <c>OrderTrack</c> shape a theme can override.
+/// </summary>
+public class TrackOrderViewModel
+{
+    public string OrderNumber { get; set; }
+
+    public string Email { get; set; }
+
+    [BindNever]
+    public bool NotFound { get; set; }
+}
+
+/// <summary>
 /// A printable document of an order: its invoice or a packing slip. Its shape (<c>OrderInvoice</c> or
 /// <c>OrderPackingSlip</c>) is what a theme overrides to change it.
 /// </summary>

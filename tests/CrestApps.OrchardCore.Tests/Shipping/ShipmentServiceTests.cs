@@ -271,6 +271,9 @@ public sealed class ShipmentServiceTests
         public ValueTask<Shipment> FindByIdAsync(string shipmentId, CancellationToken cancellationToken = default)
             => ValueTask.FromResult(_shipments.FirstOrDefault(shipment => shipment.ItemId == shipmentId));
 
+        public Task<Shipment> FindByTrackingNumberAsync(string trackingNumber, CancellationToken cancellationToken = default)
+            => Task.FromResult(_shipments.FirstOrDefault(shipment => shipment.TrackingNumber == trackingNumber));
+
         public Task<IReadOnlyList<Shipment>> ListByOrderAsync(string orderId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<Shipment>>([.. _shipments.Where(shipment => shipment.OrderId == orderId).OrderBy(shipment => shipment.Number)]);
 

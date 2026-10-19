@@ -67,6 +67,22 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
                 .ToList();
             model.StockLocations = await GetStockLocationsAsync();
 
+            var from = settings.ShipFrom;
+
+            model.ShipFromName = from?.Name;
+            model.ShipFromCompany = from?.Company;
+            model.ShipFromAddressLine1 = from?.AddressLine1;
+            model.ShipFromAddressLine2 = from?.AddressLine2;
+            model.ShipFromCity = from?.City;
+            model.ShipFromRegion = from?.Region;
+            model.ShipFromPostalCode = from?.PostalCode;
+            model.ShipFromCountry = from?.Country;
+            model.ShipFromPhone = from?.Phone;
+            model.DefaultParcelLength = settings.DefaultParcelLength;
+            model.DefaultParcelWidth = settings.DefaultParcelWidth;
+            model.DefaultParcelHeight = settings.DefaultParcelHeight;
+            model.PackagingWeight = settings.PackagingWeight;
+
             // A blank row to add a location with, while there is room for one.
             if (model.PickupLocations.Count < MaxPickupLocations)
             {
@@ -92,6 +108,32 @@ public sealed class ShippingSettingsDisplayDriver : SiteDisplayDriver<ShippingSe
         settings.Carriers = ParseCarriers(model.Carriers);
         settings.SendShippedEmails = model.SendShippedEmails;
         settings.PickupLocations = ParsePickupLocations(model.PickupLocations, context);
+
+        // Where parcels leave from: kept once it has a street, a city and a country.
+        settings.ShipFrom = string.IsNullOrWhiteSpace(model.ShipFromAddressLine1) && string.IsNullOrWhiteSpace(model.ShipFromCity)
+            ? null
+            : new CrestApps.OrchardCore.Addresses.Models.Address
+            {
+                Name = Trim(model.ShipFromName),
+                Company = Trim(model.ShipFromCompany),
+                AddressLine1 = Trim(model.ShipFromAddressLine1),
+                AddressLine2 = Trim(model.ShipFromAddressLine2),
+                City = Trim(model.ShipFromCity),
+                Region = Trim(model.ShipFromRegion),
+                PostalCode = Trim(model.ShipFromPostalCode),
+                Country = Trim(model.ShipFromCountry)?.ToUpperInvariant(),
+                Phone = Trim(model.ShipFromPhone),
+            };
+
+        if (settings.ShipFrom is { } shipFrom && (string.IsNullOrEmpty(shipFrom.AddressLine1) || string.IsNullOrEmpty(shipFrom.City) || string.IsNullOrEmpty(shipFrom.Country)))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ShipFromAddressLine1), S["Enter the street, city and country parcels are sent from."]);
+        }
+
+        settings.DefaultParcelLength = model.DefaultParcelLength is > 0 ? model.DefaultParcelLength : null;
+        settings.DefaultParcelWidth = model.DefaultParcelWidth is > 0 ? model.DefaultParcelWidth : null;
+        settings.DefaultParcelHeight = model.DefaultParcelHeight is > 0 ? model.DefaultParcelHeight : null;
+        settings.PackagingWeight = Math.Max(0, model.PackagingWeight);
 
         return Edit(site, settings, context);
     }

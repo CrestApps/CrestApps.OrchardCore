@@ -13,6 +13,8 @@ public sealed class ShipmentIndex : CatalogItemIndex
     public DateTime CreatedUtc { get; set; }
 
     public DateTime? ShippedUtc { get; set; }
+
+    public string TrackingNumber { get; set; }
 }
 
 public sealed class ShipmentIndexProvider : IndexProvider<Shipment>
@@ -32,6 +34,7 @@ public sealed class ShipmentIndexProvider : IndexProvider<Shipment>
                 Status = shipment.Status,
                 CreatedUtc = shipment.CreatedUtc,
                 ShippedUtc = shipment.ShippedUtc,
+                TrackingNumber = string.IsNullOrWhiteSpace(shipment.TrackingNumber) ? null : shipment.TrackingNumber.Trim(),
             });
     }
 }

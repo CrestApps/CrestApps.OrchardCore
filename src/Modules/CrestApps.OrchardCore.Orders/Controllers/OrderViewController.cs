@@ -113,6 +113,41 @@ public sealed class OrderViewController : Controller
         return View(await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => OrdersAdminController.Copy(document, model)));
     }
 
+    [HttpGet("orders/track", Name = "OrdersTrack")]
+    public async Task<IActionResult> Track()
+        => View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", model => { }));
+
+    [HttpPost("orders/track")]
+    [ValidateAntiForgeryToken]
+    [RateLimitGroup(OrderConstants.FindRateLimitGroup)]
+    public async Task<IActionResult> Track(TrackOrderViewModel model)
+    {
+        var number = model.OrderNumber?.Trim().TrimStart('#');
+        var email = model.Email?.Trim();
+        Order order = null;
+
+        // Both must match, and the guesses are limited, so a number alone or an email alone shows nothing.
+        if (!string.IsNullOrEmpty(number) && !string.IsNullOrEmpty(email) &&
+            await _limiter.AcquireAsync("track-order", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"))
+        {
+            order = await _orderStore.FindByNumberAsync(number.ToUpperInvariant());
+        }
+
+        if (order is { Status: OrderStatus.Paid } &&
+            string.Equals(order.CustomerEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase) &&
+            await _orderLinks.CreateUrlAsync(order) is { } url)
+        {
+            return Redirect(url);
+        }
+
+        return View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", shape =>
+        {
+            shape.OrderNumber = model.OrderNumber;
+            shape.Email = model.Email;
+            shape.NotFound = true;
+        }));
+    }
+
     [HttpGet("orders/find", Name = OrderConstants.RouteNames.Find)]
     public async Task<IActionResult> Find()
         => View(await LookupShapeAsync("OrderLookup", email: null));

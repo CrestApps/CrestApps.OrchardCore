@@ -55,7 +55,8 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<ShippingMethod, FlatRateMethodDisplayDriver>()
             .AddDisplayDriver<ShippingMethod, TableRateMethodDisplayDriver>()
             .AddDisplayDriver<ShippingMethod, FreeShippingMethodDisplayDriver>()
-            .AddDisplayDriver<ShippingMethod, LocalDeliveryMethodDisplayDriver>();
+            .AddDisplayDriver<ShippingMethod, LocalDeliveryMethodDisplayDriver>()
+            .AddDisplayDriver<ShippingMethod, CarrierRateMethodDisplayDriver>();
 
         services.AddSiteDisplayDriver<ShippingSettingsDisplayDriver>();
 
@@ -115,4 +116,25 @@ public sealed class ReportsStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
         => services.AddScoped<IReport, ShippingPerformanceReport>();
+}
+
+/// <summary>
+/// The carriers' rates, labels and tracking through an EasyPost account.
+/// </summary>
+[Feature(ShippingConstants.Features.EasyPost)]
+public sealed class EasyPostStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddHttpClient(EasyPostCarrierService.HttpClientName, client =>
+        {
+            client.BaseAddress = new Uri("https://api.easypost.com/v2/");
+            client.Timeout = TimeSpan.FromSeconds(20);
+        });
+
+        services.AddScoped<EasyPostCarrierService>();
+        services.AddScoped<ICarrierService>(serviceProvider => serviceProvider.GetRequiredService<EasyPostCarrierService>());
+        services.AddScoped<EasyPostTrackingUpdater>();
+        services.AddSiteDisplayDriver<EasyPostSettingsDisplayDriver>();
+    }
 }
