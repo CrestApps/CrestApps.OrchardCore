@@ -71,6 +71,10 @@ public sealed class QueueGroupsController : ContactCenterCatalogController<Activ
     protected override LocalizedHtmlString DeletedNotification
         => H["The queue group has been deleted successfully."];
 
+    /// <inheritdoc/>
+    protected override void SetName(ActivityQueueGroup entry, string name)
+        => entry.Name = name;
+
     /// <summary>
     /// Lists the queue groups.
     /// </summary>

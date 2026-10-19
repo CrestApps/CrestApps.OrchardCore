@@ -55,15 +55,28 @@ public sealed class ContactOptOutResolver : IContactOptOutResolver
 
         // Every other published record reachable at one of these numbers. A record that shares a number is taken to
         // be the same person, because the alternative -- calling them on the other number -- is the one mistake a
-        // request to stop cannot tolerate.
-        var sharing = await _session
+        // request to stop cannot tolerate. One query per phone column rather than one OR across both, so each seeks
+        // its own phone index instead of scanning the contact index for every contact a batch loads.
+        var sharingByCell = await _session
             .Query<ContentItem, OmnichannelContactIndex>(index =>
                 index.Published &&
                 index.ContentItemId != contactItemId &&
-                (index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers) || index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers)))
+                index.NormalizedPrimaryCellPhoneNumber.IsIn(numbers))
             .ListAsync(cancellationToken);
 
-        return sharing.Any(other => OmnichannelContactPreferences.HasOptedOut(other, channel));
+        if (sharingByCell.Any(other => OmnichannelContactPreferences.HasOptedOut(other, channel)))
+        {
+            return true;
+        }
+
+        var sharingByHome = await _session
+            .Query<ContentItem, OmnichannelContactIndex>(index =>
+                index.Published &&
+                index.ContentItemId != contactItemId &&
+                index.NormalizedPrimaryHomePhoneNumber.IsIn(numbers))
+            .ListAsync(cancellationToken);
+
+        return sharingByHome.Any(other => OmnichannelContactPreferences.HasOptedOut(other, channel));
     }
 
     private async Task<string[]> GetPhoneNumbersAsync(string contactItemId, CancellationToken cancellationToken)
