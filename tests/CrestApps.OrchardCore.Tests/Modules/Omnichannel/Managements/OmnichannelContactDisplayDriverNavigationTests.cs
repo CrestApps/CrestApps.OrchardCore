@@ -64,7 +64,7 @@ public sealed class OmnichannelContactDisplayDriverNavigationTests
             .Setup(manager => manager.GetTypeDefinitionAsync("Customer"))
             .ReturnsAsync(CreateTypeDefinition(OmnichannelConstants.ContentParts.OmnichannelContact, "ListPart"));
 
-        var driver = new OmnichannelContactDisplayDriver(definitionManager.Object);
+        var driver = new OmnichannelContactDisplayDriver(definitionManager.Object, TestContactMethods.Accessor);
 
         // Act
         var first = await driver.GetContactNavigationContentTypeAsync(CreateContact());
@@ -83,7 +83,7 @@ public sealed class OmnichannelContactDisplayDriverNavigationTests
             .Setup(manager => manager.GetTypeDefinitionAsync(definition.Name))
             .ReturnsAsync(definition);
 
-        return new OmnichannelContactDisplayDriver(definitionManager.Object);
+        return new OmnichannelContactDisplayDriver(definitionManager.Object, TestContactMethods.Accessor);
     }
 
     private static ContentItem CreateContact()

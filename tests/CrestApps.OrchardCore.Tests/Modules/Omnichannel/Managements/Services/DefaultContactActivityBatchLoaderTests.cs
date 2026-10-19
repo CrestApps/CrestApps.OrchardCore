@@ -832,6 +832,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session)),
             ContactPhoneTestStore.CreateLookup(session),
             new NoNotInServiceNumbers(),
+            TestContactMethods.Accessor,
             NullLogger<DefaultContactActivityBatchLoader>.Instance,
             leadContentTypes is null ? null : [CreateContactTypeProvider(leadContentTypes)]);
     }
@@ -1159,18 +1160,13 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
     }
 
     /// <summary>
-    /// The contact index provider is internal to its module, so it is constructed the way the existing contact-index
-    /// test does rather than being reimplemented here: the phone and time-zone filters are only meaningful against
-    /// the real index the module writes.
+    /// The module's own contact index provider rather than a reimplementation: the phone and time-zone filters are
+    /// only meaningful against the real index the module writes.
     /// </summary>
-    private static IIndexProvider CreateContactIndexProvider()
-    {
-        var providerType = typeof(CrestApps.OrchardCore.Omnichannel.Managements.Startup).Assembly.GetType(
-            "CrestApps.OrchardCore.Omnichannel.Managements.Indexes.OmnichannelContactIndexProvider",
-            throwOnError: true);
-
-        return (IIndexProvider)Activator.CreateInstance(providerType, new object[] { new DefaultPhoneNumberService() });
-    }
+    private static CrestApps.OrchardCore.Omnichannel.Managements.Indexes.OmnichannelContactIndexProvider CreateContactIndexProvider()
+        => new CrestApps.OrchardCore.Omnichannel.Managements.Indexes.OmnichannelContactIndexProvider(
+            new DefaultPhoneNumberService(),
+            TestContactMethods.Accessor);
 
     private static string DatabasePath(string suffix)
     {

@@ -93,6 +93,12 @@ public sealed class DependencyInjectionArchitectureTests
         new DependencyInjectionException(
             "ContactActivityExportHandler",
             "An import handler that injected the import manager would close a manager-to-handler construction cycle."),
+        new DependencyInjectionException(
+            "DefaultContactMethodsAccessor",
+            "Like DefaultTelephonyProviderResolver, it activates the contact-methods provider chosen at run time for a contact's content type from ContactMethodsOptions; AddContactMethodsProvider registers the provider in the same call that maps the type, so a mapped provider is never missing."),
+        new DependencyInjectionException(
+            "DefaultContactMethodsWriter",
+            "It activates the writer chosen at run time for a contact's content type from ContactMethodsOptions, and it is itself the IContactMethodsWriter consumers inject, so the type-specific writers cannot be injected as that contract; AddContactMethodsWriter registers the writer in the same call that maps the type."),
     ];
 
     /// <summary>

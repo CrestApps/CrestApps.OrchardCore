@@ -41,6 +41,7 @@ public sealed class SmsMessagingChannelContactMatchTests
                 Mock.Of<IStringLocalizer<SmsMessagingChannel>>(),
                 contactTypes.Object,
                 new DefaultPhoneNumberService(),
+                Modules.Omnichannel.TestContactMethods.Accessor,
                 ContactPhoneTestStore.CreateLookup(session));
 
             // Act

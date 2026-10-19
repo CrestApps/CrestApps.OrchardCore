@@ -1,6 +1,5 @@
-using CrestApps.Core;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -8,7 +7,6 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Documents;
-using OrchardCore.Flows.Models;
 using YesSql;
 using YesSql.Services;
 
@@ -60,6 +58,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
 
         var step = await RunStepAsync(
             serviceProvider.GetRequiredService<IStore>(),
+            serviceProvider.GetRequiredService<IContactMethodsAccessor>(),
             state.Cursors.GetValueOrDefault(BackfillName),
             PagesPerRun,
             serviceProvider.GetRequiredService<ILogger<ContactPhoneNumberIndexBackfillBackgroundTask>>(),
@@ -83,6 +82,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
     /// Indexes up to <paramref name="pages"/> pages of records after <paramref name="cursor"/>.
     /// </summary>
     /// <param name="store">The store the records are read from and saved to.</param>
+    /// <param name="contactMethods">Reads the phone numbers of a record.</param>
     /// <param name="cursor">The document id of the last record already read.</param>
     /// <param name="pages">How many pages to read before returning.</param>
     /// <param name="logger">The logger.</param>
@@ -90,6 +90,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
     /// <returns>The new cursor, and whether every record has now been read.</returns>
     internal static async Task<(long Cursor, bool Completed)> RunStepAsync(
         IStore store,
+        IContactMethodsAccessor contactMethods,
         long cursor,
         int pages,
         ILogger logger,
@@ -101,7 +102,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var (pageCursor, pageReindexed, found) = await IndexPageAsync(store, cursor, cancellationToken);
+            var (pageCursor, pageReindexed, found) = await IndexPageAsync(store, contactMethods, cursor, cancellationToken);
 
             if (!found)
             {
@@ -119,7 +120,11 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
         return (cursor, false);
     }
 
-    private static async Task<(long Cursor, int Reindexed, bool Found)> IndexPageAsync(IStore store, long cursor, CancellationToken cancellationToken)
+    private static async Task<(long Cursor, int Reindexed, bool Found)> IndexPageAsync(
+        IStore store,
+        IContactMethodsAccessor contactMethods,
+        long cursor,
+        CancellationToken cancellationToken)
     {
         long[] pending;
         var pageCursor = cursor;
@@ -153,7 +158,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
                 .ToHashSet();
 
             var toIndex = items
-                .Where(item => !indexed.Contains(item.Id) && HasPhoneNumber(item))
+                .Where(item => !indexed.Contains(item.Id) && contactMethods.Get(item).PhoneNumbers.Count > 0)
                 .ToList();
 
             if (toIndex.Count == 0)
@@ -214,12 +219,6 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTask : IBackgroundT
 
         return (pageCursor, reindexed, true);
     }
-
-    private static bool HasPhoneNumber(ContentItem item)
-        => item.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) &&
-            bagPart.ContentItems is not null &&
-            bagPart.ContentItems.Any(method =>
-                string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal));
 
     private static void Log(ILogger logger, int reindexed)
     {

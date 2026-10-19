@@ -35,6 +35,7 @@ public sealed class Startup : StartupBase
     {
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelProcessor, SmsOmnichannelProcessor>());
 
+        services.AddContactMethods();
         services.AddScoped<IOmnichannelEventHandler, SmsOmnichannelEventHandler>();
 
         // Asked before any text goes out, so a stop said on any record that holds the number is honoured here too.

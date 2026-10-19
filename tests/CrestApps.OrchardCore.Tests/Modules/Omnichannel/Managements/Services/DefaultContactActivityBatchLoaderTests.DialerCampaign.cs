@@ -281,6 +281,7 @@ public sealed partial class DefaultContactActivityBatchLoaderTests
             new ContactOptOutResolver(session, ContactPhoneTestStore.CreateLookup(session)),
             ContactPhoneTestStore.CreateLookup(session),
             new NoNotInServiceNumbers(),
+            TestContactMethods.Accessor,
             logger);
     }
 

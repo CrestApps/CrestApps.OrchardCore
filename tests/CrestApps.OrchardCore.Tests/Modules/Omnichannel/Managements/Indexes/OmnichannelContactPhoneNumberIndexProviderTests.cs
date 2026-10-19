@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Indexes;
 
 public sealed class OmnichannelContactPhoneNumberIndexProviderTests
 {
-    private readonly OmnichannelContactPhoneNumberIndexProvider _provider = new(new DefaultPhoneNumberService());
+    private readonly OmnichannelContactPhoneNumberIndexProvider _provider = new(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
 
     [Fact]
     public void CreateIndexes_WritesARowForEveryNumberWhateverItsType()

@@ -5,7 +5,6 @@ using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
-using OrchardCore.Flows.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
@@ -23,54 +22,24 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 public static class OmnichannelSubjectWriter
 {
     /// <summary>
-    /// Reads the email address currently on the contact's contact-methods bag, if any.
-    /// </summary>
-    /// <param name="contact">The contact content item.</param>
-    public static string GetContactEmail(ContentItem contact)
-    {
-        if (contact is null ||
-            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bag) || bag.ContentItems is null)
-        {
-            return null;
-        }
-
-        foreach (var method in bag.ContentItems)
-        {
-            if (string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal) &&
-                method.TryGet<EmailInfoPart>(out var emailPart) &&
-                !string.IsNullOrWhiteSpace(emailPart.Email?.Text))
-            {
-                return emailPart.Email.Text.Trim();
-            }
-        }
-
-        return null;
-    }
-
-    /// <summary>
-    /// Upserts an email address the person gave into the contact's contact-methods bag, as a properly structured
-    /// email item, replacing any existing one. Returns whether the contact changed.
+    /// Makes an email address the person gave the contact's email address, replacing the one it had. Returns whether
+    /// the contact changed.
     /// </summary>
     /// <remarks>
-    /// The item is created through the content manager rather than constructed directly, so it is built the way
-    /// every other content item is: its type's parts and defaults are applied and it is given an identifier. An
-    /// item with no identifier is not merely incomplete -- OrchardCore keys a bag's items by content item id when
-    /// it applies an edit, so one such item stops the entire bag from saving, and the failure is silent. A
-    /// contact's phone numbers simply reverted on publish.
-    /// <para>
-    /// It replaces rather than appends, because a raw content-item merge added a duplicate every time.
-    /// </para>
+    /// The write goes through the contact type's writer: into the contact-methods bag, as a properly structured
+    /// email item, or to the type's own fields when it keeps its contact methods there. A type that registered a
+    /// provider of its own and no writer is left as it is.
     /// </remarks>
-    /// <param name="contentManager">The content manager used to create the email item.</param>
+    /// <param name="contactMethodsWriter">The writer of the contact's contact methods.</param>
     /// <param name="contact">The contact content item.</param>
     /// <param name="email">The address the person gave.</param>
-    public static async Task<bool> TryApplyContactEmailAsync(IContentManager contentManager, ContentItem contact, string email)
+    public static Task<bool> TryApplyContactEmailAsync(IContactMethodsWriter contactMethodsWriter, ContentItem contact, string email)
     {
-        ArgumentNullException.ThrowIfNull(contentManager);
+        ArgumentNullException.ThrowIfNull(contactMethodsWriter);
 
         if (contact is null || string.IsNullOrWhiteSpace(email))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         email = email.Trim();
@@ -78,27 +47,10 @@ public static class OmnichannelSubjectWriter
         // A conservative sanity check, so a mis-heard or mis-parsed phrase is never written as somebody's email.
         if (email.Length < 5 || !email.Contains('@', StringComparison.Ordinal) || email.Contains(' ', StringComparison.Ordinal))
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        // Nothing to do when the same address is already on file.
-        if (string.Equals(GetContactEmail(contact), email, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var bag = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods);
-        bag.ContentItems ??= [];
-        bag.ContentItems.RemoveAll(method => string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal));
-
-        var emailItem = await contentManager.NewAsync(OmnichannelConstants.ContentTypes.EmailAddress);
-        emailItem.DisplayText = email;
-        emailItem.Alter<EmailInfoPart>(part => part.Email = new TextField { Text = email });
-
-        bag.ContentItems.Add(emailItem);
-        contact.Apply(OmnichannelConstants.NamedParts.ContactMethods, bag);
-
-        return true;
+        return contactMethodsWriter.TrySetEmailAddressAsync(contact, email);
     }
 
     /// <summary>

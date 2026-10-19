@@ -1,10 +1,9 @@
 using CrestApps.Core;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using OrchardCore.ContentManagement;
-using OrchardCore.Flows.Models;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
@@ -16,10 +15,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider<ContentItem>
 {
     private readonly IPhoneNumberService _phoneNumberService;
+    private readonly IContactMethodsAccessor _contactMethods;
 
-    public OmnichannelContactPhoneNumberIndexProvider(IPhoneNumberService phoneNumberService)
+    public OmnichannelContactPhoneNumberIndexProvider(
+        IPhoneNumberService phoneNumberService,
+        IContactMethodsAccessor contactMethods)
     {
         _phoneNumberService = phoneNumberService;
+        _contactMethods = contactMethods;
     }
 
     public override void Describe(DescribeContext<ContentItem> context)
@@ -32,10 +35,14 @@ internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider
     internal IEnumerable<OmnichannelContactPhoneNumberIndex> CreateIndexes(ContentItem contact)
     {
         if ((!contact.Published && !contact.Latest) ||
-            !contact.TryGet<OmnichannelContactPart>(out _) ||
-            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bagPart) ||
-            bagPart.ContentItems is null ||
-            bagPart.ContentItems.Count == 0)
+            !contact.TryGet<OmnichannelContactPart>(out _))
+        {
+            return [];
+        }
+
+        var phoneNumbers = _contactMethods.Get(contact).PhoneNumbers;
+
+        if (phoneNumbers.Count == 0)
         {
             return [];
         }
@@ -45,16 +52,9 @@ internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider
         var indexes = new List<OmnichannelContactPhoneNumberIndex>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
-        foreach (var contactMethod in bagPart.ContentItems)
+        foreach (var phoneNumber in phoneNumbers)
         {
-            if (!string.Equals(contactMethod.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) ||
-                !contactMethod.TryGet<PhoneNumberInfoPart>(out var phonePart) ||
-                string.IsNullOrWhiteSpace(phonePart.Number?.PhoneNumber))
-            {
-                continue;
-            }
-
-            var normalized = OmnichannelContactIndexProvider.NormalizeToE164(_phoneNumberService, phonePart.Number);
+            var normalized = OmnichannelContactIndexProvider.NormalizeToE164(_phoneNumberService, phoneNumber);
 
             // A number saved twice, under one type or two, is one way to reach the record; the first type it was
             // saved under is the one kept.
@@ -70,7 +70,7 @@ internal sealed class OmnichannelContactPhoneNumberIndexProvider : IndexProvider
                 IsConverted = isConverted,
                 Published = contact.Published,
                 Latest = contact.Latest,
-                PhoneType = Truncate(phonePart.Type?.Text?.Trim(), 50),
+                PhoneType = Truncate(phoneNumber.Type, 50),
                 NormalizedPhoneNumber = normalized,
             });
         }

@@ -36,6 +36,7 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTaskTests
             // Act
             var step = await ContactPhoneNumberIndexBackfillBackgroundTask.RunStepAsync(
                 store,
+                TestContactMethods.Accessor,
                 cursor: 0,
                 pages: 10,
                 NullLogger.Instance,
@@ -91,8 +92,8 @@ public sealed class ContactPhoneNumberIndexBackfillBackgroundTaskTests
 
             // Act
             // One page holds both records, so the first step reads them and the second finds nothing after its cursor.
-            var first = await ContactPhoneNumberIndexBackfillBackgroundTask.RunStepAsync(store, 0, pages: 1, NullLogger.Instance, TestContext.Current.CancellationToken);
-            var second = await ContactPhoneNumberIndexBackfillBackgroundTask.RunStepAsync(store, first.Cursor, pages: 1, NullLogger.Instance, TestContext.Current.CancellationToken);
+            var first = await ContactPhoneNumberIndexBackfillBackgroundTask.RunStepAsync(store, TestContactMethods.Accessor, 0, pages: 1, NullLogger.Instance, TestContext.Current.CancellationToken);
+            var second = await ContactPhoneNumberIndexBackfillBackgroundTask.RunStepAsync(store, TestContactMethods.Accessor, first.Cursor, pages: 1, NullLogger.Instance, TestContext.Current.CancellationToken);
 
             // Assert
             Assert.False(first.Completed);

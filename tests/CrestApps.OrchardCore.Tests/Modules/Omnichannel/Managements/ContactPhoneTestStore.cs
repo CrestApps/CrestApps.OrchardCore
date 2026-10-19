@@ -77,7 +77,7 @@ internal static class ContactPhoneTestStore
         var providers = new List<IIndexProvider>
         {
             new ContentItemIndexProvider(),
-            new OmnichannelContactIndexProvider(new DefaultPhoneNumberService()),
+            new OmnichannelContactIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor),
         };
 
         if (withPhoneNumberIndex)
@@ -96,7 +96,7 @@ internal static class ContactPhoneTestStore
     /// Creates the phone number index provider the module registers.
     /// </summary>
     public static IIndexProvider CreatePhoneNumberIndexProvider()
-        => new OmnichannelContactPhoneNumberIndexProvider(new DefaultPhoneNumberService());
+        => new OmnichannelContactPhoneNumberIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
 
     /// <summary>
     /// Creates the lookup the module registers.

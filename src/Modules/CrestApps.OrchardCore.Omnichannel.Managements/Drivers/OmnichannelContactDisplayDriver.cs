@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using OrchardCore;
@@ -18,6 +19,7 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
     private const string HeaderAdminDisplayType = "HeaderAdmin";
 
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly IContactMethodsAccessor _contactMethods;
 
     private readonly Dictionary<string, ContentTypeDefinition> _evaluatedContentTypes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ContentTypeDefinition> _contactWithHeaderContentTypes = new(StringComparer.OrdinalIgnoreCase);
@@ -26,9 +28,13 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
     /// Initializes a new instance of the <see cref="OmnichannelContactDisplayDriver"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
-    public OmnichannelContactDisplayDriver(IContentDefinitionManager contentDefinitionManager)
+    /// <param name="contactMethods">Reads the contact's phone numbers and email addresses.</param>
+    public OmnichannelContactDisplayDriver(
+        IContentDefinitionManager contentDefinitionManager,
+        IContactMethodsAccessor contactMethods)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        _contactMethods = contactMethods;
     }
 
     public override bool CanHandleModel(ContentItem contentItem)
@@ -50,7 +56,7 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
             // primary contact methods under the contact's name whenever the list header is shown.
             Initialize<ContactPrimaryMethodsViewModel>("ContactPrimaryMethods", model =>
             {
-                model.Methods = ContactPrimaryMethodsResolver.Resolve(contentItem);
+                model.Methods = ContactPrimaryMethodsResolver.Resolve(_contactMethods.Get(contentItem));
             }).Location(HeaderAdminDisplayType, "Content:5"),
         };
 
