@@ -228,11 +228,16 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
                     agent.ActiveReservationId = null;
                 }
 
-                var targetStatus = agent.PresenceStatus is AgentPresenceStatus.Reserved or
+                // A state the agent asked for while the call rang -- a break, say -- is the state the call ending
+                // returns them to, as every other release does. Sent back to ready instead, the dialer reserved them
+                // for the next call straight away and the break they asked for was lost.
+                var heldOnTheCall = agent.PresenceStatus is AgentPresenceStatus.Reserved or
                     AgentPresenceStatus.Busy or
-                    AgentPresenceStatus.WrapUp
-                    ? AgentPresenceUtilities.ResolveDefaultReadyState(agent)
+                    AgentPresenceStatus.WrapUp;
+                var targetStatus = heldOnTheCall
+                    ? agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent)
                     : agent.PresenceStatus;
+                var requested = heldOnTheCall && agent.RequestedPresenceStatus.HasValue && agent.PresenceRequestedUtc.HasValue;
 
                 agent.RequestedPresenceStatus = null;
 
@@ -245,6 +250,8 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
                 await stateTransitions.TransitionAsync(agent, targetStatus, new AgentStateChangeContext
                 {
                     Source = AgentStateChangeSources.Reconciled,
+                    ReasonCodeId = requested ? agent.PresenceReasonCodeId : null,
+                    ReasonName = requested ? agent.PresenceReason : null,
                     InteractionId = interaction.ItemId,
                     ReservationId = releasedReservationId,
                     ChangedUtc = endedUtc,
