@@ -42,6 +42,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
     private readonly ActivityBatchSourceOptions _sourceOptions;
     private readonly IContactOptOutResolver _optOutResolver;
+    private readonly IOmnichannelContactPhoneLookup _phoneLookup;
     private readonly INotInServiceNumberService _notInServiceNumbers;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly IContactMethodsAccessor _contactMethods;
@@ -61,6 +62,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// <param name="dialerContributors">The optional dialer contributors.</param>
     /// <param name="sourceOptions">The configured activity batch sources.</param>
     /// <param name="optOutResolver">The resolver that decides whether a contact may be reached on a channel.</param>
+    /// <param name="phoneLookup">The lookup that finds records by any of their phone numbers.</param>
     /// <param name="notInServiceNumbers">The list of numbers known not to be in service.</param>
     /// <param name="logger">The logger.</param>
     public DefaultContactActivityBatchLoader(
@@ -75,6 +77,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IEnumerable<IActivityDialerContributor> dialerContributors,
         IOptions<ActivityBatchSourceOptions> sourceOptions,
         IContactOptOutResolver optOutResolver,
+        IOmnichannelContactPhoneLookup phoneLookup,
         INotInServiceNumberService notInServiceNumbers,
         IContactMethodsAccessor contactMethods,
         ILogger<DefaultContactActivityBatchLoader> logger,
@@ -91,6 +94,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _dialerContributors = dialerContributors;
         _sourceOptions = sourceOptions.Value;
         _optOutResolver = optOutResolver;
+        _phoneLookup = phoneLookup;
         _notInServiceNumbers = notInServiceNumbers;
         _contactMethods = contactMethods;
         _contactTypeProvider = contactTypeProviders?.FirstOrDefault();
@@ -492,7 +496,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             var scheduledUtc = await _localClock.ConvertToUtcAsync(batch.ScheduleAt);
 
             var leadsThatAreContacts = leadFilter?.SkipLeadsThatAreContacts == true
-                ? await FindLeadsThatAreContactsAsync(readonlySession, contacts, batch.OnlyPublishedLeads, leadTypes, cancellationToken)
+                ? await FindLeadsThatAreContactsAsync(contacts, batch.OnlyPublishedLeads, leadTypes, cancellationToken)
                 : null;
 
             foreach (var contact in contacts)
@@ -889,11 +893,10 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     }
 
     /// <summary>
-    /// Returns the leads of the page whose primary cell or home number already belongs to a contact. Only contacts
-    /// count: another lead at the number is a duplicate lead, which the lead import and duplicate prevention handle.
+    /// Returns the leads of the page that share any of their phone numbers with a contact. Only contacts count:
+    /// another lead at the number is a duplicate lead, which the lead import and duplicate prevention handle.
     /// </summary>
-    private static async Task<HashSet<string>> FindLeadsThatAreContactsAsync(
-        ISession session,
+    private async Task<HashSet<string>> FindLeadsThatAreContactsAsync(
         IEnumerable<ContentItem> page,
         bool onlyPublished,
         HashSet<string> leadTypes,
@@ -901,29 +904,22 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     {
         var pageIds = page.Select(item => item.ContentItemId).ToArray();
 
-        var leadRows = onlyPublished
-            ? await session.QueryIndex<OmnichannelContactIndex>(index => index.Published && index.ContentItemId.IsIn(pageIds)).ListAsync(cancellationToken)
-            : await session.QueryIndex<OmnichannelContactIndex>(index => index.Latest && index.ContentItemId.IsIn(pageIds)).ListAsync(cancellationToken);
+        var leadRows = await _phoneLookup.GetNumbersAsync(
+            pageIds,
+            onlyPublished ? OmnichannelContactVersion.Published : OmnichannelContactVersion.Latest,
+            cancellationToken);
 
         var leadsByNumber = new Dictionary<string, List<string>>(StringComparer.Ordinal);
 
         foreach (var row in leadRows)
         {
-            foreach (var number in new[] { row.NormalizedPrimaryCellPhoneNumber, row.NormalizedPrimaryHomePhoneNumber })
+            if (!leadsByNumber.TryGetValue(row.NormalizedPhoneNumber, out var owners))
             {
-                if (string.IsNullOrEmpty(number))
-                {
-                    continue;
-                }
-
-                if (!leadsByNumber.TryGetValue(number, out var owners))
-                {
-                    owners = [];
-                    leadsByNumber[number] = owners;
-                }
-
-                owners.Add(row.ContentItemId);
+                owners = [];
+                leadsByNumber[row.NormalizedPhoneNumber] = owners;
             }
+
+            owners.Add(row.ContentItemId);
         }
 
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -933,46 +929,23 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             return result;
         }
 
-        var numbers = leadsByNumber.Keys.ToArray();
+        var matches = await _phoneLookup.FindByNumbersAsync(
+            leadsByNumber.Keys.ToArray(),
+            OmnichannelContactVersion.Published,
+            cancellationToken: cancellationToken);
 
-        // One query per phone column rather than one OR across both: each can seek on its own phone index, where the
-        // OR made SQL Server scan the contact index for every page of leads. See LookupBatchSize for the batch size.
-        var matches = new Dictionary<string, OmnichannelContactIndex>(StringComparer.Ordinal);
-
-        foreach (var chunk in OmnichannelContactDuplicateLookupService.ToLookupBatches(numbers))
-        {
-            var byCell = await session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Published &&
-                    !index.IsConverted &&
-                    index.NormalizedPrimaryCellPhoneNumber.IsIn(chunk))
-                .ListAsync(cancellationToken);
-
-            var byHome = await session.QueryIndex<OmnichannelContactIndex>(index =>
-                    index.Published &&
-                    !index.IsConverted &&
-                    index.NormalizedPrimaryHomePhoneNumber.IsIn(chunk))
-                .ListAsync(cancellationToken);
-
-            foreach (var match in byCell.Concat(byHome))
-            {
-                matches[match.ContentItemId] = match;
-            }
-        }
-
-        foreach (var match in matches.Values)
+        foreach (var match in matches)
         {
             // A row written before the content type was indexed has none; it predates leads, so it is a contact.
-            if (!string.IsNullOrEmpty(match.ContentType) && leadTypes.Contains(match.ContentType))
+            if (match.IsConverted ||
+                (!string.IsNullOrEmpty(match.ContentType) && leadTypes.Contains(match.ContentType)))
             {
                 continue;
             }
 
-            foreach (var number in new[] { match.NormalizedPrimaryCellPhoneNumber, match.NormalizedPrimaryHomePhoneNumber })
+            if (leadsByNumber.TryGetValue(match.NormalizedPhoneNumber, out var owners))
             {
-                if (!string.IsNullOrEmpty(number) && leadsByNumber.TryGetValue(number, out var owners))
-                {
-                    result.UnionWith(owners);
-                }
+                result.UnionWith(owners);
             }
         }
 

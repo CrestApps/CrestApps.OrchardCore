@@ -37,9 +37,9 @@ public sealed class OmnichannelContactImportRowFilterTests
         // whole set and answer each lookup from it.
         _duplicateLookupService.Setup(x => x.GetPhoneNumberOwnersAsync(
                 It.IsAny<IReadOnlyCollection<string>>(),
-                It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+                It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(async (IReadOnlyCollection<string> keys, Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool> _, CancellationToken _) =>
+            .Returns(async (IReadOnlyCollection<string> keys, Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool> _, CancellationToken _) =>
             {
                 await Task.Yield();
 
@@ -72,7 +72,7 @@ public sealed class OmnichannelContactImportRowFilterTests
         Assert.True(initialized);
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -122,7 +122,7 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.Is<IReadOnlyCollection<string>>(keys => keys.Contains("5551112222") && keys.Contains("5553334444")),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -169,7 +169,7 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
 
@@ -300,7 +300,7 @@ public sealed class OmnichannelContactImportRowFilterTests
 
         _duplicateLookupService.Verify(x => x.GetPhoneNumberOwnersAsync(
             It.IsAny<IReadOnlyCollection<string>>(),
-            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelContactIndex, bool>>(),
+            It.IsAny<Func<CrestApps.OrchardCore.Omnichannel.Core.Indexes.IOmnichannelContactMatch, bool>>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
