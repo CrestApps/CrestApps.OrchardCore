@@ -16,13 +16,40 @@
 }
 
 
-<h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
-<p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
+    <div>
+        <h1 class="h3 mb-1">@T["Order {0}", order.OrderNumber]</h1>
+        <p class="text-muted">@T["Placed {0:D}", await LocalAsync(order.CreatedUtc)]</p>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.InvoiceUrl))
+    {
+        <a class="btn btn-outline-secondary btn-sm" href="@Model.InvoiceUrl">
+            <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
+        </a>
+    }
+</div>
 
 @if (!string.IsNullOrEmpty(Model.PayUrl))
 {
     <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2" role="alert">
-        <span>@T["A balance is still owed on this order."]</span>
+        @if (order.Invoice is not null && order.Status != OrderStatus.Paid)
+        {
+            <span>
+                @T["This order is waiting for your payment. Shipping and tax are added when you pay."]
+                @if (order.Invoice.DueUtc is { } due)
+                {
+                    <span class="d-block small">@T["Please pay by {0:D}.", due]</span>
+                }
+                @if (!string.IsNullOrWhiteSpace(order.Invoice.Note))
+                {
+                    <span class="d-block small mt-1" style="white-space: pre-line">@order.Invoice.Note</span>
+                }
+            </span>
+        }
+        else
+        {
+            <span>@T["A balance is still owed on this order."]</span>
+        }
         <a class="btn btn-primary btn-sm" href="@Model.PayUrl">@T["Pay now"]</a>
     </div>
 }
@@ -46,6 +73,10 @@
                             @if (!string.IsNullOrEmpty(line.PriceName))
                             {
                                 <span class="text-muted">(@line.PriceName)</span>
+                            }
+                            @if (line.ShipsFromUtc is { } shipsFrom)
+                            {
+                                <div class="small text-info-emphasis">@T["Pre-order: ships {0:D}", shipsFrom]</div>
                             }
                             @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
                             {
@@ -72,7 +103,7 @@
                 @if (order.Shipping is not null)
                 {
                     <tr>
-                        <th scope="row" colspan="2" class="text-end fw-normal">@T["Shipping ({0})", order.Shipping.Name]</th>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@(order.Shipping.IsPickup ? order.Shipping.Name : T.GetString("Shipping ({0})", order.Shipping.Name).Value)</th>
                         <td class="text-end">@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</td>
                     </tr>
                 }
@@ -107,7 +138,7 @@
 
 @if (shipsTo is { Count: > 0 })
 {
-    <h2 class="h6">@T["Ships to"]</h2>
+    <h2 class="h6">@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</h2>
     <address>
         @for (var i = 0; i < shipsTo.Count; i++)
         {
@@ -118,6 +149,10 @@
             }
         }
     </address>
+    @if (order.Shipping?.IsPickup == true && !string.IsNullOrEmpty(order.Shipping.Description))
+    {
+        <p class="small text-body-secondary">@order.Shipping.Description</p>
+    }
 }
 
 @if (billedTo is { Count: > 0 })

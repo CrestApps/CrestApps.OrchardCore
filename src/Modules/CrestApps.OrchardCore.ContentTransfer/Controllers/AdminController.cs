@@ -234,6 +234,9 @@ public sealed class AdminController : Controller, IUpdateModel
             Content = await _displayManager.BuildEditorAsync(importContent, _updateModelAccessor.ModelUpdater, true, string.Empty, string.Empty),
             Columns = columns.Where(x => x.Type != ImportColumnType.ExportOnly),
             FileFormats = BuildFileFormatSelectList(),
+            OtherLayouts = [.. HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>()
+                .Select(transformer => transformer.Describe(contentTypeDefinition))
+                .Where(description => !string.IsNullOrEmpty(description))],
         };
 
         return View(viewModel);
@@ -888,7 +891,19 @@ public sealed class AdminController : Controller, IUpdateModel
         var outputStream = new MemoryStream();
         statsPart.ErrorMessages ??= [];
 
-        using (var reader = formatProvider.CreateReader(sourceStream))
+        // Read as the import read it, so a reshaped file's failed rows are the rows that failed.
+        var contentTypeDefinition = await _contentDefinitionManager.GetTypeDefinitionAsync(entry.ContentType);
+
+        using (var reader = await ContentTransferFileReaders.TransformAsync(
+            HttpContext.RequestServices.GetServices<IContentTransferFileReaderTransformer>(),
+            () =>
+            {
+                sourceStream.Position = 0;
+
+                return formatProvider.CreateReader(sourceStream);
+            },
+            contentTypeDefinition,
+            HttpContext.RequestAborted))
         using (var writer = formatProvider.CreateWriter(outputStream, entry.ContentType))
         {
             var columnNames = reader.GetColumnNames().ToList();

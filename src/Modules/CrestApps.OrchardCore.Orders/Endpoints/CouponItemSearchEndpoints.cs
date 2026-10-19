@@ -25,7 +25,8 @@ internal static class CouponItemSearchEndpoints
 
     private static async Task<IResult> SearchProductsAsync(string query, HttpContext httpContext, IAuthorizationService authorizationService, CouponItemLookup lookup)
     {
-        if (!await authorizationService.AuthorizeAsync(httpContext.User, CheckoutPermissions.ManageCoupons))
+        if (!await authorizationService.AuthorizeAsync(httpContext.User, CheckoutPermissions.ManageCoupons) &&
+            !await authorizationService.AuthorizeAsync(httpContext.User, OrderPermissions.ManageOrders))
         {
             return Results.Forbid();
         }

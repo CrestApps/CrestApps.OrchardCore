@@ -42,6 +42,79 @@ public class ShippingSettingsViewModel
     public string Carriers { get; set; }
 
     public bool SendShippedEmails { get; set; }
+
+    public List<PickupLocationViewModel> PickupLocations { get; set; } = [];
+
+    public string ShipFromName { get; set; }
+
+    public string ShipFromCompany { get; set; }
+
+    public string ShipFromAddressLine1 { get; set; }
+
+    public string ShipFromAddressLine2 { get; set; }
+
+    public string ShipFromCity { get; set; }
+
+    public string ShipFromRegion { get; set; }
+
+    public string ShipFromPostalCode { get; set; }
+
+    public string ShipFromCountry { get; set; }
+
+    public string ShipFromPhone { get; set; }
+
+    public decimal? DefaultParcelLength { get; set; }
+
+    public decimal? DefaultParcelWidth { get; set; }
+
+    public decimal? DefaultParcelHeight { get; set; }
+
+    public decimal PackagingWeight { get; set; }
+
+    /// <summary>
+    /// Gets or sets the inventory locations a pickup location's units can come from; empty without Inventory.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyList<SelectListItem> StockLocations { get; set; } = [];
+}
+
+public class PickupLocationViewModel
+{
+    public string LocationId { get; set; }
+
+    public string Name { get; set; }
+
+    public string AddressLine1 { get; set; }
+
+    public string City { get; set; }
+
+    public string Region { get; set; }
+
+    public string PostalCode { get; set; }
+
+    public string Country { get; set; }
+
+    public string Instructions { get; set; }
+
+    public decimal Fee { get; set; }
+
+    public string StockLocationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the location is to be removed.
+    /// </summary>
+    public bool Remove { get; set; }
+}
+
+public class LocalDeliverySettingsViewModel
+{
+    public string PostalCodes { get; set; }
+
+    public decimal Amount { get; set; }
+
+    public decimal? FreeFromSubtotal { get; set; }
+
+    public decimal MinimumSubtotal { get; set; }
 }
 
 public class OrderShipmentsViewModel
@@ -55,6 +128,11 @@ public class OrderShipmentsViewModel
     public bool CanFulfill { get; set; }
 
     public IReadOnlyList<string> Carriers { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether a shipping account is set up to buy labels with.
+    /// </summary>
+    public bool CanBuyLabels { get; set; }
 }
 
 public class ShipmentLineChoice
@@ -229,6 +307,14 @@ public class ShippingCheckoutStepViewModel
     public string AddressId { get; set; }
 
     /// <summary>
+    /// Gets or sets the store location chosen to pick the order up from, or empty to have it shipped.
+    /// </summary>
+    public string PickupLocationId { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<PickupLocation> PickupLocations { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets whether the ways to ship were just shown for the address, for the buyer to choose from.
     /// </summary>
     [BindNever]
@@ -309,4 +395,74 @@ public class ShippingRatesTestViewModel
 
     [BindNever]
     public WeightUnit WeightUnit { get; set; }
+}
+
+public class EasyPostSettingsViewModel
+{
+    public string ApiKey { get; set; }
+
+    public bool RemoveApiKey { get; set; }
+
+    public string WebhookSecret { get; set; }
+
+    [BindNever]
+    public bool HasApiKey { get; set; }
+
+    [BindNever]
+    public bool HasWebhookSecret { get; set; }
+
+    [BindNever]
+    public string WebhookUrl { get; set; }
+}
+
+public class CarrierRateSettingsViewModel
+{
+    public string Carriers { get; set; }
+
+    public int MaxRates { get; set; }
+
+    public decimal MarkupPercent { get; set; }
+
+    public decimal MarkupAmount { get; set; }
+
+    public decimal? FallbackAmount { get; set; }
+
+    [BindNever]
+    public bool HasCarrierAccount { get; set; }
+}
+
+public class ShipmentLabelViewModel
+{
+    public decimal Weight { get; set; }
+
+    public decimal? Length { get; set; }
+
+    public decimal? Width { get; set; }
+
+    public decimal? Height { get; set; }
+
+    public string QuoteId { get; set; }
+
+    public string RateId { get; set; }
+
+    [BindNever]
+    public Shipment Shipment { get; set; }
+
+    [BindNever]
+    public Order Order { get; set; }
+
+    [BindNever]
+    public WeightUnit WeightUnit { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<CarrierRate> Rates { get; set; } = [];
+
+    [BindNever]
+    public string Error { get; set; }
+
+    [BindNever]
+    public bool HasShipFrom { get; set; }
+
+    [BindNever]
+    public string CarrierName { get; set; }
 }

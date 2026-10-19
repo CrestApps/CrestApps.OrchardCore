@@ -70,9 +70,54 @@ public sealed class InventoryOrderEventHandler : OrderEventHandlerBase
         }
     }
 
-    // A bundle holds and sells its parts, so many units of each as the bundles hold.
+    // The new lines are held instead of the old: all of them or, short of stock, none, and the old hold stays.
+    public override async Task LinesChangedAsync(OrderLinesChangedContext context, CancellationToken cancellationToken = default)
+    {
+        var settings = await _siteService.GetSettingsAsync<InventorySettings>();
+        var expires = _clock.UtcNow.AddMinutes(Math.Max(1, settings.HoldMinutes));
+
+        await _inventory.ReleaseAsync(context.Order.ItemId, "The order's items changed.", cancellationToken);
+
+        var result = await _inventory.ReserveAsync(context.Order.ItemId, ToRequests(context.Order), expires, cancellationToken);
+
+        foreach (var shortage in result.Shortages)
+        {
+            context.Refuse(shortage.Available > 0
+                ? S["Only {0} of {1} left.", shortage.Available, shortage.Item.Title]
+                : S["{0} is out of stock.", shortage.Item.Title]);
+        }
+    }
+
+    public override async Task ReturnedAsync(OrderReturnedContext context, CancellationToken cancellationToken = default)
+    {
+        var lines = context.Lines.Where(line => line.Restock && line.Quantity > 0).ToArray();
+
+        if (lines.Length == 0)
+        {
+            return;
+        }
+
+        var requests = lines.SelectMany(returned => returned.Line.BundleItems is { Count: > 0 } items
+            ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * returned.Quantity))
+            : [new StockRequest(returned.Line.ContentItemId, returned.Line.VariantId, returned.Quantity)]);
+
+        await _inventory.RestockAsync(
+            context.Order.ItemId,
+            requests,
+            context.LocationId,
+            S["Return {0} of order {1}", context.Return.Number, context.Order.OrderNumber],
+            context.ActorId is null && context.ActorName is null ? null : new StockActor(context.ActorId, context.ActorName),
+            cancellationToken);
+    }
+
+    // A bundle holds and sells its parts, so many units of each as the bundles hold. An order fulfilled from a
+    // location, such as the shop it's picked up at, would rather its units came from there.
     internal static IEnumerable<StockRequest> ToRequests(Order order)
-        => order.Lines.SelectMany(line => line.BundleItems is { Count: > 0 } items
-            ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * line.Quantity))
-            : [new StockRequest(line.ContentItemId, line.VariantId, line.Quantity)]);
+    {
+        var locationId = order.Shipping?.LocationId;
+
+        return order.Lines.SelectMany(line => line.BundleItems is { Count: > 0 } items
+            ? items.Select(item => new StockRequest(item.ContentItemId, null, Math.Max(1, item.Quantity) * line.Quantity, locationId))
+            : [new StockRequest(line.ContentItemId, line.VariantId, line.Quantity, locationId)]);
+    }
 }

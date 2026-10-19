@@ -1,0 +1,193 @@
+@model OrderReturnDetailViewModel
+@using System.Globalization
+@using CrestApps.OrchardCore.Products.Core.Services
+@inject OrchardCore.Modules.ILocalClock LocalClock
+@functions {
+    // Stored times are UTC; people read them in the site's time zone.
+    private async Task<DateTime> LocalAsync(DateTime utc)
+        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
+}
+@{
+    var orderReturn = Model.Return;
+    var canDecide = orderReturn.Status == OrderReturnStatus.Requested;
+    var canReceive = orderReturn.Status is OrderReturnStatus.Requested or OrderReturnStatus.Approved;
+    var canRefund = orderReturn.Resolution == OrderReturnResolution.Refund && orderReturn.Status is OrderReturnStatus.Approved or OrderReturnStatus.Received;
+    var canExchange = orderReturn.Resolution == OrderReturnResolution.Exchange && orderReturn.Status is OrderReturnStatus.Approved or OrderReturnStatus.Received;
+}
+
+<zone Name="Title">
+    <breadcrumb name="ReturnsDetail" title="@T["Return {0}", orderReturn.Number]">
+        <breadcrumb-item id="ReturnsIndex" action="Index" controller="ReturnsAdmin" area="CrestApps.OrchardCore.Orders" permission="@CrestApps.OrchardCore.Orders.OrderPermissions.ManageOrders.Name">@T["Returns"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    @await Html.PartialAsync("_OrderReturnStatus", orderReturn.Status)
+    <span class="text-body-secondary small">
+        @T["Asked {0:g} by {1}", await LocalAsync(orderReturn.CreatedUtc), orderReturn.CustomerName ?? orderReturn.CustomerEmail]
+        · <a asp-controller="OrdersAdmin" asp-action="Detail" asp-route-orderId="@orderReturn.OrderId">@T["Order {0}", orderReturn.OrderNumber]</a>
+    </span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card mb-4">
+            <div class="card-header">@T.Plural(orderReturn.Quantity, "1 item to return", "{0} items to return")</div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Item"]</th>
+                            <th scope="col">@T["Why"]</th>
+                            <th scope="col" class="text-end">@T["Qty"]</th>
+                            <th scope="col" class="text-end">@T["Paid"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var line in orderReturn.Lines)
+                        {
+                            <tr>
+                                <td>
+                                    @line.Title
+                                    @if (!string.IsNullOrEmpty(line.Sku))
+                                    {
+                                        <div class="small text-muted">@T["SKU {0}", line.Sku]</div>
+                                    }
+                                    @if (orderReturn.ReceivedUtc is not null)
+                                    {
+                                        <div class="small @(line.Restocked ? "text-success" : "text-muted")">@(line.Restocked ? T["Back in stock"] : T["Not restocked"])</div>
+                                    }
+                                </td>
+                                <td>@line.Reason</td>
+                                <td class="text-end">@line.Quantity</td>
+                                <td class="text-end text-nowrap">@ProductPriceFormatter.Format(line.UnitPrice * line.Quantity, orderReturn.Currency)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body border-top">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-4">@T["The buyer wants"]</dt>
+                    <dd class="col-sm-8">@(orderReturn.Resolution == OrderReturnResolution.Exchange ? T["An exchange: {0}", orderReturn.ExchangeFor] : T["Their money back"])</dd>
+                    @if (!string.IsNullOrWhiteSpace(orderReturn.Comment))
+                    {
+                        <dt class="col-sm-4">@T["They wrote"]</dt>
+                        <dd class="col-sm-8" style="white-space: pre-line">@orderReturn.Comment</dd>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(orderReturn.StoreMessage))
+                    {
+                        <dt class="col-sm-4">@T["We told them"]</dt>
+                        <dd class="col-sm-8" style="white-space: pre-line">@orderReturn.StoreMessage</dd>
+                    }
+                    @if (orderReturn.RefundedAmount > 0)
+                    {
+                        <dt class="col-sm-4">@T["Refunded"]</dt>
+                        <dd class="col-sm-8">@ProductPriceFormatter.Format(orderReturn.RefundedAmount, orderReturn.Currency)</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        @if (canDecide)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T["Approve"]</div>
+                <div class="card-body">
+                    <form asp-action="Approve" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
+                        <label class="form-label small" for="approve-message">@T["Message for the buyer (optional)"]</label>
+                        <textarea id="approve-message" name="message" rows="2" maxlength="2000" class="form-control mb-2"></textarea>
+                        <span class="hint d-block mb-2">
+                            @if (string.IsNullOrWhiteSpace(Model.Instructions))
+                            {
+                                @T["They're emailed the return number to put in the parcel. Add where to send it here, or once for every return in Settings › Commerce › Returns."]
+                            }
+                            else
+                            {
+                                @T["They're emailed the return instructions from the settings and the return number, with this message."]
+                            }
+                        </span>
+                        <button type="submit" class="btn btn-success btn-sm">@T["Approve"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (canReceive)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T["The items arrived"]</div>
+                <div class="card-body">
+                    <form asp-action="Receive" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
+                        <p class="small mb-2">@T["Tick what can be sold again; it goes back into stock."]</p>
+                        @foreach (var line in orderReturn.Lines)
+                        {
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="restock" value="@line.LineId" id="restock-@line.LineId" checked />
+                                <label class="form-check-label" for="restock-@line.LineId">@line.Quantity × @line.Title</label>
+                            </div>
+                        }
+                        @if (Model.Locations.Count > 1)
+                        {
+                            <label class="form-label small mt-2 mb-0" for="restock-location">@T["Back into stock at"]</label>
+                            <select id="restock-location" name="locationId" class="form-select form-select-sm">
+                                <option value="">@T["Where it was sold from"]</option>
+                                @foreach (var location in Model.Locations)
+                                {
+                                    <option value="@location.Value">@location.Text</option>
+                                }
+                            </select>
+                        }
+                        <button type="submit" class="btn btn-primary btn-sm mt-3">@T["Mark received"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (canRefund)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T["Refund"]</div>
+                <div class="card-body">
+                    <form asp-action="Refund" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
+                        <label class="form-label small" for="refund-amount">@T["Amount"]</label>
+                        <input id="refund-amount" name="amount" type="number" min="0.01" step="0.01" max="@Model.Refundable.ToString(CultureInfo.InvariantCulture)" value="@Model.SuggestedRefund.ToString(CultureInfo.InvariantCulture)" class="form-control w-auto mb-1" />
+                        <span class="hint d-block mb-2">@T["What the items were paid, before tax and shipping. Up to {0} can still be refunded on the order.", ProductPriceFormatter.Format(Model.Refundable, orderReturn.Currency)]</span>
+                        <button type="submit" class="btn btn-success btn-sm" data-title="@T["Refund"]" data-message="@T["Refund the buyer now? The money goes back the way they paid."]">@T["Refund and close"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (canExchange)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T["Exchange"]</div>
+                <div class="card-body">
+                    <form asp-action="Exchanged" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
+                        <p class="small mb-2">@T["Send them {0}, then close the return here.", orderReturn.ExchangeFor]</p>
+                        <label class="form-label small" for="exchange-message">@T["Message for the buyer (optional)"]</label>
+                        <textarea id="exchange-message" name="message" rows="2" maxlength="2000" class="form-control mb-2" placeholder="@T["Such as the tracking number"]"></textarea>
+                        <button type="submit" class="btn btn-success btn-sm">@T["The replacement is on its way"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+
+        @if (orderReturn.Status is OrderReturnStatus.Requested or OrderReturnStatus.Approved)
+        {
+            <div class="card mb-4">
+                <div class="card-header">@T["Decline"]</div>
+                <div class="card-body">
+                    <form asp-action="Reject" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
+                        <label class="form-label small" for="reject-message">@T["Why (the buyer is told)"]</label>
+                        <textarea id="reject-message" name="message" rows="2" maxlength="2000" class="form-control mb-2" required></textarea>
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline the return"]</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,102 @@
+@model OrderDocumentViewModel
+
+@*
+    A packing slip: where the box goes, and what to put in it, with a box to tick per line and no prices. A shipment's
+    slip lists its lines and number.
+*@
+
+@{
+    var header = Model.Header;
+    var order = Model.Order;
+}
+
+<div class="d-flex flex-column flex-sm-row justify-content-between gap-3 border-bottom pb-3 mb-3">
+    <div>
+        @if (!string.IsNullOrEmpty(header.LogoUrl))
+        {
+            <img src="@header.LogoUrl" alt="@header.Name" style="max-height: 3.5rem; max-width: 12rem" class="mb-2 d-block" />
+        }
+        <div class="fw-semibold fs-5">@header.Name</div>
+        @if (!string.IsNullOrEmpty(header.Address))
+        {
+            <div class="small text-body-secondary" style="white-space: pre-line">@header.Address</div>
+        }
+        <div class="small text-body-secondary">
+            @foreach (var contact in new[] { header.Email, header.Phone, header.Website }.Where(value => !string.IsNullOrEmpty(value)))
+            {
+                <div>@contact</div>
+            }
+        </div>
+    </div>
+    <div class="text-sm-end">
+        <h1 class="h3 mb-1">@Model.Title</h1>
+        <div>@T["Order {0}", order.OrderNumber]</div>
+        <div class="small text-body-secondary">@T["Placed {0:d}", Model.Placed]</div>
+        @if (!string.IsNullOrEmpty(Model.ShipmentNumber))
+        {
+            <div class="small text-body-secondary">@T["Shipment {0}", Model.ShipmentNumber]</div>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6">
+        <div class="small text-body-secondary text-uppercase">@(order.Shipping?.IsPickup == true ? T["Picked up by"] : T["Ship to"])</div>
+        @if (Model.ShipsTo.Count > 0 && order.Shipping?.IsPickup != true)
+        {
+            @foreach (var line in Model.ShipsTo)
+            {
+                <div class="fs-6">@line</div>
+            }
+        }
+        else
+        {
+            <div class="fw-semibold">@order.CustomerName</div>
+        }
+        @if (!string.IsNullOrEmpty(order.CustomerPhone))
+        {
+            <div class="small">@order.CustomerPhone</div>
+        }
+    </div>
+    @if (!string.IsNullOrEmpty(order.Shipping?.Name))
+    {
+        <div class="col-sm-6">
+            <div class="small text-body-secondary text-uppercase">@(order.Shipping.IsPickup ? T["Pickup"] : T["Shipping method"])</div>
+            <div>@order.Shipping.Name</div>
+            @if (order.Shipping.IsPickup && !string.IsNullOrEmpty(order.Shipping.Description))
+            {
+                <div class="small">@order.Shipping.Description</div>
+            }
+        </div>
+    }
+</div>
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col" style="width: 2.5rem"><span class="visually-hidden">@T["Packed"]</span></th>
+                <th scope="col">@T["Item"]</th>
+                <th scope="col">@T["SKU"]</th>
+                <th scope="col" class="text-end">@T["Qty"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines)
+            {
+                <tr>
+                    <td><span class="d-inline-block border border-secondary rounded-1" style="width: 1.1rem; height: 1.1rem" aria-hidden="true"></span></td>
+                    <td class="text-break">@line.Description</td>
+                    <td class="small text-body-secondary">@line.Sku</td>
+                    <td class="text-end fw-semibold">@line.Quantity</td>
+                </tr>
+            }
+            @if (Model.Lines.Count == 0)
+            {
+                <tr><td colspan="4" class="text-body-secondary">@T["Nothing in this order is shipped."]</td></tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<p class="small text-body-secondary mt-3 mb-0">@T.Plural(Model.Lines.Sum(line => line.Quantity), "1 item", "{0} items")</p>

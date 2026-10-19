@@ -96,6 +96,12 @@ public sealed class AbandonedOrderSweeper
 
     private async Task<OrderCancelReason?> GetReasonAsync(Order order, CancellationToken cancellationToken)
     {
+        // An order the store made for the buyer to pay waits for them; the store cancels it if it must.
+        if (order.Invoice is not null)
+        {
+            return null;
+        }
+
         if (string.IsNullOrEmpty(order.CheckoutSessionId))
         {
             return OrderCancelReason.Abandoned;

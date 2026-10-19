@@ -22,6 +22,11 @@ public interface IStockMovementStore
     /// The sum of a stock item's movements: the units it holds by its history.
     /// </summary>
     Task<int> SumAsync(string stockItemId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds up the movements of a stock item at each location; a movement without a location is at the default one.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, int>> SumByLocationAsync(string stockItemId, CancellationToken cancellationToken = default);
 }
 
 public sealed class StockMovementStore : DocumentCatalog<StockMovement, StockMovementIndex>, IStockMovementStore
@@ -45,8 +50,11 @@ public sealed class StockMovementStore : DocumentCatalog<StockMovement, StockMov
     }
 
     public async Task<int> SumAsync(string stockItemId, CancellationToken cancellationToken = default)
+        => (await SumByLocationAsync(stockItemId, cancellationToken)).Values.Sum();
+
+    public async Task<IReadOnlyDictionary<string, int>> SumByLocationAsync(string stockItemId, CancellationToken cancellationToken = default)
     {
-        var sum = 0;
+        var sums = new Dictionary<string, int>(StringComparer.Ordinal);
 
         for (var skip = 0; ; skip += SumPageSize)
         {
@@ -56,11 +64,16 @@ public sealed class StockMovementStore : DocumentCatalog<StockMovement, StockMov
                 .Take(SumPageSize)
                 .ListAsync(cancellationToken)).ToArray();
 
-            sum += page.Sum(movement => movement.Quantity);
+            foreach (var movement in page)
+            {
+                var locationId = string.IsNullOrEmpty(movement.LocationId) ? InventoryConstants.DefaultLocationId : movement.LocationId;
+
+                sums[locationId] = sums.GetValueOrDefault(locationId) + movement.Quantity;
+            }
 
             if (page.Length < SumPageSize)
             {
-                return sum;
+                return sums;
             }
         }
     }

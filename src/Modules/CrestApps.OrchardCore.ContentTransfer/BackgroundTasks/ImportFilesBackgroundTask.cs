@@ -4,6 +4,7 @@ using System.Data.Common;
 using CrestApps.OrchardCore.BackgroundWork;
 using CrestApps.OrchardCore.ContentTransfer.Indexes;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -462,7 +463,17 @@ public sealed class ImportFilesBackgroundTask : IBackgroundTask
         IStringLocalizer localizer,
         CancellationToken cancellationToken)
     {
-        using var reader = formatProvider.CreateReader(stream);
+        // Another system's layout, such as a store's product export, is read as the content type's columns.
+        using var reader = await ContentTransferFileReaders.TransformAsync(
+            serviceProvider.GetServices<IContentTransferFileReaderTransformer>(),
+            () =>
+            {
+                stream.Position = 0;
+
+                return formatProvider.CreateReader(stream);
+            },
+            contentTypeDefinition,
+            cancellationToken);
 
         var pacingOptions = serviceProvider.GetService<IOptions<BackgroundWorkPacingOptions>>()?.Value;
 

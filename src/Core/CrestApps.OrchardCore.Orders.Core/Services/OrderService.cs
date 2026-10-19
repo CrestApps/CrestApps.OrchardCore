@@ -46,6 +46,13 @@ public interface IOrderService
     /// Adds a note to the order.
     /// </summary>
     Task AddNoteAsync(Order order, string text, OrderNoteKind kind, string authorName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces the lines of an order not paid or checked out yet with the cart's, such as a store's draft being
+    /// changed. The orders' handlers hear of it, and one that can't provide the new lines, such as stock running short,
+    /// refuses them: nothing changes and the problems are returned.
+    /// </summary>
+    Task<IReadOnlyList<string>> ReplaceLinesAsync(Order order, CartPricing pricing, CancellationToken cancellationToken = default);
 }
 
 public sealed class OrderService : IOrderService
@@ -92,30 +99,7 @@ public sealed class OrderService : IOrderService
             Status = OrderStatus.Draft,
             CreatedUtc = now,
             ModifiedUtc = now,
-            Lines = pricing.Lines.Select(line => new OrderLine
-            {
-                LineId = line.Line.LineId,
-                ContentItemId = line.Line.ContentItemId,
-                ContentItemVersionId = line.Product?.ContentItemVersionId ?? line.ContentItem?.ContentItemVersionId,
-                ContentType = line.Product?.ContentType ?? line.ContentItem?.ContentType,
-                Title = line.Title,
-                Sku = line.Product?.Sku,
-                PriceId = line.Price?.PriceId,
-                PriceName = line.Price?.Price?.Name,
-                VariantId = line.Line.VariantId,
-                VariantTitle = line.Product?.VariantTitle,
-                Quantity = line.Line.Quantity,
-                UnitPrice = line.UnitPrice,
-                LineTotal = line.LineTotal,
-                ProductType = line.Product?.ProductType ?? default,
-                TaxCategoryCode = line.Product?.TaxCategoryCode,
-                TaxClassificationCode = line.Product?.TaxClassificationCode,
-                CategoryIds = ProductCategories.GetIds(line.ContentItem),
-                AddOns = [.. (line.AddOns ?? []).Select(addOn => new OrderLineAddOn { AddOnId = addOn.AddOnId, Label = addOn.Label, Value = addOn.Value, Price = addOn.Price })],
-                BundleItems = line.ContentItem?.TryGet<ProductBundlePart>(out var bundle) == true && bundle.Items is { Count: > 0 }
-                    ? [.. bundle.Items.Where(item => !string.IsNullOrEmpty(item.ContentItemId)).Select(item => new OrderLineBundleItem { ContentItemId = item.ContentItemId, Title = item.Title, Quantity = Math.Max(1, item.Quantity) })]
-                    : [],
-            }).ToList(),
+            Lines = OrderLines.FromPricing(pricing),
         };
 
         order.Subtotal = order.Lines.Sum(line => line.LineTotal);
@@ -135,6 +119,48 @@ public sealed class OrderService : IOrderService
         }
 
         return new OrderCreationResult(order, created.Problems);
+    }
+
+    public async Task<IReadOnlyList<string>> ReplaceLinesAsync(Order order, CartPricing pricing, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+        ArgumentNullException.ThrowIfNull(pricing);
+
+        if (order.Status != OrderStatus.Draft)
+        {
+            throw new InvalidOperationException("Only an order not checked out yet can have its lines replaced.");
+        }
+
+        if (!pricing.CanCheckout)
+        {
+            throw new InvalidOperationException("Only a cart whose every line can be bought replaces an order's lines.");
+        }
+
+        var previous = order.Lines;
+
+        order.Lines = OrderLines.FromPricing(pricing);
+        order.Currency = pricing.Currency;
+        order.Subtotal = order.Lines.Sum(line => line.LineTotal);
+
+        var changed = new OrderLinesChangedContext(order, previous);
+
+        foreach (var handler in _handlers)
+        {
+            await handler.LinesChangedAsync(changed, cancellationToken);
+        }
+
+        if (changed.Problems.Count > 0)
+        {
+            order.Lines = previous;
+            order.Subtotal = previous.Sum(line => line.LineTotal);
+
+            return changed.Problems;
+        }
+
+        order.ModifiedUtc = _clock.UtcNow;
+        await _store.UpdateAsync(order, cancellationToken);
+
+        return [];
     }
 
     public async Task<bool> CancelAsync(Order order, OrderCancelReason reason, CancellationToken cancellationToken = default)

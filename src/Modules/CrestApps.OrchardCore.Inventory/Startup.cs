@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Inventory.ContentTransfer;
 using CrestApps.OrchardCore.Inventory.BackgroundTasks;
 using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Indexes;
@@ -5,8 +7,10 @@ using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
+using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Recipes;
 using CrestApps.OrchardCore.Inventory.Reports;
@@ -51,6 +55,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<IStockItemStore, StockItemStore>();
         services.AddScoped<IStockMovementStore, StockMovementStore>();
         services.AddScoped<IInventoryService, DefaultInventoryService>();
+        services.AddScoped<InventoryLocationService>();
+        services.AddScoped<IInventoryLocationService>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
+        services.AddScoped<IFulfillmentLocationProvider>(serviceProvider => serviceProvider.GetRequiredService<InventoryLocationService>());
         services.AddScoped<InventoryProductSynchronizer>();
         services.AddScoped<InventorySyncService>();
         services.AddScoped<StockCountImporter>();
@@ -95,13 +102,16 @@ public sealed class OrdersStartup : StartupBase
 }
 
 /// <summary>
-/// Counts the stock a product import says.
+/// Imports and exports how a product's stock is kept, and how many are available, with Content Transfer.
 /// </summary>
-[RequireFeatures(ProductConstants.Feature.Transfer)]
-public sealed class ProductTransferStartup : StartupBase
+[RequireFeatures(ContentTransferConstants.Feature.ModuleId)]
+public sealed class ContentTransferStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
-        => services.AddScoped<IProductImportHandler, InventoryProductImportHandler>();
+    {
+        services.AddScoped<InventoryCountApplier>();
+        services.AddContentPartImportHandler<InventoryPart, InventoryPartContentImportHandler>();
+    }
 }
 
 /// <summary>
@@ -185,4 +195,42 @@ public sealed class ReportsStartup : StartupBase
         services.AddScoped<IReport, StockOnHandReport>();
         services.AddScoped<IReport, StockMovementsReport>();
     }
+}
+
+/// <summary>
+/// Lets shoppers ask to hear when a sold-out product is back, and emails them when it is.
+/// </summary>
+[Feature(InventoryConstants.Features.StockAlerts)]
+public sealed class StockAlertsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<StockAlertMigrations>()
+            .AddIndexProvider<StockAlertIndexProvider>();
+        services.AddScoped<StockAlertService>();
+        services.AddScoped<IStockLevelHandler, BackInStockAlertHandler>();
+        services.AddScoped<CrestApps.OrchardCore.Customers.PersonalData.ICommercePersonalDataContributor, StockAlertPersonalDataContributor>();
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<StockAlertDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Orders stock from suppliers and receives it at a location.
+/// </summary>
+[Feature(InventoryConstants.Features.PurchaseOrders)]
+public sealed class PurchaseOrdersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<PurchaseOrderMigrations>()
+            .AddIndexProvider<PurchaseOrderIndexProvider>();
+        services.AddScoped<IPurchaseOrderStore, PurchaseOrderStore>();
+        services.AddScoped<PurchaseOrderReceiver>();
+        services.AddDisplayDriver<PurchaseOrder, PurchaseOrderDisplayDriver>();
+        services.AddNavigationProvider<PurchaseOrdersAdminMenu>();
+    }
+
+    public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddStockItemSearchEndpoint();
 }

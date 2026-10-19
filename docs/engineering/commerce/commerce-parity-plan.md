@@ -1,6 +1,6 @@
 # Commerce parity plan: WooCommerce and Shopify
 
-Status: phases 1 and 2 built, 2026-10-18 (see [Phase 1 as built](#phase-1-as-built) and [Phase 2 as built](#phase-2-as-built)); phases 3 to 12 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
+Status: phases 1 to 4 built, 2026-10-19 (see [Phase 1 as built](#phase-1-as-built), [Phase 2 as built](#phase-2-as-built), [Phase 3 as built](#phase-3-as-built), merged as #1004, and [Phase 4 as built](#phase-4-as-built)); phases 5 to 12 to do. Follows the [commerce completion plan](commerce-completion-plan.md), which finished the
 [e-commerce plan](../../ecommerce-plan.md) through phase 12. The goal here is a suite at least as complete as
 WooCommerce with its common extensions and Shopify with its common apps, while keeping what we already do better.
 
@@ -279,8 +279,8 @@ phase, verified on a test site in the browser at every Bootstrap breakpoint befo
 | --- | --- | --- |
 | **1. Accounts and conversion** (built) | PA1 account pages, passwordless sign-in; PE1 abandoned checkout emails; PE2 one-page option, custom fields, account after checkout, mini cart | A guest who leaves at payment gets a recovery email, comes back, pays on one page, creates an account, and finds the order and downloads on their account page on a phone. |
 | **2. Payments** (built, but PayPal, Square, PB2) | PB1 PayPal, a second card gateway, bank transfer and cash on delivery, saved cards for one-time purchases; PB2 express buttons on product and cart pages, buy now pay later; PB3 fraud scoring, disputes on orders | One store takes PayPal, Stripe and bank transfer; a disputed Stripe payment shows on its order and in a report. |
-| **3. Merchandising** | PC1 scheduled sales, upsells, cross-sells, related, recently viewed, order bumps and post-purchase offers; PC2 grouped, external, bundles, product options; PC3 quantity rules, tier and group pricing, comparison; PC4 CSV import and export, migration importers | A bundle with a personalized part sells at a tier price to a wholesale group, and a WooCommerce product export imports with its variants. |
-| **4. Fulfillment** | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
+| **3. Merchandising** (built) | PC1 scheduled sales, upsells, cross-sells, related, recently viewed, order bumps and post-purchase offers; PC2 grouped, external, bundles, product options; PC3 quantity rules, tier and group pricing, comparison; PC4 CSV import and export, migration importers | A bundle with a personalized part sells at a tier price to a wholesale group, and a WooCommerce product export imports with its variants. |
+| **4. Fulfillment** (built, but return labels) | PF1 manual and draft orders, order editing, packing slips; PF2 self-service returns and exchanges; PF3 local pickup and delivery; PF4 carrier rates, labels, tracking page; PF5 locations, transfers, purchase orders; PF6 back-in-stock, pre-orders | A buyer returns one item from their account, the store approves it, prints a return label, and the refund and restock land at the right location. |
 | **5. Promotions and loyalty** | PD1 automatic and buy-X-get-Y discounts, combining rules, link codes, bulk codes; PD2 gift cards and store credit; PD3 loyalty points, referrals | A gift card pays part of an order that also gets an automatic discount and a code, under the store's combining rules. |
 | **6. Markets** | PG1 shopper currency and market prices, address autocomplete; PG2 translated catalog, emails and checkout; PG3 duties, OSS, tax connectors | A shopper in Germany sees euros and German, pays VAT included, and the order shows in the OSS report. |
 | **7. B2B** | PH1 companies, buyers, payment terms on F3 order payment schedules; PH2 quotes, PO numbers, company price lists; PH3 approval workflows, budgets, punchout | A company buyer requests a quote, the store converts it, and the company pays a deposit, then the rest on net-30 terms, with its PO number on the invoice. |
@@ -335,7 +335,7 @@ One branch, a commit per slice:
 - **PC2 bundles.** A **Product Bundles** feature: kits at their own price; stock from the parts, held, sold and restocked per part.
 - **PC3 quantity rules, tier and group pricing.** Minimum, maximum and pack sizes; volume discounts; role discounts.
 - **PC3 comparison.** A **Product Comparison** feature: up to four products side by side.
-- **PC4 CSV import and export, migration importers.** A **Product Import and Export** feature reading Shopify and WooCommerce exports and writing Shopify's format; an orders CSV export from the Orders list.
+- **PC4 CSV import and export, migration importers.** Products import and export with Content Transfer (product, variant and stock columns; taxonomy terms by name), and Shopify's and WooCommerce's product exports are read as those columns; an orders CSV export from the Orders list. (A separate Product Import and Export page was built first, then folded into Content Transfer in phase 4.)
 - **Storefront theming.** The account pages, guest order and pay pages, the mini cart, the comparison page and the confirmation's thanks were plain views; each is now a named shape a theme overrides in Razor or Liquid, and a test keeps new pages that way.
 - **Found in testing.** Orders paid offline read *Paid*; they now read *Payment due* until paid, and the owed note no longer names Pay Later for every method.
 
@@ -343,6 +343,30 @@ Not built yet, and why:
 
 - **File uploads as add-ons** (PC2). An uploaded file needs storage outside the media library, virus scanning and a retention rule before buyers can send one; it fits the F1 line details foundation (PL0).
 - **Image import** (PC4). Downloading images from the addresses in an export means fetching from servers a file names, which needs an allow-list and size limits to be safe; product photos are added in the media library.
+
+## Phase 4 as built
+
+One branch, a commit per slice:
+
+- **PF1 printable invoices and packing slips.** An order's **Invoice** and **Packing slip** pages print or save as PDF, with the store's header from the Receipts settings; each shipment prints its own slip with its lines and number. Buyers print their invoice from their account and from a guest's order link.
+- **PF1 manual and draft orders.** **Create order** on the Orders list puts an order together for a buyer at their own prices (`DraftOrderService`), kept as a draft with an `Order.Invoice`; **Send invoice** emails it with a signed pay link, and shipping and tax are added at checkout. A sent draft shows on the buyer's order page and account until paid, isn't swept as abandoned, and goes back to a draft when its checkout fails, so the link pays it again.
+- **PF1 order editing, as built.** Drafts are edited before they're paid (`IOrderService.ReplaceLinesAsync`, with `IOrderEventHandler.LinesChangedAsync`, where Inventory holds the new lines or refuses the change). A paid order isn't edited: **Add items** makes a second order for the same buyer to pay, linked to the first, and removing items is done through Returns or a refund.
+- **PF2 self-service returns and exchanges.** A **Returns** feature: buyers ask from their account or a guest link, within a window that runs from payment, with a reason per item and a refund or an exchange; the store approves or declines, receives with what's restocked and at which location (`IOrderEventHandler.ReturnedAsync`, `IInventoryService.RestockAsync(lines)`), then refunds through the order's refund or closes the exchange. Each step is emailed and noted on the order. Exchanges are closed by staff after they send the replacement: no replacement order is made. Staff-started returns weren't added; refunds and restocking a whole order stay on the order's page.
+- **PF3 local pickup and delivery.** Pickup locations in the Shipping settings, offered on the Shipping step instead of an address, taxed at the location, with pickup wording through fulfillment and a *ready for pickup* email. A **Local delivery** method by postal code (prefix wildcards), with a fee, free-from subtotal and minimum order.
+- **PF4 carrier rates, labels, tracking page.** Aggregator first, as P-D3's default: `ICarrierService` in Shipping, a **Carrier rates** method (carriers, cheapest services, markup, fallback amount, ten-minute quote cache) and an **EasyPost** feature that quotes, buys a shipment's label (**Buy label**, which ships it and emails the tracking) and applies its signed tracking webhook, delivering the shipment when the parcel arrives. Labels and checkout quotes use the store's ship-from address and default box from the Shipping settings. A **Track your order** page finds a paid order by number and email. EasyPost's calls are unit-tested against recorded responses but haven't been exercised against a real account: the test site has no EasyPost test key.
+- **PF5 locations and transfers.** Inventory locations in its settings; a stock item keeps units per location (`StockItem.Levels`, totals unchanged, older items at the default location), with receive, adjust and count per location and transfers between them. Orders take an item from one location that has it all, in the listed order; a pickup order prefers its shop's stock location (`OrderShipping.LocationId`, through `IFulfillmentLocationProvider`). Availability adds every location together.
+- **PF5 purchase orders.** A **Purchase Orders** feature: draft, ordered, partly received, received or canceled, optionally started from a location's low-stock items, received at its location as `Received` movements with the order's number. The supplier isn't emailed.
+- **PF6 back-in-stock.** A **Back-in-Stock Alerts** feature: an email form on a sold-out product's page (per variant), one email per request when the item comes back, limits per email and per visitor, and the requests in the personal data export and erasure.
+- **PF6 pre-orders.** A **Ships from** date on the Inventory part makes a backorder a pre-order until then (`ProductAvailabilityStatus.Preorder`): **Pre-order** on the button, and the date on the cart, mini cart and order lines.
+- **Moved in from phase 3.** The Product Import and Export page was folded into Content Transfer: product, variant and stock columns, Shopify and WooCommerce exports read as those columns, and duplicate matching by SKU (`ProductImportRowFilter` over a new `ProductSkuIndex`).
+
+The exit gate holds except for the return label: the buyer returns an item from their account, the store approves it and the buyer is sent the return instructions, and the refund and restock land at the chosen location.
+
+Not built yet, and why:
+
+- **Return labels** (PF2, PF4). A label for the buyer to send items back needs the return's parcel and the buyer's address as the sender; it fits on `ICarrierService` once a real account has verified outbound labels.
+- **Several parcels per shipment, and package presets.** A label is one parcel in the default box with the weight staff enter; carts are quoted the same way.
+- **Pay link without email.** The order's admin page shows a draft's **Pay link**, which pays it whether or not the invoice was emailed, for a store that sends it by hand or has no email set up.
 
 ## Decisions needed
 

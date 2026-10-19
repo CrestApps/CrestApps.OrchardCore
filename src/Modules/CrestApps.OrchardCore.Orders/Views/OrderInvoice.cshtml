@@ -1,0 +1,158 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+@model OrderDocumentViewModel
+
+@*
+    An order's invoice: who's billed and where it ships, the lines with their prices, the discounts, shipping and tax,
+    the total, and what's been refunded and is still owed.
+*@
+
+@{
+    var header = Model.Header;
+    var order = Model.Order;
+}
+
+<div class="d-flex flex-column flex-sm-row justify-content-between gap-3 border-bottom pb-3 mb-3">
+    <div>
+        @if (!string.IsNullOrEmpty(header.LogoUrl))
+        {
+            <img src="@header.LogoUrl" alt="@header.Name" style="max-height: 3.5rem; max-width: 12rem" class="mb-2 d-block" />
+        }
+        <div class="fw-semibold fs-5">@header.Name</div>
+        @if (!string.IsNullOrEmpty(header.Address))
+        {
+            <div class="small text-body-secondary" style="white-space: pre-line">@header.Address</div>
+        }
+        <div class="small text-body-secondary">
+            @foreach (var contact in new[] { header.Email, header.Phone, header.Website }.Where(value => !string.IsNullOrEmpty(value)))
+            {
+                <div>@contact</div>
+            }
+        </div>
+    </div>
+    <div class="text-sm-end">
+        <h1 class="h3 mb-1">@Model.Title</h1>
+        <div>@T["Order {0}", order.OrderNumber]</div>
+        <div class="small text-body-secondary">@T["Placed {0:d}", Model.Placed]</div>
+        @if (Model.Paid is { } paid && Model.AmountDue <= 0m)
+        {
+            <div class="small text-body-secondary">@T["Paid {0:d}", paid]</div>
+        }
+        <span class="badge text-bg-@(Model.AmountDue > 0m ? "warning" : "success") mt-1">@Model.Status</span>
+    </div>
+</div>
+
+@{
+    string Format(decimal amount) => ProductPriceFormatter.Format(amount, order.Currency);
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-sm-6">
+        <div class="small text-body-secondary text-uppercase">@T["Billed to"]</div>
+        <div class="fw-semibold">@order.CustomerName</div>
+        @if (!string.IsNullOrEmpty(order.CustomerEmail))
+        {
+            <div>@order.CustomerEmail</div>
+        }
+        @foreach (var line in Model.BilledTo)
+        {
+            <div>@line</div>
+        }
+    </div>
+    @if (Model.ShipsTo.Count > 0)
+    {
+        <div class="col-sm-6">
+            <div class="small text-body-secondary text-uppercase">@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</div>
+            @foreach (var line in Model.ShipsTo)
+            {
+                <div>@line</div>
+            }
+            @if (!string.IsNullOrEmpty(order.Shipping?.Name) && !order.Shipping.IsPickup)
+            {
+                <div class="small text-body-secondary mt-1">@order.Shipping.Name</div>
+            }
+        </div>
+    }
+</div>
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["Item"]</th>
+                <th scope="col" class="d-none d-sm-table-cell">@T["SKU"]</th>
+                <th scope="col" class="text-end">@T["Qty"]</th>
+                <th scope="col" class="text-end d-none d-sm-table-cell">@T["Price"]</th>
+                <th scope="col" class="text-end">@T["Amount"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines)
+            {
+                <tr>
+                    <td class="text-break">@line.Description</td>
+                    <td class="d-none d-sm-table-cell text-body-secondary small">@line.Sku</td>
+                    <td class="text-end">@line.Quantity</td>
+                    <td class="text-end d-none d-sm-table-cell text-nowrap">@Format(line.UnitPrice)</td>
+                    <td class="text-end text-nowrap">@Format(line.Amount)</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Subtotal"]</th>
+                <th colspan="2" class="text-end fw-normal d-sm-none">@T["Subtotal"]</th>
+                <td class="text-end text-nowrap">@Format(order.Subtotal)</td>
+            </tr>
+            @foreach (var (label, amount) in Model.Discounts)
+            {
+                <tr>
+                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@label</th>
+                    <th colspan="2" class="text-end fw-normal d-sm-none">@label</th>
+                    <td class="text-end text-nowrap">&minus;@Format(amount)</td>
+                </tr>
+            }
+            @if (order.Shipping is not null)
+            {
+                <tr>
+                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Shipping"]</th>
+                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Shipping"]</th>
+                    <td class="text-end text-nowrap">@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</td>
+                </tr>
+            }
+            @if (order.TaxAmount > 0)
+            {
+                <tr>
+                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Tax"]</th>
+                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Tax"]</th>
+                    <td class="text-end text-nowrap">@Format(order.TaxAmount.Value)</td>
+                </tr>
+            }
+            <tr>
+                <th colspan="4" class="text-end d-none d-sm-table-cell">@T["Total"]</th>
+                <th colspan="2" class="text-end d-sm-none">@T["Total"]</th>
+                <th class="text-end text-nowrap">@Format(order.Total ?? order.Subtotal)</th>
+            </tr>
+            @if (order.RefundedAmount > 0)
+            {
+                <tr>
+                    <th colspan="4" class="text-end fw-normal d-none d-sm-table-cell">@T["Refunded"]</th>
+                    <th colspan="2" class="text-end fw-normal d-sm-none">@T["Refunded"]</th>
+                    <td class="text-end text-nowrap">&minus;@Format(order.RefundedAmount)</td>
+                </tr>
+            }
+            @if (Model.AmountDue > 0)
+            {
+                <tr>
+                    <th colspan="4" class="text-end d-none d-sm-table-cell">@T["Amount due"]</th>
+                    <th colspan="2" class="text-end d-sm-none">@T["Amount due"]</th>
+                    <th class="text-end text-nowrap">@Format(Model.AmountDue)</th>
+                </tr>
+            }
+        </tfoot>
+    </table>
+</div>
+
+@if (!string.IsNullOrEmpty(header.Footer))
+{
+    <p class="small text-body-secondary text-center mt-4 mb-0" style="white-space: pre-line">@header.Footer</p>
+}

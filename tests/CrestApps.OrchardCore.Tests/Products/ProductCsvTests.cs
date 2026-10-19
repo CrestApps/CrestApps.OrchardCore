@@ -4,8 +4,7 @@ using Xunit;
 namespace CrestApps.OrchardCore.Tests.Products;
 
 /// <summary>
-/// Product exports from Shopify and WooCommerce read as the same products, with their variants, prices and stock,
-/// and this store's export reads back as it was written.
+/// Product exports from Shopify and WooCommerce read as the same products, with their variants, prices and stock.
 /// </summary>
 public sealed class ProductCsvTests
 {
@@ -70,37 +69,6 @@ public sealed class ProductCsvTests
         var cap = read.Products.Single(product => product.Title == "Cap");
         Assert.Equal(("CAP", (decimal?)18m, (int?)9), (cap.Sku, cap.Price, cap.Quantity));
         Assert.False(cap.Published);
-    }
-
-    [Fact]
-    public void ThisStoresExport_ReadsBackAsItWasWritten()
-    {
-        var written = ProductCsv.WriteShopify(
-        [
-            new ImportedProduct
-            {
-                Key = "kit",
-                Title = "Kit, \"deluxe\"",
-                Brand = "Contoso",
-                Category = "Kits",
-                Options = [new() { Name = "Size", Values = ["S", "M"] }],
-                Variants =
-                [
-                    new() { Options = new(StringComparer.OrdinalIgnoreCase) { ["Size"] = "S" }, Sku = "KIT-S", Price = 50m, Quantity = 2 },
-                    new() { Options = new(StringComparer.OrdinalIgnoreCase) { ["Size"] = "M" }, Sku = "KIT-M", Price = 55m, CompareAtPrice = 60m },
-                ],
-            },
-            new ImportedProduct { Key = "mug", Title = "Mug", Sku = "MUG", Price = 9m, Quantity = 3, Published = false },
-        ]);
-
-        var read = ProductCsv.Read(written);
-
-        Assert.Equal(ProductCsv.Shopify, read.Format);
-        Assert.Equal(2, read.Products.Count);
-        Assert.Equal("Kit, \"deluxe\"", read.Products[0].Title);
-        Assert.Equal(["KIT-S", "KIT-M"], read.Products[0].Variants.Select(variant => variant.Sku));
-        Assert.Equal(60m, read.Products[0].Variants[1].CompareAtPrice);
-        Assert.Equal(("MUG", (decimal?)9m, (int?)3, false), (read.Products[1].Sku, read.Products[1].Price, read.Products[1].Quantity, read.Products[1].Published));
     }
 
     [Fact]

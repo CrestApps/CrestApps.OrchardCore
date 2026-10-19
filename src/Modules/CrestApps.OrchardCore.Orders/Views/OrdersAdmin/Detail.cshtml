@@ -30,6 +30,65 @@
     </breadcrumb>
 </zone>
 
+@if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            @if (order.Status == OrderStatus.AwaitingPayment)
+            {
+                @T["The buyer has opened the checkout to pay this order."]
+            }
+            else if (order.Invoice.SentUtc is { } sent)
+            {
+                @T["Invoice emailed to {0} {1:g}. Waiting for payment.", order.CustomerEmail, await LocalAsync(sent)]
+            }
+            else
+            {
+                @T["A draft made by {0}, not sent to the buyer yet.", order.Invoice.CreatedBy ?? T["the store"].Value]
+            }
+            @if (!string.IsNullOrEmpty(order.Invoice.AddsToOrderId))
+            {
+                <span class="d-block small">@T["Adds to order"] <a asp-action="Detail" asp-route-orderId="@order.Invoice.AddsToOrderId">@order.Invoice.AddsToOrderNumber</a></span>
+            }
+            @if (!string.IsNullOrEmpty(Model.PayUrl))
+            {
+                <span class="input-group input-group-sm mt-2">
+                    <label class="input-group-text" for="order-pay-link">@T["Pay link"]</label>
+                    <input id="order-pay-link" class="form-control" value="@Model.PayUrl" readonly onfocus="this.select()" />
+                </span>
+                <span class="d-block small text-body-secondary">@T["Send it to the buyer yourself, such as in a chat, if you don't email the invoice."]</span>
+            }
+        </span>
+        @if (Model.CanManage)
+        {
+            <span class="d-flex flex-wrap gap-2">
+                @if (order.Status == OrderStatus.Draft)
+                {
+                    <a class="btn btn-sm btn-secondary" asp-controller="DraftOrdersAdmin" asp-action="Edit" asp-route-orderId="@order.ItemId">@T["Edit"]</a>
+                }
+                <form asp-controller="DraftOrdersAdmin" asp-action="SendInvoice" asp-route-orderId="@order.ItemId" method="post" class="no-multisubmit">
+                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? T["Send invoice"] : T["Send again"])</button>
+                </form>
+            </span>
+        }
+    </div>
+}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    @if (Model.CanManage && order.Status == OrderStatus.Paid)
+    {
+        <a class="btn btn-outline-secondary btn-sm" asp-controller="DraftOrdersAdmin" asp-action="Create" asp-route-addsToOrderId="@order.ItemId">
+            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> @T["Add items"]
+        </a>
+    }
+    <a class="btn btn-outline-secondary btn-sm" asp-action="Invoice" asp-route-orderId="@order.ItemId">
+        <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
+    </a>
+    <a class="btn btn-outline-secondary btn-sm" asp-action="PackingSlip" asp-route-orderId="@order.ItemId">
+        <i class="fa-solid fa-box" aria-hidden="true"></i> @T["Packing slip"]
+    </a>
+</div>
+
 <div class="row g-4">
     <div class="col-lg-8">
         <div class="card">
@@ -101,6 +160,10 @@
                                 }
                                 <span>@T["{0} × {1}", line.Quantity, Format(line.UnitPrice)]</span>
                             </div>
+                            @if (line.ShipsFromUtc is { } shipsFrom)
+                            {
+                                <div class="small text-info-emphasis"><span class="fa-solid fa-calendar-day me-1" aria-hidden="true"></span>@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                            }
                             @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
                             {
                                 <div class="small text-break"><span class="fa-solid fa-box-open text-body-secondary me-1" aria-hidden="true"></span>@T["Includes {0}", contents]</div>
@@ -135,7 +198,7 @@
                 @if (order.Shipping is not null)
                 {
                     <div class="d-flex justify-content-between">
-                        <span>@T["Shipping ({0})", order.Shipping.Name]</span>
+                        <span>@(order.Shipping.IsPickup ? order.Shipping.Name : T.GetString("Shipping ({0})", order.Shipping.Name).Value)</span>
                         <span>@(order.Shipping.Amount == 0 ? T["Free"].Value : Format(order.Shipping.Amount))</span>
                     </div>
                 }
@@ -201,7 +264,7 @@
                     }
                     @if (order.ShippingAddress is not null)
                     {
-                        <dt>@T["Ships to"]</dt>
+                        <dt>@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</dt>
                         <dd>
                             @foreach (var line in await BillingLinesAsync(order.ShippingAddress))
                             {

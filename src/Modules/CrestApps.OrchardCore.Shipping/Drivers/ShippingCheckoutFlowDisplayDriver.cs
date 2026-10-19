@@ -23,6 +23,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Entities;
 using OrchardCore.Json;
 using OrchardCore.Mvc.ModelBinding;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Shipping.Drivers;
 
@@ -46,6 +47,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
     private readonly IShapeFactory _shapeFactory;
     private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ISiteService _siteService;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
     internal readonly IStringLocalizer S;
@@ -58,6 +60,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
         IShapeFactory shapeFactory,
         CheckoutInvoiceBuilder invoiceBuilder,
         IServiceProvider serviceProvider,
+        ISiteService siteService,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IStringLocalizer<ShippingCheckoutFlowDisplayDriver> stringLocalizer)
     {
@@ -68,6 +71,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
         _shapeFactory = shapeFactory;
         _invoiceBuilder = invoiceBuilder;
         _serviceProvider = serviceProvider;
+        _siteService = siteService;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         S = stringLocalizer;
     }
@@ -96,6 +100,34 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             modelState.AddModelError(Prefix, nameof(model.RateId), S["This order can no longer be found. Go back to your cart and check out again."]);
 
             return BuildEditor(flow, model, quote: null);
+        }
+
+        // Picked up from one of the store's locations: no address to enter and nothing to quote, the location is where
+        // the order goes and what it's taxed by.
+        if (!string.IsNullOrEmpty(model.PickupLocationId))
+        {
+            var location = (await _siteService.GetSettingsAsync<ShippingSettings>()).PickupLocations?
+                .FirstOrDefault(entry => string.Equals(entry.LocationId, model.PickupLocationId, StringComparison.Ordinal));
+
+            if (location is null)
+            {
+                modelState.AddModelError(Prefix, nameof(model.PickupLocationId), S["That pickup location is no longer offered. Choose another, or have the order shipped."]);
+
+                return BuildEditor(flow, model, quote: null);
+            }
+
+            var pickupAddress = location.ToAddress();
+
+            Choose(session, new ShippingCheckoutStep
+            {
+                PickupLocationId = location.LocationId,
+                Address = pickupAddress,
+                RateId = PickupRateId(location),
+            }, pickupAddress, CreatePickupRate(location), location.StockLocationId);
+
+            await _invoiceBuilder.BuildAsync(flow);
+
+            return BuildEditor(flow, posted: null, quote: null);
         }
 
         var customer = await GetCustomerAsync(session);
@@ -159,14 +191,22 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             return BuildEditor(flow, model, quote);
         }
 
-        var step = new ShippingCheckoutStep
+        Choose(session, new ShippingCheckoutStep
         {
             AddressId = saved?.AddressId,
             Address = address,
             RateId = rate.RateId,
             SaveAddress = saved is null && customer is not null && model.SaveAddress,
-        };
+        }, address, rate, stockLocationId: null);
 
+        await _invoiceBuilder.BuildAsync(flow);
+
+        return BuildEditor(flow, posted: null, quote);
+    }
+
+    // Keeps the buyer's choice, where the order goes and how, and adds what it costs to the invoice.
+    private void Choose(ICheckoutFlowSession session, ShippingCheckoutStep step, Address address, ShippingRate rate, string stockLocationId)
+    {
         session.SavedSteps[ShippingConstants.CheckoutStepKey] = JObject.FromObject(step);
 
         session.Put(new CheckoutShippingInfo
@@ -179,6 +219,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             Name = rate.Name,
             Description = rate.Description,
             Amount = rate.Amount,
+            LocationId = stockLocationId,
         });
 
         // Shipping is a line of the invoice, taxed as shipping where the order goes.
@@ -189,7 +230,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
                 new BillingItem
                 {
                     ItemId = ShippingLineId,
-                    Description = S["Shipping: {0}", rate.Name],
+                    Description = step.PickupLocationId is null ? S["Shipping: {0}", rate.Name] : rate.Name,
                     Amount = rate.Amount,
                     Quantity = 1,
                     TaxableKind = TaxableItemKind.Shipping,
@@ -197,11 +238,20 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
                 },
             ];
         }
-
-        await _invoiceBuilder.BuildAsync(flow);
-
-        return BuildEditor(flow, posted: null, quote);
     }
+
+    private ShippingRate CreatePickupRate(PickupLocation location)
+        => new()
+        {
+            RateId = PickupRateId(location),
+            ProviderName = ShippingConstants.Providers.Pickup,
+            Name = S["Pick up at {0}", location.Name],
+            Description = location.Instructions,
+            Amount = location.Fee,
+        };
+
+    private static string PickupRateId(PickupLocation location)
+        => ShippingConstants.Providers.Pickup.ToLowerInvariant() + ":" + location.LocationId;
 
     private ShapeResult BuildEditor(CheckoutFlow flow, ShippingCheckoutStepViewModel posted, ShippingQuote quote)
         => Initialize<ShippingCheckoutStepViewModel>("ShippingCheckoutStep_Edit", async model =>
@@ -212,8 +262,11 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             var step = ShippingCheckoutHandler.GetStep(session, _documentJsonSerializerOptions);
             Address known = null;
 
+            model.PickupLocations = (await _siteService.GetSettingsAsync<ShippingSettings>()).PickupLocations ?? [];
+
             if (posted is not null)
             {
+                model.PickupLocationId = posted.PickupLocationId;
                 model.AddressId = posted.AddressId;
                 model.RateId = posted.RateId;
                 model.IsChoosing = posted.IsChoosing;
@@ -222,7 +275,7 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
 
                 await _addressEditor.PopulateAsync(model.Address, options);
             }
-            else if (step is not null)
+            else if (step is { PickupLocationId: null })
             {
                 model.AddressId = step.AddressId;
                 model.RateId = step.RateId;
@@ -233,7 +286,10 @@ public sealed class ShippingCheckoutFlowDisplayDriver : CheckoutFlowDisplayDrive
             else
             {
                 // A customer starts with their default shipping address; anyone else with the billing address they
-                // just gave, addressed to them.
+                // just gave, addressed to them. A buyer back on the step after choosing pickup sees the same, should
+                // they change their mind.
+                model.PickupLocationId = step?.PickupLocationId;
+
                 var defaultAddress = customer?.GetDefaultShippingAddress();
 
                 model.AddressId = defaultAddress?.AddressId;

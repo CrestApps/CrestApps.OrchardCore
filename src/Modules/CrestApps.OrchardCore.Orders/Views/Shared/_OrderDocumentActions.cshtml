@@ -1,0 +1,41 @@
+@model OrderDocumentPageViewModel
+
+@*
+    The print button and the way back above a printable order document, which don't print, and the style that prints
+    the page's .order-document-print-area alone.
+*@
+
+<style at="Head">
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .order-document-print-area,
+        .order-document-print-area * {
+            visibility: visible;
+        }
+
+        .order-document-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="d-flex flex-wrap gap-2 mb-3 no-print@(Model.IsAdmin ? null : " mt-3")">
+    <button type="button" class="btn btn-primary" onclick="window.print();">
+        <i class="fa-solid fa-print" aria-hidden="true"></i> @Model.PrintLabel
+    </button>
+    @if (!string.IsNullOrEmpty(Model.BackUrl))
+    {
+        <a class="btn btn-outline-secondary" href="@Model.BackUrl">@T["Back to the order"]</a>
+    }
+</div>
+

@@ -32,4 +32,10 @@ public sealed class CheckoutShippingInfo
     /// Gets or sets what shipping costs, before tax.
     /// </summary>
     public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the location the order is fulfilled from, such as the shop it's picked up at, or
+    /// <see langword="null"/>.
+    /// </summary>
+    public string LocationId { get; set; }
 }

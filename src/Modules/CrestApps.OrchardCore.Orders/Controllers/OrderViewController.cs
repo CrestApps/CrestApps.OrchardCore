@@ -69,14 +69,17 @@ public sealed class OrderViewController : Controller
         var orderId = _orderLinks.GetOrderId(token);
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
-        // A link that was altered, expired or names an order that was never placed shows nothing about any order.
-        if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
+        // A link that was altered, expired or names an order that was never placed shows nothing about any order. An
+        // order the store sent the buyer to pay shows before it's paid.
+        if (order is null || order.Status == OrderStatus.Canceled || (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null))
         {
             return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
+            ? Url.RouteUrl("GuestOrderPay", new { token })
+            : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
         var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
             ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
             : null;
@@ -87,6 +90,61 @@ public sealed class OrderViewController : Controller
             model.Sections = sections;
             model.PayUrl = payUrl;
             model.RegisterUrl = registerUrl;
+            model.InvoiceUrl = Url.RouteUrl("GuestOrderInvoice", new { token });
+        }));
+    }
+
+    /// <summary>
+    /// The invoice of an order opened from its signed link, to print or save as a PDF.
+    /// </summary>
+    [HttpGet("orders/view/{token}/invoice", Name = "GuestOrderInvoice")]
+    public async Task<IActionResult> Invoice(string token, [FromServices] OrderDocumentBuilder documents)
+    {
+        var orderId = _orderLinks.GetOrderId(token);
+        var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
+
+        if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
+        {
+            return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
+        }
+
+        var document = await documents.BuildInvoiceAsync(order, HttpContext.RequestAborted);
+
+        return View(await _shapeFactory.CreateAsync<OrderDocumentViewModel>("OrderInvoice", model => OrdersAdminController.Copy(document, model)));
+    }
+
+    [HttpGet("orders/track", Name = "OrdersTrack")]
+    public async Task<IActionResult> Track()
+        => View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", model => { }));
+
+    [HttpPost("orders/track")]
+    [ValidateAntiForgeryToken]
+    [RateLimitGroup(OrderConstants.FindRateLimitGroup)]
+    public async Task<IActionResult> Track(TrackOrderViewModel model)
+    {
+        var number = model.OrderNumber?.Trim().TrimStart('#');
+        var email = model.Email?.Trim();
+        Order order = null;
+
+        // Both must match, and the guesses are limited, so a number alone or an email alone shows nothing.
+        if (!string.IsNullOrEmpty(number) && !string.IsNullOrEmpty(email) &&
+            await _limiter.AcquireAsync("track-order", HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"))
+        {
+            order = await _orderStore.FindByNumberAsync(number.ToUpperInvariant());
+        }
+
+        if (order is { Status: OrderStatus.Paid } &&
+            string.Equals(order.CustomerEmail?.Trim(), email, StringComparison.OrdinalIgnoreCase) &&
+            await _orderLinks.CreateUrlAsync(order) is { } url)
+        {
+            return Redirect(url);
+        }
+
+        return View(await _shapeFactory.CreateAsync<TrackOrderViewModel>("OrderTrack", shape =>
+        {
+            shape.OrderNumber = model.OrderNumber;
+            shape.Email = model.Email;
+            shape.NotFound = true;
         }));
     }
 

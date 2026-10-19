@@ -54,6 +54,11 @@ public enum OrderStatusFilter
     Canceled,
 
     All,
+
+    /// <summary>
+    /// Orders not checked out yet, such as the store's drafts.
+    /// </summary>
+    Drafts,
 }
 
 public class OrderDetailViewModel
@@ -79,6 +84,11 @@ public class OrderDetailViewModel
     /// Gets or sets a value indicating whether the site can email the confirmation again.
     /// </summary>
     public bool CanResendConfirmation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the link the buyer pays an order the store made for them from, or <see langword="null"/>.
+    /// </summary>
+    public string PayUrl { get; set; }
 }
 
 public class OrderRefundInputModel
@@ -206,6 +216,11 @@ public class OrderSettingsViewModel
 
 public class OrderViewViewModel
 {
+    /// <summary>
+    /// Gets or sets the order's printable invoice, for the buyer.
+    /// </summary>
+    public string InvoiceUrl { get; set; }
+
     public Order Order { get; set; }
 
     /// <summary>
@@ -241,4 +256,170 @@ public class AccountOrdersViewModel
 public class FindOrderViewModel
 {
     public string Email { get; set; }
+}
+
+/// <summary>
+/// Track your order: an order's number and the email it was placed with open its page. The model of the
+/// <c>OrderTrack</c> shape a theme can override.
+/// </summary>
+public class TrackOrderViewModel
+{
+    public string OrderNumber { get; set; }
+
+    public string Email { get; set; }
+
+    [BindNever]
+    public bool NotFound { get; set; }
+}
+
+/// <summary>
+/// A printable document of an order: its invoice or a packing slip. Its shape (<c>OrderInvoice</c> or
+/// <c>OrderPackingSlip</c>) is what a theme overrides to change it.
+/// </summary>
+public class OrderDocumentViewModel
+{
+    public Order Order { get; set; }
+
+    public OrderDocumentHeader Header { get; set; } = new();
+
+    public string Title { get; set; }
+
+    public DateTime Placed { get; set; }
+
+    public DateTime? Paid { get; set; }
+
+    public IList<string> BilledTo { get; set; } = [];
+
+    public IList<string> ShipsTo { get; set; } = [];
+
+    public IList<OrderDocumentLine> Lines { get; set; } = [];
+
+    public IList<(string Label, decimal Amount)> Discounts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets what's still owed, for an invoice.
+    /// </summary>
+    public decimal AmountDue { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the invoice says of the order: paid, payment due, refunded or canceled.
+    /// </summary>
+    public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the shipment a packing slip is for, or <see langword="null"/> for the whole order.
+    /// </summary>
+    public string ShipmentNumber { get; set; }
+}
+
+public class OrderDocumentLine
+{
+    public string Description { get; set; }
+
+    public string Sku { get; set; }
+
+    public int Quantity { get; set; }
+
+    public decimal UnitPrice { get; set; }
+
+    public decimal Amount { get; set; }
+}
+
+/// <summary>
+/// The store as its documents name it: from the receipt settings, else the site's name.
+/// </summary>
+public class OrderDocumentHeader
+{
+    public string Name { get; set; }
+
+    public string LogoUrl { get; set; }
+
+    public string Address { get; set; }
+
+    public string Email { get; set; }
+
+    public string Phone { get; set; }
+
+    public string Website { get; set; }
+
+    public string Footer { get; set; }
+}
+
+/// <summary>
+/// The page around a printable order document: where it goes back to, and whether it's the store's or the buyer's.
+/// </summary>
+public class OrderDocumentPageViewModel
+{
+    public Order Order { get; set; }
+
+    public IShape Document { get; set; }
+
+    public bool IsAdmin { get; set; }
+
+    public string BackUrl { get; set; }
+
+    public string PrintLabel { get; set; }
+}
+
+public class DraftOrderEditViewModel
+{
+    public string CustomerEmail { get; set; }
+
+    public string CustomerName { get; set; }
+
+    public string Note { get; set; }
+
+    public DateTime? DueDate { get; set; }
+
+    public string AddsToOrderId { get; set; }
+
+    public List<DraftOrderLineViewModel> Lines { get; set; } = [];
+
+    public string[] AddProductIds { get; set; } = [];
+
+    [BindNever]
+    public Order Order { get; set; }
+
+    [BindNever]
+    public string AddsToOrderNumber { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<string> Problems { get; set; } = [];
+
+    [BindNever]
+    public decimal Subtotal { get; set; }
+
+    [BindNever]
+    public string Currency { get; set; }
+
+    [BindNever]
+    public string ProductSearchEndpoint { get; set; }
+
+    [BindNever]
+    public bool CanEmail { get; set; }
+}
+
+public class DraftOrderLineViewModel
+{
+    public string LineId { get; set; }
+
+    public string ContentItemId { get; set; }
+
+    public string VariantId { get; set; }
+
+    public int Quantity { get; set; }
+
+    public bool Remove { get; set; }
+
+    [BindNever]
+    public string Title { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<SelectListItem> Variants { get; set; } = [];
+
+    [BindNever]
+    public decimal? LineTotal { get; set; }
+
+    [BindNever]
+    public string Problem { get; set; }
 }

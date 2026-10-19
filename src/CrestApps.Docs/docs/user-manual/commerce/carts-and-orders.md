@@ -23,6 +23,7 @@ When products are sold online, visitors can add them to a **cart** from your pro
 - Clicking **Cart** slides out the **mini cart** from the side: each product with its quantity and price, a **Remove** link, the subtotal, **Checkout** and **View cart**. With the cart link on the page, **Add to cart** adds without leaving the page and opens the mini cart with *added to your cart*.
 - The **cart page** lists each product with its price, a quantity box and a remove button, and the subtotal. Discounts and tax are worked out at checkout.
 - **Checkout** takes the buyer to the [checkout](checkout.md), where they enter a promotion code and pay. The confirmation shows their **order number**.
+- A product sold ahead of its release shows **Pre-order** on its button, and *Pre-order: ships* with the date in the cart, the mini cart and the order. See [Sell before a product is out](inventory.md#sell-before-a-product-is-out).
 
 A cart always shows today's prices. If a price changed since a product was added, the cart says so. If a product can no longer be bought, the cart says why, and the buyer has to remove it before checking out.
 
@@ -30,7 +31,7 @@ Guests do not need an account to use a cart. If a guest signs in, what they put 
 
 ## Shipped orders
 
-With the [Shipping](shipping.md) feature on, an order with goods shows where it ships, how, and its shipments: each with what's in it, the carrier and the tracking link. The orders list and the order page say whether an order is *Unfulfilled*, *Partially fulfilled* or *Fulfilled*. See [Ship an order](shipping.md#ship-an-order).
+With the [Shipping](shipping.md) feature on, an order with goods shows where it ships, how, and its shipments: each with what's in it, the carrier and the tracking link. The orders list and the order page say whether an order is *Unfulfilled*, *Partially fulfilled* or *Fulfilled*. See [Ship an order](shipping.md#ship-an-order). An order the buyer picks up from one of your locations shows **Pick up at** instead of where it ships; see [Store pickup](shipping.md#store-pickup).
 
 ## Finding orders
 
@@ -40,6 +41,7 @@ With the [Shipping](shipping.md) feature on, an order with goods shows where it 
 | --- | --- |
 | Paid | The checkout completed. |
 | Awaiting payment | The buyer started the checkout and has not finished it yet. |
+| Draft | An order you created for a buyer, not paid yet. Show them with the **Drafts** filter. See [Create an order for a buyer](#create-an-order-for-a-buyer). |
 | Canceled | The order was canceled. The order page says why: the cart was checked out again (which made a newer order), the payment was declined, the checkout was canceled, nobody finished it in time, an item was out of stock when the buyer checked out, or you canceled it, with your reason. |
 
 An order you gave money back for also shows **Partially refunded** or **Refunded** next to its status.
@@ -63,6 +65,18 @@ Under **Settings > Commerce > Orders**, **Order bump** offers a product on the p
 ## Manage an order
 
 Open an order from **Commerce > Orders**. The **Manage** box on the right does what you need, and every action is written in the order's **Notes** with who did it.
+
+### Print an invoice or a packing slip
+
+Above the order's details, **Invoice** and **Packing slip** open a page to print, with **Print invoice** or **Print packing slip** at the top. Your browser's print dialog can also save it as a PDF.
+
+- The **invoice** has your store's name, logo, address and contact details, who it's billed to and where it ships, each item with its SKU, quantity and price, the discounts, shipping, tax and total, what was refunded, and the amount still due, with the order's status (*Paid*, *Payment due*, *Refunded* or *Canceled*).
+- The **packing slip** has where the parcel goes, the shipping method, and the goods to pack, with a box to tick per line and no prices. Downloads and services are left off.
+- Each shipment in the order's **Shipments** section has its own packing slip button, which lists only that shipment's items and its number.
+
+The store's name, logo, address, contact details and footer come from **Settings > Commerce > Receipts**; without them, the invoice shows your site's name.
+
+Buyers print their own invoice too: an **Invoice** button on their order's page, in their account or on the order link a guest has.
 
 ### Refund an order
 
@@ -99,6 +113,29 @@ Stripe's fraud checks rate every card payment. An order whose payment was rated 
 
 Write a note under **Notes** and click **Add note** to keep something for the store, such as *Called the customer about the delivery date*. Customers never see notes. Refunds, cancellations and resent confirmations add their own notes, with who did them.
 
+## Create an order for a buyer
+
+Put an order together for a buyer yourself, such as one taken over the phone, and email them an invoice to pay it online.
+
+1. On **Commerce > Orders**, click **Create order**.
+2. Under **Buyer**, enter their **Email** and **Name**. The invoice goes to the email. A buyer with an account under that email gets their own prices and sees the order in their account.
+3. Under **Add products**, click **Find products**, choose them, and click **Update prices**. Each comes in with a quantity of 1: change the **Quantity**, choose a variant where the product has them, or tick **Remove**. The **Amount** of each line and the **Subtotal** are the buyer's prices.
+4. Under **Invoice**, write a **Note for the buyer** if you like, such as *Thanks for your call. Here's the order we discussed.*, and a **Pay by (optional)** date.
+5. Click **Save draft**. The order's page opens, with a box that says it's *a draft, not sent to the buyer yet*.
+6. Click **Send invoice**. The buyer is emailed *Your order ... is ready to pay*, with the items, the subtotal, your note, the date to pay by and a **Review and pay** button.
+
+Shipping and tax aren't on the draft: the buyer adds them at checkout, which already knows their name and email. Until they pay, the order's page says *Invoice emailed to ... Waiting for payment.*, and **Send again** emails it once more. While it's a draft, **Edit** changes its items and details; while the buyer is paying, it can't be changed. An order you created isn't canceled for being left unpaid, the way a buyer's unfinished checkout is: cancel it yourself if you no longer want it.
+
+The items are held from stock like a buyer's checkout. When you change them and there isn't enough of something, the draft says so and keeps its earlier items.
+
+The buyer sees the order on its link, or in their account, with *This order is waiting for your payment*, your note, the date to pay by, and **Pay now**.
+
+Sending the invoice needs your site's email to be set up; the draft's editor warns you when it isn't. Either way, the order's page shows the draft's **Pay link**: copy it and send it to the buyer yourself, such as in a chat.
+
+### Add items to a paid order
+
+A paid order can't be changed, but on its page **Add items** starts a new order for the same buyer, marked *These items are added to order ...*. Fill it in and send its invoice like any other; its page links back to the paid order. To take items off a paid order, refund them, or let the buyer [return them](returns.md).
+
 ## Store reports
 
 With the **Reports** feature on, **Reports > Commerce** answers what the store sold. Choose a period at the top, such as *Today* or *Last Month*, and click **Show**; every report exports to CSV, and to Excel with Reports (OpenXml).
@@ -130,7 +167,7 @@ A signed-in buyer opens **My account** from the user menu, or `/account` on your
 
 | Page | What it shows | Feature |
 | --- | --- | --- |
-| **Orders** | Their orders, newest first, with the status and total. Each opens the order's page; an order awaiting payment has **Pay now**. | Orders |
+| **Orders** | Their orders, newest first, with the status and total. Each opens the order's page, with an **Invoice** to print; an order awaiting payment has **Pay now**, and with Returns on, a paid order has **Return items**. | Orders |
 | **Downloads** | The files of their paid orders, with the downloads left and the date each link expires, and why a link stopped working. | Digital Downloads |
 | **Subscriptions** | Their subscriptions, with **Cancel** at the end of the period. | Subscriptions |
 | **Balances and invoices** | What they owe and their invoices and receipts. | Transactions |
@@ -155,10 +192,11 @@ Under **Settings > Commerce > Orders**, turn on **Email buyers who leave a check
 A guest has no account to sign in to, so they reach their order through a **link**:
 
 - The confirmation page and the confirmation email give a guest a link that opens their order: what they bought, the total, the billing address, and a **Pay now** button when something is still owed. A link works for 60 days. A changed or expired link shows *This order link no longer works* and nothing about any order.
+- **Track your order** (`/orders/track` on your site) asks for the order number and the email the order was placed with, and opens the paid order's page, with its shipments and where each parcel is. Both must match, and tries are limited, so a number alone shows nothing. **Find my order** links to it.
 - **Find my order** (`/orders/find` on your site) asks for an email and emails a link to each order placed with it in the last year. It always answers the same way, whether or not there are orders, so it never tells anyone who has bought from you. It is limited to a few requests per visitor and per email.
 - When a guest later creates an account with the same email and confirms it, their guest orders join the account and appear under **My Orders**. See [Customers](customers.md#guests-who-create-an-account).
 
-Link to **Find my order** from your site's footer or help page so guests can find it.
+Link to **Track your order** and **Find my order** from your site's footer or help page so guests can find them.
 
 ## Order confirmations
 

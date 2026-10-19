@@ -22,4 +22,10 @@ public sealed class InventoryPart : ContentPart
     /// Gets or sets how few available units count as low stock, or <see langword="null"/> for the site's default.
     /// </summary>
     public int? LowStockThreshold { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a product not out yet ships. With backorders allowed, buyers pre-order it until then while
+    /// none are in stock.
+    /// </summary>
+    public DateTime? ReleaseDateUtc { get; set; }
 }

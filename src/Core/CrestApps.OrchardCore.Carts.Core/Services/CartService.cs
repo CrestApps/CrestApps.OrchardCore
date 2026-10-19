@@ -391,6 +391,7 @@ public sealed class CartService : ICartService
                 UnitPrice = unitPrice,
                 LineTotal = unitPrice * line.Quantity,
                 MaxQuantity = resolved.MaxQuantity,
+                ShipsFromUtc = resolved.ReleaseDateUtc,
                 PriceChanged = resolved.Price is not null && unitPrice != line.AddedUnitPrice,
                 AddOns = ProductAddOns.Describe(resolved.ProductPart, line.AddOns),
                 Problem = problem,
@@ -468,6 +469,12 @@ public sealed class CartService : ICartService
         // units this cart's own unpaid orders hold count as available to it.
         var availability = (await _availability.GetAvailabilityAsync([new ProductStockKey(contentItem.ContentItemId, product.VariantId)], cartId, cancellationToken))
             .GetValueOrDefault(new ProductStockKey(contentItem.ContentItemId, product.VariantId));
+
+        // A pre-order says when it ships, on the cart and the order.
+        if (availability?.Status == ProductAvailabilityStatus.Preorder)
+        {
+            resolved = resolved with { ReleaseDateUtc = availability.ReleaseDateUtc };
+        }
 
         if (availability is not null && !availability.AllowBackorder)
         {
@@ -604,5 +611,7 @@ public sealed class CartService : ICartService
         /// Gets whether <see cref="MaxQuantity"/> is what's left in stock rather than what the price allows.
         /// </summary>
         public bool LimitedByStock { get; init; }
+
+        public DateTime? ReleaseDateUtc { get; init; }
     }
 }

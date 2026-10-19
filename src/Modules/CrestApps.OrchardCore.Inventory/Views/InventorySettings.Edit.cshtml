@@ -33,3 +33,43 @@
         <span class="hint">@T["Users in these roles get a notification when a product or variant runs low or sells out. Notifications need the Notifications feature. A Low Stock workflow event fires too, when Workflows is on."]</span>
     </div>
 </div>
+
+<h4 class="mt-4">@T["Locations"]</h4>
+<p class="text-body-secondary">@T["The places you keep stock, such as warehouses and shops. Orders take their units from one location that has them all, trying the locations from the top; an order picked up at a shop takes them from that shop's stock location first. Leave the blank location empty to add none."]</p>
+
+@for (var i = 0; i < Model.Locations.Count; i++)
+{
+    var location = Model.Locations[i];
+    var isNew = string.IsNullOrEmpty(location.LocationId);
+
+    <fieldset class="border rounded p-3 mb-3">
+        <legend class="float-none w-auto fs-6 px-1 mb-0">
+            @(isNew ? T["Add a location"] : location.IsDefault ? T["Default location"] : T["Location"])
+        </legend>
+        <input type="hidden" asp-for="Locations[i].LocationId" />
+        <div class="row g-2">
+            <div class="col-md-5" asp-validation-class-for="Locations[i].Name">
+                <label asp-for="Locations[i].Name" class="form-label">@T["Name"]</label>
+                <input asp-for="Locations[i].Name" class="form-control" placeholder="@T["Main warehouse"]" />
+                <span asp-validation-for="Locations[i].Name"></span>
+            </div>
+            <div class="col-md-7">
+                <label asp-for="Locations[i].Address" class="form-label">@T["Address"]</label>
+                <input asp-for="Locations[i].Address" class="form-control" autocomplete="off" />
+                <span class="hint">@T["Optional, for your staff."]</span>
+            </div>
+        </div>
+        @if (location.IsDefault)
+        {
+            <span class="hint d-block mt-2">@T["Stock counted before there were locations is here, and so is stock imported without a location. It can't be removed."]</span>
+        }
+        else if (!isNew)
+        {
+            <div class="form-check mt-2">
+                <input asp-for="Locations[i].Remove" type="checkbox" class="form-check-input" />
+                <label asp-for="Locations[i].Remove" class="form-check-label">@T["Remove this location"]</label>
+                <span class="hint dashed">@T["Units still there stay on their items and can be moved to another location."]</span>
+            </div>
+        }
+    </fieldset>
+}

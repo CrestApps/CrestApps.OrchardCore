@@ -5,8 +5,7 @@ using CrestApps.OrchardCore.Products.Core.Models;
 namespace CrestApps.OrchardCore.Products.Core.Transfer;
 
 /// <summary>
-/// Reads the product CSV files stores move from: Shopify's product export (which this store's own export also
-/// writes), and WooCommerce's. Each becomes the same products, with their options, variants, prices and stock.
+/// Reads the product CSV files stores move from: Shopify's product export and WooCommerce's. Each becomes the same products, with their options, variants, prices and stock.
 /// </summary>
 public static class ProductCsv
 {
@@ -21,21 +20,30 @@ public static class ProductCsv
     public const string WooCommerce = "WooCommerce";
 
     /// <summary>
-    /// The columns this store's export writes: Shopify's, so the file opens in Shopify too.
-    /// </summary>
-    public static readonly string[] ExportColumns =
-    [
-        "Handle", "Title", "Body (HTML)", "Vendor", "Type", "Published",
-        "Option1 Name", "Option1 Value", "Option2 Name", "Option2 Value", "Option3 Name", "Option3 Value",
-        "Variant SKU", "Variant Price", "Variant Compare At Price", "Variant Inventory Qty", "Image Src", "Status",
-    ];
-
-    /// <summary>
     /// Reads a product export, telling its format from its columns.
     /// </summary>
     public static ProductCsvReadResult Read(string text)
     {
         var (headers, rows) = CsvTable.Parse(text);
+
+        return Read(headers, rows);
+    }
+
+    /// <summary>
+    /// Reads a product export already split into columns and rows, such as a spreadsheet ContentTransfer opened.
+    /// </summary>
+    public static ProductCsvReadResult Read(IReadOnlyList<string> headers, IEnumerable<string[]> records)
+        => Read(headers, CsvTable.ToRows(headers, records));
+
+    /// <summary>
+    /// Returns whether columns are those of a Shopify or WooCommerce product export.
+    /// </summary>
+    public static bool IsStoreExport(IReadOnlyList<string> headers)
+        => (Has(headers, "Handle") && (Has(headers, "Variant Price") || Has(headers, "Title"))) ||
+            (Has(headers, "Type") && Has(headers, "Regular price") && Has(headers, "Name"));
+
+    private static ProductCsvReadResult Read(IReadOnlyList<string> headers, IReadOnlyList<CsvRow> rows)
+    {
 
         if (Has(headers, "Handle") && (Has(headers, "Variant Price") || Has(headers, "Title")))
         {
@@ -48,53 +56,6 @@ public static class ProductCsv
         }
 
         return new ProductCsvReadResult(null, [], ["The file isn't a Shopify or WooCommerce product export: it needs Shopify's Handle and Variant Price columns, or WooCommerce's Type, Name and Regular price."]);
-    }
-
-    /// <summary>
-    /// Writes products as Shopify's product export: a row per variant, the product's details on its first row.
-    /// </summary>
-    public static string WriteShopify(IEnumerable<ImportedProduct> products)
-    {
-        var csv = new StringBuilder();
-        CsvTable.AppendRow(csv, ExportColumns);
-
-        foreach (var product in products ?? [])
-        {
-            var handle = string.IsNullOrEmpty(product.Key) ? Slugify(product.Title) : product.Key;
-            var variants = product.Variants.Count > 0
-                ? product.Variants
-                : [new ImportedVariant { Sku = product.Sku, Price = product.Price, CompareAtPrice = product.CompareAtPrice, Quantity = product.Quantity }];
-            var names = product.Options.Select(option => option.Name).Take(3).ToArray();
-
-            for (var i = 0; i < variants.Count; i++)
-            {
-                var variant = variants[i];
-                var first = i == 0;
-                string Option(int index, bool name)
-                    => names.Length == 0
-                        ? index == 0 ? (name ? (first ? "Title" : null) : "Default Title") : null
-                        : index < names.Length ? (name ? (first ? names[index] : null) : variant.Options.GetValueOrDefault(names[index])) : null;
-
-                CsvTable.AppendRow(csv,
-                [
-                    handle,
-                    first ? product.Title : null,
-                    first ? product.DescriptionHtml : null,
-                    first ? product.Brand : null,
-                    first ? product.Category : null,
-                    first ? (product.Published ? "TRUE" : "FALSE") : null,
-                    Option(0, true), Option(0, false), Option(1, true), Option(1, false), Option(2, true), Option(2, false),
-                    variant.Sku,
-                    Money(variant.Price),
-                    Money(variant.CompareAtPrice),
-                    variant.Quantity?.ToString(CultureInfo.InvariantCulture),
-                    first ? product.ImageUrls.FirstOrDefault() : null,
-                    first ? (product.Published ? "active" : "draft") : null,
-                ]);
-            }
-        }
-
-        return csv.ToString();
     }
 
     private static ProductCsvReadResult ReadShopify(IReadOnlyList<CsvRow> rows)
@@ -391,9 +352,6 @@ public static class ProductCsv
     private static int? Integer(string value)
         => decimal.TryParse(value?.Trim(), NumberStyles.Number, CultureInfo.InvariantCulture, out var amount) ? (int)Math.Truncate(amount) : null;
 
-    private static string Money(decimal? amount)
-        => amount?.ToString("0.00", CultureInfo.InvariantCulture);
-
     internal static string Slugify(string text)
     {
         var slug = new StringBuilder();
@@ -524,6 +482,41 @@ public sealed class CsvRow
 /// </summary>
 public static class CsvTable
 {
+    /// <summary>
+    /// Turns records under the headers into rows read by column name, skipping empty ones. Row numbers count the
+    /// header as 1.
+    /// </summary>
+    public static IReadOnlyList<CsvRow> ToRows(IReadOnlyList<string> headers, IEnumerable<string[]> records)
+    {
+        var names = (headers ?? []).Select(header => header?.Trim()).ToArray();
+        var rows = new List<CsvRow>();
+        var number = 1;
+
+        foreach (var record in records ?? [])
+        {
+            number++;
+
+            if (record is null || record.All(string.IsNullOrWhiteSpace))
+            {
+                continue;
+            }
+
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            for (var c = 0; c < names.Length && c < record.Length; c++)
+            {
+                if (!string.IsNullOrEmpty(names[c]))
+                {
+                    values.TryAdd(names[c], record[c]);
+                }
+            }
+
+            rows.Add(new CsvRow(number, values));
+        }
+
+        return rows;
+    }
+
     public static (IReadOnlyList<string> Headers, IReadOnlyList<CsvRow> Rows) Parse(string text)
     {
         var records = ParseRecords(text ?? string.Empty);

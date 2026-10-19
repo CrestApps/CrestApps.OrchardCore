@@ -38,6 +38,7 @@ public sealed class InventoryAdminController : Controller
     private readonly IStockItemStore _items;
     private readonly IStockMovementStore _movements;
     private readonly IInventoryService _inventory;
+    private readonly IInventoryLocationService _locations;
     private readonly InventorySyncService _sync;
     private readonly StockCountImporter _importer;
     private readonly IClock _clock;
@@ -54,6 +55,7 @@ public sealed class InventoryAdminController : Controller
         IStockItemStore items,
         IStockMovementStore movements,
         IInventoryService inventory,
+        IInventoryLocationService locations,
         InventorySyncService sync,
         StockCountImporter importer,
         IClock clock,
@@ -68,6 +70,7 @@ public sealed class InventoryAdminController : Controller
         _items = items;
         _movements = movements;
         _inventory = inventory;
+        _locations = locations;
         _sync = sync;
         _importer = importer;
         _clock = clock;
@@ -317,7 +320,7 @@ public sealed class InventoryAdminController : Controller
             return BadRequest();
         }
 
-        var result = await CommitAsync(await _inventory.AdjustAsync(stockItemId, model.Kind, model.Quantity, model.Reason, CurrentActor(), HttpContext.RequestAborted));
+        var result = await CommitAsync(await _inventory.AdjustAsync(stockItemId, await KnownLocationAsync(model.LocationId), model.Kind, model.Quantity, model.Reason, CurrentActor(), HttpContext.RequestAborted));
 
         await NotifyAsync(result, model.Kind == StockMovementKind.Received
             ? H["{0} received. {1} on hand.", model.Quantity, result.Item?.OnHand]
@@ -342,9 +345,54 @@ public sealed class InventoryAdminController : Controller
             return RedirectToAction(nameof(Item), new { stockItemId });
         }
 
-        var result = await CommitAsync(await _inventory.SetCountAsync(stockItemId, count, model.Reason, CurrentActor(), HttpContext.RequestAborted));
+        var result = await CommitAsync(await _inventory.SetCountAsync(stockItemId, await KnownLocationAsync(model.LocationId), count, model.Reason, CurrentActor(), HttpContext.RequestAborted));
 
         await NotifyAsync(result, H["Counted {0}. The difference was {1}.", count, result.Movement?.Quantity]);
+
+        return RedirectToAction(nameof(Item), new { stockItemId });
+    }
+
+    [HttpPost]
+    [Admin("inventory/{stockItemId}/transfer", "InventoryTransfer")]
+    public async Task<IActionResult> Transfer(string stockItemId, [Bind(Prefix = "Transfer")] TransferStockViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory))
+        {
+            return Forbid();
+        }
+
+        if (model?.Quantity is not > 0 || string.IsNullOrEmpty(model.FromLocationId) || string.IsNullOrEmpty(model.ToLocationId))
+        {
+            await _notifier.ErrorAsync(H["Choose where the units come from and go to, and how many."]);
+
+            return RedirectToAction(nameof(Item), new { stockItemId });
+        }
+
+        // Units can come from a location no longer listed, but only go to one that is.
+        var locations = await _locations.GetLocationsAsync();
+
+        if (!locations.Any(location => location.LocationId == model.ToLocationId))
+        {
+            return BadRequest();
+        }
+
+        var from = locations.FirstOrDefault(location => location.LocationId == model.FromLocationId)?.Name ?? model.FromLocationId;
+        var to = locations.First(location => location.LocationId == model.ToLocationId).Name;
+        var reason = string.IsNullOrWhiteSpace(model.Reason) ? S["From {0} to {1}", from, to].Value : model.Reason;
+        var result = await _inventory.TransferAsync(stockItemId, model.FromLocationId, model.ToLocationId, model.Quantity.Value, reason, CurrentActor(), HttpContext.RequestAborted);
+
+        if (result.Error == StockChangeError.NotEnoughAtLocation)
+        {
+            await _notifier.ErrorAsync(model.FromLocationId == model.ToLocationId
+                ? H["Choose two different locations."]
+                : H["{0} doesn't have {1} available to move. Units held for orders stay where they are.", from, model.Quantity]);
+
+            return RedirectToAction(nameof(Item), new { stockItemId });
+        }
+
+        result = await CommitAsync(result);
+
+        await NotifyAsync(result, H["Moved {0} from {1} to {2}.", model.Quantity, from, to]);
 
         return RedirectToAction(nameof(Item), new { stockItemId });
     }
@@ -377,16 +425,39 @@ public sealed class InventoryAdminController : Controller
             .Take(50)
             .ListAsync(HttpContext.RequestAborted);
 
+        var listed = await _locations.GetLocationsAsync();
+        var locations = listed.ToList();
+
+        // A location no longer listed still shows while it holds units of the item, so they can be moved.
+        item.NormalizeLevels();
+
+        foreach (var level in item.Levels.Where(level => level.OnHand != 0 || level.Reserved != 0))
+        {
+            if (!locations.Any(location => location.LocationId == level.LocationId))
+            {
+                locations.Add(new InventoryLocation { LocationId = level.LocationId, Name = S["Removed location"] });
+            }
+        }
+
         return new StockItemViewModel
         {
             Item = item,
+            Locations = locations,
+            ListedLocations = listed,
             Movements = movements,
             Holds = holds.ToArray(),
             MovementCount = count,
+            WaitingAlerts = HttpContext.RequestServices.GetService(typeof(StockAlertService)) is StockAlertService alerts ? await alerts.CountWaitingAsync(item.ItemId, HttpContext.RequestAborted) : null,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
             Pager = await _shapeFactory.PagerAsync(pager, count, new RouteData(new RouteValueDictionary { { "stockItemId", item.ItemId } })),
         };
     }
+
+    // A location that's listed, or the default one: a removed location only gives units away, by a transfer.
+    private async Task<string> KnownLocationAsync(string locationId)
+        => !string.IsNullOrEmpty(locationId) && (await _locations.GetLocationsAsync()).Any(location => location.LocationId == locationId)
+            ? locationId
+            : InventoryConstants.DefaultLocationId;
 
     // The change is committed here, so a checkout that changed the same stock at the same moment can't be overwritten:
     // the later of the two fails and is asked to try again.

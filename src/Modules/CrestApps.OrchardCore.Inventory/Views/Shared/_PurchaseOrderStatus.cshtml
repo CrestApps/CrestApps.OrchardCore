@@ -1,0 +1,20 @@
+@model PurchaseOrderStatus
+
+@switch (Model)
+{
+    case PurchaseOrderStatus.Ordered:
+        <span class="badge ta-badge bg-info-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-paper-plane text-info me-1" aria-hidden="true"></i>@T["Ordered"]</span>
+        break;
+    case PurchaseOrderStatus.PartiallyReceived:
+        <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-truck-ramp-box text-warning me-1" aria-hidden="true"></i>@T["Partly received"]</span>
+        break;
+    case PurchaseOrderStatus.Received:
+        <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-circle-check text-success me-1" aria-hidden="true"></i>@T["Received"]</span>
+        break;
+    case PurchaseOrderStatus.Canceled:
+        <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Canceled"]</span>
+        break;
+    default:
+        <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]"><i class="fa-solid fa-pen text-secondary me-1" aria-hidden="true"></i>@T["Draft"]</span>
+        break;
+}

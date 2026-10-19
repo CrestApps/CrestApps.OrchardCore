@@ -68,6 +68,11 @@ public sealed class CartLinePricing
     public int MaxQuantity { get; init; }
 
     /// <summary>
+    /// Gets when a pre-ordered line ships, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? ShipsFromUtc { get; init; }
+
+    /// <summary>
     /// Gets whether the price is not the one shown when the line was added.
     /// </summary>
     public bool PriceChanged { get; init; }

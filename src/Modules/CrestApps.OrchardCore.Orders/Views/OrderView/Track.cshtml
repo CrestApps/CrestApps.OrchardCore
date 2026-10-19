@@ -1,0 +1,11 @@
+@model IShape
+
+<zone Name="Title">
+    <breadcrumb name="OrdersTrack" title="@T["Track your order"]" />
+</zone>
+
+<div class="container my-4" style="max-width: 640px;">
+    <h1 class="h3 mb-3">@T["Track your order"]</h1>
+
+    @await DisplayAsync(Model)
+</div>

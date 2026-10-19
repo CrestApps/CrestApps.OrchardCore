@@ -1,0 +1,37 @@
+@model OrderReturnIndexViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ReturnsIndex" title="@T["Returns"]" />
+</zone>
+
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="returns-filter" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by return or order number"]" type="search" autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="Returns" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> No returns match the current filter. Buyers ask to return items from their order pages."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Return"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Items" position="40" title="@T["Items"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="commerce-admin-list" at="Foot"></script>

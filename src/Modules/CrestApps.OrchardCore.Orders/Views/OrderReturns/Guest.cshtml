@@ -1,0 +1,15 @@
+@model IShape
+
+@{
+    var form = (OrderReturnRequestViewModel)Model;
+}
+
+<zone Name="Title">
+    <breadcrumb name="GuestOrderReturn" title="@T["Return items"]">
+        <breadcrumb-item id="OrdersView" title="@T["Order {0}", form.Order.OrderNumber]" href="@form.BackUrl" />
+    </breadcrumb>
+</zone>
+
+<div class="container my-4" style="max-width: 860px;">
+    @await DisplayAsync(Model)
+</div>

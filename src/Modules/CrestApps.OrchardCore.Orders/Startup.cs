@@ -54,6 +54,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ICheckoutHandler, OrderConfirmationCheckoutHandler>();
         services.AddScoped<OrderConfirmationEmailBuilder>();
         services.AddScoped<OrderLinksEmailBuilder>();
+        services.AddScoped<DraftOrderService>();
         services.AddScoped<IOrderLinkService, OrderLinkService>();
         services.AddDisplayDriver<CheckoutFlow, OrderConfirmationDisplayDriver>();
 
@@ -81,6 +82,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<OrderOperationScope>();
         services.AddScoped<OrderConfirmationSender>();
         services.AddScoped<OrderOperationsService>();
+
+        // The order's invoice and packing slip, to print.
+        services.AddScoped<OrderDocumentBuilder>();
         services.AddScoped<IPaymentRefundHandler, OrderRefundRecorder>();
 
         // A dispute reported by a gateway is recorded on its order, and shown on its page and in the orders list.
@@ -142,5 +146,28 @@ public sealed class WorkflowsStartup : StartupBase
         services.AddActivity<OrderCanceledEvent, OrderEventDisplayDriver<OrderCanceledEvent>>();
         services.AddActivity<OrderRefundedEvent, OrderEventDisplayDriver<OrderRefundedEvent>>();
         services.AddScoped<IOrderEventHandler, OrderWorkflowHandler>();
+    }
+}
+
+/// <summary>
+/// Returns: buyers ask, the store approves, receives, restocks and refunds or exchanges.
+/// </summary>
+[Feature(OrderConstants.Features.Returns)]
+public sealed class ReturnsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<OrderReturnMigrations>()
+            .AddIndexProvider<OrderReturnIndexProvider>();
+        services.AddScoped<IOrderReturnStore, OrderReturnStore>();
+        services.AddScoped<OrderReturnService>();
+        services.AddScoped<OrderReturnEmailSender>();
+        services.AddDisplayDriver<Order, OrderReturnsDisplayDriver>();
+        services.AddDisplayDriver<OrderReturn, OrderReturnDisplayDriver>();
+        services.AddSiteDisplayDriver<ReturnSettingsDisplayDriver>();
+
+        // Lets a role with Manage orders, but no site-settings permission, open Settings > Commerce > Returns.
+        services.AddSiteSettingsPermission(OrderConstants.ReturnsSettingsGroupId, OrderPermissions.ManageOrders);
+        services.AddNavigationProvider<ReturnsAdminMenu>();
     }
 }

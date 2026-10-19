@@ -14,6 +14,11 @@ public interface IShipmentStore
     /// </summary>
     Task<IReadOnlyList<Shipment>> ListByOrderAsync(string orderId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Finds the shipment sent with a tracking number, or <see langword="null"/>.
+    /// </summary>
+    Task<Shipment> FindByTrackingNumberAsync(string trackingNumber, CancellationToken cancellationToken = default);
+
     ValueTask CreateAsync(Shipment shipment, CancellationToken cancellationToken = default);
 
     ValueTask UpdateAsync(Shipment shipment, CancellationToken cancellationToken = default);
@@ -27,6 +32,18 @@ public sealed class ShipmentStore : DocumentCatalog<Shipment, ShipmentIndex>, IS
         : base(session)
     {
         CollectionName = ShippingConstants.CollectionName;
+    }
+
+    public async Task<Shipment> FindByTrackingNumberAsync(string trackingNumber, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(trackingNumber))
+        {
+            return null;
+        }
+
+        var number = trackingNumber.Trim();
+
+        return await Session.Query<Shipment, ShipmentIndex>(index => index.TrackingNumber == number, collection: CollectionName).FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<Shipment>> ListByOrderAsync(string orderId, CancellationToken cancellationToken = default)
