@@ -139,6 +139,19 @@ public sealed class RecommendationsStartup : StartupBase
 }
 
 /// <summary>
+/// Imports products from Shopify and WooCommerce exports, and exports them in Shopify's format.
+/// </summary>
+[Feature(ProductConstants.Feature.Transfer)]
+public sealed class TransferStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ProductCatalogTransfer>();
+        services.AddNavigationProvider<ProductTransferAdminMenu>();
+    }
+}
+
+/// <summary>
 /// Sells bundles made of other products.
 /// </summary>
 [Feature(ProductConstants.Feature.Bundles)]

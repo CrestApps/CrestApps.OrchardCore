@@ -33,6 +33,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ProductConstants.Feature.Transfer,
+    Name = "Product Import and Export",
+    Description = "Imports products from a Shopify or WooCommerce product export, with their variants, prices, categories and stock, and exports products in Shopify's format.",
+    Category = "Content Management",
+    Dependencies =
+    [
+        ProductConstants.Feature.Listing,
+    ]
+)]
+
+[assembly: Feature(
     Id = ProductConstants.Feature.Bundles,
     Name = "Product Bundles",
     Description = "Sells bundles and kits made of other products at their own price, with their stock worked out from their parts and taken from each part when sold.",

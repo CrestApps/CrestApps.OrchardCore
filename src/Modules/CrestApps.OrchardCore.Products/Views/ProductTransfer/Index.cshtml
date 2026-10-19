@@ -1,0 +1,98 @@
+@using CrestApps.OrchardCore.Products.ViewModels
+@model ProductTransferViewModel
+
+<zone Name="Title">
+    <breadcrumb name="ProductTransfer" title="@T["Import and export products"]" />
+</zone>
+
+@if (Model.Result is not null)
+{
+    var result = Model.Result;
+    var tone = Model.Format is null ? "danger" : Model.Problems.Count > 0 ? "warning" : "success";
+
+    <div class="alert alert-@tone" role="status">
+        @if (Model.Format is not null)
+        {
+            <p class="mb-1 fw-semibold">@T["Read as a {0} product export.", Model.Format]</p>
+            <p class="mb-0">@T["Added: {0}. Updated: {1}. Already in the store and left as they were: {2}.", result.Created, result.Updated, result.Skipped]</p>
+            @if (result.ImagesNotImported > 0)
+            {
+                <p class="mb-0 mt-1 small">@T["Images linked in the file: {0}. They aren't downloaded; add product images in the media library.", result.ImagesNotImported]</p>
+            }
+        }
+        @if (Model.Problems.Count > 0)
+        {
+            <ul class="mb-0 mt-2 small">
+                @foreach (var problem in Model.Problems.Take(50))
+                {
+                    <li>@problem</li>
+                }
+            </ul>
+            @if (Model.Problems.Count > 50)
+            {
+                <p class="small mb-0">@T["And {0} more.", Model.Problems.Count - 50]</p>
+            }
+        }
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5">@T["Import products"]</h2>
+                <p class="text-body-secondary small">@T["From Shopify's product export (Products › Export), WooCommerce's (Products › Export), or this store's own export. A row per variant; the format is told from the columns."]</p>
+
+                <form asp-action="Index" method="post" enctype="multipart/form-data" class="no-multisubmit">
+                    <div class="mb-3">
+                        <label for="product-import-file" class="form-label">@T["CSV file"]</label>
+                        <input id="product-import-file" name="file" type="file" accept=".csv,text/csv" class="form-control" required />
+                        @Html.ValidationMessage("file", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ContentType" class="form-label">@T["Import as"]</label>
+                        <select asp-for="ContentType" asp-items="Model.ContentTypes" class="form-select"></select>
+                        <span class="hint">@T["The product type new products are made as. Its taxonomy fields named like Category and Brand get the file's categories and brands, matched to their terms by name; a product with variants needs the type's Product Variants part with options of the same names."]</span>
+                        <span asp-validation-for="ContentType"></span>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input asp-for="UpdateExisting" type="checkbox" class="form-check-input" />
+                        <label asp-for="UpdateExisting" class="form-check-label">@T["Update products already in the store"]</label>
+                        <span class="hint dashed">@T["Matched by the product's SKU or one of its variants'. Unticked, they're left as they are."]</span>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="Publish" type="checkbox" class="form-check-input" />
+                        <label asp-for="Publish" class="form-check-label">@T["Publish new products"]</label>
+                        <span class="hint dashed">@T["The ones the file says are published. Unticked, new products are drafts to review first."]</span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-file-import" aria-hidden="true"></i> @T["Import"]
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5">@T["Export products"]</h2>
+                <p class="text-body-secondary small">@T["A type's products, with their variants, prices, categories, brands and stock, in Shopify's product format: it opens in a spreadsheet, imports back here, and imports into Shopify."]</p>
+
+                <form asp-action="Export" method="get">
+                    <div class="mb-3">
+                        <label for="product-export-type" class="form-label">@T["Products of type"]</label>
+                        <select id="product-export-type" name="contentType" asp-items="Model.ContentTypes" class="form-select"></select>
+                    </div>
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-file-csv" aria-hidden="true"></i> @T["Export CSV"]
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
