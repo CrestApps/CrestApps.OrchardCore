@@ -35,3 +35,15 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Email",
     ]
 )]
+
+[assembly: Feature(
+    Id = InventoryConstants.Features.PurchaseOrders,
+    Name = "Purchase Orders",
+    Description = "Orders stock from suppliers and receives it at a location, under Commerce > Purchase orders.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InventoryConstants.Features.Inventory,
+        "CrestApps.OrchardCore.Resources",
+    ]
+)]

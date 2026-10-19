@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
+using CrestApps.OrchardCore.Inventory.Endpoints;
 using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
 using CrestApps.OrchardCore.Products.Core.Models;
@@ -212,4 +213,24 @@ public sealed class StockAlertsStartup : StartupBase
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<StockAlertDisplayDriver>();
     }
+}
+
+/// <summary>
+/// Orders stock from suppliers and receives it at a location.
+/// </summary>
+[Feature(InventoryConstants.Features.PurchaseOrders)]
+public sealed class PurchaseOrdersStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<PurchaseOrderMigrations>()
+            .AddIndexProvider<PurchaseOrderIndexProvider>();
+        services.AddScoped<IPurchaseOrderStore, PurchaseOrderStore>();
+        services.AddScoped<PurchaseOrderReceiver>();
+        services.AddDisplayDriver<PurchaseOrder, PurchaseOrderDisplayDriver>();
+        services.AddNavigationProvider<PurchaseOrdersAdminMenu>();
+    }
+
+    public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+        => routes.AddStockItemSearchEndpoint();
 }

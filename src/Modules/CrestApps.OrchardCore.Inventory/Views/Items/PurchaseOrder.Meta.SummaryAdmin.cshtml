@@ -1,0 +1,17 @@
+@model PurchaseOrderRowViewModel
+@{
+    var order = Model.Order;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Items received of those ordered"]">
+    <i class="fa-solid fa-boxes-stacked text-secondary me-1" aria-hidden="true"></i>@T["{0} of {1}", order.Received, order.Ordered]
+</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Received at"]">
+    <i class="fa-solid fa-warehouse text-secondary me-1" aria-hidden="true"></i>@Model.LocationName
+</span>
+@if (order.ExpectedUtc is { } expected && order.CanReceive)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Expected"]">
+        <i class="fa-solid fa-calendar-day text-secondary me-1" aria-hidden="true"></i>@expected.ToString("d")
+    </span>
+}

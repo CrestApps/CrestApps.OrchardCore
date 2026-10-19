@@ -186,3 +186,97 @@ public class StockAlertFormViewModel
 
     public string ReturnUrl { get; set; }
 }
+
+public class PurchaseOrderIndexOptions
+{
+    public string Search { get; set; }
+
+    /// <summary>
+    /// Gets or sets the orders shown: a status, <c>all</c>, or empty for the open ones.
+    /// </summary>
+    public string Show { get; set; }
+
+    [BindNever]
+    public List<SelectListItem> Filters { get; set; } = [];
+}
+
+public class PurchaseOrderIndexViewModel
+{
+    public PurchaseOrderIndexOptions Options { get; set; }
+
+    public AdminListContext List { get; set; }
+
+    public bool CanManage { get; set; }
+}
+
+public class PurchaseOrderEditViewModel
+{
+    public string PurchaseOrderId { get; set; }
+
+    public string Supplier { get; set; }
+
+    public string SupplierEmail { get; set; }
+
+    public string LocationId { get; set; }
+
+    public string Currency { get; set; }
+
+    public DateTime? ExpectedDate { get; set; }
+
+    public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether a new order starts with the items that are low on stock at its location.
+    /// </summary>
+    public bool StartWithLowStock { get; set; }
+
+    public List<PurchaseOrderLineViewModel> Lines { get; set; } = [];
+
+    public string[] AddStockItemIds { get; set; } = [];
+
+    [BindNever]
+    public PurchaseOrder Order { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<SelectListItem> Locations { get; set; } = [];
+
+    [BindNever]
+    public string LocationName { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<SelectListItem> Currencies { get; set; } = [];
+
+    [BindNever]
+    public IReadOnlyList<string> Suppliers { get; set; } = [];
+
+    [BindNever]
+    public bool CanManage { get; set; }
+
+    [BindNever]
+    public string SearchEndpoint { get; set; }
+}
+
+public class PurchaseOrderLineViewModel
+{
+    public string LineId { get; set; }
+
+    public int? Ordered { get; set; }
+
+    public decimal? UnitCost { get; set; }
+
+    public bool Remove { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many of the line arrived, when receiving.
+    /// </summary>
+    public int? Receive { get; set; }
+}
+
+public class PurchaseOrderRowViewModel
+{
+    public PurchaseOrder Order { get; set; }
+
+    public string LocationName { get; set; }
+
+    public bool CanManage { get; set; }
+}
