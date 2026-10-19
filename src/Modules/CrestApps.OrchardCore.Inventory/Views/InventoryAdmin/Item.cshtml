@@ -40,6 +40,10 @@
                         <dd class="col-6 text-end">@item.Sku</dd>
                     }
                 </dl>
+                @if (Model.WaitingAlerts > 0)
+                {
+                    <p class="small mb-0 mt-2"><span class="fa-solid fa-bell text-body-secondary me-1" aria-hidden="true"></span>@T.Plural(Model.WaitingAlerts.Value, "1 shopper is waiting to hear when it's back.", "{0} shoppers are waiting to hear when it's back.")</p>
+                }
             </div>
             <div class="card-footer">
                 <a class="btn btn-sm btn-secondary" href="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = item.ContentItemId })">@T["Open the product"]</a>

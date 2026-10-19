@@ -88,6 +88,12 @@ public class StockItemViewModel
 
     public int MovementCount { get; set; }
 
+    /// <summary>
+    /// Gets or sets how many shoppers asked to hear when it's back, or <see langword="null"/> without Back-in-Stock
+    /// Alerts.
+    /// </summary>
+    public int? WaitingAlerts { get; set; }
+
     public bool CanManage { get; set; }
 
     public dynamic Pager { get; set; }
@@ -111,4 +117,23 @@ public class CountStockViewModel
     public int? Count { get; set; }
 
     public string Reason { get; set; }
+}
+
+/// <summary>
+/// The back-in-stock form on a sold-out product's page.
+/// </summary>
+public class StockAlertFormViewModel
+{
+    public string ContentItemId { get; set; }
+
+    public bool HasVariants { get; set; }
+
+    /// <summary>
+    /// Gets or sets the variants that are sold out, for a product sold in variants: the form shows when one is picked.
+    /// </summary>
+    public IList<string> SoldOutVariantIds { get; set; } = [];
+
+    public string Email { get; set; }
+
+    public string ReturnUrl { get; set; }
 }

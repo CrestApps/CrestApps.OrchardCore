@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Inventory.Deployments;
 using CrestApps.OrchardCore.Inventory.Drivers;
 using CrestApps.OrchardCore.Inventory.Handlers;
 using CrestApps.OrchardCore.Inventory.Migrations;
+using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Inventory.Navigation;
 using CrestApps.OrchardCore.Inventory.Recipes;
 using CrestApps.OrchardCore.Inventory.Reports;
@@ -189,5 +190,23 @@ public sealed class ReportsStartup : StartupBase
     {
         services.AddScoped<IReport, StockOnHandReport>();
         services.AddScoped<IReport, StockMovementsReport>();
+    }
+}
+
+/// <summary>
+/// Lets shoppers ask to hear when a sold-out product is back, and emails them when it is.
+/// </summary>
+[Feature(InventoryConstants.Features.StockAlerts)]
+public sealed class StockAlertsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<StockAlertMigrations>()
+            .AddIndexProvider<StockAlertIndexProvider>();
+        services.AddScoped<StockAlertService>();
+        services.AddScoped<IStockLevelHandler, BackInStockAlertHandler>();
+        services.AddScoped<CrestApps.OrchardCore.Customers.PersonalData.ICommercePersonalDataContributor, StockAlertPersonalDataContributor>();
+        services.AddContentPart<ProductPart>()
+            .UseDisplayDriver<StockAlertDisplayDriver>();
     }
 }

@@ -23,3 +23,15 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Contents",
     ]
 )]
+
+[assembly: Feature(
+    Id = InventoryConstants.Features.StockAlerts,
+    Name = "Back-in-Stock Alerts",
+    Description = "Lets shoppers ask to be emailed when a product that's sold out is back in stock, and emails them, once, when it is.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        InventoryConstants.Features.Inventory,
+        "OrchardCore.Email",
+    ]
+)]

@@ -1,0 +1,86 @@
+@model StockAlertFormViewModel
+
+@*
+    "Email me when it's back", under Add to cart on a sold-out product's page. For a product sold in variants it shows
+    while a sold-out variant is picked, and asks about that one.
+*@
+
+<form method="post" asp-route="StockAlertSubscribe" class="stock-alert-form w-100 mt-2@(Model.HasVariants ? " d-none" : null)"
+      data-stock-alert="@Model.ContentItemId"
+      data-sold-out="@(Model.HasVariants ? System.Text.Json.JsonSerializer.Serialize(Model.SoldOutVariantIds) : null)"
+      data-error="@T["That didn't go through. Try again."]">
+    <input type="hidden" name="contentItemId" value="@Model.ContentItemId" />
+    <input type="hidden" name="variantId" value="" data-stock-alert-variant />
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    <label class="form-label small text-body-secondary mb-1" for="stock-alert-@Model.ContentItemId">@T["Sold out. Get an email when it's back:"]</label>
+    <div class="input-group input-group-sm">
+        <input type="email" id="stock-alert-@Model.ContentItemId" name="email" class="form-control" value="@Model.Email" placeholder="@T["Your email"]" autocomplete="email" required maxlength="254" />
+        <button type="submit" class="btn btn-outline-primary">
+            <span class="fa-solid fa-bell" aria-hidden="true"></span>
+            @T["Notify me"]
+        </button>
+    </div>
+    <div class="small mt-1" role="status" data-stock-alert-message hidden></div>
+</form>
+
+<script at="Foot">
+    (function () {
+        var form = document.querySelector('[data-stock-alert="@Model.ContentItemId"]');
+
+        if (!form || !window.fetch) {
+            return;
+        }
+
+        // Sent in place, so the shopper sees the answer under the form; without scripts the form posts and returns.
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            var message = form.querySelector('[data-stock-alert-message]');
+            var button = form.querySelector('button[type=submit]');
+
+            button.disabled = true;
+
+            fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                .then(function (response) { return response.json(); })
+                .then(function (result) {
+                    message.textContent = result.message;
+                    message.className = 'small mt-1 ' + (result.succeeded ? 'text-success' : 'text-danger');
+                })
+                .catch(function () {
+                    message.textContent = form.getAttribute('data-error');
+                    message.className = 'small mt-1 text-danger';
+                })
+                .finally(function () {
+                    message.hidden = false;
+                    button.disabled = false;
+                });
+        });
+    })();
+</script>
+
+@if (Model.HasVariants)
+{
+    <script at="Foot">
+        (function () {
+            var form = document.querySelector('[data-stock-alert="@Model.ContentItemId"]');
+            var picker = document.querySelector('#add-to-cart-@Model.ContentItemId [data-product-variant]');
+
+            if (!form || !picker) {
+                return;
+            }
+
+            var soldOut = JSON.parse(form.getAttribute('data-sold-out') || '[]');
+            var variant = form.querySelector('[data-stock-alert-variant]');
+
+            function sync() {
+                var out = soldOut.indexOf(picker.value) >= 0;
+
+                form.classList.toggle('d-none', !out);
+                variant.value = out ? picker.value : '';
+            }
+
+            picker.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
+}

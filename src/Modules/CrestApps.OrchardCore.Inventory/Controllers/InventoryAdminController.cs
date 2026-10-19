@@ -383,6 +383,7 @@ public sealed class InventoryAdminController : Controller
             Movements = movements,
             Holds = holds.ToArray(),
             MovementCount = count,
+            WaitingAlerts = HttpContext.RequestServices.GetService(typeof(StockAlertService)) is StockAlertService alerts ? await alerts.CountWaitingAsync(item.ItemId, HttpContext.RequestAborted) : null,
             CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory),
             Pager = await _shapeFactory.PagerAsync(pager, count, new RouteData(new RouteValueDictionary { { "stockItemId", item.ItemId } })),
         };
