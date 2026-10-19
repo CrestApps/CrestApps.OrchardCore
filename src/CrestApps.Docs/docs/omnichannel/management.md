@@ -302,6 +302,14 @@ The **Interaction Center > Contacts** menu item opens the standard Orchard Core 
 
 The contact content types are read from the cached `OmnichannelContentTypeProvider` that tracks which types attach `OmnichannelContactPart`, so the menu stays in sync as you attach or detach the part without scanning every content definition on each request. The menu item is available to users with the **List content items** permission (`ListContent`).
 
+## Matching a number to a contact
+
+Every lookup of a record by an exact phone number reads every number on the record, whatever type it is saved as: Cell, Home, Work, Office, Other or Fax, and a second number of the same type. That covers an incoming call (the **Matched customers** cards), the sender of an incoming text, the shared-number opt-out check, lead-to-contact matching at conversion, the import duplicate check, and the dialer's check for leads that are already contacts. A contact reached at its work number is therefore recognized when it calls or texts back from that number. A request not to be called or texted, recorded on one record, also stops every other record that holds the same number, under any type.
+
+The numbers come from `OmnichannelContactPhoneNumberIndex`, which holds one row per distinct number of each published or latest version of a contact or lead, in E.164 form, with its type, content type, converted-lead flag and version flags. A number that cannot be read as E.164 is not in it; the import duplicate check still compares such numbers by their national digits on the first Cell and Home numbers. Code that needs to find a record by number uses `IOmnichannelContactPhoneLookup` (`FindByNumbersAsync` and `GetNumbersAsync`), which compares one indexed column per query, in fixed batches of 50 numbers.
+
+The index starts empty on an upgraded tenant. The **Omnichannel Contact Phone Number Backfill** background task indexes the records saved before it, a few thousand a minute, resuming where it stopped after a restart; a record saved in the meantime is indexed by the save. Until the backfill has finished, every lookup also reads the first Cell and Home numbers of the contact index, so no record that used to be found is missed.
+
 ## Phone number search
 
 Phone filters in **Load Activities**, **Manage Activities**, and Content Admin search the primary **Cell** and **Home** contact methods. How users type searches, and the `phone:`, `phone-exact:`, `phone-starts:` and `phone-ends:` terms, are described in [Find a contact](../user-manual/contacts.md#find-a-contact) and [Load activities](../user-manual/load-inventory.md#phone-number-tips).
