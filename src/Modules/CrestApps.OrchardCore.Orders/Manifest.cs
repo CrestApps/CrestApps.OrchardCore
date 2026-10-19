@@ -29,6 +29,18 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = OrderConstants.Features.GiftCards,
+    Name = "Gift Cards",
+    Description = "Sells gift cards and lets buyers pay part or all of an order with one, under Commerce > Gift cards.",
+    Category = "Commerce",
+    Dependencies =
+    [
+        OrderConstants.Features.Orders,
+        "OrchardCore.Title",
+    ]
+)]
+
+[assembly: Feature(
     Id = OrderConstants.Features.Returns,
     Name = "Returns",
     Description = "Lets buyers ask to return items of their orders, for a refund or an exchange, and the store approve, receive, restock and refund them under Commerce > Returns.",

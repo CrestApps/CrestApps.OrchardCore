@@ -1,0 +1,4 @@
+@model ShapeViewModel<GiftCard>
+
+@* Staff see the last characters in the list, and the whole code on the card's page. *@
+<a asp-action="Edit" asp-controller="GiftCardsAdmin" asp-route-itemId="@Model.Value.ItemId" class="font-monospace">&bull;&bull;&bull;&bull; @Model.Value.LastCharacters</a>

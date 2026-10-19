@@ -1,0 +1,29 @@
+@using OrchardCore.Modules
+@inject IClock Clock
+
+@model ShapeViewModel<GiftCard>
+
+@if (!Model.Value.IsEnabled)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@T["Disabled"]
+    </span>
+}
+else if (Model.Value.ExpiresUtc.HasValue && Model.Value.ExpiresUtc.Value <= Clock.UtcNow)
+{
+    <span class="badge ta-badge bg-warning-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-hourglass-end text-secondary me-1" aria-hidden="true"></i>@T["Expired"]
+    </span>
+}
+else if (Model.Value.Balance <= 0m)
+{
+    <span class="badge ta-badge bg-secondary-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["Used up"]
+    </span>
+}
+else
+{
+    <span class="badge ta-badge bg-success-subtle fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
+        <i class="fa-solid fa-circle-check text-secondary me-1" aria-hidden="true"></i>@T["Active"]
+    </span>
+}

@@ -95,8 +95,18 @@ public sealed class OrderConfirmationEmailBuilder
 
         text.AppendLine($"{S["Total"]}  {Money(total)}");
         html.Append("<tr><td style=\"padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold\">").Append(_encoder.Encode(S["Total"].Value)).Append("</td>")
-            .Append("<td style=\"padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;text-align:right\">").Append(_encoder.Encode(Money(total))).Append("</td></tr>")
-            .Append("</table>");
+            .Append("<td style=\"padding:8px 0;border-top:1px solid #dee2e6;font-weight:bold;text-align:right\">").Append(_encoder.Encode(Money(total))).Append("</td></tr>");
+
+        foreach (var tender in order.Tenders ?? [])
+        {
+            var label = S["Paid with {0}", tender.Description].Value;
+
+            text.AppendLine($"{label}  {Money(tender.Amount)}");
+            html.Append("<tr><td style=\"padding:4px 0\">").Append(_encoder.Encode(label)).Append("</td>")
+                .Append("<td style=\"padding:4px 0;text-align:right\">").Append(_encoder.Encode(Money(tender.Amount))).Append("</td></tr>");
+        }
+
+        html.Append("</table>");
 
         foreach (var provider in _serviceProvider.GetServices<IOrderEmailSectionProvider>())
         {

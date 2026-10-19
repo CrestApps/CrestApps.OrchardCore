@@ -118,6 +118,13 @@
                     <th scope="row" colspan="2" class="text-end">@T["Total"]</th>
                     <td class="text-end fw-bold">@Format(order.Total ?? order.Subtotal)</td>
                 </tr>
+                @foreach (var tender in order.Tenders ?? [])
+                {
+                    <tr>
+                        <th scope="row" colspan="2" class="text-end fw-normal">@T["Paid with {0}", tender.Description]</th>
+                        <td class="text-end">@Format(tender.Amount)</td>
+                    </tr>
+                }
                 @foreach (var refund in order.Refunds ?? [])
                 {
                     <tr>

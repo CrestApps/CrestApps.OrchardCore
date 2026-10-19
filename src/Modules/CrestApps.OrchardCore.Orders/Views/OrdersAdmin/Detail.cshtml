@@ -216,6 +216,13 @@
                         <span>@Format(order.Total.Value)</span>
                     </div>
                 }
+                @foreach (var tender in order.Tenders ?? [])
+                {
+                    <div class="d-flex justify-content-between text-muted">
+                        <span>@T["Paid with {0}", tender.Description]</span>
+                        <span>@Format(tender.Amount)</span>
+                    </div>
+                }
                 @foreach (var refund in order.Refunds ?? [])
                 {
                     <div class="d-flex justify-content-between text-info">

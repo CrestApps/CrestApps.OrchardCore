@@ -77,6 +77,12 @@ public sealed class OrderOperationsService
             money.Refundable += remaining;
         }
 
+        // What a gift card or store credit paid can be put back on it.
+        if (!string.IsNullOrEmpty(order.CheckoutSessionId) && _serviceProvider.GetService<ICheckoutTenderLedger>() is { } ledger)
+        {
+            money.Refundable += (await ledger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken)).Sum(hold => hold.Amount - hold.ReturnedAmount);
+        }
+
         foreach (var transaction in await GetTransactionsAsync(order, cancellationToken))
         {
             money.Refundable += Math.Max(0m, transaction.AmountPaid - transaction.AmountRefunded);
@@ -134,6 +140,9 @@ public sealed class OrderOperationsService
 
         left = await RefundPaymentsAsync(order, left, reason, result, cancellationToken);
         left = await RefundTransactionsAsync(order, left, reason, result, cancellationToken);
+
+        // The card is refunded first, up to what it paid; what a gift card or store credit paid goes back on it last.
+        left = await RefundTendersAsync(order, left, reason, cancellationToken);
 
         result.Refunded = Money.Round((amount ?? money.Refundable) - left, order.Currency);
 
@@ -310,6 +319,41 @@ public sealed class OrderOperationsService
         }
 
         return left;
+    }
+
+    private async Task<decimal> RefundTendersAsync(Order order, decimal left, string reason, CancellationToken cancellationToken)
+    {
+        if (left <= 0m || string.IsNullOrEmpty(order.CheckoutSessionId) || _serviceProvider.GetService<ICheckoutTenderLedger>() is not { } ledger)
+        {
+            return left;
+        }
+
+        var balances = string.Join(", ", (await ledger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken)).Select(hold => hold.Description).Distinct());
+        var returned = await ledger.ReturnAsync(order.CheckoutSessionId, left, reason ?? S["A refund of order {0}.", order.OrderNumber].Value, cancellationToken);
+
+        if (returned <= 0m)
+        {
+            return left;
+        }
+
+        // Recorded as one of the order's refunds, like a card refund, so what was refunded adds up to its total.
+        await _orderService.RecordRefundAsync(order, new OrderRefund
+        {
+            RefundId = "tender:" + global::OrchardCore.IdGenerator.GenerateId(),
+            Amount = returned,
+            Currency = order.Currency,
+            Reason = reason,
+            CreatedUtc = _serviceProvider.GetRequiredService<global::OrchardCore.Modules.IClock>().UtcNow,
+        }, _scope.Restock, cancellationToken);
+
+        await _orderService.AddNoteAsync(
+            order,
+            S["Put {0} back on {1}.", ProductPriceFormatter.Format(returned, order.Currency), balances],
+            OrderNoteKind.Event,
+            _scope.ActorName,
+            cancellationToken);
+
+        return Money.Round(left - returned, order.Currency);
     }
 
     private async Task<decimal> RefundTransactionsAsync(Order order, decimal left, string reason, OrderOperationResult result, CancellationToken cancellationToken)

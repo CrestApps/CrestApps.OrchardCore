@@ -19,6 +19,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -169,5 +171,30 @@ public sealed class ReturnsStartup : StartupBase
         // Lets a role with Manage orders, but no site-settings permission, open Settings > Commerce > Returns.
         services.AddSiteSettingsPermission(OrderConstants.ReturnsSettingsGroupId, OrderPermissions.ManageOrders);
         services.AddNavigationProvider<ReturnsAdminMenu>();
+    }
+}
+
+/// <summary>
+/// Gift cards: sold as products, issued by hand, and paying toward checkouts after tax.
+/// </summary>
+[Feature(OrderConstants.Features.GiftCards)]
+public sealed class GiftCardsStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<GiftCardMigrations>()
+            .AddIndexProvider<GiftCardIndexProvider>();
+        services.AddScoped<IGiftCardStore, GiftCardStore>();
+        services.AddScoped<GiftCardService>();
+        services.AddScoped<GiftCardEmailSender>();
+        services.AddScoped<GiftCardTenderProvider>();
+        services.AddScoped<ICheckoutTenderProvider>(serviceProvider => serviceProvider.GetRequiredService<GiftCardTenderProvider>());
+        services.AddScoped<IOrderEventHandler, GiftCardOrderEventHandler>();
+        services.AddContentPart<GiftCardPart>()
+            .UseDisplayDriver<GiftCardPartDisplayDriver>();
+        services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, GiftCardCheckoutFlowDisplayDriver>();
+        services.AddScoped<IPermissionProvider, GiftCardPermissionsProvider>();
+        services.AddNavigationProvider<GiftCardsAdminMenu>();
     }
 }

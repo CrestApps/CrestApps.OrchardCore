@@ -27,6 +27,16 @@ public static class OrderConstants
     public const string CollectionName = "Orders";
 
     /// <summary>
+    /// The key gift cards pay toward checkouts with (<see cref="Checkout.Services.ICheckoutTenderProvider.Key"/>).
+    /// </summary>
+    public const string GiftCardTenderKey = "gift-card";
+
+    /// <summary>
+    /// The product type the Gift Cards feature makes for selling gift cards.
+    /// </summary>
+    public const string GiftCardContentType = "GiftCard";
+
+    /// <summary>
     /// The key of the concealed checkout step that carries an order's lines.
     /// </summary>
     public const string CheckoutStepKey = "Order";
@@ -48,6 +58,8 @@ public static class OrderConstants
         public const string Orders = "CrestApps.OrchardCore.Orders";
 
         public const string Returns = "CrestApps.OrchardCore.Orders.Returns";
+
+        public const string GiftCards = "CrestApps.OrchardCore.Orders.GiftCards";
     }
 
     public static class RouteNames

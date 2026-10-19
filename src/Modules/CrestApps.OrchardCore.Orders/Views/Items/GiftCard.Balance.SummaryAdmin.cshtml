@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Products.Core.Services
+
+@model ShapeViewModel<GiftCard>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Balance"]">
+    <i class="fa-solid fa-gift text-secondary me-1" aria-hidden="true"></i>@T["{0} of {1}", ProductPriceFormatter.Format(Model.Value.Balance, Model.Value.Currency), ProductPriceFormatter.Format(Model.Value.InitialValue, Model.Value.Currency)]
+</span>

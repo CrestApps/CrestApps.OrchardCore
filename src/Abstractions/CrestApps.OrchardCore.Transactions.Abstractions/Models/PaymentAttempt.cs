@@ -116,6 +116,12 @@ public sealed class PaymentAttempt : CatalogItem
     public string FailureReason { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the attempt was set aside, never charged, because the checkout's total changed before it
+    /// was paid. A superseded attempt doesn't count toward the checkout's payments at all.
+    /// </summary>
+    public bool IsSuperseded { get; set; }
+
+    /// <summary>
     /// Gets or sets how risky the gateway's fraud checks rated the payment: <c>normal</c>, <c>elevated</c> or
     /// <c>highest</c>, or <see langword="null"/> when it doesn't rate payments.
     /// </summary>

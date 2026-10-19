@@ -1,0 +1,12 @@
+@model ShapeViewModel<GiftCard>
+
+<div class="text-muted small">
+    @if (!string.IsNullOrEmpty(Model.Value.RecipientEmail))
+    {
+        <span>@T["For {0}", string.IsNullOrEmpty(Model.Value.RecipientName) ? Model.Value.RecipientEmail : $"{Model.Value.RecipientName} ({Model.Value.RecipientEmail})"]</span>
+    }
+    @if (!string.IsNullOrEmpty(Model.Value.OrderNumber))
+    {
+        <span class="ms-1">@T["Bought with order {0}", Model.Value.OrderNumber]</span>
+    }
+</div>

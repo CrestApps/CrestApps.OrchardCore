@@ -91,6 +91,16 @@ public static class CheckoutConstants
         public const string RemoveCouponPrefix = "remove-coupon:";
 
         /// <summary>
+        /// Applies a balance, such as a gift card, to the checkout and shows the step again.
+        /// </summary>
+        public const string ApplyTender = "apply-tender";
+
+        /// <summary>
+        /// Takes a balance off the checkout: the provider key and the reference follow, separated by a colon.
+        /// </summary>
+        public const string RemoveTenderPrefix = "remove-tender:";
+
+        /// <summary>
         /// Saves what was changed on a one-page checkout and shows it again with the new total, instead of paying.
         /// </summary>
         public const string Update = "update";

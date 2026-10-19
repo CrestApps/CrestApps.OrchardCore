@@ -94,7 +94,7 @@
                     }
 
                     <button type="submit" class="btn btn-primary px-4" id="checkout-submit">
-                        <span class="checkout-submit-label">@(Model.ShowsPayment ? T["Pay now"] : T["Continue"])</span>
+                        <span class="checkout-submit-label">@(Model.ShowsPayment ? Model.NothingToPay ? T["Place order"] : T["Pay now"] : T["Continue"])</span>
                         <span class="checkout-submit-busy d-none">
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                             @T["Processing…"]

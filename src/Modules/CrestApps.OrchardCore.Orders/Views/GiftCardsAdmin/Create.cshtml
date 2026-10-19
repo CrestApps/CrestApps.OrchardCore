@@ -1,0 +1,72 @@
+@using CrestApps.OrchardCore.Orders
+@model GiftCardCreateViewModel
+
+<zone Name="Title">
+    <breadcrumb name="GiftCardsCreate" title="@T["Issue gift card"]">
+        <breadcrumb-item id="GiftCards" action="Index" controller="GiftCardsAdmin" area="CrestApps.OrchardCore.Orders" permission="@OrderPermissions.ManageGiftCards.Name">@T["Gift cards"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="Value" class="form-label">@T["Amount"]</label>
+            <input asp-for="Value" type="number" step="0.01" min="0.01" class="form-control" required />
+            <span asp-validation-for="Value"></span>
+        </div>
+        <div class="col-md-2 mb-3">
+            <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+            <input asp-for="Currency" class="form-control" maxlength="3" />
+            <span asp-validation-for="Currency"></span>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Code" class="form-label">@T["Code"]</label>
+            <input asp-for="Code" class="form-control font-monospace" autocomplete="off" />
+            <span asp-validation-for="Code"></span>
+            <span class="hint">@T["Optional. Leave it blank to have a 16-character code made up, which nobody can guess."]</span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="RecipientName" class="form-label">@T["Recipient's name"]</label>
+            <input asp-for="RecipientName" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="RecipientEmail" class="form-label">@T["Recipient's email"]</label>
+            <input asp-for="RecipientEmail" type="email" class="form-control" />
+            <span asp-validation-for="RecipientEmail"></span>
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="ExpiresUtc" class="form-label">@T["Expires (UTC)"]</label>
+            <input asp-for="ExpiresUtc" type="datetime-local" class="form-control" />
+            <span asp-validation-for="ExpiresUtc"></span>
+            <span class="hint">@T["Optional. Leave blank for a card that never expires; some places require that."]</span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Message" class="form-label">@T["Message"]</label>
+        <textarea asp-for="Message" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Optional. Shown in the email with the card."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Note" class="form-label">@T["Note"]</label>
+        <input asp-for="Note" class="form-control" />
+        <span class="hint">@T["Optional. For the store only, such as why the card was given."]</span>
+    </div>
+
+    <div class="mb-3 form-check">
+        <input asp-for="SendEmail" class="form-check-input" />
+        <label asp-for="SendEmail" class="form-check-label">@T["Email the card"]</label>
+        <span class="hint dashed">@T["Sends the code to the recipient's email, with how to use it."]</span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">@T["Issue"]</button>
+        <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

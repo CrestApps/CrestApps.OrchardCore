@@ -1,0 +1,45 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Orders.Core
+@using CrestApps.OrchardCore.Products.Core.Services
+@model CheckoutGiftCardViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <label asp-for="GiftCardCode" class="form-label">@T["Gift card"]</label>
+
+        @if (Model.Applied.Count > 0)
+        {
+            <ul class="list-unstyled mb-2">
+                @foreach (var applied in Model.Applied)
+                {
+                    <li class="d-flex align-items-start gap-2 py-1">
+                        <span class="badge text-bg-light border font-monospace mt-1">&bull;&bull;&bull;&bull; @applied.LastCharacters</span>
+                        <span class="flex-grow-1 small">
+                            <span class="text-success">@T["{0} used", ProductPriceFormatter.Format(applied.Amount, Model.Currency)]</span>
+                            <span class="text-body-secondary d-block">@T["{0} left after this order", ProductPriceFormatter.Format(applied.Remaining, Model.Currency)]</span>
+                        </span>
+                        @* Removing a card is its own submit, so the step is shown again with what's left to pay. *@
+                        <button type="submit"
+                                class="btn btn-link btn-sm p-0"
+                                name="@CheckoutConstants.FormActions.FieldName"
+                                value="@(CheckoutConstants.FormActions.RemoveTenderPrefix + OrderConstants.GiftCardTenderKey + ":" + applied.ItemId)"
+                                formnovalidate
+                                aria-label="@T["Remove the gift card ending {0}", applied.LastCharacters]">@T["Remove"]</button>
+                    </li>
+                }
+            </ul>
+        }
+
+        @* Applying a card is its own submit: the pay button hands the form to the payment script, which never posts it. *@
+        <div class="input-group">
+            <input asp-for="GiftCardCode" class="form-control font-monospace" autocomplete="off" placeholder="@(Model.Applied.Count > 0 ? T["Add another gift card"] : T["Enter a gift card code"])" value="" />
+            <button type="submit"
+                    class="btn btn-outline-secondary"
+                    name="@CheckoutConstants.FormActions.FieldName"
+                    value="@CheckoutConstants.FormActions.ApplyTender"
+                    formnovalidate>@T["Apply"]</button>
+        </div>
+
+        <span asp-validation-for="GiftCardCode"></span>
+    </div>
+</div>

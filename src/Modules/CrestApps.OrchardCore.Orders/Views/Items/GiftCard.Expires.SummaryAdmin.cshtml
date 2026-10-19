@@ -1,0 +1,5 @@
+@model ShapeViewModel<GiftCard>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Expires"]">
+    <i class="fa-regular fa-calendar text-secondary me-1" aria-hidden="true"></i>@(Model.Value.ExpiresUtc.HasValue ? T["Until {0:d}", Model.Value.ExpiresUtc.Value] : T["Never expires"])
+</span>

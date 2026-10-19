@@ -177,6 +177,17 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
                 ProviderKey = discount.ProviderKey,
             })];
 
+        // What a gift card or store credit paid toward the total, so the order shows how it was paid.
+        order.Tenders = [.. (invoice.Tenders ?? [])
+            .Where(tender => tender.Amount > 0m)
+            .Select(tender => new OrderTender
+            {
+                ProviderKey = tender.ProviderKey,
+                Reference = tender.Reference,
+                Description = tender.Description,
+                Amount = tender.Amount,
+            })];
+
         // What the buyer entered at checkout is who this order is for, even when they changed a signed-in account's
         // name or email for it.
         if (global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutContactInfo>(session, out var contact))
