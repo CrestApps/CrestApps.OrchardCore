@@ -54,6 +54,11 @@ public enum OrderStatusFilter
     Canceled,
 
     All,
+
+    /// <summary>
+    /// Orders not checked out yet, such as the store's drafts.
+    /// </summary>
+    Drafts,
 }
 
 public class OrderDetailViewModel
@@ -335,4 +340,67 @@ public class OrderDocumentPageViewModel
     public string BackUrl { get; set; }
 
     public string PrintLabel { get; set; }
+}
+
+public class DraftOrderEditViewModel
+{
+    public string CustomerEmail { get; set; }
+
+    public string CustomerName { get; set; }
+
+    public string Note { get; set; }
+
+    public DateTime? DueDate { get; set; }
+
+    public string AddsToOrderId { get; set; }
+
+    public List<DraftOrderLineViewModel> Lines { get; set; } = [];
+
+    public string[] AddProductIds { get; set; } = [];
+
+    [BindNever]
+    public Order Order { get; set; }
+
+    [BindNever]
+    public string AddsToOrderNumber { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<string> Problems { get; set; } = [];
+
+    [BindNever]
+    public decimal Subtotal { get; set; }
+
+    [BindNever]
+    public string Currency { get; set; }
+
+    [BindNever]
+    public string ProductSearchEndpoint { get; set; }
+
+    [BindNever]
+    public bool CanEmail { get; set; }
+}
+
+public class DraftOrderLineViewModel
+{
+    public string LineId { get; set; }
+
+    public string ContentItemId { get; set; }
+
+    public string VariantId { get; set; }
+
+    public int Quantity { get; set; }
+
+    public bool Remove { get; set; }
+
+    [BindNever]
+    public string Title { get; set; }
+
+    [BindNever]
+    public IReadOnlyList<SelectListItem> Variants { get; set; } = [];
+
+    [BindNever]
+    public decimal? LineTotal { get; set; }
+
+    [BindNever]
+    public string Problem { get; set; }
 }

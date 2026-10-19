@@ -170,6 +170,12 @@ public sealed class Order : CatalogItem
     public OrderPaymentRisk PaymentRisk { get; set; }
 
     /// <summary>
+    /// Gets or sets the invoice of an order the store made for the buyer to pay, or <see langword="null"/> for one the
+    /// buyer made from their cart.
+    /// </summary>
+    public OrderInvoice Invoice { get; set; }
+
+    /// <summary>
     /// Gets whether a dispute against the order's payment is still open.
     /// </summary>
     public bool HasOpenDispute
@@ -322,6 +328,39 @@ public enum OrderNoteKind
     /// Something that happened to the order, such as a refund or a cancellation.
     /// </summary>
     Event = 1,
+}
+
+/// <summary>
+/// An order the store put together for the buyer, such as from a phone call, and sent them to pay.
+/// </summary>
+public sealed class OrderInvoice
+{
+    /// <summary>
+    /// Gets or sets who in the store made it.
+    /// </summary>
+    public string CreatedBy { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer reads with it.
+    /// </summary>
+    public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it should be paid by, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? DueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when it was last emailed to the buyer, or <see langword="null"/> while it's being put together.
+    /// </summary>
+    public DateTime? SentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the order this one adds to, such as items added after that one was paid.
+    /// </summary>
+    public string AddsToOrderId { get; set; }
+
+    public string AddsToOrderNumber { get; set; }
 }
 
 /// <summary>

@@ -30,7 +30,49 @@
     </breadcrumb>
 </zone>
 
+@if (order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment)
+{
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <span>
+            @if (order.Status == OrderStatus.AwaitingPayment)
+            {
+                @T["The buyer has opened the checkout to pay this order."]
+            }
+            else if (order.Invoice.SentUtc is { } sent)
+            {
+                @T["Invoice emailed to {0} {1:g}. Waiting for payment.", order.CustomerEmail, await LocalAsync(sent)]
+            }
+            else
+            {
+                @T["A draft made by {0}, not sent to the buyer yet.", order.Invoice.CreatedBy ?? T["the store"].Value]
+            }
+            @if (!string.IsNullOrEmpty(order.Invoice.AddsToOrderId))
+            {
+                <span class="d-block small">@T["Adds to order"] <a asp-action="Detail" asp-route-orderId="@order.Invoice.AddsToOrderId">@order.Invoice.AddsToOrderNumber</a></span>
+            }
+        </span>
+        @if (Model.CanManage)
+        {
+            <span class="d-flex flex-wrap gap-2">
+                @if (order.Status == OrderStatus.Draft)
+                {
+                    <a class="btn btn-sm btn-secondary" asp-controller="DraftOrdersAdmin" asp-action="Edit" asp-route-orderId="@order.ItemId">@T["Edit"]</a>
+                }
+                <form asp-controller="DraftOrdersAdmin" asp-action="SendInvoice" asp-route-orderId="@order.ItemId" method="post" class="no-multisubmit">
+                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? T["Send invoice"] : T["Send again"])</button>
+                </form>
+            </span>
+        }
+    </div>
+}
+
 <div class="d-flex flex-wrap gap-2 mb-3">
+    @if (Model.CanManage && order.Status == OrderStatus.Paid)
+    {
+        <a class="btn btn-outline-secondary btn-sm" asp-controller="DraftOrdersAdmin" asp-action="Create" asp-route-addsToOrderId="@order.ItemId">
+            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> @T["Add items"]
+        </a>
+    }
     <a class="btn btn-outline-secondary btn-sm" asp-action="Invoice" asp-route-orderId="@order.ItemId">
         <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
     </a>

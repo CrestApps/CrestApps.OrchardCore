@@ -77,9 +77,10 @@ public sealed class AccountOrdersController : Controller
     {
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId, HttpContext.RequestAborted);
 
-        // Only the customer's own placed orders open here; anything else reads as not found.
+        // Only the customer's own placed orders open here, and orders the store sent them to pay; anything else reads
+        // as not found.
         if (order is null ||
-            order.Status == OrderStatus.Draft ||
+            (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null) ||
             !string.Equals(order.UserId, User.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal) ||
             !await _authorizationService.AuthorizeAsync(User, OrderPermissions.ViewOwnOrders))
         {
@@ -87,7 +88,11 @@ public sealed class AccountOrdersController : Controller
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = order.Status == OrderStatus.Canceled ? null : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = order.Status == OrderStatus.Canceled
+            ? null
+            : order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
+                ? Url.RouteUrl("AccountOrderPay", new { orderId = order.ItemId })
+                : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
 
         return View(await _shapeFactory.CreateAsync<OrderViewViewModel>("AccountOrder", model =>
         {

@@ -69,14 +69,17 @@ public sealed class OrderViewController : Controller
         var orderId = _orderLinks.GetOrderId(token);
         var order = string.IsNullOrEmpty(orderId) ? null : await _orderStore.FindByIdAsync(orderId);
 
-        // A link that was altered, expired or names an order that was never placed shows nothing about any order.
-        if (order is null || order.Status is OrderStatus.Draft or OrderStatus.Canceled)
+        // A link that was altered, expired or names an order that was never placed shows nothing about any order. An
+        // order the store sent the buyer to pay shows before it's paid.
+        if (order is null || order.Status == OrderStatus.Canceled || (order.Status == OrderStatus.Draft && order.Invoice?.SentUtc is null))
         {
             return View("Invalid", await _shapeFactory.CreateAsync("GuestOrderInvalid"));
         }
 
         var sections = await displayManager.BuildDisplayAsync(order, updateModelAccessor.ModelUpdater, OrderConstants.DisplayTypes.Detail);
-        var payUrl = await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
+        var payUrl = order.Invoice is not null && order.Status is OrderStatus.Draft or OrderStatus.AwaitingPayment
+            ? Url.RouteUrl("GuestOrderPay", new { token })
+            : await OrderPayLinks.GetPayUrlAsync(HttpContext.RequestServices, order);
         var registerUrl = order.UserId is null && User.Identity?.IsAuthenticated != true
             ? Url.Action("Register", "Registration", new { area = "OrchardCore.Users" })
             : null;

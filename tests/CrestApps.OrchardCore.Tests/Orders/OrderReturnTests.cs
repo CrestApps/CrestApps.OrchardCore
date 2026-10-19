@@ -83,6 +83,29 @@ public sealed class OrderReturnTests
         Assert.Contains("https://store.example.com/orders/view/token", html);
     }
 
+    [Fact]
+    public void ADraftOrdersInvoice_ListsItsLines_TheNote_AndTheLinkToPay()
+    {
+        var drafts = new DraftOrderService(null, null, null, null, null, null, HtmlEncoder.Default, null, NullLogger<DraftOrderService>.Instance, new PassThroughStringLocalizer<DraftOrderService>());
+        var order = new Order
+        {
+            OrderNumber = "261019-DRAFT1",
+            CustomerName = "Sam",
+            Currency = "USD",
+            Subtotal = 30,
+            Lines = [new() { LineId = "mug", Title = "Mug", Quantity = 3, UnitPrice = 10, LineTotal = 30 }],
+            Invoice = new OrderInvoice { Note = "As discussed on the phone.", DueUtc = new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc) },
+        };
+
+        var (subject, text, html) = drafts.BuildInvoiceEmail(order, "https://store.example.com/orders/view/token/pay");
+
+        Assert.Equal("Your order 261019-DRAFT1 is ready to pay", subject);
+        Assert.Contains("Hi Sam", text);
+        Assert.Contains("As discussed on the phone.", text);
+        Assert.Contains("3 × Mug", text);
+        Assert.Contains("https://store.example.com/orders/view/token/pay", html);
+    }
+
     private static OrderReturn Return(OrderReturnStatus status, params (string LineId, int Quantity)[] lines)
         => new()
         {

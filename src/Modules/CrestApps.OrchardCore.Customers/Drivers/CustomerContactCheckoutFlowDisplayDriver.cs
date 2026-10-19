@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
 using OrchardCore.Json;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -198,12 +199,14 @@ public sealed class CustomerContactCheckoutFlowDisplayDriver : CheckoutFlowDispl
             }
             else
             {
-                // A signed-in customer starts with their own details and their default billing address.
+                // A signed-in customer starts with their own details and their default billing address; anyone else with
+                // what the checkout already knows, such as the buyer an order was made for.
                 var defaultAddress = customer?.GetDefaultBillingAddress();
+                var known = session.TryGet<CheckoutContactInfo>(out var contact) ? contact : null;
 
-                model.Name = customer is null ? null : CustomerAddressBook.NewAddressFor(customer).Name ?? customer.GetName();
-                model.Email = customer?.Email;
-                model.Phone = customer?.Phone;
+                model.Name = (customer is null ? null : CustomerAddressBook.NewAddressFor(customer).Name ?? customer.GetName()) ?? known?.DisplayName;
+                model.Email = customer?.Email ?? known?.Email;
+                model.Phone = customer?.Phone ?? known?.Phone;
                 model.BillingAddressId = defaultAddress?.AddressId;
                 model.SaveBillingAddress = customer is not null;
                 model.BillingAddress = await _addressEditor.BuildAsync(null, options);

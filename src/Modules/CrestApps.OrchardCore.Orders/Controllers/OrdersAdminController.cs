@@ -385,6 +385,7 @@ public sealed class OrdersAdminController : Controller
             new SelectListItem(S["Paid"], nameof(OrderStatusFilter.Paid), options.Status == OrderStatusFilter.Paid),
             new SelectListItem(S["Awaiting payment"], nameof(OrderStatusFilter.AwaitingPayment), options.Status == OrderStatusFilter.AwaitingPayment),
             new SelectListItem(S["Canceled"], nameof(OrderStatusFilter.Canceled), options.Status == OrderStatusFilter.Canceled),
+            new SelectListItem(S["Drafts"], nameof(OrderStatusFilter.Drafts), options.Status == OrderStatusFilter.Drafts),
             new SelectListItem(S["Any status"], nameof(OrderStatusFilter.All), options.Status == OrderStatusFilter.All),
         ];
 
@@ -437,6 +438,7 @@ public sealed class OrdersAdminController : Controller
                     OrderStatusFilter.Paid => [OrderStatus.Paid],
                     OrderStatusFilter.AwaitingPayment => [OrderStatus.AwaitingPayment],
                     OrderStatusFilter.Canceled => [OrderStatus.Canceled],
+                    OrderStatusFilter.Drafts => [OrderStatus.Draft],
                     OrderStatusFilter.All => [],
                     _ => [OrderStatus.Paid, OrderStatus.AwaitingPayment],
                 },

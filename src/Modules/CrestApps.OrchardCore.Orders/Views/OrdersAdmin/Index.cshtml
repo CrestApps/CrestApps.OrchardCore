@@ -26,6 +26,9 @@
                         </div>
                     </div>
                     <div class="col-auto">
+                        <a asp-controller="DraftOrdersAdmin" asp-action="Create" class="btn btn-secondary create">@T["Create order"]</a>
+                    </div>
+                    <div class="col-auto">
                         @* The orders the list shows, with its search and status, a row per line. *@
                         <a asp-action="Export"
                            asp-route-Options.Search="@Model.Options.Search"

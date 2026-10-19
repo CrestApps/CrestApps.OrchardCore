@@ -80,6 +80,18 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
         order.CheckoutSessionId = session.SessionId;
         order.ModifiedUtc = _clock.UtcNow;
 
+        // An order the store made for a buyer already knows who they are, so they needn't type it again.
+        if (order.Invoice is not null && !string.IsNullOrEmpty(order.CustomerEmail) &&
+            !global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutContactInfo>(session, out _))
+        {
+            global::OrchardCore.Entities.EntityExtensions.Put(session, new CheckoutContactInfo
+            {
+                DisplayName = order.CustomerName,
+                Email = order.CustomerEmail,
+                Phone = order.CustomerPhone,
+            });
+        }
+
         await _orderStore.UpdateAsync(order);
     }
 
@@ -227,6 +239,16 @@ public sealed class OrderCheckoutHandler : CheckoutHandlerBase
 
         if (order is null || !string.Equals(order.CheckoutSessionId, session.SessionId, StringComparison.Ordinal))
         {
+            return;
+        }
+
+        // An order the store sent the buyer to pay stays open: the buyer can pay it again from its link.
+        if (order.Invoice is not null && order.Status == OrderStatus.AwaitingPayment)
+        {
+            order.Status = OrderStatus.Draft;
+            order.CheckoutSessionId = null;
+            await _orderStore.UpdateAsync(order);
+
             return;
         }
 

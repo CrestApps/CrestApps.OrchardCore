@@ -38,6 +38,13 @@ public interface IOrderEventHandler
     /// </summary>
     Task ReturnedAsync(OrderReturnedContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    /// <summary>
+    /// Runs when the lines of an order not checked out yet were replaced, such as a store's draft being changed, in the
+    /// same unit of work. A handler that can't provide the new lines refuses them, and nothing changes.
+    /// </summary>
+    Task LinesChangedAsync(OrderLinesChangedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 public abstract class OrderEventHandlerBase : IOrderEventHandler
@@ -56,6 +63,36 @@ public abstract class OrderEventHandlerBase : IOrderEventHandler
 
     public virtual Task ReturnedAsync(OrderReturnedContext context, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    public virtual Task LinesChangedAsync(OrderLinesChangedContext context, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+}
+
+/// <summary>
+/// The lines of an order not checked out yet, just replaced.
+/// </summary>
+public sealed class OrderLinesChangedContext
+{
+    private readonly List<string> _problems = [];
+
+    public OrderLinesChangedContext(Order order, IReadOnlyList<OrderLine> previousLines)
+    {
+        Order = order;
+        PreviousLines = previousLines ?? [];
+    }
+
+    public Order Order { get; }
+
+    public IReadOnlyList<OrderLine> PreviousLines { get; }
+
+    public IReadOnlyList<string> Problems
+        => _problems;
+
+    /// <summary>
+    /// Refuses the new lines, with why, for the store.
+    /// </summary>
+    public void Refuse(string problem)
+        => _problems.Add(problem);
 }
 
 /// <summary>
