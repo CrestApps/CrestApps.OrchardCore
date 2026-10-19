@@ -112,6 +112,7 @@ public sealed class OrderService : IOrderService
                 TaxClassificationCode = line.Product?.TaxClassificationCode,
                 CategoryIds = ProductCategories.GetIds(line.ContentItem),
                 AddOns = [.. (line.AddOns ?? []).Select(addOn => new OrderLineAddOn { AddOnId = addOn.AddOnId, Label = addOn.Label, Value = addOn.Value, Price = addOn.Price })],
+                ShipsFromUtc = line.ShipsFromUtc,
                 BundleItems = line.ContentItem?.TryGet<ProductBundlePart>(out var bundle) == true && bundle.Items is { Count: > 0 }
                     ? [.. bundle.Items.Where(item => !string.IsNullOrEmpty(item.ContentItemId)).Select(item => new OrderLineBundleItem { ContentItemId = item.ContentItemId, Title = item.Title, Quantity = Math.Max(1, item.Quantity) })]
                     : [],

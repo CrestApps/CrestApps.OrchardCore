@@ -55,6 +55,10 @@
                                 {
                                     <div class="small text-muted">@T["SKU {0}", line.Product.Sku]</div>
                                 }
+                                @if (line.ShipsFromUtc is { } shipsFrom)
+                                {
+                                    <div class="small text-info-emphasis"><span class="fa-solid fa-calendar-day me-1" aria-hidden="true"></span>@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                                }
                                 @foreach (var addOn in line.AddOns)
                                 {
                                     <div class="small">

@@ -279,6 +279,11 @@ public sealed class OrderLine
     /// Stock is held and sold from them, not from the bundle.
     /// </summary>
     public List<OrderLineBundleItem> BundleItems { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets when a pre-ordered line ships, as it was when the order was placed, or <see langword="null"/>.
+    /// </summary>
+    public DateTime? ShipsFromUtc { get; set; }
 }
 
 /// <summary>

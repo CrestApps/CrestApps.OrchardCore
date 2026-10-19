@@ -149,6 +149,11 @@ public class AddToCartAvailabilityViewModel
     public string Tone { get; set; }
 
     public bool CanBuy { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the product is ordered ahead of its release, so the button says Pre-order.
+    /// </summary>
+    public bool IsPreorder { get; set; }
 }
 
 /// <summary>

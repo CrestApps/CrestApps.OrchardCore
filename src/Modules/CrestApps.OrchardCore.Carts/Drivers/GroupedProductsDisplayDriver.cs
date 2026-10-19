@@ -163,6 +163,7 @@ public sealed class GroupedProductsDisplayDriver : ContentPartDisplayDriver<Prod
             ProductAvailabilityStatus.LowStock => new() { Label = S["Only {0} left", availability.Available], Tone = "warning", CanBuy = true },
             ProductAvailabilityStatus.OutOfStock => new() { Label = S["Out of stock"], Tone = "danger", CanBuy = false },
             ProductAvailabilityStatus.Backorder => new() { Label = S["Available on backorder"], Tone = "secondary", CanBuy = true },
+            ProductAvailabilityStatus.Preorder => new() { Label = S["Pre-order: ships {0}", availability.ReleaseDateUtc.Value.ToString("D", System.Globalization.CultureInfo.CurrentCulture)], Tone = "info", CanBuy = true, IsPreorder = true },
             _ => new() { Label = S["In stock"], Tone = "success", CanBuy = true },
         };
 }

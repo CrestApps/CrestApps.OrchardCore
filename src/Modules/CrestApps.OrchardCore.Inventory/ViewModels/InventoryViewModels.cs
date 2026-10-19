@@ -14,6 +14,11 @@ public class InventoryPartViewModel
 
     public int? LowStockThreshold { get; set; }
 
+    /// <summary>
+    /// Gets or sets when the product ships, in the site's time zone.
+    /// </summary>
+    public DateTime? ReleaseDate { get; set; }
+
     [BindNever]
     public int DefaultLowStockThreshold { get; set; }
 

@@ -17,11 +17,13 @@ public sealed class InventoryAvailabilityProvider : IProductAvailabilityProvider
 {
     private readonly ISession _session;
     private readonly IServiceProvider _serviceProvider;
+    private readonly global::OrchardCore.Modules.IClock _clock;
 
-    public InventoryAvailabilityProvider(ISession session, IServiceProvider serviceProvider)
+    public InventoryAvailabilityProvider(ISession session, IServiceProvider serviceProvider, global::OrchardCore.Modules.IClock clock)
     {
         _session = session;
         _serviceProvider = serviceProvider;
+        _clock = clock;
     }
 
     public async Task<IReadOnlyDictionary<ProductStockKey, ProductAvailability>> GetAvailabilityAsync(ProductAvailabilityRequest request, CancellationToken cancellationToken = default)
@@ -59,7 +61,11 @@ public sealed class InventoryAvailabilityProvider : IProductAvailabilityProvider
                 continue;
             }
 
-            answer[key] = new ProductAvailability(item.Available + ownHolds.GetValueOrDefault(item.ItemId), item.AllowBackorder, item.LowStockThreshold);
+            // A release date to come makes a backorder a pre-order; once it's passed, a backorder is a backorder.
+            answer[key] = new ProductAvailability(item.Available + ownHolds.GetValueOrDefault(item.ItemId), item.AllowBackorder, item.LowStockThreshold)
+            {
+                ReleaseDateUtc = item.ReleaseDateUtc > _clock.UtcNow ? item.ReleaseDateUtc : null,
+            };
         }
 
         return answer;

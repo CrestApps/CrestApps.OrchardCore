@@ -57,6 +57,11 @@ public sealed class StockItem : CatalogItem
     public bool AllowBackorder { get; set; }
 
     /// <summary>
+    /// Gets or sets when the product ships, from its inventory settings, which makes a backorder a pre-order until then.
+    /// </summary>
+    public DateTime? ReleaseDateUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets whether the product or variant counted is gone or no longer tracked. Its history is kept.
     /// </summary>
     public bool Archived { get; set; }

@@ -468,7 +468,7 @@ public sealed class InventoryStockTests : IAsyncLifetime
             .BuildServiceProvider();
 
         await using var session = _store.CreateSession();
-        var provider = new CrestApps.OrchardCore.Inventory.Services.InventoryAvailabilityProvider(session, services);
+        var provider = new CrestApps.OrchardCore.Inventory.Services.InventoryAvailabilityProvider(session, services, Clock());
 
         var everyone = await provider.GetAvailabilityAsync(new CrestApps.OrchardCore.Products.Core.Services.ProductAvailabilityRequest
         {

@@ -30,6 +30,10 @@
             <div class="d-flex justify-content-between gap-2">
                 <div class="me-2">
                     <div class="fw-semibold">@(line.ContentItem is null ? T["A product that is no longer available"].Value : line.Title)</div>
+                    @if (line.ShipsFromUtc is { } shipsFrom)
+                    {
+                        <div class="small text-info-emphasis">@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                    }
                     @foreach (var addOn in line.AddOns)
                     {
                         <div class="small text-break">@(string.IsNullOrEmpty(addOn.Value) ? addOn.Label : addOn.Label + ": " + addOn.Value)</div>

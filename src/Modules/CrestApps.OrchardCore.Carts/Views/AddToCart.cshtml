@@ -188,7 +188,7 @@
         }
         <button type="submit" class="btn btn-primary" style="flex: 1 1 8rem; min-width: 0" disabled="@(!canBuy)">
             <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
-            @T["Add to cart"]
+            @(initial?.IsPreorder == true ? T["Pre-order"].Value : T["Add to cart"].Value)
         </button>
     </div>
 </form>

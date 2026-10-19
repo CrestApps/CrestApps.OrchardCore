@@ -57,6 +57,10 @@
                             {
                                 <span class="text-muted">(@line.PriceName)</span>
                             }
+                            @if (line.ShipsFromUtc is { } shipsFrom)
+                            {
+                                <div class="small text-info-emphasis">@T["Pre-order: ships {0:D}", shipsFrom]</div>
+                            }
                             @if (CrestApps.OrchardCore.Orders.Core.Services.OrderLineText.DescribeBundle(line) is { } contents)
                             {
                                 <div class="small text-muted text-break">@T["Includes {0}", contents]</div>
