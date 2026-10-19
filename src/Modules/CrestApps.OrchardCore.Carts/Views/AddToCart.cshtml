@@ -170,7 +170,8 @@
         </fieldset>
     }
 
-    @* On a narrow card the button wraps under the quantity rather than breaking its label. *@
+    @* On a narrow card the button wraps under the quantity rather than breaking its label; alone on a card too narrow
+       for it, as when there's no quantity to choose, its label wraps instead of spilling out of the card. *@
     <div class="d-flex flex-wrap gap-2">
         @if ((Model.MaxQuantity > 1 || Model.MinQuantity > 1) && canBuy)
         {
@@ -185,7 +186,7 @@
                    style="flex: 0 0 4.5rem; max-width: 4.5rem"
                    aria-label="@T["Quantity"]" />
         }
-        <button type="submit" class="btn btn-primary text-nowrap" style="flex: 1 1 8rem" disabled="@(!canBuy)">
+        <button type="submit" class="btn btn-primary" style="flex: 1 1 8rem; min-width: 0" disabled="@(!canBuy)">
             <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
             @T["Add to cart"]
         </button>
